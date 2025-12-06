@@ -10,21 +10,19 @@ import {
   useQuery
 } from '@tanstack/react-query';
 import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
   MutationFunction,
+  QueryClient,
   QueryFunction,
   QueryKey,
+  UndefinedInitialDataOptions,
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
-
-import * as axios from 'axios';
-import type {
-  AxiosError,
-  AxiosRequestConfig,
-  AxiosResponse
-} from 'axios';
 
 import type {
   Account,
@@ -44,6 +42,7 @@ import type {
   User
 } from '../models';
 
+import { axios } from '../axios';
 
 
 
@@ -52,15 +51,17 @@ import type {
  * Get all accounts
  */
 export const accountControllerFindAll = (
-     options?: AxiosRequestConfig
- ): Promise<AxiosResponse<Account[]>> => {
     
-    
-    return axios.default.get(
-      `/account`,options
-    );
-  }
-
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<Account[]>(
+      {url: `/account`, method: 'GET', signal
+    },
+      );
+    }
+  
 
 
 
@@ -71,37 +72,61 @@ export const getAccountControllerFindAllQueryKey = () => {
     }
 
     
-export const getAccountControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof accountControllerFindAll>>, TError = AxiosError<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindAll>>, TError, TData>, axios?: AxiosRequestConfig}
+export const getAccountControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof accountControllerFindAll>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindAll>>, TError, TData>>, }
 ) => {
 
-const {query: queryOptions, axios: axiosOptions} = options ?? {};
+const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getAccountControllerFindAllQueryKey();
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof accountControllerFindAll>>> = ({ signal }) => accountControllerFindAll({ signal, ...axiosOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof accountControllerFindAll>>> = ({ signal }) => accountControllerFindAll(signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindAll>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type AccountControllerFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof accountControllerFindAll>>>
-export type AccountControllerFindAllQueryError = AxiosError<unknown>
+export type AccountControllerFindAllQueryError = unknown
 
 
+export function useAccountControllerFindAll<TData = Awaited<ReturnType<typeof accountControllerFindAll>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindAll>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof accountControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof accountControllerFindAll>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAccountControllerFindAll<TData = Awaited<ReturnType<typeof accountControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindAll>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof accountControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof accountControllerFindAll>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAccountControllerFindAll<TData = Awaited<ReturnType<typeof accountControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindAll>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useAccountControllerFindAll<TData = Awaited<ReturnType<typeof accountControllerFindAll>>, TError = AxiosError<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindAll>>, TError, TData>, axios?: AxiosRequestConfig}
-  
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+export function useAccountControllerFindAll<TData = Awaited<ReturnType<typeof accountControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindAll>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getAccountControllerFindAllQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   query.queryKey = queryOptions.queryKey ;
 
@@ -116,28 +141,31 @@ export function useAccountControllerFindAll<TData = Awaited<ReturnType<typeof ac
  * Create a new account
  */
 export const accountControllerCreate = (
-    createAccountDto: CreateAccountDto, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<Account>> => {
-    
-    
-    return axios.default.post(
-      `/account`,
-      createAccountDto,options
-    );
-  }
+    createAccountDto: CreateAccountDto,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<Account>(
+      {url: `/account`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createAccountDto, signal
+    },
+      );
+    }
+  
 
 
-
-export const getAccountControllerCreateMutationOptions = <TError = AxiosError<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountControllerCreate>>, TError,{data: CreateAccountDto}, TContext>, axios?: AxiosRequestConfig}
+export const getAccountControllerCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountControllerCreate>>, TError,{data: CreateAccountDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof accountControllerCreate>>, TError,{data: CreateAccountDto}, TContext> => {
 
 const mutationKey = ['accountControllerCreate'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -145,7 +173,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof accountControllerCreate>>, {data: CreateAccountDto}> = (props) => {
           const {data} = props ?? {};
 
-          return  accountControllerCreate(data,axiosOptions)
+          return  accountControllerCreate(data,)
         }
 
         
@@ -155,11 +183,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type AccountControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof accountControllerCreate>>>
     export type AccountControllerCreateMutationBody = CreateAccountDto
-    export type AccountControllerCreateMutationError = AxiosError<unknown>
+    export type AccountControllerCreateMutationError = unknown
 
-    export const useAccountControllerCreate = <TError = AxiosError<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountControllerCreate>>, TError,{data: CreateAccountDto}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useAccountControllerCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountControllerCreate>>, TError,{data: CreateAccountDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof accountControllerCreate>>,
         TError,
         {data: CreateAccountDto},
@@ -168,22 +196,24 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getAccountControllerCreateMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Get an account by ID
  */
 export const accountControllerFindOne = (
-    id: string, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<Account>> => {
-    
-    
-    return axios.default.get(
-      `/account/${id}`,options
-    );
-  }
-
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<Account>(
+      {url: `/account/${id}`, method: 'GET', signal
+    },
+      );
+    }
+  
 
 
 
@@ -194,37 +224,61 @@ export const getAccountControllerFindOneQueryKey = (id?: string,) => {
     }
 
     
-export const getAccountControllerFindOneQueryOptions = <TData = Awaited<ReturnType<typeof accountControllerFindOne>>, TError = AxiosError<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindOne>>, TError, TData>, axios?: AxiosRequestConfig}
+export const getAccountControllerFindOneQueryOptions = <TData = Awaited<ReturnType<typeof accountControllerFindOne>>, TError = void>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindOne>>, TError, TData>>, }
 ) => {
 
-const {query: queryOptions, axios: axiosOptions} = options ?? {};
+const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getAccountControllerFindOneQueryKey(id);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof accountControllerFindOne>>> = ({ signal }) => accountControllerFindOne(id, { signal, ...axiosOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof accountControllerFindOne>>> = ({ signal }) => accountControllerFindOne(id, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindOne>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindOne>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type AccountControllerFindOneQueryResult = NonNullable<Awaited<ReturnType<typeof accountControllerFindOne>>>
-export type AccountControllerFindOneQueryError = AxiosError<void>
+export type AccountControllerFindOneQueryError = void
 
 
+export function useAccountControllerFindOne<TData = Awaited<ReturnType<typeof accountControllerFindOne>>, TError = void>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindOne>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof accountControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof accountControllerFindOne>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAccountControllerFindOne<TData = Awaited<ReturnType<typeof accountControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindOne>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof accountControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof accountControllerFindOne>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAccountControllerFindOne<TData = Awaited<ReturnType<typeof accountControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindOne>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useAccountControllerFindOne<TData = Awaited<ReturnType<typeof accountControllerFindOne>>, TError = AxiosError<void>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindOne>>, TError, TData>, axios?: AxiosRequestConfig}
-  
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+export function useAccountControllerFindOne<TData = Awaited<ReturnType<typeof accountControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof accountControllerFindOne>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getAccountControllerFindOneQueryOptions(id,options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   query.queryKey = queryOptions.queryKey ;
 
@@ -239,27 +293,28 @@ export function useAccountControllerFindOne<TData = Awaited<ReturnType<typeof ac
  * Delete an account
  */
 export const accountControllerRemove = (
-    id: string, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<void>> => {
-    
-    
-    return axios.default.delete(
-      `/account/${id}`,options
-    );
-  }
+    id: string,
+ ) => {
+      
+      
+      return axios<void>(
+      {url: `/account/${id}`, method: 'DELETE'
+    },
+      );
+    }
+  
 
 
-
-export const getAccountControllerRemoveMutationOptions = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountControllerRemove>>, TError,{id: string}, TContext>, axios?: AxiosRequestConfig}
+export const getAccountControllerRemoveMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountControllerRemove>>, TError,{id: string}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof accountControllerRemove>>, TError,{id: string}, TContext> => {
 
 const mutationKey = ['accountControllerRemove'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -267,7 +322,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof accountControllerRemove>>, {id: string}> = (props) => {
           const {id} = props ?? {};
 
-          return  accountControllerRemove(id,axiosOptions)
+          return  accountControllerRemove(id,)
         }
 
         
@@ -277,11 +332,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type AccountControllerRemoveMutationResult = NonNullable<Awaited<ReturnType<typeof accountControllerRemove>>>
     
-    export type AccountControllerRemoveMutationError = AxiosError<void>
+    export type AccountControllerRemoveMutationError = void
 
-    export const useAccountControllerRemove = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountControllerRemove>>, TError,{id: string}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useAccountControllerRemove = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountControllerRemove>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof accountControllerRemove>>,
         TError,
         {id: string},
@@ -290,22 +345,24 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getAccountControllerRemoveMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Get all balance snapshots
  */
 export const balanceSnapshotControllerFindAll = (
-     options?: AxiosRequestConfig
- ): Promise<AxiosResponse<BalanceSnapshot[]>> => {
     
-    
-    return axios.default.get(
-      `/balance-snapshot`,options
-    );
-  }
-
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<BalanceSnapshot[]>(
+      {url: `/balance-snapshot`, method: 'GET', signal
+    },
+      );
+    }
+  
 
 
 
@@ -316,37 +373,61 @@ export const getBalanceSnapshotControllerFindAllQueryKey = () => {
     }
 
     
-export const getBalanceSnapshotControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError = AxiosError<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError, TData>, axios?: AxiosRequestConfig}
+export const getBalanceSnapshotControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError, TData>>, }
 ) => {
 
-const {query: queryOptions, axios: axiosOptions} = options ?? {};
+const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getBalanceSnapshotControllerFindAllQueryKey();
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>> = ({ signal }) => balanceSnapshotControllerFindAll({ signal, ...axiosOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>> = ({ signal }) => balanceSnapshotControllerFindAll(signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type BalanceSnapshotControllerFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>>
-export type BalanceSnapshotControllerFindAllQueryError = AxiosError<unknown>
+export type BalanceSnapshotControllerFindAllQueryError = unknown
 
 
+export function useBalanceSnapshotControllerFindAll<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalanceSnapshotControllerFindAll<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalanceSnapshotControllerFindAll<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useBalanceSnapshotControllerFindAll<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError = AxiosError<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError, TData>, axios?: AxiosRequestConfig}
-  
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+export function useBalanceSnapshotControllerFindAll<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindAll>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getBalanceSnapshotControllerFindAllQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   query.queryKey = queryOptions.queryKey ;
 
@@ -361,28 +442,31 @@ export function useBalanceSnapshotControllerFindAll<TData = Awaited<ReturnType<t
  * Create a new balance snapshot
  */
 export const balanceSnapshotControllerCreate = (
-    createBalanceSnapshotDto: CreateBalanceSnapshotDto, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<BalanceSnapshot>> => {
-    
-    
-    return axios.default.post(
-      `/balance-snapshot`,
-      createBalanceSnapshotDto,options
-    );
-  }
+    createBalanceSnapshotDto: CreateBalanceSnapshotDto,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<BalanceSnapshot>(
+      {url: `/balance-snapshot`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createBalanceSnapshotDto, signal
+    },
+      );
+    }
+  
 
 
-
-export const getBalanceSnapshotControllerCreateMutationOptions = <TError = AxiosError<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerCreate>>, TError,{data: CreateBalanceSnapshotDto}, TContext>, axios?: AxiosRequestConfig}
+export const getBalanceSnapshotControllerCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerCreate>>, TError,{data: CreateBalanceSnapshotDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerCreate>>, TError,{data: CreateBalanceSnapshotDto}, TContext> => {
 
 const mutationKey = ['balanceSnapshotControllerCreate'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -390,7 +474,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof balanceSnapshotControllerCreate>>, {data: CreateBalanceSnapshotDto}> = (props) => {
           const {data} = props ?? {};
 
-          return  balanceSnapshotControllerCreate(data,axiosOptions)
+          return  balanceSnapshotControllerCreate(data,)
         }
 
         
@@ -400,11 +484,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type BalanceSnapshotControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof balanceSnapshotControllerCreate>>>
     export type BalanceSnapshotControllerCreateMutationBody = CreateBalanceSnapshotDto
-    export type BalanceSnapshotControllerCreateMutationError = AxiosError<unknown>
+    export type BalanceSnapshotControllerCreateMutationError = unknown
 
-    export const useBalanceSnapshotControllerCreate = <TError = AxiosError<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerCreate>>, TError,{data: CreateBalanceSnapshotDto}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useBalanceSnapshotControllerCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerCreate>>, TError,{data: CreateBalanceSnapshotDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof balanceSnapshotControllerCreate>>,
         TError,
         {data: CreateBalanceSnapshotDto},
@@ -413,22 +497,24 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getBalanceSnapshotControllerCreateMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Get a balance snapshot by ID
  */
 export const balanceSnapshotControllerFindOne = (
-    id: string, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<BalanceSnapshot>> => {
-    
-    
-    return axios.default.get(
-      `/balance-snapshot/${id}`,options
-    );
-  }
-
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<BalanceSnapshot>(
+      {url: `/balance-snapshot/${id}`, method: 'GET', signal
+    },
+      );
+    }
+  
 
 
 
@@ -439,37 +525,61 @@ export const getBalanceSnapshotControllerFindOneQueryKey = (id?: string,) => {
     }
 
     
-export const getBalanceSnapshotControllerFindOneQueryOptions = <TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError = AxiosError<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError, TData>, axios?: AxiosRequestConfig}
+export const getBalanceSnapshotControllerFindOneQueryOptions = <TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError = void>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError, TData>>, }
 ) => {
 
-const {query: queryOptions, axios: axiosOptions} = options ?? {};
+const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getBalanceSnapshotControllerFindOneQueryKey(id);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>> = ({ signal }) => balanceSnapshotControllerFindOne(id, { signal, ...axiosOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>> = ({ signal }) => balanceSnapshotControllerFindOne(id, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type BalanceSnapshotControllerFindOneQueryResult = NonNullable<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>>
-export type BalanceSnapshotControllerFindOneQueryError = AxiosError<void>
+export type BalanceSnapshotControllerFindOneQueryError = void
 
 
+export function useBalanceSnapshotControllerFindOne<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError = void>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalanceSnapshotControllerFindOne<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalanceSnapshotControllerFindOne<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useBalanceSnapshotControllerFindOne<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError = AxiosError<void>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError, TData>, axios?: AxiosRequestConfig}
-  
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+export function useBalanceSnapshotControllerFindOne<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindOne>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getBalanceSnapshotControllerFindOneQueryOptions(id,options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   query.queryKey = queryOptions.queryKey ;
 
@@ -485,28 +595,30 @@ export function useBalanceSnapshotControllerFindOne<TData = Awaited<ReturnType<t
  */
 export const balanceSnapshotControllerUpdate = (
     id: string,
-    updateBalanceSnapshotDto: UpdateBalanceSnapshotDto, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<BalanceSnapshot>> => {
-    
-    
-    return axios.default.patch(
-      `/balance-snapshot/${id}`,
-      updateBalanceSnapshotDto,options
-    );
-  }
+    updateBalanceSnapshotDto: UpdateBalanceSnapshotDto,
+ ) => {
+      
+      
+      return axios<BalanceSnapshot>(
+      {url: `/balance-snapshot/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateBalanceSnapshotDto
+    },
+      );
+    }
+  
 
 
-
-export const getBalanceSnapshotControllerUpdateMutationOptions = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerUpdate>>, TError,{id: string;data: UpdateBalanceSnapshotDto}, TContext>, axios?: AxiosRequestConfig}
+export const getBalanceSnapshotControllerUpdateMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerUpdate>>, TError,{id: string;data: UpdateBalanceSnapshotDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerUpdate>>, TError,{id: string;data: UpdateBalanceSnapshotDto}, TContext> => {
 
 const mutationKey = ['balanceSnapshotControllerUpdate'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -514,7 +626,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof balanceSnapshotControllerUpdate>>, {id: string;data: UpdateBalanceSnapshotDto}> = (props) => {
           const {id,data} = props ?? {};
 
-          return  balanceSnapshotControllerUpdate(id,data,axiosOptions)
+          return  balanceSnapshotControllerUpdate(id,data,)
         }
 
         
@@ -524,11 +636,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type BalanceSnapshotControllerUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof balanceSnapshotControllerUpdate>>>
     export type BalanceSnapshotControllerUpdateMutationBody = UpdateBalanceSnapshotDto
-    export type BalanceSnapshotControllerUpdateMutationError = AxiosError<void>
+    export type BalanceSnapshotControllerUpdateMutationError = void
 
-    export const useBalanceSnapshotControllerUpdate = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerUpdate>>, TError,{id: string;data: UpdateBalanceSnapshotDto}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useBalanceSnapshotControllerUpdate = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerUpdate>>, TError,{id: string;data: UpdateBalanceSnapshotDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof balanceSnapshotControllerUpdate>>,
         TError,
         {id: string;data: UpdateBalanceSnapshotDto},
@@ -537,34 +649,35 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getBalanceSnapshotControllerUpdateMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Delete a balance snapshot
  */
 export const balanceSnapshotControllerRemove = (
-    id: string, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<void>> => {
-    
-    
-    return axios.default.delete(
-      `/balance-snapshot/${id}`,options
-    );
-  }
+    id: string,
+ ) => {
+      
+      
+      return axios<void>(
+      {url: `/balance-snapshot/${id}`, method: 'DELETE'
+    },
+      );
+    }
+  
 
 
-
-export const getBalanceSnapshotControllerRemoveMutationOptions = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerRemove>>, TError,{id: string}, TContext>, axios?: AxiosRequestConfig}
+export const getBalanceSnapshotControllerRemoveMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerRemove>>, TError,{id: string}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerRemove>>, TError,{id: string}, TContext> => {
 
 const mutationKey = ['balanceSnapshotControllerRemove'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -572,7 +685,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof balanceSnapshotControllerRemove>>, {id: string}> = (props) => {
           const {id} = props ?? {};
 
-          return  balanceSnapshotControllerRemove(id,axiosOptions)
+          return  balanceSnapshotControllerRemove(id,)
         }
 
         
@@ -582,11 +695,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type BalanceSnapshotControllerRemoveMutationResult = NonNullable<Awaited<ReturnType<typeof balanceSnapshotControllerRemove>>>
     
-    export type BalanceSnapshotControllerRemoveMutationError = AxiosError<void>
+    export type BalanceSnapshotControllerRemoveMutationError = void
 
-    export const useBalanceSnapshotControllerRemove = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerRemove>>, TError,{id: string}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useBalanceSnapshotControllerRemove = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceSnapshotControllerRemove>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof balanceSnapshotControllerRemove>>,
         TError,
         {id: string},
@@ -595,22 +708,24 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getBalanceSnapshotControllerRemoveMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Get all balance snapshots for an account
  */
 export const balanceSnapshotControllerFindByAccountId = (
-    accountId: string, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<BalanceSnapshot[]>> => {
-    
-    
-    return axios.default.get(
-      `/balance-snapshot/account/${accountId}`,options
-    );
-  }
-
+    accountId: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<BalanceSnapshot[]>(
+      {url: `/balance-snapshot/account/${accountId}`, method: 'GET', signal
+    },
+      );
+    }
+  
 
 
 
@@ -621,37 +736,61 @@ export const getBalanceSnapshotControllerFindByAccountIdQueryKey = (accountId?: 
     }
 
     
-export const getBalanceSnapshotControllerFindByAccountIdQueryOptions = <TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError = AxiosError<unknown>>(accountId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError, TData>, axios?: AxiosRequestConfig}
+export const getBalanceSnapshotControllerFindByAccountIdQueryOptions = <TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError = unknown>(accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError, TData>>, }
 ) => {
 
-const {query: queryOptions, axios: axiosOptions} = options ?? {};
+const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getBalanceSnapshotControllerFindByAccountIdQueryKey(accountId);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>> = ({ signal }) => balanceSnapshotControllerFindByAccountId(accountId, { signal, ...axiosOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>> = ({ signal }) => balanceSnapshotControllerFindByAccountId(accountId, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(accountId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: !!(accountId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type BalanceSnapshotControllerFindByAccountIdQueryResult = NonNullable<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>>
-export type BalanceSnapshotControllerFindByAccountIdQueryError = AxiosError<unknown>
+export type BalanceSnapshotControllerFindByAccountIdQueryError = unknown
 
 
+export function useBalanceSnapshotControllerFindByAccountId<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError = unknown>(
+ accountId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>,
+          TError,
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalanceSnapshotControllerFindByAccountId<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError = unknown>(
+ accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>,
+          TError,
+          Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalanceSnapshotControllerFindByAccountId<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError = unknown>(
+ accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useBalanceSnapshotControllerFindByAccountId<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError = AxiosError<unknown>>(
- accountId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError, TData>, axios?: AxiosRequestConfig}
-  
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+export function useBalanceSnapshotControllerFindByAccountId<TData = Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError = unknown>(
+ accountId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceSnapshotControllerFindByAccountId>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getBalanceSnapshotControllerFindByAccountIdQueryOptions(accountId,options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   query.queryKey = queryOptions.queryKey ;
 
@@ -667,28 +806,31 @@ export function useBalanceSnapshotControllerFindByAccountId<TData = Awaited<Retu
  */
 export const bankLinkControllerInitiateLinking = (
     provider: string,
-    initiateLinkRequest: InitiateLinkRequest, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<InitiateLinkResponse>> => {
-    
-    
-    return axios.default.post(
-      `/bank-link/initiate/${provider}`,
-      initiateLinkRequest,options
-    );
-  }
+    initiateLinkRequest: InitiateLinkRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<InitiateLinkResponse>(
+      {url: `/bank-link/initiate/${provider}`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: initiateLinkRequest, signal
+    },
+      );
+    }
+  
 
 
-
-export const getBankLinkControllerInitiateLinkingMutationOptions = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerInitiateLinking>>, TError,{provider: string;data: InitiateLinkRequest}, TContext>, axios?: AxiosRequestConfig}
+export const getBankLinkControllerInitiateLinkingMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerInitiateLinking>>, TError,{provider: string;data: InitiateLinkRequest}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerInitiateLinking>>, TError,{provider: string;data: InitiateLinkRequest}, TContext> => {
 
 const mutationKey = ['bankLinkControllerInitiateLinking'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -696,7 +838,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof bankLinkControllerInitiateLinking>>, {provider: string;data: InitiateLinkRequest}> = (props) => {
           const {provider,data} = props ?? {};
 
-          return  bankLinkControllerInitiateLinking(provider,data,axiosOptions)
+          return  bankLinkControllerInitiateLinking(provider,data,)
         }
 
         
@@ -706,11 +848,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type BankLinkControllerInitiateLinkingMutationResult = NonNullable<Awaited<ReturnType<typeof bankLinkControllerInitiateLinking>>>
     export type BankLinkControllerInitiateLinkingMutationBody = InitiateLinkRequest
-    export type BankLinkControllerInitiateLinkingMutationError = AxiosError<void>
+    export type BankLinkControllerInitiateLinkingMutationError = void
 
-    export const useBankLinkControllerInitiateLinking = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerInitiateLinking>>, TError,{provider: string;data: InitiateLinkRequest}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useBankLinkControllerInitiateLinking = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerInitiateLinking>>, TError,{provider: string;data: InitiateLinkRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof bankLinkControllerInitiateLinking>>,
         TError,
         {provider: string;data: InitiateLinkRequest},
@@ -719,34 +861,36 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getBankLinkControllerInitiateLinkingMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Handle webhook from provider (called by external service)
  */
 export const bankLinkControllerHandleWebhook = (
-    provider: string, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<void>> => {
-    
-    
-    return axios.default.post(
-      `/bank-link/webhook/${provider}`,undefined,options
-    );
-  }
+    provider: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<void>(
+      {url: `/bank-link/webhook/${provider}`, method: 'POST', signal
+    },
+      );
+    }
+  
 
 
-
-export const getBankLinkControllerHandleWebhookMutationOptions = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerHandleWebhook>>, TError,{provider: string}, TContext>, axios?: AxiosRequestConfig}
+export const getBankLinkControllerHandleWebhookMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerHandleWebhook>>, TError,{provider: string}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerHandleWebhook>>, TError,{provider: string}, TContext> => {
 
 const mutationKey = ['bankLinkControllerHandleWebhook'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -754,7 +898,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof bankLinkControllerHandleWebhook>>, {provider: string}> = (props) => {
           const {provider} = props ?? {};
 
-          return  bankLinkControllerHandleWebhook(provider,axiosOptions)
+          return  bankLinkControllerHandleWebhook(provider,)
         }
 
         
@@ -764,11 +908,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type BankLinkControllerHandleWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof bankLinkControllerHandleWebhook>>>
     
-    export type BankLinkControllerHandleWebhookMutationError = AxiosError<void>
+    export type BankLinkControllerHandleWebhookMutationError = void
 
-    export const useBankLinkControllerHandleWebhook = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerHandleWebhook>>, TError,{provider: string}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useBankLinkControllerHandleWebhook = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerHandleWebhook>>, TError,{provider: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof bankLinkControllerHandleWebhook>>,
         TError,
         {provider: string},
@@ -777,34 +921,36 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getBankLinkControllerHandleWebhookMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Sync accounts for all bank links
  */
 export const bankLinkControllerSyncAllAccounts = (
-     options?: AxiosRequestConfig
- ): Promise<AxiosResponse<Account[]>> => {
     
-    
-    return axios.default.post(
-      `/bank-link/sync-all`,undefined,options
-    );
-  }
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<Account[]>(
+      {url: `/bank-link/sync-all`, method: 'POST', signal
+    },
+      );
+    }
+  
 
 
-
-export const getBankLinkControllerSyncAllAccountsMutationOptions = <TError = AxiosError<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerSyncAllAccounts>>, TError,void, TContext>, axios?: AxiosRequestConfig}
+export const getBankLinkControllerSyncAllAccountsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerSyncAllAccounts>>, TError,void, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerSyncAllAccounts>>, TError,void, TContext> => {
 
 const mutationKey = ['bankLinkControllerSyncAllAccounts'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -812,7 +958,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof bankLinkControllerSyncAllAccounts>>, void> = () => {
           
 
-          return  bankLinkControllerSyncAllAccounts(axiosOptions)
+          return  bankLinkControllerSyncAllAccounts()
         }
 
         
@@ -822,11 +968,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type BankLinkControllerSyncAllAccountsMutationResult = NonNullable<Awaited<ReturnType<typeof bankLinkControllerSyncAllAccounts>>>
     
-    export type BankLinkControllerSyncAllAccountsMutationError = AxiosError<unknown>
+    export type BankLinkControllerSyncAllAccountsMutationError = unknown
 
-    export const useBankLinkControllerSyncAllAccounts = <TError = AxiosError<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerSyncAllAccounts>>, TError,void, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useBankLinkControllerSyncAllAccounts = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerSyncAllAccounts>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof bankLinkControllerSyncAllAccounts>>,
         TError,
         void,
@@ -835,35 +981,38 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getBankLinkControllerSyncAllAccountsMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Register a new user
  */
 export const userControllerRegister = (
-    createUserDto: CreateUserDto, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<User>> => {
-    
-    
-    return axios.default.post(
-      `/user/register`,
-      createUserDto,options
-    );
-  }
+    createUserDto: CreateUserDto,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<User>(
+      {url: `/user/register`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createUserDto, signal
+    },
+      );
+    }
+  
 
 
-
-export const getUserControllerRegisterMutationOptions = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerRegister>>, TError,{data: CreateUserDto}, TContext>, axios?: AxiosRequestConfig}
+export const getUserControllerRegisterMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerRegister>>, TError,{data: CreateUserDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof userControllerRegister>>, TError,{data: CreateUserDto}, TContext> => {
 
 const mutationKey = ['userControllerRegister'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -871,7 +1020,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerRegister>>, {data: CreateUserDto}> = (props) => {
           const {data} = props ?? {};
 
-          return  userControllerRegister(data,axiosOptions)
+          return  userControllerRegister(data,)
         }
 
         
@@ -881,11 +1030,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type UserControllerRegisterMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerRegister>>>
     export type UserControllerRegisterMutationBody = CreateUserDto
-    export type UserControllerRegisterMutationError = AxiosError<void>
+    export type UserControllerRegisterMutationError = void
 
-    export const useUserControllerRegister = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerRegister>>, TError,{data: CreateUserDto}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useUserControllerRegister = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerRegister>>, TError,{data: CreateUserDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof userControllerRegister>>,
         TError,
         {data: CreateUserDto},
@@ -894,35 +1043,38 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getUserControllerRegisterMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Login and get JWT token
  */
 export const userControllerLogin = (
-    loginDto: LoginDto, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<LoginResponse>> => {
-    
-    
-    return axios.default.post(
-      `/user/login`,
-      loginDto,options
-    );
-  }
+    loginDto: LoginDto,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<LoginResponse>(
+      {url: `/user/login`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: loginDto, signal
+    },
+      );
+    }
+  
 
 
-
-export const getUserControllerLoginMutationOptions = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerLogin>>, TError,{data: LoginDto}, TContext>, axios?: AxiosRequestConfig}
+export const getUserControllerLoginMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerLogin>>, TError,{data: LoginDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof userControllerLogin>>, TError,{data: LoginDto}, TContext> => {
 
 const mutationKey = ['userControllerLogin'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -930,7 +1082,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerLogin>>, {data: LoginDto}> = (props) => {
           const {data} = props ?? {};
 
-          return  userControllerLogin(data,axiosOptions)
+          return  userControllerLogin(data,)
         }
 
         
@@ -940,11 +1092,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type UserControllerLoginMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerLogin>>>
     export type UserControllerLoginMutationBody = LoginDto
-    export type UserControllerLoginMutationError = AxiosError<void>
+    export type UserControllerLoginMutationError = void
 
-    export const useUserControllerLogin = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerLogin>>, TError,{data: LoginDto}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useUserControllerLogin = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerLogin>>, TError,{data: LoginDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof userControllerLogin>>,
         TError,
         {data: LoginDto},
@@ -953,22 +1105,24 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getUserControllerLoginMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Get current user profile
  */
 export const userControllerMe = (
-     options?: AxiosRequestConfig
- ): Promise<AxiosResponse<User>> => {
     
-    
-    return axios.default.get(
-      `/user/me`,options
-    );
-  }
-
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<User>(
+      {url: `/user/me`, method: 'GET', signal
+    },
+      );
+    }
+  
 
 
 
@@ -979,37 +1133,61 @@ export const getUserControllerMeQueryKey = () => {
     }
 
     
-export const getUserControllerMeQueryOptions = <TData = Awaited<ReturnType<typeof userControllerMe>>, TError = AxiosError<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof userControllerMe>>, TError, TData>, axios?: AxiosRequestConfig}
+export const getUserControllerMeQueryOptions = <TData = Awaited<ReturnType<typeof userControllerMe>>, TError = void>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof userControllerMe>>, TError, TData>>, }
 ) => {
 
-const {query: queryOptions, axios: axiosOptions} = options ?? {};
+const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getUserControllerMeQueryKey();
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof userControllerMe>>> = ({ signal }) => userControllerMe({ signal, ...axiosOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof userControllerMe>>> = ({ signal }) => userControllerMe(signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof userControllerMe>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof userControllerMe>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type UserControllerMeQueryResult = NonNullable<Awaited<ReturnType<typeof userControllerMe>>>
-export type UserControllerMeQueryError = AxiosError<void>
+export type UserControllerMeQueryError = void
 
 
+export function useUserControllerMe<TData = Awaited<ReturnType<typeof userControllerMe>>, TError = void>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof userControllerMe>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof userControllerMe>>,
+          TError,
+          Awaited<ReturnType<typeof userControllerMe>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUserControllerMe<TData = Awaited<ReturnType<typeof userControllerMe>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof userControllerMe>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof userControllerMe>>,
+          TError,
+          Awaited<ReturnType<typeof userControllerMe>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUserControllerMe<TData = Awaited<ReturnType<typeof userControllerMe>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof userControllerMe>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useUserControllerMe<TData = Awaited<ReturnType<typeof userControllerMe>>, TError = AxiosError<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof userControllerMe>>, TError, TData>, axios?: AxiosRequestConfig}
-  
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+export function useUserControllerMe<TData = Awaited<ReturnType<typeof userControllerMe>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof userControllerMe>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getUserControllerMeQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   query.queryKey = queryOptions.queryKey ;
 
@@ -1024,17 +1202,18 @@ export function useUserControllerMe<TData = Awaited<ReturnType<typeof userContro
  * Get all transactions
  */
 export const transactionControllerFindAll = (
-    params?: TransactionControllerFindAllParams, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<Transaction[]>> => {
-    
-    
-    return axios.default.get(
-      `/transaction`,{
-    ...options,
-        params: {...params, ...options?.params},}
-    );
-  }
-
+    params?: TransactionControllerFindAllParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<Transaction[]>(
+      {url: `/transaction`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
 
 
 
@@ -1045,37 +1224,61 @@ export const getTransactionControllerFindAllQueryKey = (params?: TransactionCont
     }
 
     
-export const getTransactionControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof transactionControllerFindAll>>, TError = AxiosError<unknown>>(params?: TransactionControllerFindAllParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindAll>>, TError, TData>, axios?: AxiosRequestConfig}
+export const getTransactionControllerFindAllQueryOptions = <TData = Awaited<ReturnType<typeof transactionControllerFindAll>>, TError = unknown>(params?: TransactionControllerFindAllParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindAll>>, TError, TData>>, }
 ) => {
 
-const {query: queryOptions, axios: axiosOptions} = options ?? {};
+const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getTransactionControllerFindAllQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof transactionControllerFindAll>>> = ({ signal }) => transactionControllerFindAll(params, { signal, ...axiosOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof transactionControllerFindAll>>> = ({ signal }) => transactionControllerFindAll(params, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindAll>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindAll>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type TransactionControllerFindAllQueryResult = NonNullable<Awaited<ReturnType<typeof transactionControllerFindAll>>>
-export type TransactionControllerFindAllQueryError = AxiosError<unknown>
+export type TransactionControllerFindAllQueryError = unknown
 
 
+export function useTransactionControllerFindAll<TData = Awaited<ReturnType<typeof transactionControllerFindAll>>, TError = unknown>(
+ params: undefined |  TransactionControllerFindAllParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindAll>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof transactionControllerFindAll>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTransactionControllerFindAll<TData = Awaited<ReturnType<typeof transactionControllerFindAll>>, TError = unknown>(
+ params?: TransactionControllerFindAllParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindAll>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof transactionControllerFindAll>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTransactionControllerFindAll<TData = Awaited<ReturnType<typeof transactionControllerFindAll>>, TError = unknown>(
+ params?: TransactionControllerFindAllParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindAll>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useTransactionControllerFindAll<TData = Awaited<ReturnType<typeof transactionControllerFindAll>>, TError = AxiosError<unknown>>(
- params?: TransactionControllerFindAllParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindAll>>, TError, TData>, axios?: AxiosRequestConfig}
-  
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+export function useTransactionControllerFindAll<TData = Awaited<ReturnType<typeof transactionControllerFindAll>>, TError = unknown>(
+ params?: TransactionControllerFindAllParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindAll>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getTransactionControllerFindAllQueryOptions(params,options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   query.queryKey = queryOptions.queryKey ;
 
@@ -1090,28 +1293,31 @@ export function useTransactionControllerFindAll<TData = Awaited<ReturnType<typeo
  * Create a new transaction
  */
 export const transactionControllerCreate = (
-    createTransactionDto: CreateTransactionDto, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<Transaction>> => {
-    
-    
-    return axios.default.post(
-      `/transaction`,
-      createTransactionDto,options
-    );
-  }
+    createTransactionDto: CreateTransactionDto,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<Transaction>(
+      {url: `/transaction`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createTransactionDto, signal
+    },
+      );
+    }
+  
 
 
-
-export const getTransactionControllerCreateMutationOptions = <TError = AxiosError<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerCreate>>, TError,{data: CreateTransactionDto}, TContext>, axios?: AxiosRequestConfig}
+export const getTransactionControllerCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerCreate>>, TError,{data: CreateTransactionDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof transactionControllerCreate>>, TError,{data: CreateTransactionDto}, TContext> => {
 
 const mutationKey = ['transactionControllerCreate'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -1119,7 +1325,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof transactionControllerCreate>>, {data: CreateTransactionDto}> = (props) => {
           const {data} = props ?? {};
 
-          return  transactionControllerCreate(data,axiosOptions)
+          return  transactionControllerCreate(data,)
         }
 
         
@@ -1129,11 +1335,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type TransactionControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof transactionControllerCreate>>>
     export type TransactionControllerCreateMutationBody = CreateTransactionDto
-    export type TransactionControllerCreateMutationError = AxiosError<unknown>
+    export type TransactionControllerCreateMutationError = unknown
 
-    export const useTransactionControllerCreate = <TError = AxiosError<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerCreate>>, TError,{data: CreateTransactionDto}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useTransactionControllerCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerCreate>>, TError,{data: CreateTransactionDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof transactionControllerCreate>>,
         TError,
         {data: CreateTransactionDto},
@@ -1142,22 +1348,24 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getTransactionControllerCreateMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Get a transaction by ID
  */
 export const transactionControllerFindOne = (
-    id: string, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<Transaction>> => {
-    
-    
-    return axios.default.get(
-      `/transaction/${id}`,options
-    );
-  }
-
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<Transaction>(
+      {url: `/transaction/${id}`, method: 'GET', signal
+    },
+      );
+    }
+  
 
 
 
@@ -1168,37 +1376,61 @@ export const getTransactionControllerFindOneQueryKey = (id?: string,) => {
     }
 
     
-export const getTransactionControllerFindOneQueryOptions = <TData = Awaited<ReturnType<typeof transactionControllerFindOne>>, TError = AxiosError<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindOne>>, TError, TData>, axios?: AxiosRequestConfig}
+export const getTransactionControllerFindOneQueryOptions = <TData = Awaited<ReturnType<typeof transactionControllerFindOne>>, TError = void>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindOne>>, TError, TData>>, }
 ) => {
 
-const {query: queryOptions, axios: axiosOptions} = options ?? {};
+const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getTransactionControllerFindOneQueryKey(id);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof transactionControllerFindOne>>> = ({ signal }) => transactionControllerFindOne(id, { signal, ...axiosOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof transactionControllerFindOne>>> = ({ signal }) => transactionControllerFindOne(id, signal);
 
       
 
       
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindOne>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindOne>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type TransactionControllerFindOneQueryResult = NonNullable<Awaited<ReturnType<typeof transactionControllerFindOne>>>
-export type TransactionControllerFindOneQueryError = AxiosError<void>
+export type TransactionControllerFindOneQueryError = void
 
 
+export function useTransactionControllerFindOne<TData = Awaited<ReturnType<typeof transactionControllerFindOne>>, TError = void>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindOne>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof transactionControllerFindOne>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTransactionControllerFindOne<TData = Awaited<ReturnType<typeof transactionControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindOne>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof transactionControllerFindOne>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTransactionControllerFindOne<TData = Awaited<ReturnType<typeof transactionControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindOne>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useTransactionControllerFindOne<TData = Awaited<ReturnType<typeof transactionControllerFindOne>>, TError = AxiosError<void>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindOne>>, TError, TData>, axios?: AxiosRequestConfig}
-  
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+export function useTransactionControllerFindOne<TData = Awaited<ReturnType<typeof transactionControllerFindOne>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof transactionControllerFindOne>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getTransactionControllerFindOneQueryOptions(id,options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   query.queryKey = queryOptions.queryKey ;
 
@@ -1214,28 +1446,30 @@ export function useTransactionControllerFindOne<TData = Awaited<ReturnType<typeo
  */
 export const transactionControllerUpdate = (
     id: string,
-    updateTransactionDto: UpdateTransactionDto, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<Transaction>> => {
-    
-    
-    return axios.default.patch(
-      `/transaction/${id}`,
-      updateTransactionDto,options
-    );
-  }
+    updateTransactionDto: UpdateTransactionDto,
+ ) => {
+      
+      
+      return axios<Transaction>(
+      {url: `/transaction/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateTransactionDto
+    },
+      );
+    }
+  
 
 
-
-export const getTransactionControllerUpdateMutationOptions = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerUpdate>>, TError,{id: string;data: UpdateTransactionDto}, TContext>, axios?: AxiosRequestConfig}
+export const getTransactionControllerUpdateMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerUpdate>>, TError,{id: string;data: UpdateTransactionDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof transactionControllerUpdate>>, TError,{id: string;data: UpdateTransactionDto}, TContext> => {
 
 const mutationKey = ['transactionControllerUpdate'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -1243,7 +1477,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof transactionControllerUpdate>>, {id: string;data: UpdateTransactionDto}> = (props) => {
           const {id,data} = props ?? {};
 
-          return  transactionControllerUpdate(id,data,axiosOptions)
+          return  transactionControllerUpdate(id,data,)
         }
 
         
@@ -1253,11 +1487,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type TransactionControllerUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof transactionControllerUpdate>>>
     export type TransactionControllerUpdateMutationBody = UpdateTransactionDto
-    export type TransactionControllerUpdateMutationError = AxiosError<void>
+    export type TransactionControllerUpdateMutationError = void
 
-    export const useTransactionControllerUpdate = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerUpdate>>, TError,{id: string;data: UpdateTransactionDto}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useTransactionControllerUpdate = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerUpdate>>, TError,{id: string;data: UpdateTransactionDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof transactionControllerUpdate>>,
         TError,
         {id: string;data: UpdateTransactionDto},
@@ -1266,34 +1500,35 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getTransactionControllerUpdateMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
 /**
  * Delete a transaction
  */
 export const transactionControllerRemove = (
-    id: string, options?: AxiosRequestConfig
- ): Promise<AxiosResponse<void>> => {
-    
-    
-    return axios.default.delete(
-      `/transaction/${id}`,options
-    );
-  }
+    id: string,
+ ) => {
+      
+      
+      return axios<void>(
+      {url: `/transaction/${id}`, method: 'DELETE'
+    },
+      );
+    }
+  
 
 
-
-export const getTransactionControllerRemoveMutationOptions = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerRemove>>, TError,{id: string}, TContext>, axios?: AxiosRequestConfig}
+export const getTransactionControllerRemoveMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerRemove>>, TError,{id: string}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof transactionControllerRemove>>, TError,{id: string}, TContext> => {
 
 const mutationKey = ['transactionControllerRemove'];
-const {mutation: mutationOptions, axios: axiosOptions} = options ?
+const {mutation: mutationOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, axios: undefined};
+      : {mutation: { mutationKey, }};
 
       
 
@@ -1301,7 +1536,7 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof transactionControllerRemove>>, {id: string}> = (props) => {
           const {id} = props ?? {};
 
-          return  transactionControllerRemove(id,axiosOptions)
+          return  transactionControllerRemove(id,)
         }
 
         
@@ -1311,11 +1546,11 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
     export type TransactionControllerRemoveMutationResult = NonNullable<Awaited<ReturnType<typeof transactionControllerRemove>>>
     
-    export type TransactionControllerRemoveMutationError = AxiosError<void>
+    export type TransactionControllerRemoveMutationError = void
 
-    export const useTransactionControllerRemove = <TError = AxiosError<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerRemove>>, TError,{id: string}, TContext>, axios?: AxiosRequestConfig}
- ): UseMutationResult<
+    export const useTransactionControllerRemove = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transactionControllerRemove>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof transactionControllerRemove>>,
         TError,
         {id: string},
@@ -1324,6 +1559,6 @@ const {mutation: mutationOptions, axios: axiosOptions} = options ?
 
       const mutationOptions = getTransactionControllerRemoveMutationOptions(options);
 
-      return useMutation(mutationOptions);
+      return useMutation(mutationOptions, queryClient);
     }
     
