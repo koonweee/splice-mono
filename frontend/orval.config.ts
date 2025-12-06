@@ -8,6 +8,12 @@ export default defineConfig({
       schemas: './src/api/models',
       client: 'react-query',
       mode: 'split',
+      override: {
+        mutator: {
+          path: './src/api/axios.ts',
+          name: 'axios',
+        },
+      },
     },
   },
 })
