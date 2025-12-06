@@ -1,0 +1,523 @@
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
+import { AccountEntity } from '../account/account.entity';
+import { BalanceColumns } from '../common/balance.columns';
+import { OwnedCrudService } from '../common/owned-crud.service';
+import {
+  LinkedAccountCreatedEvent,
+  LinkedAccountEvents,
+  LinkedAccountUpdatedEvent,
+} from '../events/account.events';
+import type { Account, CreateAccountDto } from '../types/Account';
+import type {
+  APIAccount,
+  BankLink,
+  CreateBankLinkDto,
+  InitiateLinkResponse,
+  UpdateBankLinkDto,
+} from '../types/BankLink';
+import { UserService } from '../user/user.service';
+import { WebhookEventService } from '../webhook-event/webhook-event.service';
+import { BankLinkEntity } from './bank-link.entity';
+import { ProviderRegistry } from './providers/provider.registry';
+
+/**
+ * Orchestrates bank account linking across multiple providers
+ * Manages the lifecycle: initiation -> webhook -> completion
+ */
+@Injectable()
+export class BankLinkService extends OwnedCrudService<
+  BankLinkEntity,
+  BankLink,
+  CreateBankLinkDto,
+  UpdateBankLinkDto
+> {
+  protected readonly logger = new Logger(BankLinkService.name);
+  protected readonly entityName = 'BankLink';
+  protected readonly EntityClass = BankLinkEntity;
+
+  constructor(
+    @InjectRepository(BankLinkEntity)
+    bankLinkRepository: Repository<BankLinkEntity>,
+    private providerRegistry: ProviderRegistry,
+    private webhookEventService: WebhookEventService,
+    @InjectRepository(AccountEntity)
+    private accountRepository: Repository<AccountEntity>,
+    private eventEmitter: EventEmitter2,
+    private userService: UserService,
+  ) {
+    super(bankLinkRepository);
+  }
+
+  protected applyUpdate(entity: BankLinkEntity, dto: UpdateBankLinkDto): void {
+    if (dto.providerName !== undefined) {
+      entity.providerName = dto.providerName;
+    }
+    if (dto.authentication !== undefined) {
+      entity.authentication = dto.authentication;
+    }
+    if (dto.accountIds !== undefined) {
+      entity.accountIds = dto.accountIds;
+    }
+  }
+
+  /**
+   * Step 1: Initiate bank account linking
+   * Creates a pending webhook event and returns link info for frontend
+   *
+   * @param accountId - Internal Account ID to link
+   * @param providerName - Provider to use (e.g., 'plaid', 'simplefin')
+   * @param userId - User initiating the link
+   * @param redirectUri - Optional redirect after linking
+   * @returns Link information for frontend
+   */
+  async initiateLinking(
+    accountId: string,
+    providerName: string,
+    userId: string,
+    redirectUri?: string,
+  ): Promise<InitiateLinkResponse> {
+    this.logger.log(
+      `Initiating link for account ${accountId} with provider ${providerName} for user ${userId}`,
+    );
+
+    // Get provider
+    const provider = this.providerRegistry.getProvider(providerName);
+
+    // Fetch existing provider-specific user details
+    const providerUserDetails = await this.userService.getProviderDetails(
+      userId,
+      providerName,
+    );
+
+    // Call provider to get link URL/token
+    const linkResponse = await provider.initiateLinking({
+      internalAccountId: accountId,
+      userId,
+      redirectUri,
+      providerUserDetails,
+    });
+
+    // If provider returned updated user details, persist them
+    if (linkResponse.updatedProviderUserDetails) {
+      await this.userService.updateProviderDetails(
+        userId,
+        providerName,
+        linkResponse.updatedProviderUserDetails,
+      );
+      this.logger.log(
+        `Updated provider details for user ${userId}, provider ${providerName}`,
+      );
+    }
+
+    // Create pending webhook event to track this link request
+    // The webhookId (e.g., link_token for Plaid) will be used to correlate the webhook callback
+    if (linkResponse.webhookId) {
+      await this.webhookEventService.createPending(
+        linkResponse.webhookId,
+        providerName,
+        userId,
+        linkResponse.expiresAt,
+      );
+      this.logger.log(
+        `Created pending webhook event for webhookId=${linkResponse.webhookId}`,
+      );
+    }
+
+    return linkResponse;
+  }
+
+  /**
+   * Step 2: Handle webhook from provider
+   * Looks up pending webhook event by webhookId, processes if pending, marks as completed
+   *
+   * @param providerName - Provider sending webhook
+   * @param rawBody - Raw webhook body as string (for signature verification)
+   * @param headers - HTTP headers from the request
+   * @param parsedPayload - Parsed webhook body
+   */
+  async handleWebhook(
+    providerName: string,
+    rawBody: string,
+    headers: Record<string, string>,
+    parsedPayload: Record<string, any>,
+  ): Promise<void> {
+    this.logger.log(`Received webhook from provider ${providerName}`);
+
+    // Get provider
+    const provider = this.providerRegistry.getProvider(providerName);
+
+    // Step 1: Verify webhook signature before processing
+    const isValid = await provider.verifyWebhook(rawBody, headers);
+    if (!isValid) {
+      this.logger.warn(
+        `Webhook verification failed for provider ${providerName}`,
+      );
+      throw new UnauthorizedException('Invalid webhook signature');
+    }
+    this.logger.log(
+      `Webhook verified successfully for provider ${providerName}`,
+    );
+
+    // Step 2: Extract webhookId and check if we should process this webhook type
+    const webhookId = provider.shouldProcessWebhook(parsedPayload);
+    if (!webhookId) {
+      this.logger.log(
+        `Webhook from ${providerName} not a processable type, skipping`,
+      );
+      return;
+    }
+
+    // Step 3: Look up pending webhook event by webhookId to get userId
+    const pendingEvent =
+      await this.webhookEventService.findPendingByWebhookId(webhookId);
+    if (!pendingEvent) {
+      this.logger.warn(
+        `No pending webhook event found for webhookId=${webhookId}. ` +
+          `Either already processed, expired, or initiation was never called.`,
+      );
+      return;
+    }
+
+    const userId = pendingEvent.userId;
+    this.logger.log(
+      `Found pending webhook event for webhookId=${webhookId}, userId=${userId}`,
+    );
+
+    // Step 4: Process the webhook
+    try {
+      const linkCompletionResponses =
+        await provider.processWebhook(parsedPayload);
+      if (!linkCompletionResponses) {
+        this.logger.warn(
+          `No link completion responses from provider ${providerName}`,
+        );
+        await this.webhookEventService.markFailed(
+          webhookId,
+          'No link completion responses from provider',
+          parsedPayload,
+        );
+        return;
+      }
+
+      // Bank links from link completion responses
+      const bankLinks = linkCompletionResponses.map((response) => {
+        return BankLinkEntity.fromDto(
+          {
+            providerName: providerName,
+            authentication: response.authentication,
+            accountIds: response.accounts.map((account) => account.accountId),
+            institutionId: response.institution?.id ?? null,
+            institutionName: response.institution?.name ?? null,
+          },
+          userId,
+        );
+      });
+
+      // Save bank links
+      const savedBankLinks = await this.repository.save(bankLinks);
+      this.logger.log(`Saved ${savedBankLinks.length} bank links`);
+
+      // Map of external account ids to bank link entities
+      const accountIdToBankLink = new Map<string, BankLinkEntity>();
+      savedBankLinks.forEach((bankLink) => {
+        bankLink.accountIds.forEach((accountId) => {
+          accountIdToBankLink.set(accountId, bankLink);
+        });
+      });
+
+      // Flat map of all accounts
+      const allAccounts = linkCompletionResponses.flatMap(
+        (response) => response.accounts,
+      );
+
+      // Create accounts from all accounts using helper method
+      const accounts = allAccounts.map((apiAccount) => {
+        const bankLinkId = accountIdToBankLink.get(apiAccount.accountId)?.id;
+        if (!bankLinkId) {
+          throw new Error(
+            `Bank link not found for account ${apiAccount.accountId}`,
+          );
+        }
+        const dto = this.createAccountDtoFromAPIAccount(apiAccount, bankLinkId);
+        return AccountEntity.fromDto(dto, userId);
+      });
+
+      // Save accounts
+      const savedAccounts = await this.accountRepository.save(accounts);
+      this.logger.log(`Saved ${savedAccounts.length} accounts`);
+
+      // Emit linked account created events for all new accounts
+      for (const account of savedAccounts) {
+        this.eventEmitter.emit(
+          LinkedAccountEvents.CREATED,
+          new LinkedAccountCreatedEvent(account.toObject()),
+        );
+      }
+
+      // Mark webhook event as completed
+      await this.webhookEventService.markCompleted(webhookId, parsedPayload);
+      this.logger.log(
+        `Webhook processing completed for webhookId=${webhookId}`,
+      );
+    } catch (error) {
+      // Mark webhook event as failed
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      await this.webhookEventService.markFailed(
+        webhookId,
+        errorMessage,
+        parsedPayload,
+      );
+      this.logger.error(
+        `Webhook processing failed for webhookId=${webhookId}: ${errorMessage}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Sync accounts for all bank links for a user
+   *
+   * @param userId - ID of the user whose bank links to sync
+   * @returns Updated accounts from all bank links
+   */
+  async syncAllAccounts(userId: string): Promise<Account[]> {
+    this.logger.log(`Syncing accounts for all bank links for userId=${userId}`);
+
+    const bankLinks = await this.repository.find({
+      where: { userId },
+    });
+    this.logger.log(`Found ${bankLinks.length} bank links to sync`);
+
+    const allAccounts: Account[] = [];
+    for (const bankLink of bankLinks) {
+      try {
+        const accounts = await this.syncAccounts(bankLink.id, userId);
+        allAccounts.push(...accounts);
+      } catch (error) {
+        this.logger.error(
+          `Failed to sync accounts for bank link ${bankLink.id}: ${error}`,
+        );
+      }
+    }
+
+    this.logger.log(`Synced ${allAccounts.length} accounts total`);
+    return allAccounts;
+  }
+
+  /**
+   * Sync accounts for all bank links across all users (system operation)
+   * Used by scheduled tasks and admin operations
+   *
+   * @returns Updated accounts from all bank links
+   */
+  async syncAllAccountsSystem(): Promise<Account[]> {
+    this.logger.log('Syncing accounts for all bank links (system operation)');
+
+    const bankLinks = await this.repository.find();
+    this.logger.log(`Found ${bankLinks.length} bank links to sync`);
+
+    const allAccounts: Account[] = [];
+    for (const bankLink of bankLinks) {
+      try {
+        const accounts = await this.syncAccounts(bankLink.id, bankLink.userId);
+        allAccounts.push(...accounts);
+      } catch (error) {
+        this.logger.error(
+          `Failed to sync accounts for bank link ${bankLink.id}: ${error}`,
+        );
+      }
+    }
+
+    this.logger.log(`Synced ${allAccounts.length} accounts total`);
+    return allAccounts;
+  }
+
+  /**
+   * Sync accounts for a bank link by fetching latest data from the provider
+   *
+   * @param bankLinkId - The ID of the bank link to sync
+   * @param userId - ID of the user who owns this bank link
+   * @returns Updated accounts
+   */
+  async syncAccounts(bankLinkId: string, userId: string): Promise<Account[]> {
+    this.logger.log(
+      `Syncing accounts for bank link ${bankLinkId}, userId=${userId}`,
+    );
+
+    // Get bank link entity (scoped by userId)
+    const bankLink = await this.repository.findOne({
+      where: { id: bankLinkId, userId },
+    });
+    if (!bankLink) {
+      throw new Error(`Bank link not found: ${bankLinkId}`);
+    }
+
+    // Get provider
+    const provider = this.providerRegistry.getProvider(bankLink.providerName);
+
+    // Fetch accounts and institution info from provider
+    const { accounts: apiAccounts, institution } = await provider.getAccounts(
+      bankLink.authentication,
+    );
+    this.logger.log(
+      `Fetched ${apiAccounts.length} accounts from ${bankLink.providerName}`,
+    );
+
+    // Update bank link institution info if changed
+    if (institution) {
+      const institutionId = institution.id ?? null;
+      const institutionName = institution.name ?? null;
+      if (
+        bankLink.institutionId !== institutionId ||
+        bankLink.institutionName !== institutionName
+      ) {
+        bankLink.institutionId = institutionId;
+        bankLink.institutionName = institutionName;
+        await this.repository.save(bankLink);
+        this.logger.log(
+          `Updated institution info for bank link ${bankLinkId}: ${institutionName} (${institutionId})`,
+        );
+      }
+    }
+
+    // Create mapping of all external account IDs to this bank link ID
+    const accountIdToBankLinkId = new Map<string, string>();
+    apiAccounts.forEach((apiAccount) => {
+      accountIdToBankLinkId.set(apiAccount.accountId, bankLink.id);
+    });
+
+    // Upsert accounts using shared method
+    const savedAccounts = await this.upsertAccountsFromAPI(
+      apiAccounts,
+      accountIdToBankLinkId,
+      bankLink.userId,
+    );
+    this.logger.log(`Synced ${savedAccounts.length} accounts`);
+
+    return savedAccounts;
+  }
+
+  /**
+   * Upsert accounts from API responses - updates existing accounts or creates new ones
+   *
+   * @param apiAccounts - Accounts from the provider API
+   * @param accountIdToBankLinkId - Map of external account ID to bank link ID
+   * @param userId - ID of the user who owns these accounts
+   * @returns Saved account domain objects
+   */
+  async upsertAccountsFromAPI(
+    apiAccounts: APIAccount[],
+    accountIdToBankLinkId: Map<string, string>,
+    userId: string,
+  ): Promise<Account[]> {
+    if (apiAccounts.length === 0) {
+      return [];
+    }
+
+    // Get existing accounts by external account IDs (scoped by userId)
+    const externalAccountIds = apiAccounts.map((a) => a.accountId);
+    const existingAccounts = await this.accountRepository.find({
+      where: { externalAccountId: In(externalAccountIds), userId },
+    });
+
+    // Create a map of external account ID to existing entity
+    const existingAccountMap = new Map<string, AccountEntity>();
+    existingAccounts.forEach((account) => {
+      if (account.externalAccountId) {
+        existingAccountMap.set(account.externalAccountId, account);
+      }
+    });
+
+    // Update existing accounts or create new ones
+    const accountsToSave: AccountEntity[] = [];
+    const newAccountExternalIds = new Set<string>();
+
+    for (const apiAccount of apiAccounts) {
+      const bankLinkId = accountIdToBankLinkId.get(apiAccount.accountId);
+      if (!bankLinkId) {
+        throw new Error(
+          `Bank link ID not found for account ${apiAccount.accountId}`,
+        );
+      }
+
+      const dto = this.createAccountDtoFromAPIAccount(apiAccount, bankLinkId);
+      const existingAccount = existingAccountMap.get(apiAccount.accountId);
+      if (existingAccount) {
+        this.applyAccountDtoToEntity(existingAccount, dto);
+        accountsToSave.push(existingAccount);
+      } else {
+        accountsToSave.push(AccountEntity.fromDto(dto, userId));
+        newAccountExternalIds.add(apiAccount.accountId);
+      }
+    }
+
+    const savedAccounts = await this.accountRepository.save(accountsToSave);
+
+    // Emit events for saved accounts
+    for (const account of savedAccounts) {
+      const accountObj = account.toObject();
+      if (
+        account.externalAccountId &&
+        newAccountExternalIds.has(account.externalAccountId)
+      ) {
+        this.eventEmitter.emit(
+          LinkedAccountEvents.CREATED,
+          new LinkedAccountCreatedEvent(accountObj),
+        );
+      } else {
+        this.eventEmitter.emit(
+          LinkedAccountEvents.UPDATED,
+          new LinkedAccountUpdatedEvent(accountObj),
+        );
+      }
+    }
+
+    return savedAccounts.map((account) => account.toObject());
+  }
+
+  /**
+   * Convert an APIAccount to a CreateAccountDto
+   */
+  private createAccountDtoFromAPIAccount(
+    apiAccount: APIAccount,
+    bankLinkId: string,
+  ): CreateAccountDto {
+    return {
+      name: apiAccount.name,
+      mask: apiAccount.mask,
+      availableBalance: apiAccount.availableBalance,
+      currentBalance: apiAccount.currentBalance,
+      type: apiAccount.type,
+      subType: apiAccount.subType,
+      externalAccountId: apiAccount.accountId,
+      rawApiAccount: apiAccount,
+      bankLinkId,
+    };
+  }
+
+  /**
+   * Apply a CreateAccountDto to an existing AccountEntity
+   */
+  private applyAccountDtoToEntity(
+    entity: AccountEntity,
+    dto: CreateAccountDto,
+  ): void {
+    entity.name = dto.name;
+    entity.mask = dto.mask ?? null;
+    entity.availableBalance = BalanceColumns.fromMoneyWithSign(
+      dto.availableBalance,
+    );
+    entity.currentBalance = BalanceColumns.fromMoneyWithSign(
+      dto.currentBalance,
+    );
+    entity.type = dto.type;
+    entity.subType = dto.subType;
+    entity.externalAccountId = dto.externalAccountId ?? null;
+    entity.rawApiAccount = dto.rawApiAccount ?? null;
+    entity.bankLinkId = dto.bankLinkId ?? null;
+  }
+}

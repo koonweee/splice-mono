@@ -1,0 +1,465 @@
+---
+description: Complete guide for adding new entities and modules to the NestJS application
+globs:
+  - 'src/**/*.ts'
+  - 'src/types/*.ts'
+alwaysApply: true
+---
+
+# Adding New Entities and Modules
+
+This guide covers the complete workflow for adding a new entity/module to the application, from defining types to implementing tests.
+
+## Overview
+
+When adding a new entity (e.g., `Account`, `Transaction`, `User`), you need to create:
+
+1. **Type definitions** in `src/types/`
+2. **Module folder** in `src/{module-name}/` containing:
+   - Entity (`.entity.ts`)
+   - Service (`.service.ts`)
+   - Controller (`.controller.ts`)
+   - Module (`.module.ts`)
+3. **Tests** in `test/{module-name}/`
+4. **Mocks** in `test/mocks/{module-name}/`
+
+## Step 1: Define Types (`src/types/`)
+
+### Type file structure
+
+Create `src/types/{EntityName}.ts` with:
+
+- **Enums** for structured values (use `z.nativeEnum()` for schemas)
+- **Main domain type schema** with all fields
+- **CreateDto schema** (usually same as domain minus `id`)
+- **UpdateDto schema** (use `.partial()` on CreateDto)
+- **Infer TypeScript types** using `z.infer<typeof Schema>`
+
+### Type definition best practices
+
+- **Always use Zod** for schema validation
+- **Create shared types separately** - Types that could be reused across multiple entities (like `MoneyWithSign`, `Address`, `Contact`) should be in their own type file, not embedded in a single entity type
+- **Import and compose** shared types (e.g., `MoneyWithSignSchema`)
+- **Use `.optional()`** for optional fields in schemas
+- **Keep types pure** - no business logic, just structure
+- **Add section comments** to clarify intent (e.g., `/** Service arguments */`)
+
+## Step 2: Create Entity (`src/{module}/`)
+
+See **[Repository Entity Guidelines](repository-entities.mdc)** for complete entity patterns.
+
+### Key requirements
+
+- **Use `@PrimaryGeneratedColumn('uuid')`** for ID generation
+- **Flatten nested objects** into separate columns
+- **Use `{ nullable: true }`** for optional fields
+- **Must implement `fromDto()`** static method - converts DTO to entity for saving
+- **Must implement `toObject()`** instance method - converts entity to domain object
+- **Import types from `../types/`** not from entity file
+
+## Step 3: Create Service (`src/{module}/`)
+
+### Key requirements
+
+- **Use `@Injectable()` decorator**
+- **Inject repository** using `@InjectRepository(EntityEntity)`
+- **Always use `EntityEntity.fromDto()`** before saving
+- **Always use `.toObject()`** before returning
+- **Return domain types**, not entities
+- **Keep business logic in services**, not controllers
+
+### Standard CRUD methods
+
+- `create(dto): Promise<Entity>`
+- `findOne(id): Promise<Entity | null>`
+- `findAll(): Promise<Entity[]>`
+- `update(id, dto): Promise<Entity | null>`
+- `remove(id): Promise<boolean>`
+
+## Step 4: Create Controller (`src/{module}/`)
+
+### Controller file structure
+
+Create `src/{module}/{module}.controller.ts`:
+
+```typescript
+@ApiTags('entity')
+@Controller('entity')
+export class EntityController {
+  constructor(private entityService: EntityService) {}
+
+  @Get()
+  @ApiOperation({ description: 'Get all entities' })
+  @ApiResponse({ status: 200, description: 'Returns all entities' })
+  async findAll(): Promise<Entity[]> {
+    return this.entityService.findAll();
+  }
+
+  @Post()
+  @ApiOperation({ description: 'Create a new entity' })
+  @ApiResponse({ status: 201, description: 'Entity created successfully' })
+  async create(
+    @Body(new ZodValidationPipe(CreateEntityDtoSchema))
+    createDto: CreateEntityDto,
+  ): Promise<Entity> {
+    return this.entityService.create(createDto);
+  }
+
+  @Get(':id')
+  @ApiOperation({ description: 'Get an entity by ID' })
+  @ApiResponse({ status: 200, description: 'Returns the entity' })
+  @ApiResponse({ status: 404, description: 'Entity not found' })
+  async findOne(@Param('id') id: string): Promise<Entity> {
+    const entity = await this.entityService.findOne(id);
+    if (!entity) {
+      throw new NotFoundException(`Entity with id ${id} not found`);
+    }
+    return entity;
+  }
+
+  @Patch(':id')
+  @ApiOperation({ description: 'Update an entity' })
+  @ApiResponse({ status: 200, description: 'Entity updated successfully' })
+  @ApiResponse({ status: 404, description: 'Entity not found' })
+  async update(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(UpdateEntityDtoSchema))
+    updateDto: UpdateEntityDto,
+  ): Promise<Entity> {
+    const entity = await this.entityService.update(id, updateDto);
+    if (!entity) {
+      throw new NotFoundException(`Entity with id ${id} not found`);
+    }
+    return entity;
+  }
+
+  @Delete(':id')
+  @ApiOperation({ description: 'Delete an entity' })
+  @ApiResponse({ status: 204, description: 'Entity deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Entity not found' })
+  async remove(@Param('id') id: string): Promise<void> {
+    const deleted = await this.entityService.remove(id);
+    if (!deleted) {
+      throw new NotFoundException(`Entity with id ${id} not found`);
+    }
+  }
+}
+```
+
+### Controller best practices
+
+- **Use `@Controller('entity')`** with the route path
+- **Use `@ApiTags('entity')`** for Swagger grouping
+- **Add `@ApiOperation` and `@ApiResponse`** to all endpoints
+- **All methods must be async**
+- **Use `ZodValidationPipe`** with schema for request validation
+- **Use type imports** (`type Entity`) for return types
+- **Return domain types** not entities
+- **Handle 404 errors** with `NotFoundException`
+- **Inject service via constructor**
+- **Keep controllers thin** - no business logic
+
+### Standard REST endpoints
+
+- `GET /entity` - findAll()
+- `GET /entity/:id` - findOne()
+- `POST /entity` - create()
+- `PATCH /entity/:id` - update()
+- `DELETE /entity/:id` - remove()
+
+## Step 5: Create Module (`src/{module}/`)
+
+### Module file structure
+
+Create `src/{module}/{module}.module.ts`:
+
+```typescript
+@Module({
+  imports: [TypeOrmModule.forFeature([EntityEntity])],
+  controllers: [EntityController],
+  providers: [EntityService],
+  exports: [EntityService], // Export service for use in other modules
+})
+export class EntityModule {}
+```
+
+### Module best practices
+
+- **Import `TypeOrmModule.forFeature([EntityEntity])`** to inject entity into service
+- **List controllers** in `controllers` array
+- **List services** in `providers` array
+- **Export service** in `exports` array for use in other modules
+- **Add helpful comments** for clarity
+
+### Register module in app.module.ts
+
+Add `EntityModule` to the `imports` array in `app.module.ts`.
+
+## Step 6: Create Tests
+
+See **[NestJS Testing Guidelines](nestjs-testing.mdc)** for complete testing patterns.
+
+### Create service tests (`test/{module}/{module}.service.spec.ts`)
+
+```typescript
+describe('EntityService', () => {
+  let service: EntityService;
+  let repository: any;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        EntityService,
+        {
+          provide: getRepositoryToken(EntityEntity),
+          useValue: mockEntityRepository,
+        },
+      ],
+    }).compile();
+
+    service = module.get<EntityService>(EntityService);
+    repository = module.get(getRepositoryToken(EntityEntity));
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('create', () => {
+    it('should create and return an entity', async () => {
+      const result = await service.create(mockCreateEntityDto);
+      expect(result).toEqual(mockEntity);
+      expect(repository.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return an entity when found', async () => {
+      const result = await service.findOne('1');
+      expect(result).toEqual(mockEntity);
+    });
+
+    it('should return null when entity not found', async () => {
+      repository.findOne.mockResolvedValueOnce(null);
+      const result = await service.findOne('999');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return all entities', async () => {
+      const result = await service.findAll();
+      expect(result).toEqual([mockEntity]);
+    });
+  });
+});
+```
+
+### Create controller tests (`test/{module}/{module}.controller.spec.ts`)
+
+```typescript
+describe('EntityController', () => {
+  let controller: EntityController;
+  let service: EntityService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [EntityController],
+      providers: [
+        {
+          provide: EntityService,
+          useValue: mockEntityService,
+        },
+      ],
+    }).compile();
+
+    controller = module.get<EntityController>(EntityController);
+    service = module.get<EntityService>(EntityService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('findAll', () => {
+    it('should return an array of entities', async () => {
+      const result = await controller.findAll();
+      expect(result).toEqual([mockEntity]);
+      expect(service.findAll).toHaveBeenCalled();
+    });
+  });
+
+  describe('create', () => {
+    it('should create and return an entity', async () => {
+      const result = await controller.create(mockCreateEntityDto);
+      expect(result).toEqual(mockEntity);
+      expect(service.create).toHaveBeenCalledWith(mockCreateEntityDto);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return an entity when found', async () => {
+      const result = await controller.findOne('1');
+      expect(result).toEqual(mockEntity);
+    });
+
+    it('should throw NotFoundException when entity not found', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValueOnce(null);
+      await expect(controller.findOne('999')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+});
+```
+
+## Step 7: Create Mocks
+
+### Create entity mocks (`test/mocks/{module}/{module}.mock.ts`)
+
+```typescript
+export const mockEntity: Entity = {
+  id: '1',
+  name: 'Test Entity',
+  nestedField: {
+    amount: 100,
+    currency: 'USD',
+  },
+  type: 'type1',
+  subType: 'subtype1',
+};
+
+export const mockCreateEntityDto: CreateEntityDto = {
+  name: 'Test Entity',
+  nestedField: {
+    amount: 100,
+    currency: 'USD',
+  },
+  type: 'type1',
+  subType: 'subtype1',
+};
+```
+
+### Create service mocks (`test/mocks/{module}/{module}-service.mock.ts`)
+
+```typescript
+export const mockEntityService = {
+  create: jest.fn().mockResolvedValue(mockEntity),
+  findOne: jest.fn().mockResolvedValue(mockEntity),
+  findAll: jest.fn().mockResolvedValue([mockEntity]),
+  update: jest.fn().mockResolvedValue(mockEntity),
+  remove: jest.fn().mockResolvedValue(true),
+};
+```
+
+### Create repository mocks (`test/mocks/{module}/{module}-repository.mock.ts`)
+
+```typescript
+const mockEntityEntity = {
+  id: '1',
+  name: 'Test Entity',
+  nestedFieldAmount: 100,
+  nestedFieldCurrency: 'USD',
+  type: 'type1',
+  subType: 'subtype1',
+  toObject: jest.fn().mockReturnValue(mockEntity),
+};
+
+export const mockEntityRepository = {
+  save: jest.fn().mockResolvedValue(mockEntityEntity),
+  findOne: jest.fn().mockResolvedValue(mockEntityEntity),
+  find: jest.fn().mockResolvedValue([mockEntityEntity]),
+  delete: jest.fn().mockResolvedValue({ affected: 1 }),
+};
+```
+
+## Complete Checklist
+
+When adding a new entity/module, ensure:
+
+### Types
+
+- [ ] Type file created in `src/types/{Entity}.ts`
+- [ ] Enums defined for structured values
+- [ ] Zod schemas created for all types and enums
+- [ ] Main domain type schema defined
+- [ ] DTO schemas defined (CreateDto, UpdateDto)
+- [ ] Types inferred using `z.infer<>`
+- [ ] Nested types imported and composed
+
+### Entity
+
+- [ ] Entity file created in `src/{module}/{module}.entity.ts`
+- [ ] Uses `@Entity()` decorator
+- [ ] Uses `@PrimaryGeneratedColumn('uuid')`
+- [ ] Nested objects flattened into columns
+- [ ] Optional fields use `{ nullable: true }`
+- [ ] `fromDto()` static method implemented
+- [ ] `toObject()` instance method implemented
+
+### Service
+
+- [ ] Service file created in `src/{module}/{module}.service.ts`
+- [ ] Uses `@Injectable()` decorator
+- [ ] Repository injected with `@InjectRepository`
+- [ ] All methods use `fromDto()` before saving
+- [ ] All methods use `toObject()` before returning
+- [ ] Returns domain types not entities
+- [ ] Standard CRUD methods implemented
+
+### Controller
+
+- [ ] Controller file created in `src/{module}/{module}.controller.ts`
+- [ ] Uses `@Controller()` with route path
+- [ ] Uses `@ApiTags()` for Swagger
+- [ ] All endpoints have `@ApiOperation` and `@ApiResponse`
+- [ ] All methods are async
+- [ ] Uses `ZodValidationPipe` for validation
+- [ ] Uses type imports for return types
+- [ ] Handles 404 errors with `NotFoundException`
+
+### Module
+
+- [ ] Module file created in `src/{module}/{module}.module.ts`
+- [ ] Imports `TypeOrmModule.forFeature([Entity])`
+- [ ] Controller listed in `controllers` array
+- [ ] Service listed in `providers` array
+- [ ] Service exported in `exports` array
+- [ ] Module registered in `app.module.ts`
+
+### Tests
+
+- [ ] Service tests created in `test/{module}/{module}.service.spec.ts`
+- [ ] Controller tests created in `test/{module}/{module}.controller.spec.ts`
+- [ ] Tests cover happy paths and error cases
+- [ ] Entity mock created in `test/mocks/{module}/{module}.mock.ts`
+- [ ] Service mock created in `test/mocks/{module}/{module}-service.mock.ts`
+- [ ] Repository mock created in `test/mocks/{module}/{module}-repository.mock.ts`
+
+## Related Rules
+
+- **[Repository Entity Guidelines](repository-entities.mdc)** - Detailed entity patterns
+- **[NestJS Testing Guidelines](nestjs-testing.mdc)** - Complete testing patterns
+
+## File Structure Summary
+
+```
+src/
+  ├── types/
+  │   └── Entity.ts              # Domain types and Zod schemas
+  └── entity/
+      ├── entity.entity.ts       # TypeORM entity
+      ├── entity.service.ts      # Business logic
+      ├── entity.controller.ts   # HTTP endpoints
+      └── entity.module.ts       # Module definition
+
+test/
+  ├── entity/
+  │   ├── entity.service.spec.ts    # Service tests
+  │   └── entity.controller.spec.ts # Controller tests
+  └── mocks/
+      └── entity/
+          ├── entity.mock.ts            # Domain object mocks
+          ├── entity-service.mock.ts    # Service mocks
+          └── entity-repository.mock.ts # Repository mocks
+```

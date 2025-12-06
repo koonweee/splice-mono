@@ -1,0 +1,198 @@
+---
+description: NestJS testing guidelines for controllers and services
+globs:
+  - '**/*.spec.ts'
+alwaysApply: false
+---
+
+# NestJS Testing Guidelines
+
+## General Testing Principles
+
+### Keep tests simple and focused
+
+- Test happy paths as the primary focus
+- **Always test obvious error cases** (e.g., failing input validation, missing required fields)
+- Avoid over-engineering test scenarios for unlikely edge cases
+- Focus on essential functionality and common failure modes
+
+### Test file organization
+
+- **All test files go in the `test/` folder**, not alongside source files
+- Mirror the module structure from `src/` in the `test/` folder
+- Example: `src/account/account.service.ts` → `test/account/account.service.spec.ts`
+- Example: `src/account/account.controller.ts` → `test/account/account.controller.spec.ts`
+- Keep the same file naming convention: `{filename}.spec.ts`
+
+## Mock Management
+
+### Create shared mocks
+
+- Create reusable mocks in the `test/mocks` folder
+- Organize mocks by module (e.g., `test/mocks/account`, `test/mocks/user`)
+- Use consistent naming conventions: `{entity}.mock.ts`
+
+### Always check for existing mocks first
+
+- **Before creating a new mock**, always check `test/mocks` for existing mocks
+- Look for similar entities or services that already have mocks
+- Extend or adapt existing mocks when possible
+- Avoid duplicating mock logic across the codebase
+
+## Controller Testing
+
+### Controller test scope
+
+- Test input validation (DTO validation, param validation)
+- Verify correct HTTP status codes are returned
+- Confirm the controller calls the appropriate service methods
+- **Do NOT test business logic at the controller level**
+- Mock all service dependencies
+
+### What to verify in controller tests
+
+- Request validation passes correctly for valid inputs
+- Request validation fails correctly for invalid inputs (e.g., missing fields, wrong types)
+- Correct status codes: `200`, `201`, `400`, `404`, etc.
+- Response structure matches expected format
+- Service methods are called with correct arguments
+- Error responses include appropriate error messages
+
+### Example controller test structure
+
+```typescript
+describe('AccountController', () => {
+  let controller: AccountController;
+  let service: AccountService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [AccountController],
+      providers: [
+        {
+          provide: AccountService,
+          useValue: mockAccountService, // Use shared mock from test/mocks
+        },
+      ],
+    }).compile();
+
+    controller = module.get<AccountController>(AccountController);
+    service = module.get<AccountService>(AccountService);
+  });
+
+  it('should return 200 and account data when valid ID is provided', async () => {
+    // Test happy path
+    // Verify status and response structure
+  });
+
+  it('should return 400 when invalid input is provided', async () => {
+    // Test obvious validation failures
+  });
+
+  it('should return 400 when required fields are missing', async () => {
+    // Test missing required fields
+  });
+});
+```
+
+## Service Testing
+
+### Service test scope
+
+- Test business logic in depth
+- Test data transformations and calculations
+- Test error handling and edge cases for business rules
+- Mock external dependencies (databases, APIs, other services)
+
+### What to verify in service tests
+
+- Business logic produces correct results
+- Data is transformed correctly
+- Appropriate errors are thrown when business rules are violated
+- Service methods handle various input scenarios correctly
+
+### Example service test structure
+
+```typescript
+describe('AccountService', () => {
+  let service: AccountService;
+  let repository: Repository<Account>;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AccountService,
+        {
+          provide: getRepositoryToken(Account),
+          useValue: mockRepository, // Use shared mock from test/mocks
+        },
+      ],
+    }).compile();
+
+    service = module.get<AccountService>(AccountService);
+    repository = module.get(getRepositoryToken(Account));
+  });
+
+  it('should calculate account balance correctly', () => {
+    // Test business logic in depth
+    // Verify calculations and transformations
+  });
+
+  it('should throw error when business rule is violated', () => {
+    // Test error handling
+  });
+});
+```
+
+## Mock Organization
+
+### Directory structure
+
+```
+src/
+  ├── account/
+  │   ├── account.controller.ts
+  │   ├── account.service.ts
+  │   └── account.module.ts
+  └── user/
+      ├── user.controller.ts
+      └── user.service.ts
+
+test/
+  ├── account/
+  │   ├── account.controller.spec.ts  # Mirrors src/account/account.controller.ts
+  │   └── account.service.spec.ts     # Mirrors src/account/account.service.ts
+  ├── user/
+  │   ├── user.controller.spec.ts
+  │   └── user.service.spec.ts
+  └── mocks/
+      ├── account/
+      │   ├── account.mock.ts
+      │   ├── account-service.mock.ts
+      │   └── account-repository.mock.ts
+      └── user/
+          ├── user.mock.ts
+          └── user-service.mock.ts
+```
+
+### Mock file template
+
+```typescript
+// test/mocks/account/account.mock.ts
+import { Account } from '@/types/Account';
+
+export const mockAccount: Account = {
+  id: '1',
+  name: 'Test Account',
+  balance: 1000,
+  // ... other fields
+};
+
+export const mockAccountService = {
+  findOne: jest.fn().mockResolvedValue(mockAccount),
+  findAll: jest.fn().mockResolvedValue([mockAccount]),
+  create: jest.fn().mockResolvedValue(mockAccount),
+  update: jest.fn().mockResolvedValue(mockAccount),
+  remove: jest.fn().mockResolvedValue(undefined),
+};
+```

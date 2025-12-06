@@ -1,0 +1,220 @@
+---
+description: Guidelines for creating and managing TypeORM repository entities
+globs:
+  - '**/**.entity.ts'
+  - '**/**.service.ts'
+  - '**/**.controller.ts'
+alwaysApply: false
+---
+
+# Repository Entity Guidelines
+
+## Entity File Organization
+
+### Location and naming
+
+- **Entity files must be co-located** with their service and controller in the same module folder
+- Use the naming convention: `{entity-name}.entity.ts`
+- Example structure:
+  ```
+  src/account/
+    ├── account.controller.ts
+    ├── account.service.ts
+    ├── account.entity.ts
+    └── account.module.ts
+  ```
+
+### When to create an entity
+
+- Create a TypeORM entity when you need to persist data to the database
+- Each entity should represent a single database table
+- Entity schemas may differ from domain types (DTOs) to accommodate database constraints
+
+## Required Entity Methods
+
+Every TypeORM entity **must implement** two transformation methods:
+
+### 1. `fromDto()` - Static method to convert DTO to Entity
+
+- Converts incoming DTOs to entity format for database persistence
+- Handles flattening of nested objects into database columns
+- Should be a **static** method
+
+### 2. `toObject()` - Instance method to convert Entity to domain object
+
+- Converts entity back to domain object format for API responses
+- Reconstructs nested objects from flattened database columns
+- Should be an **instance** method
+
+## Entity Template
+
+```typescript
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { YourDomainType, YourDto } from '../types/YourType';
+
+@Entity()
+export class YourEntity {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
+  someField: string;
+
+  @Column({ nullable: true })
+  optionalField?: string;
+
+  /**
+   * Create entity from DTO
+   */
+  static fromDto(dto: YourDto): YourEntity {
+    const entity = new YourEntity();
+    entity.someField = dto.someField;
+    entity.optionalField = dto.optionalField;
+    // Map nested objects to flattened columns
+    return entity;
+  }
+
+  /**
+   * Convert entity to domain object
+   */
+  toObject(): YourDomainType {
+    return {
+      id: this.id.toString(),
+      someField: this.someField,
+      optionalField: this.optionalField,
+      // Reconstruct nested objects from flattened columns
+    };
+  }
+}
+```
+
+## Entity Design Patterns
+
+### Flattening nested objects
+
+When your domain types have nested objects (like `MoneyWithSign`), flatten them into separate columns:
+
+**Domain Type:**
+
+```typescript
+{
+  availableBalance: {
+    money: {
+      amount: 100,
+      currency: 'USD'
+    },
+    sign: 'credit'
+  }
+}
+```
+
+**Entity Columns:**
+
+```typescript
+@Column()
+availableBalance: number;
+
+@Column()
+availableBalanceCurrency: string;
+
+@Column()
+availableBalanceSign: string;
+```
+
+### Handling optional fields
+
+- Use `{ nullable: true }` in `@Column()` decorator for optional fields
+- Mark field as optional with `?` in TypeScript
+- Example: `@Column({ nullable: true }) name?: string;`
+
+### Type conversions
+
+- Entity IDs are typically `number` (database auto-increment)
+- Domain object IDs are typically `string` (API responses)
+- Convert in `toObject()`: `id: this.id.toString()`
+- Convert in service when querying: `Number(id)`
+
+## Service Integration
+
+### Using entity methods in services
+
+Always use `fromDto()` and `toObject()` in your service methods:
+
+```typescript
+@Injectable()
+export class YourService {
+  constructor(
+    @InjectRepository(YourEntity)
+    private repository: Repository<YourEntity>,
+  ) {}
+
+  async create(dto: YourDto): Promise<YourDomainType> {
+    const entity = YourEntity.fromDto(dto);
+    const savedEntity = await this.repository.save(entity);
+    return savedEntity.toObject();
+  }
+
+  async findOne(id: number): Promise<YourDomainType | null> {
+    const entity = await this.repository.findOne({ where: { id } });
+    return entity ? entity.toObject() : null;
+  }
+
+  async findAll(): Promise<YourDomainType[]> {
+    const entities = await this.repository.find();
+    return entities.map((entity) => entity.toObject());
+  }
+}
+```
+
+## Common Pitfalls
+
+### ❌ Don't pass DTOs directly to repository
+
+```typescript
+// BAD - DTO structure doesn't match entity
+await this.repository.save(createDto);
+```
+
+### ✅ Do convert via fromDto
+
+```typescript
+// GOOD - Properly transformed
+const entity = YourEntity.fromDto(createDto);
+await this.repository.save(entity);
+```
+
+### ❌ Don't return entities from services
+
+```typescript
+// BAD - Exposes database structure
+async create(dto: YourDto): Promise<YourEntity> {
+  const entity = YourEntity.fromDto(dto);
+  return await this.repository.save(entity);
+}
+```
+
+### ✅ Do convert via toObject
+
+```typescript
+// GOOD - Returns domain type
+async create(dto: YourDto): Promise<YourDomainType> {
+  const entity = YourEntity.fromDto(dto);
+  const savedEntity = await this.repository.save(entity);
+  return savedEntity.toObject();
+}
+```
+
+## Checklist for New Entities
+
+When creating a new entity, ensure:
+
+- [ ] Entity file is co-located with service and controller
+- [ ] File follows naming convention: `{name}.entity.ts`
+- [ ] `fromDto()` static method is implemented
+- [ ] `toObject()` instance method is implemented
+- [ ] All nested objects are properly flattened to columns
+- [ ] Optional fields use `{ nullable: true }` decorator
+- [ ] Service uses `fromDto()` before saving
+- [ ] Service uses `toObject()` before returning
+- [ ] Controller methods are async and return domain types
+- [ ] Type conversions (id: number ↔ string) are handled

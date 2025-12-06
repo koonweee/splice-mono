@@ -1,0 +1,61 @@
+# General Development and Testing Principles
+
+## Package Manager
+
+- **Always use `yarn`** as the package manager for this project
+- Use `yarn add` to add dependencies, not `npm install`
+- Use `yarn` (without arguments) to install dependencies
+- Use `yarn remove` to remove dependencies
+- Scripts should be run with `yarn <script-name>`
+
+## Development Workflow
+
+### Code Quality and Formatting
+
+Before committing code, ensure it meets quality standards:
+
+#### Linting with ESLint
+
+- **Run linter and auto-fix**: `yarn lint`
+- **Fix all linting errors** before committing code
+- ESLint configuration is in `eslint.config.mjs`
+- Note: The lint script automatically fixes issues (includes `--fix` flag)
+
+#### Formatting with Prettier
+
+- **Auto-format code**: `yarn format`
+- **Always format code** before committing
+- Prettier is integrated with ESLint for consistent styling
+- Formats all TypeScript files in `src/` and `test/` directories
+
+### Testing
+
+#### Running Tests
+
+- **Run all tests**: `yarn test`
+- **Run tests in watch mode**: `yarn test:watch`
+- **Run specific test file**: `yarn test path/to/test.spec.ts`
+- **Generate coverage report**: `yarn test:cov`
+
+#### Test Requirements
+
+- **Write tests for all new features** (controllers and services)
+- **Ensure all tests pass** before committing (`yarn test`)
+- **Follow testing patterns** described in [NestJS Testing Guidelines](nestjs-testing.mdc)
+- **Maintain test coverage** - all critical paths should be tested
+
+#### Test Organization
+
+- Unit tests go in `test/{module}/` directory
+- Mock files go in `test/mocks/{module}/` directory
+- Follow naming convention: `{module}.controller.spec.ts` and `{module}.service.spec.ts`
+
+### Pre-Commit Checklist
+
+Before committing changes, ensure:
+
+1. [ ] Code is properly formatted: `yarn format`
+2. [ ] No linting errors: `yarn lint`
+3. [ ] All tests pass: `yarn test`
+4. [ ] New tests added for new features
+5. [ ] Code follows project conventions and rules

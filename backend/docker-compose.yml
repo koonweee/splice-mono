@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: splice-postgres
+    restart: unless-stopped
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - splice-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: splice-app
+    restart: unless-stopped
+    ports:
+      - '${PORT:-3000}:3000'
+    environment:
+      NODE_ENV: development
+      PORT: ${PORT:-3000}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PLAID_CLIENT_ID: ${PLAID_CLIENT_ID}
+      PLAID_SECRET: ${PLAID_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      APP_DOMAIN: ${APP_DOMAIN}
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src
+      - ./test:/app/test
+      # Prevent overwriting node_modules
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - splice-network
+    command: yarn start:dev
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  splice-network:
+    driver: bridge
