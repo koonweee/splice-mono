@@ -1,0 +1,535 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
+import { ISOCurrencyCode } from '@half0wl/money';
+import { Injectable, Logger } from '@nestjs/common';
+import { createHash, timingSafeEqual } from 'crypto';
+import { decodeJwt, decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
+import {
+  Configuration,
+  CountryCode,
+  ItemPublicTokenExchangeRequest,
+  JWKPublicKey,
+  LinkSessionFinishedWebhook,
+  LinkTokenCreateRequest,
+  PlaidApi,
+  PlaidEnvironments,
+  Products,
+  UserCreateRequest,
+} from 'plaid';
+import {
+  APIAccount,
+  type GetAccountsResponse,
+  type Institution,
+  LinkCompletionResponse,
+  LinkInitiationResponse,
+} from '../../../types/BankLink';
+import { MoneySign, MoneyWithSign } from '../../../types/MoneyWithSign';
+import {
+  PlaidUserDetails,
+  PlaidUserDetailsSchema,
+} from '../../../types/ProviderUserDetails';
+import { IBankLinkProvider } from '../bank-link-provider.interface';
+/**
+ * Plaid provider for linking bank accounts
+ */
+@Injectable()
+export class PlaidProvider implements IBankLinkProvider {
+  private readonly logger = new Logger(PlaidProvider.name);
+  readonly providerName = 'plaid';
+
+  private client: PlaidApi;
+  /**
+   * Cached JWK for webhook verification
+   * - kid: Key ID from JWT header
+   * - key: The JWK public key
+   * - expiredAt: Unix timestamp when key expires (null = not expired)
+   * - cachedAt: When we cached this key (for TTL check)
+   */
+  private cachedJwk: {
+    kid: string;
+    key: JWKPublicKey;
+    expiredAt: number | null;
+    cachedAt: number;
+  } | null = null;
+
+  /** Cache TTL in milliseconds (24 hours) - forces periodic refresh even if key hasn't expired */
+  private static readonly JWK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+  constructor() {
+    this.logger.log(`Initializing PlaidProvider`);
+    // Log client ID and secret
+    this.logger.log(`Client ID: ${process.env.PLAID_CLIENT_ID}`);
+    this.logger.log(`Secret: ${process.env.PLAID_SECRET}`);
+    const configuration = new Configuration({
+      basePath: PlaidEnvironments.production,
+      baseOptions: {
+        headers: {
+          'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
+          'PLAID-SECRET': process.env.PLAID_SECRET,
+        },
+      },
+    });
+    this.client = new PlaidApi(configuration);
+  }
+
+  /**
+   * Parse and validate provider user details using Zod schema
+   * Returns undefined if details are missing or invalid
+   *
+   * @param providerUserDetails - Raw provider details from storage
+   * @returns Validated PlaidUserDetails or undefined
+   */
+  private parseProviderUserDetails(
+    providerUserDetails?: Record<string, unknown>,
+  ): PlaidUserDetails | undefined {
+    if (!providerUserDetails) {
+      return undefined;
+    }
+
+    const result = PlaidUserDetailsSchema.safeParse(providerUserDetails);
+    if (!result.success) {
+      this.logger.warn(
+        `Invalid Plaid user details, ignoring: ${result.error.message}`,
+      );
+      return undefined;
+    }
+
+    return result.data;
+  }
+
+  /**
+   * Create a Plaid user and get their user token
+   * Required for multi-item link functionality
+   *
+   * Plaid will error if the same client_user_id is used to create a new user token.
+   *
+   * @param clientUserId - Unique identifier for the user in your system
+   * @returns The user token from Plaid
+   */
+  private async createUserToken(clientUserId: string): Promise<string> {
+    const request: UserCreateRequest = {
+      client_user_id: clientUserId,
+    };
+
+    try {
+      const response = await this.client.userCreate(request);
+      const userToken = response.data.user_token;
+      if (!userToken) {
+        throw new Error('Plaid user creation did not return a user_token');
+      }
+      this.logger.log(`Created Plaid user for client_user_id=${clientUserId}`);
+      return userToken;
+    } catch (error) {
+      this.logger.error(`Error creating Plaid user: ${error['message']}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Initiate Plaid Link flow
+   * Returns URL to redirect user to for hosted Plaid Link flow
+   */
+  async initiateLinking(input: {
+    internalAccountId: string;
+    userId: string;
+    redirectUri?: string;
+    providerUserDetails?: Record<string, unknown>;
+  }): Promise<LinkInitiationResponse> {
+    const { internalAccountId, userId, redirectUri, providerUserDetails } =
+      input;
+    this.logger.log(
+      `Plaid link initiated: internalAccountId=${internalAccountId}, userId=${userId}, redirectUri=${redirectUri}`,
+    );
+
+    // Parse and validate existing provider details
+    const existingDetails = this.parseProviderUserDetails(providerUserDetails);
+
+    // Reuse existing user token or create a new one
+    let userToken: string;
+    let updatedProviderUserDetails: PlaidUserDetails | undefined;
+
+    if (existingDetails?.userToken) {
+      // Reuse existing user token
+      userToken = existingDetails.userToken;
+      this.logger.log(`Reusing existing Plaid user token for userId=${userId}`);
+    } else {
+      // Create new user token and return it for persistence
+      userToken = await this.createUserToken(userId);
+      updatedProviderUserDetails = { userToken };
+      this.logger.log(`Created new Plaid user token for userId=${userId}`);
+    }
+
+    // Construct link token request
+    const request: LinkTokenCreateRequest = {
+      client_name: 'Splice',
+      language: 'en',
+      country_codes: [CountryCode.Us],
+      user: {
+        client_user_id: userId,
+      },
+      products: [Products.Transactions],
+      optional_products: [Products.Investments], // Optional since we don't want to fail if we don't have it
+      redirect_uri: redirectUri,
+      hosted_link: {
+        completion_redirect_uri: redirectUri,
+      },
+      enable_multi_item_link: true,
+      user_token: userToken,
+      webhook: `${process.env.APP_DOMAIN}/bank-link/webhook/plaid`,
+    };
+
+    this.logger.debug(
+      `Plaid link token request: ${JSON.stringify(request, null, 2)}`,
+    );
+
+    try {
+      const response = await this.client.linkTokenCreate(request);
+      const result: LinkInitiationResponse = {
+        webhookId: response.data.link_token,
+        expiresAt: new Date(response.data.expiration),
+        linkUrl: response.data.hosted_link_url,
+        updatedProviderUserDetails,
+      };
+      this.logger.log(
+        `Plaid link initiated: ${JSON.stringify(result, null, 2)}`,
+      );
+      return result;
+    } catch (error) {
+      this.logger.error(`Error creating link token: ${error['message']}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Exchange public token for access token
+   */
+  private async exchangeToken(publicToken: string): Promise<{
+    accessToken: string;
+    /** Plaid's external ID is the item ID, corresponds to an institution */
+    externalAccountId: string;
+  }> {
+    const request: ItemPublicTokenExchangeRequest = {
+      public_token: publicToken,
+    };
+
+    try {
+      const response = await this.client.itemPublicTokenExchange(request);
+      return {
+        accessToken: response.data.access_token,
+        externalAccountId: response.data.item_id,
+      };
+    } catch (error) {
+      this.logger.error(`Error exchanging public token: ${error['message']}`);
+      throw error;
+    }
+  }
+
+  shouldProcessWebhook(rawPayload: Record<string, any>): string | undefined {
+    // Check that payload conatins webhook_code and link_token
+    if (
+      !rawPayload.webhook_code ||
+      !rawPayload.link_token ||
+      typeof rawPayload.link_token !== 'string' ||
+      !rawPayload.status ||
+      typeof rawPayload.status !== 'string'
+    ) {
+      this.logger.warn(
+        `Not processing Plaid webhook: missing webhook_code or link_token or status`,
+      );
+      return;
+    }
+    const { webhook_code, link_token, status } = rawPayload;
+    if (webhook_code !== 'SESSION_FINISHED') {
+      this.logger.warn(`Not processing Plaid webhook of type ${webhook_code}`);
+      return;
+    }
+    if (status !== 'success') {
+      this.logger.warn(`Not processing Plaid webhook of status ${status}`);
+      return;
+    }
+    return link_token;
+  }
+
+  /**
+   * Process webhook from Plaid
+   * Parses mock webhook payload and returns standardized event
+   */
+  async processWebhook(
+    rawPayload: Record<string, any>,
+  ): Promise<LinkCompletionResponse[]> {
+    // Cast rawPayload to LinkSessionFinishedWebhook
+    const castedPayload = rawPayload as LinkSessionFinishedWebhook;
+
+    // Debug: Log casted payload
+    this.logger.log(
+      `Plaid webhook processed: castedPayload=${JSON.stringify(castedPayload, null, 2)}`,
+    );
+
+    const { public_tokens = [] } = castedPayload;
+
+    const plaidItems = await Promise.all(
+      public_tokens.map(async (public_token) => {
+        return this.exchangeToken(public_token);
+      }),
+    );
+
+    // Log all plaid items
+    this.logger.log(
+      `Plaid webhook processed: plaidItems=${JSON.stringify(plaidItems, null, 2)}`,
+    );
+
+    // Get accounts and institution info from Plaid
+    const accountsResponses = await Promise.all(
+      plaidItems.map(async (item) => {
+        return this.getAccounts({ accessToken: item.accessToken });
+      }),
+    );
+
+    return plaidItems.map((item, index) => ({
+      authentication: {
+        accessToken: item.accessToken,
+      },
+      accounts: accountsResponses[index].accounts,
+      institution: accountsResponses[index].institution,
+    }));
+  }
+
+  /**
+   * Get accounts from Plaid using /accounts/get
+   *
+   * @param authentication - Authentication data containing { accessToken: string }
+   * @returns Accounts and institution info from Plaid
+   */
+  async getAccounts(
+    authentication: Record<string, any>,
+  ): Promise<GetAccountsResponse> {
+    const accessToken = authentication.accessToken as string;
+    if (!accessToken) {
+      throw new Error('Missing accessToken in authentication data');
+    }
+
+    this.logger.log(`Fetching accounts from Plaid`);
+    try {
+      const response = await this.client.accountsGet({
+        access_token: accessToken,
+      });
+      // Debug: Log response
+      this.logger.log(
+        `Plaid accounts response: ${JSON.stringify(response.data, null, 2)}`,
+      );
+
+      // Extract institution info from the response
+      const institution: Institution = {
+        id: response.data.item.institution_id ?? null,
+        name: response.data.item.institution_name ?? null,
+      };
+
+      // Convert Plaid accounts to API accounts
+      const accounts: APIAccount[] = response.data.accounts.map((account) => {
+        const {
+          account_id,
+          official_name,
+          name,
+          mask,
+          type,
+          subtype,
+          balances: {
+            available,
+            current,
+            iso_currency_code,
+            unofficial_currency_code,
+          },
+        } = account;
+
+        // Pre-process account name
+        const accountName = official_name ?? name;
+
+        // Pre-process shared currency code (default to USD if not available)
+        const currency = (iso_currency_code ??
+          unofficial_currency_code ??
+          'USD') as ISOCurrencyCode;
+
+        // Pre-process available balance (Plaid returns float amounts like 199.99)
+        const availableAmount = available ?? 0;
+        const availableSign =
+          availableAmount >= 0 ? MoneySign.CREDIT : MoneySign.DEBIT;
+        const availableBalance = MoneyWithSign.fromFloat(
+          currency,
+          availableAmount,
+          availableSign,
+        );
+
+        // Pre-process current balance (Plaid returns float amounts like 199.99)
+        const currentAmount = current ?? 0;
+        const currentSign =
+          currentAmount >= 0 ? MoneySign.CREDIT : MoneySign.DEBIT;
+        const currentBalance = MoneyWithSign.fromFloat(
+          currency,
+          currentAmount,
+          currentSign,
+        );
+
+        return {
+          accountId: account_id,
+          name: accountName,
+          mask,
+          type,
+          subType: subtype,
+          // Serialize to plain objects for DTO compatibility
+          availableBalance: availableBalance.toSerialized(),
+          currentBalance: currentBalance.toSerialized(),
+        };
+      });
+
+      return { accounts, institution };
+    } catch (error) {
+      this.logger.error(
+        `Error fetching account details from Plaid: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Verify that a webhook is genuine and from Plaid
+   *
+   * Implements verification as per:
+   * https://plaid.com/docs/api/webhooks/webhook-verification/
+   *
+   * @param rawBody - Raw webhook body as string (preserves original formatting for hash verification)
+   * @param headers - HTTP headers from the webhook request
+   * @returns true if webhook is verified, false otherwise
+   */
+  async verifyWebhook(
+    rawBody: string,
+    headers: Record<string, string>,
+  ): Promise<boolean> {
+    try {
+      // Step 1: Extract the JWT from the Plaid-Verification header
+      // Headers are case-insensitive in HTTP 1.x, lowercase in HTTP 2
+      const signedJwt =
+        headers['plaid-verification'] || headers['Plaid-Verification'];
+
+      if (!signedJwt) {
+        this.logger.warn(
+          'Webhook verification failed: Missing Plaid-Verification header',
+        );
+        return false;
+      }
+
+      // Step 2: Decode the JWT header to get the key ID (kid)
+      const jwtHeader = decodeProtectedHeader(signedJwt);
+
+      // Ensure the algorithm is ES256
+      if (jwtHeader.alg !== 'ES256') {
+        this.logger.warn(
+          `Webhook verification failed: Invalid algorithm ${jwtHeader.alg}, expected ES256`,
+        );
+        return false;
+      }
+
+      const keyId = jwtHeader.kid;
+      if (!keyId) {
+        this.logger.warn(
+          'Webhook verification failed: Missing kid in JWT header',
+        );
+        return false;
+      }
+
+      // Step 3: Get the JWK from Plaid (use cache if valid)
+      let jwk: JWKPublicKey;
+      const now = Date.now();
+      const isCacheValid =
+        this.cachedJwk &&
+        this.cachedJwk.kid === keyId &&
+        // Check key hasn't expired (expiredAt is Unix seconds, convert to ms)
+        (this.cachedJwk.expiredAt === null ||
+          this.cachedJwk.expiredAt * 1000 > now) &&
+        // Check cache TTL hasn't exceeded (force periodic refresh)
+        now - this.cachedJwk.cachedAt < PlaidProvider.JWK_CACHE_TTL_MS;
+
+      if (isCacheValid && this.cachedJwk) {
+        jwk = this.cachedJwk.key;
+        this.logger.debug(`Using cached JWK for kid=${keyId}`);
+      } else {
+        try {
+          const response = await this.client.webhookVerificationKeyGet({
+            key_id: keyId,
+          });
+          jwk = response.data.key;
+          // Cache the key with expiration info
+          this.cachedJwk = {
+            kid: keyId,
+            key: jwk,
+            expiredAt: response.data.key.expired_at ?? null,
+            cachedAt: now,
+          };
+          this.logger.log(`Fetched and cached new JWK for kid=${keyId}`);
+        } catch (error) {
+          this.logger.error(
+            `Webhook verification failed: Could not fetch verification key: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          return false;
+        }
+      }
+
+      // Step 4: Verify the JWT signature and check max age (5 minutes)
+      const publicKey = await importJWK(jwk, 'ES256');
+
+      try {
+        await jwtVerify(signedJwt, publicKey, {
+          maxTokenAge: '5 min',
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Webhook verification failed: JWT verification error: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return false;
+      }
+
+      // Step 5: Verify the body hash
+      const jwtPayload = decodeJwt(signedJwt);
+      const claimedBodyHash = jwtPayload.request_body_sha256 as
+        | string
+        | undefined;
+
+      if (!claimedBodyHash) {
+        this.logger.warn(
+          'Webhook verification failed: Missing request_body_sha256 in JWT payload',
+        );
+        return false;
+      }
+
+      // Compute SHA-256 of the raw body
+      const computedBodyHash = createHash('sha256')
+        .update(rawBody)
+        .digest('hex');
+
+      // Use timing-safe comparison to prevent timing attacks
+      const claimedBuffer = Buffer.from(claimedBodyHash, 'utf8');
+      const computedBuffer = Buffer.from(computedBodyHash, 'utf8');
+
+      if (claimedBuffer.length !== computedBuffer.length) {
+        this.logger.warn(
+          'Webhook verification failed: Body hash length mismatch',
+        );
+        return false;
+      }
+
+      if (!timingSafeEqual(claimedBuffer, computedBuffer)) {
+        this.logger.warn('Webhook verification failed: Body hash mismatch');
+        return false;
+      }
+
+      this.logger.log('Webhook verification successful');
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Webhook verification error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return false;
+    }
+  }
+
+  // TODO: Implement Plaid link 'update' flow for using same access token to fix broken links
+}
