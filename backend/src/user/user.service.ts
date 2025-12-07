@@ -4,14 +4,15 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import { Repository } from 'typeorm';
+import { AuthService } from '../auth/auth.service';
 import type {
   CreateUserDto,
   LoginDto,
   LoginResponse,
+  TokenResponse,
   User,
 } from '../types/User';
 import { UserEntity } from './user.entity';
@@ -23,7 +24,7 @@ export class UserService {
   constructor(
     @InjectRepository(UserEntity)
     private repository: Repository<UserEntity>,
-    private jwtService: JwtService,
+    private authService: AuthService,
   ) {}
 
   /**
@@ -103,13 +104,32 @@ export class UserService {
     }
 
     const user = entity.toObject();
-    const accessToken = this.jwtService.sign({
-      sub: user.id,
-      email: user.email,
-    });
+    const accessToken = this.authService.generateAccessToken(
+      user.id,
+      user.email,
+    );
+    const refreshToken = await this.authService.generateRefreshToken(user.id);
 
     this.logger.log(`Login successful: id=${user.id}`);
-    return { accessToken, user };
+    return { accessToken, refreshToken, user };
+  }
+
+  async refreshTokens(refreshToken: string): Promise<TokenResponse> {
+    const { userId, newRefreshToken } =
+      await this.authService.rotateRefreshToken(refreshToken);
+
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const accessToken = this.authService.generateAccessToken(
+      userId,
+      user.email,
+    );
+
+    this.logger.log(`Tokens refreshed for user: ${userId}`);
+    return { accessToken, refreshToken: newRefreshToken };
   }
 
   async findOne(id: string): Promise<User | null> {
