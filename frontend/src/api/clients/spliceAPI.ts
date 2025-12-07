@@ -35,6 +35,8 @@ import type {
   InitiateLinkResponse,
   LoginDto,
   LoginResponse,
+  RefreshTokenDto,
+  TokenResponse,
   Transaction,
   TransactionControllerFindAllParams,
   UpdateBalanceSnapshotDto,
@@ -1198,6 +1200,190 @@ export function useUserControllerMe<TData = Awaited<ReturnType<typeof userContro
 
 
 
+/**
+ * Refresh access token using refresh token
+ */
+export const userControllerRefresh = (
+    refreshTokenDto: RefreshTokenDto,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<TokenResponse>(
+      {url: `/user/refresh`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: refreshTokenDto, signal
+    },
+      );
+    }
+  
+
+
+export const getUserControllerRefreshMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerRefresh>>, TError,{data: RefreshTokenDto}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof userControllerRefresh>>, TError,{data: RefreshTokenDto}, TContext> => {
+
+const mutationKey = ['userControllerRefresh'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerRefresh>>, {data: RefreshTokenDto}> = (props) => {
+          const {data} = props ?? {};
+
+          return  userControllerRefresh(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UserControllerRefreshMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerRefresh>>>
+    export type UserControllerRefreshMutationBody = RefreshTokenDto
+    export type UserControllerRefreshMutationError = void
+
+    export const useUserControllerRefresh = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerRefresh>>, TError,{data: RefreshTokenDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof userControllerRefresh>>,
+        TError,
+        {data: RefreshTokenDto},
+        TContext
+      > => {
+
+      const mutationOptions = getUserControllerRefreshMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * Logout and invalidate refresh token
+ */
+export const userControllerLogout = (
+    refreshTokenDto: RefreshTokenDto,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<void>(
+      {url: `/user/logout`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: refreshTokenDto, signal
+    },
+      );
+    }
+  
+
+
+export const getUserControllerLogoutMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerLogout>>, TError,{data: RefreshTokenDto}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof userControllerLogout>>, TError,{data: RefreshTokenDto}, TContext> => {
+
+const mutationKey = ['userControllerLogout'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerLogout>>, {data: RefreshTokenDto}> = (props) => {
+          const {data} = props ?? {};
+
+          return  userControllerLogout(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UserControllerLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerLogout>>>
+    export type UserControllerLogoutMutationBody = RefreshTokenDto
+    export type UserControllerLogoutMutationError = unknown
+
+    export const useUserControllerLogout = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerLogout>>, TError,{data: RefreshTokenDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof userControllerLogout>>,
+        TError,
+        {data: RefreshTokenDto},
+        TContext
+      > => {
+
+      const mutationOptions = getUserControllerLogoutMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * Logout from all devices
+ */
+export const userControllerLogoutAll = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<void>(
+      {url: `/user/logout-all`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getUserControllerLogoutAllMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerLogoutAll>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof userControllerLogoutAll>>, TError,void, TContext> => {
+
+const mutationKey = ['userControllerLogoutAll'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerLogoutAll>>, void> = () => {
+          
+
+          return  userControllerLogoutAll()
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UserControllerLogoutAllMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerLogoutAll>>>
+    
+    export type UserControllerLogoutAllMutationError = unknown
+
+    export const useUserControllerLogoutAll = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerLogoutAll>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof userControllerLogoutAll>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getUserControllerLogoutAllMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
 /**
  * Get all transactions
  */

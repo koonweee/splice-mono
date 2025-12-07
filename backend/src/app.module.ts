@@ -7,6 +7,7 @@ import { AccountEntity } from './account/account.entity';
 import { AccountModule } from './account/account.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RefreshTokenEntity } from './auth/refresh-token.entity';
 import { BalanceSnapshotEntity } from './balance-snapshot/balance-snapshot.entity';
 import { BalanceSnapshotModule } from './balance-snapshot/balance-snapshot.module';
 import { BankLinkEntity } from './bank-link/bank-link.entity';
@@ -44,6 +45,7 @@ import { WebhookEventEntity } from './webhook-event/webhook-event.entity';
         BalanceSnapshotEntity,
         BankLinkEntity,
         CategoryEntity,
+        RefreshTokenEntity,
         TransactionEntity,
         UserEntity,
         WebhookEventEntity,

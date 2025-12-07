@@ -5,10 +5,7 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { User } from './user';
 
-export interface LoginResponse {
-  accessToken: string;
+export interface RefreshTokenDto {
   refreshToken: string;
-  user: User;
 }

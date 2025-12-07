@@ -28,6 +28,8 @@ export * from './loginResponse';
 export * from './money';
 export * from './moneyWithSign';
 export * from './moneyWithSignSign';
+export * from './refreshTokenDto';
+export * from './tokenResponse';
 export * from './transaction';
 export * from './transactionControllerFindAllParams';
 export * from './updateAccountDto';
