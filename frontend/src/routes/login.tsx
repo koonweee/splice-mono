@@ -4,14 +4,18 @@ import { AxiosError } from 'axios'
 import { useLogin } from '../lib/auth'
 
 export const Route = createFileRoute('/login')({
+  validateSearch: (search): { redirect?: string } => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+  }),
   component: LoginPage,
 })
 
 function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const { redirect } = Route.useSearch()
 
-  const loginMutation = useLogin()
+  const loginMutation = useLogin({ redirectTo: redirect })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
