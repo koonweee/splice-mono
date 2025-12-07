@@ -1,8 +1,7 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { AxiosError } from 'axios'
-import { useUserControllerLogin } from '../api/clients/spliceAPI'
-import { tokenStorage } from '../lib/auth'
+import { useLogin } from '../lib/auth'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -11,16 +10,8 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const navigate = useNavigate()
 
-  const loginMutation = useUserControllerLogin({
-    mutation: {
-      onSuccess: (data) => {
-        tokenStorage.setTokens(data.accessToken, data.refreshToken)
-        navigate({ to: '/' })
-      },
-    },
-  })
+  const loginMutation = useLogin()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
