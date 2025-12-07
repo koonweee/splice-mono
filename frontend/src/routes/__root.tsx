@@ -1,12 +1,35 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import {
+  HeadContent,
+  Scripts,
+  createRootRouteWithContext,
+  redirect,
+} from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import Header from '../components/Header'
+import type { RouterContext } from '../router'
 
 import appCss from '../styles.css?url'
 
-export const Route = createRootRoute({
+const PUBLIC_PATHS = ['/login', '/register']
+
+export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: ({ location, context }) => {
+    // Skip auth check for public routes
+    if (PUBLIC_PATHS.includes(location.pathname)) {
+      return
+    }
+
+    // Redirect to login if not authenticated
+    if (!context.auth.isAuthenticated()) {
+      throw redirect({
+        to: '/login',
+        search: { redirect: location.href },
+      })
+    }
+  },
+
   head: () => ({
     meta: [
       {
