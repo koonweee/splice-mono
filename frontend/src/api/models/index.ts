@@ -8,6 +8,8 @@
 
 export * from './account';
 export * from './accountSubType';
+export * from './accountSummary';
+export * from './accountSummaryType';
 export * from './accountType';
 export * from './balanceSnapshot';
 export * from './balanceSnapshotSnapshotType';
@@ -21,6 +23,9 @@ export * from './createBalanceSnapshotDto';
 export * from './createBalanceSnapshotDtoSnapshotType';
 export * from './createTransactionDto';
 export * from './createUserDto';
+export * from './dashboardControllerGetSummaryParams';
+export * from './dashboardControllerGetSummaryPeriod';
+export * from './dashboardSummary';
 export * from './initiateLinkRequest';
 export * from './initiateLinkResponse';
 export * from './loginDto';
@@ -28,7 +33,9 @@ export * from './loginResponse';
 export * from './money';
 export * from './moneyWithSign';
 export * from './moneyWithSignSign';
+export * from './netWorthChartPoint';
 export * from './refreshTokenDto';
+export * from './timePeriod';
 export * from './tokenResponse';
 export * from './transaction';
 export * from './transactionControllerFindAllParams';
