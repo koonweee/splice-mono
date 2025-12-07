@@ -31,6 +31,8 @@ import type {
   CreateBalanceSnapshotDto,
   CreateTransactionDto,
   CreateUserDto,
+  DashboardControllerGetSummaryParams,
+  DashboardSummary,
   InitiateLinkRequest,
   InitiateLinkResponse,
   LoginDto,
@@ -1384,6 +1386,97 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     
+/**
+ * Get dashboard summary with net worth and account summaries
+ */
+export const dashboardControllerGetSummary = (
+    params?: DashboardControllerGetSummaryParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<DashboardSummary>(
+      {url: `/dashboard/summary`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getDashboardControllerGetSummaryQueryKey = (params?: DashboardControllerGetSummaryParams,) => {
+    return [
+    `/dashboard/summary`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getDashboardControllerGetSummaryQueryOptions = <TData = Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError = unknown>(params?: DashboardControllerGetSummaryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDashboardControllerGetSummaryQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof dashboardControllerGetSummary>>> = ({ signal }) => dashboardControllerGetSummary(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DashboardControllerGetSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof dashboardControllerGetSummary>>>
+export type DashboardControllerGetSummaryQueryError = unknown
+
+
+export function useDashboardControllerGetSummary<TData = Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError = unknown>(
+ params: undefined |  DashboardControllerGetSummaryParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dashboardControllerGetSummary>>,
+          TError,
+          Awaited<ReturnType<typeof dashboardControllerGetSummary>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDashboardControllerGetSummary<TData = Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError = unknown>(
+ params?: DashboardControllerGetSummaryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dashboardControllerGetSummary>>,
+          TError,
+          Awaited<ReturnType<typeof dashboardControllerGetSummary>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDashboardControllerGetSummary<TData = Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError = unknown>(
+ params?: DashboardControllerGetSummaryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useDashboardControllerGetSummary<TData = Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError = unknown>(
+ params?: DashboardControllerGetSummaryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof dashboardControllerGetSummary>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDashboardControllerGetSummaryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
 /**
  * Get all transactions
  */

@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { AxiosError } from 'axios'
 import { useLogin } from '../lib/auth'
 
 export const Route = createFileRoute('/login')({
@@ -15,7 +14,7 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const { redirect } = Route.useSearch()
 
-  const loginMutation = useLogin({ redirectTo: redirect })
+  const loginMutation = useLogin({ redirectTo: redirect ?? '/home' })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,31 +22,27 @@ function LoginPage() {
   }
 
   return (
-    <div className="p-8 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Login</h1>
+    <div className="min-h-screen flex items-center justify-center">
+      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
+        <h1 className="text-2xl font-bold text-center">Login</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-            required
-          />
-        </div>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          className="w-full border rounded px-3 py-2"
+          required
+        />
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-            required
-          />
-        </div>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          className="w-full border rounded px-3 py-2"
+          required
+        />
 
         <button
           type="submit"
@@ -56,28 +51,11 @@ function LoginPage() {
         >
           {loginMutation.isPending ? 'Logging in...' : 'Login'}
         </button>
+
+        {loginMutation.isError && (
+          <p className="text-red-600 text-center">Login failed</p>
+        )}
       </form>
-
-      {loginMutation.isError && (
-        <div className="mt-4 p-4 bg-red-100 text-red-700 rounded">
-          <strong>Error:</strong>
-          <pre className="mt-2 text-sm overflow-auto">
-            {(() => {
-              const err = loginMutation.error as unknown as AxiosError<{ message?: string }>
-              return JSON.stringify(err.response?.data ?? err.message ?? 'Unknown error', null, 2)
-            })()}
-          </pre>
-        </div>
-      )}
-
-      {loginMutation.isSuccess && (
-        <div className="mt-4 p-4 bg-green-100 text-green-700 rounded">
-          <strong>Success!</strong>
-          <pre className="mt-2 text-sm overflow-auto">
-            {JSON.stringify(loginMutation.data, null, 2)}
-          </pre>
-        </div>
-      )}
     </div>
   )
 }

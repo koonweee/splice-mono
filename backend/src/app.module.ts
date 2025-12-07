@@ -14,6 +14,7 @@ import { BankLinkEntity } from './bank-link/bank-link.entity';
 import { BankLinkModule } from './bank-link/bank-link.module';
 import { CategoryEntity } from './category/category.entity';
 import { CategoryModule } from './category/category.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { TransactionEntity } from './transaction/transaction.entity';
 import { TransactionModule } from './transaction/transaction.module';
 import { UserEntity } from './user/user.entity';
@@ -29,6 +30,7 @@ import { WebhookEventEntity } from './webhook-event/webhook-event.entity';
     BalanceSnapshotModule,
     BankLinkModule,
     CategoryModule,
+    DashboardModule,
     TransactionModule,
     UserModule,
     TypeOrmModule.forRoot({
