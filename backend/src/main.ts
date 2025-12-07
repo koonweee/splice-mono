@@ -13,6 +13,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:5173',
+      'http://localhost:4000',
       'https://splice-app.jtkw.me',
       'https://splice.jtkw.me',
     ],
