@@ -50,8 +50,28 @@ export const LoginResponseSchema = registerSchema(
   'LoginResponse',
   z.object({
     accessToken: z.string(),
+    refreshToken: z.string(),
     user: UserSchema,
   }),
 );
 
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+
+export const RefreshTokenDtoSchema = registerSchema(
+  'RefreshTokenDto',
+  z.object({
+    refreshToken: z.string(),
+  }),
+);
+
+export type RefreshTokenDto = z.infer<typeof RefreshTokenDtoSchema>;
+
+export const TokenResponseSchema = registerSchema(
+  'TokenResponse',
+  z.object({
+    accessToken: z.string(),
+    refreshToken: z.string(),
+  }),
+);
+
+export type TokenResponse = z.infer<typeof TokenResponseSchema>;
