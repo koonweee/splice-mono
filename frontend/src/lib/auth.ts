@@ -39,7 +39,11 @@ export const tokenStorage = {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
   },
 
-  hasTokens: (): boolean => !!localStorage.getItem(ACCESS_TOKEN_KEY),
+  hasTokens: (): boolean => {
+    // On server (SSR), assume authenticated - client will verify after hydration
+    if (typeof window === 'undefined') return true;
+    return !!localStorage.getItem(ACCESS_TOKEN_KEY);
+  },
 };
 
 /**
