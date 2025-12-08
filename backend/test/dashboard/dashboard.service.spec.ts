@@ -5,6 +5,7 @@ import { BalanceSnapshotService } from '../../src/balance-snapshot/balance-snaps
 import { DashboardService } from '../../src/dashboard/dashboard.service';
 import { TimePeriod } from '../../src/types/Dashboard';
 import { MoneySign } from '../../src/types/MoneyWithSign';
+import { UserService } from '../../src/user/user.service';
 import {
   createMockAccountWithConversion,
   createMockSnapshotWithConversion,
@@ -13,6 +14,7 @@ import {
   mockSavingsAccount,
   mockUserId,
 } from '../mocks/dashboard/dashboard.mock';
+import { mockUserService } from '../mocks/user/user-service.mock';
 
 describe('DashboardService', () => {
   let service: DashboardService;
@@ -41,6 +43,10 @@ describe('DashboardService', () => {
         {
           provide: BalanceSnapshotService,
           useValue: balanceSnapshotService,
+        },
+        {
+          provide: UserService,
+          useValue: mockUserService,
         },
       ],
     }).compile();

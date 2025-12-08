@@ -187,12 +187,27 @@ export class UserService {
     const currentSettings = entity.settings;
     const newSettings: UserSettings = {
       currency: settingsUpdate.currency ?? currentSettings.currency,
+      timezone: settingsUpdate.timezone ?? currentSettings.timezone,
     };
     entity.settings = newSettings;
 
     await this.repository.save(entity);
     this.logger.log(`Updated settings for user ${userId}`);
     return newSettings;
+  }
+
+  /**
+   * Get user's timezone setting
+   *
+   * @param userId - User ID
+   * @returns IANA timezone string (defaults to 'UTC' if user not found or not set)
+   */
+  async getTimezone(userId: string): Promise<string> {
+    const entity = await this.repository.findOne({
+      where: { id: userId },
+    });
+
+    return entity?.settings?.timezone ?? 'UTC';
   }
 
   /**

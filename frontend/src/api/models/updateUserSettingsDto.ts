@@ -8,4 +8,5 @@
 
 export interface UpdateUserSettingsDto {
   currency?: string;
+  timezone?: string;
 }

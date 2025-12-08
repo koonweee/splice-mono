@@ -8,4 +8,5 @@
 
 export interface UserSettings {
   currency?: string;
+  timezone?: string;
 }

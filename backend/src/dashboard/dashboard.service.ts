@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import { AccountType } from 'plaid';
 import { AccountService } from '../account/account.service';
 import { BalanceSnapshotService } from '../balance-snapshot/balance-snapshot.service';
@@ -14,6 +17,10 @@ import {
   MoneySign,
   type SerializedMoneyWithSign,
 } from '../types/MoneyWithSign';
+import { UserService } from '../user/user.service';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 /** Account types that contribute positively to net worth */
 const ASSET_TYPES: string[] = [
@@ -53,6 +60,7 @@ export class DashboardService {
   constructor(
     private readonly accountService: AccountService,
     private readonly balanceSnapshotService: BalanceSnapshotService,
+    private readonly userService: UserService,
   ) {}
 
   /**
@@ -88,10 +96,15 @@ export class DashboardService {
     const targetCurrency =
       accounts[0].convertedCurrentBalance?.money.currency ?? 'USD';
 
+    // Get user's timezone for date calculations
+    const userTimezone = await this.userService.getTimezone(userId);
+
     // Get snapshots from the specified period ago for comparison
-    const today = new Date();
-    const comparisonDate = new Date(today);
-    comparisonDate.setDate(comparisonDate.getDate() - PERIOD_DAYS[period]);
+    const comparisonDate = dayjs()
+      .tz(userTimezone)
+      .startOf('day')
+      .subtract(PERIOD_DAYS[period], 'day')
+      .toDate();
 
     const previousSnapshots =
       await this.balanceSnapshotService.findSnapshotsNearDateWithConversion(
@@ -154,7 +167,12 @@ export class DashboardService {
         : null;
 
     // Generate chart data (monthly points for last 6 months)
-    const chartData = await this.getChartData(userId, accounts, 6);
+    const chartData = await this.getChartData(
+      userId,
+      accounts,
+      6,
+      userTimezone,
+    );
 
     return {
       netWorth: createMoneyWithSign(currentNetWorth, targetCurrency),
@@ -201,34 +219,34 @@ export class DashboardService {
    * @param userId - The user ID
    * @param accounts - Pre-fetched accounts with converted balances
    * @param months - Number of months of history to include
+   * @param userTimezone - User's IANA timezone string
    */
   private async getChartData(
     userId: string,
     accounts: AccountWithConvertedBalance[],
     months: number,
+    userTimezone: string,
   ): Promise<NetWorthChartPoint[]> {
     const points: NetWorthChartPoint[] = [];
-    const today = new Date();
+    const today = dayjs().tz(userTimezone);
 
     // Get the target currency from accounts
     const targetCurrency =
       accounts[0]?.convertedCurrentBalance?.money.currency ?? 'USD';
 
     for (let i = months - 1; i >= 0; i--) {
-      const date = new Date(today);
-      date.setMonth(date.getMonth() - i);
-      date.setDate(1); // First of each month
+      const date = today.subtract(i, 'month').startOf('month');
 
       const snapshots =
         await this.balanceSnapshotService.findSnapshotsNearDateWithConversion(
           userId,
-          date,
+          date.toDate(),
         );
 
       // If no snapshots exist for this date, return null value
       if (snapshots.size === 0) {
         points.push({
-          date: date.toISOString().split('T')[0],
+          date: date.format('YYYY-MM-DD'),
           value: null,
         });
         continue;
@@ -252,7 +270,7 @@ export class DashboardService {
       }
 
       points.push({
-        date: date.toISOString().split('T')[0],
+        date: date.format('YYYY-MM-DD'),
         value: hasAnyData
           ? createMoneyWithSign(netWorth, targetCurrency)
           : null,
