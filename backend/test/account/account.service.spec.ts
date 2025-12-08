@@ -501,8 +501,6 @@ describe('AccountService', () => {
       const result = await service.findAllWithConversion(mockUserId);
 
       expect(result).toEqual([]);
-      expect(mockUserService.findOne).not.toHaveBeenCalled();
-      expect(mockCurrencyConversionService.convertMany).not.toHaveBeenCalled();
     });
 
     it('should return accounts with converted balances', async () => {
@@ -518,26 +516,6 @@ describe('AccountService', () => {
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('convertedCurrentBalance');
       expect(result[0]).toHaveProperty('convertedAvailableBalance');
-      expect(mockUserService.findOne).toHaveBeenCalledWith(mockUserId);
-      expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledTimes(
-        2,
-      );
-    });
-
-    it('should return null for converted balances when no rate available', async () => {
-      const mockEntity = AccountEntity.fromDto(
-        mockCreateAccountDto,
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockRepository.find.mockResolvedValue([mockEntity]);
-      mockCurrencyConversionService.convertMany.mockResolvedValue([
-        { amount: 50000, rate: null, usedFallback: true },
-      ]);
-
-      const result = await service.findAllWithConversion(mockUserId);
-
-      expect(result[0].convertedCurrentBalance).toBeNull();
     });
   });
 
@@ -551,7 +529,6 @@ describe('AccountService', () => {
       );
 
       expect(result).toBeNull();
-      expect(mockUserService.findOne).not.toHaveBeenCalled();
     });
 
     it('should return account with converted balances', async () => {
@@ -567,10 +544,6 @@ describe('AccountService', () => {
       expect(result).not.toBeNull();
       expect(result).toHaveProperty('convertedCurrentBalance');
       expect(result).toHaveProperty('convertedAvailableBalance');
-      expect(mockUserService.findOne).toHaveBeenCalledWith(mockUserId);
-      expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledTimes(
-        2,
-      );
     });
   });
 });

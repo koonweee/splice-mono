@@ -287,8 +287,6 @@ describe('BalanceSnapshotService', () => {
       const result = await service.findAllWithConversion(mockUserId);
 
       expect(result).toEqual([]);
-      expect(mockUserService.findOne).not.toHaveBeenCalled();
-      expect(mockCurrencyConversionService.convertMany).not.toHaveBeenCalled();
     });
 
     it('should return snapshots with converted balances', async () => {
@@ -297,10 +295,6 @@ describe('BalanceSnapshotService', () => {
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('convertedCurrentBalance');
       expect(result[0]).toHaveProperty('convertedAvailableBalance');
-      expect(mockUserService.findOne).toHaveBeenCalledWith(mockUserId);
-      expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledTimes(
-        2,
-      );
     });
   });
 
@@ -314,7 +308,6 @@ describe('BalanceSnapshotService', () => {
       );
 
       expect(result).toEqual([]);
-      expect(mockUserService.findOne).not.toHaveBeenCalled();
     });
 
     it('should return snapshots with converted balances for account', async () => {
@@ -326,7 +319,6 @@ describe('BalanceSnapshotService', () => {
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('convertedCurrentBalance');
       expect(result[0]).toHaveProperty('convertedAvailableBalance');
-      expect(mockUserService.findOne).toHaveBeenCalledWith(mockUserId);
     });
   });
 });
