@@ -83,7 +83,7 @@ export function useLogin(options?: { redirectTo?: string }) {
  */
 export function useLogout(options?: { redirectTo?: string }) {
   const navigate = useNavigate()
-  const redirectTo = options?.redirectTo ?? '/login'
+  const redirectTo = options?.redirectTo ?? '/'
 
   return useUserControllerLogout({
     mutation: {
@@ -106,7 +106,7 @@ export function useLogout(options?: { redirectTo?: string }) {
  */
 export function useLogoutAll(options?: { redirectTo?: string }) {
   const navigate = useNavigate()
-  const redirectTo = options?.redirectTo ?? '/login'
+  const redirectTo = options?.redirectTo ?? '/'
 
   return useUserControllerLogoutAll({
     mutation: {

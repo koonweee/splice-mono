@@ -1,7 +1,5 @@
 import {
   Alert,
-  Button,
-  Container,
   Grid,
   Group,
   Loader,
@@ -12,13 +10,12 @@ import {
 } from '@mantine/core'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useDashboardControllerGetSummary } from '../api/clients/spliceAPI'
-import { TimePeriod } from '../api/models'
-import { AccountCard } from '../components/AccountCard'
-import { NetWorthCard } from '../components/NetWorthCard'
-import { useLogout } from '../lib/auth'
+import { useDashboardControllerGetSummary } from '../../api/clients/spliceAPI'
+import { TimePeriod } from '../../api/models'
+import { AccountCard } from '../../components/AccountCard'
+import { NetWorthCard } from '../../components/NetWorthCard'
 
-export const Route = createFileRoute('/home')({ component: HomePage })
+export const Route = createFileRoute('/_authed/home')({ component: HomePage })
 
 const PERIOD_OPTIONS = [
   { value: TimePeriod.day, label: 'Day' },
@@ -29,38 +26,22 @@ const PERIOD_OPTIONS = [
 
 function HomePage() {
   const [period, setPeriod] = useState<TimePeriod>(TimePeriod.month)
-  const logoutMutation = useLogout()
   const {
     data: dashboard,
     isLoading,
     error,
   } = useDashboardControllerGetSummary({ period })
 
-  const handleLogout = () => {
-    // Refresh token is sent via HTTP-only cookie
-    logoutMutation.mutate({ data: {} })
-  }
-
   return (
-    <Container size="md" py="xl">
+    <>
       <Group justify="space-between" mb="xl">
-        <Title order={1}>Dashboard</Title>
-        <Group>
-          <Select
-            value={period}
-            onChange={(value) => value && setPeriod(value as TimePeriod)}
-            data={PERIOD_OPTIONS}
-            w={120}
-          />
-          <Button
-            onClick={handleLogout}
-            loading={logoutMutation.isPending}
-            variant="filled"
-            color="dark"
-          >
-            Logout
-          </Button>
-        </Group>
+        <Title order={1}>Home</Title>
+        <Select
+          value={period}
+          onChange={(value) => value && setPeriod(value as TimePeriod)}
+          data={PERIOD_OPTIONS}
+          w={120}
+        />
       </Group>
 
       {isLoading && (
@@ -125,6 +106,6 @@ function HomePage() {
           </Grid>
         </>
       )}
-    </Container>
+    </>
   )
 }
