@@ -3,11 +3,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
+import { CurrencyConversionService } from '../exchange-rate/currency-conversion.service';
 import {
   BalanceSnapshot,
+  BalanceSnapshotWithConvertedBalance,
   CreateBalanceSnapshotDto,
   UpdateBalanceSnapshotDto,
 } from '../types/BalanceSnapshot';
+import {
+  MoneySign,
+  type SerializedMoneyWithSign,
+} from '../types/MoneyWithSign';
+import { UserService } from '../user/user.service';
 import { BalanceSnapshotEntity } from './balance-snapshot.entity';
 
 @Injectable()
@@ -24,6 +31,8 @@ export class BalanceSnapshotService extends OwnedCrudService<
   constructor(
     @InjectRepository(BalanceSnapshotEntity)
     repository: Repository<BalanceSnapshotEntity>,
+    private readonly userService: UserService,
+    private readonly currencyConversionService: CurrencyConversionService,
   ) {
     super(repository);
   }
@@ -132,5 +141,157 @@ export class BalanceSnapshotService extends OwnedCrudService<
     const savedEntity = await this.repository.save(entity);
     this.logger.log(`Balance snapshot created: id=${savedEntity.id}`);
     return savedEntity.toObject();
+  }
+
+  /**
+   * Find all balance snapshots for a user with balances converted to user's preferred currency
+   *
+   * @param userId - The ID of the user
+   * @returns Array of balance snapshots with converted balances
+   */
+  async findAllWithConversion(
+    userId: string,
+  ): Promise<BalanceSnapshotWithConvertedBalance[]> {
+    const snapshots = await this.findAll(userId);
+
+    if (snapshots.length === 0) {
+      return [];
+    }
+
+    // Get user's preferred currency
+    const user = await this.userService.findOne(userId);
+    const targetCurrency = user?.settings.currency ?? 'USD';
+
+    // Prepare separate arrays for each balance type
+    const currentBalanceInputs = snapshots.map((snapshot) => ({
+      amount: snapshot.currentBalance.money.amount,
+      currency: snapshot.currentBalance.money.currency,
+    }));
+
+    const availableBalanceInputs = snapshots.map((snapshot) => ({
+      amount: snapshot.availableBalance.money.amount,
+      currency: snapshot.availableBalance.money.currency,
+    }));
+
+    // Convert both balance types in parallel
+    const [currentBalanceResults, availableBalanceResults] = await Promise.all([
+      this.currencyConversionService.convertMany(
+        currentBalanceInputs,
+        targetCurrency,
+      ),
+      this.currencyConversionService.convertMany(
+        availableBalanceInputs,
+        targetCurrency,
+      ),
+    ]);
+
+    // Map results back to snapshots
+    return snapshots.map(
+      (snapshot, index): BalanceSnapshotWithConvertedBalance => {
+        return {
+          ...snapshot,
+          convertedCurrentBalance: this.buildConvertedBalance(
+            currentBalanceResults[index],
+            snapshot.currentBalance.sign,
+            targetCurrency,
+          ),
+          convertedAvailableBalance: this.buildConvertedBalance(
+            availableBalanceResults[index],
+            snapshot.availableBalance.sign,
+            targetCurrency,
+          ),
+        };
+      },
+    );
+  }
+
+  /**
+   * Find all balance snapshots for an account with balances converted to user's preferred currency
+   *
+   * @param accountId - The account ID to filter by
+   * @param userId - The ID of the user who owns the snapshots
+   * @returns Array of balance snapshots with converted balances
+   */
+  async findByAccountIdWithConversion(
+    accountId: string,
+    userId: string,
+  ): Promise<BalanceSnapshotWithConvertedBalance[]> {
+    const snapshots = await this.findByAccountId(accountId, userId);
+
+    if (snapshots.length === 0) {
+      return [];
+    }
+
+    // Get user's preferred currency
+    const user = await this.userService.findOne(userId);
+    const targetCurrency = user?.settings.currency ?? 'USD';
+
+    // Prepare separate arrays for each balance type
+    const currentBalanceInputs = snapshots.map((snapshot) => ({
+      amount: snapshot.currentBalance.money.amount,
+      currency: snapshot.currentBalance.money.currency,
+    }));
+
+    const availableBalanceInputs = snapshots.map((snapshot) => ({
+      amount: snapshot.availableBalance.money.amount,
+      currency: snapshot.availableBalance.money.currency,
+    }));
+
+    // Convert both balance types in parallel
+    const [currentBalanceResults, availableBalanceResults] = await Promise.all([
+      this.currencyConversionService.convertMany(
+        currentBalanceInputs,
+        targetCurrency,
+      ),
+      this.currencyConversionService.convertMany(
+        availableBalanceInputs,
+        targetCurrency,
+      ),
+    ]);
+
+    // Map results back to snapshots
+    return snapshots.map(
+      (snapshot, index): BalanceSnapshotWithConvertedBalance => {
+        return {
+          ...snapshot,
+          convertedCurrentBalance: this.buildConvertedBalance(
+            currentBalanceResults[index],
+            snapshot.currentBalance.sign,
+            targetCurrency,
+          ),
+          convertedAvailableBalance: this.buildConvertedBalance(
+            availableBalanceResults[index],
+            snapshot.availableBalance.sign,
+            targetCurrency,
+          ),
+        };
+      },
+    );
+  }
+
+  /**
+   * Helper to build a converted balance object from conversion result
+   */
+  private buildConvertedBalance(
+    conversionResult: {
+      amount: number;
+      rate: number | null;
+      usedFallback: boolean;
+    },
+    originalSign: MoneySign,
+    targetCurrency: string,
+  ): SerializedMoneyWithSign | null {
+    // Return null if no rate was available (fallback was used)
+    if (conversionResult.usedFallback) {
+      return null;
+    }
+
+    return {
+      money: {
+        amount: Math.round(conversionResult.amount),
+        currency: targetCurrency,
+      },
+      sign: originalSign,
+    };
   }
 }

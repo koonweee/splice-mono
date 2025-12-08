@@ -5,7 +5,8 @@ import { AccountService } from '../../src/account/account.service';
 import { mockAccountService } from '../mocks/account/account-service.mock';
 import {
   mockAccount,
-  mockAccount2,
+  mockAccountWithConversion,
+  mockAccountWithConversion2,
   mockCreateAccountDto,
 } from '../mocks/account/account.mock';
 
@@ -38,61 +39,70 @@ describe('AccountController', () => {
   describe('findAll', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
 
-    it('should return an array of accounts', async () => {
+    it('should return an array of accounts with converted balances', async () => {
       const result = await controller.findAll(mockUser);
 
-      expect(result).toEqual([mockAccount, mockAccount2]);
-      expect(mockAccountService.findAll).toHaveBeenCalledWith(mockUser.userId);
+      expect(result).toEqual([
+        mockAccountWithConversion,
+        mockAccountWithConversion2,
+      ]);
+      expect(mockAccountService.findAllWithConversion).toHaveBeenCalledWith(
+        mockUser.userId,
+      );
     });
 
-    it('should call accountService.findAll with userId', async () => {
+    it('should call accountService.findAllWithConversion with userId', async () => {
       await controller.findAll(mockUser);
 
-      expect(mockAccountService.findAll).toHaveBeenCalledTimes(1);
-      expect(mockAccountService.findAll).toHaveBeenCalledWith(mockUser.userId);
+      expect(mockAccountService.findAllWithConversion).toHaveBeenCalledTimes(1);
+      expect(mockAccountService.findAllWithConversion).toHaveBeenCalledWith(
+        mockUser.userId,
+      );
     });
   });
 
   describe('create', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
 
-    it('should create and return a new account', async () => {
+    it('should create and return a new account with converted balances', async () => {
       const result = await controller.create(mockUser, mockCreateAccountDto);
 
-      expect(result).toEqual(mockAccount);
+      expect(result).toEqual(mockAccountWithConversion);
       expect(mockAccountService.create).toHaveBeenCalledWith(
         mockCreateAccountDto,
+        mockUser.userId,
+      );
+      expect(mockAccountService.findOneWithConversion).toHaveBeenCalledWith(
+        mockAccount.id,
         mockUser.userId,
       );
     });
 
-    it('should call accountService.create with correct data', async () => {
+    it('should call accountService.create then findOneWithConversion', async () => {
       await controller.create(mockUser, mockCreateAccountDto);
 
       expect(mockAccountService.create).toHaveBeenCalledTimes(1);
-      expect(mockAccountService.create).toHaveBeenCalledWith(
-        mockCreateAccountDto,
-        mockUser.userId,
-      );
+      expect(mockAccountService.findOneWithConversion).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('findOne', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
 
-    it('should return an account when valid ID is provided', async () => {
-      mockAccountService.findOne.mockResolvedValue(mockAccount);
+    it('should return an account with converted balances when valid ID is provided', async () => {
       const result = await controller.findOne('test-id-123', mockUser);
 
-      expect(result).toEqual(mockAccount);
-      expect(mockAccountService.findOne).toHaveBeenCalledWith(
+      expect(result).toEqual(mockAccountWithConversion);
+      expect(mockAccountService.findOneWithConversion).toHaveBeenCalledWith(
         'test-id-123',
         mockUser.userId,
       );
     });
 
     it('should throw NotFoundException when account is not found', async () => {
-      mockAccountService.findOne.mockResolvedValue(null);
+      mockAccountService.findOneWithConversion
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
 
       await expect(
         controller.findOne('non-existent-id', mockUser),
@@ -102,12 +112,11 @@ describe('AccountController', () => {
       ).rejects.toThrow('Account with id non-existent-id not found');
     });
 
-    it('should call accountService.findOne with correct ID and userId', async () => {
-      mockAccountService.findOne.mockResolvedValue(mockAccount);
+    it('should call accountService.findOneWithConversion with correct ID and userId', async () => {
       await controller.findOne('test-id-123', mockUser);
 
-      expect(mockAccountService.findOne).toHaveBeenCalledTimes(1);
-      expect(mockAccountService.findOne).toHaveBeenCalledWith(
+      expect(mockAccountService.findOneWithConversion).toHaveBeenCalledTimes(1);
+      expect(mockAccountService.findOneWithConversion).toHaveBeenCalledWith(
         'test-id-123',
         mockUser.userId,
       );

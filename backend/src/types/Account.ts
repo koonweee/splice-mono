@@ -63,3 +63,20 @@ export const UpdateAccountDtoSchema = registerSchema(
 );
 
 export type UpdateAccountDto = z.infer<typeof UpdateAccountDtoSchema>;
+
+/**
+ * Account with balances converted to user's preferred currency
+ */
+export const AccountWithConvertedBalanceSchema = registerSchema(
+  'AccountWithConvertedBalance',
+  AccountSchema.extend({
+    /** Current balance converted to user's preferred currency */
+    convertedCurrentBalance: MoneyWithSignSchema.nullable(),
+    /** Available balance converted to user's preferred currency */
+    convertedAvailableBalance: MoneyWithSignSchema.nullable(),
+  }),
+);
+
+export type AccountWithConvertedBalance = z.infer<
+  typeof AccountWithConvertedBalanceSchema
+>;

@@ -76,3 +76,20 @@ export const UpdateBalanceSnapshotDtoSchema = registerSchema(
 export type UpdateBalanceSnapshotDto = z.infer<
   typeof UpdateBalanceSnapshotDtoSchema
 >;
+
+/**
+ * Balance snapshot with balances converted to user's preferred currency
+ */
+export const BalanceSnapshotWithConvertedBalanceSchema = registerSchema(
+  'BalanceSnapshotWithConvertedBalance',
+  BalanceSnapshotSchema.extend({
+    /** Current balance converted to user's preferred currency */
+    convertedCurrentBalance: MoneyWithSignSchema.nullable(),
+    /** Available balance converted to user's preferred currency */
+    convertedAvailableBalance: MoneyWithSignSchema.nullable(),
+  }),
+);
+
+export type BalanceSnapshotWithConvertedBalance = z.infer<
+  typeof BalanceSnapshotWithConvertedBalanceSchema
+>;
