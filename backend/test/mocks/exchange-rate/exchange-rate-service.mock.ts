@@ -27,4 +27,9 @@ export const mockExchangeRateService = {
     { baseCurrency: 'EUR', targetCurrency: 'USD' },
     { baseCurrency: 'GBP', targetCurrency: 'USD' },
   ]),
+
+  // Backfill methods
+  backfillRatesForUser: jest
+    .fn()
+    .mockResolvedValue([mockExchangeRate, mockExchangeRate2]),
 };
