@@ -5,26 +5,26 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { MoneyWithSign } from './moneyWithSign';
-import type { AccountType } from './accountType';
-import type { AccountSubType } from './accountSubType';
+import type { MoneyWithSign } from './moneyWithSign'
+import type { AccountType } from './accountType'
+import type { AccountSubType } from './accountSubType'
 
 export interface Account {
-  id: string;
+  id: string
   /** @nullable */
-  name: string | null;
+  name: string | null
   /** @nullable */
-  mask?: string | null;
-  availableBalance: MoneyWithSign;
-  currentBalance: MoneyWithSign;
-  type: AccountType;
+  mask?: string | null
+  availableBalance: MoneyWithSign
+  currentBalance: MoneyWithSign
+  type: AccountType
   /** @nullable */
-  subType: AccountSubType;
+  subType: AccountSubType
   /** @nullable */
-  externalAccountId?: string | null;
+  externalAccountId?: string | null
   /** @nullable */
-  bankLinkId?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  userId: string;
+  bankLinkId?: string | null
+  createdAt: string
+  updatedAt: string
+  userId: string
 }

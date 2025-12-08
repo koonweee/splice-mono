@@ -8,9 +8,8 @@
     "serve": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
-    "format": "prettier",
     "typecheck": "tsc --noEmit",
-    "check": "prettier --write . && eslint --fix",
+    "format": "prettier --write .",
     "orval": "orval"
   },
   "dependencies": {
