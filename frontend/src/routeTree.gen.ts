@@ -13,6 +13,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedHomeRouteImport } from './routes/_authed/home'
+import { Route as AuthedSplatRouteImport } from './routes/_authed/$'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -33,14 +34,21 @@ const AuthedHomeRoute = AuthedHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedSplatRoute = AuthedSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof AuthedSplatRoute
   '/home': typeof AuthedHomeRoute
   '/settings': typeof AuthedSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof AuthedSplatRoute
   '/home': typeof AuthedHomeRoute
   '/settings': typeof AuthedSettingsRoute
 }
@@ -48,15 +56,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
+  '/_authed/$': typeof AuthedSplatRoute
   '/_authed/home': typeof AuthedHomeRoute
   '/_authed/settings': typeof AuthedSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/home' | '/settings'
+  fullPaths: '/' | '/$' | '/home' | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/home' | '/settings'
-  id: '__root__' | '/' | '/_authed' | '/_authed/home' | '/_authed/settings'
+  to: '/' | '/$' | '/home' | '/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authed'
+    | '/_authed/$'
+    | '/_authed/home'
+    | '/_authed/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,15 +109,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedHomeRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/$': {
+      id: '/_authed/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof AuthedSplatRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
 interface AuthedRouteChildren {
+  AuthedSplatRoute: typeof AuthedSplatRoute
   AuthedHomeRoute: typeof AuthedHomeRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedSplatRoute: AuthedSplatRoute,
   AuthedHomeRoute: AuthedHomeRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
 }
