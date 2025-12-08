@@ -15,6 +15,9 @@ export const mockBalanceSnapshotService = {
     .fn()
     .mockResolvedValue([mockBalanceSnapshotWithConversion]),
   findSnapshotsForDateWithConversion: jest.fn().mockResolvedValue(new Map()),
+  findByAccountIdAndDate: jest.fn().mockResolvedValue(mockBalanceSnapshot),
+  findMostRecentBeforeDate: jest.fn().mockResolvedValue(mockBalanceSnapshot),
+  upsert: jest.fn().mockResolvedValue(mockBalanceSnapshot),
   update: jest.fn().mockResolvedValue(mockBalanceSnapshot),
   remove: jest.fn().mockResolvedValue(true),
 };

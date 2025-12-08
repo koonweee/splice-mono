@@ -94,7 +94,7 @@ export class DashboardService {
     // Get the target currency from the first account's converted balance
     // All accounts are converted to the same currency
     const targetCurrency =
-      accounts[0].convertedCurrentBalance?.money.currency ?? 'USD';
+      accounts[0].convertedCurrentBalance?.balance.money.currency ?? 'USD';
 
     // Get user's timezone for date calculations
     const userTimezone = await this.userService.getTimezone(userId);
@@ -196,9 +196,18 @@ export class DashboardService {
   private getSignedConvertedBalance(
     account: AccountWithConvertedBalance,
   ): number {
-    const balance = account.convertedCurrentBalance ?? account.currentBalance;
-    const amount = balance.money.amount;
-    return balance.sign === MoneySign.NEGATIVE ? -amount : amount;
+    const convertedBalance = account.convertedCurrentBalance;
+    if (convertedBalance) {
+      const amount = convertedBalance.balance.money.amount;
+      return convertedBalance.balance.sign === MoneySign.NEGATIVE
+        ? -amount
+        : amount;
+    }
+    // Fallback to original balance
+    const amount = account.currentBalance.money.amount;
+    return account.currentBalance.sign === MoneySign.NEGATIVE
+      ? -amount
+      : amount;
   }
 
   /**
@@ -209,9 +218,18 @@ export class DashboardService {
   private getSignedConvertedBalanceFromSnapshot(
     snapshot: BalanceSnapshotWithConvertedBalance,
   ): number {
-    const balance = snapshot.convertedCurrentBalance ?? snapshot.currentBalance;
-    const amount = balance.money.amount;
-    return balance.sign === MoneySign.NEGATIVE ? -amount : amount;
+    const convertedBalance = snapshot.convertedCurrentBalance;
+    if (convertedBalance) {
+      const amount = convertedBalance.balance.money.amount;
+      return convertedBalance.balance.sign === MoneySign.NEGATIVE
+        ? -amount
+        : amount;
+    }
+    // Fallback to original balance
+    const amount = snapshot.currentBalance.money.amount;
+    return snapshot.currentBalance.sign === MoneySign.NEGATIVE
+      ? -amount
+      : amount;
   }
 
   /**
@@ -236,7 +254,7 @@ export class DashboardService {
 
     // Get the target currency from accounts
     const targetCurrency =
-      accounts[0]?.convertedCurrentBalance?.money.currency ?? 'USD';
+      accounts[0]?.convertedCurrentBalance?.balance.money.currency ?? 'USD';
 
     // Get the number of days for this period
     const daysToShow = PERIOD_DAYS[period];
@@ -246,11 +264,6 @@ export class DashboardService {
     for (let i = daysToShow; i >= 0; i--) {
       dates.push(today.subtract(i, 'day'));
     }
-
-    console.log(
-      'dates',
-      dates.map((d) => d.format('YYYY-MM-DD')),
-    );
 
     // Find the first date (oldest) that has data
     let startIndex = 0;

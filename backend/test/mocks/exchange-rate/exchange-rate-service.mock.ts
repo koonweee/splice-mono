@@ -1,12 +1,17 @@
 import { mockExchangeRate, mockExchangeRate2 } from './exchange-rate.mock';
 
-/** Default mock for synchronous batch lookup function */
-const mockBatchLookup = jest.fn((from: string, to: string) => {
-  if (from === to) return 1;
-  if (from === 'EUR' && to === 'USD') return mockExchangeRate.rate;
-  if (from === 'GBP' && to === 'USD') return mockExchangeRate2.rate;
-  return null;
-});
+/** Default mock for synchronous batch lookup function - returns BatchRateLookupResult */
+const mockBatchLookup = jest.fn(
+  (from: string, to: string, rateDate?: string) => {
+    const effectiveDate = rateDate ?? '2024-01-15';
+    if (from === to) return { rate: 1, rateDate: effectiveDate };
+    if (from === 'EUR' && to === 'USD')
+      return { rate: mockExchangeRate.rate, rateDate: effectiveDate };
+    if (from === 'GBP' && to === 'USD')
+      return { rate: mockExchangeRate2.rate, rateDate: effectiveDate };
+    return null;
+  },
+);
 
 export const mockExchangeRateService = {
   // Public cache-based methods

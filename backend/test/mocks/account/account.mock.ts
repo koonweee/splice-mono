@@ -65,12 +65,20 @@ export const mockAccount2: Account = {
 export const mockAccountWithConversion: AccountWithConvertedBalance = {
   ...mockAccount,
   convertedCurrentBalance: {
-    money: { currency: 'USD', amount: 100000 },
-    sign: MoneySign.POSITIVE,
+    balance: {
+      money: { currency: 'USD', amount: 100000 },
+      sign: MoneySign.POSITIVE,
+    },
+    rate: 1,
+    rateDate: '2024-01-15',
   },
   convertedAvailableBalance: {
-    money: { currency: 'USD', amount: 100000 },
-    sign: MoneySign.POSITIVE,
+    balance: {
+      money: { currency: 'USD', amount: 100000 },
+      sign: MoneySign.POSITIVE,
+    },
+    rate: 1,
+    rateDate: '2024-01-15',
   },
 };
 
@@ -80,12 +88,20 @@ export const mockAccountWithConversion: AccountWithConvertedBalance = {
 export const mockAccountWithConversion2: AccountWithConvertedBalance = {
   ...mockAccount2,
   convertedCurrentBalance: {
-    money: { currency: 'USD', amount: 500000 },
-    sign: MoneySign.POSITIVE,
+    balance: {
+      money: { currency: 'USD', amount: 500000 },
+      sign: MoneySign.POSITIVE,
+    },
+    rate: 1,
+    rateDate: '2024-01-15',
   },
   convertedAvailableBalance: {
-    money: { currency: 'USD', amount: 500000 },
-    sign: MoneySign.POSITIVE,
+    balance: {
+      money: { currency: 'USD', amount: 500000 },
+      sign: MoneySign.POSITIVE,
+    },
+    rate: 1,
+    rateDate: '2024-01-15',
   },
 };
 
