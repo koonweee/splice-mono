@@ -7,12 +7,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Parse arguments
-SIMPLE_MODE=false
-if [[ "$1" == "--simple" ]] || [[ "$1" == "-s" ]]; then
-    SIMPLE_MODE=true
-fi
-
 echo -e "${YELLOW}=== Deploy Script ===${NC}"
 
 # 1. Fetch and pull latest
@@ -36,18 +30,7 @@ REPO_URL=$(gh repo view --json url --jq '.url')
 
 # 3. Generate deploy summary
 echo -e "\n${GREEN}Generating deploy summary...${NC}"
-
-if [ "$SIMPLE_MODE" = true ]; then
-    # Simple mode: just list commits with links
-    SUMMARY=$(git log origin/deploy..origin/main --pretty=format:"- %s ([%h](${REPO_URL}/commit/%H))")
-    echo -e "${YELLOW}(Simple mode - no Claude summary)${NC}"
-else
-    # Claude mode: generate intelligent summary
-    DIFF_CONTENT=$(git log origin/deploy..origin/main --pretty=format:"- %s (%h)" | head -20)
-    SUMMARY=$(claude --print "Generate a deploy summary as succinct bullet points. One bullet per logical change (group related commits). Focus on what changed, not how. Just output the bullets, nothing else:
-
-$DIFF_CONTENT")
-fi
+SUMMARY=$(git log origin/deploy..origin/main --pretty=format:"- %s ([%h](${REPO_URL}/commit/%H))")
 
 echo -e "\n${YELLOW}Summary:${NC}"
 echo "$SUMMARY"
