@@ -64,7 +64,9 @@ export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 export const RefreshTokenDtoSchema = registerSchema(
   'RefreshTokenDto',
   z.object({
-    refreshToken: z.string(),
+    // Optional for web clients (token is read from HTTP-only cookie)
+    // Required for mobile clients (token is passed in body)
+    refreshToken: z.string().optional(),
   }),
 );
 
