@@ -299,14 +299,14 @@ export class ExchangeRateService {
   async getRequiredCurrencyPairs(): Promise<CurrencyPair[]> {
     // Get all users with their currency setting
     const users = await this.userRepository.find({
-      select: ['id', 'currency'],
+      select: ['id', 'settings'],
     });
 
     const pairsSet = new Set<string>();
     const pairs: CurrencyPair[] = [];
 
     for (const user of users) {
-      const userCurrency = user.currency;
+      const userCurrency = user.settings.currency;
 
       // Get all accounts for this user
       const accounts = await this.accountRepository.find({

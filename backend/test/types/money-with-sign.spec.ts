@@ -209,7 +209,11 @@ describe('MoneyWithSign', () => {
 
   describe('roundtrip conversion', () => {
     it('should preserve value through serialize/deserialize cycle', () => {
-      const original = MoneyWithSign.fromFloat('USD', 199.99, MoneySign.POSITIVE);
+      const original = MoneyWithSign.fromFloat(
+        'USD',
+        199.99,
+        MoneySign.POSITIVE,
+      );
       const serialized = original.toSerialized();
       const restored = MoneyWithSign.fromSerialized(serialized);
 
