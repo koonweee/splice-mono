@@ -22,10 +22,10 @@ const mockTransactionEntity = {
   amount: {
     amount: 5000,
     currency: 'USD',
-    sign: MoneySign.DEBIT,
+    sign: MoneySign.NEGATIVE,
     toMoneyWithSign: jest.fn().mockReturnValue({
       money: { currency: 'USD', amount: 5000 },
-      sign: MoneySign.DEBIT,
+      sign: MoneySign.NEGATIVE,
     }),
   },
   createdAt: new Date('2024-01-01T00:00:00Z'),
@@ -49,10 +49,10 @@ const mockTransactionEntity2 = {
   amount: {
     amount: 2500,
     currency: 'USD',
-    sign: MoneySign.DEBIT,
+    sign: MoneySign.NEGATIVE,
     toMoneyWithSign: jest.fn().mockReturnValue({
       money: { currency: 'USD', amount: 2500 },
-      sign: MoneySign.DEBIT,
+      sign: MoneySign.NEGATIVE,
     }),
   },
   createdAt: new Date('2024-01-01T00:00:00Z'),

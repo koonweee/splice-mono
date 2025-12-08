@@ -23,14 +23,14 @@ describe('ZodValidationPipe', () => {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         type: 'depository',
         subType: null,
@@ -50,14 +50,14 @@ describe('ZodValidationPipe', () => {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         type: 'depository',
         subType: null,
@@ -86,14 +86,14 @@ describe('ZodValidationPipe', () => {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         type: 'invalid-type',
       };
@@ -110,7 +110,7 @@ describe('ZodValidationPipe', () => {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         type: 'depository',
       };
@@ -126,14 +126,14 @@ describe('ZodValidationPipe', () => {
             currency: 'USD',
             amount: 'not-a-number',
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         type: 'depository',
       };
@@ -149,14 +149,14 @@ describe('ZodValidationPipe', () => {
             currency: 'USD',
             amount: 10.99, // Decimal not allowed - must be integer cents (1099)
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         type: 'depository',
         subType: null,
@@ -180,7 +180,7 @@ describe('ZodValidationPipe', () => {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         type: 'depository',
       };
@@ -196,14 +196,14 @@ describe('ZodValidationPipe', () => {
             currency: 'USD',
             // missing amount
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
             amount: 1000,
           },
-          sign: 'credit',
+          sign: 'positive',
         },
         type: 'depository',
       };

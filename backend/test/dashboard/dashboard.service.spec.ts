@@ -159,19 +159,19 @@ describe('DashboardService', () => {
       expect(result.changePercent).toBeNull();
     });
 
-    it('should handle debit sign balances correctly', async () => {
-      const debitAccount = createMockAccountEntity({
+    it('should handle negative sign balances correctly', async () => {
+      const negativeAccount = createMockAccountEntity({
         id: 'account-1',
         currentBalanceAmount: 100000,
-        currentBalanceSign: MoneySign.DEBIT,
+        currentBalanceSign: MoneySign.NEGATIVE,
       });
 
-      accountRepository.find.mockResolvedValue([debitAccount]);
+      accountRepository.find.mockResolvedValue([negativeAccount]);
       snapshotRepository.find.mockResolvedValue([]);
 
       const result = await service.getSummary(mockUserId);
 
-      // Debit sign means negative balance, but for depository it's treated as asset
+      // Negative sign means negative balance, but for depository it's treated as asset
       expect(result.netWorth).toBe(-1000);
     });
 

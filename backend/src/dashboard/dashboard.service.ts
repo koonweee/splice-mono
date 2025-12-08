@@ -10,6 +10,7 @@ import {
   NetWorthChartPoint,
   TimePeriod,
 } from '../types/Dashboard';
+import { MoneySign } from '../types/MoneyWithSign';
 
 /** Account types that contribute positively to net worth */
 const ASSET_TYPES: string[] = [
@@ -113,10 +114,10 @@ export class DashboardService {
         }
       } else if (LIABILITY_TYPES.includes(account.type)) {
         liabilities.push(summary);
-        // Liabilities subtract from net worth (currentBalance is already signed)
-        currentNetWorth += currentBalance;
+        // Liabilities subtract from net worth - negate the balance
+        currentNetWorth -= Math.abs(currentBalance);
         if (previousBalance !== null) {
-          previousNetWorth += previousBalance;
+          previousNetWorth -= Math.abs(previousBalance);
         }
       }
     }
@@ -151,7 +152,9 @@ export class DashboardService {
    */
   private getSignedBalance(account: AccountEntity): number {
     const amount = Number(account.currentBalance.amount);
-    return account.currentBalance.sign === 'debit' ? -amount : amount;
+    return account.currentBalance.sign === MoneySign.NEGATIVE
+      ? -amount
+      : amount;
   }
 
   /**
@@ -162,7 +165,9 @@ export class DashboardService {
     snapshot: BalanceSnapshotEntity,
   ): number {
     const amount = Number(snapshot.currentBalance.amount);
-    return snapshot.currentBalance.sign === 'debit' ? -amount : amount;
+    return snapshot.currentBalance.sign === MoneySign.NEGATIVE
+      ? -amount
+      : amount;
   }
 
   /**
@@ -255,8 +260,8 @@ export class DashboardService {
           if (ASSET_TYPES.includes(account.type)) {
             netWorth += balance;
           } else if (LIABILITY_TYPES.includes(account.type)) {
-            // Liabilities: balance is already signed, just add it
-            netWorth += balance;
+            // Liabilities subtract from net worth - negate the balance
+            netWorth -= Math.abs(balance);
           }
         }
       }

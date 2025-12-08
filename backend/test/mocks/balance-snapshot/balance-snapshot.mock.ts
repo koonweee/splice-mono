@@ -24,11 +24,11 @@ export const mockBalanceSnapshot: BalanceSnapshot = {
   snapshotDate: '2024-01-01',
   currentBalance: {
     money: { currency: 'USD', amount: 100000 }, // $1,000.00 in cents
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   availableBalance: {
     money: { currency: 'USD', amount: 95000 }, // $950.00 in cents
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   snapshotType: BalanceSnapshotType.SYNC,
   ...mockTimestamps,
@@ -44,11 +44,11 @@ export const mockBalanceSnapshot2: BalanceSnapshot = {
   snapshotDate: '2024-01-02',
   currentBalance: {
     money: { currency: 'USD', amount: 150000 }, // $1,500.00 in cents
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   availableBalance: {
     money: { currency: 'USD', amount: 145000 }, // $1,450.00 in cents
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   snapshotType: BalanceSnapshotType.USER_UPDATE,
   ...mockTimestamps,
@@ -62,11 +62,11 @@ export const mockCreateBalanceSnapshotDto: CreateBalanceSnapshotDto = {
   snapshotDate: '2024-01-01',
   currentBalance: {
     money: { currency: 'USD', amount: 100000 },
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   availableBalance: {
     money: { currency: 'USD', amount: 95000 },
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   snapshotType: BalanceSnapshotType.SYNC,
 };

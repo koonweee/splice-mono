@@ -153,7 +153,7 @@ describe('BalanceSnapshotService', () => {
       const updateDto = {
         currentBalance: {
           money: { currency: 'USD', amount: 200000 },
-          sign: MoneySign.CREDIT,
+          sign: MoneySign.POSITIVE,
         },
       };
 
@@ -223,12 +223,12 @@ describe('BalanceSnapshotService', () => {
         currentBalance: {
           amount: 50000,
           currency: 'USD',
-          sign: MoneySign.CREDIT,
+          sign: MoneySign.POSITIVE,
         },
         availableBalance: {
           amount: 45000,
           currency: 'USD',
-          sign: MoneySign.CREDIT,
+          sign: MoneySign.POSITIVE,
         },
         snapshotType: BalanceSnapshotType.SYNC,
         toObject: jest.fn().mockReturnValue(mockBalanceSnapshot),
