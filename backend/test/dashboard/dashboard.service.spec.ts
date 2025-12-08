@@ -367,4 +367,3 @@ function getDateDaysAgo(days: number): string {
   date.setDate(date.getDate() - days);
   return date.toISOString().split('T')[0];
 }
-

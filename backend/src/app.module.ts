@@ -15,6 +15,8 @@ import { BankLinkModule } from './bank-link/bank-link.module';
 import { CategoryEntity } from './category/category.entity';
 import { CategoryModule } from './category/category.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ExchangeRateEntity } from './exchange-rate/exchange-rate.entity';
+import { ExchangeRateModule } from './exchange-rate/exchange-rate.module';
 import { TransactionEntity } from './transaction/transaction.entity';
 import { TransactionModule } from './transaction/transaction.module';
 import { UserEntity } from './user/user.entity';
@@ -31,6 +33,7 @@ import { WebhookEventEntity } from './webhook-event/webhook-event.entity';
     BankLinkModule,
     CategoryModule,
     DashboardModule,
+    ExchangeRateModule,
     TransactionModule,
     UserModule,
     TypeOrmModule.forRoot({
@@ -47,6 +50,7 @@ import { WebhookEventEntity } from './webhook-event/webhook-event.entity';
         BalanceSnapshotEntity,
         BankLinkEntity,
         CategoryEntity,
+        ExchangeRateEntity,
         RefreshTokenEntity,
         TransactionEntity,
         UserEntity,
