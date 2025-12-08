@@ -7,11 +7,11 @@
  */
 
 export interface ExchangeRate {
-  id: string;
-  baseCurrency: string;
-  targetCurrency: string;
-  rate: number;
-  rateDate: string;
-  createdAt: string;
-  updatedAt: string;
+  id: string
+  baseCurrency: string
+  targetCurrency: string
+  rate: number
+  rateDate: string
+  createdAt: string
+  updatedAt: string
 }

@@ -7,5 +7,5 @@
  */
 
 export type ExchangeRateControllerGetRateParams = {
-date: string;
-};
+  date: string
+}

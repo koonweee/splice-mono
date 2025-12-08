@@ -5,21 +5,21 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { CreateAccountDtoRawApiAccountType } from './createAccountDtoRawApiAccountType';
-import type { CreateAccountDtoRawApiAccountSubType } from './createAccountDtoRawApiAccountSubType';
-import type { MoneyWithSign } from './moneyWithSign';
+import type { CreateAccountDtoRawApiAccountType } from './createAccountDtoRawApiAccountType'
+import type { CreateAccountDtoRawApiAccountSubType } from './createAccountDtoRawApiAccountSubType'
+import type { MoneyWithSign } from './moneyWithSign'
 
 /**
  * @nullable
  */
 export type CreateAccountDtoRawApiAccount = {
-  accountId: string;
-  name: string;
+  accountId: string
+  name: string
   /** @nullable */
-  mask: string | null;
-  type: CreateAccountDtoRawApiAccountType;
+  mask: string | null
+  type: CreateAccountDtoRawApiAccountType
   /** @nullable */
-  subType: CreateAccountDtoRawApiAccountSubType;
-  availableBalance: MoneyWithSign;
-  currentBalance: MoneyWithSign;
-} | null;
+  subType: CreateAccountDtoRawApiAccountSubType
+  availableBalance: MoneyWithSign
+  currentBalance: MoneyWithSign
+} | null

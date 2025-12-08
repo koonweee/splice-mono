@@ -5,14 +5,14 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { MoneyWithSign } from './moneyWithSign';
-import type { UpdateBalanceSnapshotDtoSnapshotType } from './updateBalanceSnapshotDtoSnapshotType';
+import type { MoneyWithSign } from './moneyWithSign'
+import type { UpdateBalanceSnapshotDtoSnapshotType } from './updateBalanceSnapshotDtoSnapshotType'
 
 export interface UpdateBalanceSnapshotDto {
-  accountId?: string;
+  accountId?: string
   /** @pattern ^\d{4}-\d{2}-\d{2}$ */
-  snapshotDate?: string;
-  currentBalance?: MoneyWithSign;
-  availableBalance?: MoneyWithSign;
-  snapshotType?: UpdateBalanceSnapshotDtoSnapshotType;
+  snapshotDate?: string
+  currentBalance?: MoneyWithSign
+  availableBalance?: MoneyWithSign
+  snapshotType?: UpdateBalanceSnapshotDtoSnapshotType
 }

@@ -5,17 +5,17 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { AccountSummaryType } from './accountSummaryType';
-import type { MoneyWithSign } from './moneyWithSign';
+import type { AccountSummaryType } from './accountSummaryType'
+import type { MoneyWithSign } from './moneyWithSign'
 
 export interface AccountSummary {
-  id: string;
+  id: string
   /** @nullable */
-  name: string | null;
-  type: AccountSummaryType;
+  name: string | null
+  type: AccountSummaryType
   /** @nullable */
-  subType: string | null;
-  currentBalance: MoneyWithSign;
+  subType: string | null
+  currentBalance: MoneyWithSign
   /** @nullable */
-  changePercent: number | null;
+  changePercent: number | null
 }

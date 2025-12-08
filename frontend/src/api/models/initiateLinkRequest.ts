@@ -7,6 +7,6 @@
  */
 
 export interface InitiateLinkRequest {
-  accountId: string;
-  redirectUri?: string;
+  accountId: string
+  redirectUri?: string
 }
