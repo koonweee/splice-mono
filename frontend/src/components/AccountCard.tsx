@@ -15,9 +15,11 @@ function getChangeColorMantine(
 export function AccountCard({
   account,
   isLiability,
+  onClick,
 }: {
   account: AccountSummary
   isLiability: boolean
+  onClick?: () => void
 }) {
   const changePercent = formatPercent(account.changePercent)
   const hasConvertedBalance =
@@ -30,7 +32,13 @@ export function AccountCard({
       p="md"
       withBorder
       h={94}
-      style={{ display: 'flex', alignItems: 'center' }}
+      className={onClick ? 'account-card-clickable' : undefined}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        cursor: onClick ? 'pointer' : undefined,
+      }}
+      onClick={onClick}
     >
       <Group justify="space-between" align="center" style={{ width: '100%' }}>
         <div>

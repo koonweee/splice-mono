@@ -8,11 +8,13 @@ import {
   Text,
   Title,
 } from '@mantine/core'
+import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useDashboardControllerGetSummary } from '../../api/clients/spliceAPI'
-import { TimePeriod } from '../../api/models'
+import { AccountSummary, TimePeriod } from '../../api/models'
 import { AccountCard } from '../../components/AccountCard'
+import { AccountModal } from '../../components/AccountModal'
 import { NetWorthCard } from '../../components/NetWorthCard'
 
 export const Route = createFileRoute('/_authed/home')({ component: HomePage })
@@ -26,11 +28,21 @@ const PERIOD_OPTIONS = [
 
 function HomePage() {
   const [period, setPeriod] = useState<TimePeriod>(TimePeriod.month)
+  const [selectedAccount, setSelectedAccount] = useState<AccountSummary | null>(
+    null,
+  )
+  const [modalOpened, { open: openModal, close: closeModal }] =
+    useDisclosure(false)
   const {
     data: dashboard,
     isLoading,
     error,
   } = useDashboardControllerGetSummary({ period })
+
+  const handleAccountClick = (account: AccountSummary) => {
+    setSelectedAccount(account)
+    openModal()
+  }
 
   return (
     <>
@@ -80,6 +92,7 @@ function HomePage() {
                       key={account.id}
                       account={account}
                       isLiability={false}
+                      onClick={() => handleAccountClick(account)}
                     />
                   ))
                 )}
@@ -99,6 +112,7 @@ function HomePage() {
                       key={account.id}
                       account={account}
                       isLiability={true}
+                      onClick={() => handleAccountClick(account)}
                     />
                   ))
                 )}
@@ -107,6 +121,12 @@ function HomePage() {
           </Grid>
         </>
       )}
+
+      <AccountModal
+        account={selectedAccount}
+        opened={modalOpened}
+        onClose={closeModal}
+      />
     </>
   )
 }
