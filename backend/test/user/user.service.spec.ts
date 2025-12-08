@@ -59,7 +59,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockCreateUserDto.email;
       mockEntity.hashedPassword = 'hashed-password';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -96,7 +96,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockCreateUserDto.email;
       mockEntity.hashedPassword = 'hashed-password';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -128,7 +128,7 @@ describe('UserService', () => {
       const mockEntity = new UserEntity();
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockLoginDto.email;
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -180,7 +180,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockLoginDto.email;
       mockEntity.hashedPassword = 'invalid-hash-format';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -198,7 +198,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -227,7 +227,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -299,7 +299,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.providerDetails = {
         plaid: { userToken: 'plaid-user-token-123' },
       };
@@ -321,7 +321,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.providerDetails = null;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
@@ -338,7 +338,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.providerDetails = {
         other: { someField: 'value' },
       };
@@ -370,7 +370,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.providerDetails = null;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
@@ -402,7 +402,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.providerDetails = {
         simplefin: { existingField: 'value' },
       };
@@ -431,7 +431,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
       mockEntity.providerDetails = {
         plaid: { userToken: 'old-token', otherField: 'will-be-removed' },
       };

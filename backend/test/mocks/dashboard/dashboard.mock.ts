@@ -1,4 +1,4 @@
-import { AccountType } from 'plaid';
+import { AccountSubtype, AccountType } from 'plaid';
 import { AccountWithConvertedBalance } from '../../../src/types/Account';
 import {
   BalanceSnapshotType,
@@ -27,7 +27,7 @@ export function createMockAccountWithConversion(
     userId: string;
     name: string;
     type: AccountType;
-    subType: string | null;
+    subType: AccountSubtype | null;
     currentBalanceAmount: number;
     currentBalanceSign: MoneySign;
     availableBalanceAmount: number;
