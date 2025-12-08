@@ -5,10 +5,12 @@ import {
   createRootRouteWithContext,
   redirect,
 } from '@tanstack/react-router'
+import { MantineProvider, ColorSchemeScript } from '@mantine/core'
 
 import type { RouterContext } from '../router'
 
 import appCss from '../styles.css?url'
+import mantineCss from '@mantine/core/styles.css?url'
 
 const PUBLIC_PATHS = ['/', '/login']
 
@@ -42,6 +44,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     links: [
       {
         rel: 'stylesheet',
+        href: mantineCss,
+      },
+      {
+        rel: 'stylesheet',
         href: appCss,
       },
     ],
@@ -54,10 +60,13 @@ function RootComponent() {
   return (
     <html lang="en">
       <head>
+        <ColorSchemeScript defaultColorScheme="light" />
         <HeadContent />
       </head>
       <body>
-        <Outlet />
+        <MantineProvider defaultColorScheme="light">
+          <Outlet />
+        </MantineProvider>
         <Scripts />
       </body>
     </html>

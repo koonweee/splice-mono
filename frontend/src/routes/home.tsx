@@ -1,22 +1,48 @@
+import {
+  Alert,
+  Button,
+  Container,
+  Grid,
+  Group,
+  Loader,
+  Paper,
+  Select,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useDashboardControllerGetSummary } from '../api/clients/spliceAPI'
 import type { AccountSummary } from '../api/models'
 import { TimePeriod } from '../api/models'
 import { tokenStorage, useLogout } from '../lib/auth'
-import {
-  formatMoneyWithSign,
-  formatPercent,
-  getChangeColor,
-} from '../lib/format'
+import { formatMoneyWithSign, formatPercent } from '../lib/format'
 
 export const Route = createFileRoute('/home')({ component: HomePage })
+
+const PERIOD_OPTIONS = [
+  { value: TimePeriod.day, label: 'Day' },
+  { value: TimePeriod.week, label: 'Week' },
+  { value: TimePeriod.month, label: 'Month' },
+  { value: TimePeriod.year, label: 'Year' },
+]
 
 const PERIOD_LABELS: Record<TimePeriod, string> = {
   [TimePeriod.day]: 'Day',
   [TimePeriod.week]: 'Week',
   [TimePeriod.month]: 'Month',
   [TimePeriod.year]: 'Year',
+}
+
+function getChangeColorMantine(
+  changePercent: number | null,
+  isLiability: boolean,
+): string {
+  if (changePercent === null) return 'dimmed'
+  const isPositive = changePercent > 0
+  const isGood = isLiability ? !isPositive : isPositive
+  return isGood ? 'teal' : 'red'
 }
 
 function AccountCard({
@@ -29,30 +55,27 @@ function AccountCard({
   const changePercent = formatPercent(account.changePercent)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <div className="flex justify-between items-start">
+    <Paper p="md" withBorder>
+      <Group justify="space-between" align="flex-start">
         <div>
-          <p className="font-medium text-gray-900">
-            {account.name || 'Unnamed Account'}
-          </p>
-          <p className="text-sm text-gray-500 capitalize">
+          <Text fw={500}>{account.name || 'Unnamed Account'}</Text>
+          <Text size="sm" c="dimmed" tt="capitalize">
             {account.subType || account.type}
-          </p>
+          </Text>
         </div>
-        <div className="text-right">
-          <p className="font-semibold">
-            {formatMoneyWithSign(account.currentBalance)}
-          </p>
+        <div style={{ textAlign: 'right' }}>
+          <Text fw={600}>{formatMoneyWithSign(account.currentBalance)}</Text>
           {changePercent && (
-            <p
-              className={`text-sm ${getChangeColor(account.changePercent, isLiability)}`}
+            <Text
+              size="sm"
+              c={getChangeColorMantine(account.changePercent, isLiability)}
             >
               {changePercent}
-            </p>
+            </Text>
           )}
         </div>
-      </div>
-    </div>
+      </Group>
+    </Paper>
   )
 }
 
@@ -73,95 +96,101 @@ function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <div className="flex items-center gap-4">
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as TimePeriod)}
-              className="border border-gray-300 rounded px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400"
-            >
-              {Object.values(TimePeriod).map((p) => (
-                <option key={p} value={p}>
-                  {PERIOD_LABELS[p]}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-              className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700 disabled:opacity-50"
-            >
-              {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
-            </button>
-          </div>
-        </div>
+    <Container size="md" py="xl">
+      <Group justify="space-between" mb="xl">
+        <Title order={1}>Dashboard</Title>
+        <Group>
+          <Select
+            value={period}
+            onChange={(value) => value && setPeriod(value as TimePeriod)}
+            data={PERIOD_OPTIONS}
+            w={120}
+          />
+          <Button
+            onClick={handleLogout}
+            loading={logoutMutation.isPending}
+            variant="filled"
+            color="dark"
+          >
+            Logout
+          </Button>
+        </Group>
+      </Group>
 
-        {isLoading && <p>Loading dashboard...</p>}
-        {error ? (
-          <p className="text-red-500">
-            Error loading dashboard:{' '}
-            {error instanceof Error ? error.message : 'Unknown error'}
-          </p>
-        ) : null}
+      {isLoading && (
+        <Group justify="center" py="xl">
+          <Loader />
+        </Group>
+      )}
 
-        {dashboard && (
-          <>
-            <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-              <p className="text-sm text-gray-500 mb-1">Net Worth</p>
-              <p className="text-3xl font-bold">
-                {formatMoneyWithSign(dashboard.netWorth)}
-              </p>
-              {dashboard.changePercent !== null && (
-                <p
-                  className={`text-sm ${getChangeColor(dashboard.changePercent, false)}`}
-                >
-                  {formatPercent(dashboard.changePercent)} from last{' '}
-                  {PERIOD_LABELS[dashboard.comparisonPeriod].toLowerCase()}
-                </p>
-              )}
-            </div>
+      {error ? (
+        <Alert color="red" title="Error" mb="lg">
+          Error loading dashboard:{' '}
+          {error instanceof Error ? error.message : 'Unknown error'}
+        </Alert>
+      ) : null}
 
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <h2 className="text-lg font-semibold mb-4">Assets</h2>
-                <div className="space-y-3">
-                  {dashboard.assets.length === 0 ? (
-                    <p className="text-gray-500">No assets</p>
-                  ) : (
-                    dashboard.assets.map((account) => (
-                      <AccountCard
-                        key={account.id}
-                        account={account}
-                        isLiability={false}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
+      {dashboard && (
+        <>
+          <Paper p="lg" withBorder mb="xl">
+            <Text size="sm" c="dimmed" mb={4}>
+              Net Worth
+            </Text>
+            <Title order={2} size="h1">
+              {formatMoneyWithSign(dashboard.netWorth)}
+            </Title>
+            {dashboard.changePercent !== null && (
+              <Text
+                size="sm"
+                c={getChangeColorMantine(dashboard.changePercent, false)}
+              >
+                {formatPercent(dashboard.changePercent)} from last{' '}
+                {PERIOD_LABELS[dashboard.comparisonPeriod].toLowerCase()}
+              </Text>
+            )}
+          </Paper>
 
-              <div>
-                <h2 className="text-lg font-semibold mb-4">Liabilities</h2>
-                <div className="space-y-3">
-                  {dashboard.liabilities.length === 0 ? (
-                    <p className="text-gray-500">No liabilities</p>
-                  ) : (
-                    dashboard.liabilities.map((account) => (
-                      <AccountCard
-                        key={account.id}
-                        account={account}
-                        isLiability={true}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+          <Grid>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Title order={3} mb="md">
+                Assets
+              </Title>
+              <Stack gap="sm">
+                {dashboard.assets.length === 0 ? (
+                  <Text c="dimmed">No assets</Text>
+                ) : (
+                  dashboard.assets.map((account) => (
+                    <AccountCard
+                      key={account.id}
+                      account={account}
+                      isLiability={false}
+                    />
+                  ))
+                )}
+              </Stack>
+            </Grid.Col>
+
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Title order={3} mb="md">
+                Liabilities
+              </Title>
+              <Stack gap="sm">
+                {dashboard.liabilities.length === 0 ? (
+                  <Text c="dimmed">No liabilities</Text>
+                ) : (
+                  dashboard.liabilities.map((account) => (
+                    <AccountCard
+                      key={account.id}
+                      account={account}
+                      isLiability={true}
+                    />
+                  ))
+                )}
+              </Stack>
+            </Grid.Col>
+          </Grid>
+        </>
+      )}
+    </Container>
   )
 }
