@@ -10,6 +10,8 @@ export const UserSettingsSchema = registerSchema(
   z.object({
     /** User's preferred currency for display (ISO 4217 code) */
     currency: z.string().default('USD'),
+    /** User's timezone (IANA timezone string, e.g., 'America/New_York') */
+    timezone: z.string().default('UTC'),
     // Future settings can be added here:
     // theme: z.enum(['light', 'dark', 'system']).default('system'),
     // locale: z.string().default('en-US'),
@@ -34,4 +36,5 @@ export type UpdateUserSettingsDto = z.infer<typeof UpdateUserSettingsDtoSchema>;
  */
 export const DEFAULT_USER_SETTINGS: UserSettings = {
   currency: 'USD',
+  timezone: 'UTC',
 };

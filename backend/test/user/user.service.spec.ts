@@ -251,6 +251,48 @@ describe('UserService', () => {
     });
   });
 
+  describe('getTimezone', () => {
+    it('should return user timezone when set', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = { currency: 'USD', timezone: 'America/New_York' };
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+
+      const result = await service.getTimezone('user-uuid-123');
+
+      expect(result).toBe('America/New_York');
+    });
+
+    it('should return UTC when user not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.getTimezone('non-existent-id');
+
+      expect(result).toBe('UTC');
+    });
+
+    it('should return UTC when timezone not set', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = { currency: 'USD' } as any; // Simulating old data without timezone
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+
+      const result = await service.getTimezone('user-uuid-123');
+
+      expect(result).toBe('UTC');
+    });
+  });
+
   describe('getProviderDetails', () => {
     it('should return provider details when user has them', async () => {
       const mockEntity = new UserEntity();

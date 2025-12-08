@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedHomeRouteImport } from './routes/_authed/home'
 
 const AuthedRoute = AuthedRouteImport.update({
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedHomeRoute = AuthedHomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -31,23 +37,26 @@ const AuthedHomeRoute = AuthedHomeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/home': typeof AuthedHomeRoute
+  '/settings': typeof AuthedSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/home': typeof AuthedHomeRoute
+  '/settings': typeof AuthedSettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/_authed/home': typeof AuthedHomeRoute
+  '/_authed/settings': typeof AuthedSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/home'
+  fullPaths: '/' | '/home' | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/home'
-  id: '__root__' | '/' | '/_authed' | '/_authed/home'
+  to: '/' | '/home' | '/settings'
+  id: '__root__' | '/' | '/_authed' | '/_authed/home' | '/_authed/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -71,6 +80,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/settings': {
+      id: '/_authed/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthedSettingsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/home': {
       id: '/_authed/home'
       path: '/home'
@@ -83,10 +99,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthedRouteChildren {
   AuthedHomeRoute: typeof AuthedHomeRoute
+  AuthedSettingsRoute: typeof AuthedSettingsRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedHomeRoute: AuthedHomeRoute,
+  AuthedSettingsRoute: AuthedSettingsRoute,
 }
 
 const AuthedRouteWithChildren =

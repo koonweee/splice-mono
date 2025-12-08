@@ -6,8 +6,10 @@ import {
   LinkedAccountUpdatedEvent,
 } from '../../src/events/account.events';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
+import { UserService } from '../../src/user/user.service';
 import { mockAccount } from '../mocks/account/account.mock';
 import { mockBalanceSnapshot } from '../mocks/balance-snapshot/balance-snapshot.mock';
+import { mockUserService } from '../mocks/user/user-service.mock';
 
 const mockBalanceSnapshotService = {
   upsert: jest.fn().mockResolvedValue(mockBalanceSnapshot),
@@ -24,6 +26,10 @@ describe('BalanceSnapshotListener', () => {
         {
           provide: BalanceSnapshotService,
           useValue: mockBalanceSnapshotService,
+        },
+        {
+          provide: UserService,
+          useValue: mockUserService,
         },
       ],
     }).compile();
