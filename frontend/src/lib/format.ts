@@ -24,15 +24,17 @@ export function formatMoneyWithSign(value: MoneyWithSign): string {
 
 /**
  * Format a percentage value with sign prefix
+ * Returns null for 0% changes (to hide them in the UI)
  *
  * @example
  * formatPercent(3.5)   // => "+3.50%"
  * formatPercent(-2.1)  // => "-2.10%"
+ * formatPercent(0)     // => null
  * formatPercent(null)  // => null
  */
 export function formatPercent(value: number | null): string | null {
-  if (value === null) return null
-  const sign = value >= 0 ? '+' : ''
+  if (value === null || value === 0) return null
+  const sign = value > 0 ? '+' : ''
   return `${sign}${value.toFixed(2)}%`
 }
 

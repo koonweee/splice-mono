@@ -5,7 +5,6 @@ import {
   Grid,
   Group,
   Loader,
-  Paper,
   Select,
   Stack,
   Text,
@@ -14,10 +13,10 @@ import {
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useDashboardControllerGetSummary } from '../api/clients/spliceAPI'
-import type { AccountSummary } from '../api/models'
 import { TimePeriod } from '../api/models'
+import { AccountCard } from '../components/AccountCard'
+import { NetWorthCard } from '../components/NetWorthCard'
 import { useLogout } from '../lib/auth'
-import { formatMoneyWithSign, formatPercent } from '../lib/format'
 
 export const Route = createFileRoute('/home')({ component: HomePage })
 
@@ -27,57 +26,6 @@ const PERIOD_OPTIONS = [
   { value: TimePeriod.month, label: 'Month' },
   { value: TimePeriod.year, label: 'Year' },
 ]
-
-const PERIOD_LABELS: Record<TimePeriod, string> = {
-  [TimePeriod.day]: 'Day',
-  [TimePeriod.week]: 'Week',
-  [TimePeriod.month]: 'Month',
-  [TimePeriod.year]: 'Year',
-}
-
-function getChangeColorMantine(
-  changePercent: number | null,
-  isLiability: boolean,
-): string {
-  if (changePercent === null) return 'dimmed'
-  const isPositive = changePercent > 0
-  const isGood = isLiability ? !isPositive : isPositive
-  return isGood ? 'teal' : 'red'
-}
-
-function AccountCard({
-  account,
-  isLiability,
-}: {
-  account: AccountSummary
-  isLiability: boolean
-}) {
-  const changePercent = formatPercent(account.changePercent)
-
-  return (
-    <Paper p="md" withBorder>
-      <Group justify="space-between" align="flex-start">
-        <div>
-          <Text fw={500}>{account.name || 'Unnamed Account'}</Text>
-          <Text size="sm" c="dimmed" tt="capitalize">
-            {account.subType || account.type}
-          </Text>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <Text fw={600}>{formatMoneyWithSign(account.currentBalance)}</Text>
-          {changePercent && (
-            <Text
-              size="sm"
-              c={getChangeColorMantine(account.changePercent, isLiability)}
-            >
-              {changePercent}
-            </Text>
-          )}
-        </div>
-      </Group>
-    </Paper>
-  )
-}
 
 function HomePage() {
   const [period, setPeriod] = useState<TimePeriod>(TimePeriod.month)
@@ -130,23 +78,11 @@ function HomePage() {
 
       {dashboard && (
         <>
-          <Paper p="lg" withBorder mb="xl">
-            <Text size="sm" c="dimmed" mb={4}>
-              Net Worth
-            </Text>
-            <Title order={2} size="h1">
-              {formatMoneyWithSign(dashboard.netWorth)}
-            </Title>
-            {dashboard.changePercent !== null && (
-              <Text
-                size="sm"
-                c={getChangeColorMantine(dashboard.changePercent, false)}
-              >
-                {formatPercent(dashboard.changePercent)} from last{' '}
-                {PERIOD_LABELS[dashboard.comparisonPeriod].toLowerCase()}
-              </Text>
-            )}
-          </Paper>
+          <NetWorthCard
+            netWorth={dashboard.netWorth}
+            changePercent={dashboard.changePercent}
+            comparisonPeriod={dashboard.comparisonPeriod}
+          />
 
           <Grid>
             <Grid.Col span={{ base: 12, md: 6 }}>
