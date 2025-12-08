@@ -82,7 +82,19 @@ export class AuthService {
     });
 
     if (!oldTokenEntity) {
-      this.logger.warn('Invalid refresh token rotation attempted');
+      // Check if token exists but is revoked (indicates reuse attempt)
+      const revokedToken = await this.refreshTokenRepository.findOne({
+        where: { token: hashedOldToken },
+      });
+      if (revokedToken) {
+        this.logger.warn(
+          `Refresh token reuse detected for user: ${revokedToken.userId}. Token was revoked at: ${revokedToken.updatedAt}. This may indicate a race condition on the client or token theft.`,
+        );
+      } else {
+        this.logger.warn(
+          'Invalid refresh token rotation attempted - token not found in database',
+        );
+      }
       throw new UnauthorizedException('Invalid refresh token');
     }
 
