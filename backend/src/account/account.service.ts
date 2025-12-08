@@ -92,9 +92,11 @@ export class AccountService extends OwnedCrudService<
       return null;
     }
 
-    return this.balanceConversionHelper.addConvertedBalancesToOne(
-      account,
-      userId,
-    );
+    const [accountWithConversion] =
+      await this.balanceConversionHelper.addConvertedBalances(
+        [account],
+        userId,
+      );
+    return accountWithConversion;
   }
 }

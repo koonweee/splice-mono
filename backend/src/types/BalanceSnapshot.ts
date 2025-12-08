@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
-import { MoneyWithSignSchema } from './MoneyWithSign';
+import { ConvertedBalanceSchema, MoneyWithSignSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
 
 /**
@@ -83,10 +83,10 @@ export type UpdateBalanceSnapshotDto = z.infer<
 export const BalanceSnapshotWithConvertedBalanceSchema = registerSchema(
   'BalanceSnapshotWithConvertedBalance',
   BalanceSnapshotSchema.extend({
-    /** Current balance converted to user's preferred currency */
-    convertedCurrentBalance: MoneyWithSignSchema.nullable(),
-    /** Available balance converted to user's preferred currency */
-    convertedAvailableBalance: MoneyWithSignSchema.nullable(),
+    /** Current balance converted to user's preferred currency with rate info */
+    convertedCurrentBalance: ConvertedBalanceSchema.nullable(),
+    /** Available balance converted to user's preferred currency with rate info */
+    convertedAvailableBalance: ConvertedBalanceSchema.nullable(),
   }),
 );
 

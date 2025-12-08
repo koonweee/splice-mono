@@ -7,6 +7,8 @@ export interface ConversionResult {
   amount: number;
   /** The exchange rate used, or null if no rate was available */
   rate: number | null;
+  /** The date of the exchange rate used (YYYY-MM-DD), or null if no rate was available */
+  rateDate: string | null;
   /** Whether a fallback was used (no rate available) */
   usedFallback: boolean;
 }
@@ -30,7 +32,7 @@ export class CurrencyConversionService {
    * @param fromCurrency - Source currency code (e.g., 'EUR')
    * @param toCurrency - Target currency code (e.g., 'USD')
    * @param rateDate - Optional specific date for historical conversion (YYYY-MM-DD)
-   * @returns Conversion result with amount, rate used, and fallback indicator
+   * @returns Conversion result with amount, rate used, rateDate, and fallback indicator
    */
   async convert(
     amount: number,
@@ -38,35 +40,26 @@ export class CurrencyConversionService {
     toCurrency: string,
     rateDate?: string,
   ): Promise<ConversionResult> {
-    // Same currency - no conversion needed
-    if (fromCurrency === toCurrency) {
-      return {
-        amount,
-        rate: 1,
-        usedFallback: false,
-      };
-    }
+    // Use batch lookup for consistency (it now returns rateDate)
+    const getRate = await this.exchangeRateService.prepareForBatchLookup();
+    const result = getRate(fromCurrency, toCurrency, rateDate);
 
-    const rate = await this.exchangeRateService.getRate(
-      fromCurrency,
-      toCurrency,
-      rateDate,
-    );
-
-    if (rate === null) {
+    if (result === null) {
       this.logger.warn(
         `No exchange rate found for ${fromCurrency}→${toCurrency}${rateDate ? ` on ${rateDate}` : ''}, using original amount`,
       );
       return {
         amount,
         rate: null,
+        rateDate: null,
         usedFallback: true,
       };
     }
 
     return {
-      amount: amount * rate,
-      rate,
+      amount: amount * result.rate,
+      rate: result.rate,
+      rateDate: result.rateDate,
       usedFallback: false,
     };
   }
@@ -96,31 +89,24 @@ export class CurrencyConversionService {
     return items.map((item) => {
       const { amount, currency: fromCurrency } = item;
 
-      // Same currency - no conversion needed
-      if (fromCurrency === toCurrency) {
-        return {
-          amount,
-          rate: 1,
-          usedFallback: false,
-        };
-      }
+      const result = getRate(fromCurrency, toCurrency, rateDate);
 
-      const rate = getRate(fromCurrency, toCurrency, rateDate);
-
-      if (rate === null) {
+      if (result === null) {
         this.logger.warn(
           `No exchange rate found for ${fromCurrency}→${toCurrency}${rateDate ? ` on ${rateDate}` : ''}, using original amount`,
         );
         return {
           amount,
           rate: null,
+          rateDate: null,
           usedFallback: true,
         };
       }
 
       return {
-        amount: amount * rate,
-        rate,
+        amount: amount * result.rate,
+        rate: result.rate,
+        rateDate: result.rateDate,
         usedFallback: false,
       };
     });

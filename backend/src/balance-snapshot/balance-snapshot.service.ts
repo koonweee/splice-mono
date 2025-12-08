@@ -147,6 +147,19 @@ export class BalanceSnapshotService extends OwnedCrudService<
   }
 
   /**
+   * Add currencyDate to snapshots for historical currency conversion.
+   * Maps snapshotDate to currencyDate so the helper uses the correct historical rate.
+   */
+  private addCurrencyDateToSnapshots(
+    snapshots: BalanceSnapshot[],
+  ): (BalanceSnapshot & { currencyDate: string })[] {
+    return snapshots.map((snapshot) => ({
+      ...snapshot,
+      currencyDate: snapshot.snapshotDate,
+    }));
+  }
+
+  /**
    * Find all balance snapshots for a user with balances converted to user's preferred currency
    *
    * @param userId - The ID of the user
@@ -156,7 +169,11 @@ export class BalanceSnapshotService extends OwnedCrudService<
     userId: string,
   ): Promise<BalanceSnapshotWithConvertedBalance[]> {
     const snapshots = await this.findAll(userId);
-    return this.balanceConversionHelper.addConvertedBalances(snapshots, userId);
+    const snapshotsWithDate = this.addCurrencyDateToSnapshots(snapshots);
+    return this.balanceConversionHelper.addConvertedBalances(
+      snapshotsWithDate,
+      userId,
+    );
   }
 
   /**
@@ -171,7 +188,11 @@ export class BalanceSnapshotService extends OwnedCrudService<
     userId: string,
   ): Promise<BalanceSnapshotWithConvertedBalance[]> {
     const snapshots = await this.findByAccountId(accountId, userId);
-    return this.balanceConversionHelper.addConvertedBalances(snapshots, userId);
+    const snapshotsWithDate = this.addCurrencyDateToSnapshots(snapshots);
+    return this.balanceConversionHelper.addConvertedBalances(
+      snapshotsWithDate,
+      userId,
+    );
   }
 
   /**
@@ -196,13 +217,14 @@ export class BalanceSnapshotService extends OwnedCrudService<
       return new Map();
     }
 
-    // Convert snapshots to domain objects
+    // Convert snapshots to domain objects with currencyDate for historical conversion
     const snapshots = entities.map((e) => e.toObject());
+    const snapshotsWithDate = this.addCurrencyDateToSnapshots(snapshots);
 
     // Add converted balances using the helper
     const snapshotsWithConversion =
       await this.balanceConversionHelper.addConvertedBalances(
-        snapshots,
+        snapshotsWithDate,
         userId,
       );
 
@@ -213,5 +235,55 @@ export class BalanceSnapshotService extends OwnedCrudService<
     }
 
     return result;
+  }
+
+  /**
+   * Find a snapshot for a specific account and date.
+   * Used by the scheduled forward-fill job to check if a snapshot exists.
+   *
+   * @param accountId - The account ID
+   * @param userId - The user ID
+   * @param snapshotDate - The date string (YYYY-MM-DD)
+   * @returns The snapshot if found, null otherwise
+   */
+  async findByAccountIdAndDate(
+    accountId: string,
+    userId: string,
+    snapshotDate: string,
+  ): Promise<BalanceSnapshot | null> {
+    const entity = await this.repository.findOne({
+      where: {
+        accountId,
+        userId,
+        snapshotDate,
+      },
+    });
+
+    return entity ? entity.toObject() : null;
+  }
+
+  /**
+   * Find the most recent snapshot before a given date for an account.
+   * Used by the scheduled forward-fill job to copy from the previous snapshot.
+   *
+   * @param accountId - The account ID
+   * @param userId - The user ID
+   * @param beforeDate - The date string (YYYY-MM-DD) to search before
+   * @returns The most recent snapshot before the date, or null if none exists
+   */
+  async findMostRecentBeforeDate(
+    accountId: string,
+    userId: string,
+    beforeDate: string,
+  ): Promise<BalanceSnapshot | null> {
+    const entity = await this.repository
+      .createQueryBuilder('snapshot')
+      .where('snapshot.accountId = :accountId', { accountId })
+      .andWhere('snapshot.userId = :userId', { userId })
+      .andWhere('snapshot.snapshotDate < :beforeDate', { beforeDate })
+      .orderBy('snapshot.snapshotDate', 'DESC')
+      .getOne();
+
+    return entity ? entity.toObject() : null;
   }
 }

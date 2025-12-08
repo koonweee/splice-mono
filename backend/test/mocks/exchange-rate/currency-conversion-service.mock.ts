@@ -6,6 +6,7 @@ import type { ConversionResult } from '../../../src/exchange-rate/currency-conve
 export const mockConversionResult: ConversionResult = {
   amount: 100000,
   rate: 1,
+  rateDate: '2024-01-15',
   usedFallback: false,
 };
 
@@ -15,6 +16,7 @@ export const mockConversionResult: ConversionResult = {
 export const mockFallbackConversionResult: ConversionResult = {
   amount: 100000,
   rate: null,
+  rateDate: null,
   usedFallback: true,
 };
 
@@ -27,16 +29,23 @@ export const mockCurrencyConversionService = {
   convert: jest.fn().mockResolvedValue(mockConversionResult),
   convertMany: jest
     .fn()
-    .mockImplementation((items: { amount: number; currency: string }[]) => {
-      // Return 1:1 conversion for each item
-      return Promise.resolve(
-        items.map((item) => ({
-          amount: item.amount,
-          rate: 1,
-          usedFallback: false,
-        })),
-      );
-    }),
+    .mockImplementation(
+      (
+        items: { amount: number; currency: string }[],
+        _toCurrency: string,
+        rateDate?: string,
+      ) => {
+        // Return 1:1 conversion for each item
+        return Promise.resolve(
+          items.map((item) => ({
+            amount: item.amount,
+            rate: 1,
+            rateDate: rateDate ?? '2024-01-15',
+            usedFallback: false,
+          })),
+        );
+      },
+    ),
   convertAmount: jest
     .fn()
     .mockImplementation((amount: number) => Promise.resolve(amount)),

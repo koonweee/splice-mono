@@ -34,58 +34,65 @@ describe('CurrencyConversionService', () => {
 
   describe('convert', () => {
     it('should return amount unchanged with rate=1 for same currency', async () => {
+      const mockGetRate = jest
+        .fn()
+        .mockReturnValue({ rate: 1, rateDate: '2024-01-15' });
+      exchangeRateService.prepareForBatchLookup.mockResolvedValue(mockGetRate);
+
       const result = await service.convert(1000, 'USD', 'USD');
 
       expect(result).toEqual({
         amount: 1000,
         rate: 1,
+        rateDate: '2024-01-15',
         usedFallback: false,
       });
-      expect(exchangeRateService.getRate).not.toHaveBeenCalled();
     });
 
     it('should convert amount using exchange rate', async () => {
-      exchangeRateService.getRate.mockResolvedValue(1.08);
+      const mockGetRate = jest
+        .fn()
+        .mockReturnValue({ rate: 1.08, rateDate: '2024-01-15' });
+      exchangeRateService.prepareForBatchLookup.mockResolvedValue(mockGetRate);
 
       const result = await service.convert(1000, 'EUR', 'USD');
 
       expect(result).toEqual({
         amount: 1080,
         rate: 1.08,
+        rateDate: '2024-01-15',
         usedFallback: false,
       });
-      expect(exchangeRateService.getRate).toHaveBeenCalledWith(
-        'EUR',
-        'USD',
-        undefined,
-      );
+      expect(mockGetRate).toHaveBeenCalledWith('EUR', 'USD', undefined);
     });
 
     it('should use date-specific rate when provided', async () => {
-      exchangeRateService.getRate.mockResolvedValue(1.05);
+      const mockGetRate = jest
+        .fn()
+        .mockReturnValue({ rate: 1.05, rateDate: '2024-01-15' });
+      exchangeRateService.prepareForBatchLookup.mockResolvedValue(mockGetRate);
 
       const result = await service.convert(1000, 'EUR', 'USD', '2024-01-15');
 
       expect(result).toEqual({
         amount: 1050,
         rate: 1.05,
+        rateDate: '2024-01-15',
         usedFallback: false,
       });
-      expect(exchangeRateService.getRate).toHaveBeenCalledWith(
-        'EUR',
-        'USD',
-        '2024-01-15',
-      );
+      expect(mockGetRate).toHaveBeenCalledWith('EUR', 'USD', '2024-01-15');
     });
 
     it('should return original amount with usedFallback=true when no rate available', async () => {
-      exchangeRateService.getRate.mockResolvedValue(null);
+      const mockGetRate = jest.fn().mockReturnValue(null);
+      exchangeRateService.prepareForBatchLookup.mockResolvedValue(mockGetRate);
 
       const result = await service.convert(1000, 'EUR', 'USD');
 
       expect(result).toEqual({
         amount: 1000,
         rate: null,
+        rateDate: null,
         usedFallback: true,
       });
     });
@@ -100,10 +107,11 @@ describe('CurrencyConversionService', () => {
     });
 
     it('should convert multiple amounts using synchronous batch lookup', async () => {
-      // Mock the synchronous lookup function
+      // Mock the synchronous lookup function returning BatchRateLookupResult
       const mockGetRate = jest.fn((from: string, to: string) => {
-        if (from === 'EUR') return 1.08;
-        if (from === 'GBP') return 1.27;
+        if (from === to) return { rate: 1, rateDate: '2024-01-15' };
+        if (from === 'EUR') return { rate: 1.08, rateDate: '2024-01-15' };
+        if (from === 'GBP') return { rate: 1.27, rateDate: '2024-01-15' };
         return null;
       });
       exchangeRateService.prepareForBatchLookup.mockResolvedValue(mockGetRate);
@@ -118,9 +126,19 @@ describe('CurrencyConversionService', () => {
       );
 
       expect(result).toEqual([
-        { amount: 1080, rate: 1.08, usedFallback: false },
-        { amount: 635, rate: 1.27, usedFallback: false },
-        { amount: 200, rate: 1, usedFallback: false }, // Same currency
+        {
+          amount: 1080,
+          rate: 1.08,
+          rateDate: '2024-01-15',
+          usedFallback: false,
+        },
+        {
+          amount: 635,
+          rate: 1.27,
+          rateDate: '2024-01-15',
+          usedFallback: false,
+        },
+        { amount: 200, rate: 1, rateDate: '2024-01-15', usedFallback: false }, // Same currency
       ]);
 
       // prepareForBatchLookup should only be called once
@@ -128,10 +146,11 @@ describe('CurrencyConversionService', () => {
         1,
       );
 
-      // The sync lookup should be called for EUR and GBP (not USD - same currency)
-      expect(mockGetRate).toHaveBeenCalledTimes(2);
+      // The sync lookup should be called for all currencies (including same currency for rateDate)
+      expect(mockGetRate).toHaveBeenCalledTimes(3);
       expect(mockGetRate).toHaveBeenCalledWith('EUR', 'USD', undefined);
       expect(mockGetRate).toHaveBeenCalledWith('GBP', 'USD', undefined);
+      expect(mockGetRate).toHaveBeenCalledWith('USD', 'USD', undefined);
     });
 
     it('should handle missing rates with fallback', async () => {
@@ -144,12 +163,14 @@ describe('CurrencyConversionService', () => {
       );
 
       expect(result).toEqual([
-        { amount: 1000, rate: null, usedFallback: true },
+        { amount: 1000, rate: null, rateDate: null, usedFallback: true },
       ]);
     });
 
     it('should pass rateDate to lookup function', async () => {
-      const mockGetRate = jest.fn().mockReturnValue(1.05);
+      const mockGetRate = jest
+        .fn()
+        .mockReturnValue({ rate: 1.05, rateDate: '2024-01-15' });
       exchangeRateService.prepareForBatchLookup.mockResolvedValue(mockGetRate);
 
       await service.convertMany(
@@ -164,7 +185,10 @@ describe('CurrencyConversionService', () => {
 
   describe('convertAmount', () => {
     it('should return just the converted number', async () => {
-      exchangeRateService.getRate.mockResolvedValue(1.08);
+      const mockGetRate = jest
+        .fn()
+        .mockReturnValue({ rate: 1.08, rateDate: '2024-01-15' });
+      exchangeRateService.prepareForBatchLookup.mockResolvedValue(mockGetRate);
 
       const result = await service.convertAmount(1000, 'EUR', 'USD');
 
@@ -172,7 +196,8 @@ describe('CurrencyConversionService', () => {
     });
 
     it('should return original amount when no rate available', async () => {
-      exchangeRateService.getRate.mockResolvedValue(null);
+      const mockGetRate = jest.fn().mockReturnValue(null);
+      exchangeRateService.prepareForBatchLookup.mockResolvedValue(mockGetRate);
 
       const result = await service.convertAmount(1000, 'EUR', 'USD');
 
@@ -180,10 +205,14 @@ describe('CurrencyConversionService', () => {
     });
 
     it('should return same amount for same currency', async () => {
+      const mockGetRate = jest
+        .fn()
+        .mockReturnValue({ rate: 1, rateDate: '2024-01-15' });
+      exchangeRateService.prepareForBatchLookup.mockResolvedValue(mockGetRate);
+
       const result = await service.convertAmount(1000, 'USD', 'USD');
 
       expect(result).toBe(1000);
-      expect(exchangeRateService.getRate).not.toHaveBeenCalled();
     });
   });
 

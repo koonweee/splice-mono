@@ -5,6 +5,6 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { MoneyWithSign } from './moneyWithSign';
+import type { ConvertedBalance } from './convertedBalance';
 
-export type AccountWithConvertedBalanceAllOfConvertedCurrentBalance = MoneyWithSign | null;
+export type AccountWithConvertedBalanceAllOfConvertedCurrentBalance = ConvertedBalance | null;

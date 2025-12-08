@@ -27,6 +27,7 @@ export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedAvailableBalan
 export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedAvailableBalanceAllOf';
 export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedCurrentBalance';
 export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedCurrentBalanceAllOf';
+export * from './convertedBalance';
 export * from './createAccountDto';
 export * from './createAccountDtoRawApiAccount';
 export * from './createAccountDtoRawApiAccountSubType';

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { AccountTypeSchema } from './Account';
-import { MoneyWithSignSchema } from './MoneyWithSign';
+import { ConvertedBalanceSchema, MoneyWithSignSchema } from './MoneyWithSign';
 
 /**
  * Time period for comparison calculations
@@ -45,8 +45,8 @@ export const AccountSummarySchema = registerSchema(
     subType: z.string().nullable(),
     /** Current balance in account's original currency */
     currentBalance: MoneyWithSignSchema,
-    /** Current balance converted to user's preferred currency */
-    convertedCurrentBalance: MoneyWithSignSchema.nullable(),
+    /** Current balance converted to user's preferred currency with rate info */
+    convertedCurrentBalance: ConvertedBalanceSchema.nullable(),
     /** Period-over-period percentage change (e.g., 3.5 for +3.5%) */
     changePercent: z.number().nullable(),
     /** Institution name from linked bank (e.g., "Chase", "Bank of America") */

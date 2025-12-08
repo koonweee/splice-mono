@@ -60,6 +60,12 @@ interface CachedRate {
   rateDate: string;
 }
 
+/** Result from batch rate lookup including both rate and the date it applies to */
+export interface BatchRateLookupResult {
+  rate: number;
+  rateDate: string;
+}
+
 @Injectable()
 export class ExchangeRateService {
   private readonly logger = new Logger(ExchangeRateService.name);
@@ -158,7 +164,7 @@ export class ExchangeRateService {
       baseCurrency: string,
       targetCurrency: string,
       rateDate?: string,
-    ) => number | null
+    ) => BatchRateLookupResult | null
   > {
     await this.ensureCacheLoaded();
 
@@ -166,9 +172,13 @@ export class ExchangeRateService {
       baseCurrency: string,
       targetCurrency: string,
       rateDate?: string,
-    ): number | null => {
+    ): BatchRateLookupResult | null => {
       if (baseCurrency === targetCurrency) {
-        return 1;
+        // Same currency - rate is 1, use requested date or today
+        return {
+          rate: 1,
+          rateDate: rateDate ?? new Date().toISOString().split('T')[0],
+        };
       }
 
       const { base, target, inverted } = normalizeCurrencyPair(
@@ -177,19 +187,25 @@ export class ExchangeRateService {
       );
 
       let rate: number | undefined;
+      let actualRateDate: string | undefined;
 
       if (rateDate) {
         rate = this.rateCache.get(`${base}:${target}:${rateDate}`);
+        actualRateDate = rateDate;
       } else {
         const cached = this.latestRateCache.get(`${base}:${target}`);
         rate = cached?.rate;
+        actualRateDate = cached?.rateDate;
       }
 
-      if (rate === undefined) {
+      if (rate === undefined || actualRateDate === undefined) {
         return null;
       }
 
-      return inverted ? 1 / rate : rate;
+      return {
+        rate: inverted ? 1 / rate : rate,
+        rateDate: actualRateDate,
+      };
     };
   }
 

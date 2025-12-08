@@ -1,5 +1,6 @@
 import { CurrencyConversionService } from '../exchange-rate/currency-conversion.service';
 import {
+  type ConvertedBalance,
   MoneySign,
   type SerializedMoneyWithSign,
 } from '../types/MoneyWithSign';
@@ -14,11 +15,19 @@ export interface HasBalances {
 }
 
 /**
+ * Interface for objects that optionally have a currency date for historical conversion
+ */
+export interface MayHaveCurrencyDate {
+  /** Optional date (YYYY-MM-DD) for historical currency conversion. If not provided, uses the latest available rate. */
+  currencyDate?: string;
+}
+
+/**
  * Interface for objects with converted balances added
  */
 export interface WithConvertedBalances {
-  convertedCurrentBalance: SerializedMoneyWithSign | null;
-  convertedAvailableBalance: SerializedMoneyWithSign | null;
+  convertedCurrentBalance: ConvertedBalance | null;
+  convertedAvailableBalance: ConvertedBalance | null;
 }
 
 /**
@@ -27,6 +36,7 @@ export interface WithConvertedBalances {
 interface ConversionResult {
   amount: number;
   rate: number | null;
+  rateDate: string | null;
   usedFallback: boolean;
 }
 
@@ -82,14 +92,17 @@ export class BalanceConversionHelper {
    * This method:
    * 1. Gets the user's preferred currency
    * 2. Prepares balance inputs for batch conversion
-   * 3. Converts both balance types in parallel
+   * 3. Converts both balance types in parallel (grouped by date for efficiency)
    * 4. Maps the results back to the items
+   *
+   * Items can optionally have a `currencyDate` field (YYYY-MM-DD) for historical
+   * currency conversion. If not provided, uses the latest available rate.
    *
    * @param items - Array of items with balances to convert
    * @param userId - The user ID (to get preferred currency)
    * @returns Array of items with converted balances added
    */
-  async addConvertedBalances<T extends HasBalances>(
+  async addConvertedBalances<T extends HasBalances & MayHaveCurrencyDate>(
     items: T[],
     userId: string,
   ): Promise<(T & WithConvertedBalances)[]> {
@@ -99,89 +112,126 @@ export class BalanceConversionHelper {
 
     const targetCurrency = await this.getTargetCurrency(userId);
 
-    // Prepare separate arrays for each balance type
-    const currentBalanceInputs = items.map((item) => ({
-      amount: item.currentBalance.money.amount,
-      currency: item.currentBalance.money.currency,
-    }));
+    // Group items by their currency date for efficient batch conversion
+    // undefined key = use latest rate
+    const dateGroups = new Map<
+      string | undefined,
+      { indices: number[]; items: T[] }
+    >();
 
-    const availableBalanceInputs = items.map((item) => ({
-      amount: item.availableBalance.money.amount,
-      currency: item.availableBalance.money.currency,
-    }));
-
-    // Convert both balance types in parallel
-    const [currentBalanceResults, availableBalanceResults] = await Promise.all([
-      this.currencyConversionService.convertMany(
-        currentBalanceInputs,
-        targetCurrency,
-      ),
-      this.currencyConversionService.convertMany(
-        availableBalanceInputs,
-        targetCurrency,
-      ),
-    ]);
-
-    // Map results back to items
-    return items.map((item, index): T & WithConvertedBalances => {
-      return {
-        ...item,
-        convertedCurrentBalance: this.buildConvertedBalance(
-          currentBalanceResults[index],
-          item.currentBalance.sign,
-          targetCurrency,
-        ),
-        convertedAvailableBalance: this.buildConvertedBalance(
-          availableBalanceResults[index],
-          item.availableBalance.sign,
-          targetCurrency,
-        ),
-      };
+    items.forEach((item, index) => {
+      const rateDate = item.currencyDate;
+      if (!dateGroups.has(rateDate)) {
+        dateGroups.set(rateDate, { indices: [], items: [] });
+      }
+      const group = dateGroups.get(rateDate)!;
+      group.indices.push(index);
+      group.items.push(item);
     });
-  }
 
-  /**
-   * Add converted balances to a single item that has current and available balances.
-   *
-   * @param item - The item with balances to convert
-   * @param userId - The user ID (to get preferred currency)
-   * @returns The item with converted balances added
-   */
-  async addConvertedBalancesToOne<T extends HasBalances>(
-    item: T,
-    userId: string,
-  ): Promise<T & WithConvertedBalances> {
-    const [result] = await this.addConvertedBalances([item], userId);
-    return result;
+    // Process each date group in parallel
+    const groupResults = await Promise.all(
+      Array.from(dateGroups.entries()).map(async ([rateDate, group]) => {
+        const currentBalanceInputs = group.items.map((item) => ({
+          amount: item.currentBalance.money.amount,
+          currency: item.currentBalance.money.currency,
+        }));
+
+        const availableBalanceInputs = group.items.map((item) => ({
+          amount: item.availableBalance.money.amount,
+          currency: item.availableBalance.money.currency,
+        }));
+
+        const [currentResults, availableResults] = await Promise.all([
+          this.currencyConversionService.convertMany(
+            currentBalanceInputs,
+            targetCurrency,
+            rateDate,
+          ),
+          this.currencyConversionService.convertMany(
+            availableBalanceInputs,
+            targetCurrency,
+            rateDate,
+          ),
+        ]);
+
+        return {
+          indices: group.indices,
+          items: group.items,
+          currentResults,
+          availableResults,
+        };
+      }),
+    );
+
+    // Build result array, placing items back in original order
+    const results: (T & WithConvertedBalances)[] = new Array(
+      items.length,
+    ) as (T & WithConvertedBalances)[];
+
+    for (const {
+      indices,
+      items: groupItems,
+      currentResults,
+      availableResults,
+    } of groupResults) {
+      indices.forEach((originalIndex, groupIndex) => {
+        const originalItem = items[indices[groupIndex]];
+        const groupItem = groupItems[groupIndex];
+        results[originalIndex] = {
+          ...originalItem,
+          convertedCurrentBalance: this.buildConvertedBalance(
+            currentResults[groupIndex],
+            groupItem.currentBalance.sign,
+            targetCurrency,
+          ),
+          convertedAvailableBalance: this.buildConvertedBalance(
+            availableResults[groupIndex],
+            groupItem.availableBalance.sign,
+            targetCurrency,
+          ),
+        };
+      });
+    }
+
+    return results;
   }
 
   /**
    * Build a converted balance object from a conversion result.
    *
    * Returns null if the conversion used a fallback (no rate available),
-   * otherwise returns the converted balance with the original sign.
+   * otherwise returns the converted balance with the original sign and rate info.
    *
    * @param conversionResult - Result from CurrencyConversionService.convertMany
    * @param originalSign - The sign of the original balance
    * @param targetCurrency - The currency the balance was converted to
-   * @returns The converted balance, or null if conversion failed
+   * @returns The converted balance with rate info, or null if conversion failed
    */
   buildConvertedBalance(
     conversionResult: ConversionResult,
     originalSign: MoneySign,
     targetCurrency: string,
-  ): SerializedMoneyWithSign | null {
+  ): ConvertedBalance | null {
     // Return null if no rate was available (fallback was used)
-    if (conversionResult.usedFallback) {
+    if (
+      conversionResult.usedFallback ||
+      conversionResult.rate === null ||
+      conversionResult.rateDate === null
+    ) {
       return null;
     }
 
     return {
-      money: {
-        amount: Math.round(conversionResult.amount),
-        currency: targetCurrency,
+      balance: {
+        money: {
+          amount: Math.round(conversionResult.amount),
+          currency: targetCurrency,
+        },
+        sign: originalSign,
       },
-      sign: originalSign,
+      rate: conversionResult.rate,
+      rateDate: conversionResult.rateDate,
     };
   }
 }
