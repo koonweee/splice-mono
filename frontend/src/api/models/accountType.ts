@@ -6,8 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 
-export type AccountType = typeof AccountType[keyof typeof AccountType];
-
+export type AccountType = (typeof AccountType)[keyof typeof AccountType]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AccountType = {
@@ -17,4 +16,4 @@ export const AccountType = {
   loan: 'loan',
   brokerage: 'brokerage',
   other: 'other',
-} as const;
+} as const

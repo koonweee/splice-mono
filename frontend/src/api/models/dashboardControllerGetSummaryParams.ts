@@ -5,11 +5,11 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { DashboardControllerGetSummaryPeriod } from './dashboardControllerGetSummaryPeriod';
+import type { DashboardControllerGetSummaryPeriod } from './dashboardControllerGetSummaryPeriod'
 
 export type DashboardControllerGetSummaryParams = {
-/**
- * Time period for comparison (day, week, month, year). Defaults to month.
- */
-period?: DashboardControllerGetSummaryPeriod;
-};
+  /**
+   * Time period for comparison (day, week, month, year). Defaults to month.
+   */
+  period?: DashboardControllerGetSummaryPeriod
+}
