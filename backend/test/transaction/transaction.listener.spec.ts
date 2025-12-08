@@ -10,6 +10,8 @@ import { TransactionListener } from '../../src/transaction/transaction.listener'
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { Transaction } from '../../src/types/Transaction';
+import { UserService } from '../../src/user/user.service';
+import { mockUserService } from '../mocks/user/user-service.mock';
 
 describe('TransactionListener', () => {
   let listener: TransactionListener;
@@ -25,6 +27,10 @@ describe('TransactionListener', () => {
         {
           provide: getRepositoryToken(AccountEntity),
           useValue: mockAccountRepository,
+        },
+        {
+          provide: UserService,
+          useValue: mockUserService,
         },
       ],
     }).compile();

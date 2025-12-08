@@ -9,6 +9,7 @@ import {
   LinkedAccountUpdatedEvent,
 } from '../events/account.events';
 import { BalanceSnapshotType } from '../types/BalanceSnapshot';
+import { UserService } from '../user/user.service';
 import { BalanceSnapshotService } from './balance-snapshot.service';
 
 dayjs.extend(utc);
@@ -23,6 +24,7 @@ export class BalanceSnapshotListener {
 
   constructor(
     private readonly balanceSnapshotService: BalanceSnapshotService,
+    private readonly userService: UserService,
   ) {}
 
   /**
@@ -41,13 +43,15 @@ export class BalanceSnapshotListener {
     );
 
     try {
+      const snapshotDate = await this.getSnapshotDate(event.account.userId);
+
       await this.balanceSnapshotService.upsert(
         {
           accountId: event.account.id,
           currentBalance: event.account.currentBalance,
           availableBalance: event.account.availableBalance,
           snapshotType: BalanceSnapshotType.SYNC,
-          snapshotDate: this.getSnapshotDate(),
+          snapshotDate,
         },
         event.account.userId,
       );
@@ -66,10 +70,9 @@ export class BalanceSnapshotListener {
    * Get the snapshot date to use by returning today in the user's timezone
    *
    * Truncates to only the date part (YYYY-MM-DD) and ignores the time part
-   *
-   * TODO: Fetch user's timezone from the account and localize the date. For now, hardcoded to PST
    */
-  private getSnapshotDate(): string {
-    return dayjs().tz('America/Los_Angeles').format('YYYY-MM-DD');
+  private async getSnapshotDate(userId: string): Promise<string> {
+    const timezone = await this.userService.getTimezone(userId);
+    return dayjs().tz(timezone).format('YYYY-MM-DD');
   }
 }

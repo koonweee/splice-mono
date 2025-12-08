@@ -14,6 +14,7 @@ import {
 } from '../events/transaction.events';
 import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import { MoneySign, SerializedMoneyWithSign } from '../types/MoneyWithSign';
+import { UserService } from '../user/user.service';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -28,6 +29,7 @@ export class TransactionListener {
   constructor(
     @InjectRepository(AccountEntity)
     private readonly accountRepository: Repository<AccountEntity>,
+    private readonly userService: UserService,
   ) {}
 
   /**
@@ -53,7 +55,7 @@ export class TransactionListener {
 
     try {
       const signedAmount = this.getSignedAmount(transaction.amount);
-      const snapshotDate = this.getSnapshotDate();
+      const snapshotDate = await this.getSnapshotDate(transaction.userId);
 
       // Atomic CTE: update account balance and upsert snapshot in one statement
       await this.accountRepository.query(
@@ -158,6 +160,7 @@ export class TransactionListener {
         reversedAmount,
         transaction.accountId,
         transaction.date,
+        transaction.userId,
       );
 
       this.logger.log(
@@ -213,6 +216,7 @@ export class TransactionListener {
         amountDifference,
         newTransaction.accountId,
         earlierDate,
+        newTransaction.userId,
       );
 
       this.logger.log(
@@ -242,8 +246,9 @@ export class TransactionListener {
     amountDelta: number,
     accountId: string,
     fromDate: string,
+    userId: string,
   ): Promise<void> {
-    const todayDate = this.getSnapshotDate();
+    const todayDate = await this.getSnapshotDate(userId);
 
     await this.accountRepository.query(
       `
@@ -269,9 +274,10 @@ export class TransactionListener {
   /**
    * Get the snapshot date by returning today in the user's timezone
    *
-   * TODO: Fetch user's timezone from the account and localize the date. For now, hardcoded to PST
+   * Truncates to only the date part (YYYY-MM-DD) and ignores the time part
    */
-  private getSnapshotDate(): string {
-    return dayjs().tz('America/Los_Angeles').format('YYYY-MM-DD');
+  private async getSnapshotDate(userId: string): Promise<string> {
+    const timezone = await this.userService.getTimezone(userId);
+    return dayjs().tz(timezone).format('YYYY-MM-DD');
   }
 }
