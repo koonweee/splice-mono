@@ -1,4 +1,5 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthService } from '../../src/auth/auth.service';
@@ -9,6 +10,7 @@ import { mockCreateUserDto, mockLoginDto } from '../mocks/user/user.mock';
 describe('UserService', () => {
   let service: UserService;
   let authService: AuthService;
+  let eventEmitter: EventEmitter2;
 
   const mockRepository = {
     save: jest.fn(),
@@ -24,6 +26,10 @@ describe('UserService', () => {
     }),
   };
 
+  const mockEventEmitter = {
+    emit: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -36,11 +42,16 @@ describe('UserService', () => {
           provide: AuthService,
           useValue: mockAuthService,
         },
+        {
+          provide: EventEmitter2,
+          useValue: mockEventEmitter,
+        },
       ],
     }).compile();
 
     service = module.get<UserService>(UserService);
     authService = module.get<AuthService>(AuthService);
+    eventEmitter = module.get<EventEmitter2>(EventEmitter2);
   });
 
   afterEach(() => {
@@ -465,6 +476,105 @@ describe('UserService', () => {
 
       expect(result).toBeNull();
       expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateSettings', () => {
+    it('should update settings and emit event when currency changes', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.providerDetails = null;
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
+
+      const result = await service.updateSettings('user-uuid-123', {
+        currency: 'EUR',
+      });
+
+      expect(result).toEqual({ currency: 'EUR', timezone: 'UTC' });
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'user.settings-updated',
+        expect.objectContaining({
+          userId: 'user-uuid-123',
+          oldSettings: { currency: 'USD', timezone: 'UTC' },
+          newSettings: { currency: 'EUR', timezone: 'UTC' },
+        }),
+      );
+    });
+
+    it('should update settings and emit event when timezone changes', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.providerDetails = null;
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
+
+      const result = await service.updateSettings('user-uuid-123', {
+        timezone: 'America/New_York',
+      });
+
+      expect(result).toEqual({ currency: 'USD', timezone: 'America/New_York' });
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'user.settings-updated',
+        expect.objectContaining({
+          userId: 'user-uuid-123',
+          oldSettings: { currency: 'USD', timezone: 'UTC' },
+          newSettings: { currency: 'USD', timezone: 'America/New_York' },
+        }),
+      );
+    });
+
+    it('should not emit event when settings are unchanged', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.providerDetails = null;
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
+
+      // Update with same values
+      const result = await service.updateSettings('user-uuid-123', {
+        currency: 'USD',
+        timezone: 'UTC',
+      });
+
+      expect(result).toEqual({ currency: 'USD', timezone: 'UTC' });
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should return null when user not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.updateSettings('non-existent-id', {
+        currency: 'EUR',
+      });
+
+      expect(result).toBeNull();
+      expect(mockRepository.save).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 });

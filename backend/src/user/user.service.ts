@@ -4,10 +4,12 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import { Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
+import { UserEvents, UserSettingsUpdatedEvent } from '../events/user.events';
 import type {
   CreateUserDto,
   LoginDto,
@@ -29,6 +31,7 @@ export class UserService {
     @InjectRepository(UserEntity)
     private repository: Repository<UserEntity>,
     private authService: AuthService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -184,15 +187,27 @@ export class UserService {
     }
 
     // Merge existing settings with updates
-    const currentSettings = entity.settings;
+    const oldSettings = { ...entity.settings };
     const newSettings: UserSettings = {
-      currency: settingsUpdate.currency ?? currentSettings.currency,
-      timezone: settingsUpdate.timezone ?? currentSettings.timezone,
+      currency: settingsUpdate.currency ?? oldSettings.currency,
+      timezone: settingsUpdate.timezone ?? oldSettings.timezone,
     };
     entity.settings = newSettings;
 
     await this.repository.save(entity);
     this.logger.log(`Updated settings for user ${userId}`);
+
+    // Emit event if settings actually changed
+    if (
+      oldSettings.currency !== newSettings.currency ||
+      oldSettings.timezone !== newSettings.timezone
+    ) {
+      this.eventEmitter.emit(
+        UserEvents.SETTINGS_UPDATED,
+        new UserSettingsUpdatedEvent(userId, oldSettings, newSettings),
+      );
+    }
+
     return newSettings;
   }
 

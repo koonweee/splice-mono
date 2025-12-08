@@ -11,9 +11,18 @@ const mockExchangeRateEntity = {
   toObject: jest.fn().mockReturnValue(mockExchangeRate),
 };
 
+/** Mock query builder for createQueryBuilder calls */
+const mockQueryBuilder = {
+  select: jest.fn().mockReturnThis(),
+  where: jest.fn().mockReturnThis(),
+  andWhere: jest.fn().mockReturnThis(),
+  getMany: jest.fn().mockResolvedValue([]),
+};
+
 export const mockExchangeRateRepository = {
   save: jest.fn().mockResolvedValue(mockExchangeRateEntity),
   findOne: jest.fn().mockResolvedValue(mockExchangeRateEntity),
   find: jest.fn().mockResolvedValue([mockExchangeRateEntity]),
   delete: jest.fn().mockResolvedValue({ affected: 1 }),
+  createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
 };
