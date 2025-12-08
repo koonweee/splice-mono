@@ -6,8 +6,8 @@
  * OpenAPI spec version: 1.0
  */
 
-export type DashboardControllerGetSummaryPeriod =
-  (typeof DashboardControllerGetSummaryPeriod)[keyof typeof DashboardControllerGetSummaryPeriod]
+export type DashboardControllerGetSummaryPeriod = typeof DashboardControllerGetSummaryPeriod[keyof typeof DashboardControllerGetSummaryPeriod];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const DashboardControllerGetSummaryPeriod = {
@@ -15,4 +15,4 @@ export const DashboardControllerGetSummaryPeriod = {
   week: 'week',
   month: 'month',
   year: 'year',
-} as const
+} as const;

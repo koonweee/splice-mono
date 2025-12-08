@@ -6,11 +6,11 @@
  * OpenAPI spec version: 1.0
  */
 
-export type MoneyWithSignSign =
-  (typeof MoneyWithSignSign)[keyof typeof MoneyWithSignSign]
+export type MoneyWithSignSign = typeof MoneyWithSignSign[keyof typeof MoneyWithSignSign];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const MoneyWithSignSign = {
   positive: 'positive',
   negative: 'negative',
-} as const
+} as const;

@@ -7,5 +7,5 @@
  */
 
 export interface UpdateUserSettingsDto {
-  currency?: string
+  currency?: string;
 }

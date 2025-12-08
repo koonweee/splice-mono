@@ -6,7 +6,8 @@
  * OpenAPI spec version: 1.0
  */
 
-export type TimePeriod = (typeof TimePeriod)[keyof typeof TimePeriod]
+export type TimePeriod = typeof TimePeriod[keyof typeof TimePeriod];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const TimePeriod = {
@@ -14,4 +15,4 @@ export const TimePeriod = {
   week: 'week',
   month: 'month',
   year: 'year',
-} as const
+} as const;

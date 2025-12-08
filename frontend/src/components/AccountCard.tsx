@@ -20,6 +20,10 @@ export function AccountCard({
   isLiability: boolean
 }) {
   const changePercent = formatPercent(account.changePercent)
+  const hasConvertedBalance =
+    account.convertedCurrentBalance &&
+    account.convertedCurrentBalance.money.currency !==
+      account.currentBalance.money.currency
 
   return (
     <Paper p="md" withBorder>
@@ -31,7 +35,16 @@ export function AccountCard({
           </Text>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <Text fw={600}>{formatMoneyWithSign(account.currentBalance)}</Text>
+          <Text fw={600}>
+            {formatMoneyWithSign(
+              account.convertedCurrentBalance ?? account.currentBalance,
+            )}
+          </Text>
+          {hasConvertedBalance && (
+            <Text size="xs" c="dimmed">
+              {formatMoneyWithSign(account.currentBalance)}
+            </Text>
+          )}
           {changePercent && (
             <Text
               size="sm"
