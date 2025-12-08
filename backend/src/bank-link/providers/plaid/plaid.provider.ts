@@ -178,10 +178,6 @@ export class PlaidProvider implements IBankLinkProvider {
       webhook: `${process.env.APP_DOMAIN}/bank-link/webhook/plaid`,
     };
 
-    this.logger.debug(
-      `Plaid link token request: ${JSON.stringify(request, null, 2)}`,
-    );
-
     try {
       const response = await this.client.linkTokenCreate(request);
       const result: LinkInitiationResponse = {
@@ -450,7 +446,6 @@ export class PlaidProvider implements IBankLinkProvider {
 
       if (isCacheValid && this.cachedJwk) {
         jwk = this.cachedJwk.key;
-        this.logger.debug(`Using cached JWK for kid=${keyId}`);
       } else {
         try {
           const response = await this.client.webhookVerificationKeyGet({
