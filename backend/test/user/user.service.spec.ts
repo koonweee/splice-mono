@@ -1,23 +1,27 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { AuthService } from '../../src/auth/auth.service';
 import { UserEntity } from '../../src/user/user.entity';
 import { UserService } from '../../src/user/user.service';
 import { mockCreateUserDto, mockLoginDto } from '../mocks/user/user.mock';
 
 describe('UserService', () => {
   let service: UserService;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  let jwtService: JwtService;
+  let authService: AuthService;
 
   const mockRepository = {
     save: jest.fn(),
     findOne: jest.fn(),
   };
 
-  const mockJwtService = {
-    sign: jest.fn().mockReturnValue('mock-jwt-token'),
+  const mockAuthService = {
+    generateAccessToken: jest.fn().mockReturnValue('mock-jwt-token'),
+    generateRefreshToken: jest.fn().mockResolvedValue('mock-refresh-token'),
+    rotateRefreshToken: jest.fn().mockResolvedValue({
+      userId: 'user-uuid-123',
+      newRefreshToken: 'new-refresh-token',
+    }),
   };
 
   beforeEach(async () => {
@@ -29,14 +33,14 @@ describe('UserService', () => {
           useValue: mockRepository,
         },
         {
-          provide: JwtService,
-          useValue: mockJwtService,
+          provide: AuthService,
+          useValue: mockAuthService,
         },
       ],
     }).compile();
 
     service = module.get<UserService>(UserService);
-    jwtService = module.get<JwtService>(JwtService);
+    authService = module.get<AuthService>(AuthService);
   });
 
   afterEach(() => {
@@ -55,6 +59,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockCreateUserDto.email;
       mockEntity.hashedPassword = 'hashed-password';
+      mockEntity.currency = 'USD';
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -91,6 +96,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockCreateUserDto.email;
       mockEntity.hashedPassword = 'hashed-password';
+      mockEntity.currency = 'USD';
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -122,6 +128,7 @@ describe('UserService', () => {
       const mockEntity = new UserEntity();
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockLoginDto.email;
+      mockEntity.currency = 'USD';
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -145,11 +152,16 @@ describe('UserService', () => {
 
       expect(result).toHaveProperty('accessToken');
       expect(result.accessToken).toBe('mock-jwt-token');
+      expect(result).toHaveProperty('refreshToken');
+      expect(result.refreshToken).toBe('mock-refresh-token');
       expect(result.user.email).toBe(mockLoginDto.email);
-      expect(mockJwtService.sign).toHaveBeenCalledWith({
-        sub: mockEntity.id,
-        email: mockEntity.email,
-      });
+      expect(mockAuthService.generateAccessToken).toHaveBeenCalledWith(
+        mockEntity.id,
+        mockEntity.email,
+      );
+      expect(mockAuthService.generateRefreshToken).toHaveBeenCalledWith(
+        mockEntity.id,
+      );
     });
 
     it('should throw UnauthorizedException if user not found', async () => {
@@ -168,6 +180,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockLoginDto.email;
       mockEntity.hashedPassword = 'invalid-hash-format';
+      mockEntity.currency = 'USD';
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -185,6 +198,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
+      mockEntity.currency = 'USD';
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -213,6 +227,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
+      mockEntity.currency = 'USD';
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -242,6 +257,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
+      mockEntity.currency = 'USD';
       mockEntity.providerDetails = {
         plaid: { userToken: 'plaid-user-token-123' },
       };
@@ -263,6 +279,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
+      mockEntity.currency = 'USD';
       mockEntity.providerDetails = null;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
@@ -279,6 +296,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
+      mockEntity.currency = 'USD';
       mockEntity.providerDetails = {
         other: { someField: 'value' },
       };
@@ -310,6 +328,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
+      mockEntity.currency = 'USD';
       mockEntity.providerDetails = null;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
@@ -341,6 +360,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
+      mockEntity.currency = 'USD';
       mockEntity.providerDetails = {
         simplefin: { existingField: 'value' },
       };
@@ -369,6 +389,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
+      mockEntity.currency = 'USD';
       mockEntity.providerDetails = {
         plaid: { userToken: 'old-token', otherField: 'will-be-removed' },
       };

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AuthService } from '../../src/auth/auth.service';
 import { UserController } from '../../src/user/user.controller';
 import { UserService } from '../../src/user/user.service';
 import { mockUserService } from '../mocks/user/user-service.mock';
@@ -14,6 +15,11 @@ describe('UserController', () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let service: UserService;
 
+  const mockAuthService = {
+    revokeToken: jest.fn().mockResolvedValue(undefined),
+    revokeAllUserTokens: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
@@ -21,6 +27,10 @@ describe('UserController', () => {
         {
           provide: UserService,
           useValue: mockUserService,
+        },
+        {
+          provide: AuthService,
+          useValue: mockAuthService,
         },
       ],
     }).compile();

@@ -118,4 +118,3 @@ export const mockInvestmentAccount = createMockAccountEntity({
   type: AccountType.Investment,
   currentBalanceAmount: 1000000, // $10,000
 });
-

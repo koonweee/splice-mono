@@ -9,6 +9,8 @@ export const UserSchema = registerSchema(
     .object({
       id: z.string().uuid(),
       email: z.string().email(),
+      /** User's preferred currency for display (ISO 4217 code, e.g., 'USD') */
+      currency: z.string().default('USD'),
       /** Provider-specific user details keyed by provider name */
       providerDetails: ProviderUserDetailsSchema.optional(),
     })
@@ -31,6 +33,8 @@ export const CreateUserDtoSchema = registerSchema(
   z.object({
     email: z.string().email(),
     password: z.string().min(8),
+    /** User's preferred currency for display (ISO 4217 code, defaults to 'USD') */
+    currency: z.string().optional(),
   }),
 );
 
