@@ -1,4 +1,5 @@
 import { Box, Group, Loader, Modal, Stack, Text } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import {
@@ -19,6 +20,8 @@ interface AccountModalProps {
 }
 
 export function AccountModal({ account, opened, onClose }: AccountModalProps) {
+  const isMobile = useMediaQuery('(max-width: 50em)')
+
   const { data: fullAccount, isLoading: isLoadingAccount } =
     useAccountControllerFindOne(account?.id ?? '', {
       query: { enabled: opened && !!account?.id },
@@ -45,7 +48,9 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
       opened={opened}
       onClose={onClose}
       title={account?.name || 'Account Details'}
-      size="lg"
+      size="xl"
+      fullScreen={isMobile}
+      transitionProps={{ transition: 'fade', duration: 200 }}
     >
       {isLoading ? (
         <Group justify="center" py="xl">
