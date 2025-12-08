@@ -25,6 +25,8 @@ export const AccountSchema = registerSchema(
       externalAccountId: z.string().nullable().optional(),
       /** ID of linked BankLink (optional 1-to-1 relationship) */
       bankLinkId: z.string().nullable().optional(),
+      /** Institution name from linked bank (e.g., "Chase", "Bank of America") */
+      institutionName: z.string().nullable().optional(),
     })
     .merge(OwnedSchema),
 );

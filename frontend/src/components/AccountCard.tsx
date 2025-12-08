@@ -36,7 +36,9 @@ export function AccountCard({
         <div>
           <Text fw={500}>{account.name || 'Unnamed Account'}</Text>
           <Text size="sm" c="dimmed" tt="capitalize">
-            {account.subType || account.type}
+            {account.institutionName
+              ? `${account.institutionName} · ${account.subType || account.type}`
+              : account.subType || account.type}
           </Text>
         </div>
         <div style={{ textAlign: 'right' }}>

@@ -1,7 +1,21 @@
 import { AreaChart } from '@mantine/charts'
+import { Paper, Text } from '@mantine/core'
 import dayjs from 'dayjs'
 import type { NetWorthChartPoint } from '../api/models'
 import { MoneyWithSignSign } from '../api/models'
+
+function ChartTooltip({ label, value }: { label: string; value: string }) {
+  return (
+    <Paper px="md" py="xs" withBorder shadow="md" radius="md">
+      <Text size="xs" c="dimmed" mb={4}>
+        {label}
+      </Text>
+      <Text fw={600} size="lg">
+        {value}
+      </Text>
+    </Paper>
+  )
+}
 
 interface MoneyChartProps {
   data: NetWorthChartPoint[]
@@ -32,6 +46,14 @@ export function MoneyChart({
       }
     })
 
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
+
   return (
     <AreaChart
       h={height}
@@ -45,15 +67,17 @@ export function MoneyChart({
       withXAxis
       withYAxis
       withGradient
-      yAxisProps={{ width: 80 }}
-      valueFormatter={(value) =>
-        new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(value)
-      }
+      yAxisProps={{ width: 80, domain: ['auto', 'auto'] }}
+      valueFormatter={formatCurrency}
+      tooltipProps={{
+        content: ({ label, payload }) => {
+          if (!payload?.length || !label) return null
+          const value = payload[0]?.value as number
+          return (
+            <ChartTooltip label={String(label)} value={formatCurrency(value)} />
+          )
+        },
+      }}
     />
   )
 }

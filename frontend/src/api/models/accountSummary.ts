@@ -20,4 +20,6 @@ export interface AccountSummary {
   convertedCurrentBalance: AccountSummaryConvertedCurrentBalance;
   /** @nullable */
   changePercent: number | null;
+  /** @nullable */
+  institutionName: string | null;
 }

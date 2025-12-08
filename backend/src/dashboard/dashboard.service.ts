@@ -141,6 +141,7 @@ export class DashboardService {
         convertedCurrentBalance: account.convertedCurrentBalance,
         changePercent:
           changePercent !== null ? Math.round(changePercent * 10) / 10 : null,
+        institutionName: account.institutionName ?? null,
       };
 
       if (ASSET_TYPES.includes(account.type)) {

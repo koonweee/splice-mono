@@ -49,6 +49,8 @@ export const AccountSummarySchema = registerSchema(
     convertedCurrentBalance: MoneyWithSignSchema.nullable(),
     /** Period-over-period percentage change (e.g., 3.5 for +3.5%) */
     changePercent: z.number().nullable(),
+    /** Institution name from linked bank (e.g., "Chase", "Bank of America") */
+    institutionName: z.string().nullable(),
   }),
 );
 

@@ -24,6 +24,8 @@ export interface Account {
   externalAccountId?: string | null;
   /** @nullable */
   bankLinkId?: string | null;
+  /** @nullable */
+  institutionName?: string | null;
   createdAt: string;
   updatedAt: string;
   userId: string;
