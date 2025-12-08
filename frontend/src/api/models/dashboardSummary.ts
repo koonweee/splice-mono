@@ -5,13 +5,13 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { MoneyWithSign } from './moneyWithSign';
 import type { TimePeriod } from './timePeriod';
 import type { NetWorthChartPoint } from './netWorthChartPoint';
 import type { AccountSummary } from './accountSummary';
 
 export interface DashboardSummary {
-  netWorth: number;
-  currency: string;
+  netWorth: MoneyWithSign;
   /** @nullable */
   changePercent: number | null;
   comparisonPeriod: TimePeriod;

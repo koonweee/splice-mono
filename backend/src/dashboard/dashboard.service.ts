@@ -10,7 +10,10 @@ import {
   NetWorthChartPoint,
   TimePeriod,
 } from '../types/Dashboard';
-import { MoneySign } from '../types/MoneyWithSign';
+import {
+  MoneySign,
+  type SerializedMoneyWithSign,
+} from '../types/MoneyWithSign';
 
 /** Account types that contribute positively to net worth */
 const ASSET_TYPES: string[] = [
@@ -31,8 +34,20 @@ const PERIOD_DAYS: Record<TimePeriod, number> = {
   [TimePeriod.YEAR]: 365,
 };
 
-/** Convert cents to dollars */
-const centsToDollars = (cents: number): number => cents / 100;
+/** Default currency for dashboard calculations */
+const DEFAULT_CURRENCY = 'USD';
+
+/** Create a SerializedMoneyWithSign from cents amount */
+const createMoneyWithSign = (
+  cents: number,
+  currency: string = DEFAULT_CURRENCY,
+): SerializedMoneyWithSign => ({
+  money: {
+    amount: Math.abs(cents),
+    currency,
+  },
+  sign: cents >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE,
+});
 
 @Injectable()
 export class DashboardService {
@@ -78,7 +93,6 @@ export class DashboardService {
 
     let currentNetWorth = 0;
     let previousNetWorth = 0;
-    const defaultCurrency = 'USD';
 
     for (const account of accounts) {
       const currentBalance = this.getSignedBalance(account);
@@ -98,10 +112,7 @@ export class DashboardService {
         name: account.name,
         type: account.type as AccountType,
         subType: account.subType,
-        currentBalance: centsToDollars(
-          Math.abs(Number(account.currentBalance.amount)),
-        ),
-        currency: account.currentBalance.currency || defaultCurrency,
+        currentBalance: account.currentBalance.toMoneyWithSign(),
         changePercent:
           changePercent !== null ? Math.round(changePercent * 10) / 10 : null,
       };
@@ -133,8 +144,7 @@ export class DashboardService {
     const chartData = await this.getChartData(userId, accounts, 6);
 
     return {
-      netWorth: centsToDollars(currentNetWorth),
-      currency: defaultCurrency,
+      netWorth: createMoneyWithSign(currentNetWorth),
       changePercent:
         netWorthChangePercent !== null
           ? Math.round(netWorthChangePercent * 10) / 10
@@ -268,7 +278,7 @@ export class DashboardService {
 
       points.push({
         date: date.toISOString().split('T')[0],
-        value: hasAnyData ? centsToDollars(netWorth) : null,
+        value: hasAnyData ? createMoneyWithSign(netWorth) : null,
       });
     }
 

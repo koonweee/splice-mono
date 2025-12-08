@@ -5,9 +5,9 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { NetWorthChartPointValue } from './netWorthChartPointValue';
 
 export interface NetWorthChartPoint {
   date: string;
-  /** @nullable */
-  value: number | null;
+  value: NetWorthChartPointValue;
 }

@@ -11,6 +11,6 @@ export type MoneyWithSignSign = typeof MoneyWithSignSign[keyof typeof MoneyWithS
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const MoneyWithSignSign = {
-  credit: 'credit',
-  debit: 'debit',
+  positive: 'positive',
+  negative: 'negative',
 } as const;

@@ -6,9 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface CreateUserDto {
-  email: string;
-  /** @minLength 8 */
-  password: string;
-  currency?: string;
-}
+/**
+ * @nullable
+ */
+export type NetWorthChartPointValueAllOf = unknown | null;

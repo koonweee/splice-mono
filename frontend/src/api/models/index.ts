@@ -34,6 +34,8 @@ export * from './money';
 export * from './moneyWithSign';
 export * from './moneyWithSignSign';
 export * from './netWorthChartPoint';
+export * from './netWorthChartPointValue';
+export * from './netWorthChartPointValueAllOf';
 export * from './refreshTokenDto';
 export * from './timePeriod';
 export * from './tokenResponse';

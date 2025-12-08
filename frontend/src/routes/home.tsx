@@ -4,6 +4,11 @@ import { useDashboardControllerGetSummary } from '../api/clients/spliceAPI'
 import type { AccountSummary } from '../api/models'
 import { TimePeriod } from '../api/models'
 import { tokenStorage, useLogout } from '../lib/auth'
+import {
+  formatMoneyWithSign,
+  formatPercent,
+  getChangeColor,
+} from '../lib/format'
 
 export const Route = createFileRoute('/home')({ component: HomePage })
 
@@ -14,20 +19,15 @@ const PERIOD_LABELS: Record<TimePeriod, string> = {
   [TimePeriod.year]: 'Year',
 }
 
-function formatCurrency(amount: number, currency: string) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(
-    amount,
-  )
-}
-
-function formatPercent(value: number | null) {
-  if (value === null) return null
-  const sign = value >= 0 ? '+' : ''
-  return `${sign}${value.toFixed(2)}%`
-}
-
-function AccountCard({ account }: { account: AccountSummary }) {
+function AccountCard({
+  account,
+  isLiability,
+}: {
+  account: AccountSummary
+  isLiability: boolean
+}) {
   const changePercent = formatPercent(account.changePercent)
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
       <div className="flex justify-between items-start">
@@ -41,11 +41,11 @@ function AccountCard({ account }: { account: AccountSummary }) {
         </div>
         <div className="text-right">
           <p className="font-semibold">
-            {formatCurrency(account.currentBalance, account.currency)}
+            {formatMoneyWithSign(account.currentBalance)}
           </p>
           {changePercent && (
             <p
-              className={`text-sm ${account.changePercent! >= 0 ? 'text-green-600' : 'text-red-600'}`}
+              className={`text-sm ${getChangeColor(account.changePercent, isLiability)}`}
             >
               {changePercent}
             </p>
@@ -112,11 +112,11 @@ function HomePage() {
             <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
               <p className="text-sm text-gray-500 mb-1">Net Worth</p>
               <p className="text-3xl font-bold">
-                {formatCurrency(dashboard.netWorth, dashboard.currency)}
+                {formatMoneyWithSign(dashboard.netWorth)}
               </p>
               {dashboard.changePercent !== null && (
                 <p
-                  className={`text-sm ${dashboard.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                  className={`text-sm ${getChangeColor(dashboard.changePercent, false)}`}
                 >
                   {formatPercent(dashboard.changePercent)} from last{' '}
                   {PERIOD_LABELS[dashboard.comparisonPeriod].toLowerCase()}
@@ -132,7 +132,11 @@ function HomePage() {
                     <p className="text-gray-500">No assets</p>
                   ) : (
                     dashboard.assets.map((account) => (
-                      <AccountCard key={account.id} account={account} />
+                      <AccountCard
+                        key={account.id}
+                        account={account}
+                        isLiability={false}
+                      />
                     ))
                   )}
                 </div>
@@ -145,7 +149,11 @@ function HomePage() {
                     <p className="text-gray-500">No liabilities</p>
                   ) : (
                     dashboard.liabilities.map((account) => (
-                      <AccountCard key={account.id} account={account} />
+                      <AccountCard
+                        key={account.id}
+                        account={account}
+                        isLiability={true}
+                      />
                     ))
                   )}
                 </div>

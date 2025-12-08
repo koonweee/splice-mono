@@ -10,6 +10,7 @@ import type { UserProviderDetails } from './userProviderDetails';
 export interface User {
   id: string;
   email: string;
+  currency?: string;
   providerDetails?: UserProviderDetails;
   createdAt: string;
   updatedAt: string;

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { AccountTypeSchema } from './Account';
+import { MoneyWithSignSchema } from './MoneyWithSign';
 
 /**
  * Time period for comparison calculations
@@ -25,8 +26,8 @@ export const NetWorthChartPointSchema = registerSchema(
   z.object({
     /** Date in YYYY-MM-DD format */
     date: z.string(),
-    /** Net worth value in smallest currency unit (e.g., cents), null if no data */
-    value: z.number().nullable(),
+    /** Net worth value, null if no data */
+    value: MoneyWithSignSchema.nullable(),
   }),
 );
 
@@ -42,10 +43,8 @@ export const AccountSummarySchema = registerSchema(
     name: z.string().nullable(),
     type: AccountTypeSchema,
     subType: z.string().nullable(),
-    /** Current balance in smallest currency unit */
-    currentBalance: z.number(),
-    /** Currency code (e.g., 'USD') */
-    currency: z.string(),
+    /** Current balance */
+    currentBalance: MoneyWithSignSchema,
     /** Period-over-period percentage change (e.g., 3.5 for +3.5%) */
     changePercent: z.number().nullable(),
   }),
@@ -59,10 +58,8 @@ export type AccountSummary = z.infer<typeof AccountSummarySchema>;
 export const DashboardSummarySchema = registerSchema(
   'DashboardSummary',
   z.object({
-    /** Current net worth in smallest currency unit */
-    netWorth: z.number(),
-    /** Currency code (e.g., 'USD') */
-    currency: z.string(),
+    /** Current net worth */
+    netWorth: MoneyWithSignSchema,
     /** Period-over-period percentage change for net worth */
     changePercent: z.number().nullable(),
     /** The time period used for comparison */
