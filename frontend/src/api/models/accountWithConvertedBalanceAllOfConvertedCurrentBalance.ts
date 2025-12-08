@@ -6,6 +6,5 @@
  * OpenAPI spec version: 1.0
  */
 import type { MoneyWithSign } from './moneyWithSign';
-import type { AccountWithConvertedBalanceAllOfConvertedCurrentBalanceAllOf } from './accountWithConvertedBalanceAllOfConvertedCurrentBalanceAllOf';
 
-export type AccountWithConvertedBalanceAllOfConvertedCurrentBalance = MoneyWithSign & AccountWithConvertedBalanceAllOfConvertedCurrentBalanceAllOf;
+export type AccountWithConvertedBalanceAllOfConvertedCurrentBalance = MoneyWithSign | null;

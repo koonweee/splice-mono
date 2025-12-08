@@ -6,6 +6,5 @@
  * OpenAPI spec version: 1.0
  */
 import type { MoneyWithSign } from './moneyWithSign';
-import type { NetWorthChartPointValueAllOf } from './netWorthChartPointValueAllOf';
 
-export type NetWorthChartPointValue = MoneyWithSign & NetWorthChartPointValueAllOf;
+export type NetWorthChartPointValue = MoneyWithSign | null;
