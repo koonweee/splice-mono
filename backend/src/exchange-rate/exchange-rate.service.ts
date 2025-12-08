@@ -316,8 +316,6 @@ export class ExchangeRateService {
         where: { userId: user.id },
       });
 
-      this.logger.debug(`Accounts: ${JSON.stringify(accounts)}`);
-
       for (const account of accounts) {
         const accountCurrency = account.currentBalance.currency;
 
