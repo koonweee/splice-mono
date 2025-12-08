@@ -3,11 +3,15 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
 import { AccountService } from '../../src/account/account.service';
+import { CurrencyConversionService } from '../../src/exchange-rate/currency-conversion.service';
 import { MoneySign } from '../../src/types/MoneyWithSign';
+import { UserService } from '../../src/user/user.service';
 import {
   mockCreateAccountDto,
   mockUserId,
 } from '../mocks/account/account.mock';
+import { mockCurrencyConversionService } from '../mocks/exchange-rate/currency-conversion-service.mock';
+import { mockUserService } from '../mocks/user/user-service.mock';
 
 describe('AccountService', () => {
   let service: AccountService;
@@ -27,6 +31,14 @@ describe('AccountService', () => {
         {
           provide: getRepositoryToken(AccountEntity),
           useValue: mockRepository,
+        },
+        {
+          provide: UserService,
+          useValue: mockUserService,
+        },
+        {
+          provide: CurrencyConversionService,
+          useValue: mockCurrencyConversionService,
         },
       ],
     }).compile();
@@ -479,6 +491,86 @@ describe('AccountService', () => {
         id: 'test-id-123',
         userId: mockUserId,
       });
+    });
+  });
+
+  describe('findAllWithConversion', () => {
+    it('should return empty array when no accounts exist', async () => {
+      mockRepository.find.mockResolvedValue([]);
+
+      const result = await service.findAllWithConversion(mockUserId);
+
+      expect(result).toEqual([]);
+      expect(mockUserService.findOne).not.toHaveBeenCalled();
+      expect(mockCurrencyConversionService.convertMany).not.toHaveBeenCalled();
+    });
+
+    it('should return accounts with converted balances', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.find.mockResolvedValue([mockEntity]);
+
+      const result = await service.findAllWithConversion(mockUserId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('convertedCurrentBalance');
+      expect(result[0]).toHaveProperty('convertedAvailableBalance');
+      expect(mockUserService.findOne).toHaveBeenCalledWith(mockUserId);
+      expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledTimes(
+        2,
+      );
+    });
+
+    it('should return null for converted balances when no rate available', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.find.mockResolvedValue([mockEntity]);
+      mockCurrencyConversionService.convertMany.mockResolvedValue([
+        { amount: 50000, rate: null, usedFallback: true },
+      ]);
+
+      const result = await service.findAllWithConversion(mockUserId);
+
+      expect(result[0].convertedCurrentBalance).toBeNull();
+    });
+  });
+
+  describe('findOneWithConversion', () => {
+    it('should return null when account does not exist', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.findOneWithConversion(
+        'non-existent',
+        mockUserId,
+      );
+
+      expect(result).toBeNull();
+      expect(mockUserService.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should return account with converted balances', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+
+      const result = await service.findOneWithConversion('test-id', mockUserId);
+
+      expect(result).not.toBeNull();
+      expect(result).toHaveProperty('convertedCurrentBalance');
+      expect(result).toHaveProperty('convertedAvailableBalance');
+      expect(mockUserService.findOne).toHaveBeenCalledWith(mockUserId);
+      expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledTimes(
+        2,
+      );
     });
   });
 });

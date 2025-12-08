@@ -1,6 +1,7 @@
 import {
   BalanceSnapshot,
   BalanceSnapshotType,
+  BalanceSnapshotWithConvertedBalance,
   CreateBalanceSnapshotDto,
 } from '../../../src/types/BalanceSnapshot';
 import { MoneySign } from '../../../src/types/MoneyWithSign';
@@ -53,6 +54,22 @@ export const mockBalanceSnapshot2: BalanceSnapshot = {
   snapshotType: BalanceSnapshotType.USER_UPDATE,
   ...mockTimestamps,
 };
+
+/**
+ * Mock balance snapshot with converted balances
+ */
+export const mockBalanceSnapshotWithConversion: BalanceSnapshotWithConvertedBalance =
+  {
+    ...mockBalanceSnapshot,
+    convertedCurrentBalance: {
+      money: { currency: 'USD', amount: 100000 },
+      sign: MoneySign.POSITIVE,
+    },
+    convertedAvailableBalance: {
+      money: { currency: 'USD', amount: 95000 },
+      sign: MoneySign.POSITIVE,
+    },
+  };
 
 /**
  * Mock DTO for creating a balance snapshot

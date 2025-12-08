@@ -2,14 +2,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
 import { BalanceSnapshotService } from '../../src/balance-snapshot/balance-snapshot.service';
+import { CurrencyConversionService } from '../../src/exchange-rate/currency-conversion.service';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { MoneySign } from '../../src/types/MoneyWithSign';
+import { UserService } from '../../src/user/user.service';
 import { mockBalanceSnapshotRepository } from '../mocks/balance-snapshot/balance-snapshot-repository.mock';
 import {
   mockBalanceSnapshot,
   mockCreateBalanceSnapshotDto,
   mockUserId,
 } from '../mocks/balance-snapshot/balance-snapshot.mock';
+import { mockCurrencyConversionService } from '../mocks/exchange-rate/currency-conversion-service.mock';
+import { mockUserService } from '../mocks/user/user-service.mock';
 
 describe('BalanceSnapshotService', () => {
   let service: BalanceSnapshotService;
@@ -22,6 +26,14 @@ describe('BalanceSnapshotService', () => {
         {
           provide: getRepositoryToken(BalanceSnapshotEntity),
           useValue: mockBalanceSnapshotRepository,
+        },
+        {
+          provide: UserService,
+          useValue: mockUserService,
+        },
+        {
+          provide: CurrencyConversionService,
+          useValue: mockCurrencyConversionService,
         },
       ],
     }).compile();
@@ -265,6 +277,56 @@ describe('BalanceSnapshotService', () => {
 
       expect(existingEntity.snapshotType).toBe(BalanceSnapshotType.USER_UPDATE);
       expect(repository.save).toHaveBeenCalledWith(existingEntity);
+    });
+  });
+
+  describe('findAllWithConversion', () => {
+    it('should return empty array when no snapshots exist', async () => {
+      repository.find.mockResolvedValueOnce([]);
+
+      const result = await service.findAllWithConversion(mockUserId);
+
+      expect(result).toEqual([]);
+      expect(mockUserService.findOne).not.toHaveBeenCalled();
+      expect(mockCurrencyConversionService.convertMany).not.toHaveBeenCalled();
+    });
+
+    it('should return snapshots with converted balances', async () => {
+      const result = await service.findAllWithConversion(mockUserId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('convertedCurrentBalance');
+      expect(result[0]).toHaveProperty('convertedAvailableBalance');
+      expect(mockUserService.findOne).toHaveBeenCalledWith(mockUserId);
+      expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledTimes(
+        2,
+      );
+    });
+  });
+
+  describe('findByAccountIdWithConversion', () => {
+    it('should return empty array when no snapshots exist for account', async () => {
+      repository.find.mockResolvedValueOnce([]);
+
+      const result = await service.findByAccountIdWithConversion(
+        'account-id-123',
+        mockUserId,
+      );
+
+      expect(result).toEqual([]);
+      expect(mockUserService.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should return snapshots with converted balances for account', async () => {
+      const result = await service.findByAccountIdWithConversion(
+        'account-id-123',
+        mockUserId,
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('convertedCurrentBalance');
+      expect(result[0]).toHaveProperty('convertedAvailableBalance');
+      expect(mockUserService.findOne).toHaveBeenCalledWith(mockUserId);
     });
   });
 });

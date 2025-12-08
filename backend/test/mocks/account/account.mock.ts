@@ -1,5 +1,9 @@
 import { AccountType } from 'plaid';
-import { Account, CreateAccountDto } from '../../../src/types/Account';
+import {
+  Account,
+  AccountWithConvertedBalance,
+  CreateAccountDto,
+} from '../../../src/types/Account';
 import { MoneySign } from '../../../src/types/MoneyWithSign';
 
 /** Standard mock timestamps for testing */
@@ -53,6 +57,36 @@ export const mockAccount2: Account = {
   externalAccountId: 'plaid-acc-456',
   bankLinkId: 'bank-link-123',
   ...mockTimestamps,
+};
+
+/**
+ * Mock account with converted balances (same as mockAccount but with conversion fields)
+ */
+export const mockAccountWithConversion: AccountWithConvertedBalance = {
+  ...mockAccount,
+  convertedCurrentBalance: {
+    money: { currency: 'USD', amount: 100000 },
+    sign: MoneySign.POSITIVE,
+  },
+  convertedAvailableBalance: {
+    money: { currency: 'USD', amount: 100000 },
+    sign: MoneySign.POSITIVE,
+  },
+};
+
+/**
+ * Mock account 2 with converted balances
+ */
+export const mockAccountWithConversion2: AccountWithConvertedBalance = {
+  ...mockAccount2,
+  convertedCurrentBalance: {
+    money: { currency: 'USD', amount: 500000 },
+    sign: MoneySign.POSITIVE,
+  },
+  convertedAvailableBalance: {
+    money: { currency: 'USD', amount: 500000 },
+    sign: MoneySign.POSITIVE,
+  },
 };
 
 /**

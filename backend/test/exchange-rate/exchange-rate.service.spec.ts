@@ -234,8 +234,8 @@ describe('ExchangeRateService', () => {
   describe('getRequiredCurrencyPairs', () => {
     it('should return unique normalized currency pairs', async () => {
       userRepository.find.mockResolvedValue([
-        { id: 'user-1', currency: 'USD' },
-        { id: 'user-2', currency: 'GBP' },
+        { id: 'user-1', settings: { currency: 'USD' } },
+        { id: 'user-2', settings: { currency: 'GBP' } },
       ]);
 
       // User 1 has EUR and GBP accounts, but user currency is USD
@@ -306,7 +306,7 @@ describe('ExchangeRateService', () => {
 
     it('should return empty array when no users have accounts', async () => {
       userRepository.find.mockResolvedValue([
-        { id: 'user-1', currency: 'USD' },
+        { id: 'user-1', settings: { currency: 'USD' } },
       ]);
       accountRepository.find.mockResolvedValue([]);
 
@@ -317,7 +317,7 @@ describe('ExchangeRateService', () => {
 
     it('should skip accounts with same currency as user', async () => {
       userRepository.find.mockResolvedValue([
-        { id: 'user-1', currency: 'USD' },
+        { id: 'user-1', settings: { currency: 'USD' } },
       ]);
       accountRepository.find.mockResolvedValue([
         {
@@ -333,8 +333,8 @@ describe('ExchangeRateService', () => {
 
     it('should deduplicate currency pairs across users', async () => {
       userRepository.find.mockResolvedValue([
-        { id: 'user-1', currency: 'USD' },
-        { id: 'user-2', currency: 'USD' },
+        { id: 'user-1', settings: { currency: 'USD' } },
+        { id: 'user-2', settings: { currency: 'USD' } },
       ]);
 
       // Both users have EUR accounts with USD as their currency
@@ -372,8 +372,8 @@ describe('ExchangeRateService', () => {
 
     it('should deduplicate inverse pairs (USD->SGD and SGD->USD become SGD->USD)', async () => {
       userRepository.find.mockResolvedValue([
-        { id: 'user-1', currency: 'USD' }, // Needs SGD->USD for SGD account
-        { id: 'user-2', currency: 'SGD' }, // Needs USD->SGD for USD account
+        { id: 'user-1', settings: { currency: 'USD' } }, // Needs SGD->USD for SGD account
+        { id: 'user-2', settings: { currency: 'SGD' } }, // Needs USD->SGD for USD account
       ]);
 
       accountRepository.find
@@ -410,8 +410,8 @@ describe('ExchangeRateService', () => {
 
     it('should normalize non-USD pairs alphabetically', async () => {
       userRepository.find.mockResolvedValue([
-        { id: 'user-1', currency: 'GBP' }, // Needs EUR->GBP for EUR account
-        { id: 'user-2', currency: 'EUR' }, // Needs GBP->EUR for GBP account
+        { id: 'user-1', settings: { currency: 'GBP' } }, // Needs EUR->GBP for EUR account
+        { id: 'user-2', settings: { currency: 'EUR' } }, // Needs GBP->EUR for GBP account
       ]);
 
       accountRepository.find
@@ -450,7 +450,7 @@ describe('ExchangeRateService', () => {
   describe('syncDailyRates', () => {
     it('should return empty array when no currency pairs to sync', async () => {
       userRepository.find.mockResolvedValue([
-        { id: 'user-1', currency: 'USD' },
+        { id: 'user-1', settings: { currency: 'USD' } },
       ]);
       accountRepository.find.mockResolvedValue([
         {
@@ -467,7 +467,7 @@ describe('ExchangeRateService', () => {
     it('should invalidate cache after sync when pairs exist', async () => {
       // Setup: user with EUR account, USD currency -> needs EUR->USD rate
       userRepository.find.mockResolvedValue([
-        { id: 'user-1', currency: 'USD' },
+        { id: 'user-1', settings: { currency: 'USD' } },
       ]);
       accountRepository.find.mockResolvedValue([
         {
