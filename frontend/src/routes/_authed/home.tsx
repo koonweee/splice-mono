@@ -13,6 +13,7 @@ import { useState } from 'react'
 import { useDashboardControllerGetSummary } from '../../api/clients/spliceAPI'
 import { TimePeriod } from '../../api/models'
 import { AccountCard } from '../../components/AccountCard'
+import { MoneyChart } from '../../components/MoneyChart'
 import { NetWorthCard } from '../../components/NetWorthCard'
 
 export const Route = createFileRoute('/_authed/home')({ component: HomePage })
@@ -64,6 +65,10 @@ function HomePage() {
             changePercent={dashboard.changePercent}
             comparisonPeriod={dashboard.comparisonPeriod}
           />
+
+          {dashboard.chartData.length > 0 && (
+            <MoneyChart data={dashboard.chartData} mb="xl" />
+          )}
 
           <Grid>
             <Grid.Col span={{ base: 12, md: 6 }}>
