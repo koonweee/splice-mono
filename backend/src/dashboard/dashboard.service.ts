@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { AccountType } from 'plaid';
-import { Between, Repository } from 'typeorm';
-import { AccountEntity } from '../account/account.entity';
-import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
+import { AccountService } from '../account/account.service';
+import { BalanceSnapshotService } from '../balance-snapshot/balance-snapshot.service';
+import { AccountWithConvertedBalance } from '../types/Account';
+import { BalanceSnapshotWithConvertedBalance } from '../types/BalanceSnapshot';
 import {
   AccountSummary,
   DashboardSummary,
@@ -34,13 +34,10 @@ const PERIOD_DAYS: Record<TimePeriod, number> = {
   [TimePeriod.YEAR]: 365,
 };
 
-/** Default currency for dashboard calculations */
-const DEFAULT_CURRENCY = 'USD';
-
 /** Create a SerializedMoneyWithSign from cents amount */
 const createMoneyWithSign = (
   cents: number,
-  currency: string = DEFAULT_CURRENCY,
+  currency: string,
 ): SerializedMoneyWithSign => ({
   money: {
     amount: Math.abs(cents),
@@ -54,14 +51,13 @@ export class DashboardService {
   private readonly logger = new Logger(DashboardService.name);
 
   constructor(
-    @InjectRepository(AccountEntity)
-    private readonly accountRepository: Repository<AccountEntity>,
-    @InjectRepository(BalanceSnapshotEntity)
-    private readonly snapshotRepository: Repository<BalanceSnapshotEntity>,
+    private readonly accountService: AccountService,
+    private readonly balanceSnapshotService: BalanceSnapshotService,
   ) {}
 
   /**
    * Get dashboard summary including net worth, period-over-period changes, and account summaries
+   * All balances are converted to the user's preferred currency
    * @param userId - The user ID to get the dashboard for
    * @param period - The time period for comparison (defaults to MONTH)
    */
@@ -73,19 +69,35 @@ export class DashboardService {
       `Getting dashboard summary for userId=${userId}, period=${period}`,
     );
 
-    const accounts = await this.accountRepository.find({
-      where: { userId },
-    });
+    // Get accounts with converted balances
+    const accounts = await this.accountService.findAllWithConversion(userId);
+
+    if (accounts.length === 0) {
+      return {
+        netWorth: createMoneyWithSign(0, 'USD'),
+        changePercent: null,
+        comparisonPeriod: period,
+        chartData: [],
+        assets: [],
+        liabilities: [],
+      };
+    }
+
+    // Get the target currency from the first account's converted balance
+    // All accounts are converted to the same currency
+    const targetCurrency =
+      accounts[0].convertedCurrentBalance?.money.currency ?? 'USD';
 
     // Get snapshots from the specified period ago for comparison
     const today = new Date();
     const comparisonDate = new Date(today);
     comparisonDate.setDate(comparisonDate.getDate() - PERIOD_DAYS[period]);
 
-    const previousSnapshots = await this.getSnapshotsNearDate(
-      userId,
-      comparisonDate,
-    );
+    const previousSnapshots =
+      await this.balanceSnapshotService.findSnapshotsNearDateWithConversion(
+        userId,
+        comparisonDate,
+      );
 
     // Build account summaries with period-over-period changes
     const assets: AccountSummary[] = [];
@@ -95,10 +107,10 @@ export class DashboardService {
     let previousNetWorth = 0;
 
     for (const account of accounts) {
-      const currentBalance = this.getSignedBalance(account);
+      const currentBalance = this.getSignedConvertedBalance(account);
       const previousSnapshot = previousSnapshots.get(account.id);
       const previousBalance = previousSnapshot
-        ? this.getSignedBalanceFromSnapshot(previousSnapshot)
+        ? this.getSignedConvertedBalanceFromSnapshot(previousSnapshot)
         : null;
 
       const changePercent =
@@ -112,7 +124,8 @@ export class DashboardService {
         name: account.name,
         type: account.type as AccountType,
         subType: account.subType,
-        currentBalance: account.currentBalance.toMoneyWithSign(),
+        currentBalance: account.currentBalance,
+        convertedCurrentBalance: account.convertedCurrentBalance,
         changePercent:
           changePercent !== null ? Math.round(changePercent * 10) / 10 : null,
       };
@@ -144,7 +157,7 @@ export class DashboardService {
     const chartData = await this.getChartData(userId, accounts, 6);
 
     return {
-      netWorth: createMoneyWithSign(currentNetWorth),
+      netWorth: createMoneyWithSign(currentNetWorth, targetCurrency),
       changePercent:
         netWorthChangePercent !== null
           ? Math.round(netWorthChangePercent * 10) / 10
@@ -157,98 +170,60 @@ export class DashboardService {
   }
 
   /**
-   * Get the signed balance value from an account in cents
+   * Get the signed converted balance value from an account in cents
+   * Uses converted balance if available, falls back to original balance
    * Returns positive for credit balances, negative for debit balances
    */
-  private getSignedBalance(account: AccountEntity): number {
-    const amount = Number(account.currentBalance.amount);
-    return account.currentBalance.sign === MoneySign.NEGATIVE
-      ? -amount
-      : amount;
-  }
-
-  /**
-   * Get the signed balance value from a snapshot in cents
-   * Returns positive for credit balances, negative for debit balances
-   */
-  private getSignedBalanceFromSnapshot(
-    snapshot: BalanceSnapshotEntity,
+  private getSignedConvertedBalance(
+    account: AccountWithConvertedBalance,
   ): number {
-    const amount = Number(snapshot.currentBalance.amount);
-    return snapshot.currentBalance.sign === MoneySign.NEGATIVE
-      ? -amount
-      : amount;
+    const balance = account.convertedCurrentBalance ?? account.currentBalance;
+    const amount = balance.money.amount;
+    return balance.sign === MoneySign.NEGATIVE ? -amount : amount;
   }
 
   /**
-   * Get snapshots closest to a target date for all accounts
+   * Get the signed converted balance value from a snapshot in cents
+   * Uses converted balance if available, falls back to original balance
+   * Returns positive for credit balances, negative for debit balances
    */
-  private async getSnapshotsNearDate(
-    userId: string,
-    targetDate: Date,
-  ): Promise<Map<string, BalanceSnapshotEntity>> {
-    // Look for snapshots within a 7-day window around the target date
-    const windowStart = new Date(targetDate);
-    windowStart.setDate(windowStart.getDate() - 3);
-    const windowEnd = new Date(targetDate);
-    windowEnd.setDate(windowEnd.getDate() + 3);
-
-    const snapshots = await this.snapshotRepository.find({
-      where: {
-        userId,
-        snapshotDate: Between(
-          windowStart.toISOString().split('T')[0],
-          windowEnd.toISOString().split('T')[0],
-        ),
-      },
-      order: { snapshotDate: 'DESC' },
-    });
-
-    // Group by accountId, keeping the closest to target date
-    const result = new Map<string, BalanceSnapshotEntity>();
-    const targetTime = targetDate.getTime();
-
-    for (const snapshot of snapshots) {
-      const existing = result.get(snapshot.accountId);
-      if (!existing) {
-        result.set(snapshot.accountId, snapshot);
-      } else {
-        // Keep the one closest to target date
-        const existingDiff = Math.abs(
-          new Date(existing.snapshotDate).getTime() - targetTime,
-        );
-        const currentDiff = Math.abs(
-          new Date(snapshot.snapshotDate).getTime() - targetTime,
-        );
-        if (currentDiff < existingDiff) {
-          result.set(snapshot.accountId, snapshot);
-        }
-      }
-    }
-
-    return result;
+  private getSignedConvertedBalanceFromSnapshot(
+    snapshot: BalanceSnapshotWithConvertedBalance,
+  ): number {
+    const balance = snapshot.convertedCurrentBalance ?? snapshot.currentBalance;
+    const amount = balance.money.amount;
+    return balance.sign === MoneySign.NEGATIVE ? -amount : amount;
   }
 
   /**
    * Generate chart data points for net worth over time
+   * All values are in the user's preferred currency
    * @param userId - The user ID
-   * @param accounts - Pre-fetched accounts for the user
+   * @param accounts - Pre-fetched accounts with converted balances
    * @param months - Number of months of history to include
    */
   private async getChartData(
     userId: string,
-    accounts: AccountEntity[],
+    accounts: AccountWithConvertedBalance[],
     months: number,
   ): Promise<NetWorthChartPoint[]> {
     const points: NetWorthChartPoint[] = [];
     const today = new Date();
+
+    // Get the target currency from accounts
+    const targetCurrency =
+      accounts[0]?.convertedCurrentBalance?.money.currency ?? 'USD';
 
     for (let i = months - 1; i >= 0; i--) {
       const date = new Date(today);
       date.setMonth(date.getMonth() - i);
       date.setDate(1); // First of each month
 
-      const snapshots = await this.getSnapshotsNearDate(userId, date);
+      const snapshots =
+        await this.balanceSnapshotService.findSnapshotsNearDateWithConversion(
+          userId,
+          date,
+        );
 
       // If no snapshots exist for this date, return null value
       if (snapshots.size === 0) {
@@ -266,7 +241,7 @@ export class DashboardService {
         const snapshot = snapshots.get(account.id);
         if (snapshot) {
           hasAnyData = true;
-          const balance = this.getSignedBalanceFromSnapshot(snapshot);
+          const balance = this.getSignedConvertedBalanceFromSnapshot(snapshot);
           if (ASSET_TYPES.includes(account.type)) {
             netWorth += balance;
           } else if (LIABILITY_TYPES.includes(account.type)) {
@@ -278,7 +253,9 @@ export class DashboardService {
 
       points.push({
         date: date.toISOString().split('T')[0],
-        value: hasAnyData ? createMoneyWithSign(netWorth) : null,
+        value: hasAnyData
+          ? createMoneyWithSign(netWorth, targetCurrency)
+          : null,
       });
     }
 

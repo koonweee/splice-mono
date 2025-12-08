@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
+import { BalanceConversionHelper } from '../common/balance-conversion.helper';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
 import { CurrencyConversionService } from '../exchange-rate/currency-conversion.service';
@@ -10,10 +11,6 @@ import {
   CreateBalanceSnapshotDto,
   UpdateBalanceSnapshotDto,
 } from '../types/BalanceSnapshot';
-import {
-  MoneySign,
-  type SerializedMoneyWithSign,
-} from '../types/MoneyWithSign';
 import { UserService } from '../user/user.service';
 import { BalanceSnapshotEntity } from './balance-snapshot.entity';
 
@@ -28,6 +25,8 @@ export class BalanceSnapshotService extends OwnedCrudService<
   protected readonly entityName = 'BalanceSnapshot';
   protected readonly EntityClass = BalanceSnapshotEntity;
 
+  private readonly balanceConversionHelper: BalanceConversionHelper;
+
   constructor(
     @InjectRepository(BalanceSnapshotEntity)
     repository: Repository<BalanceSnapshotEntity>,
@@ -35,6 +34,10 @@ export class BalanceSnapshotService extends OwnedCrudService<
     private readonly currencyConversionService: CurrencyConversionService,
   ) {
     super(repository);
+    this.balanceConversionHelper = new BalanceConversionHelper(
+      userService,
+      currencyConversionService,
+    );
   }
 
   protected applyUpdate(
@@ -153,56 +156,7 @@ export class BalanceSnapshotService extends OwnedCrudService<
     userId: string,
   ): Promise<BalanceSnapshotWithConvertedBalance[]> {
     const snapshots = await this.findAll(userId);
-
-    if (snapshots.length === 0) {
-      return [];
-    }
-
-    // Get user's preferred currency
-    const user = await this.userService.findOne(userId);
-    const targetCurrency = user?.settings.currency ?? 'USD';
-
-    // Prepare separate arrays for each balance type
-    const currentBalanceInputs = snapshots.map((snapshot) => ({
-      amount: snapshot.currentBalance.money.amount,
-      currency: snapshot.currentBalance.money.currency,
-    }));
-
-    const availableBalanceInputs = snapshots.map((snapshot) => ({
-      amount: snapshot.availableBalance.money.amount,
-      currency: snapshot.availableBalance.money.currency,
-    }));
-
-    // Convert both balance types in parallel
-    const [currentBalanceResults, availableBalanceResults] = await Promise.all([
-      this.currencyConversionService.convertMany(
-        currentBalanceInputs,
-        targetCurrency,
-      ),
-      this.currencyConversionService.convertMany(
-        availableBalanceInputs,
-        targetCurrency,
-      ),
-    ]);
-
-    // Map results back to snapshots
-    return snapshots.map(
-      (snapshot, index): BalanceSnapshotWithConvertedBalance => {
-        return {
-          ...snapshot,
-          convertedCurrentBalance: this.buildConvertedBalance(
-            currentBalanceResults[index],
-            snapshot.currentBalance.sign,
-            targetCurrency,
-          ),
-          convertedAvailableBalance: this.buildConvertedBalance(
-            availableBalanceResults[index],
-            snapshot.availableBalance.sign,
-            targetCurrency,
-          ),
-        };
-      },
-    );
+    return this.balanceConversionHelper.addConvertedBalances(snapshots, userId);
   }
 
   /**
@@ -217,81 +171,83 @@ export class BalanceSnapshotService extends OwnedCrudService<
     userId: string,
   ): Promise<BalanceSnapshotWithConvertedBalance[]> {
     const snapshots = await this.findByAccountId(accountId, userId);
-
-    if (snapshots.length === 0) {
-      return [];
-    }
-
-    // Get user's preferred currency
-    const user = await this.userService.findOne(userId);
-    const targetCurrency = user?.settings.currency ?? 'USD';
-
-    // Prepare separate arrays for each balance type
-    const currentBalanceInputs = snapshots.map((snapshot) => ({
-      amount: snapshot.currentBalance.money.amount,
-      currency: snapshot.currentBalance.money.currency,
-    }));
-
-    const availableBalanceInputs = snapshots.map((snapshot) => ({
-      amount: snapshot.availableBalance.money.amount,
-      currency: snapshot.availableBalance.money.currency,
-    }));
-
-    // Convert both balance types in parallel
-    const [currentBalanceResults, availableBalanceResults] = await Promise.all([
-      this.currencyConversionService.convertMany(
-        currentBalanceInputs,
-        targetCurrency,
-      ),
-      this.currencyConversionService.convertMany(
-        availableBalanceInputs,
-        targetCurrency,
-      ),
-    ]);
-
-    // Map results back to snapshots
-    return snapshots.map(
-      (snapshot, index): BalanceSnapshotWithConvertedBalance => {
-        return {
-          ...snapshot,
-          convertedCurrentBalance: this.buildConvertedBalance(
-            currentBalanceResults[index],
-            snapshot.currentBalance.sign,
-            targetCurrency,
-          ),
-          convertedAvailableBalance: this.buildConvertedBalance(
-            availableBalanceResults[index],
-            snapshot.availableBalance.sign,
-            targetCurrency,
-          ),
-        };
-      },
-    );
+    return this.balanceConversionHelper.addConvertedBalances(snapshots, userId);
   }
 
   /**
-   * Helper to build a converted balance object from conversion result
+   * Find snapshots closest to a target date for all accounts, with converted balances
+   *
+   * @param userId - The user ID
+   * @param targetDate - The target date to find snapshots near
+   * @param windowDays - Number of days before/after target to search (default 3)
+   * @returns Map of accountId to snapshot with converted balances
    */
-  private buildConvertedBalance(
-    conversionResult: {
-      amount: number;
-      rate: number | null;
-      usedFallback: boolean;
-    },
-    originalSign: MoneySign,
-    targetCurrency: string,
-  ): SerializedMoneyWithSign | null {
-    // Return null if no rate was available (fallback was used)
-    if (conversionResult.usedFallback) {
-      return null;
+  async findSnapshotsNearDateWithConversion(
+    userId: string,
+    targetDate: Date,
+    windowDays: number = 3,
+  ): Promise<Map<string, BalanceSnapshotWithConvertedBalance>> {
+    // Look for snapshots within a window around the target date
+    const windowStart = new Date(targetDate);
+    windowStart.setDate(windowStart.getDate() - windowDays);
+    const windowEnd = new Date(targetDate);
+    windowEnd.setDate(windowEnd.getDate() + windowDays);
+
+    const entities = await this.repository.find({
+      where: {
+        userId,
+        snapshotDate: Between(
+          windowStart.toISOString().split('T')[0],
+          windowEnd.toISOString().split('T')[0],
+        ),
+      },
+      order: { snapshotDate: 'DESC' },
+    });
+
+    if (entities.length === 0) {
+      return new Map();
     }
 
-    return {
-      money: {
-        amount: Math.round(conversionResult.amount),
-        currency: targetCurrency,
-      },
-      sign: originalSign,
-    };
+    // Group by accountId, keeping the closest to target date
+    const closestByAccount = new Map<string, BalanceSnapshotEntity>();
+    const targetTime = targetDate.getTime();
+
+    for (const entity of entities) {
+      const existing = closestByAccount.get(entity.accountId);
+      if (!existing) {
+        closestByAccount.set(entity.accountId, entity);
+      } else {
+        // Keep the one closest to target date
+        const existingDiff = Math.abs(
+          new Date(existing.snapshotDate).getTime() - targetTime,
+        );
+        const currentDiff = Math.abs(
+          new Date(entity.snapshotDate).getTime() - targetTime,
+        );
+        if (currentDiff < existingDiff) {
+          closestByAccount.set(entity.accountId, entity);
+        }
+      }
+    }
+
+    // Convert snapshots to domain objects
+    const snapshots = Array.from(closestByAccount.values()).map((e) =>
+      e.toObject(),
+    );
+
+    // Add converted balances using the helper
+    const snapshotsWithConversion =
+      await this.balanceConversionHelper.addConvertedBalances(
+        snapshots,
+        userId,
+      );
+
+    // Build result map keyed by accountId
+    const result = new Map<string, BalanceSnapshotWithConvertedBalance>();
+    for (const snapshot of snapshotsWithConversion) {
+      result.set(snapshot.accountId, snapshot);
+    }
+
+    return result;
   }
 }
