@@ -48,7 +48,9 @@ import type {
   TransactionControllerFindAllParams,
   UpdateBalanceSnapshotDto,
   UpdateTransactionDto,
-  User
+  UpdateUserSettingsDto,
+  User,
+  UserSettings
 } from '../models';
 
 import { axios } from '../axios';
@@ -1207,6 +1209,67 @@ export function useUserControllerMe<TData = Awaited<ReturnType<typeof userContro
 
 
 
+/**
+ * Update current user settings
+ */
+export const userControllerUpdateSettings = (
+    updateUserSettingsDto: UpdateUserSettingsDto,
+ ) => {
+      
+      
+      return axios<UserSettings>(
+      {url: `/user/settings`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateUserSettingsDto
+    },
+      );
+    }
+  
+
+
+export const getUserControllerUpdateSettingsMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerUpdateSettings>>, TError,{data: UpdateUserSettingsDto}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof userControllerUpdateSettings>>, TError,{data: UpdateUserSettingsDto}, TContext> => {
+
+const mutationKey = ['userControllerUpdateSettings'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerUpdateSettings>>, {data: UpdateUserSettingsDto}> = (props) => {
+          const {data} = props ?? {};
+
+          return  userControllerUpdateSettings(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UserControllerUpdateSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerUpdateSettings>>>
+    export type UserControllerUpdateSettingsMutationBody = UpdateUserSettingsDto
+    export type UserControllerUpdateSettingsMutationError = void
+
+    export const useUserControllerUpdateSettings = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerUpdateSettings>>, TError,{data: UpdateUserSettingsDto}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof userControllerUpdateSettings>>,
+        TError,
+        {data: UpdateUserSettingsDto},
+        TContext
+      > => {
+
+      const mutationOptions = getUserControllerUpdateSettingsMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
 /**
  * Refresh access token using refresh token
  */

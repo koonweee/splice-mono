@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   NotFoundException,
+  Patch,
   Post,
   Req,
   Res,
@@ -33,6 +34,14 @@ import {
   TokenResponseSchema,
   UserSchema,
 } from '../types/User';
+import type {
+  UpdateUserSettingsDto,
+  UserSettings,
+} from '../types/UserSettings';
+import {
+  UpdateUserSettingsDtoSchema,
+  UserSettingsSchema,
+} from '../types/UserSettings';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { UserService } from './user.service';
 
@@ -121,6 +130,31 @@ export class UserController {
       throw new NotFoundException('User not found');
     }
     return user;
+  }
+
+  @Patch('settings')
+  @ApiOperation({ description: 'Update current user settings' })
+  @ZodApiBody({ schema: UpdateUserSettingsDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Settings updated successfully',
+    schema: UserSettingsSchema,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateSettings(
+    @CurrentUser() currentUser: JwtUser,
+    @Body(new ZodValidationPipe(UpdateUserSettingsDtoSchema))
+    updateDto: UpdateUserSettingsDto,
+  ): Promise<UserSettings> {
+    const settings = await this.userService.updateSettings(
+      currentUser.userId,
+      updateDto,
+    );
+    if (!settings) {
+      throw new NotFoundException('User not found');
+    }
+    return settings;
   }
 
   @Public()
