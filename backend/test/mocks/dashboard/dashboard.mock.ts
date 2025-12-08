@@ -62,9 +62,17 @@ export function createMockAccountWithConversion(
     bankLinkId: null,
     currentBalance,
     availableBalance,
-    // Converted balances are the same as original for USD accounts
-    convertedCurrentBalance: currentBalance,
-    convertedAvailableBalance: availableBalance,
+    // Converted balances with rate info (same as original for USD accounts)
+    convertedCurrentBalance: {
+      balance: currentBalance,
+      rate: 1,
+      rateDate: '2024-01-15',
+    },
+    convertedAvailableBalance: {
+      balance: availableBalance,
+      rate: 1,
+      rateDate: '2024-01-15',
+    },
     ...mockTimestamps,
   };
 }
@@ -91,6 +99,7 @@ export function createMockSnapshotWithConversion(
   const currency = overrides.currency ?? 'USD';
   const availableAmount = overrides.availableBalanceAmount ?? amount;
   const availableSign = overrides.availableBalanceSign ?? sign;
+  const snapshotDate = overrides.snapshotDate ?? '2024-01-01';
 
   const currentBalance: SerializedMoneyWithSign = {
     money: { currency, amount },
@@ -106,13 +115,21 @@ export function createMockSnapshotWithConversion(
     id: overrides.id ?? 'snapshot-1',
     userId: overrides.userId ?? mockUserId,
     accountId: overrides.accountId ?? 'account-1',
-    snapshotDate: overrides.snapshotDate ?? '2024-01-01',
+    snapshotDate,
     snapshotType: overrides.snapshotType ?? BalanceSnapshotType.SYNC,
     currentBalance,
     availableBalance,
-    // Converted balances are the same as original for USD accounts
-    convertedCurrentBalance: currentBalance,
-    convertedAvailableBalance: availableBalance,
+    // Converted balances with rate info (same as original for USD accounts)
+    convertedCurrentBalance: {
+      balance: currentBalance,
+      rate: 1,
+      rateDate: snapshotDate,
+    },
+    convertedAvailableBalance: {
+      balance: availableBalance,
+      rate: 1,
+      rateDate: snapshotDate,
+    },
     ...mockTimestamps,
   };
 }

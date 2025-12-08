@@ -62,12 +62,20 @@ export const mockBalanceSnapshotWithConversion: BalanceSnapshotWithConvertedBala
   {
     ...mockBalanceSnapshot,
     convertedCurrentBalance: {
-      money: { currency: 'USD', amount: 100000 },
-      sign: MoneySign.POSITIVE,
+      balance: {
+        money: { currency: 'USD', amount: 100000 },
+        sign: MoneySign.POSITIVE,
+      },
+      rate: 1,
+      rateDate: '2024-01-01',
     },
     convertedAvailableBalance: {
-      money: { currency: 'USD', amount: 95000 },
-      sign: MoneySign.POSITIVE,
+      balance: {
+        money: { currency: 'USD', amount: 95000 },
+        sign: MoneySign.POSITIVE,
+      },
+      rate: 1,
+      rateDate: '2024-01-01',
     },
   };
 
