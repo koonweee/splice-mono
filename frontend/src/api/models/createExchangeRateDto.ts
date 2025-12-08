@@ -6,6 +6,9 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface RefreshTokenDto {
-  refreshToken?: string;
+export interface CreateExchangeRateDto {
+  baseCurrency: string;
+  targetCurrency: string;
+  rate: number;
+  rateDate: string;
 }

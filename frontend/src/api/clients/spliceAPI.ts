@@ -33,6 +33,11 @@ import type {
   CreateUserDto,
   DashboardControllerGetSummaryParams,
   DashboardSummary,
+  ExchangeRate,
+  ExchangeRateControllerGetLatestRate200,
+  ExchangeRateControllerGetRate200,
+  ExchangeRateControllerGetRateParams,
+  ExchangeRateControllerGetRatesForDateParams,
   InitiateLinkRequest,
   InitiateLinkResponse,
   LoginDto,
@@ -1465,6 +1470,359 @@ export function useDashboardControllerGetSummary<TData = Awaited<ReturnType<type
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getDashboardControllerGetSummaryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * Manually trigger exchange rate sync for all required currency pairs
+ */
+export const exchangeRateControllerSyncRates = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<ExchangeRate[]>(
+      {url: `/exchange-rates/sync`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getExchangeRateControllerSyncRatesMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exchangeRateControllerSyncRates>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof exchangeRateControllerSyncRates>>, TError,void, TContext> => {
+
+const mutationKey = ['exchangeRateControllerSyncRates'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exchangeRateControllerSyncRates>>, void> = () => {
+          
+
+          return  exchangeRateControllerSyncRates()
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExchangeRateControllerSyncRatesMutationResult = NonNullable<Awaited<ReturnType<typeof exchangeRateControllerSyncRates>>>
+    
+    export type ExchangeRateControllerSyncRatesMutationError = void
+
+    export const useExchangeRateControllerSyncRates = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exchangeRateControllerSyncRates>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof exchangeRateControllerSyncRates>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getExchangeRateControllerSyncRatesMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * Get the latest exchange rate for a currency pair
+ */
+export const exchangeRateControllerGetLatestRate = (
+    baseCurrency: string,
+    targetCurrency: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<ExchangeRateControllerGetLatestRate200>(
+      {url: `/exchange-rates/latest/${baseCurrency}/${targetCurrency}`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getExchangeRateControllerGetLatestRateQueryKey = (baseCurrency?: string,
+    targetCurrency?: string,) => {
+    return [
+    `/exchange-rates/latest/${baseCurrency}/${targetCurrency}`
+    ] as const;
+    }
+
+    
+export const getExchangeRateControllerGetLatestRateQueryOptions = <TData = Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError = unknown>(baseCurrency: string,
+    targetCurrency: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExchangeRateControllerGetLatestRateQueryKey(baseCurrency,targetCurrency);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>> = ({ signal }) => exchangeRateControllerGetLatestRate(baseCurrency,targetCurrency, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(baseCurrency && targetCurrency), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExchangeRateControllerGetLatestRateQueryResult = NonNullable<Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>>
+export type ExchangeRateControllerGetLatestRateQueryError = unknown
+
+
+export function useExchangeRateControllerGetLatestRate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError = unknown>(
+ baseCurrency: string,
+    targetCurrency: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>,
+          TError,
+          Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExchangeRateControllerGetLatestRate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError = unknown>(
+ baseCurrency: string,
+    targetCurrency: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>,
+          TError,
+          Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExchangeRateControllerGetLatestRate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError = unknown>(
+ baseCurrency: string,
+    targetCurrency: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useExchangeRateControllerGetLatestRate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError = unknown>(
+ baseCurrency: string,
+    targetCurrency: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetLatestRate>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExchangeRateControllerGetLatestRateQueryOptions(baseCurrency,targetCurrency,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * Get exchange rate for a currency pair on a specific date
+ */
+export const exchangeRateControllerGetRate = (
+    baseCurrency: string,
+    targetCurrency: string,
+    params: ExchangeRateControllerGetRateParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<ExchangeRateControllerGetRate200>(
+      {url: `/exchange-rates/${baseCurrency}/${targetCurrency}`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getExchangeRateControllerGetRateQueryKey = (baseCurrency?: string,
+    targetCurrency?: string,
+    params?: ExchangeRateControllerGetRateParams,) => {
+    return [
+    `/exchange-rates/${baseCurrency}/${targetCurrency}`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getExchangeRateControllerGetRateQueryOptions = <TData = Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError = unknown>(baseCurrency: string,
+    targetCurrency: string,
+    params: ExchangeRateControllerGetRateParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExchangeRateControllerGetRateQueryKey(baseCurrency,targetCurrency,params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exchangeRateControllerGetRate>>> = ({ signal }) => exchangeRateControllerGetRate(baseCurrency,targetCurrency,params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(baseCurrency && targetCurrency), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExchangeRateControllerGetRateQueryResult = NonNullable<Awaited<ReturnType<typeof exchangeRateControllerGetRate>>>
+export type ExchangeRateControllerGetRateQueryError = unknown
+
+
+export function useExchangeRateControllerGetRate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError = unknown>(
+ baseCurrency: string,
+    targetCurrency: string,
+    params: ExchangeRateControllerGetRateParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exchangeRateControllerGetRate>>,
+          TError,
+          Awaited<ReturnType<typeof exchangeRateControllerGetRate>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExchangeRateControllerGetRate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError = unknown>(
+ baseCurrency: string,
+    targetCurrency: string,
+    params: ExchangeRateControllerGetRateParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exchangeRateControllerGetRate>>,
+          TError,
+          Awaited<ReturnType<typeof exchangeRateControllerGetRate>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExchangeRateControllerGetRate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError = unknown>(
+ baseCurrency: string,
+    targetCurrency: string,
+    params: ExchangeRateControllerGetRateParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useExchangeRateControllerGetRate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError = unknown>(
+ baseCurrency: string,
+    targetCurrency: string,
+    params: ExchangeRateControllerGetRateParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRate>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExchangeRateControllerGetRateQueryOptions(baseCurrency,targetCurrency,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * Get all exchange rates for a specific date
+ */
+export const exchangeRateControllerGetRatesForDate = (
+    params: ExchangeRateControllerGetRatesForDateParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<ExchangeRate[]>(
+      {url: `/exchange-rates`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getExchangeRateControllerGetRatesForDateQueryKey = (params?: ExchangeRateControllerGetRatesForDateParams,) => {
+    return [
+    `/exchange-rates`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getExchangeRateControllerGetRatesForDateQueryOptions = <TData = Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError = unknown>(params: ExchangeRateControllerGetRatesForDateParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExchangeRateControllerGetRatesForDateQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>> = ({ signal }) => exchangeRateControllerGetRatesForDate(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExchangeRateControllerGetRatesForDateQueryResult = NonNullable<Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>>
+export type ExchangeRateControllerGetRatesForDateQueryError = unknown
+
+
+export function useExchangeRateControllerGetRatesForDate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError = unknown>(
+ params: ExchangeRateControllerGetRatesForDateParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>,
+          TError,
+          Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExchangeRateControllerGetRatesForDate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError = unknown>(
+ params: ExchangeRateControllerGetRatesForDateParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>,
+          TError,
+          Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExchangeRateControllerGetRatesForDate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError = unknown>(
+ params: ExchangeRateControllerGetRatesForDateParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useExchangeRateControllerGetRatesForDate<TData = Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError = unknown>(
+ params: ExchangeRateControllerGetRatesForDateParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exchangeRateControllerGetRatesForDate>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExchangeRateControllerGetRatesForDateQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

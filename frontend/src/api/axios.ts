@@ -1,49 +1,34 @@
-import Axios, {
-  AxiosError,
-  AxiosRequestConfig,
-  InternalAxiosRequestConfig,
-} from 'axios';
-import { tokenStorage } from '../lib/auth';
+import Axios, { AxiosError, AxiosRequestConfig } from 'axios';
 
 const axiosInstance = Axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
+  // Include cookies in all requests for authentication
+  withCredentials: true,
 });
-
-// Request interceptor - attach access token to all requests
-axiosInstance.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = tokenStorage.getAccessToken();
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
 
 // State for managing token refresh
 let isRefreshing = false;
 let failedQueue: Array<{
-  resolve: (token: string) => void;
+  resolve: () => void;
   reject: (error: Error) => void;
 }> = [];
 
-const processQueue = (error: Error | null, token: string | null = null) => {
+const processQueue = (error: Error | null) => {
   failedQueue.forEach((promise) => {
     if (error) {
       promise.reject(error);
-    } else if (token) {
-      promise.resolve(token);
+    } else {
+      promise.resolve();
     }
   });
   failedQueue = [];
 };
 
-// Response interceptor - handle 401 and refresh token
+// Response interceptor - handle 401 and refresh token via cookies
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
+    const originalRequest = error.config as AxiosRequestConfig & {
       _retry?: boolean;
     };
 
@@ -63,10 +48,7 @@ axiosInstance.interceptors.response.use(
         // Queue this request to retry after refresh completes
         return new Promise((resolve, reject) => {
           failedQueue.push({
-            resolve: (token: string) => {
-              if (originalRequest.headers) {
-                originalRequest.headers.Authorization = `Bearer ${token}`;
-              }
+            resolve: () => {
               resolve(axiosInstance(originalRequest));
             },
             reject: (err: Error) => reject(err),
@@ -77,37 +59,17 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = tokenStorage.getRefreshToken();
-
-      if (!refreshToken) {
-        // No refresh token available - redirect to login
-        tokenStorage.clearTokens();
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-
       try {
-        // Make refresh request directly with a fresh Axios instance to avoid interceptors
-        const response = await Axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/user/refresh`,
-          { refreshToken },
-        );
+        // Make refresh request - cookies will be sent automatically
+        // The backend will set new cookies in the response
+        await axiosInstance.post('/user/refresh', {});
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        processQueue(null);
 
-        tokenStorage.setTokens(accessToken, newRefreshToken);
-
-        // Update the failed request's authorization header
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        }
-
-        processQueue(null, accessToken);
-
+        // Retry the original request - new cookies will be sent automatically
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError as Error, null);
-        tokenStorage.clearTokens();
+        processQueue(refreshError as Error);
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {

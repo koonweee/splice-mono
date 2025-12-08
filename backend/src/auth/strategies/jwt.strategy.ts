@@ -1,11 +1,29 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
+import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 export interface JwtPayload {
   sub: string; // user id
   email?: string;
   // Add other claims as needed
+}
+
+const ACCESS_TOKEN_COOKIE = 'splice_access_token';
+
+/**
+ * Extract JWT from cookie first, then fall back to Authorization header.
+ * This allows both web clients (cookies) and mobile clients (header) to authenticate.
+ */
+function extractJwtFromCookieOrHeader(req: Request): string | null {
+  // Try cookie first (for web clients)
+  const cookieToken = req.cookies?.[ACCESS_TOKEN_COOKIE] as string | undefined;
+  if (cookieToken) {
+    return cookieToken;
+  }
+
+  // Fall back to Authorization header (for mobile clients)
+  return ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 }
 
 @Injectable()
@@ -17,7 +35,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: extractJwtFromCookieOrHeader,
       ignoreExpiration: false,
       secretOrKey: secret,
     });
