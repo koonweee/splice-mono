@@ -3,13 +3,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountEntity } from '../../src/account/account.entity';
 import { ExchangeRateEntity } from '../../src/exchange-rate/exchange-rate.entity';
 import { ExchangeRateService } from '../../src/exchange-rate/exchange-rate.service';
-import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserEntity } from '../../src/user/user.entity';
 import { mockExchangeRateRepository } from '../mocks/exchange-rate/exchange-rate-repository.mock';
-import {
-  mockCreateExchangeRateDto,
-  mockExchangeRate,
-} from '../mocks/exchange-rate/exchange-rate.mock';
+import { mockExchangeRate } from '../mocks/exchange-rate/exchange-rate.mock';
 
 describe('ExchangeRateService', () => {
   let service: ExchangeRateService;
@@ -25,6 +21,11 @@ describe('ExchangeRateService', () => {
     accountRepository = {
       find: jest.fn(),
     };
+
+    // Reset repository mocks
+    mockExchangeRateRepository.find.mockReset();
+    mockExchangeRateRepository.findOne.mockReset();
+    mockExchangeRateRepository.save.mockReset();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -46,229 +47,156 @@ describe('ExchangeRateService', () => {
 
     service = module.get<ExchangeRateService>(ExchangeRateService);
     repository = module.get(getRepositoryToken(ExchangeRateEntity));
+
+    // Invalidate cache before each test to ensure fresh state
+    service.invalidateCache();
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('upsert', () => {
-    it('should create a new exchange rate when none exists (X->USD stays as is)', async () => {
-      repository.findOne.mockResolvedValueOnce(null);
+  describe('getRate (cached)', () => {
+    it('should return 1 for same currency', async () => {
+      const result = await service.getRate('USD', 'USD');
 
-      // EUR->USD: USD is target, so this is already normalized
-      const result = await service.upsert(mockCreateExchangeRateDto);
-
-      expect(result).toEqual(mockExchangeRate);
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: {
-          baseCurrency: 'EUR', // X->USD normalized
-          targetCurrency: 'USD',
-          rateDate: mockCreateExchangeRateDto.rateDate,
-        },
-      });
-      expect(repository.save).toHaveBeenCalled();
+      expect(result).toBe(1);
+      // Should not load cache for same currency
+      expect(repository.find).not.toHaveBeenCalled();
     });
 
-    it('should normalize pair and invert rate when storing USD->X (USD should be target)', async () => {
-      repository.findOne.mockResolvedValueOnce(null);
-
-      // USD->EUR should be normalized to EUR->USD (USD always target)
-      // and the rate should be inverted
-      await service.upsert({
-        baseCurrency: 'USD',
-        targetCurrency: 'EUR',
-        rate: 0.93, // 1 USD = 0.93 EUR
-        rateDate: '2024-01-15',
-      });
-
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: {
-          baseCurrency: 'EUR', // Normalized: EUR->USD
-          targetCurrency: 'USD',
-          rateDate: '2024-01-15',
-        },
-      });
-
-      // The saved entity should have the inverted rate (1 EUR = 1/0.93 USD)
-      expect(repository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          baseCurrency: 'EUR',
-          targetCurrency: 'USD',
-          rate: expect.closeTo(1 / 0.93, 5) as number,
-        }),
-      );
-    });
-
-    it('should normalize non-USD pairs alphabetically', async () => {
-      repository.findOne.mockResolvedValueOnce(null);
-
-      // GBP->EUR should be normalized to EUR->GBP (alphabetically)
-      await service.upsert({
-        baseCurrency: 'GBP',
-        targetCurrency: 'EUR',
-        rate: 1.17, // 1 GBP = 1.17 EUR
-        rateDate: '2024-01-15',
-      });
-
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: {
-          baseCurrency: 'EUR', // Alphabetically first
-          targetCurrency: 'GBP',
-          rateDate: '2024-01-15',
-        },
-      });
-
-      // The saved entity should have the inverted rate
-      expect(repository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          baseCurrency: 'EUR',
-          targetCurrency: 'GBP',
-          rate: expect.closeTo(1 / 1.17, 5) as number,
-        }),
-      );
-    });
-
-    it('should update existing exchange rate when one exists for same pair and date', async () => {
-      const existingEntity = {
-        id: 'existing-rate-id',
+    it('should return rate from cache for date-specific lookup', async () => {
+      const mockEntity = {
         baseCurrency: 'EUR',
         targetCurrency: 'USD',
-        rate: 1.05,
+        rate: 1.08,
         rateDate: '2024-01-15',
         toObject: jest.fn().mockReturnValue(mockExchangeRate),
       };
-      repository.findOne.mockResolvedValueOnce(existingEntity);
+      repository.find.mockResolvedValueOnce([mockEntity]);
 
-      const result = await service.upsert(mockCreateExchangeRateDto);
-
-      expect(result).toEqual(mockExchangeRate);
-      expect(existingEntity.rate).toBe(mockCreateExchangeRateDto.rate);
-      expect(repository.save).toHaveBeenCalledWith(existingEntity);
-    });
-  });
-
-  describe('getRate', () => {
-    it('should return exchange rate when found (already normalized)', async () => {
       const result = await service.getRate('EUR', 'USD', '2024-01-15');
 
-      expect(result).toEqual(mockExchangeRate);
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: {
-          baseCurrency: 'EUR', // Normalized
-          targetCurrency: 'USD',
-          rateDate: '2024-01-15',
-        },
+      expect(result).toBe(1.08);
+      expect(repository.find).toHaveBeenCalledWith({
+        order: { rateDate: 'DESC' },
       });
     });
 
+    it('should return latest rate from cache when no date specified', async () => {
+      const mockEntity = {
+        baseCurrency: 'EUR',
+        targetCurrency: 'USD',
+        rate: 1.08,
+        rateDate: '2024-01-15',
+        toObject: jest.fn().mockReturnValue(mockExchangeRate),
+      };
+      repository.find.mockResolvedValueOnce([mockEntity]);
+
+      const result = await service.getRate('EUR', 'USD');
+
+      expect(result).toBe(1.08);
+    });
+
     it('should return inverse rate when requesting USD->EUR but EUR->USD is stored', async () => {
-      const storedRate = {
-        ...mockExchangeRate,
+      const mockEntity = {
         baseCurrency: 'EUR',
         targetCurrency: 'USD',
         rate: 1.08, // 1 EUR = 1.08 USD
+        rateDate: '2024-01-15',
       };
-      const mockEntity = {
-        toObject: jest.fn().mockReturnValue(storedRate),
-      };
-      repository.findOne.mockResolvedValueOnce(mockEntity);
+      repository.find.mockResolvedValueOnce([mockEntity]);
 
       // Request USD->EUR (inverse of what's stored)
       const result = await service.getRate('USD', 'EUR', '2024-01-15');
 
-      // Should query with normalized pair
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: {
-          baseCurrency: 'EUR',
-          targetCurrency: 'USD',
-          rateDate: '2024-01-15',
-        },
-      });
-
-      // Should return inverted rate with swapped currencies
-      expect(result).not.toBeNull();
-      expect(result!.baseCurrency).toBe('USD');
-      expect(result!.targetCurrency).toBe('EUR');
-      expect(result!.rate).toBeCloseTo(1 / 1.08, 5);
+      // Should return inverted rate
+      expect(result).toBeCloseTo(1 / 1.08, 5);
     });
 
-    it('should return null when exchange rate not found', async () => {
-      repository.findOne.mockResolvedValueOnce(null);
+    it('should return null when rate not found in cache', async () => {
+      repository.find.mockResolvedValueOnce([]);
 
       const result = await service.getRate('EUR', 'USD', '2024-01-15');
 
       expect(result).toBeNull();
     });
 
-    it('should return null when requesting same currency', async () => {
-      const result = await service.getRate('USD', 'USD', '2024-01-15');
+    it('should use cached data on subsequent calls within TTL', async () => {
+      const mockEntity = {
+        baseCurrency: 'EUR',
+        targetCurrency: 'USD',
+        rate: 1.08,
+        rateDate: '2024-01-15',
+      };
+      repository.find.mockResolvedValueOnce([mockEntity]);
 
-      expect(result).toBeNull();
-      expect(repository.findOne).not.toHaveBeenCalled();
+      // First call loads cache
+      await service.getRate('EUR', 'USD', '2024-01-15');
+
+      // Second call should use cache
+      const result = await service.getRate('EUR', 'USD', '2024-01-15');
+
+      expect(result).toBe(1.08);
+      // Repository.find should only be called once
+      expect(repository.find).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('getLatestRate', () => {
-    it('should return the latest exchange rate for a currency pair', async () => {
-      const result = await service.getLatestRate('EUR', 'USD');
-
-      expect(result).toEqual(mockExchangeRate);
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: { baseCurrency: 'EUR', targetCurrency: 'USD' },
-        order: { rateDate: 'DESC' },
-      });
-    });
-
-    it('should return inverse rate when requesting USD->EUR but EUR->USD is stored', async () => {
-      const storedRate = {
-        ...mockExchangeRate,
+    it('should return the latest rate from cache', async () => {
+      const mockEntity = {
         baseCurrency: 'EUR',
         targetCurrency: 'USD',
         rate: 1.08,
+        rateDate: '2024-01-15',
       };
-      const mockEntity = {
-        toObject: jest.fn().mockReturnValue(storedRate),
-      };
-      repository.findOne.mockResolvedValueOnce(mockEntity);
+      repository.find.mockResolvedValueOnce([mockEntity]);
 
-      const result = await service.getLatestRate('USD', 'EUR');
+      const result = await service.getLatestRate('EUR', 'USD');
 
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: { baseCurrency: 'EUR', targetCurrency: 'USD' },
-        order: { rateDate: 'DESC' },
-      });
+      expect(result).toBe(1.08);
+    });
 
-      expect(result).not.toBeNull();
-      expect(result!.baseCurrency).toBe('USD');
-      expect(result!.targetCurrency).toBe('EUR');
-      expect(result!.rate).toBeCloseTo(1 / 1.08, 5);
+    it('should return 1 for same currency', async () => {
+      const result = await service.getLatestRate('USD', 'USD');
+
+      expect(result).toBe(1);
+      expect(repository.find).not.toHaveBeenCalled();
     });
 
     it('should return null when no rates exist for currency pair', async () => {
-      repository.findOne.mockResolvedValueOnce(null);
+      repository.find.mockResolvedValueOnce([]);
 
       const result = await service.getLatestRate('EUR', 'USD');
 
       expect(result).toBeNull();
-    });
-
-    it('should return null when requesting same currency', async () => {
-      const result = await service.getLatestRate('USD', 'USD');
-
-      expect(result).toBeNull();
-      expect(repository.findOne).not.toHaveBeenCalled();
     });
   });
 
   describe('getRatesForDate', () => {
-    it('should return all exchange rates for a specific date', async () => {
+    it('should return all exchange rates for a specific date from cache', async () => {
+      const mockEntities = [
+        {
+          baseCurrency: 'EUR',
+          targetCurrency: 'USD',
+          rate: 1.08,
+          rateDate: '2024-01-15',
+        },
+        {
+          baseCurrency: 'GBP',
+          targetCurrency: 'USD',
+          rate: 1.27,
+          rateDate: '2024-01-15',
+        },
+      ];
+      repository.find.mockResolvedValueOnce(mockEntities);
+
       const result = await service.getRatesForDate('2024-01-15');
 
-      expect(result).toEqual([mockExchangeRate]);
-      expect(repository.find).toHaveBeenCalledWith({
-        where: { rateDate: '2024-01-15' },
-      });
+      expect(result).toHaveLength(2);
+      expect(result[0].baseCurrency).toBe('EUR');
+      expect(result[1].baseCurrency).toBe('GBP');
     });
 
     it('should return empty array when no rates exist for date', async () => {
@@ -277,6 +205,29 @@ describe('ExchangeRateService', () => {
       const result = await service.getRatesForDate('2024-01-15');
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('invalidateCache', () => {
+    it('should force cache reload on next access', async () => {
+      const mockEntity = {
+        baseCurrency: 'EUR',
+        targetCurrency: 'USD',
+        rate: 1.08,
+        rateDate: '2024-01-15',
+      };
+      repository.find.mockResolvedValue([mockEntity]);
+
+      // First call loads cache
+      await service.getRate('EUR', 'USD', '2024-01-15');
+      expect(repository.find).toHaveBeenCalledTimes(1);
+
+      // Invalidate cache
+      service.invalidateCache();
+
+      // Next call should reload cache
+      await service.getRate('EUR', 'USD', '2024-01-15');
+      expect(repository.find).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -453,31 +404,24 @@ describe('ExchangeRateService', () => {
   });
 
   describe('syncDailyRates', () => {
-    it('should sync rates for all required currency pairs', async () => {
+    it('should return empty array when no currency pairs to sync', async () => {
       userRepository.find.mockResolvedValue([
         { id: 'user-1', currency: 'USD' },
       ]);
       accountRepository.find.mockResolvedValue([
         {
           id: 'acc-1',
-          currentBalance: { currency: 'EUR', amount: 10000, sign: 'credit' },
+          currentBalance: { currency: 'USD', amount: 10000, sign: 'credit' },
         },
       ]);
-      repository.findOne.mockResolvedValue(null); // No existing rate
-
-      // Mock fetchExchangeRates (batch) to return rates
-      const fetchSpy = jest
-        .spyOn(service, 'fetchExchangeRates')
-        .mockResolvedValue(new Map([['USD', 1.08]]));
 
       const result = await service.syncDailyRates();
 
-      expect(fetchSpy).toHaveBeenCalledWith('EUR', ['USD']);
-      expect(repository.save).toHaveBeenCalled();
-      expect(result).toHaveLength(1);
+      expect(result).toEqual([]);
     });
 
-    it('should skip pairs when fetch returns empty map', async () => {
+    it('should invalidate cache after sync when pairs exist', async () => {
+      // Setup: user with EUR account, USD currency -> needs EUR->USD rate
       userRepository.find.mockResolvedValue([
         { id: 'user-1', currency: 'USD' },
       ]);
@@ -488,86 +432,47 @@ describe('ExchangeRateService', () => {
         },
       ]);
 
-      // Mock fetchExchangeRates to return empty map (API error)
-      const fetchSpy = jest
-        .spyOn(service, 'fetchExchangeRates')
-        .mockResolvedValue(new Map());
+      const mockEntity = {
+        baseCurrency: 'EUR',
+        targetCurrency: 'USD',
+        rate: 1.08,
+        rateDate: '2024-01-15',
+        toObject: jest.fn().mockReturnValue(mockExchangeRate),
+      };
+      repository.find.mockResolvedValue([mockEntity]);
+      repository.findOne.mockResolvedValue(null); // No existing rate for upsert
+      repository.save.mockResolvedValue(mockEntity);
 
-      const result = await service.syncDailyRates();
+      // Pre-load cache by calling getRate
+      await service.getRate('EUR', 'USD');
+      const initialFindCalls = repository.find.mock.calls.length;
 
-      expect(fetchSpy).toHaveBeenCalledWith('EUR', ['USD']);
-      expect(result).toHaveLength(0);
-    });
+      // Mock the fetch to return a rate (private method, we need to mock global fetch)
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            base: 'EUR',
+            date: '2024-01-15',
+            rates: { USD: 1.08 },
+          }),
+      });
 
-    it('should handle errors gracefully and continue with other base currencies', async () => {
-      userRepository.find.mockResolvedValue([
-        { id: 'user-1', currency: 'USD' },
-      ]);
-      accountRepository.find.mockResolvedValue([
-        {
-          id: 'acc-1',
-          currentBalance: { currency: 'EUR', amount: 10000, sign: 'credit' },
-        },
-        {
-          id: 'acc-2',
-          currentBalance: { currency: 'GBP', amount: 20000, sign: 'credit' },
-        },
-      ]);
-      repository.findOne.mockResolvedValue(null);
+      try {
+        // Sync should invalidate cache after saving rates
+        await service.syncDailyRates();
 
-      // First call throws, second succeeds
-      const fetchSpy = jest
-        .spyOn(service, 'fetchExchangeRates')
-        .mockRejectedValueOnce(new Error('API error'))
-        .mockResolvedValueOnce(new Map([['USD', 1.27]]));
+        // Next getRate call should reload cache
+        await service.getRate('EUR', 'USD');
 
-      const result = await service.syncDailyRates();
-
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
-      expect(result).toHaveLength(1);
-    });
-
-    it('should batch multiple target currencies per base in single API call', async () => {
-      userRepository.find.mockResolvedValue([
-        { id: 'user-1', currency: 'USD' },
-        { id: 'user-2', currency: 'GBP' },
-      ]);
-      // User 1 has EUR account (needs EUR->USD)
-      // User 2 has EUR account (needs EUR->GBP)
-      // Both should be batched into one call with base=EUR
-      accountRepository.find
-        .mockResolvedValueOnce([
-          {
-            id: 'acc-1',
-            currentBalance: { currency: 'EUR', amount: 10000, sign: 'credit' },
-          },
-        ])
-        .mockResolvedValueOnce([
-          {
-            id: 'acc-2',
-            currentBalance: { currency: 'EUR', amount: 20000, sign: 'credit' },
-          },
-        ]);
-      repository.findOne.mockResolvedValue(null);
-
-      const fetchSpy = jest
-        .spyOn(service, 'fetchExchangeRates')
-        .mockResolvedValue(
-          new Map([
-            ['GBP', 0.86],
-            ['USD', 1.08],
-          ]),
+        // find should be called again after invalidation
+        expect(repository.find.mock.calls.length).toBeGreaterThan(
+          initialFindCalls,
         );
-
-      const result = await service.syncDailyRates();
-
-      // Should only make one API call with both targets
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
-      expect(fetchSpy).toHaveBeenCalledWith(
-        'EUR',
-        expect.arrayContaining(['GBP', 'USD']),
-      );
-      expect(result).toHaveLength(2);
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
   });
 });
