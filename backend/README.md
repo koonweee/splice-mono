@@ -60,7 +60,6 @@ That's it! Your application will be running at `http://localhost:3000` 🚀
    ```
 
 4. **Access the application**
-
    - Application: `http://localhost:3000`
    - API Documentation (Swagger): `http://localhost:3000/api`
 
@@ -137,6 +136,7 @@ Swagger/OpenAPI documentation is available at `/api` when the server is running.
 You can generate a fully typed API client from the OpenAPI spec using tools like:
 
 **Using `@hey-api/openapi-ts`:**
+
 ```bash
 # Install the generator
 yarn add -D @hey-api/openapi-ts
@@ -146,6 +146,7 @@ npx @hey-api/openapi-ts -i http://localhost:3000/api-json -o ./src/client
 ```
 
 **Using `openapi-typescript` (types only):**
+
 ```bash
 yarn add -D openapi-typescript
 
@@ -154,12 +155,75 @@ npx openapi-typescript http://localhost:3000/api-json -o ./src/api-types.ts
 ```
 
 **Using `orval` (React Query/SWR hooks):**
+
 ```bash
 yarn add -D orval
 
 # Generate with React Query hooks
 npx orval --input http://localhost:3000/api-json --output ./src/api
 ```
+
+## Database Migrations
+
+This project uses TypeORM migrations to manage database schema changes. Migrations are used in all environments (development and production).
+
+### Migration Commands
+
+```bash
+# Generate a new migration from entity changes
+yarn migration:generate src/migrations/MigrationName
+
+# Run pending migrations (local, requires DB connection)
+yarn migration:run
+
+# Run migrations in Docker dev environment
+yarn docker:migration:run
+
+# Revert the last migration
+yarn migration:revert
+
+# Show migration status
+yarn migration:show
+```
+
+### Workflow for Schema Changes
+
+1. **Make changes to your entity files** (e.g., add a column in `account.entity.ts`)
+
+2. **Generate a migration:**
+
+   ```bash
+   yarn migration:generate src/migrations/AddFieldToAccount
+   ```
+
+   TypeORM compares your entities to the current DB and generates the SQL diff.
+
+3. **Review the generated migration** in `src/migrations/`. Verify the `up()` and `down()` methods are correct.
+
+4. **Apply the migration:**
+
+   ```bash
+   # If running locally
+   yarn migration:run
+
+   # If using Docker
+   yarn docker:migration:run
+   ```
+
+5. **Commit the migration file** along with your entity changes.
+
+### How Migrations Work
+
+- TypeORM tracks executed migrations in a `migrations` table in your database
+- Running `migration:run` only executes migrations that haven't been run yet
+- In production, migrations run automatically on container startup via the Docker entrypoint
+
+### Adding a New Entity
+
+When adding a new entity:
+
+1. Create your `*.entity.ts` file (entities are auto-loaded)
+2. Generate a migration to create the table: `yarn migration:generate src/migrations/CreateMyEntity`
 
 ## Testing
 
