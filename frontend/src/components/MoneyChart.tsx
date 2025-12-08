@@ -1,4 +1,5 @@
 import { AreaChart } from '@mantine/charts'
+import dayjs from 'dayjs'
 import type { NetWorthChartPoint } from '../api/models'
 import { MoneyWithSignSign } from '../api/models'
 
@@ -58,6 +59,5 @@ export function MoneyChart({
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return dayjs(dateStr).format('MMM D')
 }
