@@ -110,11 +110,11 @@ describe('AccountService', () => {
         name: null,
         availableBalance: {
           money: { currency: 'USD', amount: 100 },
-          sign: MoneySign.CREDIT,
+          sign: MoneySign.POSITIVE,
         },
         currentBalance: {
           money: { currency: 'USD', amount: 100 },
-          sign: MoneySign.CREDIT,
+          sign: MoneySign.POSITIVE,
         },
         type: AccountType.Depository,
         subType: null,

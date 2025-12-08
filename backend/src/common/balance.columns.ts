@@ -11,7 +11,7 @@ import {
  * Creates 3 columns when embedded:
  * - {prefix}Amount (bigint) - Amount in smallest currency unit (e.g., cents)
  * - {prefix}Currency (string) - ISO 4217 currency code
- * - {prefix}Sign (string) - 'credit' or 'debit'
+ * - {prefix}Sign (string) - 'positive' or 'negative'
  *
  * @example
  * // In your entity:
@@ -32,9 +32,9 @@ export class BalanceColumns {
   @Column()
   currency: string;
 
-  /** Credit or debit sign */
+  /** Positive or negative sign */
   @Column()
-  sign: string;
+  sign: MoneySign;
 
   /**
    * Create BalanceColumns from a SerializedMoneyWithSign (domain type)
@@ -60,7 +60,7 @@ export class BalanceColumns {
         amount,
         currency: this.currency,
       },
-      sign: this.sign as MoneySign,
+      sign: this.sign,
     };
   }
 }

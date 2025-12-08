@@ -3,8 +3,8 @@ import { registerSchema } from 'src/common/zod-api-response';
 import { z } from 'zod';
 
 export enum MoneySign {
-  CREDIT = 'credit',
-  DEBIT = 'debit',
+  POSITIVE = 'positive',
+  NEGATIVE = 'negative',
 }
 
 /**
@@ -46,12 +46,12 @@ export type SerializedMoneyWithSign = z.infer<typeof MoneyWithSignSchema>;
  *
  * @example
  * // Create from float (e.g., from Plaid API)
- * const balance = MoneyWithSign.fromFloat('USD', 199.99, MoneySign.CREDIT);
+ * const balance = MoneyWithSign.fromFloat('USD', 199.99, MoneySign.POSITIVE);
  * balance.getAmount();     // => 19999 (cents)
  * balance.toLocaleString(); // => '$199.99'
  *
  * // Create from integer (e.g., from database)
- * const balance2 = new MoneyWithSign('USD', 19999, MoneySign.CREDIT);
+ * const balance2 = new MoneyWithSign('USD', 19999, MoneySign.POSITIVE);
  */
 export class MoneyWithSign {
   private readonly money: Money;

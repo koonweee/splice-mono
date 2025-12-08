@@ -20,11 +20,11 @@ export const mockAccount: Account = {
   name: 'Test Checking Account',
   availableBalance: {
     money: { currency: 'USD', amount: 100000 }, // $1,000.00 in cents
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   currentBalance: {
     money: { currency: 'USD', amount: 100000 }, // $1,000.00 in cents
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   type: AccountType.Depository,
   subType: null,
@@ -42,11 +42,11 @@ export const mockAccount2: Account = {
   name: 'Test Savings Account',
   availableBalance: {
     money: { currency: 'USD', amount: 500000 }, // $5,000.00 in cents
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   currentBalance: {
     money: { currency: 'USD', amount: 500000 }, // $5,000.00 in cents
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   type: AccountType.Depository,
   subType: null,
@@ -62,11 +62,11 @@ export const mockCreateAccountDto: CreateAccountDto = {
   name: 'New Test Account',
   availableBalance: {
     money: { currency: 'USD', amount: 50000 }, // $500.00 in cents
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   currentBalance: {
     money: { currency: 'USD', amount: 50000 }, // $500.00 in cents
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   type: AccountType.Depository,
   subType: null,

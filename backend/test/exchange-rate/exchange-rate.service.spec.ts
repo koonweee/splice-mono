@@ -244,25 +244,25 @@ describe('ExchangeRateService', () => {
         .mockResolvedValueOnce([
           {
             id: 'acc-1',
-            currentBalance: { currency: 'EUR', amount: 10000, sign: 'credit' },
+            currentBalance: { currency: 'EUR', amount: 10000, sign: 'positive' },
           },
           {
             id: 'acc-2',
-            currentBalance: { currency: 'GBP', amount: 20000, sign: 'credit' },
+            currentBalance: { currency: 'GBP', amount: 20000, sign: 'positive' },
           },
           {
             id: 'acc-3',
-            currentBalance: { currency: 'USD', amount: 30000, sign: 'credit' },
+            currentBalance: { currency: 'USD', amount: 30000, sign: 'positive' },
           }, // Same as user, should skip
         ])
         .mockResolvedValueOnce([
           {
             id: 'acc-4',
-            currentBalance: { currency: 'EUR', amount: 40000, sign: 'credit' },
+            currentBalance: { currency: 'EUR', amount: 40000, sign: 'positive' },
           },
           {
             id: 'acc-5',
-            currentBalance: { currency: 'GBP', amount: 50000, sign: 'credit' },
+            currentBalance: { currency: 'GBP', amount: 50000, sign: 'positive' },
           }, // Same as user, should skip
         ]);
 
@@ -302,7 +302,7 @@ describe('ExchangeRateService', () => {
       accountRepository.find.mockResolvedValue([
         {
           id: 'acc-1',
-          currentBalance: { currency: 'USD', amount: 10000, sign: 'credit' },
+          currentBalance: { currency: 'USD', amount: 10000, sign: 'positive' },
         },
       ]);
 
@@ -322,13 +322,13 @@ describe('ExchangeRateService', () => {
         .mockResolvedValueOnce([
           {
             id: 'acc-1',
-            currentBalance: { currency: 'EUR', amount: 10000, sign: 'credit' },
+            currentBalance: { currency: 'EUR', amount: 10000, sign: 'positive' },
           },
         ])
         .mockResolvedValueOnce([
           {
             id: 'acc-2',
-            currentBalance: { currency: 'EUR', amount: 20000, sign: 'credit' },
+            currentBalance: { currency: 'EUR', amount: 20000, sign: 'positive' },
           },
         ]);
 
@@ -352,13 +352,13 @@ describe('ExchangeRateService', () => {
         .mockResolvedValueOnce([
           {
             id: 'acc-1',
-            currentBalance: { currency: 'SGD', amount: 10000, sign: 'credit' },
+            currentBalance: { currency: 'SGD', amount: 10000, sign: 'positive' },
           },
         ])
         .mockResolvedValueOnce([
           {
             id: 'acc-2',
-            currentBalance: { currency: 'USD', amount: 20000, sign: 'credit' },
+            currentBalance: { currency: 'USD', amount: 20000, sign: 'positive' },
           },
         ]);
 
@@ -382,13 +382,13 @@ describe('ExchangeRateService', () => {
         .mockResolvedValueOnce([
           {
             id: 'acc-1',
-            currentBalance: { currency: 'EUR', amount: 10000, sign: 'credit' },
+            currentBalance: { currency: 'EUR', amount: 10000, sign: 'positive' },
           },
         ])
         .mockResolvedValueOnce([
           {
             id: 'acc-2',
-            currentBalance: { currency: 'GBP', amount: 20000, sign: 'credit' },
+            currentBalance: { currency: 'GBP', amount: 20000, sign: 'positive' },
           },
         ]);
 
@@ -411,7 +411,7 @@ describe('ExchangeRateService', () => {
       accountRepository.find.mockResolvedValue([
         {
           id: 'acc-1',
-          currentBalance: { currency: 'USD', amount: 10000, sign: 'credit' },
+          currentBalance: { currency: 'USD', amount: 10000, sign: 'positive' },
         },
       ]);
 
@@ -428,7 +428,7 @@ describe('ExchangeRateService', () => {
       accountRepository.find.mockResolvedValue([
         {
           id: 'acc-1',
-          currentBalance: { currency: 'EUR', amount: 10000, sign: 'credit' },
+          currentBalance: { currency: 'EUR', amount: 10000, sign: 'positive' },
         },
       ]);
 

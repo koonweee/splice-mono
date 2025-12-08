@@ -230,7 +230,7 @@ export class TransactionListener {
    * Credit amounts are positive, debit amounts are negative
    */
   private getSignedAmount(amount: SerializedMoneyWithSign): number {
-    return amount.sign === MoneySign.CREDIT
+    return amount.sign === MoneySign.POSITIVE
       ? amount.money.amount
       : -amount.money.amount;
   }
