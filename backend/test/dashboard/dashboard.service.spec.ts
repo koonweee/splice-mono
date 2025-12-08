@@ -379,8 +379,8 @@ describe('DashboardService', () => {
 
       const result = await service.getSummary(mockUserId);
 
-      // Should have 6 monthly points for MONTH period (default)
-      expect(result.chartData).toHaveLength(6);
+      // Should have 31 daily points for MONTH period (30 days + today)
+      expect(result.chartData).toHaveLength(31);
       for (const point of result.chartData) {
         expect(point.value).not.toBeNull();
       }
@@ -404,11 +404,11 @@ describe('DashboardService', () => {
 
       const result = await service.getSummary(mockUserId, TimePeriod.DAY);
 
-      // Should have 7 daily points for DAY period
-      expect(result.chartData).toHaveLength(7);
+      // Should have 2 daily points for DAY period (1 day ago + today)
+      expect(result.chartData).toHaveLength(2);
     });
 
-    it('should use weekly granularity for WEEK period', async () => {
+    it('should use daily granularity for WEEK period', async () => {
       const account = createMockAccountWithConversion({
         id: 'account-1',
         currentBalanceAmount: 100000,
@@ -426,11 +426,11 @@ describe('DashboardService', () => {
 
       const result = await service.getSummary(mockUserId, TimePeriod.WEEK);
 
-      // Should have 8 weekly points for WEEK period
+      // Should have 8 daily points for WEEK period (7 days ago + today)
       expect(result.chartData).toHaveLength(8);
     });
 
-    it('should use yearly granularity for YEAR period', async () => {
+    it('should use daily granularity for YEAR period', async () => {
       const account = createMockAccountWithConversion({
         id: 'account-1',
         currentBalanceAmount: 100000,
@@ -448,8 +448,8 @@ describe('DashboardService', () => {
 
       const result = await service.getSummary(mockUserId, TimePeriod.YEAR);
 
-      // Should have 5 yearly points for YEAR period
-      expect(result.chartData).toHaveLength(5);
+      // Should have 366 daily points for YEAR period (365 days ago + today)
+      expect(result.chartData).toHaveLength(366);
     });
 
     it('should include date in YYYY-MM-DD format', async () => {
@@ -475,7 +475,7 @@ describe('DashboardService', () => {
       }
     });
 
-    it('should stop at first date without data going backwards', async () => {
+    it('should start from first date with data going backwards', async () => {
       const account = createMockAccountWithConversion({
         id: 'account-1',
         currentBalanceAmount: 100000,
@@ -488,25 +488,28 @@ describe('DashboardService', () => {
 
       accountService.findAllWithConversion.mockResolvedValue([account]);
 
-      // Only return data for dates containing "12" (December) or "11" (November)
-      // This ensures only the most recent months have data
+      // Only return data for the last 10 days
+      const today = new Date();
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockImplementation(
         (_userId: string, snapshotDate: string) => {
-          // Check if the date is in November or December 2025
-          if (
-            snapshotDate.startsWith('2025-12') ||
-            snapshotDate.startsWith('2025-11')
-          ) {
+          const snapshotDateObj = new Date(snapshotDate);
+          const daysDiff = Math.floor(
+            (today.getTime() - snapshotDateObj.getTime()) /
+              (1000 * 60 * 60 * 24),
+          );
+          // Only return data for dates within the last 10 days
+          if (daysDiff <= 10) {
             return Promise.resolve(new Map([['account-1', snapshot]]));
           }
           return Promise.resolve(new Map());
         },
       );
 
+      // Use MONTH period (30 days), but only last 10 days have data
       const result = await service.getSummary(mockUserId);
 
-      // Should have 2 points (Nov and Dec 2025)
-      expect(result.chartData.length).toBe(2);
+      // Should have 11 points (10 days ago through today)
+      expect(result.chartData.length).toBe(11);
       // All returned points should have values (no nulls)
       for (const point of result.chartData) {
         expect(point.value).not.toBeNull();

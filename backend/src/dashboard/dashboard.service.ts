@@ -214,26 +214,12 @@ export class DashboardService {
   }
 
   /**
-   * Chart configuration for each time period
-   * Defines the unit of time and number of data points
-   */
-  private static readonly CHART_CONFIG: Record<
-    TimePeriod,
-    { unit: 'day' | 'week' | 'month' | 'year'; count: number }
-  > = {
-    [TimePeriod.DAY]: { unit: 'day', count: 7 },
-    [TimePeriod.WEEK]: { unit: 'week', count: 8 },
-    [TimePeriod.MONTH]: { unit: 'month', count: 6 },
-    [TimePeriod.YEAR]: { unit: 'year', count: 5 },
-  };
-
-  /**
    * Generate chart data points for net worth over time
+   * Shows daily data points for the entire period (matching the comparison period)
    * All values are in the user's preferred currency
-   * Stops at the first date with no data (going backwards in time)
    * @param userId - The user ID
    * @param accounts - Pre-fetched accounts with converted balances
-   * @param period - The time period that determines granularity (day=daily, week=weekly, etc.)
+   * @param period - The time period (determines how many days of data to show)
    * @param userTimezone - User's IANA timezone string
    */
   private async getChartData(
@@ -243,22 +229,29 @@ export class DashboardService {
     userTimezone: string,
   ): Promise<NetWorthChartPoint[]> {
     const points: NetWorthChartPoint[] = [];
-    const today = dayjs().tz(userTimezone);
+    const today = dayjs().tz(userTimezone).startOf('day');
+
+    console.log('getting chart data starting at', today.format('YYYY-MM-DD'));
 
     // Get the target currency from accounts
     const targetCurrency =
       accounts[0]?.convertedCurrentBalance?.money.currency ?? 'USD';
 
-    const { unit, count } = DashboardService.CHART_CONFIG[period];
+    // Get the number of days for this period
+    const daysToShow = PERIOD_DAYS[period];
 
-    // Build points from oldest to newest, stopping when we hit missing data
-    // First, collect all dates going backwards and find where data starts
+    // Build daily dates from oldest to newest
     const dates: dayjs.Dayjs[] = [];
-    for (let i = count - 1; i >= 0; i--) {
-      dates.push(today.subtract(i, unit).startOf(unit));
+    for (let i = daysToShow; i >= 0; i--) {
+      dates.push(today.subtract(i, 'day'));
     }
 
-    // Find the first date (oldest) that has data by checking from oldest to newest
+    console.log(
+      'dates',
+      dates.map((d) => d.format('YYYY-MM-DD')),
+    );
+
+    // Find the first date (oldest) that has data
     let startIndex = 0;
     for (let i = 0; i < dates.length; i++) {
       const snapshotDate = dates[i].format('YYYY-MM-DD');
@@ -277,7 +270,7 @@ export class DashboardService {
       }
     }
 
-    // Now generate points from startIndex onwards
+    // Generate points from startIndex onwards
     for (let i = startIndex; i < dates.length; i++) {
       const date = dates[i];
       const snapshotDate = date.format('YYYY-MM-DD');
