@@ -34,6 +34,10 @@ RUN yarn install --frozen-lockfile --production && \
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
+
 # Change ownership to non-root user
 RUN chown -R nestjs:nodejs /app
 
@@ -43,6 +47,5 @@ USER nestjs
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["node", "dist/main"]
-
+# Run migrations then start the application
+ENTRYPOINT ["./docker-entrypoint.sh"]
