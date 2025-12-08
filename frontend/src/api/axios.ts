@@ -70,7 +70,7 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest)
       } catch (refreshError) {
         processQueue(refreshError as Error)
-        window.location.href = '/login'
+        window.location.href = '/?login=true'
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
