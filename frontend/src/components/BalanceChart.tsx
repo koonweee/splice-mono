@@ -70,7 +70,7 @@ export function BalanceChart({
       withYAxis
       withGradient
       xAxisProps={{ tickLine: true, interval: 0 }}
-      yAxisProps={{ width: 80, domain: ['auto', 'auto'] }}
+      yAxisProps={{ width: 50, domain: ['auto', 'auto'] }}
       valueFormatter={formatCurrency}
       tooltipProps={{
         content: ({ label, payload }) => {
