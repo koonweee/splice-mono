@@ -14,6 +14,10 @@ export class UserEntity extends TimestampedEntity {
   @Column({ type: 'varchar' })
   hashedPassword: string;
 
+  /** User's preferred currency for display (ISO 4217 code, e.g., 'USD') */
+  @Column({ type: 'varchar', default: 'USD' })
+  currency: string;
+
   @Column({ type: 'jsonb', nullable: true })
   providerDetails: ProviderUserDetails | null;
 
@@ -24,6 +28,7 @@ export class UserEntity extends TimestampedEntity {
     const entity = new UserEntity();
     entity.email = dto.email;
     entity.hashedPassword = hashedPassword;
+    entity.currency = dto.currency ?? 'USD';
     entity.providerDetails = null;
     return entity;
   }
@@ -35,6 +40,7 @@ export class UserEntity extends TimestampedEntity {
     return {
       id: this.id,
       email: this.email,
+      currency: this.currency,
       providerDetails: this.providerDetails ?? undefined,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
@@ -48,6 +54,7 @@ export class UserEntity extends TimestampedEntity {
     return {
       id: this.id,
       email: this.email,
+      currency: this.currency,
       hashedPassword: this.hashedPassword,
       providerDetails: this.providerDetails ?? undefined,
       createdAt: this.createdAt,
