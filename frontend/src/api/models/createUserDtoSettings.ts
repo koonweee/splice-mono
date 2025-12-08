@@ -7,5 +7,5 @@
  */
 
 export type CreateUserDtoSettings = {
-  currency?: string
-}
+  currency?: string;
+};

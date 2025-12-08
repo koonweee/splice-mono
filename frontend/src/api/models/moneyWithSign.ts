@@ -5,10 +5,10 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { Money } from './money'
-import type { MoneyWithSignSign } from './moneyWithSignSign'
+import type { Money } from './money';
+import type { MoneyWithSignSign } from './moneyWithSignSign';
 
 export interface MoneyWithSign {
-  money: Money
-  sign: MoneyWithSignSign
+  money: Money;
+  sign: MoneyWithSignSign;
 }

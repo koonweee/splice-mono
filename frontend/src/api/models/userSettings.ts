@@ -7,5 +7,5 @@
  */
 
 export interface UserSettings {
-  currency?: string
+  currency?: string;
 }
