@@ -26,8 +26,13 @@ export function AccountCard({
       account.currentBalance.money.currency
 
   return (
-    <Paper p="md" withBorder>
-      <Group justify="space-between" align="flex-start">
+    <Paper
+      p="md"
+      withBorder
+      h={94}
+      style={{ display: 'flex', alignItems: 'center' }}
+    >
+      <Group justify="space-between" align="center" style={{ width: '100%' }}>
         <div>
           <Text fw={500}>{account.name || 'Unnamed Account'}</Text>
           <Text size="sm" c="dimmed" tt="capitalize">
