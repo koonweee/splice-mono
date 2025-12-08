@@ -16,7 +16,7 @@ import { useState } from 'react'
 import { useDashboardControllerGetSummary } from '../api/clients/spliceAPI'
 import type { AccountSummary } from '../api/models'
 import { TimePeriod } from '../api/models'
-import { tokenStorage, useLogout } from '../lib/auth'
+import { useLogout } from '../lib/auth'
 import { formatMoneyWithSign, formatPercent } from '../lib/format'
 
 export const Route = createFileRoute('/home')({ component: HomePage })
@@ -89,10 +89,8 @@ function HomePage() {
   } = useDashboardControllerGetSummary({ period })
 
   const handleLogout = () => {
-    const refreshToken = tokenStorage.getRefreshToken()
-    if (refreshToken) {
-      logoutMutation.mutate({ data: { refreshToken } })
-    }
+    // Refresh token is sent via HTTP-only cookie
+    logoutMutation.mutate({ data: {} })
   }
 
   return (

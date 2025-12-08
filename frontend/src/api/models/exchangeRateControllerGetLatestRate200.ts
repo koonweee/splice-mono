@@ -6,6 +6,4 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface RefreshTokenDto {
-  refreshToken?: string;
-}
+export type ExchangeRateControllerGetLatestRate200 = { [key: string]: unknown };

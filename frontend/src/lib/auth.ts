@@ -1,110 +1,123 @@
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router'
 import {
   useUserControllerLogin,
   useUserControllerLogout,
   useUserControllerLogoutAll,
-} from '../api/clients/spliceAPI';
+} from '../api/clients/spliceAPI'
 
-const ACCESS_TOKEN_KEY = 'splice_access_token';
-const REFRESH_TOKEN_KEY = 'splice_refresh_token';
+// Key used to track if user has logged in (for SSR auth check)
+// The actual tokens are stored in HTTP-only cookies by the backend
+const AUTH_FLAG_KEY = 'splice_authenticated'
 
+export const authStorage = {
+  /**
+   * Mark user as authenticated (called after successful login)
+   * This flag is used for client-side routing decisions.
+   * The actual authentication is handled by HTTP-only cookies.
+   */
+  setAuthenticated: (): void => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(AUTH_FLAG_KEY, 'true')
+    }
+  },
+
+  /**
+   * Clear authentication flag (called after logout)
+   */
+  clearAuthenticated: (): void => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(AUTH_FLAG_KEY)
+    }
+  },
+
+  /**
+   * Check if user appears to be authenticated.
+   * This is used for client-side routing decisions.
+   * The actual authentication is verified by the backend via HTTP-only cookies.
+   */
+  isAuthenticated: (): boolean => {
+    // On server (SSR), we can't check cookies, so assume not authenticated
+    // This prevents protected content from being rendered on the server
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem(AUTH_FLAG_KEY) === 'true'
+  },
+}
+
+// Keep tokenStorage as an alias for backwards compatibility during migration
 export const tokenStorage = {
-  getAccessToken: (): string | null => localStorage.getItem(ACCESS_TOKEN_KEY),
-
-  setAccessToken: (token: string): void => {
-    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  hasTokens: authStorage.isAuthenticated,
+  clearTokens: authStorage.clearAuthenticated,
+  // These are no-ops now since tokens are in HTTP-only cookies
+  setTokens: (_accessToken: string, _refreshToken: string): void => {
+    authStorage.setAuthenticated()
   },
-
-  removeAccessToken: (): void => {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-  },
-
-  getRefreshToken: (): string | null => localStorage.getItem(REFRESH_TOKEN_KEY),
-
-  setRefreshToken: (token: string): void => {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token);
-  },
-
-  removeRefreshToken: (): void => {
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-  },
-
-  setTokens: (accessToken: string, refreshToken: string): void => {
-    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-  },
-
-  clearTokens: (): void => {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-  },
-
-  hasTokens: (): boolean => {
-    // On server (SSR), assume authenticated - client will verify after hydration
-    if (typeof window === 'undefined') return true;
-    return !!localStorage.getItem(ACCESS_TOKEN_KEY);
-  },
-};
-
-/**
- * Login hook that automatically stores tokens and navigates to home on success.
- * Use this instead of useUserControllerLogin directly.
- */
-export function useLogin(options?: { redirectTo?: string }) {
-  const navigate = useNavigate();
-  const redirectTo = options?.redirectTo ?? '/';
-
-  return useUserControllerLogin({
-    mutation: {
-      onSuccess: (data) => {
-        tokenStorage.setTokens(data.accessToken, data.refreshToken);
-        navigate({ to: redirectTo });
-      },
-    },
-  });
+  getAccessToken: (): string | null => null,
+  getRefreshToken: (): string | null => null,
+  setAccessToken: (_token: string): void => {},
+  removeAccessToken: (): void => {},
+  setRefreshToken: (_token: string): void => {},
+  removeRefreshToken: (): void => {},
 }
 
 /**
- * Logout hook that revokes the refresh token and clears local storage.
- * Use this instead of useUserControllerLogout directly.
+ * Login hook that sets auth flag and navigates on success.
+ * Tokens are automatically stored in HTTP-only cookies by the backend.
+ */
+export function useLogin(options?: { redirectTo?: string }) {
+  const navigate = useNavigate()
+  const redirectTo = options?.redirectTo ?? '/'
+
+  return useUserControllerLogin({
+    mutation: {
+      onSuccess: () => {
+        authStorage.setAuthenticated()
+        navigate({ to: redirectTo })
+      },
+    },
+  })
+}
+
+/**
+ * Logout hook that clears auth flag and navigates.
+ * The backend clears the HTTP-only cookies.
  */
 export function useLogout(options?: { redirectTo?: string }) {
-  const navigate = useNavigate();
-  const redirectTo = options?.redirectTo ?? '/login';
+  const navigate = useNavigate()
+  const redirectTo = options?.redirectTo ?? '/login'
 
   return useUserControllerLogout({
     mutation: {
       onSuccess: () => {
-        tokenStorage.clearTokens();
-        navigate({ to: redirectTo });
+        authStorage.clearAuthenticated()
+        navigate({ to: redirectTo })
       },
       onError: () => {
-        // Even if the server request fails, clear tokens locally
-        tokenStorage.clearTokens();
-        navigate({ to: redirectTo });
+        // Even if the server request fails, clear auth flag locally
+        authStorage.clearAuthenticated()
+        navigate({ to: redirectTo })
       },
     },
-  });
+  })
 }
 
 /**
  * Logout from all devices hook.
- * Use this instead of useUserControllerLogoutAll directly.
+ * The backend clears the HTTP-only cookies.
  */
 export function useLogoutAll(options?: { redirectTo?: string }) {
-  const navigate = useNavigate();
-  const redirectTo = options?.redirectTo ?? '/login';
+  const navigate = useNavigate()
+  const redirectTo = options?.redirectTo ?? '/login'
 
   return useUserControllerLogoutAll({
     mutation: {
       onSuccess: () => {
-        tokenStorage.clearTokens();
-        navigate({ to: redirectTo });
+        authStorage.clearAuthenticated()
+        navigate({ to: redirectTo })
       },
       onError: () => {
-        tokenStorage.clearTokens();
-        navigate({ to: redirectTo });
+        authStorage.clearAuthenticated()
+        navigate({ to: redirectTo })
       },
     },
-  });
+  })
 }

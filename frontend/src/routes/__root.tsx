@@ -1,3 +1,4 @@
+import { ColorSchemeScript, MantineProvider } from '@mantine/core'
 import {
   HeadContent,
   Outlet,
@@ -5,18 +6,23 @@ import {
   createRootRouteWithContext,
   redirect,
 } from '@tanstack/react-router'
-import { MantineProvider, ColorSchemeScript } from '@mantine/core'
 
 import type { RouterContext } from '../router'
 
-import appCss from '../styles.css?url'
 import mantineCss from '@mantine/core/styles.css?url'
+import appCss from '../styles.css?url'
 
 const PUBLIC_PATHS = ['/', '/login']
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: ({ location, context }) => {
     if (PUBLIC_PATHS.includes(location.pathname)) {
+      return
+    }
+
+    // Skip auth check during SSR - cookies will authenticate API requests
+    // The client will handle redirects after hydration if needed
+    if (typeof window === 'undefined') {
       return
     }
 

@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { generateSchemaComponents } from './common/zod-api-response';
 
@@ -8,6 +9,9 @@ async function bootstrap() {
     // Enable raw body for webhook signature verification
     rawBody: true,
   });
+
+  // Enable cookie parsing for JWT authentication
+  app.use(cookieParser());
 
   // Enable CORS for frontend
   app.enableCors({
