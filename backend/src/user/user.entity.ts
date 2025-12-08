@@ -2,6 +2,10 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { TimestampedEntity } from '../common/base.entity';
 import type { ProviderUserDetails } from '../types/ProviderUserDetails';
 import type { CreateUserDto, User, UserWithPassword } from '../types/User';
+import {
+  DEFAULT_USER_SETTINGS,
+  type UserSettings,
+} from '../types/UserSettings';
 
 @Entity()
 export class UserEntity extends TimestampedEntity {
@@ -14,9 +18,12 @@ export class UserEntity extends TimestampedEntity {
   @Column({ type: 'varchar' })
   hashedPassword: string;
 
-  /** User's preferred currency for display (ISO 4217 code, e.g., 'USD') */
-  @Column({ type: 'varchar', default: 'USD' })
-  currency: string;
+  /** User settings (currency, preferences, etc.) stored as JSONB */
+  @Column({
+    type: 'jsonb',
+    default: () => `'${JSON.stringify(DEFAULT_USER_SETTINGS)}'`,
+  })
+  settings: UserSettings;
 
   @Column({ type: 'jsonb', nullable: true })
   providerDetails: ProviderUserDetails | null;
@@ -28,7 +35,10 @@ export class UserEntity extends TimestampedEntity {
     const entity = new UserEntity();
     entity.email = dto.email;
     entity.hashedPassword = hashedPassword;
-    entity.currency = dto.currency ?? 'USD';
+    entity.settings = {
+      ...DEFAULT_USER_SETTINGS,
+      ...dto.settings,
+    };
     entity.providerDetails = null;
     return entity;
   }
@@ -40,7 +50,7 @@ export class UserEntity extends TimestampedEntity {
     return {
       id: this.id,
       email: this.email,
-      currency: this.currency,
+      settings: this.settings,
       providerDetails: this.providerDetails ?? undefined,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
@@ -54,7 +64,7 @@ export class UserEntity extends TimestampedEntity {
     return {
       id: this.id,
       email: this.email,
-      currency: this.currency,
+      settings: this.settings,
       hashedPassword: this.hashedPassword,
       providerDetails: this.providerDetails ?? undefined,
       createdAt: this.createdAt,

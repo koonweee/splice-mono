@@ -15,6 +15,10 @@ import type {
   TokenResponse,
   User,
 } from '../types/User';
+import type {
+  UpdateUserSettingsDto,
+  UserSettings,
+} from '../types/UserSettings';
 import { UserEntity } from './user.entity';
 
 @Injectable()
@@ -157,6 +161,38 @@ export class UserService {
     }
 
     return entity.toObject();
+  }
+
+  /**
+   * Update user settings (partial update - merges with existing settings)
+   *
+   * @param userId - User ID
+   * @param settingsUpdate - Partial settings to update
+   * @returns Updated user settings or null if user not found
+   */
+  async updateSettings(
+    userId: string,
+    settingsUpdate: UpdateUserSettingsDto,
+  ): Promise<UserSettings | null> {
+    const entity = await this.repository.findOne({
+      where: { id: userId },
+    });
+
+    if (!entity) {
+      this.logger.warn(`Cannot update settings: user not found: id=${userId}`);
+      return null;
+    }
+
+    // Merge existing settings with updates
+    const currentSettings = entity.settings;
+    const newSettings: UserSettings = {
+      currency: settingsUpdate.currency ?? currentSettings.currency,
+    };
+    entity.settings = newSettings;
+
+    await this.repository.save(entity);
+    this.logger.log(`Updated settings for user ${userId}`);
+    return newSettings;
   }
 
   /**

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { ProviderUserDetailsSchema } from './ProviderUserDetails';
 import { TimestampsSchema } from './Timestamps';
+import { UserSettingsSchema } from './UserSettings';
 
 export const UserSchema = registerSchema(
   'User',
@@ -9,8 +10,8 @@ export const UserSchema = registerSchema(
     .object({
       id: z.string().uuid(),
       email: z.string().email(),
-      /** User's preferred currency for display (ISO 4217 code, e.g., 'USD') */
-      currency: z.string().default('USD'),
+      /** User settings (currency, preferences, etc.) */
+      settings: UserSettingsSchema,
       /** Provider-specific user details keyed by provider name */
       providerDetails: ProviderUserDetailsSchema.optional(),
     })
@@ -33,8 +34,8 @@ export const CreateUserDtoSchema = registerSchema(
   z.object({
     email: z.string().email(),
     password: z.string().min(8),
-    /** User's preferred currency for display (ISO 4217 code, defaults to 'USD') */
-    currency: z.string().optional(),
+    /** Initial user settings (optional, defaults will be applied) */
+    settings: UserSettingsSchema.partial().optional(),
   }),
 );
 

@@ -5,10 +5,11 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { CreateUserDtoSettings } from './createUserDtoSettings';
 
 export interface CreateUserDto {
   email: string;
   /** @minLength 8 */
   password: string;
-  currency?: string;
+  settings?: CreateUserDtoSettings;
 }
