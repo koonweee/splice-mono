@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { BalanceConversionHelper } from '../common/balance-conversion.helper';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
 import { CurrencyConversionService } from '../exchange-rate/currency-conversion.service';
@@ -10,10 +11,6 @@ import {
   CreateAccountDto,
   UpdateAccountDto,
 } from '../types/Account';
-import {
-  MoneySign,
-  type SerializedMoneyWithSign,
-} from '../types/MoneyWithSign';
 import { UserService } from '../user/user.service';
 import { AccountEntity } from './account.entity';
 
@@ -29,6 +26,8 @@ export class AccountService extends OwnedCrudService<
   protected readonly EntityClass = AccountEntity;
   protected readonly relations = ['bankLink'];
 
+  private readonly balanceConversionHelper: BalanceConversionHelper;
+
   constructor(
     @InjectRepository(AccountEntity)
     repository: Repository<AccountEntity>,
@@ -36,6 +35,10 @@ export class AccountService extends OwnedCrudService<
     private readonly currencyConversionService: CurrencyConversionService,
   ) {
     super(repository);
+    this.balanceConversionHelper = new BalanceConversionHelper(
+      userService,
+      currencyConversionService,
+    );
   }
 
   protected applyUpdate(entity: AccountEntity, dto: UpdateAccountDto): void {
@@ -69,54 +72,7 @@ export class AccountService extends OwnedCrudService<
     userId: string,
   ): Promise<AccountWithConvertedBalance[]> {
     const accounts = await this.findAll(userId);
-
-    if (accounts.length === 0) {
-      return [];
-    }
-
-    // Get user's preferred currency
-    const user = await this.userService.findOne(userId);
-    const targetCurrency = user?.settings.currency ?? 'USD';
-
-    // Prepare separate arrays for each balance type
-    const currentBalanceInputs = accounts.map((account) => ({
-      amount: account.currentBalance.money.amount,
-      currency: account.currentBalance.money.currency,
-    }));
-
-    const availableBalanceInputs = accounts.map((account) => ({
-      amount: account.availableBalance.money.amount,
-      currency: account.availableBalance.money.currency,
-    }));
-
-    // Convert both balance types in parallel
-    const [currentBalanceResults, availableBalanceResults] = await Promise.all([
-      this.currencyConversionService.convertMany(
-        currentBalanceInputs,
-        targetCurrency,
-      ),
-      this.currencyConversionService.convertMany(
-        availableBalanceInputs,
-        targetCurrency,
-      ),
-    ]);
-
-    // Map results back to accounts
-    return accounts.map((account, index): AccountWithConvertedBalance => {
-      return {
-        ...account,
-        convertedCurrentBalance: this.buildConvertedBalance(
-          currentBalanceResults[index],
-          account.currentBalance.sign,
-          targetCurrency,
-        ),
-        convertedAvailableBalance: this.buildConvertedBalance(
-          availableBalanceResults[index],
-          account.availableBalance.sign,
-          targetCurrency,
-        ),
-      };
-    });
+    return this.balanceConversionHelper.addConvertedBalances(accounts, userId);
   }
 
   /**
@@ -136,71 +92,9 @@ export class AccountService extends OwnedCrudService<
       return null;
     }
 
-    // Get user's preferred currency
-    const user = await this.userService.findOne(userId);
-    const targetCurrency = user?.settings.currency ?? 'USD';
-
-    // Convert both balance types in parallel
-    const [[currentBalanceResult], [availableBalanceResult]] =
-      await Promise.all([
-        this.currencyConversionService.convertMany(
-          [
-            {
-              amount: account.currentBalance.money.amount,
-              currency: account.currentBalance.money.currency,
-            },
-          ],
-          targetCurrency,
-        ),
-        this.currencyConversionService.convertMany(
-          [
-            {
-              amount: account.availableBalance.money.amount,
-              currency: account.availableBalance.money.currency,
-            },
-          ],
-          targetCurrency,
-        ),
-      ]);
-
-    return {
-      ...account,
-      convertedCurrentBalance: this.buildConvertedBalance(
-        currentBalanceResult,
-        account.currentBalance.sign,
-        targetCurrency,
-      ),
-      convertedAvailableBalance: this.buildConvertedBalance(
-        availableBalanceResult,
-        account.availableBalance.sign,
-        targetCurrency,
-      ),
-    };
-  }
-
-  /**
-   * Helper to build a converted balance object from conversion result
-   */
-  private buildConvertedBalance(
-    conversionResult: {
-      amount: number;
-      rate: number | null;
-      usedFallback: boolean;
-    },
-    originalSign: MoneySign,
-    targetCurrency: string,
-  ): SerializedMoneyWithSign | null {
-    // Return null if no rate was available (fallback was used)
-    if (conversionResult.usedFallback) {
-      return null;
-    }
-
-    return {
-      money: {
-        amount: Math.round(conversionResult.amount),
-        currency: targetCurrency,
-      },
-      sign: originalSign,
-    };
+    return this.balanceConversionHelper.addConvertedBalancesToOne(
+      account,
+      userId,
+    );
   }
 }

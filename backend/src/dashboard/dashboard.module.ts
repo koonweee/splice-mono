@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AccountEntity } from '../account/account.entity';
-import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
+import { AccountModule } from '../account/account.module';
+import { BalanceSnapshotModule } from '../balance-snapshot/balance-snapshot.module';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AccountEntity, BalanceSnapshotEntity])],
+  imports: [AccountModule, BalanceSnapshotModule],
   controllers: [DashboardController],
   providers: [DashboardService],
 })

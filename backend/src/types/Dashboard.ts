@@ -43,8 +43,10 @@ export const AccountSummarySchema = registerSchema(
     name: z.string().nullable(),
     type: AccountTypeSchema,
     subType: z.string().nullable(),
-    /** Current balance */
+    /** Current balance in account's original currency */
     currentBalance: MoneyWithSignSchema,
+    /** Current balance converted to user's preferred currency */
+    convertedCurrentBalance: MoneyWithSignSchema.nullable(),
     /** Period-over-period percentage change (e.g., 3.5 for +3.5%) */
     changePercent: z.number().nullable(),
   }),
