@@ -9,4 +9,4 @@
 /**
  * @nullable
  */
-export type NetWorthChartPointValueAllOf = unknown | null
+export type NetWorthChartPointValueAllOf = unknown | null;

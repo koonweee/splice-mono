@@ -5,14 +5,14 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { UserSettings } from './userSettings'
-import type { UserProviderDetails } from './userProviderDetails'
+import type { UserSettings } from './userSettings';
+import type { UserProviderDetails } from './userProviderDetails';
 
 export interface User {
-  id: string
-  email: string
-  settings: UserSettings
-  providerDetails?: UserProviderDetails
-  createdAt: string
-  updatedAt: string
+  id: string;
+  email: string;
+  settings: UserSettings;
+  providerDetails?: UserProviderDetails;
+  createdAt: string;
+  updatedAt: string;
 }

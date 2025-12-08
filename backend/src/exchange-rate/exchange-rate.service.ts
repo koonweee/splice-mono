@@ -309,10 +309,14 @@ export class ExchangeRateService {
       const userCurrency = user.settings.currency;
 
       // Get all accounts for this user
+      // Note: We don't use select here because currentBalance is an embedded column
+      // (BalanceColumns) which creates multiple DB columns (currentBalanceAmount,
+      // currentBalanceCurrency, currentBalanceSign)
       const accounts = await this.accountRepository.find({
         where: { userId: user.id },
-        select: ['id', 'currentBalance'],
       });
+
+      this.logger.debug(`Accounts: ${JSON.stringify(accounts)}`);
 
       for (const account of accounts) {
         const accountCurrency = account.currentBalance.currency;

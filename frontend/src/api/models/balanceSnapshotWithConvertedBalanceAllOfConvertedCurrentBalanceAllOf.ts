@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface InitiateLinkResponse {
-  linkUrl?: string;
-  expiresAt?: string;
-}
+/**
+ * @nullable
+ */
+export type BalanceSnapshotWithConvertedBalanceAllOfConvertedCurrentBalanceAllOf = unknown | null;

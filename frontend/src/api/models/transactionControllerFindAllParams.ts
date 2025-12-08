@@ -7,8 +7,8 @@
  */
 
 export type TransactionControllerFindAllParams = {
-  /**
-   * Filter by account ID
-   */
-  accountId?: string
-}
+/**
+ * Filter by account ID
+ */
+accountId?: string;
+};

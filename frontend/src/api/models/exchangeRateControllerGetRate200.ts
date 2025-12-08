@@ -6,4 +6,4 @@
  * OpenAPI spec version: 1.0
  */
 
-export type ExchangeRateControllerGetRate200 = { [key: string]: unknown }
+export type ExchangeRateControllerGetRate200 = { [key: string]: unknown };

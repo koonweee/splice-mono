@@ -9,9 +9,8 @@
 /**
  * @nullable
  */
-export type AccountSubType =
-  | (typeof AccountSubType)[keyof typeof AccountSubType]
-  | null
+export type AccountSubType = typeof AccountSubType[keyof typeof AccountSubType] | null;
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AccountSubType = {
@@ -85,4 +84,4 @@ export const AccountSubType = {
   ugma: 'ugma',
   utma: 'utma',
   variable_annuity: 'variable annuity',
-} as const
+} as const;
