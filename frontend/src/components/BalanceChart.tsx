@@ -1,7 +1,7 @@
 import { AreaChart } from '@mantine/charts'
 import { Paper, Text } from '@mantine/core'
 import dayjs from 'dayjs'
-import type { NetWorthChartPoint } from '../api/models'
+import type { BalanceSnapshotWithConvertedBalance } from '../api/models'
 import { MoneyWithSignSign } from '../api/models'
 
 function ChartTooltip({ label, value }: { label: string; value: string }) {
@@ -17,31 +17,32 @@ function ChartTooltip({ label, value }: { label: string; value: string }) {
   )
 }
 
-interface MoneyChartProps {
-  data: NetWorthChartPoint[]
+interface BalanceChartProps {
+  data: BalanceSnapshotWithConvertedBalance[]
   height?: number
   color?: string
-  mb?: string
 }
 
-export function MoneyChart({
+export function BalanceChart({
   data,
   height = 280,
-  color = 'teal.6',
-  mb,
-}: MoneyChartProps) {
-  // Transform data for Mantine chart - convert cents to dollars with proper sign
-  // Filter out null values and transform the rest
-  const chartData = data
-    .filter((point) => point.value !== null)
-    .map((point) => {
-      const value = point.value!
-      const dollars = value.money.amount / 100
+  color = 'blue.6',
+}: BalanceChartProps) {
+  // Sort by date and transform for chart
+  const chartData = [...data]
+    .sort(
+      (a, b) =>
+        new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime(),
+    )
+    .map((snapshot) => {
+      const balance =
+        snapshot.convertedCurrentBalance?.balance ?? snapshot.currentBalance
+      const dollars = balance.money.amount / 100
       const signedValue =
-        value.sign === MoneyWithSignSign.negative ? -dollars : dollars
+        balance.sign === MoneyWithSignSign.negative ? -dollars : dollars
 
       return {
-        date: formatDate(point.date),
+        date: dayjs(snapshot.snapshotDate).format('MMM D'),
         value: signedValue,
       }
     })
@@ -50,14 +51,15 @@ export function MoneyChart({
     new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
     }).format(value)
+
+  if (chartData.length === 0) {
+    return null
+  }
 
   return (
     <AreaChart
       h={height}
-      mb={mb}
       data={chartData}
       dataKey="date"
       series={[{ name: 'value', color }]}
@@ -81,8 +83,4 @@ export function MoneyChart({
       }}
     />
   )
-}
-
-function formatDate(dateStr: string): string {
-  return dayjs(dateStr).format('MMM D')
 }

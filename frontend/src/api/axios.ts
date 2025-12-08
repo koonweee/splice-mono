@@ -1,5 +1,7 @@
 import Axios, { AxiosError, AxiosRequestConfig } from 'axios'
 
+const AUTH_FLAG_KEY = 'splice_authenticated'
+
 const axiosInstance = Axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   // Include cookies in all requests for authentication
@@ -8,6 +10,7 @@ const axiosInstance = Axios.create({
 
 // State for managing token refresh
 let isRefreshing = false
+let refreshPromise: Promise<void> | null = null
 let failedQueue: Array<{
   resolve: () => void
   reject: (error: Error) => void
@@ -22,6 +25,14 @@ const processQueue = (error: Error | null) => {
     }
   })
   failedQueue = []
+}
+
+const clearAuthAndRedirect = () => {
+  // Clear the auth flag so routing doesn't get stuck in a loop
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(AUTH_FLAG_KEY)
+    window.location.href = '/?login=true'
+  }
 }
 
 // Response interceptor - handle 401 and refresh token via cookies
@@ -46,6 +57,7 @@ axiosInstance.interceptors.response.use(
 
       if (isRefreshing) {
         // Queue this request to retry after refresh completes
+        // Use the existing refresh promise to avoid race conditions
         return new Promise((resolve, reject) => {
           failedQueue.push({
             resolve: () => {
@@ -59,21 +71,29 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true
       isRefreshing = true
 
+      // Create a single refresh promise that all queued requests will wait for
+      refreshPromise = (async () => {
+        try {
+          // Make refresh request - cookies will be sent automatically
+          // The backend will set new cookies in the response
+          await axiosInstance.post('/user/refresh', {})
+          processQueue(null)
+        } catch (refreshError) {
+          processQueue(refreshError as Error)
+          clearAuthAndRedirect()
+          throw refreshError
+        } finally {
+          isRefreshing = false
+          refreshPromise = null
+        }
+      })()
+
       try {
-        // Make refresh request - cookies will be sent automatically
-        // The backend will set new cookies in the response
-        await axiosInstance.post('/user/refresh', {})
-
-        processQueue(null)
-
+        await refreshPromise
         // Retry the original request - new cookies will be sent automatically
         return axiosInstance(originalRequest)
       } catch (refreshError) {
-        processQueue(refreshError as Error)
-        window.location.href = '/?login=true'
         return Promise.reject(refreshError)
-      } finally {
-        isRefreshing = false
       }
     }
 
