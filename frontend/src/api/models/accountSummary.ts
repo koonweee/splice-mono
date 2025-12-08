@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { AccountSummaryType } from './accountSummaryType';
+import type { MoneyWithSign } from './moneyWithSign';
 
 export interface AccountSummary {
   id: string;
@@ -14,8 +15,7 @@ export interface AccountSummary {
   type: AccountSummaryType;
   /** @nullable */
   subType: string | null;
-  currentBalance: number;
-  currency: string;
+  currentBalance: MoneyWithSign;
   /** @nullable */
   changePercent: number | null;
 }

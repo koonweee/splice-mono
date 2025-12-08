@@ -60,8 +60,9 @@ describe('DashboardService', () => {
 
       const result = await service.getSummary(mockUserId);
 
-      expect(result.netWorth).toBe(1000); // $1,000 from checking
-      expect(result.currency).toBe('USD');
+      expect(result.netWorth.money.amount).toBe(100000); // $1,000 in cents
+      expect(result.netWorth.money.currency).toBe('USD');
+      expect(result.netWorth.sign).toBe(MoneySign.POSITIVE);
       expect(result.assets).toHaveLength(1);
       expect(result.assets[0].id).toBe('checking-1');
       expect(result.liabilities).toHaveLength(0);
@@ -76,7 +77,8 @@ describe('DashboardService', () => {
 
       const result = await service.getSummary(mockUserId);
 
-      expect(result.netWorth).toBe(6000); // $1,000 + $5,000
+      expect(result.netWorth.money.amount).toBe(600000); // $1,000 + $5,000 in cents
+      expect(result.netWorth.sign).toBe(MoneySign.POSITIVE);
       expect(result.assets).toHaveLength(2);
     });
 
@@ -89,7 +91,8 @@ describe('DashboardService', () => {
 
       const result = await service.getSummary(mockUserId);
 
-      expect(result.netWorth).toBe(500); // $1,000 - $500
+      expect(result.netWorth.money.amount).toBe(50000); // $1,000 - $500 = $500 in cents
+      expect(result.netWorth.sign).toBe(MoneySign.POSITIVE);
       expect(result.assets).toHaveLength(1);
       expect(result.liabilities).toHaveLength(1);
     });
@@ -153,7 +156,8 @@ describe('DashboardService', () => {
 
       const result = await service.getSummary(mockUserId);
 
-      expect(result.netWorth).toBe(0);
+      expect(result.netWorth.money.amount).toBe(0);
+      expect(result.netWorth.sign).toBe(MoneySign.POSITIVE);
       expect(result.assets).toEqual([]);
       expect(result.liabilities).toEqual([]);
       expect(result.changePercent).toBeNull();
@@ -172,7 +176,8 @@ describe('DashboardService', () => {
       const result = await service.getSummary(mockUserId);
 
       // Negative sign means negative balance, but for depository it's treated as asset
-      expect(result.netWorth).toBe(-1000);
+      expect(result.netWorth.money.amount).toBe(100000); // $1,000 in cents (absolute value)
+      expect(result.netWorth.sign).toBe(MoneySign.NEGATIVE);
     });
 
     it('should categorize account types correctly', async () => {
@@ -210,7 +215,8 @@ describe('DashboardService', () => {
       // Assets: depository ($1,000) + investment ($2,000) = $3,000
       // Liabilities: credit ($500) + loan ($1,000) = $1,500
       // Net worth: $3,000 - $1,500 = $1,500
-      expect(result.netWorth).toBe(1500);
+      expect(result.netWorth.money.amount).toBe(150000); // $1,500 in cents
+      expect(result.netWorth.sign).toBe(MoneySign.POSITIVE);
       expect(result.assets).toHaveLength(2);
       expect(result.liabilities).toHaveLength(2);
     });
@@ -328,9 +334,11 @@ describe('DashboardService', () => {
       });
 
       accountRepository.find.mockResolvedValue([account]);
-      snapshotRepository.find.mockImplementation(async (options) => {
+      snapshotRepository.find.mockImplementation((options) => {
         // Return snapshot only for queries that include the current month
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         const whereClause = options?.where;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (whereClause?.snapshotDate) {
           return [snapshot];
         }
