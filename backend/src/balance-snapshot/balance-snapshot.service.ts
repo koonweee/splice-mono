@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { BalanceConversionHelper } from '../common/balance-conversion.helper';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
@@ -175,65 +175,29 @@ export class BalanceSnapshotService extends OwnedCrudService<
   }
 
   /**
-   * Find snapshots closest to a target date for all accounts, with converted balances
+   * Find snapshots for an exact date for all accounts, with converted balances
    *
    * @param userId - The user ID
-   * @param targetDate - The target date to find snapshots near
-   * @param windowDays - Number of days before/after target to search (default 3)
+   * @param snapshotDate - The exact date string (YYYY-MM-DD) to find snapshots for
    * @returns Map of accountId to snapshot with converted balances
    */
-  async findSnapshotsNearDateWithConversion(
+  async findSnapshotsForDateWithConversion(
     userId: string,
-    targetDate: Date,
-    windowDays: number = 3,
+    snapshotDate: string,
   ): Promise<Map<string, BalanceSnapshotWithConvertedBalance>> {
-    // Look for snapshots within a window around the target date
-    const windowStart = new Date(targetDate);
-    windowStart.setDate(windowStart.getDate() - windowDays);
-    const windowEnd = new Date(targetDate);
-    windowEnd.setDate(windowEnd.getDate() + windowDays);
-
     const entities = await this.repository.find({
       where: {
         userId,
-        snapshotDate: Between(
-          windowStart.toISOString().split('T')[0],
-          windowEnd.toISOString().split('T')[0],
-        ),
+        snapshotDate,
       },
-      order: { snapshotDate: 'DESC' },
     });
 
     if (entities.length === 0) {
       return new Map();
     }
 
-    // Group by accountId, keeping the closest to target date
-    const closestByAccount = new Map<string, BalanceSnapshotEntity>();
-    const targetTime = targetDate.getTime();
-
-    for (const entity of entities) {
-      const existing = closestByAccount.get(entity.accountId);
-      if (!existing) {
-        closestByAccount.set(entity.accountId, entity);
-      } else {
-        // Keep the one closest to target date
-        const existingDiff = Math.abs(
-          new Date(existing.snapshotDate).getTime() - targetTime,
-        );
-        const currentDiff = Math.abs(
-          new Date(entity.snapshotDate).getTime() - targetTime,
-        );
-        if (currentDiff < existingDiff) {
-          closestByAccount.set(entity.accountId, entity);
-        }
-      }
-    }
-
     // Convert snapshots to domain objects
-    const snapshots = Array.from(closestByAccount.values()).map((e) =>
-      e.toObject(),
-    );
+    const snapshots = entities.map((e) => e.toObject());
 
     // Add converted balances using the helper
     const snapshotsWithConversion =

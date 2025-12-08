@@ -104,10 +104,10 @@ export class DashboardService {
       .tz(userTimezone)
       .startOf('day')
       .subtract(PERIOD_DAYS[period], 'day')
-      .toDate();
+      .format('YYYY-MM-DD');
 
     const previousSnapshots =
-      await this.balanceSnapshotService.findSnapshotsNearDateWithConversion(
+      await this.balanceSnapshotService.findSnapshotsForDateWithConversion(
         userId,
         comparisonDate,
       );
@@ -166,11 +166,11 @@ export class DashboardService {
           100
         : null;
 
-    // Generate chart data (monthly points for last 6 months)
+    // Generate chart data based on selected time period
     const chartData = await this.getChartData(
       userId,
       accounts,
-      6,
+      period,
       userTimezone,
     );
 
@@ -214,17 +214,32 @@ export class DashboardService {
   }
 
   /**
+   * Chart configuration for each time period
+   * Defines the unit of time and number of data points
+   */
+  private static readonly CHART_CONFIG: Record<
+    TimePeriod,
+    { unit: 'day' | 'week' | 'month' | 'year'; count: number }
+  > = {
+    [TimePeriod.DAY]: { unit: 'day', count: 7 },
+    [TimePeriod.WEEK]: { unit: 'week', count: 8 },
+    [TimePeriod.MONTH]: { unit: 'month', count: 6 },
+    [TimePeriod.YEAR]: { unit: 'year', count: 5 },
+  };
+
+  /**
    * Generate chart data points for net worth over time
    * All values are in the user's preferred currency
+   * Stops at the first date with no data (going backwards in time)
    * @param userId - The user ID
    * @param accounts - Pre-fetched accounts with converted balances
-   * @param months - Number of months of history to include
+   * @param period - The time period that determines granularity (day=daily, week=weekly, etc.)
    * @param userTimezone - User's IANA timezone string
    */
   private async getChartData(
     userId: string,
     accounts: AccountWithConvertedBalance[],
-    months: number,
+    period: TimePeriod,
     userTimezone: string,
   ): Promise<NetWorthChartPoint[]> {
     const points: NetWorthChartPoint[] = [];
@@ -234,23 +249,44 @@ export class DashboardService {
     const targetCurrency =
       accounts[0]?.convertedCurrentBalance?.money.currency ?? 'USD';
 
-    for (let i = months - 1; i >= 0; i--) {
-      const date = today.subtract(i, 'month').startOf('month');
+    const { unit, count } = DashboardService.CHART_CONFIG[period];
+
+    // Build points from oldest to newest, stopping when we hit missing data
+    // First, collect all dates going backwards and find where data starts
+    const dates: dayjs.Dayjs[] = [];
+    for (let i = count - 1; i >= 0; i--) {
+      dates.push(today.subtract(i, unit).startOf(unit));
+    }
+
+    // Find the first date (oldest) that has data by checking from oldest to newest
+    let startIndex = 0;
+    for (let i = 0; i < dates.length; i++) {
+      const snapshotDate = dates[i].format('YYYY-MM-DD');
+      const snapshots =
+        await this.balanceSnapshotService.findSnapshotsForDateWithConversion(
+          userId,
+          snapshotDate,
+        );
+      if (snapshots.size > 0) {
+        startIndex = i;
+        break;
+      }
+      // If we've checked all dates and found no data, return empty
+      if (i === dates.length - 1) {
+        return [];
+      }
+    }
+
+    // Now generate points from startIndex onwards
+    for (let i = startIndex; i < dates.length; i++) {
+      const date = dates[i];
+      const snapshotDate = date.format('YYYY-MM-DD');
 
       const snapshots =
-        await this.balanceSnapshotService.findSnapshotsNearDateWithConversion(
+        await this.balanceSnapshotService.findSnapshotsForDateWithConversion(
           userId,
-          date.toDate(),
+          snapshotDate,
         );
-
-      // If no snapshots exist for this date, return null value
-      if (snapshots.size === 0) {
-        points.push({
-          date: date.format('YYYY-MM-DD'),
-          value: null,
-        });
-        continue;
-      }
 
       let netWorth = 0;
       let hasAnyData = false;
