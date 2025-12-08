@@ -13,6 +13,7 @@ import {
 import type { RouterContext } from '../router'
 
 import mantineCss from '@mantine/core/styles.css?url'
+import mantineChartsCss from '@mantine/charts/styles.css?url'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -33,6 +34,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       {
         rel: 'stylesheet',
         href: mantineCss,
+      },
+      {
+        rel: 'stylesheet',
+        href: mantineChartsCss,
       },
       {
         rel: 'stylesheet',
