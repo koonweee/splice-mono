@@ -1,9 +1,20 @@
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { z } from 'zod';
 import { ZodApiResponse } from '../common/zod-api-response';
 import type { ExchangeRate } from '../types/ExchangeRate';
 import { ExchangeRateSchema } from '../types/ExchangeRate';
 import { ExchangeRateService } from './exchange-rate.service';
+
+/** Response schema for rate lookup endpoints */
+const RateLookupResponseSchema = z.object({
+  baseCurrency: z.string(),
+  targetCurrency: z.string(),
+  rate: z.number().nullable(),
+  rateDate: z.string().optional(),
+});
+
+type RateLookupResponse = z.infer<typeof RateLookupResponseSchema>;
 
 @ApiTags('exchange-rates')
 @Controller('exchange-rates')
@@ -33,14 +44,21 @@ export class ExchangeRateController {
   @ZodApiResponse({
     status: 200,
     description: 'Returns the latest exchange rate',
-    schema: ExchangeRateSchema,
+    schema: RateLookupResponseSchema,
   })
-  @ApiResponse({ status: 404, description: 'Exchange rate not found' })
   async getLatestRate(
     @Param('baseCurrency') baseCurrency: string,
     @Param('targetCurrency') targetCurrency: string,
-  ): Promise<ExchangeRate | null> {
-    return this.exchangeRateService.getLatestRate(baseCurrency, targetCurrency);
+  ): Promise<RateLookupResponse> {
+    const rate = await this.exchangeRateService.getLatestRate(
+      baseCurrency,
+      targetCurrency,
+    );
+    return {
+      baseCurrency,
+      targetCurrency,
+      rate,
+    };
   }
 
   @Get(':baseCurrency/:targetCurrency')
@@ -50,15 +68,24 @@ export class ExchangeRateController {
   @ZodApiResponse({
     status: 200,
     description: 'Returns the exchange rate',
-    schema: ExchangeRateSchema,
+    schema: RateLookupResponseSchema,
   })
-  @ApiResponse({ status: 404, description: 'Exchange rate not found' })
   async getRate(
     @Param('baseCurrency') baseCurrency: string,
     @Param('targetCurrency') targetCurrency: string,
     @Query('date') date: string,
-  ): Promise<ExchangeRate | null> {
-    return this.exchangeRateService.getRate(baseCurrency, targetCurrency, date);
+  ): Promise<RateLookupResponse> {
+    const rate = await this.exchangeRateService.getRate(
+      baseCurrency,
+      targetCurrency,
+      date,
+    );
+    return {
+      baseCurrency,
+      targetCurrency,
+      rate,
+      rateDate: date,
+    };
   }
 
   @Get()

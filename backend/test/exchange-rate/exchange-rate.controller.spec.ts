@@ -43,16 +43,24 @@ describe('ExchangeRateController', () => {
     it('should return the latest exchange rate for a currency pair', async () => {
       const result = await controller.getLatestRate('EUR', 'USD');
 
-      expect(result).toEqual(mockExchangeRate);
+      expect(result).toEqual({
+        baseCurrency: 'EUR',
+        targetCurrency: 'USD',
+        rate: mockExchangeRate.rate,
+      });
       expect(service.getLatestRate).toHaveBeenCalledWith('EUR', 'USD');
     });
 
-    it('should return null when no rate exists', async () => {
+    it('should return null rate when no rate exists', async () => {
       service.getLatestRate.mockResolvedValueOnce(null);
 
       const result = await controller.getLatestRate('EUR', 'USD');
 
-      expect(result).toBeNull();
+      expect(result).toEqual({
+        baseCurrency: 'EUR',
+        targetCurrency: 'USD',
+        rate: null,
+      });
     });
   });
 
@@ -60,16 +68,26 @@ describe('ExchangeRateController', () => {
     it('should return the exchange rate for a specific date', async () => {
       const result = await controller.getRate('EUR', 'USD', '2024-01-15');
 
-      expect(result).toEqual(mockExchangeRate);
+      expect(result).toEqual({
+        baseCurrency: 'EUR',
+        targetCurrency: 'USD',
+        rate: mockExchangeRate.rate,
+        rateDate: '2024-01-15',
+      });
       expect(service.getRate).toHaveBeenCalledWith('EUR', 'USD', '2024-01-15');
     });
 
-    it('should return null when no rate exists for date', async () => {
+    it('should return null rate when no rate exists for date', async () => {
       service.getRate.mockResolvedValueOnce(null);
 
       const result = await controller.getRate('EUR', 'USD', '2024-01-15');
 
-      expect(result).toBeNull();
+      expect(result).toEqual({
+        baseCurrency: 'EUR',
+        targetCurrency: 'USD',
+        rate: null,
+        rateDate: '2024-01-15',
+      });
     });
   });
 
