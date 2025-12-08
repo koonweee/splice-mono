@@ -13,8 +13,14 @@ import {
   type JwtUser,
 } from '../auth/decorators/current-user.decorator';
 import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
-import type { Account, CreateAccountDto } from '../types/Account';
-import { AccountSchema, CreateAccountDtoSchema } from '../types/Account';
+import type {
+  AccountWithConvertedBalance,
+  CreateAccountDto,
+} from '../types/Account';
+import {
+  AccountWithConvertedBalanceSchema,
+  CreateAccountDtoSchema,
+} from '../types/Account';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { AccountService } from './account.service';
 
@@ -24,15 +30,18 @@ export class AccountController {
   constructor(private accountService: AccountService) {}
 
   @Get()
-  @ApiOperation({ description: 'Get all accounts' })
+  @ApiOperation({ description: 'Get all accounts with converted balances' })
   @ZodApiResponse({
     status: 200,
-    description: 'Returns all accounts',
-    schema: AccountSchema,
+    description:
+      'Returns all accounts with balances converted to user currency',
+    schema: AccountWithConvertedBalanceSchema,
     isArray: true,
   })
-  async findAll(@CurrentUser() user: JwtUser): Promise<Account[]> {
-    return this.accountService.findAll(user.userId);
+  async findAll(
+    @CurrentUser() user: JwtUser,
+  ): Promise<AccountWithConvertedBalance[]> {
+    return this.accountService.findAllWithConversion(user.userId);
   }
 
   @Post()
@@ -41,29 +50,40 @@ export class AccountController {
   @ZodApiResponse({
     status: 201,
     description: 'Account created successfully',
-    schema: AccountSchema,
+    schema: AccountWithConvertedBalanceSchema,
   })
   async create(
     @CurrentUser() user: JwtUser,
     @Body(new ZodValidationPipe(CreateAccountDtoSchema))
     createAccountDto: CreateAccountDto,
-  ): Promise<Account> {
-    return this.accountService.create(createAccountDto, user.userId);
+  ): Promise<AccountWithConvertedBalance> {
+    // Create the account, then return it with converted balances
+    const account = await this.accountService.create(
+      createAccountDto,
+      user.userId,
+    );
+    const accountWithConversion =
+      await this.accountService.findOneWithConversion(account.id, user.userId);
+    // Account was just created, so it must exist
+    return accountWithConversion!;
   }
 
   @Get(':id')
-  @ApiOperation({ description: 'Get an account by ID' })
+  @ApiOperation({ description: 'Get an account by ID with converted balances' })
   @ZodApiResponse({
     status: 200,
-    description: 'Returns the account',
-    schema: AccountSchema,
+    description: 'Returns the account with balances converted to user currency',
+    schema: AccountWithConvertedBalanceSchema,
   })
   @ApiResponse({ status: 404, description: 'Account not found' })
   async findOne(
     @Param('id') id: string,
     @CurrentUser() user: JwtUser,
-  ): Promise<Account> {
-    const account = await this.accountService.findOne(id, user.userId);
+  ): Promise<AccountWithConvertedBalance> {
+    const account = await this.accountService.findOneWithConversion(
+      id,
+      user.userId,
+    );
     if (!account) {
       throw new NotFoundException(`Account with id ${id} not found`);
     }
