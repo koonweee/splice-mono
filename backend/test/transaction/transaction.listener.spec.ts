@@ -47,7 +47,7 @@ describe('TransactionListener', () => {
       accountId: 'account-123',
       amount: {
         money: { currency: 'USD', amount: 50000 }, // $500.00
-        sign: MoneySign.CREDIT,
+        sign: MoneySign.POSITIVE,
       },
       merchantName: 'Test Merchant',
       pending: false,
@@ -62,7 +62,7 @@ describe('TransactionListener', () => {
       updatedAt: new Date(),
     };
 
-    it('should add credit amount to account balance and upsert snapshot', async () => {
+    it('should add positive amount to account balance and upsert snapshot', async () => {
       mockAccountRepository.query.mockResolvedValue([]);
 
       const event = new TransactionCreatedEvent(mockTransaction);
@@ -90,21 +90,21 @@ describe('TransactionListener', () => {
       expect(queryCall).toContain('ON CONFLICT');
     });
 
-    it('should subtract debit amount from account balance', async () => {
-      const debitTransaction: Transaction = {
+    it('should subtract negative amount from account balance', async () => {
+      const negativeTransaction: Transaction = {
         ...mockTransaction,
         amount: {
           money: { currency: 'USD', amount: 25000 }, // $250.00
-          sign: MoneySign.DEBIT,
+          sign: MoneySign.NEGATIVE,
         },
       };
 
       mockAccountRepository.query.mockResolvedValue([]);
 
-      const event = new TransactionCreatedEvent(debitTransaction);
+      const event = new TransactionCreatedEvent(negativeTransaction);
       await listener.handleTransactionCreated(event);
 
-      // Debit should subtract (negative amount)
+      // Negative should subtract (negative amount)
       expect(mockAccountRepository.query).toHaveBeenCalledWith(
         expect.stringContaining('WITH updated_account AS'),
         [
@@ -137,7 +137,7 @@ describe('TransactionListener', () => {
       accountId: 'account-123',
       amount: {
         money: { currency: 'USD', amount: 50000 }, // $500.00
-        sign: MoneySign.CREDIT,
+        sign: MoneySign.POSITIVE,
       },
       merchantName: 'Test Merchant',
       pending: false,
@@ -152,7 +152,7 @@ describe('TransactionListener', () => {
       updatedAt: new Date(),
     };
 
-    it('should reverse credit amount from account balance and update snapshots atomically', async () => {
+    it('should reverse positive amount from account balance and update snapshots atomically', async () => {
       mockAccountRepository.query.mockResolvedValue([]);
 
       const event = new TransactionDeletedEvent(mockTransaction);
@@ -179,21 +179,21 @@ describe('TransactionListener', () => {
       expect(queryCall).toContain('UPDATE balance_snapshot_entity');
     });
 
-    it('should reverse debit amount from account balance (add back)', async () => {
-      const debitTransaction: Transaction = {
+    it('should reverse negative amount from account balance (add back)', async () => {
+      const negativeTransaction: Transaction = {
         ...mockTransaction,
         amount: {
           money: { currency: 'USD', amount: 25000 }, // $250.00
-          sign: MoneySign.DEBIT,
+          sign: MoneySign.NEGATIVE,
         },
       };
 
       mockAccountRepository.query.mockResolvedValue([]);
 
-      const event = new TransactionDeletedEvent(debitTransaction);
+      const event = new TransactionDeletedEvent(negativeTransaction);
       await listener.handleTransactionDeleted(event);
 
-      // Debit reversal should add back (positive amount)
+      // Negative reversal should add back (positive amount)
       expect(mockAccountRepository.query).toHaveBeenCalledWith(
         expect.stringContaining('WITH updated_account AS'),
         [
@@ -226,7 +226,7 @@ describe('TransactionListener', () => {
       accountId: 'account-123',
       amount: {
         money: { currency: 'USD', amount: 50000 }, // $500.00
-        sign: MoneySign.CREDIT,
+        sign: MoneySign.POSITIVE,
       },
       merchantName: 'Test Merchant',
       pending: false,
@@ -241,13 +241,13 @@ describe('TransactionListener', () => {
       updatedAt: new Date(),
     };
 
-    it('should apply positive difference when credit amount increases', async () => {
+    it('should apply positive difference when positive amount increases', async () => {
       const oldTransaction = { ...baseTransaction };
       const newTransaction = {
         ...baseTransaction,
         amount: {
           money: { currency: 'USD', amount: 75000 }, // $750.00
-          sign: MoneySign.CREDIT,
+          sign: MoneySign.POSITIVE,
         },
       };
 
@@ -268,13 +268,13 @@ describe('TransactionListener', () => {
       );
     });
 
-    it('should apply negative difference when credit amount decreases', async () => {
+    it('should apply negative difference when positive amount decreases', async () => {
       const oldTransaction = { ...baseTransaction };
       const newTransaction = {
         ...baseTransaction,
         amount: {
           money: { currency: 'USD', amount: 30000 }, // $300.00
-          sign: MoneySign.CREDIT,
+          sign: MoneySign.POSITIVE,
         },
       };
 
@@ -295,13 +295,13 @@ describe('TransactionListener', () => {
       );
     });
 
-    it('should handle sign change from credit to debit', async () => {
-      const oldTransaction = { ...baseTransaction }; // Credit $500
+    it('should handle sign change from positive to negative', async () => {
+      const oldTransaction = { ...baseTransaction }; // Positive $500
       const newTransaction = {
         ...baseTransaction,
         amount: {
-          money: { currency: 'USD', amount: 50000 }, // Debit $500
-          sign: MoneySign.DEBIT,
+          money: { currency: 'USD', amount: 50000 }, // Negative $500
+          sign: MoneySign.NEGATIVE,
         },
       };
 
@@ -340,7 +340,7 @@ describe('TransactionListener', () => {
         date: '2024-01-15',
         amount: {
           money: { currency: 'USD', amount: 75000 },
-          sign: MoneySign.CREDIT,
+          sign: MoneySign.POSITIVE,
         },
       };
 
@@ -367,7 +367,7 @@ describe('TransactionListener', () => {
         ...baseTransaction,
         amount: {
           money: { currency: 'USD', amount: 75000 },
-          sign: MoneySign.CREDIT,
+          sign: MoneySign.POSITIVE,
         },
       };
 

@@ -352,7 +352,7 @@ export class PlaidProvider implements IBankLinkProvider {
         // Pre-process available balance (Plaid returns float amounts like 199.99)
         const availableAmount = available ?? 0;
         const availableSign =
-          availableAmount >= 0 ? MoneySign.CREDIT : MoneySign.DEBIT;
+          availableAmount >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
         const availableBalance = MoneyWithSign.fromFloat(
           currency,
           availableAmount,
@@ -362,7 +362,7 @@ export class PlaidProvider implements IBankLinkProvider {
         // Pre-process current balance (Plaid returns float amounts like 199.99)
         const currentAmount = current ?? 0;
         const currentSign =
-          currentAmount >= 0 ? MoneySign.CREDIT : MoneySign.DEBIT;
+          currentAmount >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
         const currentBalance = MoneyWithSign.fromFloat(
           currency,
           currentAmount,

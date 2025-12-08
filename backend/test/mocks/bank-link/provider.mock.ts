@@ -18,11 +18,11 @@ export const mockApiAccount: APIAccount = {
   subType: null,
   availableBalance: {
     money: { currency: 'USD', amount: 100000 },
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
   currentBalance: {
     money: { currency: 'USD', amount: 100000 },
-    sign: MoneySign.CREDIT,
+    sign: MoneySign.POSITIVE,
   },
 };
 

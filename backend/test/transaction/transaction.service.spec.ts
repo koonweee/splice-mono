@@ -137,7 +137,7 @@ describe('TransactionService', () => {
       const createDto = {
         amount: {
           money: { currency: 'USD', amount: 1000 },
-          sign: MoneySign.DEBIT,
+          sign: MoneySign.NEGATIVE,
         },
         accountId: mockAccountId,
         pending: true,

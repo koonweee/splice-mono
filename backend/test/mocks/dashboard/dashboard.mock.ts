@@ -38,13 +38,13 @@ export function createMockAccountEntity(
   entity.currentBalance = new BalanceColumns();
   entity.currentBalance.amount = overrides.currentBalanceAmount ?? 100000; // $1,000.00 in cents
   entity.currentBalance.currency = overrides.currency ?? 'USD';
-  entity.currentBalance.sign = overrides.currentBalanceSign ?? MoneySign.CREDIT;
+  entity.currentBalance.sign = overrides.currentBalanceSign ?? MoneySign.POSITIVE;
 
   entity.availableBalance = new BalanceColumns();
   entity.availableBalance.amount = overrides.availableBalanceAmount ?? 100000;
   entity.availableBalance.currency = overrides.currency ?? 'USD';
   entity.availableBalance.sign =
-    overrides.availableBalanceSign ?? MoneySign.CREDIT;
+    overrides.availableBalanceSign ?? MoneySign.POSITIVE;
 
   return entity;
 }
@@ -76,13 +76,13 @@ export function createMockSnapshotEntity(
   entity.currentBalance = new BalanceColumns();
   entity.currentBalance.amount = overrides.currentBalanceAmount ?? 100000;
   entity.currentBalance.currency = overrides.currency ?? 'USD';
-  entity.currentBalance.sign = overrides.currentBalanceSign ?? MoneySign.CREDIT;
+  entity.currentBalance.sign = overrides.currentBalanceSign ?? MoneySign.POSITIVE;
 
   entity.availableBalance = new BalanceColumns();
   entity.availableBalance.amount = overrides.availableBalanceAmount ?? 100000;
   entity.availableBalance.currency = overrides.currency ?? 'USD';
   entity.availableBalance.sign =
-    overrides.availableBalanceSign ?? MoneySign.CREDIT;
+    overrides.availableBalanceSign ?? MoneySign.POSITIVE;
 
   return entity;
 }

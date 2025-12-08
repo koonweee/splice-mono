@@ -10,29 +10,29 @@ import {
 describe('MoneyWithSign', () => {
   describe('constructor', () => {
     it('should create instance with integer amount in cents', () => {
-      const money = new MoneyWithSign('USD', 19999, MoneySign.CREDIT);
+      const money = new MoneyWithSign('USD', 19999, MoneySign.POSITIVE);
 
       expect(money.getAmount()).toBe(19999);
       expect(money.getCurrency()).toBe('USD');
-      expect(money.getSign()).toBe(MoneySign.CREDIT);
+      expect(money.getSign()).toBe(MoneySign.POSITIVE);
     });
 
     it('should store absolute value of negative amounts', () => {
-      const money = new MoneyWithSign('USD', -5000, MoneySign.DEBIT);
+      const money = new MoneyWithSign('USD', -5000, MoneySign.NEGATIVE);
 
       expect(money.getAmount()).toBe(5000);
-      expect(money.getSign()).toBe(MoneySign.DEBIT);
+      expect(money.getSign()).toBe(MoneySign.NEGATIVE);
     });
 
     it('should handle zero amount', () => {
-      const money = new MoneyWithSign('USD', 0, MoneySign.CREDIT);
+      const money = new MoneyWithSign('USD', 0, MoneySign.POSITIVE);
 
       expect(money.getAmount()).toBe(0);
     });
 
     it('should work with different currencies', () => {
-      const eurMoney = new MoneyWithSign('EUR', 1000, MoneySign.CREDIT);
-      const gbpMoney = new MoneyWithSign('GBP', 2000, MoneySign.DEBIT);
+      const eurMoney = new MoneyWithSign('EUR', 1000, MoneySign.POSITIVE);
+      const gbpMoney = new MoneyWithSign('GBP', 2000, MoneySign.NEGATIVE);
 
       expect(eurMoney.getCurrency()).toBe('EUR');
       expect(gbpMoney.getCurrency()).toBe('GBP');
@@ -41,41 +41,41 @@ describe('MoneyWithSign', () => {
 
   describe('fromFloat', () => {
     it('should convert float to integer cents', () => {
-      const money = MoneyWithSign.fromFloat('USD', 199.99, MoneySign.CREDIT);
+      const money = MoneyWithSign.fromFloat('USD', 199.99, MoneySign.POSITIVE);
 
       expect(money.getAmount()).toBe(19999);
       expect(money.getCurrency()).toBe('USD');
-      expect(money.getSign()).toBe(MoneySign.CREDIT);
+      expect(money.getSign()).toBe(MoneySign.POSITIVE);
     });
 
     it('should handle whole dollar amounts', () => {
-      const money = MoneyWithSign.fromFloat('USD', 100.0, MoneySign.CREDIT);
+      const money = MoneyWithSign.fromFloat('USD', 100.0, MoneySign.POSITIVE);
 
       expect(money.getAmount()).toBe(10000);
     });
 
     it('should handle small amounts', () => {
-      const money = MoneyWithSign.fromFloat('USD', 0.01, MoneySign.CREDIT);
+      const money = MoneyWithSign.fromFloat('USD', 0.01, MoneySign.POSITIVE);
 
       expect(money.getAmount()).toBe(1);
     });
 
     it('should convert negative float to positive cents with sign', () => {
-      const money = MoneyWithSign.fromFloat('USD', -50.25, MoneySign.DEBIT);
+      const money = MoneyWithSign.fromFloat('USD', -50.25, MoneySign.NEGATIVE);
 
       expect(money.getAmount()).toBe(5025);
-      expect(money.getSign()).toBe(MoneySign.DEBIT);
+      expect(money.getSign()).toBe(MoneySign.NEGATIVE);
     });
 
     it('should handle zero amount', () => {
-      const money = MoneyWithSign.fromFloat('USD', 0, MoneySign.CREDIT);
+      const money = MoneyWithSign.fromFloat('USD', 0, MoneySign.POSITIVE);
 
       expect(money.getAmount()).toBe(0);
     });
 
     it('should round to nearest cent for imprecise floats', () => {
       // 19.999... should round to 2000 cents ($20.00)
-      const money = MoneyWithSign.fromFloat('USD', 19.999, MoneySign.CREDIT);
+      const money = MoneyWithSign.fromFloat('USD', 19.999, MoneySign.POSITIVE);
 
       expect(money.getAmount()).toBe(2000);
     });
@@ -85,49 +85,49 @@ describe('MoneyWithSign', () => {
     it('should reconstruct from serialized data', () => {
       const serialized: SerializedMoneyWithSign = {
         money: { currency: 'USD', amount: 12345 },
-        sign: MoneySign.CREDIT,
+        sign: MoneySign.POSITIVE,
       };
 
       const money = MoneyWithSign.fromSerialized(serialized);
 
       expect(money.getAmount()).toBe(12345);
       expect(money.getCurrency()).toBe('USD');
-      expect(money.getSign()).toBe(MoneySign.CREDIT);
+      expect(money.getSign()).toBe(MoneySign.POSITIVE);
     });
 
-    it('should handle debit sign', () => {
+    it('should handle negative sign', () => {
       const serialized: SerializedMoneyWithSign = {
         money: { currency: 'EUR', amount: 500 },
-        sign: MoneySign.DEBIT,
+        sign: MoneySign.NEGATIVE,
       };
 
       const money = MoneyWithSign.fromSerialized(serialized);
 
-      expect(money.getSign()).toBe(MoneySign.DEBIT);
+      expect(money.getSign()).toBe(MoneySign.NEGATIVE);
     });
   });
 
   describe('getters', () => {
     it('getAmount should return amount in cents', () => {
-      const money = new MoneyWithSign('USD', 9999, MoneySign.CREDIT);
+      const money = new MoneyWithSign('USD', 9999, MoneySign.POSITIVE);
       expect(money.getAmount()).toBe(9999);
     });
 
     it('getCurrency should return currency code', () => {
-      const money = new MoneyWithSign('JPY', 1000, MoneySign.CREDIT);
+      const money = new MoneyWithSign('JPY', 1000, MoneySign.POSITIVE);
       expect(money.getCurrency()).toBe('JPY');
     });
 
     it('getSign should return the sign', () => {
-      const credit = new MoneyWithSign('USD', 100, MoneySign.CREDIT);
-      const debit = new MoneyWithSign('USD', 100, MoneySign.DEBIT);
+      const positive = new MoneyWithSign('USD', 100, MoneySign.POSITIVE);
+      const negative = new MoneyWithSign('USD', 100, MoneySign.NEGATIVE);
 
-      expect(credit.getSign()).toBe(MoneySign.CREDIT);
-      expect(debit.getSign()).toBe(MoneySign.DEBIT);
+      expect(positive.getSign()).toBe(MoneySign.POSITIVE);
+      expect(negative.getSign()).toBe(MoneySign.NEGATIVE);
     });
 
     it('getMoney should return underlying Money instance', () => {
-      const money = new MoneyWithSign('USD', 5000, MoneySign.CREDIT);
+      const money = new MoneyWithSign('USD', 5000, MoneySign.POSITIVE);
       const underlyingMoney = money.getMoney();
 
       expect(underlyingMoney.getAmount()).toBe(5000);
@@ -137,25 +137,25 @@ describe('MoneyWithSign', () => {
 
   describe('toLocaleString', () => {
     it('should format as locale string with default locale', () => {
-      const money = new MoneyWithSign('USD', 19999, MoneySign.CREDIT);
+      const money = new MoneyWithSign('USD', 19999, MoneySign.POSITIVE);
 
       expect(money.toLocaleString()).toBe('$199.99');
     });
 
     it('should format whole amounts correctly', () => {
-      const money = new MoneyWithSign('USD', 10000, MoneySign.CREDIT);
+      const money = new MoneyWithSign('USD', 10000, MoneySign.POSITIVE);
 
       expect(money.toLocaleString()).toBe('$100.00');
     });
 
     it('should format small amounts correctly', () => {
-      const money = new MoneyWithSign('USD', 1, MoneySign.CREDIT);
+      const money = new MoneyWithSign('USD', 1, MoneySign.POSITIVE);
 
       expect(money.toLocaleString()).toBe('$0.01');
     });
 
     it('should handle different currencies', () => {
-      const eurMoney = new MoneyWithSign('EUR', 5000, MoneySign.CREDIT);
+      const eurMoney = new MoneyWithSign('EUR', 5000, MoneySign.POSITIVE);
 
       // EUR formatting may vary by locale, but should contain the amount
       const formatted = eurMoney.toLocaleString();
@@ -165,51 +165,51 @@ describe('MoneyWithSign', () => {
 
   describe('toSerialized', () => {
     it('should serialize to plain object', () => {
-      const money = new MoneyWithSign('USD', 12345, MoneySign.CREDIT);
+      const money = new MoneyWithSign('USD', 12345, MoneySign.POSITIVE);
 
       const serialized = money.toSerialized();
 
       expect(serialized).toEqual({
         money: { currency: 'USD', amount: 12345 },
-        sign: MoneySign.CREDIT,
+        sign: MoneySign.POSITIVE,
       });
     });
 
-    it('should serialize debit correctly', () => {
-      const money = new MoneyWithSign('GBP', 999, MoneySign.DEBIT);
+    it('should serialize negative correctly', () => {
+      const money = new MoneyWithSign('GBP', 999, MoneySign.NEGATIVE);
 
       const serialized = money.toSerialized();
 
       expect(serialized).toEqual({
         money: { currency: 'GBP', amount: 999 },
-        sign: MoneySign.DEBIT,
+        sign: MoneySign.NEGATIVE,
       });
     });
   });
 
   describe('toJSON', () => {
     it('should return same result as toSerialized', () => {
-      const money = new MoneyWithSign('USD', 5000, MoneySign.CREDIT);
+      const money = new MoneyWithSign('USD', 5000, MoneySign.POSITIVE);
 
       expect(money.toJSON()).toEqual(money.toSerialized());
     });
 
     it('should work with JSON.stringify', () => {
-      const money = new MoneyWithSign('USD', 19999, MoneySign.CREDIT);
+      const money = new MoneyWithSign('USD', 19999, MoneySign.POSITIVE);
 
       const jsonString = JSON.stringify(money);
       const parsed = JSON.parse(jsonString) as SerializedMoneyWithSign;
 
       expect(parsed).toEqual({
         money: { currency: 'USD', amount: 19999 },
-        sign: MoneySign.CREDIT,
+        sign: MoneySign.POSITIVE,
       });
     });
   });
 
   describe('roundtrip conversion', () => {
     it('should preserve value through serialize/deserialize cycle', () => {
-      const original = MoneyWithSign.fromFloat('USD', 199.99, MoneySign.CREDIT);
+      const original = MoneyWithSign.fromFloat('USD', 199.99, MoneySign.POSITIVE);
       const serialized = original.toSerialized();
       const restored = MoneyWithSign.fromSerialized(serialized);
 
@@ -219,7 +219,7 @@ describe('MoneyWithSign', () => {
     });
 
     it('should preserve value through JSON roundtrip', () => {
-      const original = new MoneyWithSign('EUR', 50000, MoneySign.DEBIT);
+      const original = new MoneyWithSign('EUR', 50000, MoneySign.NEGATIVE);
       const jsonString = JSON.stringify(original);
       const parsed = JSON.parse(jsonString) as SerializedMoneyWithSign;
       const restored = MoneyWithSign.fromSerialized(parsed);
@@ -278,13 +278,13 @@ describe('MoneyWithSign Zod Schemas', () => {
   });
 
   describe('MoneySignSchema', () => {
-    it('should validate credit', () => {
-      const result = MoneySignSchema.safeParse('credit');
+    it('should validate positive', () => {
+      const result = MoneySignSchema.safeParse('positive');
       expect(result.success).toBe(true);
     });
 
-    it('should validate debit', () => {
-      const result = MoneySignSchema.safeParse('debit');
+    it('should validate negative', () => {
+      const result = MoneySignSchema.safeParse('negative');
       expect(result.success).toBe(true);
     });
 
@@ -298,7 +298,7 @@ describe('MoneyWithSign Zod Schemas', () => {
     it('should validate complete MoneyWithSign object', () => {
       const result = MoneyWithSignSchema.safeParse({
         money: { currency: 'USD', amount: 5000 },
-        sign: 'credit',
+        sign: 'positive',
       });
 
       expect(result.success).toBe(true);
@@ -307,7 +307,7 @@ describe('MoneyWithSign Zod Schemas', () => {
     it('should reject decimal amounts', () => {
       const result = MoneyWithSignSchema.safeParse({
         money: { currency: 'USD', amount: 50.99 },
-        sign: 'credit',
+        sign: 'positive',
       });
 
       expect(result.success).toBe(false);
@@ -316,7 +316,7 @@ describe('MoneyWithSign Zod Schemas', () => {
     it('should reject invalid sign', () => {
       const result = MoneyWithSignSchema.safeParse({
         money: { currency: 'USD', amount: 5000 },
-        sign: 'positive',
+        sign: 'credit',
       });
 
       expect(result.success).toBe(false);
@@ -324,7 +324,7 @@ describe('MoneyWithSign Zod Schemas', () => {
 
     it('should reject missing money field', () => {
       const result = MoneyWithSignSchema.safeParse({
-        sign: 'credit',
+        sign: 'positive',
       });
 
       expect(result.success).toBe(false);

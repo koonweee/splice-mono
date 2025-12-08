@@ -21,14 +21,14 @@ export const mockAccountId = 'account-uuid-123';
 export const mockCategoryId = 'category-uuid-123';
 
 /**
- * Mock transaction - $50.00 debit at Starbucks
+ * Mock transaction - $50.00 negative (expense) at Starbucks
  */
 export const mockTransaction: Transaction = {
   id: 'transaction-uuid-123',
   userId: mockUserId,
   amount: {
     money: { currency: 'USD', amount: 5000 }, // $50.00 in cents
-    sign: MoneySign.DEBIT,
+    sign: MoneySign.NEGATIVE,
   },
   accountId: mockAccountId,
   merchantName: 'Starbucks',
@@ -44,14 +44,14 @@ export const mockTransaction: Transaction = {
 };
 
 /**
- * Mock pending transaction - $25.00 debit at Amazon
+ * Mock pending transaction - $25.00 negative (expense) at Amazon
  */
 export const mockTransaction2: Transaction = {
   id: 'transaction-uuid-456',
   userId: mockUserId,
   amount: {
     money: { currency: 'USD', amount: 2500 }, // $25.00 in cents
-    sign: MoneySign.DEBIT,
+    sign: MoneySign.NEGATIVE,
   },
   accountId: mockAccountId,
   merchantName: 'Amazon',
@@ -72,7 +72,7 @@ export const mockTransaction2: Transaction = {
 export const mockCreateTransactionDto: CreateTransactionDto = {
   amount: {
     money: { currency: 'USD', amount: 7500 }, // $75.00 in cents
-    sign: MoneySign.DEBIT,
+    sign: MoneySign.NEGATIVE,
   },
   accountId: mockAccountId,
   merchantName: 'Target',
