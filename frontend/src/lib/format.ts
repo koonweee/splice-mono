@@ -11,15 +11,44 @@ import { MoneyWithSignSign } from '../api/models'
  *
  * formatMoneyWithSign({ money: { amount: 12345, currency: 'USD' }, sign: 'negative' })
  * // => "-$123.45"
+ *
+ * formatMoneyWithSign({ money: { amount: 12345, currency: 'USD' }, sign: 'positive' }, 0)
+ * // => "$123"
  */
-export function formatMoneyWithSign(value: MoneyWithSign): string {
+export function formatMoneyWithSign(
+  value: MoneyWithSign,
+  decimals: number = 2,
+): string {
   const dollars = value.money.amount / 100
   const signedAmount =
     value.sign === MoneyWithSignSign.negative ? -dollars : dollars
+  return formatMoneyNumber({
+    value: signedAmount,
+    currency: value.money.currency,
+    decimals,
+  })
+}
+
+/**
+ * Format a number as a currency
+ * For use with chart value formatters
+ *
+ * @example
+ * formatUSD(123.45)    // => "$123.45"
+ * formatUSD(123.45, 0) // => "$123"
+ */
+export function formatMoneyNumber(input: {
+  value: number
+  currency?: string
+  decimals?: number
+}): string {
+  const { value, currency = 'USD', decimals = 2 } = input
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: value.money.currency,
-  }).format(signedAmount)
+    currency,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value)
 }
 
 /**
