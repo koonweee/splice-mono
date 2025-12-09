@@ -65,19 +65,21 @@ export function NetWorthCard({
     .join(' - ')
 
   return (
-    <Paper p="xl" withBorder mb="xl">
-      <Text size="sm" c="dimmed" mb={4}>
-        {displayLabel}
-      </Text>
-      <Title order={2} size="h1">
-        {displayValue}
-      </Title>
-      {!hoveredPoint && changePercent !== null && changePercent !== 0 && (
-        <Text size="sm" c={getChangeColorMantine(changePercent)}>
-          {formatPercent(changePercent)} from last{' '}
-          {PERIOD_LABELS[comparisonPeriod].toLowerCase()}
+    <Paper mb="xl">
+      <Box>
+        <Text size="sm" c="dimmed" mb={4}>
+          {displayLabel}
         </Text>
-      )}
+        <Title order={2} size="h1">
+          {displayValue}
+        </Title>
+        {!hoveredPoint && changePercent !== null && changePercent !== 0 && (
+          <Text size="sm" c={getChangeColorMantine(changePercent)}>
+            {formatPercent(changePercent)} from last{' '}
+            {PERIOD_LABELS[comparisonPeriod].toLowerCase()}
+          </Text>
+        )}
+      </Box>
       {hasChartData && (
         <Box mt="md">
           <Chart

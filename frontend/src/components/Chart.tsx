@@ -63,16 +63,11 @@ export function Chart({
       withDots
       gridAxis="none"
       withXAxis={false}
+      withYAxis={false}
       withGradient
       yAxisProps={{
         domain: [domainMin, domainMax],
-        ticks: [minValue, maxValue],
-        interval: 0,
       }}
-      referenceLines={[
-        { y: minValue, color: 'gray.3' },
-        { y: maxValue, color: 'gray.3' },
-      ]}
       valueFormatter={valueFormatter}
       areaChartProps={{
         onMouseMove: (state) => {
