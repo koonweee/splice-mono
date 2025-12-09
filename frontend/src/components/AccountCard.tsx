@@ -1,6 +1,10 @@
 import { Group, Paper, Text } from '@mantine/core'
 import type { AccountSummary } from '../api/models'
-import { formatMoneyWithSign, formatPercent } from '../lib/format'
+import {
+  formatMoneyWithSign,
+  formatPercent,
+  resolveBalance,
+} from '../lib/format'
 import styles from './AccountCard.module.css'
 
 function getChangeColorMantine(
@@ -23,10 +27,10 @@ export function AccountCard({
   onClick?: () => void
 }) {
   const changePercent = formatPercent(account.changePercent)
-  const hasConvertedBalance =
-    account.convertedCurrentBalance &&
-    account.convertedCurrentBalance.balance.money.currency !==
-      account.currentBalance.money.currency
+  const { primaryBalance, originalBalance } = resolveBalance(
+    account.currentBalance,
+    account.convertedCurrentBalance,
+  )
 
   return (
     <Paper
@@ -58,15 +62,13 @@ export function AccountCard({
           </Text>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <Text fw={600}>
-            {formatMoneyWithSign(
-              account.convertedCurrentBalance?.balance ??
-                account.currentBalance,
-            )}
-          </Text>
-          {hasConvertedBalance && (
+          <Text fw={600}>{formatMoneyWithSign({ value: primaryBalance })}</Text>
+          {originalBalance && (
             <Text size="xs" c="dimmed">
-              {formatMoneyWithSign(account.currentBalance)}
+              {formatMoneyWithSign({
+                value: originalBalance,
+                appendCurrency: true,
+              })}
             </Text>
           )}
           {changePercent && (
