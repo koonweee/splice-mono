@@ -53,6 +53,7 @@ function HomePage() {
           onChange={(value) => value && setPeriod(value as TimePeriod)}
           data={PERIOD_OPTIONS}
           w={120}
+          size="md"
         />
       </Group>
 
