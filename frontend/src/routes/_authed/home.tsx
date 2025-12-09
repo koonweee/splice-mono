@@ -1,6 +1,5 @@
 import { Alert, Grid, Group, Loader, Select, Title } from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useDashboardControllerGetSummary } from '../../api/clients/spliceAPI'
 import { AccountSummary, TimePeriod } from '../../api/models'
@@ -8,7 +7,17 @@ import { AccountModal } from '../../components/AccountModal'
 import { AccountSection } from '../../components/AccountSection'
 import { NetWorthCard } from '../../components/NetWorthCard'
 
-export const Route = createFileRoute('/_authed/home')({ component: HomePage })
+type HomeSearch = {
+  accountId?: string
+}
+
+export const Route = createFileRoute('/_authed/home')({
+  component: HomePage,
+  validateSearch: (search: Record<string, unknown>): HomeSearch => ({
+    accountId:
+      typeof search.accountId === 'string' ? search.accountId : undefined,
+  }),
+})
 
 const PERIOD_OPTIONS = [
   { value: TimePeriod.day, label: 'Day' },
@@ -18,21 +27,29 @@ const PERIOD_OPTIONS = [
 ]
 
 function HomePage() {
+  const { accountId } = Route.useSearch()
+  const navigate = useNavigate()
   const [period, setPeriod] = useState<TimePeriod>(TimePeriod.month)
-  const [selectedAccount, setSelectedAccount] = useState<AccountSummary | null>(
-    null,
-  )
-  const [modalOpened, { open: openModal, close: closeModal }] =
-    useDisclosure(false)
   const {
     data: dashboard,
     isLoading,
     error,
   } = useDashboardControllerGetSummary({ period })
 
+  // Find the selected account from the dashboard data
+  const selectedAccount: AccountSummary | null =
+    accountId && dashboard
+      ? ([...dashboard.assets, ...dashboard.liabilities].find(
+          (a) => a.id === accountId,
+        ) ?? null)
+      : null
+
   const handleAccountClick = (account: AccountSummary) => {
-    setSelectedAccount(account)
-    openModal()
+    navigate({ to: '/home', search: { accountId: account.id } })
+  }
+
+  const handleCloseModal = () => {
+    navigate({ to: '/home', search: {} })
   }
 
   return (
@@ -94,8 +111,8 @@ function HomePage() {
 
       <AccountModal
         account={selectedAccount}
-        opened={modalOpened}
-        onClose={closeModal}
+        opened={!!accountId}
+        onClose={handleCloseModal}
       />
     </>
   )
