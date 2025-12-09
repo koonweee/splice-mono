@@ -1,5 +1,6 @@
 import { Box, Paper, Text, Title } from '@mantine/core'
 import dayjs from 'dayjs'
+import { useState } from 'react'
 import type {
   MoneyWithSign,
   NetWorthChartPoint,
@@ -53,16 +54,25 @@ export function NetWorthCard({
   chartData?: NetWorthChartPoint[]
 }) {
   const hasChartData = chartData && chartData.length > 0
+  const [hoveredPoint, setHoveredPoint] = useState<ChartDataPoint | null>(null)
+
+  const displayValue = hoveredPoint
+    ? formatMoneyNumber({ value: hoveredPoint.value })
+    : formatMoneyWithSign(netWorth)
+
+  const displayLabel = ['Net worth', hoveredPoint?.label]
+    .filter(Boolean)
+    .join(' - ')
 
   return (
     <Paper p="xl" withBorder mb="xl">
       <Text size="sm" c="dimmed" mb={4}>
-        Net worth
+        {displayLabel}
       </Text>
       <Title order={2} size="h1">
-        {formatMoneyWithSign(netWorth)}
+        {displayValue}
       </Title>
-      {changePercent !== null && changePercent !== 0 && (
+      {!hoveredPoint && changePercent !== null && changePercent !== 0 && (
         <Text size="sm" c={getChangeColorMantine(changePercent)}>
           {formatPercent(changePercent)} from last{' '}
           {PERIOD_LABELS[comparisonPeriod].toLowerCase()}
@@ -76,6 +86,7 @@ export function NetWorthCard({
             valueFormatter={(value) =>
               formatMoneyNumber({ value, decimals: 0 })
             }
+            onDataPointHover={setHoveredPoint}
           />
         </Box>
       )}
