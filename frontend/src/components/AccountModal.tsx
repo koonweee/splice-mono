@@ -1,17 +1,42 @@
 import { Box, Group, Loader, Modal, Stack, Text } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import {
   useAccountControllerFindOne,
   useBalanceSnapshotControllerFindByAccountId,
 } from '../api/clients/spliceAPI'
-import type { AccountSummary } from '../api/models'
-import { BalanceSnapshotSnapshotType } from '../api/models'
-import { formatMoneyWithSign } from '../lib/format'
-import { BalanceChart } from './BalanceChart'
+import type {
+  AccountSummary,
+  BalanceSnapshotWithConvertedBalance,
+} from '../api/models'
+import { BalanceSnapshotSnapshotType, MoneyWithSignSign } from '../api/models'
+import { formatMoneyNumber, formatMoneyWithSign } from '../lib/format'
+import { useIsMobile } from '../lib/hooks'
+import { Chart, type ChartDataPoint } from './Chart'
 
 dayjs.extend(relativeTime)
+
+function transformSnapshotsToChartData(
+  data: BalanceSnapshotWithConvertedBalance[],
+): ChartDataPoint[] {
+  return [...data]
+    .sort(
+      (a, b) =>
+        new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime(),
+    )
+    .map((snapshot) => {
+      const balance =
+        snapshot.convertedCurrentBalance?.balance ?? snapshot.currentBalance
+      const dollars = balance.money.amount / 100
+      const signedValue =
+        balance.sign === MoneyWithSignSign.negative ? -dollars : dollars
+
+      return {
+        label: dayjs(snapshot.snapshotDate).format('MMM D'),
+        value: signedValue,
+      }
+    })
+}
 
 interface AccountModalProps {
   account: AccountSummary | null
@@ -20,7 +45,7 @@ interface AccountModalProps {
 }
 
 export function AccountModal({ account, opened, onClose }: AccountModalProps) {
-  const isMobile = useMediaQuery('(max-width: 50em)')
+  const isMobile = useIsMobile()
 
   const { data: fullAccount, isLoading: isLoadingAccount } =
     useAccountControllerFindOne(account?.id ?? '', {
@@ -101,7 +126,14 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
               <Text fw={500} mb="sm">
                 Balance History
               </Text>
-              <BalanceChart data={snapshots} height={200} />
+              <Chart
+                data={transformSnapshotsToChartData(snapshots)}
+                height={200}
+                color="blue.6"
+                valueFormatter={(value) =>
+                  formatMoneyNumber({ value, decimals: 2 })
+                }
+              />
             </Box>
           )}
         </Stack>

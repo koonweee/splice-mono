@@ -8,11 +8,3 @@ code {
   font-family:
     source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
-
-.account-card-clickable {
-  transition: border-color 150ms ease;
-}
-
-.account-card-clickable:hover {
-  border-color: var(--mantine-color-blue-5);
-}
