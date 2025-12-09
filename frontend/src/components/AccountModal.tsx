@@ -82,7 +82,7 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
           <Loader />
         </Group>
       ) : (
-        <Stack gap="md" p="md">
+        <Stack gap="md" p="lg">
           {fullAccount && (
             <>
               <Group justify="space-between">
