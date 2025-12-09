@@ -1,20 +1,11 @@
-import {
-  Alert,
-  Grid,
-  Group,
-  Loader,
-  Select,
-  Stack,
-  Text,
-  Title,
-} from '@mantine/core'
+import { Alert, Grid, Group, Loader, Select, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useDashboardControllerGetSummary } from '../../api/clients/spliceAPI'
 import { AccountSummary, TimePeriod } from '../../api/models'
-import { AccountCard } from '../../components/AccountCard'
 import { AccountModal } from '../../components/AccountModal'
+import { AccountSection } from '../../components/AccountSection'
 import { NetWorthCard } from '../../components/NetWorthCard'
 
 export const Route = createFileRoute('/_authed/home')({ component: HomePage })
@@ -81,43 +72,21 @@ function HomePage() {
 
           <Grid>
             <Grid.Col span={{ base: 12, md: 6 }}>
-              <Title order={3} mb="md">
-                Assets
-              </Title>
-              <Stack gap="sm">
-                {dashboard.assets.length === 0 ? (
-                  <Text c="dimmed">No assets</Text>
-                ) : (
-                  dashboard.assets.map((account) => (
-                    <AccountCard
-                      key={account.id}
-                      account={account}
-                      isLiability={false}
-                      onClick={() => handleAccountClick(account)}
-                    />
-                  ))
-                )}
-              </Stack>
+              <AccountSection
+                title="Assets"
+                accounts={dashboard.assets}
+                isLiability={false}
+                onAccountClick={handleAccountClick}
+              />
             </Grid.Col>
 
             <Grid.Col span={{ base: 12, md: 6 }}>
-              <Title order={3} mb="md">
-                Liabilities
-              </Title>
-              <Stack gap="sm">
-                {dashboard.liabilities.length === 0 ? (
-                  <Text c="dimmed">No liabilities</Text>
-                ) : (
-                  dashboard.liabilities.map((account) => (
-                    <AccountCard
-                      key={account.id}
-                      account={account}
-                      isLiability={true}
-                      onClick={() => handleAccountClick(account)}
-                    />
-                  ))
-                )}
-              </Stack>
+              <AccountSection
+                title="Liabilities"
+                accounts={dashboard.liabilities}
+                isLiability={true}
+                onAccountClick={handleAccountClick}
+              />
             </Grid.Col>
           </Grid>
         </>
