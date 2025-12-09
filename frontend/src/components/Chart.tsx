@@ -1,15 +1,18 @@
 import { AreaChart } from '@mantine/charts'
 import { Paper, Text } from '@mantine/core'
+import isNumber from 'lodash/isNumber'
 
-function ChartTooltip({ label, value }: { label: string; value: string }) {
+function ChartTooltip({ label, value }: { label: string; value?: string }) {
   return (
     <Paper px="md" py="xs" withBorder shadow="md" radius="md">
-      <Text size="xs" c="dimmed" mb={4}>
+      <Text size="xs" c={value ? 'dimmed' : undefined} mb={value ? 4 : 0}>
         {label}
       </Text>
-      <Text fw={600} size="lg">
-        {value}
-      </Text>
+      {value && (
+        <Text fw={600} size="lg">
+          {value}
+        </Text>
+      )}
     </Paper>
   )
 }
@@ -25,6 +28,7 @@ interface ChartProps {
   height?: number
   color?: string
   mb?: string
+  onDataPointHover?: (point: ChartDataPoint | null) => void
 }
 
 export function Chart({
@@ -33,6 +37,7 @@ export function Chart({
   height = 280,
   color = 'teal.6',
   mb,
+  onDataPointHover,
 }: ChartProps) {
   if (data.length === 0) {
     return null
@@ -69,12 +74,29 @@ export function Chart({
         { y: maxValue, color: 'gray.3' },
       ]}
       valueFormatter={valueFormatter}
+      areaChartProps={{
+        onMouseMove: (state) => {
+          const { activeIndex } = state
+          if (isNumber(Number(activeIndex))) {
+            const point = data[Number(activeIndex)]
+            onDataPointHover?.(point)
+          } else {
+            onDataPointHover?.(null)
+          }
+        },
+        onMouseLeave: () => {
+          onDataPointHover?.(null)
+        },
+      }}
       tooltipProps={{
         content: ({ label, payload }) => {
-          if (!payload?.length || !label) return null
-          const value = payload[0]?.value as number
+          if (!label || !payload) return null
+          const point = payload[0]
           return (
-            <ChartTooltip label={String(label)} value={valueFormatter(value)} />
+            <ChartTooltip
+              label={String(label)}
+              value={onDataPointHover ? undefined : valueFormatter(point.value)}
+            />
           )
         },
       }}

@@ -1,13 +1,13 @@
 .clickable {
   transition:
-    border-color 150ms ease,
     background-color 150ms ease,
     transform 150ms ease;
 }
 
 @media (hover: hover) {
   .clickable:hover {
-    border-color: var(--mantine-color-blue-5);
+    background-color: var(--mantine-color-gray-1);
+    transform: scale(0.995);
   }
 }
 
