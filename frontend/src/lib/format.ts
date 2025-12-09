@@ -1,32 +1,80 @@
-import type { MoneyWithSign } from '../api/models'
+import type { ConvertedBalance, MoneyWithSign } from '../api/models'
 import { MoneyWithSignSign } from '../api/models'
+
+/**
+ * Result of resolving which balance to display
+ */
+export interface ResolvedBalance {
+  /** The primary balance to display (converted if available, otherwise original) */
+  primaryBalance: MoneyWithSign
+  /** The original balance in native currency (only set if different from primary) */
+  originalBalance: MoneyWithSign | null
+}
+
+/**
+ * Resolve which balance to display given a current balance and optional converted balance.
+ * Returns the converted balance as primary if it exists and differs in currency,
+ * otherwise returns the current balance.
+ *
+ * @example
+ * // No conversion needed (same currency or no converted balance)
+ * resolveBalance(usdBalance, null)
+ * // => { primaryBalance: usdBalance, originalBalance: null }
+ *
+ * // With conversion (different currencies)
+ * resolveBalance(eurBalance, { balance: usdEquivalent, rate: 1.1, rateDate: '...' })
+ * // => { primaryBalance: usdEquivalent, originalBalance: eurBalance }
+ */
+export function resolveBalance(
+  currentBalance: MoneyWithSign,
+  convertedBalance: ConvertedBalance | null | undefined,
+): ResolvedBalance {
+  const hasConversion =
+    !!convertedBalance &&
+    convertedBalance.balance.money.currency !== currentBalance.money.currency
+
+  return {
+    primaryBalance: hasConversion ? convertedBalance.balance : currentBalance,
+    originalBalance: hasConversion ? currentBalance : null,
+  }
+}
 
 /**
  * Format a MoneyWithSign value as a currency string
  * Converts from cents to dollars and applies the sign
  *
  * @example
- * formatMoneyWithSign({ money: { amount: 12345, currency: 'USD' }, sign: 'positive' })
+ * formatMoneyWithSign({ value: { money: { amount: 12345, currency: 'USD' }, sign: 'positive' } })
  * // => "$123.45"
  *
- * formatMoneyWithSign({ money: { amount: 12345, currency: 'USD' }, sign: 'negative' })
+ * formatMoneyWithSign({ value: { money: { amount: 12345, currency: 'USD' }, sign: 'negative' } })
  * // => "-$123.45"
  *
- * formatMoneyWithSign({ money: { amount: 12345, currency: 'USD' }, sign: 'positive' }, 0)
+ * formatMoneyWithSign({ value: { money: { amount: 12345, currency: 'USD' }, sign: 'positive' }, decimals: 0 })
  * // => "$123"
+ *
+ * formatMoneyWithSign({ value: { money: { amount: 12345, currency: 'USD' }, sign: 'positive' }, appendCurrency: true })
+ * // => "$123.45 ($USD)"
  */
-export function formatMoneyWithSign(
-  value: MoneyWithSign,
-  decimals: number = 2,
-): string {
+export function formatMoneyWithSign(input: {
+  value: MoneyWithSign
+  decimals?: number
+  appendCurrency?: boolean
+}): string {
+  const { value, decimals = 2, appendCurrency = false } = input
   const dollars = value.money.amount / 100
   const signedAmount =
     value.sign === MoneyWithSignSign.negative ? -dollars : dollars
-  return formatMoneyNumber({
-    value: signedAmount,
-    currency: value.money.currency,
-    decimals,
-  })
+  return [
+    formatMoneyNumber({
+      value: signedAmount,
+      currency: value.money.currency,
+      decimals,
+    }),
+    appendCurrency ? `(${value.money.currency})` : undefined,
+  ]
+    .filter(Boolean)
+    .join(' ')
 }
 
 /**

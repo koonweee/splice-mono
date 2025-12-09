@@ -1,7 +1,6 @@
 import { Box, Group, Loader, Modal, Stack, Text } from '@mantine/core'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import isNil from 'lodash/isNil'
 import {
   useAccountControllerFindOne,
   useBalanceSnapshotControllerFindByAccountId,
@@ -11,7 +10,11 @@ import type {
   BalanceSnapshotWithConvertedBalance,
 } from '../api/models'
 import { BalanceSnapshotSnapshotType, MoneyWithSignSign } from '../api/models'
-import { formatMoneyNumber, formatMoneyWithSign } from '../lib/format'
+import {
+  formatMoneyNumber,
+  formatMoneyWithSign,
+  resolveBalance,
+} from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
 import { Chart, type ChartDataPoint } from './Chart'
 
@@ -71,18 +74,8 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
 
   const { convertedCurrentBalance, currentBalance } = lastSyncSnapshot ?? {}
 
-  const hasConvertedBalance = !isNil(convertedCurrentBalance)
-  const hasCurrentBalance = !isNil(currentBalance)
-  const hasDifferentCurrencies =
-    hasConvertedBalance &&
-    hasCurrentBalance &&
-    convertedCurrentBalance.balance.money.currency !==
-      currentBalance.money.currency
-
-  const balanceToUse = hasConvertedBalance
-    ? convertedCurrentBalance?.balance
-    : currentBalance
-  const hasBalanceToUse = !isNil(balanceToUse)
+  const balanceInfo =
+    currentBalance && resolveBalance(currentBalance, convertedCurrentBalance)
 
   return (
     <Modal
@@ -105,11 +98,17 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
                 <Text c="dimmed">Current Balance</Text>
                 <div style={{ textAlign: 'right' }}>
                   <Text fw={600}>
-                    {hasBalanceToUse && formatMoneyWithSign(balanceToUse)}
+                    {balanceInfo &&
+                      formatMoneyWithSign({
+                        value: balanceInfo.primaryBalance,
+                      })}
                   </Text>
-                  {hasDifferentCurrencies && (
+                  {balanceInfo?.originalBalance && (
                     <Text size="sm" c="dimmed">
-                      {formatMoneyWithSign(currentBalance)}
+                      {formatMoneyWithSign({
+                        value: balanceInfo.originalBalance,
+                        appendCurrency: true,
+                      })}
                     </Text>
                   )}
                 </div>

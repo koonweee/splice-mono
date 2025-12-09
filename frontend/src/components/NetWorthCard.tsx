@@ -58,7 +58,7 @@ export function NetWorthCard({
 
   const displayValue = hoveredPoint
     ? formatMoneyNumber({ value: hoveredPoint.value })
-    : formatMoneyWithSign(netWorth)
+    : formatMoneyWithSign({ value: netWorth })
 
   const displayLabel = ['Net worth', hoveredPoint?.label]
     .filter(Boolean)
