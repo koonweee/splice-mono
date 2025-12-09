@@ -7,11 +7,14 @@ import { TimePeriod } from '../../src/types/Dashboard';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserService } from '../../src/user/user.service';
 import {
-  createMockAccountWithConversion,
+  createMockAccount,
   createMockSnapshotWithConversion,
   mockCheckingAccount,
+  mockCheckingSnapshot,
   mockCreditCardAccount,
+  mockCreditCardSnapshot,
   mockSavingsAccount,
+  mockSavingsSnapshot,
   mockUserId,
 } from '../mocks/dashboard/dashboard.mock';
 import { mockUserService } from '../mocks/user/user-service.mock';
@@ -19,7 +22,7 @@ import { mockUserService } from '../mocks/user/user-service.mock';
 describe('DashboardService', () => {
   let service: DashboardService;
   let accountService: {
-    findAllWithConversion: jest.Mock;
+    findAll: jest.Mock;
   };
   let balanceSnapshotService: {
     findSnapshotsForDateWithConversion: jest.Mock;
@@ -27,7 +30,7 @@ describe('DashboardService', () => {
 
   beforeEach(async () => {
     accountService = {
-      findAllWithConversion: jest.fn(),
+      findAll: jest.fn(),
     };
     balanceSnapshotService = {
       findSnapshotsForDateWithConversion: jest.fn(),
@@ -60,11 +63,10 @@ describe('DashboardService', () => {
 
   describe('getSummary', () => {
     it('should return dashboard summary with net worth calculated from assets', async () => {
-      accountService.findAllWithConversion.mockResolvedValue([
-        mockCheckingAccount,
-      ]);
+      accountService.findAll.mockResolvedValue([mockCheckingAccount]);
+      // Return current snapshot for today (or yesterday as fallback)
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map(),
+        new Map([['checking-1', mockCheckingSnapshot]]),
       );
 
       const result = await service.getSummary(mockUserId);
@@ -78,12 +80,15 @@ describe('DashboardService', () => {
     });
 
     it('should calculate net worth with multiple asset accounts', async () => {
-      accountService.findAllWithConversion.mockResolvedValue([
+      accountService.findAll.mockResolvedValue([
         mockCheckingAccount,
         mockSavingsAccount,
       ]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map(),
+        new Map([
+          ['checking-1', mockCheckingSnapshot],
+          ['savings-1', mockSavingsSnapshot],
+        ]),
       );
 
       const result = await service.getSummary(mockUserId);
@@ -94,12 +99,15 @@ describe('DashboardService', () => {
     });
 
     it('should subtract liabilities from net worth', async () => {
-      accountService.findAllWithConversion.mockResolvedValue([
+      accountService.findAll.mockResolvedValue([
         mockCheckingAccount, // $1,000 asset
         mockCreditCardAccount, // $500 liability
       ]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map(),
+        new Map([
+          ['checking-1', mockCheckingSnapshot],
+          ['credit-1', mockCreditCardSnapshot],
+        ]),
       );
 
       const result = await service.getSummary(mockUserId);
@@ -111,11 +119,30 @@ describe('DashboardService', () => {
     });
 
     it('should return null changePercent when no previous snapshots exist', async () => {
-      accountService.findAllWithConversion.mockResolvedValue([
-        mockCheckingAccount,
-      ]);
-      balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map(),
+      accountService.findAll.mockResolvedValue([mockCheckingAccount]);
+      const today = new Date();
+      const comparisonDate = getDateDaysAgo(30);
+
+      // Return current snapshot for recent dates, empty for comparison date
+      balanceSnapshotService.findSnapshotsForDateWithConversion.mockImplementation(
+        (_userId: string, snapshotDate: string) => {
+          // Return empty for comparison date (30 days ago)
+          if (snapshotDate === comparisonDate) {
+            return Promise.resolve(new Map());
+          }
+          // Return snapshot for all other dates (including today and chart data)
+          const snapshotDateObj = new Date(snapshotDate);
+          const daysDiff = Math.floor(
+            (today.getTime() - snapshotDateObj.getTime()) /
+              (1000 * 60 * 60 * 24),
+          );
+          if (daysDiff <= 1) {
+            return Promise.resolve(
+              new Map([['checking-1', mockCheckingSnapshot]]),
+            );
+          }
+          return Promise.resolve(new Map());
+        },
       );
 
       const result = await service.getSummary(mockUserId);
@@ -125,8 +152,12 @@ describe('DashboardService', () => {
     });
 
     it('should calculate MoM change when previous snapshots exist', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
+      });
+
+      const currentSnapshot = createMockSnapshotWithConversion({
+        accountId: 'account-1',
         currentBalanceAmount: 110000, // $1,100 current
       });
 
@@ -136,9 +167,17 @@ describe('DashboardService', () => {
         snapshotDate: getDateDaysAgo(30),
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
-      balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map([['account-1', previousSnapshot]]),
+      const comparisonDate = getDateDaysAgo(30);
+
+      accountService.findAll.mockResolvedValue([account]);
+      // Use mockImplementation to handle all calls including chart data
+      balanceSnapshotService.findSnapshotsForDateWithConversion.mockImplementation(
+        (_userId: string, snapshotDate: string) => {
+          if (snapshotDate === comparisonDate) {
+            return Promise.resolve(new Map([['account-1', previousSnapshot]]));
+          }
+          return Promise.resolve(new Map([['account-1', currentSnapshot]]));
+        },
       );
 
       const result = await service.getSummary(mockUserId);
@@ -149,8 +188,12 @@ describe('DashboardService', () => {
     });
 
     it('should handle negative MoM change', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
+      });
+
+      const currentSnapshot = createMockSnapshotWithConversion({
+        accountId: 'account-1',
         currentBalanceAmount: 90000, // $900 current
       });
 
@@ -160,9 +203,16 @@ describe('DashboardService', () => {
         snapshotDate: getDateDaysAgo(30),
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
-      balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map([['account-1', previousSnapshot]]),
+      const comparisonDate = getDateDaysAgo(30);
+
+      accountService.findAll.mockResolvedValue([account]);
+      balanceSnapshotService.findSnapshotsForDateWithConversion.mockImplementation(
+        (_userId: string, snapshotDate: string) => {
+          if (snapshotDate === comparisonDate) {
+            return Promise.resolve(new Map([['account-1', previousSnapshot]]));
+          }
+          return Promise.resolve(new Map([['account-1', currentSnapshot]]));
+        },
       );
 
       const result = await service.getSummary(mockUserId);
@@ -172,10 +222,7 @@ describe('DashboardService', () => {
     });
 
     it('should return empty arrays when user has no accounts', async () => {
-      accountService.findAllWithConversion.mockResolvedValue([]);
-      balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map(),
-      );
+      accountService.findAll.mockResolvedValue([]);
 
       const result = await service.getSummary(mockUserId);
 
@@ -187,15 +234,19 @@ describe('DashboardService', () => {
     });
 
     it('should handle negative sign balances correctly', async () => {
-      const negativeAccount = createMockAccountWithConversion({
+      const negativeAccount = createMockAccount({
         id: 'account-1',
+      });
+
+      const negativeSnapshot = createMockSnapshotWithConversion({
+        accountId: 'account-1',
         currentBalanceAmount: 100000,
         currentBalanceSign: MoneySign.NEGATIVE,
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([negativeAccount]);
+      accountService.findAll.mockResolvedValue([negativeAccount]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map(),
+        new Map([['account-1', negativeSnapshot]]),
       );
 
       const result = await service.getSummary(mockUserId);
@@ -206,35 +257,53 @@ describe('DashboardService', () => {
     });
 
     it('should categorize account types correctly', async () => {
-      const depositoryAccount = createMockAccountWithConversion({
+      const depositoryAccount = createMockAccount({
         id: 'depository-1',
         type: AccountType.Depository,
-        currentBalanceAmount: 100000,
       });
-      const investmentAccount = createMockAccountWithConversion({
+      const investmentAccount = createMockAccount({
         id: 'investment-1',
         type: AccountType.Investment,
-        currentBalanceAmount: 200000,
       });
-      const creditAccount = createMockAccountWithConversion({
+      const creditAccount = createMockAccount({
         id: 'credit-1',
         type: AccountType.Credit,
-        currentBalanceAmount: 50000,
       });
-      const loanAccount = createMockAccountWithConversion({
+      const loanAccount = createMockAccount({
         id: 'loan-1',
         type: AccountType.Loan,
+      });
+
+      const depositorySnapshot = createMockSnapshotWithConversion({
+        accountId: 'depository-1',
+        currentBalanceAmount: 100000,
+      });
+      const investmentSnapshot = createMockSnapshotWithConversion({
+        accountId: 'investment-1',
+        currentBalanceAmount: 200000,
+      });
+      const creditSnapshot = createMockSnapshotWithConversion({
+        accountId: 'credit-1',
+        currentBalanceAmount: 50000,
+      });
+      const loanSnapshot = createMockSnapshotWithConversion({
+        accountId: 'loan-1',
         currentBalanceAmount: 100000,
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([
+      accountService.findAll.mockResolvedValue([
         depositoryAccount,
         investmentAccount,
         creditAccount,
         loanAccount,
       ]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map(),
+        new Map([
+          ['depository-1', depositorySnapshot],
+          ['investment-1', investmentSnapshot],
+          ['credit-1', creditSnapshot],
+          ['loan-1', loanSnapshot],
+        ]),
       );
 
       const result = await service.getSummary(mockUserId);
@@ -249,11 +318,9 @@ describe('DashboardService', () => {
     });
 
     it('should default to MONTH comparison period', async () => {
-      accountService.findAllWithConversion.mockResolvedValue([
-        mockCheckingAccount,
-      ]);
+      accountService.findAll.mockResolvedValue([mockCheckingAccount]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map(),
+        new Map([['checking-1', mockCheckingSnapshot]]),
       );
 
       const result = await service.getSummary(mockUserId);
@@ -262,8 +329,12 @@ describe('DashboardService', () => {
     });
 
     it('should use DAY period when specified', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
+      });
+
+      const currentSnapshot = createMockSnapshotWithConversion({
+        accountId: 'account-1',
         currentBalanceAmount: 110000, // $1,100 current
       });
 
@@ -273,9 +344,16 @@ describe('DashboardService', () => {
         snapshotDate: getDateDaysAgo(1),
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
-      balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map([['account-1', yesterdaySnapshot]]),
+      const comparisonDate = getDateDaysAgo(1);
+
+      accountService.findAll.mockResolvedValue([account]);
+      balanceSnapshotService.findSnapshotsForDateWithConversion.mockImplementation(
+        (_userId: string, snapshotDate: string) => {
+          if (snapshotDate === comparisonDate) {
+            return Promise.resolve(new Map([['account-1', yesterdaySnapshot]]));
+          }
+          return Promise.resolve(new Map([['account-1', currentSnapshot]]));
+        },
       );
 
       const result = await service.getSummary(mockUserId, TimePeriod.DAY);
@@ -285,8 +363,12 @@ describe('DashboardService', () => {
     });
 
     it('should use WEEK period when specified', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
+      });
+
+      const currentSnapshot = createMockSnapshotWithConversion({
+        accountId: 'account-1',
         currentBalanceAmount: 107000, // $1,070 current
       });
 
@@ -296,9 +378,16 @@ describe('DashboardService', () => {
         snapshotDate: getDateDaysAgo(7),
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
-      balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map([['account-1', weekAgoSnapshot]]),
+      const comparisonDate = getDateDaysAgo(7);
+
+      accountService.findAll.mockResolvedValue([account]);
+      balanceSnapshotService.findSnapshotsForDateWithConversion.mockImplementation(
+        (_userId: string, snapshotDate: string) => {
+          if (snapshotDate === comparisonDate) {
+            return Promise.resolve(new Map([['account-1', weekAgoSnapshot]]));
+          }
+          return Promise.resolve(new Map([['account-1', currentSnapshot]]));
+        },
       );
 
       const result = await service.getSummary(mockUserId, TimePeriod.WEEK);
@@ -308,8 +397,12 @@ describe('DashboardService', () => {
     });
 
     it('should use YEAR period when specified', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
+      });
+
+      const currentSnapshot = createMockSnapshotWithConversion({
+        accountId: 'account-1',
         currentBalanceAmount: 120000, // $1,200 current
       });
 
@@ -319,9 +412,16 @@ describe('DashboardService', () => {
         snapshotDate: getDateDaysAgo(365),
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
-      balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map([['account-1', yearAgoSnapshot]]),
+      const comparisonDate = getDateDaysAgo(365);
+
+      accountService.findAll.mockResolvedValue([account]);
+      balanceSnapshotService.findSnapshotsForDateWithConversion.mockImplementation(
+        (_userId: string, snapshotDate: string) => {
+          if (snapshotDate === comparisonDate) {
+            return Promise.resolve(new Map([['account-1', yearAgoSnapshot]]));
+          }
+          return Promise.resolve(new Map([['account-1', currentSnapshot]]));
+        },
       );
 
       const result = await service.getSummary(mockUserId, TimePeriod.YEAR);
@@ -331,26 +431,22 @@ describe('DashboardService', () => {
     });
 
     it('should include convertedCurrentBalance in account summaries', async () => {
-      accountService.findAllWithConversion.mockResolvedValue([
-        mockCheckingAccount,
-      ]);
+      accountService.findAll.mockResolvedValue([mockCheckingAccount]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
-        new Map(),
+        new Map([['checking-1', mockCheckingSnapshot]]),
       );
 
       const result = await service.getSummary(mockUserId);
 
       expect(result.assets[0].convertedCurrentBalance).toEqual(
-        mockCheckingAccount.convertedCurrentBalance,
+        mockCheckingSnapshot.convertedCurrentBalance,
       );
     });
   });
 
   describe('chartData', () => {
     it('should return empty chart data when no snapshots exist', async () => {
-      accountService.findAllWithConversion.mockResolvedValue([
-        mockCheckingAccount,
-      ]);
+      accountService.findAll.mockResolvedValue([mockCheckingAccount]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
         new Map(),
       );
@@ -361,9 +457,8 @@ describe('DashboardService', () => {
     });
 
     it('should return chart data only for dates with snapshots', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
-        currentBalanceAmount: 100000,
       });
 
       const snapshot = createMockSnapshotWithConversion({
@@ -371,7 +466,7 @@ describe('DashboardService', () => {
         currentBalanceAmount: 100000,
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
+      accountService.findAll.mockResolvedValue([account]);
       // Return data for all dates (simulating full history)
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
         new Map([['account-1', snapshot]]),
@@ -387,9 +482,8 @@ describe('DashboardService', () => {
     });
 
     it('should use daily granularity for DAY period', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
-        currentBalanceAmount: 100000,
       });
 
       const snapshot = createMockSnapshotWithConversion({
@@ -397,7 +491,7 @@ describe('DashboardService', () => {
         currentBalanceAmount: 100000,
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
+      accountService.findAll.mockResolvedValue([account]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
         new Map([['account-1', snapshot]]),
       );
@@ -409,9 +503,8 @@ describe('DashboardService', () => {
     });
 
     it('should use daily granularity for WEEK period', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
-        currentBalanceAmount: 100000,
       });
 
       const snapshot = createMockSnapshotWithConversion({
@@ -419,7 +512,7 @@ describe('DashboardService', () => {
         currentBalanceAmount: 100000,
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
+      accountService.findAll.mockResolvedValue([account]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
         new Map([['account-1', snapshot]]),
       );
@@ -431,9 +524,8 @@ describe('DashboardService', () => {
     });
 
     it('should use daily granularity for YEAR period', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
-        currentBalanceAmount: 100000,
       });
 
       const snapshot = createMockSnapshotWithConversion({
@@ -441,7 +533,7 @@ describe('DashboardService', () => {
         currentBalanceAmount: 100000,
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
+      accountService.findAll.mockResolvedValue([account]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
         new Map([['account-1', snapshot]]),
       );
@@ -453,9 +545,8 @@ describe('DashboardService', () => {
     });
 
     it('should include date in YYYY-MM-DD format', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
-        currentBalanceAmount: 100000,
       });
 
       const snapshot = createMockSnapshotWithConversion({
@@ -463,7 +554,7 @@ describe('DashboardService', () => {
         currentBalanceAmount: 100000,
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
+      accountService.findAll.mockResolvedValue([account]);
       balanceSnapshotService.findSnapshotsForDateWithConversion.mockResolvedValue(
         new Map([['account-1', snapshot]]),
       );
@@ -476,9 +567,8 @@ describe('DashboardService', () => {
     });
 
     it('should start from first date with data going backwards', async () => {
-      const account = createMockAccountWithConversion({
+      const account = createMockAccount({
         id: 'account-1',
-        currentBalanceAmount: 100000,
       });
 
       const snapshot = createMockSnapshotWithConversion({
@@ -486,7 +576,7 @@ describe('DashboardService', () => {
         currentBalanceAmount: 100000,
       });
 
-      accountService.findAllWithConversion.mockResolvedValue([account]);
+      accountService.findAll.mockResolvedValue([account]);
 
       // Only return data for the last 10 days
       const today = new Date();

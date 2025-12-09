@@ -1,6 +1,7 @@
 import { Box, Group, Loader, Modal, Stack, Text } from '@mantine/core'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import isNil from 'lodash/isNil'
 import {
   useAccountControllerFindOne,
   useBalanceSnapshotControllerFindByAccountId,
@@ -68,6 +69,21 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )[0]
 
+  const { convertedCurrentBalance, currentBalance } = lastSyncSnapshot ?? {}
+
+  const hasConvertedBalance = !isNil(convertedCurrentBalance)
+  const hasCurrentBalance = !isNil(currentBalance)
+  const hasDifferentCurrencies =
+    hasConvertedBalance &&
+    hasCurrentBalance &&
+    convertedCurrentBalance.balance.money.currency !==
+      currentBalance.money.currency
+
+  const balanceToUse = hasConvertedBalance
+    ? convertedCurrentBalance?.balance
+    : currentBalance
+  const hasBalanceToUse = !isNil(balanceToUse)
+
   return (
     <Modal
       opened={opened}
@@ -89,19 +105,13 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
                 <Text c="dimmed">Current Balance</Text>
                 <div style={{ textAlign: 'right' }}>
                   <Text fw={600}>
-                    {formatMoneyWithSign(
-                      fullAccount.convertedCurrentBalance?.balance ??
-                        fullAccount.currentBalance,
-                    )}
+                    {hasBalanceToUse && formatMoneyWithSign(balanceToUse)}
                   </Text>
-                  {fullAccount.convertedCurrentBalance?.balance &&
-                    fullAccount.convertedCurrentBalance.balance.money
-                      .currency !==
-                      fullAccount.currentBalance.money.currency && (
-                      <Text size="sm" c="dimmed">
-                        {formatMoneyWithSign(fullAccount.currentBalance)}
-                      </Text>
-                    )}
+                  {hasDifferentCurrencies && (
+                    <Text size="sm" c="dimmed">
+                      {formatMoneyWithSign(currentBalance)}
+                    </Text>
+                  )}
                 </div>
               </Group>
 
@@ -124,7 +134,7 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
           {snapshots && snapshots.length > 0 && (
             <Box mt="md">
               <Text fw={500} mb="sm">
-                Balance History
+                Balance history
               </Text>
               <Chart
                 data={transformSnapshotsToChartData(snapshots)}

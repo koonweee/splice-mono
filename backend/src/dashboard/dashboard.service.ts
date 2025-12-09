@@ -5,7 +5,7 @@ import utc from 'dayjs/plugin/utc';
 import { AccountType } from 'plaid';
 import { AccountService } from '../account/account.service';
 import { BalanceSnapshotService } from '../balance-snapshot/balance-snapshot.service';
-import { AccountWithConvertedBalance } from '../types/Account';
+import { Account } from '../types/Account';
 import { BalanceSnapshotWithConvertedBalance } from '../types/BalanceSnapshot';
 import {
   AccountSummary,
@@ -66,6 +66,7 @@ export class DashboardService {
   /**
    * Get dashboard summary including net worth, period-over-period changes, and account summaries
    * All balances are converted to the user's preferred currency
+   * Uses latest snapshots for current balances to ensure consistency with historical data
    * @param userId - The user ID to get the dashboard for
    * @param period - The time period for comparison (defaults to MONTH)
    */
@@ -77,8 +78,8 @@ export class DashboardService {
       `Getting dashboard summary for userId=${userId}, period=${period}`,
     );
 
-    // Get accounts with converted balances
-    const accounts = await this.accountService.findAllWithConversion(userId);
+    // Get accounts for metadata (name, type, institution, etc.)
+    const accounts = await this.accountService.findAll(userId);
 
     if (accounts.length === 0) {
       return {
@@ -91,13 +92,35 @@ export class DashboardService {
       };
     }
 
-    // Get the target currency from the first account's converted balance
-    // All accounts are converted to the same currency
-    const targetCurrency =
-      accounts[0].convertedCurrentBalance?.balance.money.currency ?? 'USD';
-
     // Get user's timezone for date calculations
     const userTimezone = await this.userService.getTimezone(userId);
+
+    // Get today's date in user's timezone for current snapshots
+    const today = dayjs().tz(userTimezone).startOf('day');
+    const todayDate = today.format('YYYY-MM-DD');
+
+    // Get latest snapshots (today's snapshots) for current balances
+    // Fall back to yesterday if no snapshots exist for today yet
+    let currentSnapshots =
+      await this.balanceSnapshotService.findSnapshotsForDateWithConversion(
+        userId,
+        todayDate,
+      );
+
+    if (currentSnapshots.size === 0) {
+      const yesterdayDate = today.subtract(1, 'day').format('YYYY-MM-DD');
+      currentSnapshots =
+        await this.balanceSnapshotService.findSnapshotsForDateWithConversion(
+          userId,
+          yesterdayDate,
+        );
+    }
+
+    // Get the target currency from the first snapshot's converted balance
+    // All snapshots are converted to the same currency
+    const firstSnapshot = Array.from(currentSnapshots.values())[0];
+    const targetCurrency =
+      firstSnapshot?.convertedCurrentBalance?.balance.money.currency ?? 'USD';
 
     // Get snapshots from the specified period ago for comparison
     const comparisonDate = dayjs()
@@ -120,7 +143,18 @@ export class DashboardService {
     let previousNetWorth = 0;
 
     for (const account of accounts) {
-      const currentBalance = this.getSignedConvertedBalance(account);
+      const currentSnapshot = currentSnapshots.get(account.id);
+
+      // Skip accounts without a current snapshot
+      if (!currentSnapshot) {
+        this.logger.debug(
+          `No current snapshot found for account ${account.id}, skipping`,
+        );
+        continue;
+      }
+
+      const currentBalance =
+        this.getSignedConvertedBalanceFromSnapshot(currentSnapshot);
       const previousSnapshot = previousSnapshots.get(account.id);
       const previousBalance = previousSnapshot
         ? this.getSignedConvertedBalanceFromSnapshot(previousSnapshot)
@@ -137,12 +171,16 @@ export class DashboardService {
         name: account.name,
         type: account.type as AccountType,
         subType: account.subType,
-        currentBalance: account.currentBalance,
-        convertedCurrentBalance: account.convertedCurrentBalance,
+        currentBalance: currentSnapshot.currentBalance,
+        convertedCurrentBalance: currentSnapshot.convertedCurrentBalance,
         changePercent:
           changePercent !== null ? Math.round(changePercent * 10) / 10 : null,
         institutionName: account.institutionName ?? null,
       };
+
+      if (account.id === '0b16fa48-7de7-4a77-8b76-f067b54e34c4') {
+        this.logger.debug(summary);
+      }
 
       if (ASSET_TYPES.includes(account.type)) {
         assets.push(summary);
@@ -171,6 +209,7 @@ export class DashboardService {
     const chartData = await this.getChartData(
       userId,
       accounts,
+      targetCurrency,
       period,
       userTimezone,
     );
@@ -186,28 +225,6 @@ export class DashboardService {
       assets,
       liabilities,
     };
-  }
-
-  /**
-   * Get the signed converted balance value from an account in cents
-   * Uses converted balance if available, falls back to original balance
-   * Returns positive for credit balances, negative for debit balances
-   */
-  private getSignedConvertedBalance(
-    account: AccountWithConvertedBalance,
-  ): number {
-    const convertedBalance = account.convertedCurrentBalance;
-    if (convertedBalance) {
-      const amount = convertedBalance.balance.money.amount;
-      return convertedBalance.balance.sign === MoneySign.NEGATIVE
-        ? -amount
-        : amount;
-    }
-    // Fallback to original balance
-    const amount = account.currentBalance.money.amount;
-    return account.currentBalance.sign === MoneySign.NEGATIVE
-      ? -amount
-      : amount;
   }
 
   /**
@@ -243,7 +260,8 @@ export class DashboardService {
    */
   private async getChartData(
     userId: string,
-    accounts: AccountWithConvertedBalance[],
+    accounts: Account[],
+    targetCurrency: string,
     period: TimePeriod,
     userTimezone: string,
   ): Promise<NetWorthChartPoint[]> {
@@ -251,10 +269,6 @@ export class DashboardService {
     const today = dayjs().tz(userTimezone).startOf('day');
 
     console.log('getting chart data starting at', today.format('YYYY-MM-DD'));
-
-    // Get the target currency from accounts
-    const targetCurrency =
-      accounts[0]?.convertedCurrentBalance?.balance.money.currency ?? 'USD';
 
     // Get the number of days for this period
     const daysToShow = PERIOD_DAYS[period];
