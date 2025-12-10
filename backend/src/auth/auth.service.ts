@@ -88,7 +88,7 @@ export class AuthService {
       });
       if (revokedToken) {
         this.logger.warn(
-          `Refresh token reuse detected for user: ${revokedToken.userId}. Token was revoked at: ${revokedToken.updatedAt}. This may indicate a race condition on the client or token theft.`,
+          `Refresh token reuse detected for user: ${revokedToken.userId}. Token was revoked at: ${revokedToken.updatedAt.toISOString()}. This may indicate a race condition on the client or token theft.`,
         );
       } else {
         this.logger.warn(
