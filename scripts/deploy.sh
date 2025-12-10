@@ -62,8 +62,15 @@ PR_URL=$(gh pr create \
 
 echo -e "PR created: $PR_URL"
 
+# Wait for CI checks to pass
+echo -e "\n${GREEN}Waiting for CI checks to pass...${NC}"
+if ! gh pr checks "$PR_URL" --watch --fail-fast; then
+    echo -e "${RED}CI checks failed. Aborting deploy.${NC}"
+    exit 1
+fi
+
 # Auto-merge the PR
 echo -e "\n${GREEN}Merging PR...${NC}"
-gh pr merge --merge --auto "$PR_URL" || gh pr merge --merge "$PR_URL"
+gh pr merge --merge "$PR_URL"
 
 echo -e "\n${GREEN}=== Deploy complete! ===${NC}"
