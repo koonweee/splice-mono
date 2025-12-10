@@ -214,6 +214,16 @@ export class DashboardService {
       userTimezone,
     );
 
+    // Sort account summaries by balance descending (highest first)
+    const sortByBalance = (a: AccountSummary, b: AccountSummary) => {
+      const balanceA = a.convertedCurrentBalance?.balance.money.amount ?? 0;
+      const balanceB = b.convertedCurrentBalance?.balance.money.amount ?? 0;
+      return balanceB - balanceA;
+    };
+
+    assets.sort(sortByBalance);
+    liabilities.sort(sortByBalance);
+
     return {
       netWorth: createMoneyWithSign(currentNetWorth, targetCurrency),
       changePercent:
