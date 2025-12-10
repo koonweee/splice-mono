@@ -64,6 +64,12 @@ export const InstitutionSchema = z.object({
 export type Institution = z.infer<typeof InstitutionSchema>;
 
 /**
+ * Status of a bank link connection
+ */
+export const BankLinkStatusEnum = z.enum(['OK', 'ERROR', 'PENDING_REAUTH']);
+export type BankLinkStatus = z.infer<typeof BankLinkStatusEnum>;
+
+/**
  * Bank Link - represents a connection to an external bank provider
  */
 export const BankLinkSchema = z
@@ -80,17 +86,23 @@ export const BankLinkSchema = z
     institutionId: z.string().nullable().optional(),
     /** Institution name */
     institutionName: z.string().nullable().optional(),
+    /** Current status of the bank link */
+    status: BankLinkStatusEnum,
+    /** When the status was last updated */
+    statusDate: z.coerce.date(),
   })
   .merge(OwnedSchema);
 
 export type BankLink = z.infer<typeof BankLinkSchema>;
 
 /**
- * DTO for creating a new BankLink (excludes id, userId, and timestamps which are auto-generated)
+ * DTO for creating a new BankLink (excludes id, userId, status fields, and timestamps which are auto-generated)
  */
 export const CreateBankLinkDtoSchema = BankLinkSchema.omit({
   id: true,
   userId: true,
+  status: true,
+  statusDate: true,
   createdAt: true,
   updatedAt: true,
 });

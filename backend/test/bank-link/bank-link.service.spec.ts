@@ -933,7 +933,9 @@ describe('BankLinkService', () => {
         ...mockBankLinkEntity,
         authentication: { accessToken: 'test-token' }, // No itemId
       };
-      mockBankLinkRepository.find.mockResolvedValueOnce([bankLinkWithoutItemId]);
+      mockBankLinkRepository.find.mockResolvedValueOnce([
+        bankLinkWithoutItemId,
+      ]);
 
       const result = await service.backfillPlaidItemIds();
 
@@ -945,7 +947,10 @@ describe('BankLinkService', () => {
       });
       expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          authentication: { accessToken: 'test-token', itemId: 'item-mock-123' },
+          authentication: {
+            accessToken: 'test-token',
+            itemId: 'item-mock-123',
+          },
         }),
       );
       expect(result).toBe(1);

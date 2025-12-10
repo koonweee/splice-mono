@@ -31,7 +31,7 @@
     "docker:prod:down": "docker-compose -f docker-compose.prod.yml down",
     "docker:prod:logs": "docker-compose -f docker-compose.prod.yml logs -f",
     "db:sync": "./scripts/sync-from-staging.sh",
-    "migration:generate": "dotenv -- sh -c 'yarn build && typeorm migration:generate -d dist/data-source.js'",
+    "migration:generate": "dotenv -- sh -c 'yarn build && typeorm migration:generate -d dist/data-source.js src/migrations/Migration'",
     "migration:run": "dotenv -- sh -c 'yarn build && typeorm migration:run -d dist/data-source.js'",
     "migration:revert": "dotenv -- sh -c 'yarn build && typeorm migration:revert -d dist/data-source.js'",
     "migration:show": "dotenv -- sh -c 'yarn build && typeorm migration:show -d dist/data-source.js'",
