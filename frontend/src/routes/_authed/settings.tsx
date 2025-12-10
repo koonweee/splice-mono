@@ -4,10 +4,12 @@ import {
   Group,
   Loader,
   Paper,
+  SegmentedControl,
   Select,
   Stack,
   Text,
   Title,
+  useMantineColorScheme,
 } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
@@ -86,6 +88,7 @@ function SettingsPage() {
   const queryClient = useQueryClient()
   const { data: user, isLoading, error } = useUserControllerMe()
   const updateSettingsMutation = useUserControllerUpdateSettings()
+  const { colorScheme, setColorScheme } = useMantineColorScheme()
 
   const timezoneOptions = useMemo(() => getTimezoneOptions(), [])
   const browserTimezone = useMemo(() => getBrowserTimezone(), [])
@@ -154,6 +157,26 @@ function SettingsPage() {
 
       <Paper withBorder p="lg" radius="md" maw={500}>
         <Stack gap="lg">
+          <div>
+            <Title order={4} mb="xs">
+              Appearance
+            </Title>
+            <Text size="sm" c="dimmed" mb="sm">
+              Choose your preferred color scheme.
+            </Text>
+            <SegmentedControl
+              value={colorScheme}
+              onChange={(value) =>
+                setColorScheme(value as 'light' | 'dark' | 'auto')
+              }
+              data={[
+                { label: 'Light', value: 'light' },
+                { label: 'Dark', value: 'dark' },
+                { label: 'Auto', value: 'auto' },
+              ]}
+            />
+          </div>
+
           <div>
             <Title order={4} mb="xs">
               Display Currency
