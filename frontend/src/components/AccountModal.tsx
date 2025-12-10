@@ -138,7 +138,6 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
               <Chart
                 data={transformSnapshotsToChartData(snapshots)}
                 height={200}
-                color="blue.6"
                 valueFormatter={(value) =>
                   formatMoneyNumber({ value, decimals: 2 })
                 }
