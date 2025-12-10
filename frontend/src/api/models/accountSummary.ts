@@ -8,6 +8,7 @@
 import type { AccountSummaryType } from './accountSummaryType';
 import type { MoneyWithSign } from './moneyWithSign';
 import type { AccountSummaryConvertedCurrentBalance } from './accountSummaryConvertedCurrentBalance';
+import type { AccountSummaryConvertedEffectiveBalance } from './accountSummaryConvertedEffectiveBalance';
 
 export interface AccountSummary {
   id: string;
@@ -18,6 +19,8 @@ export interface AccountSummary {
   subType: string | null;
   currentBalance: MoneyWithSign;
   convertedCurrentBalance: AccountSummaryConvertedCurrentBalance;
+  effectiveBalance: MoneyWithSign;
+  convertedEffectiveBalance: AccountSummaryConvertedEffectiveBalance;
   /** @nullable */
   changePercent: number | null;
   /** @nullable */

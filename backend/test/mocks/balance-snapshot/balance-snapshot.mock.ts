@@ -77,6 +77,18 @@ export const mockBalanceSnapshotWithConversion: BalanceSnapshotWithConvertedBala
       rate: 1,
       rateDate: '2024-01-01',
     },
+    effectiveBalance: {
+      money: { currency: 'USD', amount: 100000 },
+      sign: MoneySign.POSITIVE,
+    },
+    convertedEffectiveBalance: {
+      balance: {
+        money: { currency: 'USD', amount: 100000 },
+        sign: MoneySign.POSITIVE,
+      },
+      rate: 1,
+      rateDate: '2024-01-01',
+    },
   };
 
 /**

@@ -173,6 +173,8 @@ export class DashboardService {
         subType: account.subType,
         currentBalance: currentSnapshot.currentBalance,
         convertedCurrentBalance: currentSnapshot.convertedCurrentBalance,
+        effectiveBalance: currentSnapshot.effectiveBalance,
+        convertedEffectiveBalance: currentSnapshot.convertedEffectiveBalance,
         changePercent:
           changePercent !== null ? Math.round(changePercent * 10) / 10 : null,
         institutionName: account.institutionName ?? null,
@@ -214,10 +216,10 @@ export class DashboardService {
       userTimezone,
     );
 
-    // Sort account summaries by balance descending (highest first)
+    // Sort account summaries by effective balance descending (highest first)
     const sortByBalance = (a: AccountSummary, b: AccountSummary) => {
-      const balanceA = a.convertedCurrentBalance?.balance.money.amount ?? 0;
-      const balanceB = b.convertedCurrentBalance?.balance.money.amount ?? 0;
+      const balanceA = a.convertedEffectiveBalance?.balance.money.amount ?? 0;
+      const balanceB = b.convertedEffectiveBalance?.balance.money.amount ?? 0;
       return balanceB - balanceA;
     };
 
@@ -238,23 +240,23 @@ export class DashboardService {
   }
 
   /**
-   * Get the signed converted balance value from a snapshot in cents
-   * Uses converted balance if available, falls back to original balance
+   * Get the signed effective balance value from a snapshot in cents
+   * Uses converted effective balance if available, falls back to original effective balance
    * Returns positive for credit balances, negative for debit balances
    */
   private getSignedConvertedBalanceFromSnapshot(
     snapshot: BalanceSnapshotWithConvertedBalance,
   ): number {
-    const convertedBalance = snapshot.convertedCurrentBalance;
+    const convertedBalance = snapshot.convertedEffectiveBalance;
     if (convertedBalance) {
       const amount = convertedBalance.balance.money.amount;
       return convertedBalance.balance.sign === MoneySign.NEGATIVE
         ? -amount
         : amount;
     }
-    // Fallback to original balance
-    const amount = snapshot.currentBalance.money.amount;
-    return snapshot.currentBalance.sign === MoneySign.NEGATIVE
+    // Fallback to original effective balance
+    const amount = snapshot.effectiveBalance.money.amount;
+    return snapshot.effectiveBalance.sign === MoneySign.NEGATIVE
       ? -amount
       : amount;
   }

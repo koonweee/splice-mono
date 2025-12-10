@@ -7,8 +7,12 @@
  */
 import type { BalanceSnapshotWithConvertedBalanceAllOfConvertedCurrentBalance } from './balanceSnapshotWithConvertedBalanceAllOfConvertedCurrentBalance';
 import type { BalanceSnapshotWithConvertedBalanceAllOfConvertedAvailableBalance } from './balanceSnapshotWithConvertedBalanceAllOfConvertedAvailableBalance';
+import type { MoneyWithSign } from './moneyWithSign';
+import type { BalanceSnapshotWithConvertedBalanceAllOfConvertedEffectiveBalance } from './balanceSnapshotWithConvertedBalanceAllOfConvertedEffectiveBalance';
 
 export type BalanceSnapshotWithConvertedBalanceAllOf = {
   convertedCurrentBalance: BalanceSnapshotWithConvertedBalanceAllOfConvertedCurrentBalance;
   convertedAvailableBalance: BalanceSnapshotWithConvertedBalanceAllOfConvertedAvailableBalance;
+  effectiveBalance: MoneyWithSign;
+  convertedEffectiveBalance: BalanceSnapshotWithConvertedBalanceAllOfConvertedEffectiveBalance;
 };

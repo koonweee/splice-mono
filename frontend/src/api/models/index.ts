@@ -11,6 +11,7 @@ export * from './accountSubType';
 export * from './accountSummary';
 export * from './accountSummaryConvertedCurrentBalance';
 export * from './accountSummaryConvertedCurrentBalanceAllOf';
+export * from './accountSummaryConvertedEffectiveBalance';
 export * from './accountSummaryType';
 export * from './accountType';
 export * from './accountWithConvertedBalance';
@@ -27,6 +28,7 @@ export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedAvailableBalan
 export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedAvailableBalanceAllOf';
 export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedCurrentBalance';
 export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedCurrentBalanceAllOf';
+export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedEffectiveBalance';
 export * from './convertedBalance';
 export * from './createAccountDto';
 export * from './createAccountDtoRawApiAccount';
