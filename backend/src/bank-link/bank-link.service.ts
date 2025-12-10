@@ -164,6 +164,17 @@ export class BankLinkService extends OwnedCrudService<
     );
 
     // Route to appropriate handler based on webhook type
+
+    // 1. Check for status webhooks (ERROR, LOGIN_REPAIRED, etc.)
+    if (provider.parseStatusWebhook) {
+      const statusInfo = provider.parseStatusWebhook(parsedPayload);
+      if (statusInfo) {
+        await this.handleStatusWebhook(statusInfo);
+        return;
+      }
+    }
+
+    // 2. Check for update webhooks (DEFAULT_UPDATE)
     if (provider.parseUpdateWebhook) {
       const updateInfo = provider.parseUpdateWebhook(parsedPayload);
       if (updateInfo) {
@@ -172,6 +183,7 @@ export class BankLinkService extends OwnedCrudService<
       }
     }
 
+    // 3. Check for link completion webhooks (SESSION_FINISHED)
     const webhookId = provider.shouldProcessWebhook(parsedPayload);
     if (webhookId) {
       await this.handleLinkCompletionWebhook(
@@ -206,6 +218,47 @@ export class BankLinkService extends OwnedCrudService<
       this.logger.log(`Synced accounts for bank link ${bankLink.id}`);
     } else {
       this.logger.warn(`No bank link found for item_id=${updateInfo.itemId}`);
+    }
+  }
+
+  /**
+   * Handle status webhooks (e.g., Plaid ITEM webhooks: ERROR, LOGIN_REPAIRED, etc.)
+   * Updates bank link status, statusDate, and statusBody fields
+   * Optionally triggers account sync (e.g., after LOGIN_REPAIRED)
+   */
+  private async handleStatusWebhook(statusInfo: {
+    itemId: string;
+    webhookCode: string;
+    status: 'OK' | 'ERROR' | 'PENDING_REAUTH';
+    statusBody: Record<string, any> | null;
+    shouldSync: boolean;
+  }): Promise<void> {
+    this.logger.log(
+      `Processing ITEM ${statusInfo.webhookCode} webhook for item ${statusInfo.itemId}`,
+    );
+
+    const bankLink = await this.findByPlaidItemId(statusInfo.itemId);
+    if (!bankLink) {
+      this.logger.warn(`No bank link found for item_id=${statusInfo.itemId}`);
+      return;
+    }
+
+    // Update bank link status
+    bankLink.status = statusInfo.status;
+    bankLink.statusDate = new Date();
+    bankLink.statusBody = statusInfo.statusBody;
+
+    await this.repository.save(bankLink);
+    this.logger.log(
+      `Updated bank link ${bankLink.id} status to ${statusInfo.status}`,
+    );
+
+    // Optionally sync accounts after status update (e.g., LOGIN_REPAIRED)
+    if (statusInfo.shouldSync) {
+      this.logger.log(
+        `Triggering account sync after ${statusInfo.webhookCode} for bank link ${bankLink.id}`,
+      );
+      await this.syncAccounts(bankLink.id, bankLink.userId);
     }
   }
 

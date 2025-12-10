@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-
 import { ISOCurrencyCode } from '@half0wl/money';
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash, timingSafeEqual } from 'crypto';
@@ -7,10 +5,14 @@ import { decodeJwt, decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
 import {
   Configuration,
   CountryCode,
+  ItemErrorWebhook,
+  ItemLoginRepairedWebhook,
   ItemPublicTokenExchangeRequest,
   JWKPublicKey,
   LinkSessionFinishedWebhook,
   LinkTokenCreateRequest,
+  PendingDisconnectWebhook,
+  PendingExpirationWebhook,
   PlaidApi,
   PlaidEnvironments,
   Products,
@@ -120,6 +122,7 @@ export class PlaidProvider implements IBankLinkProvider {
       this.logger.log(`Created Plaid user for client_user_id=${clientUserId}`);
       return userToken;
     } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       this.logger.error(`Error creating Plaid user: ${error['message']}`);
       throw error;
     }
@@ -191,6 +194,7 @@ export class PlaidProvider implements IBankLinkProvider {
       );
       return result;
     } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       this.logger.error(`Error creating link token: ${error['message']}`);
       throw error;
     }
@@ -215,6 +219,7 @@ export class PlaidProvider implements IBankLinkProvider {
         externalAccountId: response.data.item_id,
       };
     } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       this.logger.error(`Error exchanging public token: ${error['message']}`);
       throw error;
     }
@@ -550,6 +555,98 @@ export class PlaidProvider implements IBankLinkProvider {
       return { itemId, type: webhookType };
     }
     return undefined;
+  }
+
+  /**
+   * Parse ITEM webhooks that signal status changes for bank links
+   * Handles ERROR, LOGIN_REPAIRED, PENDING_DISCONNECT, and PENDING_EXPIRATION
+   *
+   * @param rawPayload - Raw webhook payload
+   * @returns Status webhook info if this is an ITEM status webhook, undefined otherwise
+   */
+  parseStatusWebhook(rawPayload: Record<string, any>):
+    | {
+        itemId: string;
+        webhookCode: string;
+        status: 'OK' | 'ERROR' | 'PENDING_REAUTH';
+        statusBody: Record<string, any> | null;
+        shouldSync: boolean;
+      }
+    | undefined {
+    const webhookType = rawPayload.webhook_type as string | undefined;
+    const webhookCode = rawPayload.webhook_code as string | undefined;
+
+    // Only handle ITEM webhooks
+    if (webhookType !== 'ITEM') {
+      return undefined;
+    }
+
+    switch (webhookCode) {
+      case 'ERROR': {
+        const payload = rawPayload as ItemErrorWebhook;
+        const error = payload.error;
+        return {
+          itemId: payload.item_id,
+          webhookCode: 'ERROR',
+          status: 'ERROR',
+          statusBody: error
+            ? {
+                error_type: error.error_type,
+                error_code: error.error_code,
+                error_message: error.error_message,
+                display_message: error.display_message,
+                suggested_action: error.suggested_action,
+                receivedAt: new Date().toISOString(),
+              }
+            : null,
+          shouldSync: false,
+        };
+      }
+
+      case 'LOGIN_REPAIRED': {
+        const payload = rawPayload as ItemLoginRepairedWebhook;
+        return {
+          itemId: payload.item_id,
+          webhookCode: 'LOGIN_REPAIRED',
+          status: 'OK',
+          statusBody: null, // Clear error info on repair
+          shouldSync: true, // Auto-sync after login repair
+        };
+      }
+
+      case 'PENDING_DISCONNECT': {
+        const payload = rawPayload as PendingDisconnectWebhook;
+        return {
+          itemId: payload.item_id,
+          webhookCode: 'PENDING_DISCONNECT',
+          status: 'PENDING_REAUTH',
+          statusBody: {
+            reason: payload.reason,
+            environment: payload.environment,
+            receivedAt: new Date().toISOString(),
+          },
+          shouldSync: false,
+        };
+      }
+
+      case 'PENDING_EXPIRATION': {
+        const payload = rawPayload as PendingExpirationWebhook;
+        return {
+          itemId: payload.item_id,
+          webhookCode: 'PENDING_EXPIRATION',
+          status: 'PENDING_REAUTH',
+          statusBody: {
+            consent_expiration_time: payload.consent_expiration_time,
+            environment: payload.environment,
+            receivedAt: new Date().toISOString(),
+          },
+          shouldSync: false,
+        };
+      }
+
+      default:
+        return undefined;
+    }
   }
 
   /**
