@@ -178,7 +178,7 @@ export class PlaidProvider implements IBankLinkProvider {
       },
       enable_multi_item_link: true,
       user_token: userToken,
-      webhook: `${process.env.APP_DOMAIN}/bank-link/webhook/plaid`,
+      webhook: `${process.env.API_DOMAIN}/bank-link/webhook/plaid`,
     };
 
     try {

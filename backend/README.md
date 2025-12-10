@@ -247,7 +247,8 @@ Key environment variables (see `.env.example` for all variables):
 
 - `PORT` - Application port (default: 3000)
 - `NODE_ENV` - Environment mode (development/production)
-- `APP_DOMAIN` - Application domain for webhooks (e.g., `https://example.com`)
+- `API_DOMAIN` - API domain for webhooks (e.g., `https://api.example.com`)
+- `FRONTEND_DOMAIN` - Frontend domain for CORS (e.g., `https://app.example.com`)
 - `POSTGRES_HOST` - PostgreSQL host
 - `POSTGRES_PORT` - PostgreSQL port (default: 5432)
 - `POSTGRES_DB` - Database name
