@@ -8,6 +8,9 @@ const mockBankLink: BankLink = {
   accountIds: ['acc-1', 'acc-2'],
   createdAt: new Date('2025-01-01T00:00:00Z'),
   updatedAt: new Date('2025-01-01T00:00:00Z'),
+  status: 'OK',
+  statusDate: new Date('2025-01-01T00:00:00Z'),
+  statusBody: null,
 };
 
 export const mockBankLinkService = {

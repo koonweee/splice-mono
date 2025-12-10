@@ -66,6 +66,11 @@ const mockBankLinkRepository = {
   findOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
   find: jest.fn().mockResolvedValue([mockBankLinkEntity]),
   delete: jest.fn().mockResolvedValue({ affected: 1 }),
+  createQueryBuilder: jest.fn().mockReturnValue({
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
+  }),
 };
 
 const mockAccountRepository = {
