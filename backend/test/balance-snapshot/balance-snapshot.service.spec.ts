@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { AccountService } from '../../src/account/account.service';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
 import { BalanceSnapshotService } from '../../src/balance-snapshot/balance-snapshot.service';
 import { CurrencyConversionService } from '../../src/exchange-rate/currency-conversion.service';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserService } from '../../src/user/user.service';
+import { mockAccountService } from '../mocks/account/account-service.mock';
 import { mockBalanceSnapshotRepository } from '../mocks/balance-snapshot/balance-snapshot-repository.mock';
 import {
   mockBalanceSnapshot,
@@ -34,6 +36,10 @@ describe('BalanceSnapshotService', () => {
         {
           provide: CurrencyConversionService,
           useValue: mockCurrencyConversionService,
+        },
+        {
+          provide: AccountService,
+          useValue: mockAccountService,
         },
       ],
     }).compile();

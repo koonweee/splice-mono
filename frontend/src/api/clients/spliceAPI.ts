@@ -1810,6 +1810,66 @@ const {mutation: mutationOptions} = options ?
     }
     
 /**
+ * Backfill Plaid item IDs for existing bank links that are missing them
+ */
+export const bankLinkControllerBackfillPlaidItemIds = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return axios<void>(
+      {url: `/bank-link/backfill-item-ids`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getBankLinkControllerBackfillPlaidItemIdsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerBackfillPlaidItemIds>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerBackfillPlaidItemIds>>, TError,void, TContext> => {
+
+const mutationKey = ['bankLinkControllerBackfillPlaidItemIds'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bankLinkControllerBackfillPlaidItemIds>>, void> = () => {
+          
+
+          return  bankLinkControllerBackfillPlaidItemIds()
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BankLinkControllerBackfillPlaidItemIdsMutationResult = NonNullable<Awaited<ReturnType<typeof bankLinkControllerBackfillPlaidItemIds>>>
+    
+    export type BankLinkControllerBackfillPlaidItemIdsMutationError = unknown
+
+    export const useBankLinkControllerBackfillPlaidItemIds = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bankLinkControllerBackfillPlaidItemIds>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof bankLinkControllerBackfillPlaidItemIds>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getBankLinkControllerBackfillPlaidItemIdsMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
  * Get dashboard summary with net worth and account summaries
  */
 export const dashboardControllerGetSummary = (

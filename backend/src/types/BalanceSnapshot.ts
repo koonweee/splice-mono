@@ -87,6 +87,10 @@ export const BalanceSnapshotWithConvertedBalanceSchema = registerSchema(
     convertedCurrentBalance: ConvertedBalanceSchema.nullable(),
     /** Available balance converted to user's preferred currency with rate info */
     convertedAvailableBalance: ConvertedBalanceSchema.nullable(),
+    /** Effective balance (current + available for investment accounts, current for others) */
+    effectiveBalance: MoneyWithSignSchema,
+    /** Effective balance converted to user's preferred currency with rate info */
+    convertedEffectiveBalance: ConvertedBalanceSchema.nullable(),
   }),
 );
 

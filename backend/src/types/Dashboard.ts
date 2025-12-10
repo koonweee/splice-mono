@@ -47,6 +47,10 @@ export const AccountSummarySchema = registerSchema(
     currentBalance: MoneyWithSignSchema,
     /** Current balance converted to user's preferred currency with rate info */
     convertedCurrentBalance: ConvertedBalanceSchema.nullable(),
+    /** Effective balance (current + available for investment accounts, current for others) */
+    effectiveBalance: MoneyWithSignSchema,
+    /** Effective balance converted to user's preferred currency with rate info */
+    convertedEffectiveBalance: ConvertedBalanceSchema.nullable(),
     /** Period-over-period percentage change (e.g., 3.5 for +3.5%) */
     changePercent: z.number().nullable(),
     /** Institution name from linked bank (e.g., "Chase", "Bank of America") */
