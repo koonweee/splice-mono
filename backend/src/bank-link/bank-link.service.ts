@@ -1,7 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
@@ -21,6 +21,7 @@ import type {
 import { UserService } from '../user/user.service';
 import { WebhookEventService } from '../webhook-event/webhook-event.service';
 import { BankLinkEntity } from './bank-link.entity';
+import type { IBankLinkProvider } from './providers/bank-link-provider.interface';
 import { ProviderRegistry } from './providers/provider.registry';
 
 /**
@@ -130,8 +131,10 @@ export class BankLinkService extends OwnedCrudService<
   }
 
   /**
-   * Step 2: Handle webhook from provider
-   * Looks up pending webhook event by webhookId, processes if pending, marks as completed
+   * Handle webhook from provider
+   * Routes to appropriate handler based on webhook type:
+   * - Update webhooks (DEFAULT_UPDATE): Trigger account sync for existing bank links
+   * - Link completion webhooks (SESSION_FINISHED): Finalize new bank link setup
    *
    * @param providerName - Provider sending webhook
    * @param rawBody - Raw webhook body as string (for signature verification)
@@ -146,10 +149,9 @@ export class BankLinkService extends OwnedCrudService<
   ): Promise<void> {
     this.logger.log(`Received webhook from provider ${providerName}`);
 
-    // Get provider
     const provider = this.providerRegistry.getProvider(providerName);
 
-    // Step 1: Verify webhook signature before processing
+    // Verify webhook signature before processing
     const isValid = await provider.verifyWebhook(rawBody, headers);
     if (!isValid) {
       this.logger.warn(
@@ -161,16 +163,65 @@ export class BankLinkService extends OwnedCrudService<
       `Webhook verified successfully for provider ${providerName}`,
     );
 
-    // Step 2: Extract webhookId and check if we should process this webhook type
+    // Route to appropriate handler based on webhook type
+    if (provider.parseUpdateWebhook) {
+      const updateInfo = provider.parseUpdateWebhook(parsedPayload);
+      if (updateInfo) {
+        await this.handleUpdateWebhook(updateInfo);
+        return;
+      }
+    }
+
     const webhookId = provider.shouldProcessWebhook(parsedPayload);
-    if (!webhookId) {
-      this.logger.log(
-        `Webhook from ${providerName} not a processable type, skipping`,
+    if (webhookId) {
+      await this.handleLinkCompletionWebhook(
+        providerName,
+        provider,
+        webhookId,
+        parsedPayload,
       );
       return;
     }
 
-    // Step 3: Look up pending webhook event by webhookId to get userId
+    this.logger.log(
+      `Webhook from ${providerName} not a processable type, skipping`,
+    );
+  }
+
+  /**
+   * Handle update webhooks (e.g., Plaid DEFAULT_UPDATE for transactions/investments)
+   * Triggers account sync for the bank link associated with the item
+   */
+  private async handleUpdateWebhook(updateInfo: {
+    itemId: string;
+    type: string;
+  }): Promise<void> {
+    this.logger.log(
+      `Processing ${updateInfo.type} update webhook for item ${updateInfo.itemId}`,
+    );
+
+    const bankLink = await this.findByPlaidItemId(updateInfo.itemId);
+    if (bankLink) {
+      await this.syncAccounts(bankLink.id, bankLink.userId);
+      this.logger.log(`Synced accounts for bank link ${bankLink.id}`);
+    } else {
+      this.logger.warn(`No bank link found for item_id=${updateInfo.itemId}`);
+    }
+  }
+
+  /**
+   * Handle link completion webhooks (e.g., Plaid SESSION_FINISHED)
+   * Creates new bank links and accounts from the provider response
+   */
+  private async handleLinkCompletionWebhook(
+    providerName: string,
+    provider: IBankLinkProvider,
+    webhookId: string,
+    parsedPayload: Record<string, any>,
+  ): Promise<void> {
+    this.logger.log(`Processing link completion webhook: ${webhookId}`);
+
+    // Look up pending webhook event by webhookId to get userId
     const pendingEvent =
       await this.webhookEventService.findPendingByWebhookId(webhookId);
     if (!pendingEvent) {
@@ -186,7 +237,6 @@ export class BankLinkService extends OwnedCrudService<
       `Found pending webhook event for webhookId=${webhookId}, userId=${userId}`,
     );
 
-    // Step 4: Process the webhook
     try {
       const linkCompletionResponses =
         await provider.processWebhook(parsedPayload);
@@ -311,13 +361,17 @@ export class BankLinkService extends OwnedCrudService<
   /**
    * Sync accounts for all bank links across all users (system operation)
    * Used by scheduled tasks and admin operations
+   * Excludes Plaid providers which are synced via webhooks
    *
    * @returns Updated accounts from all bank links
    */
   async syncAllAccountsSystem(): Promise<Account[]> {
     this.logger.log('Syncing accounts for all bank links (system operation)');
 
-    const bankLinks = await this.repository.find();
+    // Exclude Plaid - it uses webhook-driven sync via DEFAULT_UPDATE
+    const bankLinks = await this.repository.find({
+      where: { providerName: Not('plaid') },
+    });
     this.logger.log(`Found ${bankLinks.length} bank links to sync`);
 
     const allAccounts: Account[] = [];
@@ -477,6 +531,66 @@ export class BankLinkService extends OwnedCrudService<
     }
 
     return savedAccounts.map((account) => account.toObject());
+  }
+
+  /**
+   * Find a bank link by Plaid item_id
+   * Uses JSONB query to search within the authentication column
+   *
+   * @param itemId - Plaid item_id to search for
+   * @returns BankLink entity or null if not found
+   */
+  async findByPlaidItemId(itemId: string): Promise<BankLinkEntity | null> {
+    return this.repository
+      .createQueryBuilder('bankLink')
+      .where('bankLink.providerName = :provider', { provider: 'plaid' })
+      .andWhere("bankLink.authentication->>'itemId' = :itemId", { itemId })
+      .getOne();
+  }
+
+  /**
+   * Backfill item IDs for existing Plaid bank links that don't have them
+   * Fetches item_id from Plaid API and updates the authentication JSONB
+   *
+   * @returns Number of bank links updated
+   */
+  async backfillPlaidItemIds(): Promise<number> {
+    this.logger.log('Starting backfill of Plaid item IDs');
+
+    const plaidLinks = await this.repository.find({
+      where: { providerName: 'plaid' },
+    });
+
+    const provider = this.providerRegistry.getProvider('plaid');
+    if (!provider.getItemId) {
+      throw new Error('Provider does not support getItemId');
+    }
+
+    let updatedCount = 0;
+    for (const link of plaidLinks) {
+      // Skip if already has itemId
+      if (link.authentication.itemId) {
+        this.logger.log(`Bank link ${link.id} already has itemId, skipping`);
+        continue;
+      }
+
+      try {
+        const itemId = await provider.getItemId(link.authentication);
+        link.authentication = { ...link.authentication, itemId };
+        await this.repository.save(link);
+        updatedCount++;
+        this.logger.log(`Backfilled itemId for bank link ${link.id}`);
+      } catch (error) {
+        this.logger.error(
+          `Failed to backfill itemId for bank link ${link.id}: ${error}`,
+        );
+      }
+    }
+
+    this.logger.log(
+      `Backfill complete: ${updatedCount}/${plaidLinks.length} bank links updated`,
+    );
+    return updatedCount;
   }
 
   /**
