@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { AccountService } from '../account/account.service';
 import { BalanceConversionHelper } from '../common/balance-conversion.helper';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
@@ -32,6 +33,8 @@ export class BalanceSnapshotService extends OwnedCrudService<
     repository: Repository<BalanceSnapshotEntity>,
     private readonly userService: UserService,
     private readonly currencyConversionService: CurrencyConversionService,
+    @Inject(forwardRef(() => AccountService))
+    private readonly accountService: AccountService,
   ) {
     super(repository);
     this.balanceConversionHelper = new BalanceConversionHelper(
@@ -147,16 +150,31 @@ export class BalanceSnapshotService extends OwnedCrudService<
   }
 
   /**
-   * Add currencyDate to snapshots for historical currency conversion.
+   * Add currencyDate and accountType to snapshots for historical currency conversion
+   * and effective balance calculation.
    * Maps snapshotDate to currencyDate so the helper uses the correct historical rate.
    */
-  private addCurrencyDateToSnapshots(
+  private addSnapshotMetadata(
     snapshots: BalanceSnapshot[],
-  ): (BalanceSnapshot & { currencyDate: string })[] {
+    accountTypeMap: Map<string, string>,
+  ): (BalanceSnapshot & { currencyDate: string; accountType?: string })[] {
     return snapshots.map((snapshot) => ({
       ...snapshot,
       currencyDate: snapshot.snapshotDate,
+      accountType: accountTypeMap.get(snapshot.accountId),
     }));
+  }
+
+  /**
+   * Build a map of accountId to accountType for effective balance calculation
+   */
+  private async getAccountTypeMap(userId: string): Promise<Map<string, string>> {
+    const accounts = await this.accountService.findAll(userId);
+    const accountTypeMap = new Map<string, string>();
+    for (const account of accounts) {
+      accountTypeMap.set(account.id, account.type);
+    }
+    return accountTypeMap;
   }
 
   /**
@@ -168,10 +186,16 @@ export class BalanceSnapshotService extends OwnedCrudService<
   async findAllWithConversion(
     userId: string,
   ): Promise<BalanceSnapshotWithConvertedBalance[]> {
-    const snapshots = await this.findAll(userId);
-    const snapshotsWithDate = this.addCurrencyDateToSnapshots(snapshots);
+    const [snapshots, accountTypeMap] = await Promise.all([
+      this.findAll(userId),
+      this.getAccountTypeMap(userId),
+    ]);
+    const snapshotsWithMetadata = this.addSnapshotMetadata(
+      snapshots,
+      accountTypeMap,
+    );
     return this.balanceConversionHelper.addConvertedBalances(
-      snapshotsWithDate,
+      snapshotsWithMetadata,
       userId,
     );
   }
@@ -187,10 +211,16 @@ export class BalanceSnapshotService extends OwnedCrudService<
     accountId: string,
     userId: string,
   ): Promise<BalanceSnapshotWithConvertedBalance[]> {
-    const snapshots = await this.findByAccountId(accountId, userId);
-    const snapshotsWithDate = this.addCurrencyDateToSnapshots(snapshots);
+    const [snapshots, accountTypeMap] = await Promise.all([
+      this.findByAccountId(accountId, userId),
+      this.getAccountTypeMap(userId),
+    ]);
+    const snapshotsWithMetadata = this.addSnapshotMetadata(
+      snapshots,
+      accountTypeMap,
+    );
     return this.balanceConversionHelper.addConvertedBalances(
-      snapshotsWithDate,
+      snapshotsWithMetadata,
       userId,
     );
   }
@@ -206,25 +236,31 @@ export class BalanceSnapshotService extends OwnedCrudService<
     userId: string,
     snapshotDate: string,
   ): Promise<Map<string, BalanceSnapshotWithConvertedBalance>> {
-    const entities = await this.repository.find({
-      where: {
-        userId,
-        snapshotDate,
-      },
-    });
+    const [entities, accountTypeMap] = await Promise.all([
+      this.repository.find({
+        where: {
+          userId,
+          snapshotDate,
+        },
+      }),
+      this.getAccountTypeMap(userId),
+    ]);
 
     if (entities.length === 0) {
       return new Map();
     }
 
-    // Convert snapshots to domain objects with currencyDate for historical conversion
+    // Convert snapshots to domain objects with metadata for conversion
     const snapshots = entities.map((e) => e.toObject());
-    const snapshotsWithDate = this.addCurrencyDateToSnapshots(snapshots);
+    const snapshotsWithMetadata = this.addSnapshotMetadata(
+      snapshots,
+      accountTypeMap,
+    );
 
     // Add converted balances using the helper
     const snapshotsWithConversion =
       await this.balanceConversionHelper.addConvertedBalances(
-        snapshotsWithDate,
+        snapshotsWithMetadata,
         userId,
       );
 

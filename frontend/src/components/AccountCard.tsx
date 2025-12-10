@@ -28,8 +28,8 @@ export function AccountCard({
 }) {
   const changePercent = formatPercent(account.changePercent)
   const { primaryBalance, originalBalance } = resolveBalance(
-    account.currentBalance,
-    account.convertedCurrentBalance,
+    account.effectiveBalance,
+    account.convertedEffectiveBalance,
   )
 
   return (

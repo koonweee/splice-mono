@@ -30,7 +30,7 @@ function transformSnapshotsToChartData(
     )
     .map((snapshot) => {
       const balance =
-        snapshot.convertedCurrentBalance?.balance ?? snapshot.currentBalance
+        snapshot.convertedEffectiveBalance?.balance ?? snapshot.effectiveBalance
       const dollars = balance.money.amount / 100
       const signedValue =
         balance.sign === MoneyWithSignSign.negative ? -dollars : dollars
@@ -72,10 +72,10 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )[0]
 
-  const { convertedCurrentBalance, currentBalance } = lastSyncSnapshot ?? {}
+  const { convertedEffectiveBalance, effectiveBalance } = lastSyncSnapshot ?? {}
 
   const balanceInfo =
-    currentBalance && resolveBalance(currentBalance, convertedCurrentBalance)
+    effectiveBalance && resolveBalance(effectiveBalance, convertedEffectiveBalance)
 
   return (
     <Modal

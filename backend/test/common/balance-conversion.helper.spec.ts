@@ -179,13 +179,13 @@ describe('BalanceConversionHelper', () => {
       expect(result[0].availableBalance).toEqual(items[0].availableBalance);
     });
 
-    it('should call convertMany twice (for current and available balances)', async () => {
+    it('should call convertMany three times (for current, available, and effective balances)', async () => {
       const items = [createMockItem(100000, 95000)];
 
       await helper.addConvertedBalances(items, mockUserId);
 
       expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledTimes(
-        2,
+        3,
       );
     });
 
@@ -370,10 +370,10 @@ describe('BalanceConversionHelper', () => {
 
         await helper.addConvertedBalances(items, mockUserId);
 
-        // Should have 6 calls total: 2 balance types × 3 date groups
+        // Should have 9 calls total: 3 balance types × 3 date groups
         // (2024-01-15, 2024-01-16, undefined)
         expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledTimes(
-          6,
+          9,
         );
 
         // Verify calls were made with correct date groupings
@@ -385,15 +385,15 @@ describe('BalanceConversionHelper', () => {
         const latestCalls = calls.filter((call) => call[2] === undefined);
 
         // Jan 15 should have 2 items (item-1 and item-2)
-        expect(jan15Calls.length).toBe(2); // current + available
+        expect(jan15Calls.length).toBe(3); // current + available + effective
         expect(jan15Calls[0][0]).toHaveLength(2);
 
         // Jan 16 should have 1 item (item-3)
-        expect(jan16Calls.length).toBe(2); // current + available
+        expect(jan16Calls.length).toBe(3); // current + available + effective
         expect(jan16Calls[0][0]).toHaveLength(1);
 
         // Latest (undefined) should have 1 item (item-4)
-        expect(latestCalls.length).toBe(2); // current + available
+        expect(latestCalls.length).toBe(3); // current + available + effective
         expect(latestCalls[0][0]).toHaveLength(1);
       });
 
@@ -466,6 +466,93 @@ describe('BalanceConversionHelper', () => {
 
         // Item without date should have the latest date
         expect(result[1].convertedCurrentBalance?.rateDate).toBe('2024-01-20');
+      });
+    });
+
+    describe('effective balance calculation by account type', () => {
+      const createMockItemWithAccountType = (
+        currentAmount: number,
+        availableAmount: number,
+        accountType?: string,
+        currency = 'USD',
+      ) => ({
+        currentBalance: {
+          money: { amount: currentAmount, currency },
+          sign: MoneySign.POSITIVE,
+        },
+        availableBalance: {
+          money: { amount: availableAmount, currency },
+          sign: MoneySign.POSITIVE,
+        },
+        accountType,
+      });
+
+      beforeEach(() => {
+        // Mock convertMany to return the input amount unchanged
+        mockCurrencyConversionService.convertMany.mockImplementation(
+          (inputs: { amount: number; currency: string }[]) =>
+            Promise.resolve(
+              inputs.map((input) => ({
+                amount: input.amount,
+                rate: 1,
+                rateDate: '2024-01-01',
+                usedFallback: false,
+              })),
+            ),
+        );
+      });
+
+      it('should compute effectiveBalance as currentBalance for non-investment accounts', async () => {
+        const items = [
+          createMockItemWithAccountType(100000, 50000, 'depository'), // Checking/Savings
+          createMockItemWithAccountType(200000, 75000, 'credit'), // Credit card
+          createMockItemWithAccountType(300000, 25000, undefined), // No account type
+        ];
+
+        const result = await helper.addConvertedBalances(items, mockUserId);
+
+        // For non-investment accounts, effectiveBalance should equal currentBalance
+        expect(result[0].effectiveBalance.money.amount).toBe(100000);
+        expect(result[1].effectiveBalance.money.amount).toBe(200000);
+        expect(result[2].effectiveBalance.money.amount).toBe(300000);
+
+        // Converted effective balance should also match
+        expect(result[0].convertedEffectiveBalance?.balance.money.amount).toBe(
+          100000,
+        );
+        expect(result[1].convertedEffectiveBalance?.balance.money.amount).toBe(
+          200000,
+        );
+        expect(result[2].convertedEffectiveBalance?.balance.money.amount).toBe(
+          300000,
+        );
+      });
+
+      it('should compute effectiveBalance as currentBalance + availableBalance for investment accounts', async () => {
+        const items = [
+          createMockItemWithAccountType(100000, 50000, 'investment'), // Investment account
+          createMockItemWithAccountType(200000, 75000, 'brokerage'), // Brokerage account
+        ];
+
+        const result = await helper.addConvertedBalances(items, mockUserId);
+
+        // For investment/brokerage accounts, effectiveBalance = currentBalance + availableBalance
+        expect(result[0].effectiveBalance.money.amount).toBe(150000); // 100000 + 50000
+        expect(result[1].effectiveBalance.money.amount).toBe(275000); // 200000 + 75000
+
+        // Converted effective balance should also be the sum
+        expect(result[0].convertedEffectiveBalance?.balance.money.amount).toBe(
+          150000,
+        );
+        expect(result[1].convertedEffectiveBalance?.balance.money.amount).toBe(
+          275000,
+        );
+
+        // Original balances should remain unchanged
+        expect(result[0].currentBalance.money.amount).toBe(100000);
+        expect(result[0].availableBalance.money.amount).toBe(50000);
+        expect(result[1].currentBalance.money.amount).toBe(200000);
+        expect(result[1].availableBalance.money.amount).toBe(75000);
       });
     });
   });

@@ -102,6 +102,12 @@ export function createMockSnapshotWithConversion(
     sign: availableSign,
   };
 
+  // For non-investment accounts, effective balance = current balance
+  const effectiveBalance: SerializedMoneyWithSign = {
+    money: { currency, amount },
+    sign,
+  };
+
   return {
     id: overrides.id ?? 'snapshot-1',
     userId: overrides.userId ?? mockUserId,
@@ -118,6 +124,12 @@ export function createMockSnapshotWithConversion(
     },
     convertedAvailableBalance: {
       balance: availableBalance,
+      rate: 1,
+      rateDate: snapshotDate,
+    },
+    effectiveBalance,
+    convertedEffectiveBalance: {
+      balance: effectiveBalance,
       rate: 1,
       rateDate: snapshotDate,
     },
