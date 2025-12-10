@@ -9,20 +9,34 @@ jobs:
     name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
         with:
-          base: ${{ github.event.pull_request.base.sha }}
-          ref: ${{ github.event.pull_request.head.sha }}
-          filters: |
-            backend:
-              - 'backend/**'
-            frontend:
-              - 'frontend/**'
+          fetch-depth: 2
+      - name: Get changed files
+        id: changes
+        run: |
+          # Get list of changed files between HEAD and HEAD~1
+          # For PRs, GitHub merges the PR branch, so HEAD~1 is the base
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if backend files changed
+          if echo "$CHANGED_FILES" | grep -q "^backend/"; then
+            echo "backend=true" >> $GITHUB_OUTPUT
+          else
+            echo "backend=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check if frontend files changed
+          if echo "$CHANGED_FILES" | grep -q "^frontend/"; then
+            echo "frontend=true" >> $GITHUB_OUTPUT
+          else
+            echo "frontend=false" >> $GITHUB_OUTPUT
+          fi
 
   backend-lint:
     name: Backend Lint
