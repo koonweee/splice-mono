@@ -3,27 +3,21 @@ name: CI
 on:
   pull_request:
     branches: [main, deploy]
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - ".github/workflows/ci.yml"
 
 jobs:
   changes:
     name: Detect Changes
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          base: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           filters: |
             backend:
               - 'backend/**'
