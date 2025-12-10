@@ -108,4 +108,18 @@ export class BankLinkController {
   async syncAllAccounts(@CurrentUser() user: JwtUser): Promise<Account[]> {
     return this.bankLinkService.syncAllAccounts(user.userId);
   }
+
+  @Post('backfill-item-ids')
+  @ApiOperation({
+    description:
+      'Backfill Plaid item IDs for existing bank links that are missing them',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Returns the number of bank links updated',
+  })
+  async backfillPlaidItemIds(): Promise<{ updated: number }> {
+    const updated = await this.bankLinkService.backfillPlaidItemIds();
+    return { updated };
+  }
 }

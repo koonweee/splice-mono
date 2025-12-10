@@ -70,4 +70,24 @@ export interface IBankLinkProvider {
     rawBody: string,
     headers: Record<string, string>,
   ): Promise<boolean>;
+
+  /**
+   * Parse update webhooks that signal the provider has new data available
+   * Optional - only implemented by providers that support webhook-driven updates
+   *
+   * @param rawPayload - Raw webhook payload
+   * @returns Item identifier and webhook type if this is an update webhook, undefined otherwise
+   */
+  parseUpdateWebhook?(
+    rawPayload: Record<string, any>,
+  ): { itemId: string; type: string } | undefined;
+
+  /**
+   * Get the external item ID from the provider
+   * Optional - used for backfilling item IDs for existing links
+   *
+   * @param authentication - Provider-specific authentication data
+   * @returns The external item ID
+   */
+  getItemId?(authentication: Record<string, any>): Promise<string>;
 }

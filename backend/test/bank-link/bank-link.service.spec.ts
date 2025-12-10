@@ -566,6 +566,85 @@ describe('BankLinkService', () => {
         mockParsedPayload,
       );
     });
+
+    it('should handle update webhook and trigger sync', async () => {
+      const providerName = 'plaid';
+      const updatePayload = {
+        webhook_type: 'TRANSACTIONS',
+        webhook_code: 'DEFAULT_UPDATE',
+        item_id: 'item-mock-123',
+      };
+
+      // Mock parseUpdateWebhook to return update info
+      (mockPlaidProvider.parseUpdateWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'item-mock-123',
+        type: 'TRANSACTIONS',
+      });
+
+      // Mock findByPlaidItemId via createQueryBuilder
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
+      };
+      mockBankLinkRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      await service.handleWebhook(
+        providerName,
+        JSON.stringify(updatePayload),
+        mockHeaders,
+        updatePayload,
+      );
+
+      // Should have called parseUpdateWebhook
+      expect(mockPlaidProvider.parseUpdateWebhook).toHaveBeenCalledWith(
+        updatePayload,
+      );
+      // Should have looked up bank link by item_id
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        "bankLink.authentication->>'itemId' = :itemId",
+        { itemId: 'item-mock-123' },
+      );
+      // Should NOT have processed as link completion
+      expect(
+        mockWebhookEventService.findPendingByWebhookId,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should skip sync when no bank link found for update webhook', async () => {
+      const providerName = 'plaid';
+      const updatePayload = {
+        webhook_type: 'TRANSACTIONS',
+        webhook_code: 'DEFAULT_UPDATE',
+        item_id: 'unknown-item-id',
+      };
+
+      (mockPlaidProvider.parseUpdateWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'unknown-item-id',
+        type: 'TRANSACTIONS',
+      });
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockBankLinkRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      // Should not throw, just log warning
+      await service.handleWebhook(
+        providerName,
+        JSON.stringify(updatePayload),
+        mockHeaders,
+        updatePayload,
+      );
+
+      expect(mockPlaidProvider.getAccounts).not.toHaveBeenCalled();
+    });
   });
 
   describe('syncAccounts', () => {
@@ -783,13 +862,13 @@ describe('BankLinkService', () => {
       mockAccountRepository.find.mockResolvedValue([]);
     });
 
-    it('should fetch all bank links across all users and sync accounts', async () => {
-      const result = await service.syncAllAccountsSystem();
+    it('should exclude Plaid bank links from scheduled sync', async () => {
+      await service.syncAllAccountsSystem();
 
-      // Should find all bank links (no userId filter)
-      expect(mockBankLinkRepository.find).toHaveBeenCalledWith();
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
+      // Should find bank links excluding Plaid
+      expect(mockBankLinkRepository.find).toHaveBeenCalledWith({
+        where: { providerName: expect.objectContaining({ _type: 'not' }) },
+      });
     });
 
     it('should return empty array when no bank links exist', async () => {
@@ -798,6 +877,125 @@ describe('BankLinkService', () => {
       const result = await service.syncAllAccountsSystem();
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('findByPlaidItemId', () => {
+    it('should find bank link by item_id in authentication JSONB', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
+      };
+      mockBankLinkRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      const result = await service.findByPlaidItemId('item-123');
+
+      expect(mockBankLinkRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'bankLink',
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'bankLink.providerName = :provider',
+        { provider: 'plaid' },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        "bankLink.authentication->>'itemId' = :itemId",
+        { itemId: 'item-123' },
+      );
+      expect(result).toEqual(mockBankLinkEntity);
+    });
+
+    it('should return null when no bank link found', async () => {
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockBankLinkRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      const result = await service.findByPlaidItemId('unknown-item');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('backfillPlaidItemIds', () => {
+    beforeEach(() => {
+      mockBankLinkRepository.find.mockResolvedValue([]);
+    });
+
+    it('should backfill item IDs for bank links without them', async () => {
+      const bankLinkWithoutItemId = {
+        ...mockBankLinkEntity,
+        authentication: { accessToken: 'test-token' }, // No itemId
+      };
+      mockBankLinkRepository.find.mockResolvedValueOnce([bankLinkWithoutItemId]);
+
+      const result = await service.backfillPlaidItemIds();
+
+      expect(mockBankLinkRepository.find).toHaveBeenCalledWith({
+        where: { providerName: 'plaid' },
+      });
+      expect(mockPlaidProvider.getItemId).toHaveBeenCalledWith({
+        accessToken: 'test-token',
+      });
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authentication: { accessToken: 'test-token', itemId: 'item-mock-123' },
+        }),
+      );
+      expect(result).toBe(1);
+    });
+
+    it('should skip bank links that already have itemId', async () => {
+      const bankLinkWithItemId = {
+        ...mockBankLinkEntity,
+        authentication: { accessToken: 'test-token', itemId: 'existing-item' },
+      };
+      mockBankLinkRepository.find.mockResolvedValueOnce([bankLinkWithItemId]);
+
+      const result = await service.backfillPlaidItemIds();
+
+      expect(mockPlaidProvider.getItemId).not.toHaveBeenCalled();
+      expect(result).toBe(0);
+    });
+
+    it('should continue processing when one bank link fails', async () => {
+      const bankLink1 = {
+        ...mockBankLinkEntity,
+        id: 'bank-link-1',
+        authentication: { accessToken: 'token-1' },
+      };
+      const bankLink2 = {
+        ...mockBankLinkEntity,
+        id: 'bank-link-2',
+        authentication: { accessToken: 'token-2' },
+      };
+      mockBankLinkRepository.find.mockResolvedValueOnce([bankLink1, bankLink2]);
+
+      // First call fails, second succeeds
+      (mockPlaidProvider.getItemId as jest.Mock)
+        .mockRejectedValueOnce(new Error('API error'))
+        .mockResolvedValueOnce('item-2');
+
+      const result = await service.backfillPlaidItemIds();
+
+      // Should have processed both but only succeeded for one
+      expect(mockPlaidProvider.getItemId).toHaveBeenCalledTimes(2);
+      expect(result).toBe(1);
+    });
+
+    it('should return 0 when no bank links exist', async () => {
+      mockBankLinkRepository.find.mockResolvedValueOnce([]);
+
+      const result = await service.backfillPlaidItemIds();
+
+      expect(result).toBe(0);
+      expect(mockPlaidProvider.getItemId).not.toHaveBeenCalled();
     });
   });
 

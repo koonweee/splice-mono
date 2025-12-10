@@ -32,7 +32,7 @@ export const mockInstitution = {
 };
 
 export const mockLinkCompletionResponse = {
-  authentication: { accessToken: 'access-token-123' },
+  authentication: { accessToken: 'access-token-123', itemId: 'item-mock-123' },
   accounts: [mockApiAccount],
   institution: mockInstitution,
 };
@@ -58,5 +58,11 @@ export const mockPlaidProvider: IBankLinkProvider = {
   }),
   verifyWebhook: jest.fn(function (this: void) {
     return Promise.resolve(true);
+  }),
+  parseUpdateWebhook: jest.fn(function (this: void) {
+    return undefined; // Default: not an update webhook
+  }),
+  getItemId: jest.fn(function (this: void) {
+    return Promise.resolve('item-mock-123');
   }),
 };

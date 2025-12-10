@@ -284,6 +284,7 @@ export class PlaidProvider implements IBankLinkProvider {
     return plaidItems.map((item, index) => ({
       authentication: {
         accessToken: item.accessToken,
+        itemId: item.externalAccountId, // Plaid item_id for webhook matching
       },
       accounts: accountsResponses[index].accounts,
       institution: accountsResponses[index].institution,
@@ -523,6 +524,57 @@ export class PlaidProvider implements IBankLinkProvider {
         `Webhook verification error: ${error instanceof Error ? error.message : String(error)}`,
       );
       return false;
+    }
+  }
+
+  /**
+   * Parse DEFAULT_UPDATE webhooks for transactions and investments
+   * These webhooks signal that Plaid has updated data and we should sync
+   *
+   * @param rawPayload - Raw webhook payload
+   * @returns Item ID and webhook type if this is a DEFAULT_UPDATE webhook, undefined otherwise
+   */
+  parseUpdateWebhook(
+    rawPayload: Record<string, any>,
+  ): { itemId: string; type: string } | undefined {
+    const webhookType = rawPayload.webhook_type as string | undefined;
+    const webhookCode = rawPayload.webhook_code as string | undefined;
+    const itemId = rawPayload.item_id as string | undefined;
+
+    // Handle TRANSACTIONS DEFAULT_UPDATE and INVESTMENTS DEFAULT_UPDATE
+    if (
+      (webhookType === 'TRANSACTIONS' || webhookType === 'INVESTMENTS') &&
+      webhookCode === 'DEFAULT_UPDATE' &&
+      typeof itemId === 'string'
+    ) {
+      return { itemId, type: webhookType };
+    }
+    return undefined;
+  }
+
+  /**
+   * Get item details from Plaid using the access token
+   * Used for backfilling item_id for existing bank links
+   *
+   * @param authentication - Authentication data containing { accessToken: string }
+   * @returns The item_id from Plaid
+   */
+  async getItemId(authentication: Record<string, any>): Promise<string> {
+    const accessToken = authentication.accessToken as string;
+    if (!accessToken) {
+      throw new Error('Missing accessToken in authentication data');
+    }
+
+    try {
+      const response = await this.client.itemGet({
+        access_token: accessToken,
+      });
+      return response.data.item.item_id;
+    } catch (error) {
+      this.logger.error(
+        `Error fetching item from Plaid: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
     }
   }
 
