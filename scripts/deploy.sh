@@ -64,6 +64,22 @@ echo -e "PR created: $PR_URL"
 
 # Wait for CI checks to pass
 echo -e "\n${GREEN}Waiting for CI checks to pass...${NC}"
+
+# Wait for checks to be registered (GitHub needs a moment to start them)
+echo -e "${YELLOW}Waiting for checks to start...${NC}"
+for i in {1..30}; do
+    CHECK_COUNT=$(gh pr checks "$PR_URL" --json name --jq 'length' 2>/dev/null || echo "0")
+    if [ "$CHECK_COUNT" -gt 0 ]; then
+        echo -e "Found $CHECK_COUNT check(s), waiting for completion..."
+        break
+    fi
+    if [ "$i" -eq 30 ]; then
+        echo -e "${RED}Timed out waiting for checks to start.${NC}"
+        exit 1
+    fi
+    sleep 2
+done
+
 if ! gh pr checks "$PR_URL" --watch --fail-fast; then
     echo -e "${RED}CI checks failed. Aborting deploy.${NC}"
     exit 1
