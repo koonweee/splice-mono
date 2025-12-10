@@ -1,6 +1,10 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { OwnedEntity } from '../common/owned.entity';
-import { BankLink, CreateBankLinkDto } from '../types/BankLink';
+import type {
+  BankLink,
+  BankLinkStatus,
+  CreateBankLinkDto,
+} from '../types/BankLink';
 
 @Entity()
 export class BankLinkEntity extends OwnedEntity {
@@ -22,6 +26,12 @@ export class BankLinkEntity extends OwnedEntity {
   @Column({ type: 'varchar', nullable: true })
   institutionName: string | null;
 
+  @Column({ type: 'varchar', default: 'OK' })
+  status: BankLinkStatus;
+
+  @Column({ type: 'timestamp with time zone', default: () => 'NOW()' })
+  statusDate: Date;
+
   /**
    * Create entity from DTO
    */
@@ -33,6 +43,8 @@ export class BankLinkEntity extends OwnedEntity {
     entity.accountIds = dto.accountIds;
     entity.institutionId = dto.institutionId ?? null;
     entity.institutionName = dto.institutionName ?? null;
+    entity.status = 'OK';
+    entity.statusDate = new Date();
     return entity;
   }
 
@@ -48,6 +60,8 @@ export class BankLinkEntity extends OwnedEntity {
       accountIds: this.accountIds,
       institutionId: this.institutionId,
       institutionName: this.institutionName,
+      status: this.status,
+      statusDate: this.statusDate,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
