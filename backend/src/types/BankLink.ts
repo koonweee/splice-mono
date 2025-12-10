@@ -90,6 +90,8 @@ export const BankLinkSchema = z
     status: BankLinkStatusEnum,
     /** When the status was last updated */
     statusDate: z.coerce.date(),
+    /** Additional status information (e.g., error details) */
+    statusBody: z.record(z.string(), z.any()).nullable().optional(),
   })
   .merge(OwnedSchema);
 

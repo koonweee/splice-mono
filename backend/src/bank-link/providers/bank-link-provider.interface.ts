@@ -90,4 +90,22 @@ export interface IBankLinkProvider {
    * @returns The external item ID
    */
   getItemId?(authentication: Record<string, any>): Promise<string>;
+
+  /**
+   * Parse status webhooks that signal bank link status changes
+   * Optional - only implemented by providers that support status webhooks
+   * (e.g., Plaid ITEM webhooks: ERROR, LOGIN_REPAIRED, PENDING_DISCONNECT, PENDING_EXPIRATION)
+   *
+   * @param rawPayload - Raw webhook payload
+   * @returns Status webhook info if this is a status webhook, undefined otherwise
+   */
+  parseStatusWebhook?(rawPayload: Record<string, any>):
+    | {
+        itemId: string;
+        webhookCode: string;
+        status: 'OK' | 'ERROR' | 'PENDING_REAUTH';
+        statusBody: Record<string, any> | null;
+        shouldSync: boolean;
+      }
+    | undefined;
 }

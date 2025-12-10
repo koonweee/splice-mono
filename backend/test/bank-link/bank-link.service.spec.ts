@@ -645,6 +645,208 @@ describe('BankLinkService', () => {
 
       expect(mockPlaidProvider.getAccounts).not.toHaveBeenCalled();
     });
+
+    it('should handle ERROR status webhook and update bank link status', async () => {
+      const providerName = 'plaid';
+      const errorPayload = {
+        webhook_type: 'ITEM',
+        webhook_code: 'ERROR',
+        item_id: 'item-mock-123',
+        error: {
+          error_type: 'ITEM_ERROR',
+          error_code: 'ITEM_LOGIN_REQUIRED',
+          error_message: 'the login details of this item have changed',
+          display_message: 'Please update your credentials',
+          suggested_action: 'relink',
+        },
+      };
+
+      (mockPlaidProvider.parseStatusWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'item-mock-123',
+        webhookCode: 'ERROR',
+        status: 'ERROR',
+        statusBody: errorPayload.error,
+        shouldSync: false,
+      });
+
+      const bankLinkWithStatus = {
+        ...mockBankLinkEntity,
+        status: 'OK',
+        statusDate: new Date(),
+        statusBody: null,
+        userId: mockUserId,
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(bankLinkWithStatus),
+      };
+      mockBankLinkRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      await service.handleWebhook(
+        providerName,
+        JSON.stringify(errorPayload),
+        mockHeaders,
+        errorPayload,
+      );
+
+      // Should have called parseStatusWebhook
+      expect(mockPlaidProvider.parseStatusWebhook).toHaveBeenCalledWith(
+        errorPayload,
+      );
+      // Should have updated the bank link status
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'ERROR',
+          statusBody: errorPayload.error,
+        }),
+      );
+      // Should NOT have synced accounts
+      expect(mockPlaidProvider.getAccounts).not.toHaveBeenCalled();
+    });
+
+    it('should handle LOGIN_REPAIRED status webhook and trigger sync', async () => {
+      const providerName = 'plaid';
+      const repairedPayload = {
+        webhook_type: 'ITEM',
+        webhook_code: 'LOGIN_REPAIRED',
+        item_id: 'item-mock-123',
+        environment: 'production',
+      };
+
+      (mockPlaidProvider.parseStatusWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'item-mock-123',
+        webhookCode: 'LOGIN_REPAIRED',
+        status: 'OK',
+        statusBody: null,
+        shouldSync: true,
+      });
+
+      const bankLinkWithError = {
+        ...mockBankLinkEntity,
+        status: 'ERROR',
+        statusDate: new Date(),
+        statusBody: { error_code: 'ITEM_LOGIN_REQUIRED' },
+        userId: mockUserId,
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(bankLinkWithError),
+      };
+      mockBankLinkRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      // Setup for syncAccounts call
+      mockBankLinkRepository.findOne.mockResolvedValue(bankLinkWithError);
+      mockAccountRepository.find.mockResolvedValue([]);
+
+      await service.handleWebhook(
+        providerName,
+        JSON.stringify(repairedPayload),
+        mockHeaders,
+        repairedPayload,
+      );
+
+      // Should have updated status to OK and cleared statusBody
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'OK',
+          statusBody: null,
+        }),
+      );
+      // Should have triggered account sync
+      expect(mockPlaidProvider.getAccounts).toHaveBeenCalled();
+    });
+
+    it('should handle PENDING_DISCONNECT status webhook', async () => {
+      const providerName = 'plaid';
+      const disconnectPayload = {
+        webhook_type: 'ITEM',
+        webhook_code: 'PENDING_DISCONNECT',
+        item_id: 'item-mock-123',
+        environment: 'production',
+      };
+
+      (mockPlaidProvider.parseStatusWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'item-mock-123',
+        webhookCode: 'PENDING_DISCONNECT',
+        status: 'PENDING_REAUTH',
+        statusBody: { environment: 'production' },
+        shouldSync: false,
+      });
+
+      const bankLinkWithStatus = {
+        ...mockBankLinkEntity,
+        status: 'OK',
+        statusDate: new Date(),
+        statusBody: null,
+        userId: mockUserId,
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(bankLinkWithStatus),
+      };
+      mockBankLinkRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      await service.handleWebhook(
+        providerName,
+        JSON.stringify(disconnectPayload),
+        mockHeaders,
+        disconnectPayload,
+      );
+
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'PENDING_REAUTH',
+        }),
+      );
+    });
+
+    it('should skip status webhook when no bank link found', async () => {
+      const providerName = 'plaid';
+      const errorPayload = {
+        webhook_type: 'ITEM',
+        webhook_code: 'ERROR',
+        item_id: 'unknown-item',
+      };
+
+      (mockPlaidProvider.parseStatusWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'unknown-item',
+        webhookCode: 'ERROR',
+        status: 'ERROR',
+        statusBody: null,
+        shouldSync: false,
+      });
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockBankLinkRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      await service.handleWebhook(
+        providerName,
+        JSON.stringify(errorPayload),
+        mockHeaders,
+        errorPayload,
+      );
+
+      // Should not have saved anything
+      expect(mockBankLinkRepository.save).not.toHaveBeenCalled();
+    });
   });
 
   describe('syncAccounts', () => {

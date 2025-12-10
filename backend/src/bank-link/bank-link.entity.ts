@@ -32,6 +32,9 @@ export class BankLinkEntity extends OwnedEntity {
   @Column({ type: 'timestamp with time zone', default: () => 'NOW()' })
   statusDate: Date;
 
+  @Column({ type: 'jsonb', nullable: true })
+  statusBody: Record<string, any> | null;
+
   /**
    * Create entity from DTO
    */
@@ -45,6 +48,7 @@ export class BankLinkEntity extends OwnedEntity {
     entity.institutionName = dto.institutionName ?? null;
     entity.status = 'OK';
     entity.statusDate = new Date();
+    entity.statusBody = null;
     return entity;
   }
 
@@ -62,6 +66,7 @@ export class BankLinkEntity extends OwnedEntity {
       institutionName: this.institutionName,
       status: this.status,
       statusDate: this.statusDate,
+      statusBody: this.statusBody,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
