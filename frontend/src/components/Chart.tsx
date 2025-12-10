@@ -52,6 +52,18 @@ export function Chart({
   const domainMin = minValue - padding
   const domainMax = maxValue + padding
 
+  const handleMove = (state: { activeIndex?: unknown }) => {
+    const { activeIndex } = state
+    if (activeIndex != null && isNumber(Number(activeIndex))) {
+      const point = data[Number(activeIndex)]
+      onDataPointHover?.(point)
+    } else {
+      onDataPointHover?.(null)
+    }
+  }
+
+  const handleLeave = () => onDataPointHover?.(null)
+
   return (
     <AreaChart
       h={height}
@@ -70,18 +82,10 @@ export function Chart({
       }}
       valueFormatter={valueFormatter}
       areaChartProps={{
-        onMouseMove: (state) => {
-          const { activeIndex } = state
-          if (isNumber(Number(activeIndex))) {
-            const point = data[Number(activeIndex)]
-            onDataPointHover?.(point)
-          } else {
-            onDataPointHover?.(null)
-          }
-        },
-        onMouseLeave: () => {
-          onDataPointHover?.(null)
-        },
+        onMouseMove: handleMove,
+        onMouseLeave: handleLeave,
+        onTouchMove: handleMove,
+        onTouchEnd: handleLeave,
       }}
       tooltipProps={{
         content: ({ label, payload }) => {
