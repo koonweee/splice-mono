@@ -12,6 +12,7 @@ import {
 
 import type { RouterContext } from '../router'
 
+import { themes } from '@/lib/theme'
 import mantineChartsCss from '@mantine/charts/styles.css?url'
 import mantineCss from '@mantine/core/styles.css?url'
 import appCss from '../styles.css?url'
@@ -53,11 +54,11 @@ function RootComponent() {
   return (
     <html lang="en" {...mantineHtmlProps}>
       <head>
-        <ColorSchemeScript defaultColorScheme="light" />
+        <ColorSchemeScript defaultColorScheme="auto" />
         <HeadContent />
       </head>
       <body>
-        <MantineProvider defaultColorScheme="light">
+        <MantineProvider defaultColorScheme="auto" theme={themes.warm}>
           <Outlet />
         </MantineProvider>
         <Scripts />

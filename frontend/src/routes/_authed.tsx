@@ -4,6 +4,7 @@ import {
   Burger,
   Group,
   NavLink,
+  Stack,
   Text,
   Tooltip,
 } from '@mantine/core'
@@ -89,17 +90,23 @@ function AuthedLayout() {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            component={Link}
-            to={item.to}
-            label={item.label}
-            leftSection={<item.icon size={18} />}
-            active={location.pathname === item.to}
-            onClick={() => toggle()}
-          />
-        ))}
+        <Stack gap="xs">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              component={Link}
+              to={item.to}
+              label={item.label}
+              leftSection={<item.icon size={18} />}
+              active={location.pathname === item.to}
+              onClick={() => toggle()}
+              styles={{
+                root: { borderRadius: 'var(--mantine-radius-md)' },
+                label: location.pathname === item.to ? { fontWeight: 600 } : {},
+              }}
+            />
+          ))}
+        </Stack>
       </AppShell.Navbar>
 
       <AppShell.Main>

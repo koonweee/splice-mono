@@ -6,14 +6,14 @@
 
 @media (hover: hover) {
   .clickable:hover {
-    background-color: var(--mantine-color-gray-1);
+    background-color: var(--mantine-color-default-hover);
     transform: scale(0.995);
   }
 }
 
 @media (hover: none) {
   .clickable:active {
-    background-color: var(--mantine-color-gray-1);
+    background-color: var(--mantine-color-default-hover);
     transform: scale(0.98);
   }
 }
