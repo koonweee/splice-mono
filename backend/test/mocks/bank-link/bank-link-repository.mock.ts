@@ -15,6 +15,9 @@ export const mockBankLink: BankLink = {
   providerName: 'plaid',
   authentication: { accessToken: 'test-token' },
   accountIds: ['acc-1', 'acc-2'],
+  status: 'OK',
+  statusDate: new Date('2025-01-01T00:00:00Z'),
+  statusBody: null,
   ...mockTimestamps,
 };
 
