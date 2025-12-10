@@ -40,7 +40,8 @@ services:
       PLAID_CLIENT_ID: ${PLAID_CLIENT_ID}
       PLAID_SECRET: ${PLAID_SECRET}
       JWT_SECRET: ${JWT_SECRET}
-      APP_DOMAIN: ${APP_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      FRONTEND_DOMAIN: ${FRONTEND_DOMAIN}
     volumes:
       # Mount source code for hot reload
       - ./src:/app/src

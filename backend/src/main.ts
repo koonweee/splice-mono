@@ -69,13 +69,15 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // Enable CORS for frontend
+  const corsOrigins: string[] = [
+    'http://localhost:5173',
+    'http://localhost:4000',
+  ];
+  if (process.env.FRONTEND_DOMAIN) {
+    corsOrigins.push(process.env.FRONTEND_DOMAIN);
+  }
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:4000',
-      'https://splice-app.example.com',
-      'https://splice.example.com',
-    ],
+    origin: corsOrigins,
     credentials: true,
   });
 
