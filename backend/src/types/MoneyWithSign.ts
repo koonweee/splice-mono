@@ -39,22 +39,13 @@ export type SerializedMoney = z.infer<typeof MoneySchema>;
 export type SerializedMoneyWithSign = z.infer<typeof MoneyWithSignSchema>;
 
 /**
- * Converted balance with exchange rate information.
- * Used when a balance has been converted to the user's preferred currency.
+ * Schema for entities with both current and available balance fields.
+ * Used by Account and BalanceSnapshot.
  */
-export const ConvertedBalanceSchema = registerSchema(
-  'ConvertedBalance',
-  z.object({
-    /** The converted balance amount */
-    balance: MoneyWithSignSchema,
-    /** The exchange rate used for conversion */
-    rate: z.number(),
-    /** The date of the exchange rate (YYYY-MM-DD) */
-    rateDate: z.string(),
-  }),
-);
-
-export type ConvertedBalance = z.infer<typeof ConvertedBalanceSchema>;
+export const CurrentAndAvailableBalanceSchema = z.object({
+  availableBalance: MoneyWithSignSchema,
+  currentBalance: MoneyWithSignSchema,
+});
 
 /**
  * MoneyWithSign wrapper class over @half0wl/money

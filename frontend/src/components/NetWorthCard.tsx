@@ -1,17 +1,7 @@
 import { Box, Paper, Text, Title } from '@mantine/core'
-import dayjs from 'dayjs'
 import { useState } from 'react'
-import type {
-  MoneyWithSign,
-  NetWorthChartPoint,
-  TimePeriod,
-} from '../api/models'
-import { MoneyWithSignSign } from '../api/models'
-import {
-  formatMoneyNumber,
-  formatMoneyWithSign,
-  formatPercent,
-} from '../lib/format'
+import type { MoneyWithSign, TimePeriod } from '../api/models'
+import { formatMoneyNumber, formatMoneyWithSign, formatPercent } from '../lib/format'
 import { Chart, type ChartDataPoint } from './Chart'
 
 const PERIOD_LABELS: Record<TimePeriod, string> = {
@@ -26,22 +16,6 @@ function getChangeColorMantine(changePercent: number | null): string {
   return changePercent > 0 ? 'teal' : 'red'
 }
 
-function transformChartData(data: NetWorthChartPoint[]): ChartDataPoint[] {
-  return data
-    .filter((point) => point.value !== null)
-    .map((point) => {
-      const value = point.value!
-      const dollars = value.money.amount / 100
-      const signedValue =
-        value.sign === MoneyWithSignSign.negative ? -dollars : dollars
-
-      return {
-        label: dayjs(point.date).format('MMM D'),
-        value: signedValue,
-      }
-    })
-}
-
 export function NetWorthCard({
   netWorth,
   changePercent,
@@ -51,7 +25,7 @@ export function NetWorthCard({
   netWorth: MoneyWithSign
   changePercent: number | null
   comparisonPeriod: TimePeriod
-  chartData?: NetWorthChartPoint[]
+  chartData?: ChartDataPoint[]
 }) {
   const hasChartData = chartData && chartData.length > 0
   const [hoveredPoint, setHoveredPoint] = useState<ChartDataPoint | null>(null)
@@ -83,7 +57,7 @@ export function NetWorthCard({
       {hasChartData && (
         <Box mt="md">
           <Chart
-            data={transformChartData(chartData)}
+            data={chartData}
             height={200}
             valueFormatter={(value) =>
               formatMoneyNumber({ value, decimals: 0 })

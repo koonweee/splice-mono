@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
-import { ConvertedBalanceSchema, MoneyWithSignSchema } from './MoneyWithSign';
+import { CurrentAndAvailableBalanceSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
 
 /**
@@ -31,13 +31,10 @@ export const BalanceSnapshotSchema = registerSchema(
       snapshotDate: z
         .string()
         .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
-      /** Current balance at time of snapshot */
-      currentBalance: MoneyWithSignSchema,
-      /** Available balance at time of snapshot */
-      availableBalance: MoneyWithSignSchema,
       /** How this snapshot was created */
       snapshotType: BalanceSnapshotTypeSchema,
     })
+    .merge(CurrentAndAvailableBalanceSchema)
     .merge(OwnedSchema),
 );
 
@@ -47,18 +44,18 @@ export type BalanceSnapshot = z.infer<typeof BalanceSnapshotSchema>;
 
 export const CreateBalanceSnapshotDtoSchema = registerSchema(
   'CreateBalanceSnapshotDto',
-  z.object({
-    /** ID of the account this snapshot belongs to */
-    accountId: z.string().uuid(),
-    /** Date of snapshot (YYYY-MM-DD format) */
-    snapshotDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
-    /** Current balance at time of snapshot */
-    currentBalance: MoneyWithSignSchema,
-    /** Available balance at time of snapshot */
-    availableBalance: MoneyWithSignSchema,
-    /** How this snapshot was created */
-    snapshotType: BalanceSnapshotTypeSchema,
-  }),
+  z
+    .object({
+      /** ID of the account this snapshot belongs to */
+      accountId: z.string().uuid(),
+      /** Date of snapshot (YYYY-MM-DD format) */
+      snapshotDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+      /** How this snapshot was created */
+      snapshotType: BalanceSnapshotTypeSchema,
+    })
+    .merge(CurrentAndAvailableBalanceSchema),
 );
 
 export type CreateBalanceSnapshotDto = z.infer<
@@ -75,25 +72,4 @@ export const UpdateBalanceSnapshotDtoSchema = registerSchema(
 
 export type UpdateBalanceSnapshotDto = z.infer<
   typeof UpdateBalanceSnapshotDtoSchema
->;
-
-/**
- * Balance snapshot with balances converted to user's preferred currency
- */
-export const BalanceSnapshotWithConvertedBalanceSchema = registerSchema(
-  'BalanceSnapshotWithConvertedBalance',
-  BalanceSnapshotSchema.extend({
-    /** Current balance converted to user's preferred currency with rate info */
-    convertedCurrentBalance: ConvertedBalanceSchema.nullable(),
-    /** Available balance converted to user's preferred currency with rate info */
-    convertedAvailableBalance: ConvertedBalanceSchema.nullable(),
-    /** Effective balance (current + available for investment accounts, current for others) */
-    effectiveBalance: MoneyWithSignSchema,
-    /** Effective balance converted to user's preferred currency with rate info */
-    convertedEffectiveBalance: ConvertedBalanceSchema.nullable(),
-  }),
-);
-
-export type BalanceSnapshotWithConvertedBalance = z.infer<
-  typeof BalanceSnapshotWithConvertedBalanceSchema
 >;

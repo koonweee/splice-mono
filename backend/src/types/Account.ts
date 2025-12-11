@@ -1,8 +1,8 @@
 import { AccountSubtype, AccountType } from 'plaid';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
-import { APIAccountSchema, BankLinkStatusEnum } from './BankLink';
-import { ConvertedBalanceSchema, MoneyWithSignSchema } from './MoneyWithSign';
+import { APIAccountSchema, SanitizedBankLinkSchema } from './BankLink';
+import { CurrentAndAvailableBalanceSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
 
 export const AccountTypeSchema = z.nativeEnum(AccountType);
@@ -17,23 +17,18 @@ export const AccountSchema = registerSchema(
       name: z.string().nullable(),
       /** Mask of account number (e.g., last 4 digits) */
       mask: z.string().nullable().optional(),
-      availableBalance: MoneyWithSignSchema,
-      currentBalance: MoneyWithSignSchema,
       type: AccountTypeSchema,
       subType: AccountSubTypeSchema.nullable(),
       /** External account ID from bank provider (e.g., Plaid account_id) */
       externalAccountId: z.string().nullable().optional(),
       /** ID of linked BankLink (optional 1-to-1 relationship) */
       bankLinkId: z.string().nullable().optional(),
-      /** Institution name from linked bank (e.g., "Chase", "Bank of America") */
-      institutionName: z.string().nullable().optional(),
-      /** Status of the associated bank link connection */
-      bankLinkStatus: BankLinkStatusEnum.nullable().optional(),
-      /** Provider name for the bank link (e.g., "plaid", "simplefin") */
-      providerName: z.string().nullable().optional(),
+      /** Embedded bank link data (sanitized - no authentication) */
+      bankLink: SanitizedBankLinkSchema.nullable().optional(),
       /** When the account was last synced (from latest SYNC snapshot) */
       lastSyncedAt: z.coerce.date().nullable().optional(),
     })
+    .merge(CurrentAndAvailableBalanceSchema)
     .merge(OwnedSchema),
 );
 
@@ -43,21 +38,21 @@ export type Account = z.infer<typeof AccountSchema>;
 
 export const CreateAccountDtoSchema = registerSchema(
   'CreateAccountDto',
-  z.object({
-    name: z.string().nullable(),
-    /** Mask of account number (e.g., last 4 digits) */
-    mask: z.string().nullable().optional(),
-    availableBalance: MoneyWithSignSchema,
-    currentBalance: MoneyWithSignSchema,
-    type: AccountTypeSchema,
-    subType: AccountSubTypeSchema.nullable(),
-    /** External account ID from bank provider (e.g., Plaid account_id) */
-    externalAccountId: z.string().nullable().optional(),
-    /** ID of BankLink to associate with this account */
-    bankLinkId: z.string().nullable().optional(),
-    /** Raw API account data from provider */
-    rawApiAccount: APIAccountSchema.nullable().optional(),
-  }),
+  z
+    .object({
+      name: z.string().nullable(),
+      /** Mask of account number (e.g., last 4 digits) */
+      mask: z.string().nullable().optional(),
+      type: AccountTypeSchema,
+      subType: AccountSubTypeSchema.nullable(),
+      /** External account ID from bank provider (e.g., Plaid account_id) */
+      externalAccountId: z.string().nullable().optional(),
+      /** ID of BankLink to associate with this account */
+      bankLinkId: z.string().nullable().optional(),
+      /** Raw API account data from provider */
+      rawApiAccount: APIAccountSchema.nullable().optional(),
+    })
+    .merge(CurrentAndAvailableBalanceSchema),
 );
 
 export type CreateAccountDto = z.infer<typeof CreateAccountDtoSchema>;
@@ -71,20 +66,3 @@ export const UpdateAccountDtoSchema = registerSchema(
 );
 
 export type UpdateAccountDto = z.infer<typeof UpdateAccountDtoSchema>;
-
-/**
- * Account with balances converted to user's preferred currency
- */
-export const AccountWithConvertedBalanceSchema = registerSchema(
-  'AccountWithConvertedBalance',
-  AccountSchema.extend({
-    /** Current balance converted to user's preferred currency with rate info */
-    convertedCurrentBalance: ConvertedBalanceSchema.nullable(),
-    /** Available balance converted to user's preferred currency with rate info */
-    convertedAvailableBalance: ConvertedBalanceSchema.nullable(),
-  }),
-);
-
-export type AccountWithConvertedBalance = z.infer<
-  typeof AccountWithConvertedBalanceSchema
->;

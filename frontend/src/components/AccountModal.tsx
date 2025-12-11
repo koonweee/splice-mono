@@ -1,49 +1,18 @@
 import { Box, Group, Loader, Modal, Stack, Text } from '@mantine/core'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import {
-  useAccountControllerFindOne,
-  useBalanceSnapshotControllerFindByAccountId,
-} from '../api/clients/spliceAPI'
-import type {
-  AccountSummary,
-  BalanceSnapshotWithConvertedBalance,
-} from '../api/models'
-import { BalanceSnapshotSnapshotType, MoneyWithSignSign } from '../api/models'
-import {
-  formatMoneyNumber,
-  formatMoneyWithSign,
-  resolveBalance,
-} from '../lib/format'
+import { useAccountControllerFindOne } from '../api/clients/spliceAPI'
+import { useAccountBalanceHistory } from '../hooks/useBalanceData'
+import type { AccountSummaryData } from '../lib/balance-utils'
+import { resolveEffectiveBalance } from '../lib/balance-utils'
+import { formatMoneyNumber, formatMoneyWithSign, resolveBalance } from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
-import { Chart, type ChartDataPoint } from './Chart'
+import { Chart } from './Chart'
 
 dayjs.extend(relativeTime)
 
-function transformSnapshotsToChartData(
-  data: BalanceSnapshotWithConvertedBalance[],
-): ChartDataPoint[] {
-  return [...data]
-    .sort(
-      (a, b) =>
-        new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime(),
-    )
-    .map((snapshot) => {
-      const balance =
-        snapshot.convertedEffectiveBalance?.balance ?? snapshot.effectiveBalance
-      const dollars = balance.money.amount / 100
-      const signedValue =
-        balance.sign === MoneyWithSignSign.negative ? -dollars : dollars
-
-      return {
-        label: dayjs(snapshot.snapshotDate).format('MMM D'),
-        value: signedValue,
-      }
-    })
-}
-
 interface AccountModalProps {
-  account: AccountSummary | null
+  account: AccountSummaryData | null
   opened: boolean
   onClose: () => void
 }
@@ -56,26 +25,27 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
       query: { enabled: opened && !!account?.id },
     })
 
-  const { data: snapshots, isLoading: isLoadingSnapshots } =
-    useBalanceSnapshotControllerFindByAccountId(account?.id ?? '', {
-      query: { enabled: opened && !!account?.id },
-    })
+  const { data: balanceHistory, isLoading: isLoadingBalances } =
+    useAccountBalanceHistory(account?.id, opened && !!account?.id)
 
-  const isLoading = isLoadingAccount || isLoadingSnapshots
+  const isLoading = isLoadingAccount || isLoadingBalances
   const isSyncedAccount = !!fullAccount?.bankLinkId
 
-  // Find the last sync snapshot date
-  const lastSyncSnapshot = snapshots
-    ?.filter((s) => s.snapshotType === BalanceSnapshotSnapshotType.SYNC)
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )[0]
-
-  const { convertedEffectiveBalance, effectiveBalance } = lastSyncSnapshot ?? {}
-
-  const balanceInfo =
-    effectiveBalance && resolveBalance(effectiveBalance, convertedEffectiveBalance)
+  // Get balance info from the latest balance result or fall back to account summary
+  const latestBalance = balanceHistory.latestBalance
+  const balanceInfo = latestBalance
+    ? {
+        primaryBalance: resolveEffectiveBalance(latestBalance.effectiveBalance),
+        originalBalance:
+          latestBalance.effectiveBalance.convertedBalance &&
+          latestBalance.effectiveBalance.convertedBalance.money.currency !==
+            latestBalance.effectiveBalance.balance.money.currency
+            ? latestBalance.effectiveBalance.balance
+            : null,
+      }
+    : account
+      ? resolveBalance(account.effectiveBalance, account.convertedEffectiveBalance)
+      : null
 
   return (
     <Modal
@@ -114,29 +84,29 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
                 </div>
               </Group>
 
-              {isSyncedAccount && lastSyncSnapshot && (
+              {isSyncedAccount && fullAccount.lastSyncedAt && (
                 <Group justify="space-between">
                   <Text c="dimmed">Last Synced</Text>
-                  <Text>{dayjs(lastSyncSnapshot.createdAt).fromNow()}</Text>
+                  <Text>{dayjs(fullAccount.lastSyncedAt).fromNow()}</Text>
                 </Group>
               )}
 
-              {fullAccount.institutionName && (
+              {fullAccount.bankLink?.institutionName && (
                 <Group justify="space-between">
                   <Text c="dimmed">Institution</Text>
-                  <Text>{fullAccount.institutionName}</Text>
+                  <Text>{fullAccount.bankLink.institutionName}</Text>
                 </Group>
               )}
             </>
           )}
 
-          {snapshots && snapshots.length > 0 && (
+          {balanceHistory.chartData.length > 0 && (
             <Box mt="md">
               <Text fw={500} mb="sm">
                 Balance history
               </Text>
               <Chart
-                data={transformSnapshotsToChartData(snapshots)}
+                data={balanceHistory.chartData}
                 height={200}
                 valueFormatter={(value) =>
                   formatMoneyNumber({ value, decimals: 2 })

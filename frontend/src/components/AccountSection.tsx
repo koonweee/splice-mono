@@ -1,7 +1,7 @@
 import { ActionIcon, Collapse, Group, Stack, Text, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
-import type { AccountSummary } from '../api/models'
+import type { AccountSummaryData } from '../lib/balance-utils'
 import { AccountCard } from './AccountCard'
 
 export function AccountSection({
@@ -11,9 +11,9 @@ export function AccountSection({
   onAccountClick,
 }: {
   title: string
-  accounts: AccountSummary[]
+  accounts: AccountSummaryData[]
   isLiability: boolean
-  onAccountClick: (account: AccountSummary) => void
+  onAccountClick: (account: AccountSummaryData) => void
 }) {
   const [opened, { toggle }] = useDisclosure(true)
 

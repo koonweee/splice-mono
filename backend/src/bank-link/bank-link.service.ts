@@ -13,9 +13,9 @@ import {
 import type { Account, CreateAccountDto } from '../types/Account';
 import type {
   APIAccount,
-  BankLink,
   CreateBankLinkDto,
   InitiateLinkResponse,
+  SanitizedBankLink,
   UpdateBankLinkDto,
 } from '../types/BankLink';
 import { UserService } from '../user/user.service';
@@ -31,7 +31,7 @@ import { ProviderRegistry } from './providers/provider.registry';
 @Injectable()
 export class BankLinkService extends OwnedCrudService<
   BankLinkEntity,
-  BankLink,
+  SanitizedBankLink,
   CreateBankLinkDto,
   UpdateBankLinkDto
 > {

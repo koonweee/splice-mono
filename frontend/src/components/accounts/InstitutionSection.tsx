@@ -22,7 +22,7 @@ export function InstitutionSection({
   const [opened, { toggle }] = useDisclosure(true)
 
   // Get provider from first account (all accounts in same institution share same provider)
-  const provider = accounts[0]?.providerName
+  const provider = accounts[0]?.bankLink?.providerName
 
   return (
     <Paper withBorder p="md" radius="md">

@@ -5,10 +5,10 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { MoneyWithSign } from './moneyWithSign';
 import type { AccountType } from './accountType';
 import type { AccountSubType } from './accountSubType';
-import type { AccountBankLinkStatus } from './accountBankLinkStatus';
+import type { AccountBankLink } from './accountBankLink';
+import type { MoneyWithSign } from './moneyWithSign';
 
 export interface Account {
   id: string;
@@ -16,8 +16,6 @@ export interface Account {
   name: string | null;
   /** @nullable */
   mask?: string | null;
-  availableBalance: MoneyWithSign;
-  currentBalance: MoneyWithSign;
   type: AccountType;
   /** @nullable */
   subType: AccountSubType;
@@ -25,14 +23,11 @@ export interface Account {
   externalAccountId?: string | null;
   /** @nullable */
   bankLinkId?: string | null;
-  /** @nullable */
-  institutionName?: string | null;
-  /** @nullable */
-  bankLinkStatus?: AccountBankLinkStatus;
-  /** @nullable */
-  providerName?: string | null;
+  bankLink?: AccountBankLink;
   /** @nullable */
   lastSyncedAt?: string | null;
+  availableBalance: MoneyWithSign;
+  currentBalance: MoneyWithSign;
   createdAt: string;
   updatedAt: string;
   userId: string;

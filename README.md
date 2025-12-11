@@ -88,17 +88,11 @@ Banking integrations follow a provider pattern with a standardized 4-step flow:
 
 New banking providers can be added by implementing the `IBankLinkProvider` interface.
 
-#### Multi-Currency Balance Conversion
-- Amounts stored as integer cents to avoid floating-point precision issues
-- `BalanceConversionHelper` handles batch conversion with exchange rate caching
-- Historical rates preserved for accurate point-in-time conversions
+#### Money Handling
+Amounts stored as integer cents to avoid floating-point precision issues.
 
 #### Scheduled Background Tasks
 - **Exchange Rate Sync** - Daily at 6 AM UTC, fetches rates for all currency pairs
-- **Balance Snapshot Forward-Fill** - Every 6 hours, ensures continuous daily data by copying from most recent snapshot when no sync occurred
-
-#### Net Worth Aggregation
-Dashboard service classifies accounts as assets (depository, investment) vs liabilities (credit, loans), calculates net worth as `assets - |liabilities|`, and generates daily chart data with timezone-aware date handling.
 
 ---
 
