@@ -1,5 +1,5 @@
 import { Group, Paper, Text } from '@mantine/core'
-import type { AccountSummary } from '../api/models'
+import type { AccountSummaryData } from '../lib/balance-utils'
 import {
   formatMoneyWithSign,
   formatPercent,
@@ -22,7 +22,7 @@ export function AccountCard({
   isLiability,
   onClick,
 }: {
-  account: AccountSummary
+  account: AccountSummaryData
   isLiability: boolean
   onClick?: () => void
 }) {

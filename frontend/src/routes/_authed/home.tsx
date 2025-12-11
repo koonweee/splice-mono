@@ -1,11 +1,12 @@
 import { Alert, Grid, Group, Loader, Select, Title } from '@mantine/core'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useDashboardControllerGetSummary } from '../../api/clients/spliceAPI'
-import { AccountSummary, TimePeriod } from '../../api/models'
+import { TimePeriod } from '../../api/models'
 import { AccountModal } from '../../components/AccountModal'
 import { AccountSection } from '../../components/AccountSection'
 import { NetWorthCard } from '../../components/NetWorthCard'
+import { useBalanceData } from '../../hooks/useBalanceData'
+import type { AccountSummaryData } from '../../lib/balance-utils'
 
 type HomeSearch = {
   accountId?: string
@@ -30,21 +31,17 @@ function HomePage() {
   const { accountId } = Route.useSearch()
   const navigate = useNavigate()
   const [period, setPeriod] = useState<TimePeriod>(TimePeriod.month)
-  const {
-    data: dashboard,
-    isLoading,
-    error,
-  } = useDashboardControllerGetSummary({ period })
+  const { data: dashboard, isLoading, error } = useBalanceData(period)
 
   // Find the selected account from the dashboard data
-  const selectedAccount: AccountSummary | null =
+  const selectedAccount: AccountSummaryData | null =
     accountId && dashboard
       ? ([...dashboard.assets, ...dashboard.liabilities].find(
           (a) => a.id === accountId,
         ) ?? null)
       : null
 
-  const handleAccountClick = (account: AccountSummary) => {
+  const handleAccountClick = (account: AccountSummaryData) => {
     navigate({ to: '/home', search: { accountId: account.id } })
   }
 
@@ -71,12 +68,11 @@ function HomePage() {
         </Group>
       )}
 
-      {error ? (
+      {error && (
         <Alert color="red" title="Error" mb="lg">
-          Error loading dashboard:{' '}
-          {error instanceof Error ? error.message : 'Unknown error'}
+          Error loading dashboard. Please try again.
         </Alert>
-      ) : null}
+      )}
 
       {dashboard && (
         <>
