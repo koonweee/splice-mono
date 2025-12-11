@@ -46,7 +46,6 @@ export class BankLinkController {
     @CurrentUser() currentUser: JwtUser,
   ): Promise<InitiateLinkResponse> {
     return this.bankLinkService.initiateLinking(
-      body.accountId,
       provider,
       currentUser.userId,
       body.redirectUri,

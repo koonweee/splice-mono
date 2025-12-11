@@ -17,14 +17,12 @@ export interface IBankLinkProvider {
    * Step 1: Initiate linking flow
    * Generate link URL/token for frontend and return tracking ID
    *
-   * @param internalAccountId - Our internal Account ID
    * @param userId - User ID
    * @param redirectUri - Optional redirect URL after linking
    * @param providerUserDetails - Existing provider-specific user details (provider should validate with Zod)
    * @returns Link information including linkRequestId for webhook matching
    */
   initiateLinking(input: {
-    internalAccountId: string;
     userId: string;
     redirectUri?: string;
     providerUserDetails?: Record<string, unknown>;
