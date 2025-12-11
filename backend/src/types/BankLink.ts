@@ -10,7 +10,6 @@ import { OwnedSchema } from './Timestamps';
 export const InitiateLinkRequestSchema = registerSchema(
   'InitiateLinkRequest',
   z.object({
-    accountId: z.string(), // Internal Account ID to link
     redirectUri: z.string().optional(), // Optional redirect after linking
   }),
 );

@@ -38,7 +38,6 @@ describe('BankLinkController', () => {
     it('should initiate linking and return link info', async () => {
       const provider = 'plaid';
       const requestBody = {
-        accountId: 'acc-123',
         redirectUri: 'https://myapp.com/callback',
       };
 
@@ -49,7 +48,6 @@ describe('BankLinkController', () => {
       );
 
       expect(service.initiateLinking).toHaveBeenCalledWith(
-        requestBody.accountId,
         provider,
         mockUserId,
         requestBody.redirectUri,
@@ -63,14 +61,11 @@ describe('BankLinkController', () => {
 
     it('should work without redirectUri', async () => {
       const provider = 'simplefin';
-      const requestBody = {
-        accountId: 'acc-456',
-      };
+      const requestBody = {};
 
       await controller.initiateLinking(provider, requestBody, mockCurrentUser);
 
       expect(service.initiateLinking).toHaveBeenCalledWith(
-        requestBody.accountId,
         provider,
         mockUserId,
         undefined,

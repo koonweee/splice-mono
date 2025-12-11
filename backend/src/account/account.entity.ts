@@ -93,6 +93,8 @@ export class AccountEntity extends OwnedEntity {
       externalAccountId: this.externalAccountId,
       bankLinkId: this.bankLinkId,
       institutionName: this.bankLink?.institutionName ?? null,
+      bankLinkStatus: this.bankLink?.status ?? null,
+      providerName: this.bankLink?.providerName ?? null,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

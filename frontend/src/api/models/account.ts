@@ -8,6 +8,7 @@
 import type { MoneyWithSign } from './moneyWithSign';
 import type { AccountType } from './accountType';
 import type { AccountSubType } from './accountSubType';
+import type { AccountBankLinkStatus } from './accountBankLinkStatus';
 
 export interface Account {
   id: string;
@@ -26,6 +27,12 @@ export interface Account {
   bankLinkId?: string | null;
   /** @nullable */
   institutionName?: string | null;
+  /** @nullable */
+  bankLinkStatus?: AccountBankLinkStatus;
+  /** @nullable */
+  providerName?: string | null;
+  /** @nullable */
+  lastSyncedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   userId: string;

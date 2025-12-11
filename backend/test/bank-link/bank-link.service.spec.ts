@@ -317,15 +317,13 @@ describe('BankLinkService', () => {
 
   describe('initiateLinking', () => {
     it('should call provider to initiate linking and create pending webhook event', async () => {
-      const accountId = 'acc-123';
       const providerName = 'plaid';
 
-      await service.initiateLinking(accountId, providerName, mockUserId);
+      await service.initiateLinking(providerName, mockUserId);
 
       expect(providerRegistry.getProvider).toHaveBeenCalledWith(providerName);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
-        internalAccountId: accountId,
         userId: mockUserId,
         redirectUri: undefined,
         providerUserDetails: undefined,
@@ -340,20 +338,13 @@ describe('BankLinkService', () => {
     });
 
     it('should pass redirectUri to provider', async () => {
-      const accountId = 'acc-123';
       const providerName = 'plaid';
       const redirectUri = 'https://myapp.com/callback';
 
-      await service.initiateLinking(
-        accountId,
-        providerName,
-        mockUserId,
-        redirectUri,
-      );
+      await service.initiateLinking(providerName, mockUserId, redirectUri);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
-        internalAccountId: accountId,
         userId: mockUserId,
         redirectUri,
         providerUserDetails: undefined,
@@ -361,13 +352,12 @@ describe('BankLinkService', () => {
     });
 
     it('should fetch and pass existing provider details to provider', async () => {
-      const accountId = 'acc-123';
       const providerName = 'plaid';
       const existingDetails = { userToken: 'existing-token' };
 
       userService.getProviderDetails.mockResolvedValueOnce(existingDetails);
 
-      await service.initiateLinking(accountId, providerName, mockUserId);
+      await service.initiateLinking(providerName, mockUserId);
 
       expect(userService.getProviderDetails).toHaveBeenCalledWith(
         mockUserId,
@@ -375,7 +365,6 @@ describe('BankLinkService', () => {
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
-        internalAccountId: accountId,
         userId: mockUserId,
         redirectUri: undefined,
         providerUserDetails: existingDetails,
@@ -383,7 +372,6 @@ describe('BankLinkService', () => {
     });
 
     it('should update user provider details when provider returns them', async () => {
-      const accountId = 'acc-123';
       const providerName = 'plaid';
       const updatedDetails = { userToken: 'new-token' };
 
@@ -393,7 +381,7 @@ describe('BankLinkService', () => {
         updatedProviderUserDetails: updatedDetails,
       });
 
-      await service.initiateLinking(accountId, providerName, mockUserId);
+      await service.initiateLinking(providerName, mockUserId);
 
       expect(userService.updateProviderDetails).toHaveBeenCalledWith(
         mockUserId,
@@ -403,10 +391,9 @@ describe('BankLinkService', () => {
     });
 
     it('should not update user provider details when provider does not return them', async () => {
-      const accountId = 'acc-123';
       const providerName = 'plaid';
 
-      await service.initiateLinking(accountId, providerName, mockUserId);
+      await service.initiateLinking(providerName, mockUserId);
 
       expect(userService.updateProviderDetails).not.toHaveBeenCalled();
     });

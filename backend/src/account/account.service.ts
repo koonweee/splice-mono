@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { BalanceSnapshotService } from '../balance-snapshot/balance-snapshot.service';
 import { BalanceConversionHelper } from '../common/balance-conversion.helper';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
@@ -31,6 +32,8 @@ export class AccountService extends OwnedCrudService<
   constructor(
     @InjectRepository(AccountEntity)
     repository: Repository<AccountEntity>,
+    @Inject(forwardRef(() => BalanceSnapshotService))
+    private readonly balanceSnapshotService: BalanceSnapshotService,
     private readonly userService: UserService,
     private readonly currencyConversionService: CurrencyConversionService,
   ) {
@@ -71,8 +74,22 @@ export class AccountService extends OwnedCrudService<
   async findAllWithConversion(
     userId: string,
   ): Promise<AccountWithConvertedBalance[]> {
-    const accounts = await this.findAll(userId);
-    return this.balanceConversionHelper.addConvertedBalances(accounts, userId);
+    // Fetch accounts and last sync times in parallel
+    const [accounts, lastSyncMap] = await Promise.all([
+      this.findAll(userId),
+      this.balanceSnapshotService.getLastSyncTimes(userId),
+    ]);
+
+    // Add lastSyncedAt to each account
+    const accountsWithSync = accounts.map((account) => ({
+      ...account,
+      lastSyncedAt: lastSyncMap.get(account.id) ?? null,
+    }));
+
+    return this.balanceConversionHelper.addConvertedBalances(
+      accountsWithSync,
+      userId,
+    );
   }
 
   /**
@@ -92,9 +109,19 @@ export class AccountService extends OwnedCrudService<
       return null;
     }
 
+    const lastSyncMap = await this.balanceSnapshotService.getLastSyncTimes(
+      userId,
+      id,
+    );
+
+    const accountWithSync = {
+      ...account,
+      lastSyncedAt: lastSyncMap.get(id) ?? null,
+    };
+
     const [accountWithConversion] =
       await this.balanceConversionHelper.addConvertedBalances(
-        [account],
+        [accountWithSync],
         userId,
       );
     return accountWithConversion;
