@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountModule } from './account/account.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { BalanceQueryModule } from './balance-query/balance-query.module';
 import { BalanceSnapshotModule } from './balance-snapshot/balance-snapshot.module';
 import { BankLinkModule } from './bank-link/bank-link.module';
 import { CategoryModule } from './category/category.module';
@@ -20,6 +21,7 @@ import { UserModule } from './user/user.module';
     ScheduleModule.forRoot(),
     AuthModule,
     AccountModule,
+    BalanceQueryModule,
     BalanceSnapshotModule,
     BankLinkModule,
     CategoryModule,

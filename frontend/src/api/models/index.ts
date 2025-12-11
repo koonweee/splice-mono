@@ -7,6 +7,7 @@
  */
 
 export * from './account';
+export * from './accountBalanceResult';
 export * from './accountBankLink';
 export * from './accountBankLinkStatus';
 export * from './accountSubType';
@@ -22,6 +23,9 @@ export * from './accountWithConvertedBalanceAllOfConvertedAvailableBalance';
 export * from './accountWithConvertedBalanceAllOfConvertedAvailableBalanceAllOf';
 export * from './accountWithConvertedBalanceAllOfConvertedCurrentBalance';
 export * from './accountWithConvertedBalanceAllOfConvertedCurrentBalanceAllOf';
+export * from './allBalancesRequest';
+export * from './balanceQueryPerDateResult';
+export * from './balanceQueryPerDateResultBalances';
 export * from './balanceSnapshot';
 export * from './balanceSnapshotSnapshotType';
 export * from './balanceSnapshotWithConvertedBalance';
@@ -31,6 +35,8 @@ export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedAvailableBalan
 export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedCurrentBalance';
 export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedCurrentBalanceAllOf';
 export * from './balanceSnapshotWithConvertedBalanceAllOfConvertedEffectiveBalance';
+export * from './balanceWithConvertedBalance';
+export * from './balancesRequest';
 export * from './convertedBalance';
 export * from './createAccountDto';
 export * from './createAccountDtoRawApiAccount';
@@ -62,10 +68,13 @@ export * from './moneyWithSignSign';
 export * from './netWorthChartPoint';
 export * from './netWorthChartPointValue';
 export * from './netWorthChartPointValueAllOf';
+export * from './rateWithSource';
+export * from './rateWithSourceSource';
 export * from './refreshTokenDto';
 export * from './sanitizedBankLink';
 export * from './sanitizedBankLinkStatus';
 export * from './sanitizedBankLinkStatusBody';
+export * from './snapshotBalancesRequest';
 export * from './timePeriod';
 export * from './tokenResponse';
 export * from './transaction';
