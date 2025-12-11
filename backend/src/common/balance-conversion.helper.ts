@@ -261,7 +261,8 @@ export class BalanceConversionHelper {
               : groupItem.availableBalance.money.amount;
           const sumSigned = currentSigned + availableSigned;
           effectiveAmount = Math.abs(sumSigned);
-          effectiveSign = sumSigned >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
+          effectiveSign =
+            sumSigned >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
         } else {
           effectiveAmount = groupItem.currentBalance.money.amount;
           effectiveSign = groupItem.currentBalance.sign;

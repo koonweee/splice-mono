@@ -1,7 +1,7 @@
 import { AccountSubtype, AccountType } from 'plaid';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
-import { APIAccountSchema } from './BankLink';
+import { APIAccountSchema, BankLinkStatusEnum } from './BankLink';
 import { ConvertedBalanceSchema, MoneyWithSignSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
 
@@ -27,6 +27,12 @@ export const AccountSchema = registerSchema(
       bankLinkId: z.string().nullable().optional(),
       /** Institution name from linked bank (e.g., "Chase", "Bank of America") */
       institutionName: z.string().nullable().optional(),
+      /** Status of the associated bank link connection */
+      bankLinkStatus: BankLinkStatusEnum.nullable().optional(),
+      /** Provider name for the bank link (e.g., "plaid", "simplefin") */
+      providerName: z.string().nullable().optional(),
+      /** When the account was last synced (from latest SYNC snapshot) */
+      lastSyncedAt: z.coerce.date().nullable().optional(),
     })
     .merge(OwnedSchema),
 );
