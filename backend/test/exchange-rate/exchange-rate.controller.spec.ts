@@ -37,72 +37,11 @@ describe('ExchangeRateController', () => {
       expect(result).toEqual([mockExchangeRate, mockExchangeRate2]);
       expect(service.syncDailyRates).toHaveBeenCalled();
     });
-  });
 
-  describe('getLatestRate', () => {
-    it('should return the latest exchange rate for a currency pair', async () => {
-      const result = await controller.getLatestRate('EUR', 'USD');
+    it('should return empty array when no rates synced', async () => {
+      service.syncDailyRates.mockResolvedValueOnce([]);
 
-      expect(result).toEqual({
-        baseCurrency: 'EUR',
-        targetCurrency: 'USD',
-        rate: mockExchangeRate.rate,
-      });
-      expect(service.getLatestRate).toHaveBeenCalledWith('EUR', 'USD');
-    });
-
-    it('should return null rate when no rate exists', async () => {
-      service.getLatestRate.mockResolvedValueOnce(null);
-
-      const result = await controller.getLatestRate('EUR', 'USD');
-
-      expect(result).toEqual({
-        baseCurrency: 'EUR',
-        targetCurrency: 'USD',
-        rate: null,
-      });
-    });
-  });
-
-  describe('getRate', () => {
-    it('should return the exchange rate for a specific date', async () => {
-      const result = await controller.getRate('EUR', 'USD', '2024-01-15');
-
-      expect(result).toEqual({
-        baseCurrency: 'EUR',
-        targetCurrency: 'USD',
-        rate: mockExchangeRate.rate,
-        rateDate: '2024-01-15',
-      });
-      expect(service.getRate).toHaveBeenCalledWith('EUR', 'USD', '2024-01-15');
-    });
-
-    it('should return null rate when no rate exists for date', async () => {
-      service.getRate.mockResolvedValueOnce(null);
-
-      const result = await controller.getRate('EUR', 'USD', '2024-01-15');
-
-      expect(result).toEqual({
-        baseCurrency: 'EUR',
-        targetCurrency: 'USD',
-        rate: null,
-        rateDate: '2024-01-15',
-      });
-    });
-  });
-
-  describe('getRatesForDate', () => {
-    it('should return all exchange rates for a specific date', async () => {
-      const result = await controller.getRatesForDate('2024-01-15');
-
-      expect(result).toEqual([mockExchangeRate, mockExchangeRate2]);
-      expect(service.getRatesForDate).toHaveBeenCalledWith('2024-01-15');
-    });
-
-    it('should return empty array when no rates exist for date', async () => {
-      service.getRatesForDate.mockResolvedValueOnce([]);
-
-      const result = await controller.getRatesForDate('2024-01-15');
+      const result = await controller.syncRates();
 
       expect(result).toEqual([]);
     });

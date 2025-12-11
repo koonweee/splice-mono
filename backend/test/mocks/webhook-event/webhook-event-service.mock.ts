@@ -1,5 +1,8 @@
 import { WebhookEventService } from 'src/webhook-event/webhook-event.service';
-import { mockPendingWebhookEvent, mockWebhookEvent } from './webhook-event.mock';
+import {
+  mockPendingWebhookEvent,
+  mockWebhookEvent,
+} from './webhook-event.mock';
 
 export const mockWebhookEventService: jest.Mocked<
   Omit<WebhookEventService, 'logger' | 'repository'>

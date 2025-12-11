@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { UserEvents, UserSettingsUpdatedEvent } from '../events/user.events';
-import { ExchangeRateService } from './exchange-rate.service';
+import { ExchangeRateBackfillHelper } from './exchange-rate-backfill.helper';
 
 /**
  * Listener for events that require exchange rate backfill
@@ -10,7 +10,7 @@ import { ExchangeRateService } from './exchange-rate.service';
 export class ExchangeRateListener {
   private readonly logger = new Logger(ExchangeRateListener.name);
 
-  constructor(private readonly exchangeRateService: ExchangeRateService) {}
+  constructor(private readonly backfillHelper: ExchangeRateBackfillHelper) {}
 
   /**
    * Handle user settings updated event.
@@ -32,7 +32,7 @@ export class ExchangeRateListener {
     );
 
     try {
-      const rates = await this.exchangeRateService.backfillRatesForUser(
+      const rates = await this.backfillHelper.backfillRatesForUser(
         event.userId,
       );
       this.logger.log(
