@@ -1,4 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { TimestampedEntity } from '../common/base.entity';
 import { Category } from '../types/Category';
 
 /**
@@ -6,7 +7,7 @@ import { Category } from '../types/Category';
  * This is a reference entity - categories are global/shared across all users.
  */
 @Entity()
-export class CategoryEntity {
+export class CategoryEntity extends TimestampedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -31,6 +32,8 @@ export class CategoryEntity {
       primary: this.primary,
       detailed: this.detailed,
       description: this.description,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
     };
   }
 }

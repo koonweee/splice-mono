@@ -17,16 +17,21 @@ export const InitiateLinkRequestSchema = registerSchema(
 export type InitiateLinkRequest = z.infer<typeof InitiateLinkRequestSchema>;
 
 /**
- * Response from initiating bank account linking
+ * Base schema for link responses (shared fields)
+ */
+const BaseLinkResponseSchema = z.object({
+  /** URL for user to add their banks (ie. Plaid's Link flow) */
+  linkUrl: z.string().optional(),
+  /** When the link expires */
+  expiresAt: z.date().optional(),
+});
+
+/**
+ * Response from initiating bank account linking (public API)
  */
 export const InitiateLinkResponseSchema = registerSchema(
   'InitiateLinkResponse',
-  z.object({
-    /** URL for user to add their banks (ie. Plaid's Link flow) */
-    linkUrl: z.string().optional(),
-    /** When the link expires */
-    expiresAt: z.date().optional(),
-  }),
+  BaseLinkResponseSchema,
 );
 
 export type InitiateLinkResponse = z.infer<typeof InitiateLinkResponseSchema>;
@@ -97,6 +102,17 @@ export const BankLinkSchema = z
 export type BankLink = z.infer<typeof BankLinkSchema>;
 
 /**
+ * Sanitized BankLink schema - excludes sensitive authentication data
+ * Use this for API responses and when embedding in other types
+ */
+export const SanitizedBankLinkSchema = registerSchema(
+  'SanitizedBankLink',
+  BankLinkSchema.omit({ authentication: true }),
+);
+
+export type SanitizedBankLink = z.infer<typeof SanitizedBankLinkSchema>;
+
+/**
  * DTO for creating a new BankLink (excludes id, userId, status fields, and timestamps which are auto-generated)
  */
 export const CreateBankLinkDtoSchema = BankLinkSchema.omit({
@@ -118,17 +134,14 @@ export const UpdateBankLinkDtoSchema = CreateBankLinkDtoSchema.partial();
 export type UpdateBankLinkDto = z.infer<typeof UpdateBankLinkDtoSchema>;
 
 /**
- * Response from initiating a link flow
+ * Response from initiating a link flow (internal provider response)
+ * Extends BaseLinkResponseSchema with additional internal fields
  */
-export const LinkInitiationResponseSchema = z.object({
-  /** URL for user to add their banks (ie. Plaid's Link flow) */
-  linkUrl: z.string().optional(),
-  /** When the link expires */
-  expiresAt: z.date().optional(),
+export const LinkInitiationResponseSchema = BaseLinkResponseSchema.extend({
   /**
    * Unique ID for matching webhooks
    * This is set to link token to match the initial create request to the webhook response
-   * */
+   */
   webhookId: z.string(),
   /** Provider-specific data */
   metadata: z.record(z.string(), z.any()).optional(),

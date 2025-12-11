@@ -7,6 +7,7 @@
  */
 
 export * from './account';
+export * from './accountBankLink';
 export * from './accountBankLinkStatus';
 export * from './accountSubType';
 export * from './accountSummary';
@@ -62,6 +63,9 @@ export * from './netWorthChartPoint';
 export * from './netWorthChartPointValue';
 export * from './netWorthChartPointValueAllOf';
 export * from './refreshTokenDto';
+export * from './sanitizedBankLink';
+export * from './sanitizedBankLinkStatus';
+export * from './sanitizedBankLinkStatusBody';
 export * from './timePeriod';
 export * from './tokenResponse';
 export * from './transaction';

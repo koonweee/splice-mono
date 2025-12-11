@@ -39,6 +39,15 @@ export type SerializedMoney = z.infer<typeof MoneySchema>;
 export type SerializedMoneyWithSign = z.infer<typeof MoneyWithSignSchema>;
 
 /**
+ * Schema for entities with both current and available balance fields.
+ * Used by Account and BalanceSnapshot.
+ */
+export const CurrentAndAvailableBalanceSchema = z.object({
+  availableBalance: MoneyWithSignSchema,
+  currentBalance: MoneyWithSignSchema,
+});
+
+/**
  * MoneyWithSign wrapper class over @half0wl/money
  *
  * Stores monetary amounts as integers in the smallest currency unit (e.g., cents)

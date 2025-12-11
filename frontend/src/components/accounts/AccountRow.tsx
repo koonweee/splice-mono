@@ -23,7 +23,7 @@ export function AccountRow({ account }: { account: AccountWithConvertedBalance }
         </Text>
       </div>
       <Group gap="md">
-        <StatusBadge status={account.bankLinkStatus} />
+        <StatusBadge status={account.bankLink?.status} />
         <Text size="sm" c="dimmed" style={{ minWidth: 80, textAlign: 'right' }}>
           {account.lastSyncedAt ? dayjs(account.lastSyncedAt).fromNow() : '-'}
         </Text>
