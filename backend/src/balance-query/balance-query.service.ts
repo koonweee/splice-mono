@@ -407,8 +407,8 @@ export class BalanceQueryService {
       };
     }
 
-    // For all other types: just availableBalance
-    return availableBalance;
+    // For all other types: just current balance
+    return currentBalance;
   }
 
   /**

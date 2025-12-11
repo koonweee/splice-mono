@@ -24,7 +24,7 @@ function AccountsPage() {
     for (const account of accounts) {
       const institution = account.bankLink?.institutionName ?? 'Manual Accounts'
       const existing = groups.get(institution) ?? []
-      groups.set(institution, [...existing, account])
+      groups.set(institution, [...existing, account as AccountWithConvertedBalance])
     }
     return groups
   }, [accounts])
