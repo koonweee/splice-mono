@@ -68,20 +68,18 @@ export class BankLinkService extends OwnedCrudService<
    * Step 1: Initiate bank account linking
    * Creates a pending webhook event and returns link info for frontend
    *
-   * @param accountId - Internal Account ID to link
    * @param providerName - Provider to use (e.g., 'plaid', 'simplefin')
    * @param userId - User initiating the link
    * @param redirectUri - Optional redirect after linking
    * @returns Link information for frontend
    */
   async initiateLinking(
-    accountId: string,
     providerName: string,
     userId: string,
     redirectUri?: string,
   ): Promise<InitiateLinkResponse> {
     this.logger.log(
-      `Initiating link for account ${accountId} with provider ${providerName} for user ${userId}`,
+      `Initiating link with provider ${providerName} for user ${userId}`,
     );
 
     // Get provider
@@ -95,7 +93,6 @@ export class BankLinkService extends OwnedCrudService<
 
     // Call provider to get link URL/token
     const linkResponse = await provider.initiateLinking({
-      internalAccountId: accountId,
       userId,
       redirectUri,
       providerUserDetails,

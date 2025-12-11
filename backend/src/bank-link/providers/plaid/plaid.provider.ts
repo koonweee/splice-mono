@@ -133,15 +133,13 @@ export class PlaidProvider implements IBankLinkProvider {
    * Returns URL to redirect user to for hosted Plaid Link flow
    */
   async initiateLinking(input: {
-    internalAccountId: string;
     userId: string;
     redirectUri?: string;
     providerUserDetails?: Record<string, unknown>;
   }): Promise<LinkInitiationResponse> {
-    const { internalAccountId, userId, redirectUri, providerUserDetails } =
-      input;
+    const { userId, redirectUri, providerUserDetails } = input;
     this.logger.log(
-      `Plaid link initiated: internalAccountId=${internalAccountId}, userId=${userId}, redirectUri=${redirectUri}`,
+      `Plaid link initiated: userId=${userId}, redirectUri=${redirectUri}`,
     );
 
     // Parse and validate existing provider details

@@ -1,9 +1,11 @@
-import { Alert, Group, Loader, Stack, Text, Title } from '@mantine/core'
+import { Alert, Button, Group, Loader, Stack, Text, Title } from '@mantine/core'
+import { useDisclosure } from '@mantine/hooks'
+import { IconPlus } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { useAccountControllerFindAll } from '../../api/clients/spliceAPI'
 import type { AccountWithConvertedBalance } from '../../api/models'
-import { InstitutionSection } from '../../components/accounts'
+import { AddAccountModal, InstitutionSection } from '../../components/accounts'
 
 export const Route = createFileRoute('/_authed/accounts')({
   component: AccountsPage,
@@ -11,6 +13,8 @@ export const Route = createFileRoute('/_authed/accounts')({
 
 function AccountsPage() {
   const { data: accounts, isLoading, error } = useAccountControllerFindAll()
+  const [modalOpened, { open: openModal, close: closeModal }] =
+    useDisclosure(false)
 
   // Group accounts by institution
   const groupedAccounts = useMemo(() => {
@@ -43,9 +47,16 @@ function AccountsPage() {
 
   return (
     <>
-      <Title order={1} mb="xl">
-        Accounts
-      </Title>
+      <Group justify="space-between" mb="xl">
+        <Title order={1}>Accounts</Title>
+        <Button
+          leftSection={<IconPlus size={16} />}
+          onClick={openModal}
+          variant="outline"
+        >
+          Add Account
+        </Button>
+      </Group>
       <Stack gap="lg">
         {Array.from(groupedAccounts.entries()).map(
           ([institution, accounts]) => (
@@ -60,6 +71,7 @@ function AccountsPage() {
           <Text c="dimmed">No accounts found</Text>
         )}
       </Stack>
+      <AddAccountModal opened={modalOpened} onClose={closeModal} />
     </>
   )
 }
