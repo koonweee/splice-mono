@@ -133,34 +133,4 @@ export class BalanceSnapshotService extends OwnedCrudService<
     this.logger.log(`Balance snapshot created: id=${savedEntity.id}`);
     return savedEntity.toObject();
   }
-
-  /**
-   * Get the last sync time for accounts based on the most recent SYNC snapshot
-   *
-   * @param userId - The user ID
-   * @param accountId - Optional account ID to filter by
-   * @returns Map of accountId to lastSyncedAt date
-   */
-  async getLastSyncTimes(
-    userId: string,
-    accountId?: string,
-  ): Promise<Map<string, Date>> {
-    const query = this.repository
-      .createQueryBuilder('snapshot')
-      .select('snapshot.accountId', 'accountId')
-      .addSelect('MAX(snapshot.createdAt)', 'lastSyncedAt')
-      .where('snapshot.userId = :userId', { userId })
-      .andWhere('snapshot.snapshotType = :type', { type: 'SYNC' });
-
-    if (accountId) {
-      query.andWhere('snapshot.accountId = :accountId', { accountId });
-    }
-
-    const results = await query.groupBy('snapshot.accountId').getRawMany<{
-      accountId: string;
-      lastSyncedAt: string;
-    }>();
-
-    return new Map(results.map((r) => [r.accountId, new Date(r.lastSyncedAt)]));
-  }
 }

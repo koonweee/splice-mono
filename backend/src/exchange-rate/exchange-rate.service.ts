@@ -60,12 +60,6 @@ interface CachedRate {
   rateDate: string;
 }
 
-/** Result from batch rate lookup including both rate and the date it applies to */
-export interface BatchRateLookupResult {
-  rate: number;
-  rateDate: string;
-}
-
 @Injectable()
 export class ExchangeRateService {
   private readonly logger = new Logger(ExchangeRateService.name);
@@ -151,62 +145,6 @@ export class ExchangeRateService {
     targetCurrency: string,
   ): Promise<number | null> {
     return this.getRate(baseCurrency, targetCurrency);
-  }
-
-  /**
-   * Ensure cache is loaded, then return a synchronous lookup function.
-   * Useful for batch operations where you want to avoid repeated async calls.
-   *
-   * @returns A synchronous function to look up rates from the loaded cache
-   */
-  async prepareForBatchLookup(): Promise<
-    (
-      baseCurrency: string,
-      targetCurrency: string,
-      rateDate?: string,
-    ) => BatchRateLookupResult | null
-  > {
-    await this.ensureCacheLoaded();
-
-    return (
-      baseCurrency: string,
-      targetCurrency: string,
-      rateDate?: string,
-    ): BatchRateLookupResult | null => {
-      if (baseCurrency === targetCurrency) {
-        // Same currency - rate is 1, use requested date or today
-        return {
-          rate: 1,
-          rateDate: rateDate ?? new Date().toISOString().split('T')[0],
-        };
-      }
-
-      const { base, target, inverted } = normalizeCurrencyPair(
-        baseCurrency,
-        targetCurrency,
-      );
-
-      let rate: number | undefined;
-      let actualRateDate: string | undefined;
-
-      if (rateDate) {
-        rate = this.rateCache.get(`${base}:${target}:${rateDate}`);
-        actualRateDate = rateDate;
-      } else {
-        const cached = this.latestRateCache.get(`${base}:${target}`);
-        rate = cached?.rate;
-        actualRateDate = cached?.rateDate;
-      }
-
-      if (rate === undefined || actualRateDate === undefined) {
-        return null;
-      }
-
-      return {
-        rate: inverted ? 1 / rate : rate,
-        rateDate: actualRateDate,
-      };
-    };
   }
 
   /**

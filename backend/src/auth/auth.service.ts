@@ -2,7 +2,7 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
-import { LessThan, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { RefreshTokenEntity } from './refresh-token.entity';
 
 @Injectable()
@@ -43,29 +43,6 @@ export class AuthService {
     this.logger.log(`Generated refresh token for user: ${userId}`);
 
     return rawToken;
-  }
-
-  /**
-   * Validate a refresh token and return the user ID
-   */
-  async validateRefreshToken(rawToken: string): Promise<string> {
-    const hashedToken = this.hashToken(rawToken);
-
-    const tokenEntity = await this.refreshTokenRepository.findOne({
-      where: { token: hashedToken, revoked: false },
-    });
-
-    if (!tokenEntity) {
-      this.logger.warn('Invalid refresh token attempted');
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    if (tokenEntity.expiresAt < new Date()) {
-      this.logger.warn(`Expired refresh token for user: ${tokenEntity.userId}`);
-      throw new UnauthorizedException('Refresh token expired');
-    }
-
-    return tokenEntity.userId;
   }
 
   /**
@@ -139,20 +116,6 @@ export class AuthService {
       { revoked: true },
     );
     this.logger.log(`Revoked all refresh tokens for user: ${userId}`);
-  }
-
-  /**
-   * Clean up expired tokens (can be called by a scheduled job)
-   */
-  async cleanupExpiredTokens(): Promise<number> {
-    const result = await this.refreshTokenRepository.delete({
-      expiresAt: LessThan(new Date()),
-    });
-    const deletedCount = result.affected ?? 0;
-    if (deletedCount > 0) {
-      this.logger.log(`Cleaned up ${deletedCount} expired refresh tokens`);
-    }
-    return deletedCount;
   }
 
   private hashToken(token: string): string {

@@ -9,7 +9,6 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { BalanceSnapshotModule } from './balance-snapshot/balance-snapshot.module';
 import { BankLinkModule } from './bank-link/bank-link.module';
 import { CategoryModule } from './category/category.module';
-import { DashboardModule } from './dashboard/dashboard.module';
 import { dataSourceOptions } from './data-source';
 import { ExchangeRateModule } from './exchange-rate/exchange-rate.module';
 import { TransactionModule } from './transaction/transaction.module';
@@ -24,7 +23,6 @@ import { UserModule } from './user/user.module';
     BalanceSnapshotModule,
     BankLinkModule,
     CategoryModule,
-    DashboardModule,
     ExchangeRateModule,
     TransactionModule,
     UserModule,
