@@ -153,19 +153,6 @@ export class UserService {
     return entity.toObject();
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    this.logger.log(`Finding user by email: email=${email}`);
-    const entity = await this.repository.findOne({
-      where: { email },
-    });
-
-    if (!entity) {
-      return null;
-    }
-
-    return entity.toObject();
-  }
-
   /**
    * Update user settings (partial update - merges with existing settings)
    *

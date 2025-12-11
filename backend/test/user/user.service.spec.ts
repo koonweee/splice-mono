@@ -232,36 +232,6 @@ describe('UserService', () => {
     });
   });
 
-  describe('findByEmail', () => {
-    it('should return a user when found by email', async () => {
-      const mockEntity = new UserEntity();
-      mockEntity.id = 'user-uuid-123';
-      mockEntity.email = 'test@example.com';
-      mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
-      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
-      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
-
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-
-      const result = await service.findByEmail('test@example.com');
-
-      expect(result).toBeDefined();
-      expect(result?.email).toBe('test@example.com');
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { email: 'test@example.com' },
-      });
-    });
-
-    it('should return null when user not found by email', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.findByEmail('notfound@example.com');
-
-      expect(result).toBeNull();
-    });
-  });
-
   describe('getTimezone', () => {
     it('should return user timezone when set', async () => {
       const mockEntity = new UserEntity();
