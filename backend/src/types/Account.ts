@@ -2,7 +2,7 @@ import { AccountSubtype, AccountType } from 'plaid';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { APIAccountSchema, BankLinkStatusEnum } from './BankLink';
-import { ConvertedBalanceSchema, MoneyWithSignSchema } from './MoneyWithSign';
+import { MoneyWithSignSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
 
 export const AccountTypeSchema = z.nativeEnum(AccountType);
@@ -71,20 +71,3 @@ export const UpdateAccountDtoSchema = registerSchema(
 );
 
 export type UpdateAccountDto = z.infer<typeof UpdateAccountDtoSchema>;
-
-/**
- * Account with balances converted to user's preferred currency
- */
-export const AccountWithConvertedBalanceSchema = registerSchema(
-  'AccountWithConvertedBalance',
-  AccountSchema.extend({
-    /** Current balance converted to user's preferred currency with rate info */
-    convertedCurrentBalance: ConvertedBalanceSchema.nullable(),
-    /** Available balance converted to user's preferred currency with rate info */
-    convertedAvailableBalance: ConvertedBalanceSchema.nullable(),
-  }),
-);
-
-export type AccountWithConvertedBalance = z.infer<
-  typeof AccountWithConvertedBalanceSchema
->;

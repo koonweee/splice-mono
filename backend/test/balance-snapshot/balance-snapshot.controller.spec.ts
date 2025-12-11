@@ -6,7 +6,6 @@ import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { mockBalanceSnapshotService } from '../mocks/balance-snapshot/balance-snapshot-service.mock';
 import {
   mockBalanceSnapshot,
-  mockBalanceSnapshotWithConversion,
   mockCreateBalanceSnapshotDto,
 } from '../mocks/balance-snapshot/balance-snapshot.mock';
 
@@ -38,13 +37,11 @@ describe('BalanceSnapshotController', () => {
   describe('findAll', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
 
-    it('should return an array of balance snapshots with converted balances', async () => {
+    it('should return an array of balance snapshots', async () => {
       const result = await controller.findAll(mockUser);
 
-      expect(result).toEqual([mockBalanceSnapshotWithConversion]);
-      expect(service.findAllWithConversion).toHaveBeenCalledWith(
-        mockUser.userId,
-      );
+      expect(result).toEqual([mockBalanceSnapshot]);
+      expect(service.findAll).toHaveBeenCalledWith(mockUser.userId);
     });
   });
 
@@ -89,14 +86,14 @@ describe('BalanceSnapshotController', () => {
   describe('findByAccountId', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
 
-    it('should return balance snapshots with converted balances for an account', async () => {
+    it('should return balance snapshots for an account', async () => {
       const result = await controller.findByAccountId(
         'account-id-123',
         mockUser,
       );
 
-      expect(result).toEqual([mockBalanceSnapshotWithConversion]);
-      expect(service.findByAccountIdWithConversion).toHaveBeenCalledWith(
+      expect(result).toEqual([mockBalanceSnapshot]);
+      expect(service.findByAccountId).toHaveBeenCalledWith(
         'account-id-123',
         mockUser.userId,
       );
