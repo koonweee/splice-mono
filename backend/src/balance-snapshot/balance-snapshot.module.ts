@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AccountEntity } from '../account/account.entity';
 import { UserModule } from '../user/user.module';
 import { BalanceSnapshotController } from './balance-snapshot.controller';
 import { BalanceSnapshotEntity } from './balance-snapshot.entity';
@@ -9,8 +8,8 @@ import { BalanceSnapshotService } from './balance-snapshot.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BalanceSnapshotEntity, AccountEntity]),
-    UserModule, // For UserService (to get user's preferred currency)
+    TypeOrmModule.forFeature([BalanceSnapshotEntity]),
+    UserModule, // For UserService (to get user's timezone)
   ],
   controllers: [BalanceSnapshotController],
   providers: [BalanceSnapshotService, BalanceSnapshotListener],
