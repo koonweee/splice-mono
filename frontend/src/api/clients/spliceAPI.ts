@@ -48,10 +48,6 @@ import type {
 } from '../models';
 
 import { axios } from '../axios';
-
-
-
-
 /**
  * Get all accounts
  */
@@ -1602,4 +1598,3 @@ const {mutation: mutationOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    
