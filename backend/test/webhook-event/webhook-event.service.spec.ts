@@ -102,14 +102,19 @@ describe('WebhookEventService', () => {
       expect(result?.webhookId).toBe('wh_plaid_12345');
       expect(result?.status).toBe(WebhookEventStatus.PENDING);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { webhookId: 'wh_plaid_12345', status: WebhookEventStatus.PENDING },
+        where: {
+          webhookId: 'wh_plaid_12345',
+          status: WebhookEventStatus.PENDING,
+        },
       });
     });
 
     it('should return null when pending webhook event not found', async () => {
       mockRepository.findOne.mockResolvedValue(null);
 
-      const result = await service.findPendingByWebhookId('wh_plaid_nonexistent');
+      const result = await service.findPendingByWebhookId(
+        'wh_plaid_nonexistent',
+      );
 
       expect(result).toBeNull();
     });
@@ -136,7 +141,10 @@ describe('WebhookEventService', () => {
         return Promise.resolve(entity);
       });
 
-      const result = await service.markCompleted('wh_plaid_12345', webhookContent);
+      const result = await service.markCompleted(
+        'wh_plaid_12345',
+        webhookContent,
+      );
 
       expect(result).toBeDefined();
       expect(result?.status).toBe(WebhookEventStatus.COMPLETED);

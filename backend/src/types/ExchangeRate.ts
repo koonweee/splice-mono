@@ -60,3 +60,20 @@ export interface CurrencyPair {
   baseCurrency: string;
   targetCurrency: string;
 }
+
+/** Source of an exchange rate value */
+export type RateSource = 'DB' | 'FILLED';
+
+/** Exchange rate with source indicator */
+export interface RateWithSource {
+  baseCurrency: string;
+  targetCurrency: string;
+  rate: number;
+  source: RateSource;
+}
+
+/** Response for getRatesForDateRange - rates for a single date */
+export interface DateRangeRateResponse {
+  date: string;
+  rates: RateWithSource[];
+}
