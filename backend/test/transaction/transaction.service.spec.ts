@@ -1,7 +1,5 @@
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { TransactionEvents } from '../../src/events/transaction.events';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import { MoneySign } from '../../src/types/MoneyWithSign';
@@ -22,11 +20,6 @@ describe('TransactionService', () => {
     delete: jest.fn(),
   };
 
-  // Mock event emitter
-  const mockEventEmitter = {
-    emit: jest.fn(),
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -34,10 +27,6 @@ describe('TransactionService', () => {
         {
           provide: getRepositoryToken(TransactionEntity),
           useValue: mockRepository,
-        },
-        {
-          provide: EventEmitter2,
-          useValue: mockEventEmitter,
         },
       ],
     }).compile();
@@ -47,7 +36,6 @@ describe('TransactionService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-    mockEventEmitter.emit.mockClear();
   });
 
   it('should be defined', () => {
@@ -86,28 +74,6 @@ describe('TransactionService', () => {
 
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.any(TransactionEntity),
-      );
-    });
-
-    it('should emit transaction created event', async () => {
-      const mockEntity = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity.id = 'generated-uuid-123';
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      await service.create(mockCreateTransactionDto, mockUserId);
-
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
-        TransactionEvents.CREATED,
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          transaction: expect.objectContaining({
-            id: 'generated-uuid-123',
-            accountId: mockCreateTransactionDto.accountId,
-          }),
-        }),
       );
     });
 
