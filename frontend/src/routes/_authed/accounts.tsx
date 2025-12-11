@@ -22,7 +22,7 @@ function AccountsPage() {
 
     const groups = new Map<string, AccountWithConvertedBalance[]>()
     for (const account of accounts) {
-      const institution = account.institutionName ?? 'Manual Accounts'
+      const institution = account.bankLink?.institutionName ?? 'Manual Accounts'
       const existing = groups.get(institution) ?? []
       groups.set(institution, [...existing, account])
     }

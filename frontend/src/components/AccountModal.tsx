@@ -121,10 +121,10 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
                 </Group>
               )}
 
-              {fullAccount.institutionName && (
+              {fullAccount.bankLink?.institutionName && (
                 <Group justify="space-between">
                   <Text c="dimmed">Institution</Text>
-                  <Text>{fullAccount.institutionName}</Text>
+                  <Text>{fullAccount.bankLink.institutionName}</Text>
                 </Group>
               )}
             </>

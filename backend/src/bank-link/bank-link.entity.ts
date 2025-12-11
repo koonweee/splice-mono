@@ -1,9 +1,9 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { OwnedEntity } from '../common/owned.entity';
 import type {
-  BankLink,
   BankLinkStatus,
   CreateBankLinkDto,
+  SanitizedBankLink,
 } from '../types/BankLink';
 
 @Entity()
@@ -53,14 +53,14 @@ export class BankLinkEntity extends OwnedEntity {
   }
 
   /**
-   * Convert entity to domain object
+   * Convert entity to domain object (sanitized - excludes authentication)
+   * Internal code that needs authentication should access entity.authentication directly
    */
-  toObject(): BankLink {
+  toObject(): SanitizedBankLink {
     return {
       id: this.id,
       userId: this.userId,
       providerName: this.providerName,
-      authentication: this.authentication,
       accountIds: this.accountIds,
       institutionId: this.institutionId,
       institutionName: this.institutionName,
