@@ -3,7 +3,6 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountService } from '../../src/account/account.service';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
 import { BalanceSnapshotService } from '../../src/balance-snapshot/balance-snapshot.service';
-import { CurrencyConversionService } from '../../src/exchange-rate/currency-conversion.service';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserService } from '../../src/user/user.service';
@@ -14,7 +13,6 @@ import {
   mockCreateBalanceSnapshotDto,
   mockUserId,
 } from '../mocks/balance-snapshot/balance-snapshot.mock';
-import { mockCurrencyConversionService } from '../mocks/exchange-rate/currency-conversion-service.mock';
 import { mockUserService } from '../mocks/user/user-service.mock';
 
 describe('BalanceSnapshotService', () => {
@@ -32,10 +30,6 @@ describe('BalanceSnapshotService', () => {
         {
           provide: UserService,
           useValue: mockUserService,
-        },
-        {
-          provide: CurrencyConversionService,
-          useValue: mockCurrencyConversionService,
         },
         {
           provide: AccountService,
@@ -283,190 +277,6 @@ describe('BalanceSnapshotService', () => {
 
       expect(existingEntity.snapshotType).toBe(BalanceSnapshotType.USER_UPDATE);
       expect(repository.save).toHaveBeenCalledWith(existingEntity);
-    });
-  });
-
-  describe('findAllWithConversion', () => {
-    it('should return empty array when no snapshots exist', async () => {
-      repository.find.mockResolvedValueOnce([]);
-
-      const result = await service.findAllWithConversion(mockUserId);
-
-      expect(result).toEqual([]);
-    });
-
-    it('should return snapshots with converted balances', async () => {
-      const result = await service.findAllWithConversion(mockUserId);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toHaveProperty('convertedCurrentBalance');
-      expect(result[0]).toHaveProperty('convertedAvailableBalance');
-    });
-
-    it('should use snapshotDate as currencyDate for historical rate lookup', async () => {
-      const result = await service.findAllWithConversion(mockUserId);
-
-      // The mock snapshot has snapshotDate '2024-01-01'
-      // convertMany should be called with that date
-      expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledWith(
-        expect.any(Array),
-        'USD',
-        '2024-01-01', // snapshotDate passed as rateDate
-      );
-    });
-  });
-
-  describe('findByAccountIdWithConversion', () => {
-    it('should return empty array when no snapshots exist for account', async () => {
-      repository.find.mockResolvedValueOnce([]);
-
-      const result = await service.findByAccountIdWithConversion(
-        'account-id-123',
-        mockUserId,
-      );
-
-      expect(result).toEqual([]);
-    });
-
-    it('should return snapshots with converted balances for account', async () => {
-      const result = await service.findByAccountIdWithConversion(
-        'account-id-123',
-        mockUserId,
-      );
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toHaveProperty('convertedCurrentBalance');
-      expect(result[0]).toHaveProperty('convertedAvailableBalance');
-    });
-
-    it('should use snapshotDate as currencyDate for historical rate lookup', async () => {
-      const result = await service.findByAccountIdWithConversion(
-        'account-id-123',
-        mockUserId,
-      );
-
-      // The mock snapshot has snapshotDate '2024-01-01'
-      expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledWith(
-        expect.any(Array),
-        'USD',
-        '2024-01-01', // snapshotDate passed as rateDate
-      );
-    });
-  });
-
-  describe('findSnapshotsForDateWithConversion', () => {
-    it('should return empty map when no snapshots exist for date', async () => {
-      repository.find.mockResolvedValueOnce([]);
-
-      const result = await service.findSnapshotsForDateWithConversion(
-        mockUserId,
-        '2024-01-01',
-      );
-
-      expect(result.size).toBe(0);
-    });
-
-    it('should use snapshotDate as currencyDate for historical rate lookup', async () => {
-      const snapshotEntity = {
-        id: 'snapshot-id-123',
-        userId: mockUserId,
-        accountId: 'account-id-123',
-        snapshotDate: '2024-01-15',
-        currentBalance: {
-          amount: 100000,
-          currency: 'USD',
-          sign: MoneySign.POSITIVE,
-        },
-        availableBalance: {
-          amount: 95000,
-          currency: 'USD',
-          sign: MoneySign.POSITIVE,
-        },
-        snapshotType: BalanceSnapshotType.SYNC,
-        createdAt: new Date('2024-01-15T00:00:00Z'),
-        updatedAt: new Date('2024-01-15T00:00:00Z'),
-        toObject: jest.fn().mockReturnValue({
-          id: 'snapshot-id-123',
-          userId: mockUserId,
-          accountId: 'account-id-123',
-          snapshotDate: '2024-01-15',
-          currentBalance: {
-            money: { currency: 'USD', amount: 100000 },
-            sign: MoneySign.POSITIVE,
-          },
-          availableBalance: {
-            money: { currency: 'USD', amount: 95000 },
-            sign: MoneySign.POSITIVE,
-          },
-          snapshotType: BalanceSnapshotType.SYNC,
-          createdAt: new Date('2024-01-15T00:00:00Z'),
-          updatedAt: new Date('2024-01-15T00:00:00Z'),
-        }),
-      };
-      repository.find.mockResolvedValueOnce([snapshotEntity]);
-
-      await service.findSnapshotsForDateWithConversion(
-        mockUserId,
-        '2024-01-15',
-      );
-
-      // Should use the snapshotDate (2024-01-15) for rate lookup
-      expect(mockCurrencyConversionService.convertMany).toHaveBeenCalledWith(
-        expect.any(Array),
-        'USD',
-        '2024-01-15',
-      );
-    });
-
-    it('should return map keyed by accountId', async () => {
-      const snapshotEntity = {
-        id: 'snapshot-id-123',
-        userId: mockUserId,
-        accountId: 'account-id-123',
-        snapshotDate: '2024-01-15',
-        currentBalance: {
-          amount: 100000,
-          currency: 'USD',
-          sign: MoneySign.POSITIVE,
-        },
-        availableBalance: {
-          amount: 95000,
-          currency: 'USD',
-          sign: MoneySign.POSITIVE,
-        },
-        snapshotType: BalanceSnapshotType.SYNC,
-        createdAt: new Date('2024-01-15T00:00:00Z'),
-        updatedAt: new Date('2024-01-15T00:00:00Z'),
-        toObject: jest.fn().mockReturnValue({
-          id: 'snapshot-id-123',
-          userId: mockUserId,
-          accountId: 'account-id-123',
-          snapshotDate: '2024-01-15',
-          currentBalance: {
-            money: { currency: 'USD', amount: 100000 },
-            sign: MoneySign.POSITIVE,
-          },
-          availableBalance: {
-            money: { currency: 'USD', amount: 95000 },
-            sign: MoneySign.POSITIVE,
-          },
-          snapshotType: BalanceSnapshotType.SYNC,
-          createdAt: new Date('2024-01-15T00:00:00Z'),
-          updatedAt: new Date('2024-01-15T00:00:00Z'),
-        }),
-      };
-      repository.find.mockResolvedValueOnce([snapshotEntity]);
-
-      const result = await service.findSnapshotsForDateWithConversion(
-        mockUserId,
-        '2024-01-15',
-      );
-
-      expect(result.size).toBe(1);
-      expect(result.has('account-id-123')).toBe(true);
-      expect(result.get('account-id-123')).toHaveProperty(
-        'convertedCurrentBalance',
-      );
     });
   });
 });

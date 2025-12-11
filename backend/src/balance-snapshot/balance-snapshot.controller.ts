@@ -16,11 +16,9 @@ import {
 import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import {
   BalanceSnapshotSchema,
-  BalanceSnapshotWithConvertedBalanceSchema,
   CreateBalanceSnapshotDtoSchema,
   UpdateBalanceSnapshotDtoSchema,
   type BalanceSnapshot,
-  type BalanceSnapshotWithConvertedBalance,
   type CreateBalanceSnapshotDto,
   type UpdateBalanceSnapshotDto,
 } from '../types/BalanceSnapshot';
@@ -34,19 +32,16 @@ export class BalanceSnapshotController {
 
   @Get()
   @ApiOperation({
-    description: 'Get all balance snapshots with converted balances',
+    description: 'Get all balance snapshots',
   })
   @ZodApiResponse({
     status: 200,
-    description:
-      'Returns all balance snapshots with balances converted to user currency',
-    schema: BalanceSnapshotWithConvertedBalanceSchema,
+    description: 'Returns all balance snapshots',
+    schema: BalanceSnapshotSchema,
     isArray: true,
   })
-  async findAll(
-    @CurrentUser() user: JwtUser,
-  ): Promise<BalanceSnapshotWithConvertedBalance[]> {
-    return this.balanceSnapshotService.findAllWithConversion(user.userId);
+  async findAll(@CurrentUser() user: JwtUser): Promise<BalanceSnapshot[]> {
+    return this.balanceSnapshotService.findAll(user.userId);
   }
 
   @Post()
@@ -86,24 +81,19 @@ export class BalanceSnapshotController {
 
   @Get('account/:accountId')
   @ApiOperation({
-    description:
-      'Get all balance snapshots for an account with converted balances',
+    description: 'Get all balance snapshots for an account',
   })
   @ZodApiResponse({
     status: 200,
-    description:
-      'Returns balance snapshots for the account with balances converted to user currency',
-    schema: BalanceSnapshotWithConvertedBalanceSchema,
+    description: 'Returns balance snapshots for the account',
+    schema: BalanceSnapshotSchema,
     isArray: true,
   })
   async findByAccountId(
     @Param('accountId') accountId: string,
     @CurrentUser() user: JwtUser,
-  ): Promise<BalanceSnapshotWithConvertedBalance[]> {
-    return this.balanceSnapshotService.findByAccountIdWithConversion(
-      accountId,
-      user.userId,
-    );
+  ): Promise<BalanceSnapshot[]> {
+    return this.balanceSnapshotService.findByAccountId(accountId, user.userId);
   }
 
   @Patch(':id')
