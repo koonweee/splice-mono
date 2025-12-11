@@ -3,6 +3,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
 import { AccountService } from '../../src/account/account.service';
+import { BalanceSnapshotService } from '../../src/balance-snapshot/balance-snapshot.service';
+import { BankLinkEntity } from '../../src/bank-link/bank-link.entity';
 import { CurrencyConversionService } from '../../src/exchange-rate/currency-conversion.service';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserService } from '../../src/user/user.service';
@@ -24,13 +26,25 @@ describe('AccountService', () => {
     delete: jest.fn(),
   };
 
+  // Mock balance snapshot service
+  const mockBalanceSnapshotService = {
+    getLastSyncTimes: jest.fn(),
+  };
+
   beforeEach(async () => {
+    // Default: return empty map for last sync times
+    mockBalanceSnapshotService.getLastSyncTimes.mockResolvedValue(new Map());
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountService,
         {
           provide: getRepositoryToken(AccountEntity),
           useValue: mockRepository,
+        },
+        {
+          provide: BalanceSnapshotService,
+          useValue: mockBalanceSnapshotService,
         },
         {
           provide: UserService,
@@ -517,6 +531,107 @@ describe('AccountService', () => {
       expect(result[0]).toHaveProperty('convertedCurrentBalance');
       expect(result[0]).toHaveProperty('convertedAvailableBalance');
     });
+
+    it('should return bankLinkStatus from associated BankLink', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockEntity.bankLinkId = 'bank-link-123';
+      mockEntity.bankLink = {
+        id: 'bank-link-123',
+        status: 'OK',
+        institutionName: 'Chase',
+      } as BankLinkEntity;
+      mockRepository.find.mockResolvedValue([mockEntity]);
+
+      const result = await service.findAllWithConversion(mockUserId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].bankLinkStatus).toBe('OK');
+      expect(result[0].institutionName).toBe('Chase');
+    });
+
+    it('should return bankLinkStatus as null when no BankLink', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockEntity.bankLink = null;
+      mockRepository.find.mockResolvedValue([mockEntity]);
+
+      const result = await service.findAllWithConversion(mockUserId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].bankLinkStatus).toBeNull();
+    });
+
+    it('should return lastSyncedAt from latest SYNC snapshot', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.find.mockResolvedValue([mockEntity]);
+
+      const lastSyncDate = new Date('2024-01-15T10:30:00Z');
+      mockBalanceSnapshotService.getLastSyncTimes.mockResolvedValue(
+        new Map([['test-id', lastSyncDate]]),
+      );
+
+      const result = await service.findAllWithConversion(mockUserId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].lastSyncedAt).toEqual(lastSyncDate);
+    });
+
+    it('should return lastSyncedAt as null when no SYNC snapshots exist', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.find.mockResolvedValue([mockEntity]);
+
+      // Default mock returns empty map
+      mockBalanceSnapshotService.getLastSyncTimes.mockResolvedValue(new Map());
+
+      const result = await service.findAllWithConversion(mockUserId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].lastSyncedAt).toBeNull();
+    });
+
+    it('should return correct lastSyncedAt for multiple accounts', async () => {
+      const mockEntity1 = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity1.id = 'account-1';
+      const mockEntity2 = AccountEntity.fromDto(
+        { ...mockCreateAccountDto, name: 'Second Account' },
+        mockUserId,
+      );
+      mockEntity2.id = 'account-2';
+      mockRepository.find.mockResolvedValue([mockEntity1, mockEntity2]);
+
+      const lastSync1 = new Date('2024-01-15T10:30:00Z');
+      const lastSync2 = new Date('2024-01-16T14:00:00Z');
+      mockBalanceSnapshotService.getLastSyncTimes.mockResolvedValue(
+        new Map([
+          ['account-1', lastSync1],
+          ['account-2', lastSync2],
+        ]),
+      );
+
+      const result = await service.findAllWithConversion(mockUserId);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].lastSyncedAt).toEqual(lastSync1);
+      expect(result[1].lastSyncedAt).toEqual(lastSync2);
+    });
   });
 
   describe('findOneWithConversion', () => {
@@ -544,6 +659,45 @@ describe('AccountService', () => {
       expect(result).not.toBeNull();
       expect(result).toHaveProperty('convertedCurrentBalance');
       expect(result).toHaveProperty('convertedAvailableBalance');
+    });
+
+    it('should return lastSyncedAt from latest SYNC snapshot', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+
+      const lastSyncDate = new Date('2024-01-15T10:30:00Z');
+      mockBalanceSnapshotService.getLastSyncTimes.mockResolvedValue(
+        new Map([['test-id', lastSyncDate]]),
+      );
+
+      const result = await service.findOneWithConversion('test-id', mockUserId);
+
+      expect(result).not.toBeNull();
+      expect(result?.lastSyncedAt).toEqual(lastSyncDate);
+      expect(mockBalanceSnapshotService.getLastSyncTimes).toHaveBeenCalledWith(
+        mockUserId,
+        'test-id',
+      );
+    });
+
+    it('should return lastSyncedAt as null when no SYNC snapshots', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+
+      mockBalanceSnapshotService.getLastSyncTimes.mockResolvedValue(new Map());
+
+      const result = await service.findOneWithConversion('test-id', mockUserId);
+
+      expect(result).not.toBeNull();
+      expect(result?.lastSyncedAt).toBeNull();
     });
   });
 });

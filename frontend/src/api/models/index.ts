@@ -7,6 +7,7 @@
  */
 
 export * from './account';
+export * from './accountBankLinkStatus';
 export * from './accountSubType';
 export * from './accountSummary';
 export * from './accountSummaryConvertedCurrentBalance';
