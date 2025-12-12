@@ -115,7 +115,7 @@ export class ExchangeRateBackfillHelper {
       { targets: string[]; earliestDate: string }
     >();
 
-    for (const pair of pairs) {
+    pairs.forEach((pair) => {
       const existing = pairsByBase.get(pair.baseCurrency);
       if (existing) {
         existing.targets.push(pair.targetCurrency);
@@ -129,7 +129,7 @@ export class ExchangeRateBackfillHelper {
           earliestDate: pair.earliestDate,
         });
       }
-    }
+    });
 
     this.logger.log(
       `Batched into ${pairsByBase.size} API requests by base currency`,
@@ -271,9 +271,9 @@ export class ExchangeRateBackfillHelper {
     }
 
     const rates = new Map<string, number>();
-    for (const [currency, rate] of Object.entries(data.rates)) {
+    Object.entries(data.rates).forEach(([currency, rate]) => {
       rates.set(currency, rate);
-    }
+    });
 
     this.logger.log(
       `Fetched ${rates.size} rates for base ${baseCurrency} (date: ${data.date})`,
@@ -315,13 +315,13 @@ export class ExchangeRateBackfillHelper {
 
     // Parse the time series response
     const rates = new Map<string, Map<string, number>>();
-    for (const [date, currencyRates] of Object.entries(data.rates)) {
+    Object.entries(data.rates).forEach(([date, currencyRates]) => {
       const dateRates = new Map<string, number>();
-      for (const [currency, rate] of Object.entries(currencyRates)) {
+      Object.entries(currencyRates).forEach(([currency, rate]) => {
         dateRates.set(currency, rate);
-      }
+      });
       rates.set(date, dateRates);
-    }
+    });
 
     this.logger.log(
       `Fetched ${rates.size} dates of rates for ${baseCurrency}→[${symbols}]`,
@@ -415,18 +415,18 @@ export class ExchangeRateBackfillHelper {
     // so we can look up by what the caller passed in
     const existingKeys = new Set<string>();
 
-    for (const entity of entities) {
+    entities.forEach((entity) => {
       // Find which original target currency this maps to
-      for (let i = 0; i < targetCurrencies.length; i++) {
+      targetCurrencies.forEach((targetCurrency, i) => {
         const normalized = normalizedPairs[i];
         if (
           entity.baseCurrency === normalized.base &&
           entity.targetCurrency === normalized.target
         ) {
-          existingKeys.add(`${targetCurrencies[i]}:${entity.rateDate}`);
+          existingKeys.add(`${targetCurrency}:${entity.rateDate}`);
         }
-      }
-    }
+      });
+    });
 
     return existingKeys;
   }
@@ -459,12 +459,12 @@ export class ExchangeRateBackfillHelper {
       { base: string; target: string; earliestDate: string }
     >();
 
-    for (const snapshot of snapshots) {
+    snapshots.forEach((snapshot) => {
       const snapshotCurrency = snapshot.currentBalance.currency;
 
       // Skip if currencies are the same
       if (snapshotCurrency === userCurrency) {
-        continue;
+        return;
       }
 
       // Normalize the pair
@@ -482,7 +482,7 @@ export class ExchangeRateBackfillHelper {
           earliestDate: snapshot.snapshotDate,
         });
       }
-    }
+    });
 
     return Array.from(pairsMap.values()).map((p) => ({
       baseCurrency: p.base,
@@ -507,9 +507,9 @@ export class ExchangeRateBackfillHelper {
     // Use diff to check if we haven't passed the end date
     while (currentDate.diff(end, 'day') <= 0) {
       const dateStr = currentDate.format('YYYY-MM-DD');
-      for (const target of targetCurrencies) {
+      targetCurrencies.forEach((target) => {
         keys.push(`${target}:${dateStr}`);
-      }
+      });
       currentDate = currentDate.add(1, 'day');
     }
 

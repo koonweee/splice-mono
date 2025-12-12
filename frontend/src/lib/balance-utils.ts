@@ -71,7 +71,7 @@ export function calculateNetWorthForDate(
 ): number {
   let netWorth = 0
 
-  for (const result of Object.values(balances)) {
+  Object.values(balances).forEach((result) => {
     const effectiveBalance = resolveEffectiveBalance(result.effectiveBalance)
     const amount = getSignedAmount(effectiveBalance)
 
@@ -83,7 +83,7 @@ export function calculateNetWorthForDate(
       // Assets add to net worth
       netWorth += amount
     }
-  }
+  })
 
   return netWorth
 }
@@ -189,9 +189,7 @@ export function transformToDashboardData(
   const liabilities: AccountSummaryData[] = []
 
   if (lastResult) {
-    for (const [accountId, accountResult] of Object.entries(
-      lastResult.balances,
-    )) {
+    Object.entries(lastResult.balances).forEach(([accountId, accountResult]) => {
       // Find this account in first result for change calculation
       const firstAccountResult = firstResult?.balances[accountId]
 
@@ -230,7 +228,7 @@ export function transformToDashboardData(
       } else {
         assets.push(summary)
       }
-    }
+    })
   }
 
   return {
@@ -285,14 +283,10 @@ export function getLatestAccountBalance(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   )
 
-  for (const result of sortedResults) {
-    const accountResult = result.balances[accountId]
-    if (accountResult) {
-      return accountResult
-    }
-  }
-
-  return undefined
+  const matchingResult = sortedResults.find(
+    (result) => result.balances[accountId],
+  )
+  return matchingResult?.balances[accountId]
 }
 
 /**
@@ -305,7 +299,7 @@ export function getLatestSyncedAt(
 ): Date | undefined {
   let latest: Date | undefined
 
-  for (const result of results) {
+  results.forEach((result) => {
     const balance = result.balances[accountId]
     if (balance?.syncedAt) {
       const syncedAt = new Date(balance.syncedAt)
@@ -313,7 +307,7 @@ export function getLatestSyncedAt(
         latest = syncedAt
       }
     }
-  }
+  })
 
   return latest
 }

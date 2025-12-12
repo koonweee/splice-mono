@@ -116,14 +116,14 @@ export class BalanceQueryService {
       string,
       Map<string, BalanceSnapshotEntity>
     >();
-    for (const snapshot of snapshots) {
+    snapshots.forEach((snapshot) => {
       if (!snapshotsByAccount.has(snapshot.accountId)) {
         snapshotsByAccount.set(snapshot.accountId, new Map());
       }
       snapshotsByAccount
         .get(snapshot.accountId)!
         .set(snapshot.snapshotDate, snapshot);
-    }
+    });
 
     // Step 3: Fetch exchange rates if targetCurrency provided
     let ratesByDate: Map<string, Map<string, RateWithSource>> | null = null;
@@ -146,9 +146,9 @@ export class BalanceQueryService {
       const dateStr = currentDate.format('YYYY-MM-DD');
       const balances: Record<string, AccountBalanceResult> = {};
 
-      for (const accountId of validAccountIds) {
+      validAccountIds.forEach((accountId) => {
         const account = accountMap.get(accountId);
-        if (!account) continue;
+        if (!account) return;
 
         // Find snapshot for this date or most recent before
         const accountSnapshots = snapshotsByAccount.get(accountId);
@@ -164,7 +164,7 @@ export class BalanceQueryService {
         );
 
         balances[accountId] = result;
-      }
+      });
 
       results.push({ date: dateStr, balances });
       currentDate = currentDate.add(1, 'day');
@@ -271,7 +271,7 @@ export class BalanceQueryService {
     const currencyPairs: CurrencyPair[] = [];
     const seenPairs = new Set<string>();
 
-    for (const account of accounts) {
+    accounts.forEach((account) => {
       const accountCurrency = account.currentBalance.currency;
       if (accountCurrency !== targetCurrency) {
         const pairKey = `${accountCurrency}:${targetCurrency}`;
@@ -283,7 +283,7 @@ export class BalanceQueryService {
           });
         }
       }
-    }
+    });
 
     if (currencyPairs.length === 0) {
       return new Map();
@@ -298,13 +298,13 @@ export class BalanceQueryService {
 
       // Build lookup: date -> (baseCurrency:targetCurrency -> rate)
       const ratesByDate = new Map<string, Map<string, RateWithSource>>();
-      for (const response of rateResponses) {
+      rateResponses.forEach((response) => {
         const dateRates = new Map<string, RateWithSource>();
-        for (const rate of response.rates) {
+        response.rates.forEach((rate) => {
           dateRates.set(`${rate.baseCurrency}:${rate.targetCurrency}`, rate);
-        }
+        });
         ratesByDate.set(response.date, dateRates);
-      }
+      });
 
       return ratesByDate;
     } catch (error) {
@@ -328,13 +328,13 @@ export class BalanceQueryService {
 
     // Find most recent before targetDate
     let mostRecent: BalanceSnapshotEntity | undefined;
-    for (const [date, snapshot] of snapshots) {
+    snapshots.forEach((snapshot, date) => {
       if (date <= targetDate) {
         if (!mostRecent || date > mostRecent.snapshotDate) {
           mostRecent = snapshot;
         }
       }
-    }
+    });
     return mostRecent;
   }
 
