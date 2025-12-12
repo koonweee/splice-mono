@@ -121,4 +121,17 @@ export class BankLinkController {
     const updated = await this.bankLinkService.backfillPlaidItemIds();
     return { updated };
   }
+
+  @Post('update-webhook-urls')
+  @ApiOperation({
+    description:
+      'Update webhook URLs for all bank links to use current API_DOMAIN',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Returns counts of updated and failed bank links',
+  })
+  async updateWebhookUrls(): Promise<{ updated: number; failed: number }> {
+    return this.bankLinkService.updateAllWebhookUrls();
+  }
 }

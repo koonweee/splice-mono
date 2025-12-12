@@ -106,4 +106,13 @@ export interface IBankLinkProvider {
         shouldSync: boolean;
       }
     | undefined;
+
+  /**
+   * Update the webhook URL for an item
+   * Optional - only implemented by providers that support webhook URL updates
+   *
+   * @param authentication - Provider-specific authentication data
+   * @returns void
+   */
+  updateWebhookUrl?(authentication: Record<string, any>): Promise<void>;
 }

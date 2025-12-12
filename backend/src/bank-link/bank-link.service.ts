@@ -763,6 +763,65 @@ export class BankLinkService extends OwnedCrudService<
   }
 
   /**
+   * Update webhook URLs for all bank links to use current API_DOMAIN
+   * Only updates bank links whose providers support updateWebhookUrl
+   *
+   * @returns Counts of updated and failed bank links
+   */
+  async updateAllWebhookUrls(): Promise<{ updated: number; failed: number }> {
+    this.logger.log({}, 'Starting webhook URL update for all bank links');
+
+    const bankLinks = await this.repository.find();
+    this.logger.log(
+      { count: bankLinks.length },
+      'Found bank links for webhook URL update',
+    );
+
+    let updated = 0;
+    let failed = 0;
+
+    const results = await Promise.allSettled(
+      bankLinks.map(async (link) => {
+        const provider = this.providerRegistry.getProvider(link.providerName);
+        if (!provider.updateWebhookUrl) {
+          this.logger.log(
+            { bankLinkId: link.id, providerName: link.providerName },
+            'Provider does not support updateWebhookUrl, skipping',
+          );
+          return { skipped: true };
+        }
+
+        await provider.updateWebhookUrl(link.authentication);
+        this.logger.log(
+          { bankLinkId: link.id, providerName: link.providerName },
+          'Updated webhook URL for bank link',
+        );
+        return { skipped: false };
+      }),
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        if (!result.value.skipped) {
+          updated++;
+        }
+      } else {
+        failed++;
+        this.logger.error(
+          { bankLinkId: bankLinks[index].id, error: String(result.reason) },
+          'Failed to update webhook URL for bank link',
+        );
+      }
+    });
+
+    this.logger.log(
+      { updated, failed, total: bankLinks.length },
+      'Webhook URL update complete',
+    );
+    return { updated, failed };
+  }
+
+  /**
    * Convert an APIAccount to a CreateAccountDto
    */
   private createAccountDtoFromAPIAccount(
