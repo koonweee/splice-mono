@@ -117,8 +117,12 @@ export class BankLinkController {
     status: 201,
     description: 'Returns the number of bank links updated',
   })
-  async backfillPlaidItemIds(): Promise<{ updated: number }> {
-    const updated = await this.bankLinkService.backfillPlaidItemIds();
+  async backfillPlaidItemIds(
+    @CurrentUser() user: JwtUser,
+  ): Promise<{ updated: number }> {
+    const updated = await this.bankLinkService.backfillPlaidItemIds(
+      user.userId,
+    );
     return { updated };
   }
 
@@ -131,7 +135,9 @@ export class BankLinkController {
     status: 201,
     description: 'Returns counts of updated and failed bank links',
   })
-  async updateWebhookUrls(): Promise<{ updated: number; failed: number }> {
-    return this.bankLinkService.updateAllWebhookUrls();
+  async updateWebhookUrls(
+    @CurrentUser() user: JwtUser,
+  ): Promise<{ updated: number; failed: number }> {
+    return this.bankLinkService.updateAllWebhookUrls(user.userId);
   }
 }
