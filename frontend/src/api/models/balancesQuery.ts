@@ -6,8 +6,8 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface BalancesRequest {
-  accountIds: string[];
+export interface BalancesQuery {
+  accountIds: string;
   /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   startDate: string;
   /** @pattern ^\d{4}-\d{2}-\d{2}$ */

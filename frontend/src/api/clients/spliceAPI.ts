@@ -26,9 +26,9 @@ import type {
 
 import type {
   Account,
-  AllBalancesRequest,
+  BalanceQueryControllerGetAllBalancesParams,
+  BalanceQueryControllerGetBalancesParams,
   BalanceQueryPerDateResult,
-  BalancesRequest,
   CreateAccountDto,
   CreateTransactionDto,
   CreateUserDto,
@@ -353,126 +353,184 @@ const {mutation: mutationOptions} = options ?
  * Get balances for specific accounts over a date range. Balances are converted to the user's preferred currency.
  */
 export const balanceQueryControllerGetBalances = (
-    balancesRequest: BalancesRequest,
+    params: BalanceQueryControllerGetBalancesParams,
  signal?: AbortSignal
 ) => {
       
       
       return axios<BalanceQueryPerDateResult[]>(
-      {url: `/balance-query/balances`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: balancesRequest, signal
+      {url: `/balance-query/balances`, method: 'GET',
+        params, signal
     },
       );
     }
   
 
 
-export const getBalanceQueryControllerGetBalancesMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError,{data: BalancesRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError,{data: BalancesRequest}, TContext> => {
 
-const mutationKey = ['balanceQueryControllerGetBalances'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+export const getBalanceQueryControllerGetBalancesQueryKey = (params?: BalanceQueryControllerGetBalancesParams,) => {
+    return [
+    `/balance-query/balances`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getBalanceQueryControllerGetBalancesQueryOptions = <TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError = void>(params: BalanceQueryControllerGetBalancesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBalanceQueryControllerGetBalancesQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>> = ({ signal }) => balanceQueryControllerGetBalances(params, signal);
 
       
 
+      
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, {data: BalancesRequest}> = (props) => {
-          const {data} = props ?? {};
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
 
-          return  balanceQueryControllerGetBalances(data,)
-        }
-
-        
+export type BalanceQueryControllerGetBalancesQueryResult = NonNullable<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>>
+export type BalanceQueryControllerGetBalancesQueryError = void
 
 
-  return  { mutationFn, ...mutationOptions }}
+export function useBalanceQueryControllerGetBalances<TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError = void>(
+ params: BalanceQueryControllerGetBalancesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+          TError,
+          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalanceQueryControllerGetBalances<TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError = void>(
+ params: BalanceQueryControllerGetBalancesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+          TError,
+          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalanceQueryControllerGetBalances<TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError = void>(
+ params: BalanceQueryControllerGetBalancesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-    export type BalanceQueryControllerGetBalancesMutationResult = NonNullable<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>>
-    export type BalanceQueryControllerGetBalancesMutationBody = BalancesRequest
-    export type BalanceQueryControllerGetBalancesMutationError = void
+export function useBalanceQueryControllerGetBalances<TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError = void>(
+ params: BalanceQueryControllerGetBalancesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-    export const useBalanceQueryControllerGetBalances = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>, TError,{data: BalancesRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
-        TError,
-        {data: BalancesRequest},
-        TContext
-      > => {
+  const queryOptions = getBalanceQueryControllerGetBalancesQueryOptions(params,options)
 
-      const mutationOptions = getBalanceQueryControllerGetBalancesMutationOptions(options);
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
 /**
  * Get balances for all linked accounts over a date range. Balances are converted to the user's preferred currency.
  */
 export const balanceQueryControllerGetAllBalances = (
-    allBalancesRequest: AllBalancesRequest,
+    params: BalanceQueryControllerGetAllBalancesParams,
  signal?: AbortSignal
 ) => {
       
       
       return axios<BalanceQueryPerDateResult[]>(
-      {url: `/balance-query/all-balances`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: allBalancesRequest, signal
+      {url: `/balance-query/all-balances`, method: 'GET',
+        params, signal
     },
       );
     }
   
 
 
-export const getBalanceQueryControllerGetAllBalancesMutationOptions = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError,{data: AllBalancesRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError,{data: AllBalancesRequest}, TContext> => {
 
-const mutationKey = ['balanceQueryControllerGetAllBalances'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+export const getBalanceQueryControllerGetAllBalancesQueryKey = (params?: BalanceQueryControllerGetAllBalancesParams,) => {
+    return [
+    `/balance-query/all-balances`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getBalanceQueryControllerGetAllBalancesQueryOptions = <TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError = void>(params: BalanceQueryControllerGetAllBalancesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBalanceQueryControllerGetAllBalancesQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>> = ({ signal }) => balanceQueryControllerGetAllBalances(params, signal);
 
       
 
+      
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, {data: AllBalancesRequest}> = (props) => {
-          const {data} = props ?? {};
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
 
-          return  balanceQueryControllerGetAllBalances(data,)
-        }
-
-        
+export type BalanceQueryControllerGetAllBalancesQueryResult = NonNullable<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>>
+export type BalanceQueryControllerGetAllBalancesQueryError = void
 
 
-  return  { mutationFn, ...mutationOptions }}
+export function useBalanceQueryControllerGetAllBalances<TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError = void>(
+ params: BalanceQueryControllerGetAllBalancesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+          TError,
+          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalanceQueryControllerGetAllBalances<TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError = void>(
+ params: BalanceQueryControllerGetAllBalancesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+          TError,
+          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalanceQueryControllerGetAllBalances<TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError = void>(
+ params: BalanceQueryControllerGetAllBalancesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-    export type BalanceQueryControllerGetAllBalancesMutationResult = NonNullable<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>>
-    export type BalanceQueryControllerGetAllBalancesMutationBody = AllBalancesRequest
-    export type BalanceQueryControllerGetAllBalancesMutationError = void
+export function useBalanceQueryControllerGetAllBalances<TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError = void>(
+ params: BalanceQueryControllerGetAllBalancesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-    export const useBalanceQueryControllerGetAllBalances = <TError = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>, TError,{data: AllBalancesRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
-        TError,
-        {data: AllBalancesRequest},
-        TContext
-      > => {
+  const queryOptions = getBalanceQueryControllerGetAllBalancesQueryOptions(params,options)
 
-      const mutationOptions = getBalanceQueryControllerGetAllBalancesMutationOptions(options);
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
 /**
  * Manually trigger exchange rate sync for all required currency pairs
  */
