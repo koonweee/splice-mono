@@ -66,14 +66,15 @@ export interface AccountBalanceHistoryResult {
 export function useAccountBalanceHistory(
   accountId: string | undefined,
   enabled: boolean,
+  period: TimePeriod = TimePeriod.month,
 ) {
   const mutation = useBalanceQueryControllerGetBalances()
 
-  // Auto-fetch when enabled and accountId changes
+  // Auto-fetch when enabled, accountId, or period changes
   useEffect(() => {
     if (!enabled || !accountId) return
 
-    const { startDate, endDate } = getDateRange(TimePeriod.month)
+    const { startDate, endDate } = getDateRange(period)
     mutation.mutate({
       data: {
         accountIds: [accountId],
@@ -82,7 +83,7 @@ export function useAccountBalanceHistory(
       },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountId, enabled])
+  }, [accountId, enabled, period])
 
   // Transform data for the chart
   const result = useMemo<AccountBalanceHistoryResult>(() => {

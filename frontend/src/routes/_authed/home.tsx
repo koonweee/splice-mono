@@ -1,7 +1,6 @@
 import { TIME_PERIOD_LABELS, TimePeriod } from '@/lib/types'
 import { Alert, Grid, Group, Loader, Select, Title } from '@mantine/core'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
 import { AccountModal } from '../../components/AccountModal'
 import { AccountSection } from '../../components/AccountSection'
 import { NetWorthCard } from '../../components/NetWorthCard'
@@ -10,13 +9,18 @@ import type { AccountSummaryData } from '../../lib/balance-utils'
 
 type HomeSearch = {
   accountId?: string
+  period?: TimePeriod
 }
+
+const isValidTimePeriod = (value: unknown): value is TimePeriod =>
+  typeof value === 'string' && Object.values(TimePeriod).includes(value as TimePeriod)
 
 export const Route = createFileRoute('/_authed/home')({
   component: HomePage,
   validateSearch: (search: Record<string, unknown>): HomeSearch => ({
     accountId:
       typeof search.accountId === 'string' ? search.accountId : undefined,
+    period: isValidTimePeriod(search.period) ? search.period : undefined,
   }),
 })
 
@@ -28,9 +32,8 @@ const PERIOD_OPTIONS = [
 ]
 
 function HomePage() {
-  const { accountId } = Route.useSearch()
+  const { accountId, period = TimePeriod.month } = Route.useSearch()
   const navigate = useNavigate()
-  const [period, setPeriod] = useState<TimePeriod>(TimePeriod.month)
   const { data: dashboard, isLoading, error } = useBalanceData(period)
 
   // Find the selected account from the dashboard data
@@ -42,11 +45,17 @@ function HomePage() {
       : undefined
 
   const handleAccountClick = (account: AccountSummaryData) => {
-    navigate({ to: '/home', search: { accountId: account.id } })
+    navigate({ to: '/home', search: { accountId: account.id, period } })
   }
 
   const handleCloseModal = () => {
-    navigate({ to: '/home', search: {} })
+    navigate({ to: '/home', search: { period } })
+  }
+
+  const handlePeriodChange = (value: string | null) => {
+    if (value && isValidTimePeriod(value)) {
+      navigate({ to: '/home', search: { accountId, period: value } })
+    }
   }
 
   return (
@@ -55,7 +64,7 @@ function HomePage() {
         <Title order={1}>Home</Title>
         <Select
           value={period}
-          onChange={(value) => value && setPeriod(value as TimePeriod)}
+          onChange={handlePeriodChange}
           data={PERIOD_OPTIONS}
           w={120}
           size="md"
@@ -109,6 +118,7 @@ function HomePage() {
         account={selectedAccount}
         opened={!!accountId}
         onClose={handleCloseModal}
+        period={period}
       />
     </>
   )
