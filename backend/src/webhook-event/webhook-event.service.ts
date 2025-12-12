@@ -24,7 +24,8 @@ export class WebhookEventService {
     expiresAt?: Date,
   ): Promise<WebhookEvent> {
     this.logger.log(
-      `Creating pending webhook event: webhookId=${webhookId}, provider=${providerName}, userId=${userId}`,
+      { webhookId, providerName, userId },
+      'Creating pending webhook event',
     );
     const entity = WebhookEventEntity.fromDto(
       {
@@ -37,7 +38,8 @@ export class WebhookEventService {
     );
     const savedEntity = await this.repository.save(entity);
     this.logger.log(
-      `Pending WebhookEvent created successfully: id=${savedEntity.id}`,
+      { id: savedEntity.id },
+      'Pending WebhookEvent created successfully',
     );
     return savedEntity.toObject();
   }
@@ -49,19 +51,17 @@ export class WebhookEventService {
   async findPendingByWebhookId(
     webhookId: string,
   ): Promise<WebhookEvent | null> {
-    this.logger.log(`Finding pending webhook event: webhookId=${webhookId}`);
+    this.logger.log({ webhookId }, 'Finding pending webhook event');
     const entity = await this.repository.findOne({
       where: { webhookId, status: WebhookEventStatus.PENDING },
     });
 
     if (!entity) {
-      this.logger.warn(
-        `Pending WebhookEvent not found: webhookId=${webhookId}`,
-      );
+      this.logger.warn({ webhookId }, 'Pending WebhookEvent not found');
       return null;
     }
 
-    this.logger.log(`Pending WebhookEvent found: webhookId=${webhookId}`);
+    this.logger.log({ webhookId }, 'Pending WebhookEvent found');
     return entity.toObject();
   }
 
@@ -72,16 +72,15 @@ export class WebhookEventService {
     webhookId: string,
     webhookContent: Record<string, any>,
   ): Promise<WebhookEvent | null> {
-    this.logger.log(
-      `Marking webhook event as completed: webhookId=${webhookId}`,
-    );
+    this.logger.log({ webhookId }, 'Marking webhook event as completed');
     const entity = await this.repository.findOne({
       where: { webhookId, status: WebhookEventStatus.PENDING },
     });
 
     if (!entity) {
       this.logger.warn(
-        `Pending WebhookEvent not found for completion: webhookId=${webhookId}`,
+        { webhookId },
+        'Pending WebhookEvent not found for completion',
       );
       return null;
     }
@@ -91,7 +90,7 @@ export class WebhookEventService {
     entity.completedAt = new Date();
 
     const savedEntity = await this.repository.save(entity);
-    this.logger.log(`WebhookEvent marked as completed: webhookId=${webhookId}`);
+    this.logger.log({ webhookId }, 'WebhookEvent marked as completed');
     return savedEntity.toObject();
   }
 
@@ -103,14 +102,15 @@ export class WebhookEventService {
     errorMessage: string,
     webhookContent?: Record<string, any>,
   ): Promise<WebhookEvent | null> {
-    this.logger.log(`Marking webhook event as failed: webhookId=${webhookId}`);
+    this.logger.log({ webhookId }, 'Marking webhook event as failed');
     const entity = await this.repository.findOne({
       where: { webhookId, status: WebhookEventStatus.PENDING },
     });
 
     if (!entity) {
       this.logger.warn(
-        `Pending WebhookEvent not found for failure: webhookId=${webhookId}`,
+        { webhookId },
+        'Pending WebhookEvent not found for failure',
       );
       return null;
     }
@@ -121,7 +121,7 @@ export class WebhookEventService {
     entity.completedAt = new Date();
 
     const savedEntity = await this.repository.save(entity);
-    this.logger.log(`WebhookEvent marked as failed: webhookId=${webhookId}`);
+    this.logger.log({ webhookId }, 'WebhookEvent marked as failed');
     return savedEntity.toObject();
   }
 }

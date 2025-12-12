@@ -39,7 +39,8 @@ export class BalanceSnapshotListener {
       event instanceof LinkedAccountCreatedEvent ? 'created' : 'updated';
 
     this.logger.log(
-      `Handling linked account ${eventType} event: accountId=${event.account.id}`,
+      { eventType, accountId: event.account.id },
+      'Handling linked account event',
     );
 
     try {
@@ -57,11 +58,13 @@ export class BalanceSnapshotListener {
       );
 
       this.logger.log(
-        `Balance snapshot upserted for ${eventType} linked account: ${event.account.id}`,
+        { eventType, accountId: event.account.id },
+        'Balance snapshot upserted for linked account',
       );
     } catch (error) {
       this.logger.error(
-        `Failed to upsert balance snapshot for ${eventType} linked account ${event.account.id}: ${error}`,
+        { eventType, accountId: event.account.id, error: String(error) },
+        'Failed to upsert balance snapshot for linked account',
       );
     }
   }

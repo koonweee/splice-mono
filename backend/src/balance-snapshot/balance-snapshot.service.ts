@@ -59,7 +59,8 @@ export class BalanceSnapshotService extends OwnedCrudService<
     userId: string,
   ): Promise<BalanceSnapshot[]> {
     this.logger.log(
-      `Finding balance snapshots for account: ${accountId}, userId=${userId}`,
+      { accountId, userId },
+      'Finding balance snapshots for account',
     );
 
     const entities = await this.repository.find({
@@ -68,7 +69,8 @@ export class BalanceSnapshotService extends OwnedCrudService<
     });
 
     this.logger.log(
-      `Found ${entities.length} balance snapshots for account ${accountId}`,
+      { count: entities.length, accountId },
+      'Found balance snapshots for account',
     );
     return entities.map((entity) => entity.toObject());
   }
@@ -89,7 +91,8 @@ export class BalanceSnapshotService extends OwnedCrudService<
       dto.snapshotDate ?? new Date().toISOString().split('T')[0];
 
     this.logger.log(
-      `Upserting balance snapshot: accountId=${dto.accountId}, date=${snapshotDate}, userId=${userId}`,
+      { accountId: dto.accountId, snapshotDate, userId },
+      'Upserting balance snapshot',
     );
 
     // Find existing snapshot for this account and date (scoped by userId)
@@ -104,7 +107,8 @@ export class BalanceSnapshotService extends OwnedCrudService<
     if (existingEntity) {
       // Update existing snapshot
       this.logger.log(
-        `Found existing snapshot, updating: id=${existingEntity.id}`,
+        { id: existingEntity.id },
+        'Found existing snapshot, updating',
       );
 
       existingEntity.currentBalance = BalanceColumns.fromMoneyWithSign(
@@ -116,12 +120,12 @@ export class BalanceSnapshotService extends OwnedCrudService<
       existingEntity.snapshotType = dto.snapshotType;
 
       const savedEntity = await this.repository.save(existingEntity);
-      this.logger.log(`Balance snapshot updated: id=${savedEntity.id}`);
+      this.logger.log({ id: savedEntity.id }, 'Balance snapshot updated');
       return savedEntity.toObject();
     }
 
     // Create new snapshot
-    this.logger.log('No existing snapshot found, creating new one');
+    this.logger.log({}, 'No existing snapshot found, creating new one');
     const entity = BalanceSnapshotEntity.fromDto(
       {
         ...dto,
@@ -130,7 +134,7 @@ export class BalanceSnapshotService extends OwnedCrudService<
       userId,
     );
     const savedEntity = await this.repository.save(entity);
-    this.logger.log(`Balance snapshot created: id=${savedEntity.id}`);
+    this.logger.log({ id: savedEntity.id }, 'Balance snapshot created');
     return savedEntity.toObject();
   }
 }

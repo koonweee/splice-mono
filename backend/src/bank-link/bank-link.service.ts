@@ -78,9 +78,7 @@ export class BankLinkService extends OwnedCrudService<
     userId: string,
     redirectUri?: string,
   ): Promise<InitiateLinkResponse> {
-    this.logger.log(
-      `Initiating link with provider ${providerName} for user ${userId}`,
-    );
+    this.logger.log({ providerName, userId }, 'Initiating link with provider');
 
     // Get provider
     const provider = this.providerRegistry.getProvider(providerName);
@@ -106,7 +104,8 @@ export class BankLinkService extends OwnedCrudService<
         linkResponse.updatedProviderUserDetails,
       );
       this.logger.log(
-        `Updated provider details for user ${userId}, provider ${providerName}`,
+        { userId, providerName },
+        'Updated provider details for user',
       );
     }
 
@@ -120,7 +119,8 @@ export class BankLinkService extends OwnedCrudService<
         linkResponse.expiresAt,
       );
       this.logger.log(
-        `Created pending webhook event for webhookId=${linkResponse.webhookId}`,
+        { webhookId: linkResponse.webhookId },
+        'Created pending webhook event',
       );
     }
 
@@ -144,21 +144,17 @@ export class BankLinkService extends OwnedCrudService<
     headers: Record<string, string>,
     parsedPayload: Record<string, any>,
   ): Promise<void> {
-    this.logger.log(`Received webhook from provider ${providerName}`);
+    this.logger.log({ providerName }, 'Received webhook from provider');
 
     const provider = this.providerRegistry.getProvider(providerName);
 
     // Verify webhook signature before processing
     const isValid = await provider.verifyWebhook(rawBody, headers);
     if (!isValid) {
-      this.logger.warn(
-        `Webhook verification failed for provider ${providerName}`,
-      );
+      this.logger.warn({ providerName }, 'Webhook verification failed');
       throw new UnauthorizedException('Invalid webhook signature');
     }
-    this.logger.log(
-      `Webhook verified successfully for provider ${providerName}`,
-    );
+    this.logger.log({ providerName }, 'Webhook verified successfully');
 
     // Route to appropriate handler based on webhook type
 
@@ -193,7 +189,8 @@ export class BankLinkService extends OwnedCrudService<
     }
 
     this.logger.log(
-      `Webhook from ${providerName} not a processable type, skipping`,
+      { providerName },
+      'Webhook not a processable type, skipping',
     );
   }
 
@@ -206,15 +203,16 @@ export class BankLinkService extends OwnedCrudService<
     type: string;
   }): Promise<void> {
     this.logger.log(
-      `Processing ${updateInfo.type} update webhook for item ${updateInfo.itemId}`,
+      { type: updateInfo.type, itemId: updateInfo.itemId },
+      'Processing update webhook',
     );
 
     const bankLink = await this.findByPlaidItemId(updateInfo.itemId);
     if (bankLink) {
       await this.syncAccounts(bankLink.id, bankLink.userId);
-      this.logger.log(`Synced accounts for bank link ${bankLink.id}`);
+      this.logger.log({ bankLinkId: bankLink.id }, 'Synced accounts for bank link');
     } else {
-      this.logger.warn(`No bank link found for item_id=${updateInfo.itemId}`);
+      this.logger.warn({ itemId: updateInfo.itemId }, 'No bank link found for item');
     }
   }
 
@@ -231,12 +229,13 @@ export class BankLinkService extends OwnedCrudService<
     shouldSync: boolean;
   }): Promise<void> {
     this.logger.log(
-      `Processing ITEM ${statusInfo.webhookCode} webhook for item ${statusInfo.itemId}`,
+      { webhookCode: statusInfo.webhookCode, itemId: statusInfo.itemId },
+      'Processing ITEM status webhook',
     );
 
     const bankLink = await this.findByPlaidItemId(statusInfo.itemId);
     if (!bankLink) {
-      this.logger.warn(`No bank link found for item_id=${statusInfo.itemId}`);
+      this.logger.warn({ itemId: statusInfo.itemId }, 'No bank link found for item');
       return;
     }
 
@@ -247,13 +246,15 @@ export class BankLinkService extends OwnedCrudService<
 
     await this.repository.save(bankLink);
     this.logger.log(
-      `Updated bank link ${bankLink.id} status to ${statusInfo.status}`,
+      { bankLinkId: bankLink.id, status: statusInfo.status },
+      'Updated bank link status',
     );
 
     // Optionally sync accounts after status update (e.g., LOGIN_REPAIRED)
     if (statusInfo.shouldSync) {
       this.logger.log(
-        `Triggering account sync after ${statusInfo.webhookCode} for bank link ${bankLink.id}`,
+        { webhookCode: statusInfo.webhookCode, bankLinkId: bankLink.id },
+        'Triggering account sync after status webhook',
       );
       await this.syncAccounts(bankLink.id, bankLink.userId);
     }
@@ -269,31 +270,27 @@ export class BankLinkService extends OwnedCrudService<
     webhookId: string,
     parsedPayload: Record<string, any>,
   ): Promise<void> {
-    this.logger.log(`Processing link completion webhook: ${webhookId}`);
+    this.logger.log({ webhookId }, 'Processing link completion webhook');
 
     // Look up pending webhook event by webhookId to get userId
     const pendingEvent =
       await this.webhookEventService.findPendingByWebhookId(webhookId);
     if (!pendingEvent) {
       this.logger.warn(
-        `No pending webhook event found for webhookId=${webhookId}. ` +
-          `Either already processed, expired, or initiation was never called.`,
+        { webhookId },
+        'No pending webhook event found. Either already processed, expired, or initiation was never called.',
       );
       return;
     }
 
     const userId = pendingEvent.userId;
-    this.logger.log(
-      `Found pending webhook event for webhookId=${webhookId}, userId=${userId}`,
-    );
+    this.logger.log({ webhookId, userId }, 'Found pending webhook event');
 
     try {
       const linkCompletionResponses =
         await provider.processWebhook(parsedPayload);
       if (!linkCompletionResponses) {
-        this.logger.warn(
-          `No link completion responses from provider ${providerName}`,
-        );
+        this.logger.warn({ providerName }, 'No link completion responses from provider');
         await this.webhookEventService.markFailed(
           webhookId,
           'No link completion responses from provider',
@@ -318,7 +315,7 @@ export class BankLinkService extends OwnedCrudService<
 
       // Save bank links
       const savedBankLinks = await this.repository.save(bankLinks);
-      this.logger.log(`Saved ${savedBankLinks.length} bank links`);
+      this.logger.log({ count: savedBankLinks.length }, 'Saved bank links');
 
       // Map of external account ids to bank link entities
       const accountIdToBankLink = new Map<string, BankLinkEntity>();
@@ -347,7 +344,7 @@ export class BankLinkService extends OwnedCrudService<
 
       // Save accounts
       const savedAccounts = await this.accountRepository.save(accounts);
-      this.logger.log(`Saved ${savedAccounts.length} accounts`);
+      this.logger.log({ count: savedAccounts.length }, 'Saved accounts');
 
       // Emit linked account created events for all new accounts
       savedAccounts.forEach((account) => {
@@ -359,9 +356,7 @@ export class BankLinkService extends OwnedCrudService<
 
       // Mark webhook event as completed
       await this.webhookEventService.markCompleted(webhookId, parsedPayload);
-      this.logger.log(
-        `Webhook processing completed for webhookId=${webhookId}`,
-      );
+      this.logger.log({ webhookId }, 'Webhook processing completed');
     } catch (error) {
       // Mark webhook event as failed
       const errorMessage =
@@ -372,7 +367,8 @@ export class BankLinkService extends OwnedCrudService<
         parsedPayload,
       );
       this.logger.error(
-        `Webhook processing failed for webhookId=${webhookId}: ${errorMessage}`,
+        { webhookId, error: errorMessage },
+        'Webhook processing failed',
       );
       throw error;
     }
@@ -385,12 +381,12 @@ export class BankLinkService extends OwnedCrudService<
    * @returns Updated accounts from all bank links
    */
   async syncAllAccounts(userId: string): Promise<Account[]> {
-    this.logger.log(`Syncing accounts for all bank links for userId=${userId}`);
+    this.logger.log({ userId }, 'Syncing accounts for all bank links');
 
     const bankLinks = await this.repository.find({
       where: { userId },
     });
-    this.logger.log(`Found ${bankLinks.length} bank links to sync`);
+    this.logger.log({ count: bankLinks.length }, 'Found bank links to sync');
 
     const results = await Promise.allSettled(
       bankLinks.map((bankLink) => this.syncAccounts(bankLink.id, userId)),
@@ -402,12 +398,13 @@ export class BankLinkService extends OwnedCrudService<
         allAccounts.push(...result.value);
       } else {
         this.logger.error(
-          `Failed to sync accounts for bank link ${bankLinks[index].id}: ${result.reason}`,
+          { bankLinkId: bankLinks[index].id, error: String(result.reason) },
+          'Failed to sync accounts for bank link',
         );
       }
     });
 
-    this.logger.log(`Synced ${allAccounts.length} accounts total`);
+    this.logger.log({ count: allAccounts.length }, 'Synced accounts total');
     return allAccounts;
   }
 
@@ -419,13 +416,13 @@ export class BankLinkService extends OwnedCrudService<
    * @returns Updated accounts from all bank links
    */
   async syncAllAccountsSystem(): Promise<Account[]> {
-    this.logger.log('Syncing accounts for all bank links (system operation)');
+    this.logger.log({}, 'Syncing accounts for all bank links (system operation)');
 
     // Exclude Plaid - it uses webhook-driven sync via DEFAULT_UPDATE
     const bankLinks = await this.repository.find({
       where: { providerName: Not('plaid') },
     });
-    this.logger.log(`Found ${bankLinks.length} bank links to sync`);
+    this.logger.log({ count: bankLinks.length }, 'Found bank links to sync (system)');
 
     const results = await Promise.allSettled(
       bankLinks.map((bankLink) =>
@@ -439,12 +436,13 @@ export class BankLinkService extends OwnedCrudService<
         allAccounts.push(...result.value);
       } else {
         this.logger.error(
-          `Failed to sync accounts for bank link ${bankLinks[index].id}: ${result.reason}`,
+          { bankLinkId: bankLinks[index].id, error: String(result.reason) },
+          'Failed to sync accounts for bank link (system)',
         );
       }
     });
 
-    this.logger.log(`Synced ${allAccounts.length} accounts total`);
+    this.logger.log({ count: allAccounts.length }, 'Synced accounts total (system)');
     return allAccounts;
   }
 
@@ -456,9 +454,7 @@ export class BankLinkService extends OwnedCrudService<
    * @returns Updated accounts
    */
   async syncAccounts(bankLinkId: string, userId: string): Promise<Account[]> {
-    this.logger.log(
-      `Syncing accounts for bank link ${bankLinkId}, userId=${userId}`,
-    );
+    this.logger.log({ bankLinkId, userId }, 'Syncing accounts for bank link');
 
     // Get bank link entity (scoped by userId)
     const bankLink = await this.repository.findOne({
@@ -476,7 +472,8 @@ export class BankLinkService extends OwnedCrudService<
       bankLink.authentication,
     );
     this.logger.log(
-      `Fetched ${apiAccounts.length} accounts from ${bankLink.providerName}`,
+      { count: apiAccounts.length, providerName: bankLink.providerName },
+      'Fetched accounts from provider',
     );
 
     // Update bank link institution info if changed
@@ -491,7 +488,8 @@ export class BankLinkService extends OwnedCrudService<
         bankLink.institutionName = institutionName;
         await this.repository.save(bankLink);
         this.logger.log(
-          `Updated institution info for bank link ${bankLinkId}: ${institutionName} (${institutionId})`,
+          { bankLinkId, institutionName, institutionId },
+          'Updated institution info for bank link',
         );
       }
     }
@@ -508,7 +506,7 @@ export class BankLinkService extends OwnedCrudService<
       accountIdToBankLinkId,
       bankLink.userId,
     );
-    this.logger.log(`Synced ${savedAccounts.length} accounts`);
+    this.logger.log({ count: savedAccounts.length }, 'Synced accounts');
 
     return savedAccounts;
   }
@@ -613,7 +611,7 @@ export class BankLinkService extends OwnedCrudService<
    * @returns Number of bank links updated
    */
   async backfillPlaidItemIds(): Promise<number> {
-    this.logger.log('Starting backfill of Plaid item IDs');
+    this.logger.log({}, 'Starting backfill of Plaid item IDs');
 
     const plaidLinks = await this.repository.find({
       where: { providerName: 'plaid' },
@@ -627,7 +625,7 @@ export class BankLinkService extends OwnedCrudService<
     // Filter out links that already have itemId
     const linksToUpdate = plaidLinks.filter((link) => {
       if (link.authentication.itemId) {
-        this.logger.log(`Bank link ${link.id} already has itemId, skipping`);
+        this.logger.log({ bankLinkId: link.id }, 'Bank link already has itemId, skipping');
         return false;
       }
       return true;
@@ -638,7 +636,7 @@ export class BankLinkService extends OwnedCrudService<
         const itemId = await provider.getItemId!(link.authentication);
         link.authentication = { ...link.authentication, itemId };
         await this.repository.save(link);
-        this.logger.log(`Backfilled itemId for bank link ${link.id}`);
+        this.logger.log({ bankLinkId: link.id }, 'Backfilled itemId for bank link');
         return link.id;
       }),
     );
@@ -649,13 +647,15 @@ export class BankLinkService extends OwnedCrudService<
         updatedCount++;
       } else {
         this.logger.error(
-          `Failed to backfill itemId for bank link ${linksToUpdate[index].id}: ${result.reason}`,
+          { bankLinkId: linksToUpdate[index].id, error: String(result.reason) },
+          'Failed to backfill itemId for bank link',
         );
       }
     });
 
     this.logger.log(
-      `Backfill complete: ${updatedCount}/${plaidLinks.length} bank links updated`,
+      { updatedCount, totalCount: plaidLinks.length },
+      'Backfill complete',
     );
     return updatedCount;
   }

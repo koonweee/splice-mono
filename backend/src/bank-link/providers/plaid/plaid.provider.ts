@@ -58,10 +58,10 @@ export class PlaidProvider implements IBankLinkProvider {
   private static readonly JWK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
   constructor() {
-    this.logger.log(`Initializing PlaidProvider`);
+    this.logger.log({}, 'Initializing PlaidProvider');
     // Log client ID and secret
-    this.logger.log(`Client ID: ${process.env.PLAID_CLIENT_ID}`);
-    this.logger.log(`Secret: ${process.env.PLAID_SECRET}`);
+    this.logger.log({ clientId: process.env.PLAID_CLIENT_ID }, 'Plaid client ID configured');
+    this.logger.log({}, 'Plaid secret configured');
     const configuration = new Configuration({
       basePath: PlaidEnvironments.production,
       baseOptions: {
@@ -91,7 +91,8 @@ export class PlaidProvider implements IBankLinkProvider {
     const result = PlaidUserDetailsSchema.safeParse(providerUserDetails);
     if (!result.success) {
       this.logger.warn(
-        `Invalid Plaid user details, ignoring: ${result.error.message}`,
+        { error: result.error.message },
+        'Invalid Plaid user details, ignoring',
       );
       return undefined;
     }
@@ -119,11 +120,13 @@ export class PlaidProvider implements IBankLinkProvider {
       if (!userToken) {
         throw new Error('Plaid user creation did not return a user_token');
       }
-      this.logger.log(`Created Plaid user for client_user_id=${clientUserId}`);
+      this.logger.log({ clientUserId }, 'Created Plaid user');
       return userToken;
     } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      this.logger.error(`Error creating Plaid user: ${error['message']}`);
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        'Error creating Plaid user',
+      );
       throw error;
     }
   }
@@ -138,9 +141,7 @@ export class PlaidProvider implements IBankLinkProvider {
     providerUserDetails?: Record<string, unknown>;
   }): Promise<LinkInitiationResponse> {
     const { userId, redirectUri, providerUserDetails } = input;
-    this.logger.log(
-      `Plaid link initiated: userId=${userId}, redirectUri=${redirectUri}`,
-    );
+    this.logger.log({ userId, redirectUri }, 'Plaid link initiated');
 
     // Parse and validate existing provider details
     const existingDetails = this.parseProviderUserDetails(providerUserDetails);
@@ -152,12 +153,12 @@ export class PlaidProvider implements IBankLinkProvider {
     if (existingDetails?.userToken) {
       // Reuse existing user token
       userToken = existingDetails.userToken;
-      this.logger.log(`Reusing existing Plaid user token for userId=${userId}`);
+      this.logger.log({ userId }, 'Reusing existing Plaid user token');
     } else {
       // Create new user token and return it for persistence
       userToken = await this.createUserToken(userId);
       updatedProviderUserDetails = { userToken };
-      this.logger.log(`Created new Plaid user token for userId=${userId}`);
+      this.logger.log({ userId }, 'Created new Plaid user token');
     }
 
     // Construct link token request
@@ -187,13 +188,13 @@ export class PlaidProvider implements IBankLinkProvider {
         linkUrl: response.data.hosted_link_url,
         updatedProviderUserDetails,
       };
-      this.logger.log(
-        `Plaid link initiated: ${JSON.stringify(result, null, 2)}`,
-      );
+      this.logger.log({ result }, 'Plaid link token created');
       return result;
     } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      this.logger.error(`Error creating link token: ${error['message']}`);
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        'Error creating link token',
+      );
       throw error;
     }
   }
@@ -217,8 +218,10 @@ export class PlaidProvider implements IBankLinkProvider {
         externalAccountId: response.data.item_id,
       };
     } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      this.logger.error(`Error exchanging public token: ${error['message']}`);
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        'Error exchanging public token',
+      );
       throw error;
     }
   }
@@ -233,17 +236,18 @@ export class PlaidProvider implements IBankLinkProvider {
       typeof rawPayload.status !== 'string'
     ) {
       this.logger.warn(
-        `Not processing Plaid webhook: missing webhook_code or link_token or status`,
+        {},
+        'Not processing Plaid webhook: missing webhook_code or link_token or status',
       );
       return;
     }
     const { webhook_code, link_token, status } = rawPayload;
     if (webhook_code !== 'SESSION_FINISHED') {
-      this.logger.warn(`Not processing Plaid webhook of type ${webhook_code}`);
+      this.logger.warn({ webhookCode: webhook_code }, 'Not processing Plaid webhook of this type');
       return;
     }
     if (status !== 'success') {
-      this.logger.warn(`Not processing Plaid webhook of status ${status}`);
+      this.logger.warn({ status }, 'Not processing Plaid webhook of this status');
       return;
     }
     return link_token;
@@ -260,9 +264,7 @@ export class PlaidProvider implements IBankLinkProvider {
     const castedPayload = rawPayload as LinkSessionFinishedWebhook;
 
     // Debug: Log casted payload
-    this.logger.log(
-      `Plaid webhook processed: castedPayload=${JSON.stringify(castedPayload, null, 2)}`,
-    );
+    this.logger.log({ payload: castedPayload }, 'Processing Plaid webhook payload');
 
     const { public_tokens = [] } = castedPayload;
 
@@ -273,9 +275,7 @@ export class PlaidProvider implements IBankLinkProvider {
     );
 
     // Log all plaid items
-    this.logger.log(
-      `Plaid webhook processed: plaidItems=${JSON.stringify(plaidItems, null, 2)}`,
-    );
+    this.logger.log({ itemCount: plaidItems.length }, 'Exchanged public tokens for access tokens');
 
     // Get accounts and institution info from Plaid
     const accountsResponses = await Promise.all(
@@ -308,14 +308,15 @@ export class PlaidProvider implements IBankLinkProvider {
       throw new Error('Missing accessToken in authentication data');
     }
 
-    this.logger.log(`Fetching accounts from Plaid`);
+    this.logger.log({}, 'Fetching accounts from Plaid');
     try {
       const response = await this.client.accountsGet({
         access_token: accessToken,
       });
       // Debug: Log response
       this.logger.log(
-        `Plaid accounts response: ${JSON.stringify(response.data, null, 2)}`,
+        { accountCount: response.data.accounts.length },
+        'Received accounts from Plaid',
       );
 
       // Extract institution info from the response
@@ -384,7 +385,8 @@ export class PlaidProvider implements IBankLinkProvider {
       return { accounts, institution };
     } catch (error) {
       this.logger.error(
-        `Error fetching account details from Plaid: ${error instanceof Error ? error.message : String(error)}`,
+        { error: error instanceof Error ? error.message : String(error) },
+        'Error fetching account details from Plaid',
       );
       throw error;
     }
@@ -411,9 +413,7 @@ export class PlaidProvider implements IBankLinkProvider {
         headers['plaid-verification'] || headers['Plaid-Verification'];
 
       if (!signedJwt) {
-        this.logger.warn(
-          'Webhook verification failed: Missing Plaid-Verification header',
-        );
+        this.logger.warn({}, 'Webhook verification failed: Missing Plaid-Verification header');
         return false;
       }
 
@@ -423,16 +423,15 @@ export class PlaidProvider implements IBankLinkProvider {
       // Ensure the algorithm is ES256
       if (jwtHeader.alg !== 'ES256') {
         this.logger.warn(
-          `Webhook verification failed: Invalid algorithm ${jwtHeader.alg}, expected ES256`,
+          { algorithm: jwtHeader.alg, expected: 'ES256' },
+          'Webhook verification failed: Invalid algorithm',
         );
         return false;
       }
 
       const keyId = jwtHeader.kid;
       if (!keyId) {
-        this.logger.warn(
-          'Webhook verification failed: Missing kid in JWT header',
-        );
+        this.logger.warn({}, 'Webhook verification failed: Missing kid in JWT header');
         return false;
       }
 
@@ -463,10 +462,11 @@ export class PlaidProvider implements IBankLinkProvider {
             expiredAt: response.data.key.expired_at ?? null,
             cachedAt: now,
           };
-          this.logger.log(`Fetched and cached new JWK for kid=${keyId}`);
+          this.logger.log({ keyId }, 'Fetched and cached new JWK');
         } catch (error) {
           this.logger.error(
-            `Webhook verification failed: Could not fetch verification key: ${error instanceof Error ? error.message : String(error)}`,
+            { error: error instanceof Error ? error.message : String(error) },
+            'Webhook verification failed: Could not fetch verification key',
           );
           return false;
         }
@@ -481,7 +481,8 @@ export class PlaidProvider implements IBankLinkProvider {
         });
       } catch (error) {
         this.logger.warn(
-          `Webhook verification failed: JWT verification error: ${error instanceof Error ? error.message : String(error)}`,
+          { error: error instanceof Error ? error.message : String(error) },
+          'Webhook verification failed: JWT verification error',
         );
         return false;
       }
@@ -493,9 +494,7 @@ export class PlaidProvider implements IBankLinkProvider {
         | undefined;
 
       if (!claimedBodyHash) {
-        this.logger.warn(
-          'Webhook verification failed: Missing request_body_sha256 in JWT payload',
-        );
+        this.logger.warn({}, 'Webhook verification failed: Missing request_body_sha256 in JWT payload');
         return false;
       }
 
@@ -509,22 +508,21 @@ export class PlaidProvider implements IBankLinkProvider {
       const computedBuffer = Buffer.from(computedBodyHash, 'utf8');
 
       if (claimedBuffer.length !== computedBuffer.length) {
-        this.logger.warn(
-          'Webhook verification failed: Body hash length mismatch',
-        );
+        this.logger.warn({}, 'Webhook verification failed: Body hash length mismatch');
         return false;
       }
 
       if (!timingSafeEqual(claimedBuffer, computedBuffer)) {
-        this.logger.warn('Webhook verification failed: Body hash mismatch');
+        this.logger.warn({}, 'Webhook verification failed: Body hash mismatch');
         return false;
       }
 
-      this.logger.log('Webhook verification successful');
+      this.logger.log({}, 'Webhook verification successful');
       return true;
     } catch (error) {
       this.logger.error(
-        `Webhook verification error: ${error instanceof Error ? error.message : String(error)}`,
+        { error: error instanceof Error ? error.message : String(error) },
+        'Webhook verification error',
       );
       return false;
     }
@@ -667,7 +665,8 @@ export class PlaidProvider implements IBankLinkProvider {
       return response.data.item.item_id;
     } catch (error) {
       this.logger.error(
-        `Error fetching item from Plaid: ${error instanceof Error ? error.message : String(error)}`,
+        { error: error instanceof Error ? error.message : String(error) },
+        'Error fetching item from Plaid',
       );
       throw error;
     }

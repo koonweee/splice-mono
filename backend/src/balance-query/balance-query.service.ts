@@ -50,7 +50,8 @@ export class BalanceQueryService {
     userId: string,
   ): Promise<BalanceQueryPerDateResult[]> {
     this.logger.log(
-      `Getting snapshot balances for ${accountIds.length} accounts from ${startDate} to ${endDate}`,
+      { accountCount: accountIds.length, startDate, endDate },
+      'Getting snapshot balances for accounts',
     );
 
     // Fetch user's preferred currency for conversion
@@ -75,7 +76,8 @@ export class BalanceQueryService {
     const missingIds = accountIds.filter((id) => !foundIds.has(id));
     if (missingIds.length > 0) {
       this.logger.warn(
-        `Accounts not found or not owned by user: ${missingIds.join(', ')}`,
+        { missingIds },
+        'Accounts not found or not owned by user',
       );
     }
 
@@ -191,7 +193,8 @@ export class BalanceQueryService {
     userId: string,
   ): Promise<BalanceQueryPerDateResult[]> {
     this.logger.log(
-      `Getting balances for ${accountIds.length} accounts from ${startDate} to ${endDate}`,
+      { accountCount: accountIds.length, startDate, endDate },
+      'Getting balances for accounts',
     );
 
     // Fetch accounts to check their types
@@ -234,7 +237,8 @@ export class BalanceQueryService {
     userId: string,
   ): Promise<BalanceQueryPerDateResult[]> {
     this.logger.log(
-      `Getting all balances from ${startDate} to ${endDate} for user ${userId}`,
+      { startDate, endDate, userId },
+      'Getting all balances for user',
     );
 
     // Fetch all linked accounts for the user
@@ -308,7 +312,10 @@ export class BalanceQueryService {
 
       return ratesByDate;
     } catch (error) {
-      this.logger.error(`Failed to fetch exchange rates: ${error}`);
+      this.logger.error(
+        { error: String(error) },
+        'Failed to fetch exchange rates',
+      );
       return new Map();
     }
   }
