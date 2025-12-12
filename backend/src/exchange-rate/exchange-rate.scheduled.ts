@@ -21,15 +21,19 @@ export class ExchangeRateScheduledService {
     timeZone: 'UTC',
   })
   async handleSyncDailyRates(): Promise<void> {
-    this.logger.log('Starting scheduled sync of exchange rates');
+    this.logger.log({}, 'Starting scheduled sync of exchange rates');
 
     try {
       const rates = await this.exchangeRateService.syncDailyRates();
       this.logger.log(
-        `Scheduled exchange rate sync completed: ${rates.length} rates synced`,
+        { ratesSynced: rates.length },
+        'Scheduled exchange rate sync completed',
       );
     } catch (error) {
-      this.logger.error(`Scheduled exchange rate sync failed: ${error}`);
+      this.logger.error(
+        { error: String(error) },
+        'Scheduled exchange rate sync failed',
+      );
     }
   }
 }

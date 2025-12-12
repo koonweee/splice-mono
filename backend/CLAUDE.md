@@ -121,3 +121,29 @@ Provider interface pattern for banking integrations:
 ### Events (`src/events/`)
 
 Uses `@nestjs/event-emitter` for domain events (e.g., `AccountUpdatedEvent`).
+
+### Structured Logging
+
+The application uses `nestjs-pino` with `pino-seq` for centralized structured logging. Logs are shipped to Seq when `SEQ_SERVER_URL` is configured, otherwise pretty-printed to console.
+
+**Always use structured logging format** - pass context as the first argument (object) and message as the second:
+
+```typescript
+// ✅ Correct - structured format
+this.logger.log({ userId, accountId }, 'Account updated');
+this.logger.warn({ id }, 'Entity not found');
+this.logger.error({ error: error.message, userId }, 'Failed to sync accounts');
+
+// ❌ Wrong - string interpolation
+this.logger.log(`Account ${accountId} updated for user ${userId}`);
+```
+
+**Guidelines:**
+- Extract meaningful data into the context object (IDs, counts, status values)
+- Keep the message static and descriptive (no interpolation)
+- For errors, include `error: error instanceof Error ? error.message : String(error)`
+- Use empty object `{}` when no context is needed: `this.logger.log({}, 'Starting sync')`
+
+**Environment variables:**
+- `SEQ_SERVER_URL` - Seq server URL (e.g., `http://localhost:5341`)
+- `SEQ_API_KEY` - Optional API key for authenticated ingestion

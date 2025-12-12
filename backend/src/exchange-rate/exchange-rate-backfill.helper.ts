@@ -82,12 +82,12 @@ export class ExchangeRateBackfillHelper {
    * @returns Array of upserted exchange rates
    */
   async backfillRatesForUser(userId: string): Promise<ExchangeRate[]> {
-    this.logger.log(`Starting exchange rate backfill for user: ${userId}`);
+    this.logger.log({ userId }, 'Starting exchange rate backfill for user');
 
     // Get user's currency preference and timezone
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
-      this.logger.error(`User not found: ${userId}`);
+      this.logger.error({ userId }, 'User not found');
       return [];
     }
     const userCurrency = user.settings.currency;
@@ -100,12 +100,20 @@ export class ExchangeRateBackfillHelper {
     );
 
     if (pairs.length === 0) {
-      this.logger.log('No currency pairs to backfill');
+      this.logger.log({}, 'No currency pairs to backfill');
       return [];
     }
 
     this.logger.log(
-      `Found ${pairs.length} currency pairs to backfill: ${pairs.map((p) => `${p.baseCurrency}→${p.targetCurrency} (from ${p.earliestDate})`).join(', ')}`,
+      {
+        count: pairs.length,
+        pairs: pairs.map((p) => ({
+          baseCurrency: p.baseCurrency,
+          targetCurrency: p.targetCurrency,
+          earliestDate: p.earliestDate,
+        })),
+      },
+      'Found currency pairs to backfill',
     );
 
     // Group pairs by base currency for batched API requests
@@ -115,7 +123,7 @@ export class ExchangeRateBackfillHelper {
       { targets: string[]; earliestDate: string }
     >();
 
-    for (const pair of pairs) {
+    pairs.forEach((pair) => {
       const existing = pairsByBase.get(pair.baseCurrency);
       if (existing) {
         existing.targets.push(pair.targetCurrency);
@@ -129,10 +137,11 @@ export class ExchangeRateBackfillHelper {
           earliestDate: pair.earliestDate,
         });
       }
-    }
+    });
 
     this.logger.log(
-      `Batched into ${pairsByBase.size} API requests by base currency`,
+      { batchCount: pairsByBase.size },
+      'Batched into API requests by base currency',
     );
 
     const results: ExchangeRate[] = [];
@@ -161,13 +170,24 @@ export class ExchangeRateBackfillHelper {
 
         if (missingKeys.length === 0) {
           this.logger.log(
-            `Skipping API call for ${baseCurrency}→[${targets.join(',')}]: all ${requiredKeys.length} rates already exist`,
+            {
+              baseCurrency,
+              targetCurrencies: targets,
+              totalRates: requiredKeys.length,
+            },
+            'Skipping API call - all rates already exist',
           );
           continue;
         }
 
         this.logger.log(
-          `Fetching ${baseCurrency}→[${targets.join(',')}]: ${missingKeys.length}/${requiredKeys.length} rates missing`,
+          {
+            baseCurrency,
+            targetCurrencies: targets,
+            missingRates: missingKeys.length,
+            totalRates: requiredKeys.length,
+          },
+          'Fetching rates from API',
         );
 
         // Fetch rates from API (will have gaps on weekends/holidays)
@@ -203,18 +223,27 @@ export class ExchangeRateBackfillHelper {
         }
 
         this.logger.log(
-          `Processed ${baseCurrency}→[${targets.join(',')}]: ${inserted} inserted, ${skipped} skipped (already exist)`,
+          {
+            baseCurrency,
+            targetCurrencies: targets,
+            inserted,
+            skipped,
+          },
+          'Processed rates',
         );
       } catch (error) {
         this.logger.error(
-          `Error backfilling rates for ${baseCurrency}→[${targets.join(',')}]: ${error}`,
+          {
+            baseCurrency,
+            targetCurrencies: targets,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Error backfilling rates',
         );
       }
     }
 
-    this.logger.log(
-      `Backfill complete. Inserted ${results.length} exchange rates`,
-    );
+    this.logger.log({ insertedCount: results.length }, 'Backfill complete');
     return results;
   }
 
@@ -232,20 +261,27 @@ export class ExchangeRateBackfillHelper {
     description: string,
   ): Promise<T | null> {
     try {
-      this.logger.log(`Fetching from Frankfurter: ${description}`);
+      this.logger.log({ description }, 'Fetching from Frankfurter');
 
       const response = await fetch(url);
 
       if (!response.ok) {
         this.logger.error(
-          `Frankfurter API error: ${response.status} ${response.statusText}`,
+          {
+            status: response.status,
+            statusText: response.statusText,
+          },
+          'Frankfurter API error',
         );
         return null;
       }
 
       return (await response.json()) as T;
     } catch (error) {
-      this.logger.error(`Failed to fetch from Frankfurter: ${error}`);
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        'Failed to fetch from Frankfurter',
+      );
       return null;
     }
   }
@@ -271,12 +307,17 @@ export class ExchangeRateBackfillHelper {
     }
 
     const rates = new Map<string, number>();
-    for (const [currency, rate] of Object.entries(data.rates)) {
+    Object.entries(data.rates).forEach(([currency, rate]) => {
       rates.set(currency, rate);
-    }
+    });
 
     this.logger.log(
-      `Fetched ${rates.size} rates for base ${baseCurrency} (date: ${data.date})`,
+      {
+        baseCurrency,
+        rateCount: rates.size,
+        date: data.date,
+      },
+      'Fetched rates',
     );
 
     return rates;
@@ -315,16 +356,21 @@ export class ExchangeRateBackfillHelper {
 
     // Parse the time series response
     const rates = new Map<string, Map<string, number>>();
-    for (const [date, currencyRates] of Object.entries(data.rates)) {
+    Object.entries(data.rates).forEach(([date, currencyRates]) => {
       const dateRates = new Map<string, number>();
-      for (const [currency, rate] of Object.entries(currencyRates)) {
+      Object.entries(currencyRates).forEach(([currency, rate]) => {
         dateRates.set(currency, rate);
-      }
+      });
       rates.set(date, dateRates);
-    }
+    });
 
     this.logger.log(
-      `Fetched ${rates.size} dates of rates for ${baseCurrency}→[${symbols}]`,
+      {
+        baseCurrency,
+        targetCurrencies: symbols,
+        dateCount: rates.size,
+      },
+      'Fetched time series rates',
     );
 
     return rates;
@@ -415,18 +461,18 @@ export class ExchangeRateBackfillHelper {
     // so we can look up by what the caller passed in
     const existingKeys = new Set<string>();
 
-    for (const entity of entities) {
+    entities.forEach((entity) => {
       // Find which original target currency this maps to
-      for (let i = 0; i < targetCurrencies.length; i++) {
+      targetCurrencies.forEach((targetCurrency, i) => {
         const normalized = normalizedPairs[i];
         if (
           entity.baseCurrency === normalized.base &&
           entity.targetCurrency === normalized.target
         ) {
-          existingKeys.add(`${targetCurrencies[i]}:${entity.rateDate}`);
+          existingKeys.add(`${targetCurrency}:${entity.rateDate}`);
         }
-      }
-    }
+      });
+    });
 
     return existingKeys;
   }
@@ -459,12 +505,12 @@ export class ExchangeRateBackfillHelper {
       { base: string; target: string; earliestDate: string }
     >();
 
-    for (const snapshot of snapshots) {
+    snapshots.forEach((snapshot) => {
       const snapshotCurrency = snapshot.currentBalance.currency;
 
       // Skip if currencies are the same
       if (snapshotCurrency === userCurrency) {
-        continue;
+        return;
       }
 
       // Normalize the pair
@@ -482,7 +528,7 @@ export class ExchangeRateBackfillHelper {
           earliestDate: snapshot.snapshotDate,
         });
       }
-    }
+    });
 
     return Array.from(pairsMap.values()).map((p) => ({
       baseCurrency: p.base,
@@ -507,9 +553,9 @@ export class ExchangeRateBackfillHelper {
     // Use diff to check if we haven't passed the end date
     while (currentDate.diff(end, 'day') <= 0) {
       const dateStr = currentDate.format('YYYY-MM-DD');
-      for (const target of targetCurrencies) {
+      targetCurrencies.forEach((target) => {
         keys.push(`${target}:${dateStr}`);
-      }
+      });
       currentDate = currentDate.add(1, 'day');
     }
 

@@ -5,11 +5,11 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { MoneyWithSign } from './moneyWithSign'
-import type { RateWithSource } from './rateWithSource'
+import type { MoneyWithSign } from './moneyWithSign';
+import type { RateWithSource } from './rateWithSource';
 
 export interface BalanceWithConvertedBalance {
-  balance: MoneyWithSign
-  convertedBalance?: MoneyWithSign
-  exchangeRate?: RateWithSource
+  balance: MoneyWithSign;
+  convertedBalance?: MoneyWithSign;
+  exchangeRate?: RateWithSource;
 }

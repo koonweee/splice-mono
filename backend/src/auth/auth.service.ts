@@ -40,7 +40,7 @@ export class AuthService {
     entity.revoked = false;
 
     await this.refreshTokenRepository.save(entity);
-    this.logger.log(`Generated refresh token for user: ${userId}`);
+    this.logger.log({ userId }, 'Generated refresh token for user');
 
     return rawToken;
   }
@@ -65,10 +65,15 @@ export class AuthService {
       });
       if (revokedToken) {
         this.logger.warn(
-          `Refresh token reuse detected for user: ${revokedToken.userId}. Token was revoked at: ${revokedToken.updatedAt.toISOString()}. This may indicate a race condition on the client or token theft.`,
+          {
+            userId: revokedToken.userId,
+            revokedAt: revokedToken.updatedAt.toISOString(),
+          },
+          'Refresh token reuse detected. This may indicate a race condition on the client or token theft',
         );
       } else {
         this.logger.warn(
+          {},
           'Invalid refresh token rotation attempted - token not found in database',
         );
       }
@@ -77,7 +82,8 @@ export class AuthService {
 
     if (oldTokenEntity.expiresAt < new Date()) {
       this.logger.warn(
-        `Expired refresh token rotation for user: ${oldTokenEntity.userId}`,
+        { userId: oldTokenEntity.userId },
+        'Expired refresh token rotation',
       );
       throw new UnauthorizedException('Refresh token expired');
     }
@@ -91,7 +97,10 @@ export class AuthService {
       oldTokenEntity.userId,
     );
 
-    this.logger.log(`Rotated refresh token for user: ${oldTokenEntity.userId}`);
+    this.logger.log(
+      { userId: oldTokenEntity.userId },
+      'Rotated refresh token for user',
+    );
     return { userId: oldTokenEntity.userId, newRefreshToken };
   }
 
@@ -104,7 +113,7 @@ export class AuthService {
       { token: hashedToken },
       { revoked: true },
     );
-    this.logger.log('Revoked refresh token');
+    this.logger.log({}, 'Revoked refresh token');
   }
 
   /**
@@ -115,7 +124,7 @@ export class AuthService {
       { userId, revoked: false },
       { revoked: true },
     );
-    this.logger.log(`Revoked all refresh tokens for user: ${userId}`);
+    this.logger.log({ userId }, 'Revoked all refresh tokens for user');
   }
 
   private hashToken(token: string): string {

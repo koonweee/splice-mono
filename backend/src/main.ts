@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import type { OpenAPIObject } from '@nestjs/swagger';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { generateSchemaComponents } from './common/zod-api-response';
 
@@ -53,9 +54,9 @@ function fixNullableRefs(obj: unknown): unknown {
 
   // Recursively process all properties
   const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(record)) {
+  Object.entries(record).forEach(([key, value]) => {
     result[key] = fixNullableRefs(value);
-  }
+  });
   return result;
 }
 
@@ -63,7 +64,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     // Enable raw body for webhook signature verification
     rawBody: true,
+    // Buffer logs during bootstrap so pino captures everything
+    bufferLogs: true,
   });
+
+  // Use pino logger globally
+  const logger = app.get(Logger);
+  app.useLogger(logger);
 
   // Enable cookie parsing for JWT authentication
   app.use(cookieParser());
@@ -104,7 +111,8 @@ async function bootstrap() {
 
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(`Server is running on port ${process.env.PORT ?? 3000}`);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+  logger.log({ port }, 'Server started');
 }
 void bootstrap();

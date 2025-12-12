@@ -1,5 +1,5 @@
 import { TimePeriod } from '@/lib/types'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import {
   useBalanceQueryControllerGetAllBalances,
   useBalanceQueryControllerGetBalances,
@@ -12,6 +12,7 @@ import type { ChartDataPoint } from '../components/Chart'
 import {
   getDateRange,
   getLatestAccountBalance,
+  getLatestSyncedAt,
   transformToAccountChartData,
   transformToDashboardData,
   type DashboardData,
@@ -19,32 +20,23 @@ import {
 
 /**
  * Hook for fetching all account balances for the dashboard
- * Wraps the mutation in a query-like pattern
  */
 export function useBalanceData(period: TimePeriod) {
-  const mutation = useBalanceQueryControllerGetAllBalances()
+  const { startDate, endDate } = getDateRange(period)
 
-  // Auto-fetch on mount and when period changes
-  useEffect(() => {
-    const { startDate, endDate } = getDateRange(period)
-    mutation.mutate({ data: { startDate, endDate } })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period])
+  const query = useBalanceQueryControllerGetAllBalances({ startDate, endDate })
 
   // Transform data to dashboard format
   const dashboard = useMemo<DashboardData | undefined>(() => {
-    if (!mutation.data) return undefined
-    return transformToDashboardData(mutation.data, period)
-  }, [mutation.data, period])
+    if (!query.data) return undefined
+    return transformToDashboardData(query.data, period)
+  }, [query.data, period])
 
   return {
     data: dashboard,
-    isLoading: mutation.isPending,
-    error: mutation.error,
-    refetch: () => {
-      const { startDate, endDate } = getDateRange(period)
-      mutation.mutate({ data: { startDate, endDate } })
-    },
+    isLoading: query.isPending,
+    error: query.error,
+    refetch: query.refetch,
   }
 }
 
@@ -54,6 +46,7 @@ export function useBalanceData(period: TimePeriod) {
 export interface AccountBalanceHistoryResult {
   chartData: ChartDataPoint[]
   latestBalance?: AccountBalanceResult
+  latestSyncedAt?: Date
   rawResults: BalanceQueryPerDateResult[]
 }
 
@@ -64,44 +57,41 @@ export interface AccountBalanceHistoryResult {
 export function useAccountBalanceHistory(
   accountId: string | undefined,
   enabled: boolean,
+  period: TimePeriod = TimePeriod.month,
 ) {
-  const mutation = useBalanceQueryControllerGetBalances()
+  const { startDate, endDate } = getDateRange(period)
 
-  // Auto-fetch when enabled and accountId changes
-  useEffect(() => {
-    if (!enabled || !accountId) return
-
-    const { startDate, endDate } = getDateRange(TimePeriod.month)
-    mutation.mutate({
-      data: {
-        accountIds: [accountId],
-        startDate,
-        endDate,
-      },
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountId, enabled])
+  const query = useBalanceQueryControllerGetBalances(
+    {
+      accountIds: accountId ?? '',
+      startDate,
+      endDate,
+    },
+    { query: { enabled: enabled && !!accountId } },
+  )
 
   // Transform data for the chart
   const result = useMemo<AccountBalanceHistoryResult>(() => {
-    if (!mutation.data || !accountId) {
+    if (!query.data || !accountId) {
       return {
         chartData: [],
         latestBalance: undefined,
+        latestSyncedAt: undefined,
         rawResults: [],
       }
     }
 
     return {
-      chartData: transformToAccountChartData(mutation.data, accountId),
-      latestBalance: getLatestAccountBalance(mutation.data, accountId),
-      rawResults: mutation.data,
+      chartData: transformToAccountChartData(query.data, accountId),
+      latestBalance: getLatestAccountBalance(query.data, accountId),
+      latestSyncedAt: getLatestSyncedAt(query.data, accountId),
+      rawResults: query.data,
     }
-  }, [mutation.data, accountId])
+  }, [query.data, accountId])
 
   return {
     data: result,
-    isLoading: mutation.isPending,
-    error: mutation.error,
+    isLoading: query.isPending,
+    error: query.error,
   }
 }

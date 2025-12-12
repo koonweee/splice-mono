@@ -79,17 +79,17 @@ export class ExchangeRateService {
 
     // Build lookup map: "base:target:date" -> rate
     const rateMap = new Map<string, number>();
-    for (const entity of entities) {
+    entities.forEach((entity) => {
       const rate =
         typeof entity.rate === 'string' ? parseFloat(entity.rate) : entity.rate;
       rateMap.set(
         `${entity.baseCurrency}:${entity.targetCurrency}:${entity.rateDate}`,
         rate,
       );
-    }
+    });
 
     // For each pair, verify we have at least one rate
-    for (const { original, normalized } of normalizedPairs) {
+    normalizedPairs.forEach(({ original, normalized }) => {
       const hasAnyRate = entities.some(
         (e) =>
           e.baseCurrency === normalized.base &&
@@ -100,11 +100,11 @@ export class ExchangeRateService {
           `No exchange rate found for pair ${original.baseCurrency}→${original.targetCurrency}`,
         );
       }
-    }
+    });
 
     // Build a sorted list of all dates we have rates for, per pair
     const pairRateDates = new Map<string, { date: string; rate: number }[]>();
-    for (const { normalized } of normalizedPairs) {
+    normalizedPairs.forEach(({ normalized }) => {
       const pairKey = `${normalized.base}:${normalized.target}`;
       if (!pairRateDates.has(pairKey)) {
         const pairEntities = entities
@@ -119,7 +119,7 @@ export class ExchangeRateService {
           }));
         pairRateDates.set(pairKey, pairEntities);
       }
-    }
+    });
 
     // Generate results for each date in range
     const results: DateRangeRateResponse[] = [];
@@ -130,7 +130,7 @@ export class ExchangeRateService {
       const dateStr = currentDate.format('YYYY-MM-DD');
       const rates: RateWithSource[] = [];
 
-      for (const { original, normalized } of normalizedPairs) {
+      normalizedPairs.forEach(({ original, normalized }) => {
         const pairKey = `${normalized.base}:${normalized.target}`;
         const lookupKey = `${normalized.base}:${normalized.target}:${dateStr}`;
 
@@ -160,7 +160,7 @@ export class ExchangeRateService {
           rate: finalRate,
           source,
         });
-      }
+      });
 
       results.push({ date: dateStr, rates });
       currentDate = currentDate.add(1, 'day');
@@ -187,34 +187,30 @@ export class ExchangeRateService {
     const results: ExchangeRate[] = [];
 
     if (pairs.length === 0) {
-      this.logger.log('No currency pairs to sync');
+      this.logger.log({}, 'No currency pairs to sync');
       return results;
     }
 
-    // Check which pairs already have rates for today (single query)
-    const allTargets = pairs.map((p) => p.targetCurrency);
+    // Check which pairs already have rates for today
     const allBases = [...new Set(pairs.map((p) => p.baseCurrency))];
 
-    // Get existing keys for today only
-    const existingKeys = await this.backfillHelper.getExistingRateKeys(
-      allBases[0],
-      allTargets,
-      today,
-      today,
-    );
-
-    // Also check other bases if there are multiple
-    for (let i = 1; i < allBases.length; i++) {
-      const basePairs = pairs.filter((p) => p.baseCurrency === allBases[i]);
+    // Get existing keys for today only - check all bases in parallel
+    const existingKeysPromises = allBases.map((baseCurrency) => {
+      const basePairs = pairs.filter((p) => p.baseCurrency === baseCurrency);
       const baseTargets = basePairs.map((p) => p.targetCurrency);
-      const moreKeys = await this.backfillHelper.getExistingRateKeys(
-        allBases[i],
+      return this.backfillHelper.getExistingRateKeys(
+        baseCurrency,
         baseTargets,
         today,
         today,
       );
-      moreKeys.forEach((key) => existingKeys.add(key));
-    }
+    });
+
+    const existingKeysArrays = await Promise.all(existingKeysPromises);
+    const existingKeys = new Set<string>();
+    existingKeysArrays.forEach((keys) => {
+      keys.forEach((key) => existingKeys.add(key));
+    });
 
     // Filter out pairs that already have rates for today
     const pairsToSync = pairs.filter((pair) => {
@@ -224,22 +220,28 @@ export class ExchangeRateService {
 
     if (pairsToSync.length === 0) {
       this.logger.log(
-        `All ${pairs.length} currency pairs already have rates for ${today}`,
+        { count: pairs.length, date: today },
+        'All currency pairs already have rates for date',
       );
       return results;
     }
 
     this.logger.log(
-      `Syncing exchange rates for ${pairsToSync.length} currency pairs on ${today} (${pairs.length - pairsToSync.length} already exist)`,
+      {
+        pairsToSync: pairsToSync.length,
+        date: today,
+        alreadyExist: pairs.length - pairsToSync.length,
+      },
+      'Syncing exchange rates for currency pairs',
     );
 
     // Group pairs by base currency to minimize API calls
     const pairsByBase = new Map<string, string[]>();
-    for (const pair of pairsToSync) {
+    pairsToSync.forEach((pair) => {
       const targets = pairsByBase.get(pair.baseCurrency) ?? [];
       targets.push(pair.targetCurrency);
       pairsByBase.set(pair.baseCurrency, targets);
-    }
+    });
 
     // Fetch rates for each base currency (one API call per base)
     for (const [baseCurrency, targetCurrencies] of pairsByBase) {
@@ -258,17 +260,19 @@ export class ExchangeRateService {
           });
           results.push(exchangeRate);
           this.logger.log(
-            `Saved rate: 1 ${baseCurrency} = ${rate} ${targetCurrency}`,
+            { baseCurrency, rate, targetCurrency },
+            'Saved exchange rate',
           );
         }
       } catch (error) {
         this.logger.error(
-          `Error fetching rates for base ${baseCurrency}: ${error}`,
+          { baseCurrency, error: String(error) },
+          'Error fetching rates for base currency',
         );
       }
     }
 
-    this.logger.log(`Synced ${results.length} exchange rates`);
+    this.logger.log({ count: results.length }, 'Synced exchange rates');
     return results;
   }
 
@@ -283,23 +287,26 @@ export class ExchangeRateService {
       select: ['id', 'settings'],
     });
 
+    // Fetch all user accounts in parallel
+    const userAccountsResults = await Promise.all(
+      users.map(async (user) => ({
+        userCurrency: user.settings.currency,
+        accounts: await this.accountRepository.find({
+          where: { userId: user.id },
+        }),
+      })),
+    );
+
     const pairsSet = new Set<string>();
     const pairs: CurrencyPair[] = [];
 
-    for (const user of users) {
-      const userCurrency = user.settings.currency;
-
-      // Get all accounts for this user
-      const accounts = await this.accountRepository.find({
-        where: { userId: user.id },
-      });
-
-      for (const account of accounts) {
+    userAccountsResults.forEach(({ userCurrency, accounts }) => {
+      accounts.forEach((account) => {
         const accountCurrency = account.currentBalance.currency;
 
         // Skip if currencies are the same
         if (accountCurrency === userCurrency) {
-          continue;
+          return;
         }
 
         // Normalize the pair to canonical form (alphabetically sorted)
@@ -318,10 +325,13 @@ export class ExchangeRateService {
             targetCurrency: target,
           });
         }
-      }
-    }
+      });
+    });
 
-    this.logger.log(`Found ${pairs.length} unique currency pairs to track`);
+    this.logger.log(
+      { count: pairs.length },
+      'Found unique currency pairs to track',
+    );
     return pairs;
   }
 

@@ -3,6 +3,7 @@ import {
   mantineHtmlProps,
   MantineProvider,
 } from '@mantine/core'
+import { Notifications } from '@mantine/notifications'
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -15,6 +16,7 @@ import type { RouterContext } from '../router'
 import { themes } from '@/lib/theme'
 import mantineChartsCss from '@mantine/charts/styles.css?url'
 import mantineCss from '@mantine/core/styles.css?url'
+import mantineNotificationsCss from '@mantine/notifications/styles.css?url'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -42,6 +44,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
       {
         rel: 'stylesheet',
+        href: mantineNotificationsCss,
+      },
+      {
+        rel: 'stylesheet',
         href: appCss,
       },
     ],
@@ -59,6 +65,7 @@ function RootComponent() {
       </head>
       <body>
         <MantineProvider defaultColorScheme="auto" theme={themes.warm}>
+          <Notifications />
           <Outlet />
         </MantineProvider>
         <Scripts />

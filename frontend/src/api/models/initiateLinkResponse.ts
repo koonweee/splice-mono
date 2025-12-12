@@ -7,6 +7,6 @@
  */
 
 export interface InitiateLinkResponse {
-  linkUrl?: string
-  expiresAt?: string
+  linkUrl?: string;
+  expiresAt?: string;
 }

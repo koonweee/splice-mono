@@ -71,7 +71,7 @@ export function calculateNetWorthForDate(
 ): number {
   let netWorth = 0
 
-  for (const result of Object.values(balances)) {
+  Object.values(balances).forEach((result) => {
     const effectiveBalance = resolveEffectiveBalance(result.effectiveBalance)
     const amount = getSignedAmount(effectiveBalance)
 
@@ -83,7 +83,7 @@ export function calculateNetWorthForDate(
       // Assets add to net worth
       netWorth += amount
     }
-  }
+  })
 
   return netWorth
 }
@@ -189,9 +189,7 @@ export function transformToDashboardData(
   const liabilities: AccountSummaryData[] = []
 
   if (lastResult) {
-    for (const [accountId, accountResult] of Object.entries(
-      lastResult.balances,
-    )) {
+    Object.entries(lastResult.balances).forEach(([accountId, accountResult]) => {
       // Find this account in first result for change calculation
       const firstAccountResult = firstResult?.balances[accountId]
 
@@ -230,7 +228,7 @@ export function transformToDashboardData(
       } else {
         assets.push(summary)
       }
-    }
+    })
   }
 
   return {
@@ -285,12 +283,31 @@ export function getLatestAccountBalance(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   )
 
-  for (const result of sortedResults) {
-    const accountResult = result.balances[accountId]
-    if (accountResult) {
-      return accountResult
-    }
-  }
+  const matchingResult = sortedResults.find(
+    (result) => result.balances[accountId],
+  )
+  return matchingResult?.balances[accountId]
+}
 
-  return undefined
+/**
+ * Get the most recent syncedAt timestamp for an account from query results
+ * Returns undefined if no synced snapshots exist (all were forward-filled)
+ */
+export function getLatestSyncedAt(
+  results: BalanceQueryPerDateResult[],
+  accountId: string,
+): Date | undefined {
+  let latest: Date | undefined
+
+  results.forEach((result) => {
+    const balance = result.balances[accountId]
+    if (balance?.syncedAt) {
+      const syncedAt = new Date(balance.syncedAt)
+      if (!latest || syncedAt > latest) {
+        latest = syncedAt
+      }
+    }
+  })
+
+  return latest
 }

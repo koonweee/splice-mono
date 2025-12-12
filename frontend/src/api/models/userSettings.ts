@@ -7,6 +7,6 @@
  */
 
 export interface UserSettings {
-  currency?: string
-  timezone?: string
+  currency?: string;
+  timezone?: string;
 }
