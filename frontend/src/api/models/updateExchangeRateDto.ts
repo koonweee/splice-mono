@@ -7,8 +7,8 @@
  */
 
 export interface UpdateExchangeRateDto {
-  baseCurrency?: string;
-  targetCurrency?: string;
-  rate?: number;
-  rateDate?: string;
+  baseCurrency?: string
+  targetCurrency?: string
+  rate?: number
+  rateDate?: string
 }

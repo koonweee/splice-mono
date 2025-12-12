@@ -7,5 +7,5 @@
  */
 
 export interface InitiateLinkRequest {
-  redirectUri?: string;
+  redirectUri?: string
 }

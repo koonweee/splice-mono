@@ -6,4 +6,6 @@
  * OpenAPI spec version: 1.0
  */
 
-export type UserProviderDetails = {[key: string]: {[key: string]: unknown | null}};
+export type UserProviderDetails = {
+  [key: string]: { [key: string]: unknown | null }
+}
