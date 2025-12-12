@@ -5,6 +5,6 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { SanitizedBankLink } from './sanitizedBankLink'
+import type { SanitizedBankLink } from './sanitizedBankLink';
 
-export type AccountBankLink = SanitizedBankLink | null
+export type AccountBankLink = SanitizedBankLink | null;

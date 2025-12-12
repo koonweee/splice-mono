@@ -48,6 +48,7 @@ export const AccountBalanceResultSchema = registerSchema(
     availableBalance: BalanceWithConvertedBalanceSchema,
     currentBalance: BalanceWithConvertedBalanceSchema,
     effectiveBalance: BalanceWithConvertedBalanceSchema,
+    syncedAt: z.date().optional(),
   }),
 );
 export type AccountBalanceResult = z.infer<typeof AccountBalanceResultSchema>;

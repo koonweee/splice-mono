@@ -1,12 +1,11 @@
 import { Box, Group, Loader, Modal, Stack, Text } from '@mantine/core'
-import { useAccountControllerFindOne } from '../api/clients/spliceAPI'
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
 import type { AccountSummaryData } from '../lib/balance-utils'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
 import {
   formatMoneyNumber,
   formatMoneyWithSign,
-  resolveBalance,
+  formatRelativeTime,
 } from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
 import { Chart } from './Chart'
@@ -20,15 +19,13 @@ interface AccountModalProps {
 export function AccountModal({ account, opened, onClose }: AccountModalProps) {
   const isMobile = useIsMobile()
 
-  const { data: fullAccount, isLoading: isLoadingAccount } =
-    useAccountControllerFindOne(account?.id ?? '', {
-      query: { enabled: opened && !!account?.id },
-    })
+  const { data: balanceHistory, isLoading } = useAccountBalanceHistory(
+    account?.id,
+    opened && !!account?.id,
+  )
 
-  const { data: balanceHistory, isLoading: isLoadingBalances } =
-    useAccountBalanceHistory(account?.id, opened && !!account?.id)
-
-  const isLoading = isLoadingAccount || isLoadingBalances
+  // Get account from balance history if available
+  const fullAccount = balanceHistory.latestBalance?.account
 
   // Get balance info from the latest balance result or fall back to account summary
   const latestBalance = balanceHistory.latestBalance
@@ -40,14 +37,9 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
           latestBalance.effectiveBalance.convertedBalance.money.currency !==
             latestBalance.effectiveBalance.balance.money.currency
             ? latestBalance.effectiveBalance.balance
-            : null,
+            : undefined,
       }
-    : account
-      ? resolveBalance(
-          account.effectiveBalance,
-          account.convertedEffectiveBalance,
-        )
-      : null
+    : undefined
 
   return (
     <Modal
@@ -90,6 +82,15 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
                 <Group justify="space-between">
                   <Text c="dimmed">Institution</Text>
                   <Text>{fullAccount.bankLink.institutionName}</Text>
+                </Group>
+              )}
+
+              {balanceHistory.latestSyncedAt && (
+                <Group justify="space-between">
+                  <Text c="dimmed">Last synced</Text>
+                  <Text>
+                    {formatRelativeTime(balanceHistory.latestSyncedAt)}
+                  </Text>
                 </Group>
               )}
             </>

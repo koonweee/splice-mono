@@ -5,12 +5,13 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { Account } from './account'
-import type { BalanceWithConvertedBalance } from './balanceWithConvertedBalance'
+import type { Account } from './account';
+import type { BalanceWithConvertedBalance } from './balanceWithConvertedBalance';
 
 export interface AccountBalanceResult {
-  account: Account
-  availableBalance: BalanceWithConvertedBalance
-  currentBalance: BalanceWithConvertedBalance
-  effectiveBalance: BalanceWithConvertedBalance
+  account: Account;
+  availableBalance: BalanceWithConvertedBalance;
+  currentBalance: BalanceWithConvertedBalance;
+  effectiveBalance: BalanceWithConvertedBalance;
+  syncedAt?: string;
 }
