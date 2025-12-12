@@ -26,7 +26,6 @@ Always use `yarn`, never `npm`.
 ```bash
 # Backend (in backend/)
 docker-compose up          # Start with PostgreSQL
-yarn start:dev             # Or run without Docker
 
 # Frontend (in frontend/)
 yarn dev                   # Starts on port 4000
@@ -35,6 +34,7 @@ yarn dev                   # Starts on port 4000
 ### Code Quality
 
 Both projects share the same quality workflow:
+
 ```bash
 yarn format     # Prettier
 yarn lint       # ESLint with auto-fix

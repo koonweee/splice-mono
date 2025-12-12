@@ -158,6 +158,7 @@ export class BalanceQueryService {
         const result = this.buildAccountBalanceResult(
           account,
           snapshot,
+          dateStr,
           targetCurrency,
           ratesByDate?.get(dateStr),
         );
@@ -343,6 +344,7 @@ export class BalanceQueryService {
   private buildAccountBalanceResult(
     account: Account,
     snapshot: BalanceSnapshotEntity | undefined,
+    targetDate: string,
     targetCurrency: string | undefined,
     dateRates: Map<string, RateWithSource> | undefined,
   ): AccountBalanceResult {
@@ -362,6 +364,11 @@ export class BalanceQueryService {
       currentBalance,
     );
 
+    // Determine syncedAt (undefined if forward-filled or no snapshot)
+    const isForwardFilled = snapshot && snapshot.snapshotDate !== targetDate;
+    const syncedAt =
+      snapshot && !isForwardFilled ? snapshot.updatedAt : undefined;
+
     // Build result with optional conversion
     return {
       account,
@@ -380,6 +387,7 @@ export class BalanceQueryService {
         targetCurrency,
         dateRates,
       ),
+      syncedAt,
     };
   }
 

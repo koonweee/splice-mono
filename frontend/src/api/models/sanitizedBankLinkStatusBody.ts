@@ -9,6 +9,4 @@
 /**
  * @nullable
  */
-export type SanitizedBankLinkStatusBody = {
-  [key: string]: unknown | null
-} | null
+export type SanitizedBankLinkStatusBody = {[key: string]: unknown | null} | null;

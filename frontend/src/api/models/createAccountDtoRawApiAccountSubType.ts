@@ -9,9 +9,8 @@
 /**
  * @nullable
  */
-export type CreateAccountDtoRawApiAccountSubType =
-  | (typeof CreateAccountDtoRawApiAccountSubType)[keyof typeof CreateAccountDtoRawApiAccountSubType]
-  | null
+export type CreateAccountDtoRawApiAccountSubType = typeof CreateAccountDtoRawApiAccountSubType[keyof typeof CreateAccountDtoRawApiAccountSubType] | null;
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateAccountDtoRawApiAccountSubType = {
@@ -85,4 +84,4 @@ export const CreateAccountDtoRawApiAccountSubType = {
   ugma: 'ugma',
   utma: 'utma',
   variable_annuity: 'variable annuity',
-} as const
+} as const;

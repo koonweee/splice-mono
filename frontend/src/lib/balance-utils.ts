@@ -294,3 +294,26 @@ export function getLatestAccountBalance(
 
   return undefined
 }
+
+/**
+ * Get the most recent syncedAt timestamp for an account from query results
+ * Returns undefined if no synced snapshots exist (all were forward-filled)
+ */
+export function getLatestSyncedAt(
+  results: BalanceQueryPerDateResult[],
+  accountId: string,
+): Date | undefined {
+  let latest: Date | undefined
+
+  for (const result of results) {
+    const balance = result.balances[accountId]
+    if (balance?.syncedAt) {
+      const syncedAt = new Date(balance.syncedAt)
+      if (!latest || syncedAt > latest) {
+        latest = syncedAt
+      }
+    }
+  }
+
+  return latest
+}

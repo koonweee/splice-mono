@@ -12,6 +12,7 @@ import type { ChartDataPoint } from '../components/Chart'
 import {
   getDateRange,
   getLatestAccountBalance,
+  getLatestSyncedAt,
   transformToAccountChartData,
   transformToDashboardData,
   type DashboardData,
@@ -54,6 +55,7 @@ export function useBalanceData(period: TimePeriod) {
 export interface AccountBalanceHistoryResult {
   chartData: ChartDataPoint[]
   latestBalance?: AccountBalanceResult
+  latestSyncedAt?: Date
   rawResults: BalanceQueryPerDateResult[]
 }
 
@@ -88,6 +90,7 @@ export function useAccountBalanceHistory(
       return {
         chartData: [],
         latestBalance: undefined,
+        latestSyncedAt: undefined,
         rawResults: [],
       }
     }
@@ -95,6 +98,7 @@ export function useAccountBalanceHistory(
     return {
       chartData: transformToAccountChartData(mutation.data, accountId),
       latestBalance: getLatestAccountBalance(mutation.data, accountId),
+      latestSyncedAt: getLatestSyncedAt(mutation.data, accountId),
       rawResults: mutation.data,
     }
   }, [mutation.data, accountId])

@@ -6,11 +6,11 @@
  * OpenAPI spec version: 1.0
  */
 
-export type RateWithSourceSource =
-  (typeof RateWithSourceSource)[keyof typeof RateWithSourceSource]
+export type RateWithSourceSource = typeof RateWithSourceSource[keyof typeof RateWithSourceSource];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const RateWithSourceSource = {
   DB: 'DB',
   FILLED: 'FILLED',
-} as const
+} as const;

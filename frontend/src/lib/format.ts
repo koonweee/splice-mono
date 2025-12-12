@@ -1,5 +1,9 @@
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
 import type { MoneyWithSign } from '../api/models'
 import { MoneyWithSignSign } from '../api/models'
+
+dayjs.extend(relativeTime)
 
 /**
  * Result of resolving which balance to display
@@ -121,4 +125,11 @@ export function getChangeColorMantine(
   const isPositive = changePercent > 0
   const isGood = isLiability ? !isPositive : isPositive
   return isGood ? 'teal' : 'red'
+}
+
+/**
+ * Format a date as relative time (e.g., "2 hours ago", "3 days ago")
+ */
+export function formatRelativeTime(date: Date | string): string {
+  return dayjs(date).fromNow()
 }
