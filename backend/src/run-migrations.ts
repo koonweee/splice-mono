@@ -1,25 +1,31 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import pino from 'pino';
 import { AppDataSource } from './data-source';
 
-// Create standalone pino logger for migration script (runs outside NestJS context)
-const logger = pino({
-  transport: process.env.SEQ_SERVER_URL
-    ? {
-        target: 'pino-seq',
-        options: {
-          serverUrl: process.env.SEQ_SERVER_URL,
-          apiKey: process.env.SEQ_API_KEY,
-        },
-      }
-    : {
-        target: 'pino-pretty',
-        options: { colorize: true },
-      },
-});
-
 const LOCK_ID = 123456; // Arbitrary unique ID for migration lock
 
+async function createLogger() {
+  if (process.env.SEQ_SERVER_URL) {
+    const pinoSeq = (await import('pino-seq')) as any;
+    const createStream = pinoSeq.default?.createStream ?? pinoSeq.createStream;
+    const stream = createStream({
+      serverUrl: process.env.SEQ_SERVER_URL,
+      apiKey: process.env.SEQ_API_KEY,
+    });
+    return pino(stream);
+  }
+  return pino({
+    transport: {
+      target: 'pino-pretty',
+      options: { colorize: true },
+    },
+  });
+}
+
 async function runMigrations() {
+  const logger = await createLogger();
   await AppDataSource.initialize();
 
   const queryRunner = AppDataSource.createQueryRunner();
@@ -50,7 +56,8 @@ async function runMigrations() {
   }
 }
 
-runMigrations().catch((err) => {
+runMigrations().catch(async (err) => {
+  const logger = await createLogger();
   logger.error(
     { error: err instanceof Error ? err.message : String(err) },
     'Migration failed',
