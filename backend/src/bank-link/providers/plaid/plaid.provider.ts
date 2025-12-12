@@ -323,14 +323,20 @@ export class PlaidProvider implements IBankLinkProvider {
       throw new Error('Missing accessToken in authentication data');
     }
 
-    this.logger.log({}, 'Fetching accounts from Plaid');
+    const startTime = Date.now();
+    this.logger.log(
+      { accessTokenHint: accessToken.slice(-4) },
+      'Fetching accounts from Plaid',
+    );
     try {
       const response = await this.client.accountsGet({
         access_token: accessToken,
       });
-      // Debug: Log response
       this.logger.log(
-        { accountCount: response.data.accounts.length },
+        {
+          accountCount: response.data.accounts.length,
+          durationMs: Date.now() - startTime,
+        },
         'Received accounts from Plaid',
       );
 
