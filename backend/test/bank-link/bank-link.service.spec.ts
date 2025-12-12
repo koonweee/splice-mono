@@ -881,6 +881,7 @@ describe('BankLinkService', () => {
         id: 'existing-account-id',
         externalAccountId: mockApiAccount.accountId,
         name: 'Old Name',
+        currentBalance: { currency: 'USD', amount: 10000, sign: 'positive' },
         toObject: jest.fn().mockReturnValue({
           id: 'existing-account-id',
           name: mockApiAccount.name,
@@ -1246,6 +1247,7 @@ describe('BankLinkService', () => {
         id: 'existing-account-id',
         externalAccountId: mockApiAccount.accountId,
         name: 'Old Name',
+        currentBalance: { currency: 'USD', amount: 10000, sign: 'positive' },
         toObject: jest.fn().mockReturnValue({
           id: 'existing-account-id',
           name: mockApiAccount.name,
@@ -1279,6 +1281,7 @@ describe('BankLinkService', () => {
         id: 'existing-account-id',
         externalAccountId: mockApiAccount.accountId,
         name: 'Old Name',
+        currentBalance: { currency: 'USD', amount: 10000, sign: 'positive' },
         toObject: jest.fn().mockReturnValue({
           id: 'existing-account-id',
           name: mockApiAccount.name,
