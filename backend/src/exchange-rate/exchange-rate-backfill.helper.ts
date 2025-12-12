@@ -110,8 +110,8 @@ export class ExchangeRateBackfillHelper {
         pairs: pairs.map((p) => ({
           baseCurrency: p.baseCurrency,
           targetCurrency: p.targetCurrency,
-          earliestDate: p.earliestDate
-        }))
+          earliestDate: p.earliestDate,
+        })),
       },
       'Found currency pairs to backfill',
     );
@@ -173,7 +173,7 @@ export class ExchangeRateBackfillHelper {
             {
               baseCurrency,
               targetCurrencies: targets,
-              totalRates: requiredKeys.length
+              totalRates: requiredKeys.length,
             },
             'Skipping API call - all rates already exist',
           );
@@ -185,7 +185,7 @@ export class ExchangeRateBackfillHelper {
             baseCurrency,
             targetCurrencies: targets,
             missingRates: missingKeys.length,
-            totalRates: requiredKeys.length
+            totalRates: requiredKeys.length,
           },
           'Fetching rates from API',
         );
@@ -227,7 +227,7 @@ export class ExchangeRateBackfillHelper {
             baseCurrency,
             targetCurrencies: targets,
             inserted,
-            skipped
+            skipped,
           },
           'Processed rates',
         );
@@ -236,17 +236,14 @@ export class ExchangeRateBackfillHelper {
           {
             baseCurrency,
             targetCurrencies: targets,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
           },
           'Error backfilling rates',
         );
       }
     }
 
-    this.logger.log(
-      { insertedCount: results.length },
-      'Backfill complete',
-    );
+    this.logger.log({ insertedCount: results.length }, 'Backfill complete');
     return results;
   }
 
@@ -272,7 +269,7 @@ export class ExchangeRateBackfillHelper {
         this.logger.error(
           {
             status: response.status,
-            statusText: response.statusText
+            statusText: response.statusText,
           },
           'Frankfurter API error',
         );
@@ -318,7 +315,7 @@ export class ExchangeRateBackfillHelper {
       {
         baseCurrency,
         rateCount: rates.size,
-        date: data.date
+        date: data.date,
       },
       'Fetched rates',
     );
@@ -371,7 +368,7 @@ export class ExchangeRateBackfillHelper {
       {
         baseCurrency,
         targetCurrencies: symbols,
-        dateCount: rates.size
+        dateCount: rates.size,
       },
       'Fetched time series rates',
     );

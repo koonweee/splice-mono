@@ -210,9 +210,15 @@ export class BankLinkService extends OwnedCrudService<
     const bankLink = await this.findByPlaidItemId(updateInfo.itemId);
     if (bankLink) {
       await this.syncAccounts(bankLink.id, bankLink.userId);
-      this.logger.log({ bankLinkId: bankLink.id }, 'Synced accounts for bank link');
+      this.logger.log(
+        { bankLinkId: bankLink.id },
+        'Synced accounts for bank link',
+      );
     } else {
-      this.logger.warn({ itemId: updateInfo.itemId }, 'No bank link found for item');
+      this.logger.warn(
+        { itemId: updateInfo.itemId },
+        'No bank link found for item',
+      );
     }
   }
 
@@ -235,7 +241,10 @@ export class BankLinkService extends OwnedCrudService<
 
     const bankLink = await this.findByPlaidItemId(statusInfo.itemId);
     if (!bankLink) {
-      this.logger.warn({ itemId: statusInfo.itemId }, 'No bank link found for item');
+      this.logger.warn(
+        { itemId: statusInfo.itemId },
+        'No bank link found for item',
+      );
       return;
     }
 
@@ -290,7 +299,10 @@ export class BankLinkService extends OwnedCrudService<
       const linkCompletionResponses =
         await provider.processWebhook(parsedPayload);
       if (!linkCompletionResponses) {
-        this.logger.warn({ providerName }, 'No link completion responses from provider');
+        this.logger.warn(
+          { providerName },
+          'No link completion responses from provider',
+        );
         await this.webhookEventService.markFailed(
           webhookId,
           'No link completion responses from provider',
@@ -416,13 +428,19 @@ export class BankLinkService extends OwnedCrudService<
    * @returns Updated accounts from all bank links
    */
   async syncAllAccountsSystem(): Promise<Account[]> {
-    this.logger.log({}, 'Syncing accounts for all bank links (system operation)');
+    this.logger.log(
+      {},
+      'Syncing accounts for all bank links (system operation)',
+    );
 
     // Exclude Plaid - it uses webhook-driven sync via DEFAULT_UPDATE
     const bankLinks = await this.repository.find({
       where: { providerName: Not('plaid') },
     });
-    this.logger.log({ count: bankLinks.length }, 'Found bank links to sync (system)');
+    this.logger.log(
+      { count: bankLinks.length },
+      'Found bank links to sync (system)',
+    );
 
     const results = await Promise.allSettled(
       bankLinks.map((bankLink) =>
@@ -442,7 +460,10 @@ export class BankLinkService extends OwnedCrudService<
       }
     });
 
-    this.logger.log({ count: allAccounts.length }, 'Synced accounts total (system)');
+    this.logger.log(
+      { count: allAccounts.length },
+      'Synced accounts total (system)',
+    );
     return allAccounts;
   }
 
@@ -625,7 +646,10 @@ export class BankLinkService extends OwnedCrudService<
     // Filter out links that already have itemId
     const linksToUpdate = plaidLinks.filter((link) => {
       if (link.authentication.itemId) {
-        this.logger.log({ bankLinkId: link.id }, 'Bank link already has itemId, skipping');
+        this.logger.log(
+          { bankLinkId: link.id },
+          'Bank link already has itemId, skipping',
+        );
         return false;
       }
       return true;
@@ -636,7 +660,10 @@ export class BankLinkService extends OwnedCrudService<
         const itemId = await provider.getItemId!(link.authentication);
         link.authentication = { ...link.authentication, itemId };
         await this.repository.save(link);
-        this.logger.log({ bankLinkId: link.id }, 'Backfilled itemId for bank link');
+        this.logger.log(
+          { bankLinkId: link.id },
+          'Backfilled itemId for bank link',
+        );
         return link.id;
       }),
     );
