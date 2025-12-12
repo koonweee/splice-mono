@@ -144,7 +144,15 @@ export class BankLinkService extends OwnedCrudService<
     headers: Record<string, string>,
     parsedPayload: Record<string, any>,
   ): Promise<void> {
-    this.logger.log({ providerName }, 'Received webhook from provider');
+    this.logger.log(
+      {
+        providerName,
+        webhookType: parsedPayload.webhook_type as string | undefined,
+        webhookCode: parsedPayload.webhook_code as string | undefined,
+        itemId: parsedPayload.item_id as string | undefined,
+      },
+      'Received webhook from provider',
+    );
 
     const provider = this.providerRegistry.getProvider(providerName);
 
@@ -189,7 +197,11 @@ export class BankLinkService extends OwnedCrudService<
     }
 
     this.logger.log(
-      { providerName },
+      {
+        providerName,
+        webhookType: parsedPayload.webhook_type as string | undefined,
+        webhookCode: parsedPayload.webhook_code as string | undefined,
+      },
       'Webhook not a processable type, skipping',
     );
   }
@@ -208,6 +220,16 @@ export class BankLinkService extends OwnedCrudService<
     );
 
     const bankLink = await this.findByPlaidItemId(updateInfo.itemId);
+    this.logger.log(
+      {
+        itemId: updateInfo.itemId,
+        found: !!bankLink,
+        bankLinkId: bankLink?.id,
+        userId: bankLink?.userId,
+      },
+      'Bank link lookup by Plaid item_id',
+    );
+
     if (bankLink) {
       await this.syncAccounts(bankLink.id, bankLink.userId);
       this.logger.log(
@@ -475,8 +497,6 @@ export class BankLinkService extends OwnedCrudService<
    * @returns Updated accounts
    */
   async syncAccounts(bankLinkId: string, userId: string): Promise<Account[]> {
-    this.logger.log({ bankLinkId, userId }, 'Syncing accounts for bank link');
-
     // Get bank link entity (scoped by userId)
     const bankLink = await this.repository.findOne({
       where: { id: bankLinkId, userId },
@@ -484,6 +504,16 @@ export class BankLinkService extends OwnedCrudService<
     if (!bankLink) {
       throw new Error(`Bank link not found: ${bankLinkId}`);
     }
+
+    this.logger.log(
+      {
+        bankLinkId,
+        userId,
+        providerName: bankLink.providerName,
+        institutionName: bankLink.institutionName,
+      },
+      'Starting account sync for bank link',
+    );
 
     // Get provider
     const provider = this.providerRegistry.getProvider(bankLink.providerName);
@@ -549,11 +579,29 @@ export class BankLinkService extends OwnedCrudService<
       return [];
     }
 
+    this.logger.log(
+      {
+        apiAccountCount: apiAccounts.length,
+        accountIds: apiAccounts.map((a) => a.accountId),
+        userId,
+      },
+      'Upserting accounts from API',
+    );
+
     // Get existing accounts by external account IDs (scoped by userId)
     const externalAccountIds = apiAccounts.map((a) => a.accountId);
     const existingAccounts = await this.accountRepository.find({
       where: { externalAccountId: In(externalAccountIds), userId },
     });
+
+    this.logger.log(
+      {
+        existingAccountCount: existingAccounts.length,
+        existingAccountIds: existingAccounts.map((a) => a.externalAccountId),
+        newAccountCount: apiAccounts.length - existingAccounts.length,
+      },
+      'Found existing accounts for upsert',
+    );
 
     // Create a map of external account ID to existing entity
     const existingAccountMap = new Map<string, AccountEntity>();
@@ -578,7 +626,29 @@ export class BankLinkService extends OwnedCrudService<
       const dto = this.createAccountDtoFromAPIAccount(apiAccount, bankLinkId);
       const existingAccount = existingAccountMap.get(apiAccount.accountId);
       if (existingAccount) {
+        // Capture old balance for logging
+        const oldCurrentBalance = existingAccount.currentBalance;
         this.applyAccountDtoToEntity(existingAccount, dto);
+        const newCurrentBalance = existingAccount.currentBalance;
+
+        // Log if balance changed (compare amount values)
+        if (oldCurrentBalance.amount !== newCurrentBalance.amount) {
+          this.logger.log(
+            {
+              accountId: existingAccount.id,
+              externalAccountId: apiAccount.accountId,
+              oldBalance: {
+                amount: oldCurrentBalance.amount,
+                currency: oldCurrentBalance.currency,
+              },
+              newBalance: {
+                amount: newCurrentBalance.amount,
+                currency: newCurrentBalance.currency,
+              },
+            },
+            'Account balance changed during sync',
+          );
+        }
         accountsToSave.push(existingAccount);
       } else {
         accountsToSave.push(AccountEntity.fromDto(dto, userId));
@@ -587,6 +657,11 @@ export class BankLinkService extends OwnedCrudService<
     });
 
     const savedAccounts = await this.accountRepository.save(accountsToSave);
+
+    // Log event emission counts
+    const createdCount = newAccountExternalIds.size;
+    const updatedCount = savedAccounts.length - createdCount;
+    this.logger.log({ createdCount, updatedCount }, 'Emitting account events');
 
     // Emit events for saved accounts
     savedAccounts.forEach((account) => {
