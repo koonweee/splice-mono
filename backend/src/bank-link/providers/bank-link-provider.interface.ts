@@ -29,23 +29,27 @@ export interface IBankLinkProvider {
   }): Promise<LinkInitiationResponse>;
 
   /**
-   * Helper function to decide if a webhook should be processed
+   * Parse link completion webhooks that signal a user has finished the linking flow
+   * Optional - only implemented by providers that support webhook-driven link completion
+   * (e.g., Plaid SESSION_FINISHED webhook)
    *
-   * Returns webhook ID if should be processed, otherwise undefined
+   * @param rawPayload - Raw webhook payload
+   * @returns Link token if this is a link completion webhook, undefined otherwise
    */
-  shouldProcessWebhook(rawPayload: any): string | undefined;
+  parseLinkCompletionWebhook?(
+    rawPayload: Record<string, any>,
+  ): { linkToken: string } | undefined;
 
   /**
-   * Step 2: Process webhook from provider
-   * Process webhook response from provider
+   * Process a link completion webhook payload
+   * Called after parseLinkCompletionWebhook identifies this as a link completion webhook
    *
    * @param rawPayload - Raw webhook body
-   * @param getWebhookIdProcessed - Function to check if webhook has been processed
-   * @returns Array of link completion responses (each corresponds to a linked account to be created) or undefined if webhook is not processed
+   * @returns Array of link completion responses (each corresponds to a linked account to be created)
    */
-  processWebhook(
-    rawPayload: any,
-  ): Promise<LinkCompletionResponse[] | undefined>;
+  processLinkCompletion?(
+    rawPayload: Record<string, any>,
+  ): Promise<LinkCompletionResponse[]>;
 
   /**
    * Fetch accounts from the provider using stored authentication

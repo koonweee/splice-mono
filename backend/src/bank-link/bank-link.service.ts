@@ -185,15 +185,17 @@ export class BankLinkService extends OwnedCrudService<
     }
 
     // 3. Check for link completion webhooks (SESSION_FINISHED)
-    const webhookId = provider.shouldProcessWebhook(parsedPayload);
-    if (webhookId) {
-      await this.handleLinkCompletionWebhook(
-        providerName,
-        provider,
-        webhookId,
-        parsedPayload,
-      );
-      return;
+    if (provider.parseLinkCompletionWebhook) {
+      const linkInfo = provider.parseLinkCompletionWebhook(parsedPayload);
+      if (linkInfo) {
+        await this.handleLinkCompletionWebhook(
+          providerName,
+          provider,
+          linkInfo.linkToken,
+          parsedPayload,
+        );
+        return;
+      }
     }
 
     this.logger.log(
@@ -353,20 +355,21 @@ export class BankLinkService extends OwnedCrudService<
     this.logger.log({ webhookId, userId }, 'Found pending webhook event');
 
     try {
-      const linkCompletionResponses =
-        await provider.processWebhook(parsedPayload);
-      if (!linkCompletionResponses) {
+      if (!provider.processLinkCompletion) {
         this.logger.warn(
           { providerName },
-          'No link completion responses from provider',
+          'Provider does not support processLinkCompletion',
         );
         await this.webhookEventService.markFailed(
           webhookId,
-          'No link completion responses from provider',
+          'Provider does not support processLinkCompletion',
           parsedPayload,
         );
         return;
       }
+
+      const linkCompletionResponses =
+        await provider.processLinkCompletion(parsedPayload);
 
       // Bank links from link completion responses
       const bankLinks = linkCompletionResponses.map((response) => {

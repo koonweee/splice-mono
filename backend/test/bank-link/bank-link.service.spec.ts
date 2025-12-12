@@ -471,15 +471,15 @@ describe('BankLinkService', () => {
 
       expect(mockWebhookEventService.markCompleted).not.toHaveBeenCalled();
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockPlaidProvider.processWebhook).not.toHaveBeenCalled();
+      expect(mockPlaidProvider.processLinkCompletion).not.toHaveBeenCalled();
     });
 
-    it('should skip processing when shouldProcessWebhook returns undefined', async () => {
+    it('should skip processing when parseLinkCompletionWebhook returns undefined', async () => {
       const providerName = 'plaid';
 
-      (mockPlaidProvider.shouldProcessWebhook as jest.Mock).mockReturnValueOnce(
-        undefined,
-      );
+      (
+        mockPlaidProvider.parseLinkCompletionWebhook as jest.Mock
+      ).mockReturnValueOnce(undefined);
 
       await service.handleWebhook(
         providerName,
@@ -539,9 +539,9 @@ describe('BankLinkService', () => {
       const providerName = 'plaid';
       const errorMessage = 'Provider error';
 
-      (mockPlaidProvider.processWebhook as jest.Mock).mockRejectedValueOnce(
-        new Error(errorMessage),
-      );
+      (
+        mockPlaidProvider.processLinkCompletion as jest.Mock
+      ).mockRejectedValueOnce(new Error(errorMessage));
 
       await expect(
         service.handleWebhook(

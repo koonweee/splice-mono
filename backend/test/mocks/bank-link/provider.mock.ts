@@ -47,10 +47,10 @@ export const mockPlaidProvider: IBankLinkProvider = {
   initiateLinking: jest.fn(function (this: void) {
     return Promise.resolve(mockLinkInitiationResponse);
   }),
-  shouldProcessWebhook: jest.fn(function (this: void) {
-    return 'webhook-mock-123';
+  parseLinkCompletionWebhook: jest.fn(function (this: void) {
+    return { linkToken: 'webhook-mock-123' };
   }),
-  processWebhook: jest.fn(function (this: void) {
+  processLinkCompletion: jest.fn(function (this: void) {
     return Promise.resolve([mockLinkCompletionResponse]);
   }),
   getAccounts: jest.fn(function (this: void) {
