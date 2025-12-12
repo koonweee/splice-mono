@@ -5,14 +5,18 @@ import { useAccountControllerFindOne } from '../api/clients/spliceAPI'
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
 import type { AccountSummaryData } from '../lib/balance-utils'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
-import { formatMoneyNumber, formatMoneyWithSign, resolveBalance } from '../lib/format'
+import {
+  formatMoneyNumber,
+  formatMoneyWithSign,
+  resolveBalance,
+} from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
 import { Chart } from './Chart'
 
 dayjs.extend(relativeTime)
 
 interface AccountModalProps {
-  account: AccountSummaryData | null
+  account?: AccountSummaryData
   opened: boolean
   onClose: () => void
 }
@@ -44,7 +48,10 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
             : null,
       }
     : account
-      ? resolveBalance(account.effectiveBalance, account.convertedEffectiveBalance)
+      ? resolveBalance(
+          account.effectiveBalance,
+          account.convertedEffectiveBalance,
+        )
       : null
 
   return (

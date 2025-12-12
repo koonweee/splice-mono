@@ -1,3 +1,4 @@
+import { TimePeriod } from '@/lib/types'
 import { useEffect, useMemo } from 'react'
 import {
   useBalanceQueryControllerGetAllBalances,
@@ -7,7 +8,6 @@ import type {
   AccountBalanceResult,
   BalanceQueryPerDateResult,
 } from '../api/models'
-import { TimePeriod } from '../api/models'
 import type { ChartDataPoint } from '../components/Chart'
 import {
   getDateRange,
@@ -32,8 +32,8 @@ export function useBalanceData(period: TimePeriod) {
   }, [period])
 
   // Transform data to dashboard format
-  const dashboard = useMemo<DashboardData | null>(() => {
-    if (!mutation.data) return null
+  const dashboard = useMemo<DashboardData | undefined>(() => {
+    if (!mutation.data) return undefined
     return transformToDashboardData(mutation.data, period)
   }, [mutation.data, period])
 
@@ -53,7 +53,7 @@ export function useBalanceData(period: TimePeriod) {
  */
 export interface AccountBalanceHistoryResult {
   chartData: ChartDataPoint[]
-  latestBalance: AccountBalanceResult | null
+  latestBalance?: AccountBalanceResult
   rawResults: BalanceQueryPerDateResult[]
 }
 
@@ -87,7 +87,7 @@ export function useAccountBalanceHistory(
     if (!mutation.data || !accountId) {
       return {
         chartData: [],
-        latestBalance: null,
+        latestBalance: undefined,
         rawResults: [],
       }
     }

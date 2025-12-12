@@ -3,11 +3,11 @@ import type {
   AccountBalanceResult,
   BalanceQueryPerDateResult,
   BalanceWithConvertedBalance,
-  ConvertedBalance,
   MoneyWithSign,
 } from '../api/models'
-import { AccountType, MoneyWithSignSign, TimePeriod } from '../api/models'
+import { AccountType, MoneyWithSignSign } from '../api/models'
 import type { ChartDataPoint } from '../components/Chart'
+import { TimePeriod } from './types'
 
 /**
  * Liability account types - debt that decreases net worth
@@ -95,8 +95,8 @@ export function calculateNetWorthForDate(
 export function calculateChangePercent(
   current: number,
   previous: number,
-): number | null {
-  if (previous === 0) return null
+): number | undefined {
+  if (previous === 0) return undefined
   return ((current - previous) / Math.abs(previous)) * 100
 }
 
@@ -123,39 +123,13 @@ export function createMoneyWithSign(
  */
 export interface AccountSummaryData {
   id: string
-  name: string | null
+  name: string
   type: AccountType
-  subType: string | null
+  subType?: string
   effectiveBalance: MoneyWithSign
-  convertedEffectiveBalance: ConvertedBalance | null
-  changePercent: number | null
-  institutionName: string | null
-}
-
-/**
- * Convert BalanceWithConvertedBalance to ConvertedBalance format
- * The balance query returns a different structure than the dashboard summary did
- */
-function toConvertedBalance(
-  balance: BalanceWithConvertedBalance,
-): ConvertedBalance | null {
-  if (!balance.convertedBalance || !balance.exchangeRate) {
-    return null
-  }
-
-  // Check if currencies are actually different
-  if (
-    balance.convertedBalance.money.currency === balance.balance.money.currency
-  ) {
-    return null
-  }
-
-  return {
-    balance: balance.convertedBalance,
-    rate: balance.exchangeRate.rate,
-    // The balance query doesn't provide rateDate, use today
-    rateDate: dayjs().format('YYYY-MM-DD'),
-  }
+  convertedEffectiveBalance?: MoneyWithSign
+  changePercent?: number
+  institutionName?: string
 }
 
 /**
@@ -163,7 +137,7 @@ function toConvertedBalance(
  */
 export interface DashboardData {
   netWorth: MoneyWithSign
-  changePercent: number | null
+  changePercent?: number
   comparisonPeriod: TimePeriod
   chartData: ChartDataPoint[]
   assets: AccountSummaryData[]
@@ -198,9 +172,7 @@ export function transformToDashboardData(
   const changePercent = calculateChangePercent(lastNetWorth, firstNetWorth)
 
   // Determine currency from first account (assume all converted to same currency)
-  const firstAccount = lastResult
-    ? Object.values(lastResult.balances)[0]
-    : null
+  const firstAccount = lastResult ? Object.values(lastResult.balances)[0] : null
   const currency = firstAccount
     ? (resolveEffectiveBalance(firstAccount.effectiveBalance).money.currency ??
       'USD')
@@ -228,7 +200,7 @@ export function transformToDashboardData(
       )
       const currentAmount = getSignedAmount(currentEffective)
 
-      let accountChangePercent: number | null = null
+      let accountChangePercent: number | undefined = undefined
       if (firstAccountResult) {
         const previousEffective = resolveEffectiveBalance(
           firstAccountResult.effectiveBalance,
@@ -242,15 +214,15 @@ export function transformToDashboardData(
 
       const summary: AccountSummaryData = {
         id: accountId,
-        name: accountResult.account.name,
+        name: accountResult.account.name ?? '',
         type: accountResult.account.type,
-        subType: accountResult.account.subType,
+        subType: accountResult.account.subType ?? undefined,
         effectiveBalance: accountResult.effectiveBalance.balance,
-        convertedEffectiveBalance: toConvertedBalance(
-          accountResult.effectiveBalance,
-        ),
+        convertedEffectiveBalance:
+          accountResult.effectiveBalance.convertedBalance,
         changePercent: accountChangePercent,
-        institutionName: accountResult.account.bankLink?.institutionName ?? null,
+        institutionName:
+          accountResult.account.bankLink?.institutionName ?? undefined,
       }
 
       if (isLiabilityType(accountResult.account.type)) {
@@ -307,7 +279,7 @@ export function transformToAccountChartData(
 export function getLatestAccountBalance(
   results: BalanceQueryPerDateResult[],
   accountId: string,
-): AccountBalanceResult | null {
+): AccountBalanceResult | undefined {
   // Sort by date descending to get latest
   const sortedResults = [...results].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
@@ -320,5 +292,5 @@ export function getLatestAccountBalance(
     }
   }
 
-  return null
+  return undefined
 }

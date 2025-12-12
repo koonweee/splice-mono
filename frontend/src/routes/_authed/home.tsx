@@ -1,7 +1,7 @@
+import { TIME_PERIOD_LABELS, TimePeriod } from '@/lib/types'
 import { Alert, Grid, Group, Loader, Select, Title } from '@mantine/core'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { TimePeriod } from '../../api/models'
 import { AccountModal } from '../../components/AccountModal'
 import { AccountSection } from '../../components/AccountSection'
 import { NetWorthCard } from '../../components/NetWorthCard'
@@ -21,10 +21,10 @@ export const Route = createFileRoute('/_authed/home')({
 })
 
 const PERIOD_OPTIONS = [
-  { value: TimePeriod.day, label: 'Day' },
-  { value: TimePeriod.week, label: 'Week' },
-  { value: TimePeriod.month, label: 'Month' },
-  { value: TimePeriod.year, label: 'Year' },
+  { value: TimePeriod.day, label: TIME_PERIOD_LABELS[TimePeriod.day] },
+  { value: TimePeriod.week, label: TIME_PERIOD_LABELS[TimePeriod.week] },
+  { value: TimePeriod.month, label: TIME_PERIOD_LABELS[TimePeriod.month] },
+  { value: TimePeriod.year, label: TIME_PERIOD_LABELS[TimePeriod.year] },
 ]
 
 function HomePage() {
@@ -34,12 +34,12 @@ function HomePage() {
   const { data: dashboard, isLoading, error } = useBalanceData(period)
 
   // Find the selected account from the dashboard data
-  const selectedAccount: AccountSummaryData | null =
+  const selectedAccount: AccountSummaryData | undefined =
     accountId && dashboard
       ? ([...dashboard.assets, ...dashboard.liabilities].find(
           (a) => a.id === accountId,
-        ) ?? null)
-      : null
+        ) ?? undefined)
+      : undefined
 
   const handleAccountClick = (account: AccountSummaryData) => {
     navigate({ to: '/home', search: { accountId: account.id } })
