@@ -187,7 +187,7 @@ export class ExchangeRateService {
     const results: ExchangeRate[] = [];
 
     if (pairs.length === 0) {
-      this.logger.log('No currency pairs to sync');
+      this.logger.log({}, 'No currency pairs to sync');
       return results;
     }
 
@@ -220,13 +220,19 @@ export class ExchangeRateService {
 
     if (pairsToSync.length === 0) {
       this.logger.log(
-        `All ${pairs.length} currency pairs already have rates for ${today}`,
+        { count: pairs.length, date: today },
+        'All currency pairs already have rates for date',
       );
       return results;
     }
 
     this.logger.log(
-      `Syncing exchange rates for ${pairsToSync.length} currency pairs on ${today} (${pairs.length - pairsToSync.length} already exist)`,
+      {
+        pairsToSync: pairsToSync.length,
+        date: today,
+        alreadyExist: pairs.length - pairsToSync.length,
+      },
+      'Syncing exchange rates for currency pairs',
     );
 
     // Group pairs by base currency to minimize API calls
@@ -254,17 +260,19 @@ export class ExchangeRateService {
           });
           results.push(exchangeRate);
           this.logger.log(
-            `Saved rate: 1 ${baseCurrency} = ${rate} ${targetCurrency}`,
+            { baseCurrency, rate, targetCurrency },
+            'Saved exchange rate',
           );
         }
       } catch (error) {
         this.logger.error(
-          `Error fetching rates for base ${baseCurrency}: ${error}`,
+          { baseCurrency, error: String(error) },
+          'Error fetching rates for base currency',
         );
       }
     }
 
-    this.logger.log(`Synced ${results.length} exchange rates`);
+    this.logger.log({ count: results.length }, 'Synced exchange rates');
     return results;
   }
 
@@ -320,7 +328,10 @@ export class ExchangeRateService {
       });
     });
 
-    this.logger.log(`Found ${pairs.length} unique currency pairs to track`);
+    this.logger.log(
+      { count: pairs.length },
+      'Found unique currency pairs to track',
+    );
     return pairs;
   }
 

@@ -139,13 +139,14 @@ export abstract class BaseCrudService<
    * ```
    */
   async create(dto: TCreateDto): Promise<TDomain> {
-    this.logger.log(`Creating ${this.entityName}`);
+    this.logger.log({}, `Creating ${this.entityName}`);
 
     const entity = this.EntityClass.fromDto(dto);
     const savedEntity = await this.repository.save(entity);
 
     this.logger.log(
-      `${this.entityName} created successfully: id=${savedEntity.id}`,
+      { id: savedEntity.id },
+      `${this.entityName} created successfully`,
     );
     return savedEntity.toObject();
   }
@@ -170,7 +171,7 @@ export abstract class BaseCrudService<
    * ```
    */
   async findOne(id: string): Promise<TDomain | null> {
-    this.logger.log(`Finding ${this.entityName}: id=${id}`);
+    this.logger.log({ id }, `Finding ${this.entityName}`);
 
     const entity = await this.repository.findOne({
       where: { id } as unknown as FindOptionsWhere<TEntity>,
@@ -178,11 +179,11 @@ export abstract class BaseCrudService<
     });
 
     if (!entity) {
-      this.logger.warn(`${this.entityName} not found: id=${id}`);
+      this.logger.warn({ id }, `${this.entityName} not found`);
       return null;
     }
 
-    this.logger.log(`${this.entityName} found: id=${id}`);
+    this.logger.log({ id }, `${this.entityName} found`);
     return entity.toObject();
   }
 
@@ -203,13 +204,13 @@ export abstract class BaseCrudService<
    * ```
    */
   async findAll(): Promise<TDomain[]> {
-    this.logger.log(`Finding all ${this.entityName}s`);
+    this.logger.log({}, `Finding all ${this.entityName}s`);
 
     const entities = await this.repository.find({
       relations: this.relations,
     });
 
-    this.logger.log(`Found ${entities.length} ${this.entityName}s`);
+    this.logger.log({ count: entities.length }, `Found ${this.entityName}s`);
     return entities.map((entity) => entity.toObject());
   }
 
@@ -264,7 +265,7 @@ export abstract class BaseCrudService<
    * ```
    */
   async update(id: string, dto: TUpdateDto): Promise<TDomain | null> {
-    this.logger.log(`Updating ${this.entityName}: id=${id}`);
+    this.logger.log({ id }, `Updating ${this.entityName}`);
 
     const entity = await this.repository.findOne({
       where: { id } as unknown as FindOptionsWhere<TEntity>,
@@ -272,14 +273,14 @@ export abstract class BaseCrudService<
     });
 
     if (!entity) {
-      this.logger.warn(`${this.entityName} not found for update: id=${id}`);
+      this.logger.warn({ id }, `${this.entityName} not found for update`);
       return null;
     }
 
     this.applyUpdate(entity, dto);
 
     const savedEntity = await this.repository.save(entity);
-    this.logger.log(`${this.entityName} updated successfully: id=${id}`);
+    this.logger.log({ id }, `${this.entityName} updated successfully`);
     return savedEntity.toObject();
   }
 
@@ -303,7 +304,7 @@ export abstract class BaseCrudService<
    * ```
    */
   async remove(id: string): Promise<boolean> {
-    this.logger.log(`Removing ${this.entityName}: id=${id}`);
+    this.logger.log({ id }, `Removing ${this.entityName}`);
 
     const result = await this.repository.delete(id);
     const success =
@@ -312,9 +313,9 @@ export abstract class BaseCrudService<
       result.affected > 0;
 
     if (success) {
-      this.logger.log(`${this.entityName} removed successfully: id=${id}`);
+      this.logger.log({ id }, `${this.entityName} removed successfully`);
     } else {
-      this.logger.warn(`${this.entityName} not found for removal: id=${id}`);
+      this.logger.warn({ id }, `${this.entityName} not found for removal`);
     }
 
     return success;

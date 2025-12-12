@@ -22,13 +22,19 @@ export class ExchangeRateListener {
   ): Promise<void> {
     if (!event.currencyChanged) {
       this.logger.debug(
-        `User ${event.userId} settings updated but currency unchanged, skipping backfill`,
+        { userId: event.userId },
+        'User settings updated but currency unchanged, skipping backfill',
       );
       return;
     }
 
     this.logger.log(
-      `User ${event.userId} currency changed from ${event.oldSettings.currency} to ${event.newSettings.currency}, triggering exchange rate backfill`,
+      {
+        userId: event.userId,
+        oldCurrency: event.oldSettings.currency,
+        newCurrency: event.newSettings.currency,
+      },
+      'User currency changed, triggering exchange rate backfill',
     );
 
     try {
@@ -36,11 +42,13 @@ export class ExchangeRateListener {
         event.userId,
       );
       this.logger.log(
-        `Backfill complete for user ${event.userId}: ${rates.length} rates inserted`,
+        { userId: event.userId, ratesInserted: rates.length },
+        'Backfill complete for user',
       );
     } catch (error) {
       this.logger.error(
-        `Failed to backfill exchange rates for user ${event.userId}: ${error}`,
+        { userId: event.userId, error: String(error) },
+        'Failed to backfill exchange rates for user',
       );
     }
   }

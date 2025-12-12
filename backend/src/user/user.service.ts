@@ -64,7 +64,7 @@ export class UserService {
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    this.logger.log(`Creating user: email=${createUserDto.email}`);
+    this.logger.log({ email: createUserDto.email }, 'Creating user');
 
     // Check if user already exists
     const existingUser = await this.repository.findOne({
@@ -72,7 +72,7 @@ export class UserService {
     });
 
     if (existingUser) {
-      this.logger.warn(`User already exists: email=${createUserDto.email}`);
+      this.logger.warn({ email: createUserDto.email }, 'User already exists');
       throw new ConflictException('User with this email already exists');
     }
 
@@ -80,12 +80,12 @@ export class UserService {
     const entity = UserEntity.fromDto(createUserDto, hashedPassword);
 
     const savedEntity = await this.repository.save(entity);
-    this.logger.log(`User created successfully: id=${savedEntity.id}`);
+    this.logger.log({ id: savedEntity.id }, 'User created successfully');
     return savedEntity.toObject();
   }
 
   async login(loginDto: LoginDto): Promise<LoginResponse> {
-    this.logger.log(`Login attempt: email=${loginDto.email}`);
+    this.logger.log({ email: loginDto.email }, 'Login attempt');
 
     const entity = await this.repository.findOne({
       where: { email: loginDto.email },
@@ -93,7 +93,8 @@ export class UserService {
 
     if (!entity) {
       this.logger.warn(
-        `Login failed - user not found: email=${loginDto.email}`,
+        { email: loginDto.email },
+        'Login failed - user not found',
       );
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -105,7 +106,8 @@ export class UserService {
 
     if (!isPasswordValid) {
       this.logger.warn(
-        `Login failed - invalid password: email=${loginDto.email}`,
+        { email: loginDto.email },
+        'Login failed - invalid password',
       );
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -117,7 +119,7 @@ export class UserService {
     );
     const refreshToken = await this.authService.generateRefreshToken(user.id);
 
-    this.logger.log(`Login successful: id=${user.id}`);
+    this.logger.log({ id: user.id }, 'Login successful');
     return { accessToken, refreshToken, user };
   }
 
@@ -135,18 +137,18 @@ export class UserService {
       user.email,
     );
 
-    this.logger.log(`Tokens refreshed for user: ${userId}`);
+    this.logger.log({ userId }, 'Tokens refreshed for user');
     return { accessToken, refreshToken: newRefreshToken };
   }
 
   async findOne(id: string): Promise<User | null> {
-    this.logger.log(`Finding user: id=${id}`);
+    this.logger.log({ id }, 'Finding user');
     const entity = await this.repository.findOne({
       where: { id },
     });
 
     if (!entity) {
-      this.logger.warn(`User not found: id=${id}`);
+      this.logger.warn({ id }, 'User not found');
       return null;
     }
 
@@ -169,7 +171,7 @@ export class UserService {
     });
 
     if (!entity) {
-      this.logger.warn(`Cannot update settings: user not found: id=${userId}`);
+      this.logger.warn({ userId }, 'Cannot update settings: user not found');
       return null;
     }
 
@@ -182,7 +184,7 @@ export class UserService {
     entity.settings = newSettings;
 
     await this.repository.save(entity);
-    this.logger.log(`Updated settings for user ${userId}`);
+    this.logger.log({ userId }, 'Updated settings for user');
 
     // Emit event if settings actually changed
     if (
@@ -255,7 +257,8 @@ export class UserService {
 
     if (!entity) {
       this.logger.warn(
-        `Cannot update provider details: user not found: id=${userId}`,
+        { userId },
+        'Cannot update provider details: user not found',
       );
       return null;
     }
@@ -269,7 +272,8 @@ export class UserService {
 
     const savedEntity = await this.repository.save(entity);
     this.logger.log(
-      `Updated provider details for user ${userId}, provider ${providerName}`,
+      { userId, providerName },
+      'Updated provider details for user',
     );
     return savedEntity.toObject();
   }

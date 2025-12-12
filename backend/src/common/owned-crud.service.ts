@@ -176,13 +176,14 @@ export abstract class OwnedCrudService<
    * ```
    */
   async create(dto: TCreateDto, userId: string): Promise<TDomain> {
-    this.logger.log(`Creating ${this.entityName}: userId=${userId}`);
+    this.logger.log({ userId }, `Creating ${this.entityName}`);
 
     const entity = this.EntityClass.fromDto(dto, userId);
     const savedEntity = await this.repository.save(entity);
 
     this.logger.log(
-      `${this.entityName} created successfully: id=${savedEntity.id}`,
+      { id: savedEntity.id },
+      `${this.entityName} created successfully`,
     );
     return savedEntity.toObject();
   }
@@ -211,7 +212,7 @@ export abstract class OwnedCrudService<
    * ```
    */
   async findOne(id: string, userId: string): Promise<TDomain | null> {
-    this.logger.log(`Finding ${this.entityName}: id=${id}, userId=${userId}`);
+    this.logger.log({ id, userId }, `Finding ${this.entityName}`);
 
     const entity = await this.repository.findOne({
       where: { id, userId } as unknown as FindOptionsWhere<TEntity>,
@@ -220,12 +221,13 @@ export abstract class OwnedCrudService<
 
     if (!entity) {
       this.logger.warn(
-        `${this.entityName} not found: id=${id}, userId=${userId}`,
+        { id, userId },
+        `${this.entityName} not found`,
       );
       return null;
     }
 
-    this.logger.log(`${this.entityName} found: id=${id}`);
+    this.logger.log({ id }, `${this.entityName} found`);
     return entity.toObject();
   }
 
@@ -250,7 +252,7 @@ export abstract class OwnedCrudService<
    * ```
    */
   async findAll(userId: string): Promise<TDomain[]> {
-    this.logger.log(`Finding all ${this.entityName}s for userId=${userId}`);
+    this.logger.log({ userId }, `Finding all ${this.entityName}s`);
 
     const entities = await this.repository.find({
       where: { userId } as unknown as FindOptionsWhere<TEntity>,
@@ -258,7 +260,8 @@ export abstract class OwnedCrudService<
     });
 
     this.logger.log(
-      `Found ${entities.length} ${this.entityName}s for userId=${userId}`,
+      { userId, count: entities.length },
+      `Found ${this.entityName}s`,
     );
     return entities.map((entity) => entity.toObject());
   }
@@ -327,7 +330,7 @@ export abstract class OwnedCrudService<
     dto: TUpdateDto,
     userId: string,
   ): Promise<TDomain | null> {
-    this.logger.log(`Updating ${this.entityName}: id=${id}, userId=${userId}`);
+    this.logger.log({ id, userId }, `Updating ${this.entityName}`);
 
     const entity = await this.repository.findOne({
       where: { id, userId } as unknown as FindOptionsWhere<TEntity>,
@@ -336,7 +339,8 @@ export abstract class OwnedCrudService<
 
     if (!entity) {
       this.logger.warn(
-        `${this.entityName} not found for update: id=${id}, userId=${userId}`,
+        { id, userId },
+        `${this.entityName} not found for update`,
       );
       return null;
     }
@@ -344,7 +348,7 @@ export abstract class OwnedCrudService<
     this.applyUpdate(entity, dto);
 
     const savedEntity = await this.repository.save(entity);
-    this.logger.log(`${this.entityName} updated successfully: id=${id}`);
+    this.logger.log({ id }, `${this.entityName} updated successfully`);
     return savedEntity.toObject();
   }
 
@@ -372,7 +376,7 @@ export abstract class OwnedCrudService<
    * ```
    */
   async remove(id: string, userId: string): Promise<boolean> {
-    this.logger.log(`Removing ${this.entityName}: id=${id}, userId=${userId}`);
+    this.logger.log({ id, userId }, `Removing ${this.entityName}`);
 
     const result = await this.repository.delete({
       id,
@@ -384,10 +388,11 @@ export abstract class OwnedCrudService<
       result.affected > 0;
 
     if (success) {
-      this.logger.log(`${this.entityName} removed successfully: id=${id}`);
+      this.logger.log({ id }, `${this.entityName} removed successfully`);
     } else {
       this.logger.warn(
-        `${this.entityName} not found for removal: id=${id}, userId=${userId}`,
+        { id, userId },
+        `${this.entityName} not found for removal`,
       );
     }
 

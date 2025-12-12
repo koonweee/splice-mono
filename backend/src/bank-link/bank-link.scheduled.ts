@@ -20,15 +20,16 @@ export class BankLinkScheduledService {
     timeZone: 'America/Los_Angeles',
   })
   async handleSyncAllAccounts(): Promise<void> {
-    this.logger.log('Starting scheduled sync of all bank link accounts');
+    this.logger.log({}, 'Starting scheduled sync of all bank link accounts');
 
     try {
       const accounts = await this.bankLinkService.syncAllAccountsSystem();
       this.logger.log(
-        `Scheduled sync completed: ${accounts.length} accounts synced`,
+        { accountsSynced: accounts.length },
+        'Scheduled sync completed',
       );
     } catch (error) {
-      this.logger.error(`Scheduled sync failed: ${error}`);
+      this.logger.error({ error: String(error) }, 'Scheduled sync failed');
     }
   }
 }
