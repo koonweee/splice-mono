@@ -117,8 +117,27 @@ export class BankLinkController {
     status: 201,
     description: 'Returns the number of bank links updated',
   })
-  async backfillPlaidItemIds(): Promise<{ updated: number }> {
-    const updated = await this.bankLinkService.backfillPlaidItemIds();
+  async backfillPlaidItemIds(
+    @CurrentUser() user: JwtUser,
+  ): Promise<{ updated: number }> {
+    const updated = await this.bankLinkService.backfillPlaidItemIds(
+      user.userId,
+    );
     return { updated };
+  }
+
+  @Post('update-webhook-urls')
+  @ApiOperation({
+    description:
+      'Update webhook URLs for all bank links to use current API_DOMAIN',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Returns counts of updated and failed bank links',
+  })
+  async updateWebhookUrls(
+    @CurrentUser() user: JwtUser,
+  ): Promise<{ updated: number; failed: number }> {
+    return this.bankLinkService.updateAllWebhookUrls(user.userId);
   }
 }

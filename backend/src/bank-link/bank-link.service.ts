@@ -704,13 +704,14 @@ export class BankLinkService extends OwnedCrudService<
    * Backfill item IDs for existing Plaid bank links that don't have them
    * Fetches item_id from Plaid API and updates the authentication JSONB
    *
+   * @param userId - ID of the user whose bank links to update
    * @returns Number of bank links updated
    */
-  async backfillPlaidItemIds(): Promise<number> {
-    this.logger.log({}, 'Starting backfill of Plaid item IDs');
+  async backfillPlaidItemIds(userId: string): Promise<number> {
+    this.logger.log({ userId }, 'Starting backfill of Plaid item IDs');
 
     const plaidLinks = await this.repository.find({
-      where: { providerName: 'plaid' },
+      where: { providerName: 'plaid', userId },
     });
 
     const provider = this.providerRegistry.getProvider('plaid');
@@ -760,6 +761,68 @@ export class BankLinkService extends OwnedCrudService<
       'Backfill complete',
     );
     return updatedCount;
+  }
+
+  /**
+   * Update webhook URLs for all bank links to use current API_DOMAIN
+   * Only updates bank links whose providers support updateWebhookUrl
+   *
+   * @param userId - ID of the user whose bank links to update
+   * @returns Counts of updated and failed bank links
+   */
+  async updateAllWebhookUrls(
+    userId: string,
+  ): Promise<{ updated: number; failed: number }> {
+    this.logger.log({ userId }, 'Starting webhook URL update for bank links');
+
+    const bankLinks = await this.repository.find({ where: { userId } });
+    this.logger.log(
+      { count: bankLinks.length, userId },
+      'Found bank links for webhook URL update',
+    );
+
+    let updated = 0;
+    let failed = 0;
+
+    const results = await Promise.allSettled(
+      bankLinks.map(async (link) => {
+        const provider = this.providerRegistry.getProvider(link.providerName);
+        if (!provider.updateWebhookUrl) {
+          this.logger.log(
+            { bankLinkId: link.id, providerName: link.providerName },
+            'Provider does not support updateWebhookUrl, skipping',
+          );
+          return { skipped: true };
+        }
+
+        await provider.updateWebhookUrl(link.authentication);
+        this.logger.log(
+          { bankLinkId: link.id, providerName: link.providerName },
+          'Updated webhook URL for bank link',
+        );
+        return { skipped: false };
+      }),
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        if (!result.value.skipped) {
+          updated++;
+        }
+      } else {
+        failed++;
+        this.logger.error(
+          { bankLinkId: bankLinks[index].id, error: String(result.reason) },
+          'Failed to update webhook URL for bank link',
+        );
+      }
+    });
+
+    this.logger.log(
+      { updated, failed, total: bankLinks.length },
+      'Webhook URL update complete',
+    );
+    return { updated, failed };
   }
 
   /**
