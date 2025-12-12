@@ -1,7 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
@@ -443,53 +443,6 @@ export class BankLinkService extends OwnedCrudService<
   }
 
   /**
-   * Sync accounts for all bank links across all users (system operation)
-   * Used by scheduled tasks and admin operations
-   * Excludes Plaid providers which are synced via webhooks
-   *
-   * @returns Updated accounts from all bank links
-   */
-  async syncAllAccountsSystem(): Promise<Account[]> {
-    this.logger.log(
-      {},
-      'Syncing accounts for all bank links (system operation)',
-    );
-
-    // Exclude Plaid - it uses webhook-driven sync via DEFAULT_UPDATE
-    const bankLinks = await this.repository.find({
-      where: { providerName: Not('plaid') },
-    });
-    this.logger.log(
-      { count: bankLinks.length },
-      'Found bank links to sync (system)',
-    );
-
-    const results = await Promise.allSettled(
-      bankLinks.map((bankLink) =>
-        this.syncAccounts(bankLink.id, bankLink.userId),
-      ),
-    );
-
-    const allAccounts: Account[] = [];
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        allAccounts.push(...result.value);
-      } else {
-        this.logger.error(
-          { bankLinkId: bankLinks[index].id, error: String(result.reason) },
-          'Failed to sync accounts for bank link (system)',
-        );
-      }
-    });
-
-    this.logger.log(
-      { count: allAccounts.length },
-      'Synced accounts total (system)',
-    );
-    return allAccounts;
-  }
-
-  /**
    * Sync accounts for a bank link by fetching latest data from the provider
    *
    * @param bankLinkId - The ID of the bank link to sync
@@ -692,7 +645,7 @@ export class BankLinkService extends OwnedCrudService<
    * @param itemId - Plaid item_id to search for
    * @returns BankLink entity or null if not found
    */
-  async findByPlaidItemId(itemId: string): Promise<BankLinkEntity | null> {
+  private async findByPlaidItemId(itemId: string): Promise<BankLinkEntity | null> {
     return this.repository
       .createQueryBuilder('bankLink')
       .where('bankLink.providerName = :provider', { provider: 'plaid' })
