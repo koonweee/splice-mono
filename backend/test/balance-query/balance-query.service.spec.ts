@@ -389,10 +389,10 @@ describe('BalanceQueryService', () => {
           mockUserId,
         );
 
-        // effectiveBalance should equal availableBalance for depository
+        // effectiveBalance should equal currentBalance for depository
         expect(
           result[0].balances['acc-1'].effectiveBalance.balance.money.amount,
-        ).toBe(95000);
+        ).toBe(100000);
       });
 
       it('should sum available + current for investment accounts', async () => {
