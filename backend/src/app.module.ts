@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -18,51 +21,62 @@ import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
-    LoggerModule.forRoot({
-      pinoHttp: {
-        autoLogging: true,
-        redact: {
-          paths: [
-            // Auth headers
-            'req.headers.authorization',
-            'req.headers.cookie',
-            'res.headers["set-cookie"]',
+    LoggerModule.forRootAsync({
+      useFactory: async () => {
+        let stream: NodeJS.WritableStream | undefined;
 
-            // Request body credentials
-            'req.body.password',
-            'req.body.refreshToken',
-            'req.body.accessToken',
+        if (process.env.SEQ_SERVER_URL) {
+          const pinoSeq = (await import('pino-seq')) as any;
+          const createStream =
+            pinoSeq.default?.createStream ?? pinoSeq.createStream;
+          stream = createStream({
+            serverUrl: process.env.SEQ_SERVER_URL,
+            apiKey: process.env.SEQ_API_KEY,
+          });
+        }
 
-            // Webhook verification headers
-            'req.headers["plaid-verification"]',
+        return {
+          pinoHttp: {
+            autoLogging: true,
+            redact: {
+              paths: [
+                // Auth headers
+                'req.headers.authorization',
+                'req.headers.cookie',
+                'res.headers["set-cookie"]',
 
-            // Defense-in-depth for service-level logs
-            '*.password',
-            '*.accessToken',
-            '*.refreshToken',
-            '*.userToken',
-            '*.clientId',
-            '*.public_tokens',
-            '*.public_tokens[*]',
-          ],
-          censor: '[REDACTED]',
-        },
-        transport: process.env.SEQ_SERVER_URL
-          ? {
-              target: 'pino-seq',
-              options: {
-                serverUrl: process.env.SEQ_SERVER_URL,
-                apiKey: process.env.SEQ_API_KEY,
-              },
-            }
-          : {
-              target: 'pino-pretty',
-              options: {
-                colorize: true,
-                singleLine: true,
-              },
+                // Request body credentials
+                'req.body.password',
+                'req.body.refreshToken',
+                'req.body.accessToken',
+
+                // Webhook verification headers
+                'req.headers["plaid-verification"]',
+
+                // Defense-in-depth for service-level logs
+                '*.password',
+                '*.accessToken',
+                '*.refreshToken',
+                '*.userToken',
+                '*.clientId',
+                '*.public_tokens',
+                '*.public_tokens[*]',
+              ],
+              censor: '[REDACTED]',
             },
-        level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+            stream,
+            ...(!stream && {
+              transport: {
+                target: 'pino-pretty',
+                options: {
+                  colorize: true,
+                  singleLine: true,
+                },
+              },
+            }),
+            level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+          },
+        };
       },
     }),
     EventEmitterModule.forRoot(),
