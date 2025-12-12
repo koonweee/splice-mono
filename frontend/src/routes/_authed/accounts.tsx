@@ -50,11 +50,11 @@ function AccountsPage() {
     if (!accounts) return new Map<string, Account[]>()
 
     const groups = new Map<string, Account[]>()
-    for (const account of accounts) {
+    accounts.forEach((account) => {
       const institution = account.bankLink?.institutionName ?? 'Manual Accounts'
       const existing = groups.get(institution) ?? []
       groups.set(institution, [...existing, account])
-    }
+    })
     return groups
   }, [accounts])
 

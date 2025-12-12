@@ -350,12 +350,12 @@ export class BankLinkService extends OwnedCrudService<
       this.logger.log(`Saved ${savedAccounts.length} accounts`);
 
       // Emit linked account created events for all new accounts
-      for (const account of savedAccounts) {
+      savedAccounts.forEach((account) => {
         this.eventEmitter.emit(
           LinkedAccountEvents.CREATED,
           new LinkedAccountCreatedEvent(account.toObject()),
         );
-      }
+      });
 
       // Mark webhook event as completed
       await this.webhookEventService.markCompleted(webhookId, parsedPayload);
@@ -392,17 +392,20 @@ export class BankLinkService extends OwnedCrudService<
     });
     this.logger.log(`Found ${bankLinks.length} bank links to sync`);
 
+    const results = await Promise.allSettled(
+      bankLinks.map((bankLink) => this.syncAccounts(bankLink.id, userId)),
+    );
+
     const allAccounts: Account[] = [];
-    for (const bankLink of bankLinks) {
-      try {
-        const accounts = await this.syncAccounts(bankLink.id, userId);
-        allAccounts.push(...accounts);
-      } catch (error) {
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        allAccounts.push(...result.value);
+      } else {
         this.logger.error(
-          `Failed to sync accounts for bank link ${bankLink.id}: ${error}`,
+          `Failed to sync accounts for bank link ${bankLinks[index].id}: ${result.reason}`,
         );
       }
-    }
+    });
 
     this.logger.log(`Synced ${allAccounts.length} accounts total`);
     return allAccounts;
@@ -424,17 +427,22 @@ export class BankLinkService extends OwnedCrudService<
     });
     this.logger.log(`Found ${bankLinks.length} bank links to sync`);
 
+    const results = await Promise.allSettled(
+      bankLinks.map((bankLink) =>
+        this.syncAccounts(bankLink.id, bankLink.userId),
+      ),
+    );
+
     const allAccounts: Account[] = [];
-    for (const bankLink of bankLinks) {
-      try {
-        const accounts = await this.syncAccounts(bankLink.id, bankLink.userId);
-        allAccounts.push(...accounts);
-      } catch (error) {
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        allAccounts.push(...result.value);
+      } else {
         this.logger.error(
-          `Failed to sync accounts for bank link ${bankLink.id}: ${error}`,
+          `Failed to sync accounts for bank link ${bankLinks[index].id}: ${result.reason}`,
         );
       }
-    }
+    });
 
     this.logger.log(`Synced ${allAccounts.length} accounts total`);
     return allAccounts;
@@ -540,7 +548,7 @@ export class BankLinkService extends OwnedCrudService<
     const accountsToSave: AccountEntity[] = [];
     const newAccountExternalIds = new Set<string>();
 
-    for (const apiAccount of apiAccounts) {
+    apiAccounts.forEach((apiAccount) => {
       const bankLinkId = accountIdToBankLinkId.get(apiAccount.accountId);
       if (!bankLinkId) {
         throw new Error(
@@ -557,12 +565,12 @@ export class BankLinkService extends OwnedCrudService<
         accountsToSave.push(AccountEntity.fromDto(dto, userId));
         newAccountExternalIds.add(apiAccount.accountId);
       }
-    }
+    });
 
     const savedAccounts = await this.accountRepository.save(accountsToSave);
 
     // Emit events for saved accounts
-    for (const account of savedAccounts) {
+    savedAccounts.forEach((account) => {
       const accountObj = account.toObject();
       if (
         account.externalAccountId &&
@@ -578,7 +586,7 @@ export class BankLinkService extends OwnedCrudService<
           new LinkedAccountUpdatedEvent(accountObj),
         );
       }
-    }
+    });
 
     return savedAccounts.map((account) => account.toObject());
   }
@@ -616,26 +624,35 @@ export class BankLinkService extends OwnedCrudService<
       throw new Error('Provider does not support getItemId');
     }
 
-    let updatedCount = 0;
-    for (const link of plaidLinks) {
-      // Skip if already has itemId
+    // Filter out links that already have itemId
+    const linksToUpdate = plaidLinks.filter((link) => {
       if (link.authentication.itemId) {
         this.logger.log(`Bank link ${link.id} already has itemId, skipping`);
-        continue;
+        return false;
       }
+      return true;
+    });
 
-      try {
-        const itemId = await provider.getItemId(link.authentication);
+    const results = await Promise.allSettled(
+      linksToUpdate.map(async (link) => {
+        const itemId = await provider.getItemId!(link.authentication);
         link.authentication = { ...link.authentication, itemId };
         await this.repository.save(link);
-        updatedCount++;
         this.logger.log(`Backfilled itemId for bank link ${link.id}`);
-      } catch (error) {
+        return link.id;
+      }),
+    );
+
+    let updatedCount = 0;
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        updatedCount++;
+      } else {
         this.logger.error(
-          `Failed to backfill itemId for bank link ${link.id}: ${error}`,
+          `Failed to backfill itemId for bank link ${linksToUpdate[index].id}: ${result.reason}`,
         );
       }
-    }
+    });
 
     this.logger.log(
       `Backfill complete: ${updatedCount}/${plaidLinks.length} bank links updated`,

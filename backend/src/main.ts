@@ -53,9 +53,9 @@ function fixNullableRefs(obj: unknown): unknown {
 
   // Recursively process all properties
   const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(record)) {
+  Object.entries(record).forEach(([key, value]) => {
     result[key] = fixNullableRefs(value);
-  }
+  });
   return result;
 }
 
