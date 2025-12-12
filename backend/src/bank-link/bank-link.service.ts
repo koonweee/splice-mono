@@ -1,7 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
@@ -170,7 +170,7 @@ export class BankLinkService extends OwnedCrudService<
     if (provider.parseStatusWebhook) {
       const statusInfo = provider.parseStatusWebhook(parsedPayload);
       if (statusInfo) {
-        await this.handleStatusWebhook(statusInfo);
+        await this.handleStatusWebhook(statusInfo, parsedPayload);
         return;
       }
     }
@@ -179,21 +179,23 @@ export class BankLinkService extends OwnedCrudService<
     if (provider.parseUpdateWebhook) {
       const updateInfo = provider.parseUpdateWebhook(parsedPayload);
       if (updateInfo) {
-        await this.handleUpdateWebhook(updateInfo);
+        await this.handleUpdateWebhook(updateInfo, parsedPayload);
         return;
       }
     }
 
     // 3. Check for link completion webhooks (SESSION_FINISHED)
-    const webhookId = provider.shouldProcessWebhook(parsedPayload);
-    if (webhookId) {
-      await this.handleLinkCompletionWebhook(
-        providerName,
-        provider,
-        webhookId,
-        parsedPayload,
-      );
-      return;
+    if (provider.parseLinkCompletionWebhook) {
+      const linkInfo = provider.parseLinkCompletionWebhook(parsedPayload);
+      if (linkInfo) {
+        await this.handleLinkCompletionWebhook(
+          providerName,
+          provider,
+          linkInfo.linkToken,
+          parsedPayload,
+        );
+        return;
+      }
     }
 
     this.logger.log(
@@ -209,53 +211,70 @@ export class BankLinkService extends OwnedCrudService<
   /**
    * Handle update webhooks (e.g., Plaid DEFAULT_UPDATE for transactions/investments)
    * Triggers account sync for the bank link associated with the item
+   * Includes time-based deduplication to prevent redundant syncs from webhook retries
    */
-  private async handleUpdateWebhook(updateInfo: {
-    itemId: string;
-    type: string;
-  }): Promise<void> {
+  private async handleUpdateWebhook(
+    updateInfo: {
+      itemId: string;
+      type: string;
+    },
+    parsedPayload: Record<string, any>,
+  ): Promise<void> {
     this.logger.log(
       { type: updateInfo.type, itemId: updateInfo.itemId },
       'Processing update webhook',
     );
 
     const bankLink = await this.findByPlaidItemId(updateInfo.itemId);
-    this.logger.log(
-      {
-        itemId: updateInfo.itemId,
-        found: !!bankLink,
-        bankLinkId: bankLink?.id,
-        userId: bankLink?.userId,
-      },
-      'Bank link lookup by Plaid item_id',
-    );
-
-    if (bankLink) {
-      await this.syncAccounts(bankLink.id, bankLink.userId);
-      this.logger.log(
-        { bankLinkId: bankLink.id },
-        'Synced accounts for bank link',
-      );
-    } else {
+    if (!bankLink) {
       this.logger.warn(
         { itemId: updateInfo.itemId },
         'No bank link found for item',
       );
+      return;
     }
+
+    // Deduplicate using composite key with 5-minute window
+    const baseWebhookId = `plaid:${updateInfo.type}:DEFAULT_UPDATE:${updateInfo.itemId}`;
+    const result = await this.webhookEventService.tryAcquireWebhook(
+      baseWebhookId,
+      'plaid',
+      bankLink.userId,
+      parsedPayload,
+      5 * 60 * 1000, // 5 minutes
+    );
+
+    if (!result.acquired) {
+      this.logger.log(
+        { baseWebhookId, reason: result.reason },
+        'Skipping duplicate update webhook',
+      );
+      return;
+    }
+
+    await this.syncAccounts(bankLink.id, bankLink.userId);
+    this.logger.log(
+      { bankLinkId: bankLink.id },
+      'Synced accounts for bank link',
+    );
   }
 
   /**
    * Handle status webhooks (e.g., Plaid ITEM webhooks: ERROR, LOGIN_REPAIRED, etc.)
    * Updates bank link status, statusDate, and statusBody fields
    * Optionally triggers account sync (e.g., after LOGIN_REPAIRED)
+   * Includes time-based deduplication to prevent redundant updates from webhook retries
    */
-  private async handleStatusWebhook(statusInfo: {
-    itemId: string;
-    webhookCode: string;
-    status: 'OK' | 'ERROR' | 'PENDING_REAUTH';
-    statusBody: Record<string, any> | null;
-    shouldSync: boolean;
-  }): Promise<void> {
+  private async handleStatusWebhook(
+    statusInfo: {
+      itemId: string;
+      webhookCode: string;
+      status: 'OK' | 'ERROR' | 'PENDING_REAUTH';
+      statusBody: Record<string, any> | null;
+      shouldSync: boolean;
+    },
+    parsedPayload: Record<string, any>,
+  ): Promise<void> {
     this.logger.log(
       { webhookCode: statusInfo.webhookCode, itemId: statusInfo.itemId },
       'Processing ITEM status webhook',
@@ -266,6 +285,24 @@ export class BankLinkService extends OwnedCrudService<
       this.logger.warn(
         { itemId: statusInfo.itemId },
         'No bank link found for item',
+      );
+      return;
+    }
+
+    // Deduplicate using composite key with 1-minute window
+    const baseWebhookId = `plaid:ITEM:${statusInfo.webhookCode}:${statusInfo.itemId}`;
+    const result = await this.webhookEventService.tryAcquireWebhook(
+      baseWebhookId,
+      'plaid',
+      bankLink.userId,
+      parsedPayload,
+      1 * 60 * 1000, // 1 minute
+    );
+
+    if (!result.acquired) {
+      this.logger.log(
+        { baseWebhookId, reason: result.reason },
+        'Skipping duplicate status webhook',
       );
       return;
     }
@@ -318,20 +355,21 @@ export class BankLinkService extends OwnedCrudService<
     this.logger.log({ webhookId, userId }, 'Found pending webhook event');
 
     try {
-      const linkCompletionResponses =
-        await provider.processWebhook(parsedPayload);
-      if (!linkCompletionResponses) {
+      if (!provider.processLinkCompletion) {
         this.logger.warn(
           { providerName },
-          'No link completion responses from provider',
+          'Provider does not support processLinkCompletion',
         );
         await this.webhookEventService.markFailed(
           webhookId,
-          'No link completion responses from provider',
+          'Provider does not support processLinkCompletion',
           parsedPayload,
         );
         return;
       }
+
+      const linkCompletionResponses =
+        await provider.processLinkCompletion(parsedPayload);
 
       // Bank links from link completion responses
       const bankLinks = linkCompletionResponses.map((response) => {
@@ -439,53 +477,6 @@ export class BankLinkService extends OwnedCrudService<
     });
 
     this.logger.log({ count: allAccounts.length }, 'Synced accounts total');
-    return allAccounts;
-  }
-
-  /**
-   * Sync accounts for all bank links across all users (system operation)
-   * Used by scheduled tasks and admin operations
-   * Excludes Plaid providers which are synced via webhooks
-   *
-   * @returns Updated accounts from all bank links
-   */
-  async syncAllAccountsSystem(): Promise<Account[]> {
-    this.logger.log(
-      {},
-      'Syncing accounts for all bank links (system operation)',
-    );
-
-    // Exclude Plaid - it uses webhook-driven sync via DEFAULT_UPDATE
-    const bankLinks = await this.repository.find({
-      where: { providerName: Not('plaid') },
-    });
-    this.logger.log(
-      { count: bankLinks.length },
-      'Found bank links to sync (system)',
-    );
-
-    const results = await Promise.allSettled(
-      bankLinks.map((bankLink) =>
-        this.syncAccounts(bankLink.id, bankLink.userId),
-      ),
-    );
-
-    const allAccounts: Account[] = [];
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        allAccounts.push(...result.value);
-      } else {
-        this.logger.error(
-          { bankLinkId: bankLinks[index].id, error: String(result.reason) },
-          'Failed to sync accounts for bank link (system)',
-        );
-      }
-    });
-
-    this.logger.log(
-      { count: allAccounts.length },
-      'Synced accounts total (system)',
-    );
     return allAccounts;
   }
 
@@ -692,7 +683,9 @@ export class BankLinkService extends OwnedCrudService<
    * @param itemId - Plaid item_id to search for
    * @returns BankLink entity or null if not found
    */
-  async findByPlaidItemId(itemId: string): Promise<BankLinkEntity | null> {
+  private async findByPlaidItemId(
+    itemId: string,
+  ): Promise<BankLinkEntity | null> {
     return this.repository
       .createQueryBuilder('bankLink')
       .where('bankLink.providerName = :provider', { provider: 'plaid' })

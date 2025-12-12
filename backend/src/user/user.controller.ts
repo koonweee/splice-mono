@@ -47,11 +47,34 @@ import { UserService } from './user.service';
 
 // Cookie configuration
 const isProduction = process.env.NODE_ENV === 'production';
+
+/**
+ * Extract parent domain from a URL for cross-subdomain cookie sharing.
+ * e.g., "https://app.splice.com" -> ".splice.com"
+ */
+function getParentDomain(url: string): string | undefined {
+  try {
+    const hostname = new URL(url).hostname;
+    const parts = hostname.split('.');
+    // Need at least 2 parts (e.g., splice.com)
+    if (parts.length < 2) return undefined;
+    // Return last two parts with leading dot
+    return '.' + parts.slice(-2).join('.');
+  } catch {
+    return undefined;
+  }
+}
+
+const cookieDomain = process.env.FRONTEND_DOMAIN
+  ? getParentDomain(process.env.FRONTEND_DOMAIN)
+  : undefined;
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? ('none' as const) : ('lax' as const),
+  sameSite: 'lax' as const,
   path: '/',
+  ...(cookieDomain && { domain: cookieDomain }),
 };
 const ACCESS_TOKEN_COOKIE = 'splice_access_token';
 const REFRESH_TOKEN_COOKIE = 'splice_refresh_token';

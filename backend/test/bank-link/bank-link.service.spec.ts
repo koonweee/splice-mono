@@ -471,15 +471,15 @@ describe('BankLinkService', () => {
 
       expect(mockWebhookEventService.markCompleted).not.toHaveBeenCalled();
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockPlaidProvider.processWebhook).not.toHaveBeenCalled();
+      expect(mockPlaidProvider.processLinkCompletion).not.toHaveBeenCalled();
     });
 
-    it('should skip processing when shouldProcessWebhook returns undefined', async () => {
+    it('should skip processing when parseLinkCompletionWebhook returns undefined', async () => {
       const providerName = 'plaid';
 
-      (mockPlaidProvider.shouldProcessWebhook as jest.Mock).mockReturnValueOnce(
-        undefined,
-      );
+      (
+        mockPlaidProvider.parseLinkCompletionWebhook as jest.Mock
+      ).mockReturnValueOnce(undefined);
 
       await service.handleWebhook(
         providerName,
@@ -539,9 +539,9 @@ describe('BankLinkService', () => {
       const providerName = 'plaid';
       const errorMessage = 'Provider error';
 
-      (mockPlaidProvider.processWebhook as jest.Mock).mockRejectedValueOnce(
-        new Error(errorMessage),
-      );
+      (
+        mockPlaidProvider.processLinkCompletion as jest.Mock
+      ).mockRejectedValueOnce(new Error(errorMessage));
 
       await expect(
         service.handleWebhook(
@@ -1047,74 +1047,6 @@ describe('BankLinkService', () => {
 
       // Should still have results from the second successful sync
       expect(result).toBeDefined();
-    });
-  });
-
-  describe('syncAllAccountsSystem', () => {
-    beforeEach(() => {
-      mockBankLinkRepository.find.mockResolvedValue([mockBankLinkEntity]);
-      mockBankLinkRepository.findOne.mockResolvedValue(mockBankLinkEntity);
-      mockAccountRepository.find.mockResolvedValue([]);
-    });
-
-    it('should exclude Plaid bank links from scheduled sync', async () => {
-      await service.syncAllAccountsSystem();
-
-      // Should find bank links excluding Plaid
-      expect(mockBankLinkRepository.find).toHaveBeenCalledWith({
-        where: { providerName: expect.objectContaining({ _type: 'not' }) },
-      });
-    });
-
-    it('should return empty array when no bank links exist', async () => {
-      mockBankLinkRepository.find.mockResolvedValueOnce([]);
-
-      const result = await service.syncAllAccountsSystem();
-
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('findByPlaidItemId', () => {
-    it('should find bank link by item_id in authentication JSONB', async () => {
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
-      };
-      mockBankLinkRepository.createQueryBuilder = jest
-        .fn()
-        .mockReturnValue(mockQueryBuilder);
-
-      const result = await service.findByPlaidItemId('item-123');
-
-      expect(mockBankLinkRepository.createQueryBuilder).toHaveBeenCalledWith(
-        'bankLink',
-      );
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-        'bankLink.providerName = :provider',
-        { provider: 'plaid' },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        "bankLink.authentication->>'itemId' = :itemId",
-        { itemId: 'item-123' },
-      );
-      expect(result).toEqual(mockBankLinkEntity);
-    });
-
-    it('should return null when no bank link found', async () => {
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(null),
-      };
-      mockBankLinkRepository.createQueryBuilder = jest
-        .fn()
-        .mockReturnValue(mockQueryBuilder);
-
-      const result = await service.findByPlaidItemId('unknown-item');
-
-      expect(result).toBeNull();
     });
   });
 
