@@ -67,17 +67,16 @@ export function formatMoneyWithSign(input: {
   const dollars = value.money.amount / 100
   const signedAmount =
     value.sign === MoneyWithSignSign.negative ? -dollars : dollars
-  return [
-    formatMoneyNumber({
-      value: signedAmount,
-      currency: value.money.currency,
-      decimals,
-    }),
-    appendCurrency ? `(${value.money.currency})` : undefined,
-  ]
-    .filter(Boolean)
-    .join(' ')
+  return formatMoneyNumber({
+    value: signedAmount,
+    currency: value.money.currency,
+    decimals,
+    appendCurrency,
+  })
 }
+
+/** eg. override SGD to format with currency USD to get '$' prefix instead of 'SGD' */
+const CURRENCY_FORMATTING_OVERRIDES = new Map<string, string>([['SGD', 'USD']])
 
 /**
  * Format a number as a currency
@@ -91,14 +90,24 @@ export function formatMoneyNumber(input: {
   value: number
   currency?: string
   decimals?: number
+  appendCurrency?: boolean
 }): string {
-  const { value, currency = 'USD', decimals = 2 } = input
-  return new Intl.NumberFormat('en-US', {
+  const {
+    value,
+    currency = 'USD',
+    decimals = 2,
+    appendCurrency = false,
+  } = input
+  const overrideCurrency =
+    CURRENCY_FORMATTING_OVERRIDES.get(currency) ?? currency
+  const formatted = new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency,
+    // When appending currency, avoid currency specific formatting
+    currency: appendCurrency ? 'USD' : overrideCurrency,
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(value)
+  return appendCurrency ? `${formatted} (${currency})` : formatted
 }
 
 /**
