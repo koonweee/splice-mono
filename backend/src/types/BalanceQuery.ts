@@ -86,26 +86,30 @@ export type SnapshotBalancesRequest = z.infer<
 >;
 
 /**
- * Request DTO for balances endpoint (specific accounts)
+ * Query params for balances endpoint (specific accounts)
+ * accountIds is received as comma-separated string and transformed to array
  */
-export const BalancesRequestSchema = registerSchema(
-  'BalancesRequest',
+export const BalancesQuerySchema = registerSchema(
+  'BalancesQuery',
   z.object({
-    /** List of account IDs to query balances for */
-    accountIds: z.array(z.string().uuid()),
+    /** Comma-separated list of account UUIDs */
+    accountIds: z
+      .string()
+      .transform((s) => s.split(','))
+      .pipe(z.array(z.string().uuid())),
     /** Start date (YYYY-MM-DD, inclusive) */
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
     /** End date (YYYY-MM-DD, inclusive) */
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
   }),
 );
-export type BalancesRequest = z.infer<typeof BalancesRequestSchema>;
+export type BalancesQuery = z.infer<typeof BalancesQuerySchema>;
 
 /**
- * Request DTO for all-balances endpoint (all user accounts)
+ * Query params for all-balances endpoint (all user accounts)
  */
-export const AllBalancesRequestSchema = registerSchema(
-  'AllBalancesRequest',
+export const AllBalancesQuerySchema = registerSchema(
+  'AllBalancesQuery',
   z.object({
     /** Start date (YYYY-MM-DD, inclusive) */
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
@@ -113,4 +117,4 @@ export const AllBalancesRequestSchema = registerSchema(
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
   }),
 );
-export type AllBalancesRequest = z.infer<typeof AllBalancesRequestSchema>;
+export type AllBalancesQuery = z.infer<typeof AllBalancesQuerySchema>;
