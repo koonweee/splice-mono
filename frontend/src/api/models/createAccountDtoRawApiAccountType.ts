@@ -6,8 +6,8 @@
  * OpenAPI spec version: 1.0
  */
 
-export type CreateAccountDtoRawApiAccountType = typeof CreateAccountDtoRawApiAccountType[keyof typeof CreateAccountDtoRawApiAccountType];
-
+export type CreateAccountDtoRawApiAccountType =
+  (typeof CreateAccountDtoRawApiAccountType)[keyof typeof CreateAccountDtoRawApiAccountType]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateAccountDtoRawApiAccountType = {
@@ -17,4 +17,4 @@ export const CreateAccountDtoRawApiAccountType = {
   loan: 'loan',
   brokerage: 'brokerage',
   other: 'other',
-} as const;
+} as const

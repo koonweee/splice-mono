@@ -25,8 +25,6 @@ export const AccountSchema = registerSchema(
       bankLinkId: z.string().nullable().optional(),
       /** Embedded bank link data (sanitized - no authentication) */
       bankLink: SanitizedBankLinkSchema.nullable().optional(),
-      /** When the account was last synced (from latest SYNC snapshot) */
-      lastSyncedAt: z.coerce.date().nullable().optional(),
     })
     .merge(CurrentAndAvailableBalanceSchema)
     .merge(OwnedSchema),
