@@ -229,4 +229,87 @@ describe('WebhookEventService', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('tryAcquireWebhook', () => {
+    const baseWebhookId = 'plaid:TRANSACTIONS:DEFAULT_UPDATE:item_abc123';
+    const webhookContent = { webhook_type: 'TRANSACTIONS', item_id: 'item_abc123' };
+
+    it('should acquire lock on first call (no recent webhook)', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.save.mockImplementation((entity) => Promise.resolve(entity));
+
+      const result = await service.tryAcquireWebhook(
+        baseWebhookId,
+        'plaid',
+        mockUserId,
+        webhookContent,
+      );
+
+      expect(result.acquired).toBe(true);
+      expect(mockRepository.findOne).toHaveBeenCalledTimes(1);
+      expect(mockRepository.save).toHaveBeenCalledTimes(1);
+
+      // Verify saved entity has timestamped webhookId
+      const savedEntity = mockRepository.save.mock.calls[0][0];
+      expect(savedEntity.webhookId).toMatch(new RegExp(`^${baseWebhookId}:\\d+$`));
+      expect(savedEntity.status).toBe(WebhookEventStatus.COMPLETED);
+      expect(savedEntity.completedAt).toBeInstanceOf(Date);
+    });
+
+    it('should reject duplicate within deduplication window', async () => {
+      const recentEntity = new WebhookEventEntity();
+      recentEntity.webhookId = `${baseWebhookId}:1702000000000`;
+      recentEntity.completedAt = new Date(); // Just now
+
+      mockRepository.findOne.mockResolvedValue(recentEntity);
+
+      const result = await service.tryAcquireWebhook(
+        baseWebhookId,
+        'plaid',
+        mockUserId,
+        webhookContent,
+        5 * 60 * 1000, // 5 minutes
+      );
+
+      expect(result.acquired).toBe(false);
+      expect('reason' in result && result.reason).toContain('Duplicate webhook');
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should acquire lock when no recent webhook within window', async () => {
+      // No recent webhook found
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.save.mockImplementation((entity) => Promise.resolve(entity));
+
+      const result = await service.tryAcquireWebhook(
+        baseWebhookId,
+        'plaid',
+        mockUserId,
+        webhookContent,
+        5 * 60 * 1000,
+      );
+
+      expect(result.acquired).toBe(true);
+      expect(mockRepository.save).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use custom deduplication window', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.save.mockImplementation((entity) => Promise.resolve(entity));
+
+      const customWindowMs = 1 * 60 * 1000; // 1 minute
+
+      await service.tryAcquireWebhook(
+        baseWebhookId,
+        'plaid',
+        mockUserId,
+        webhookContent,
+        customWindowMs,
+      );
+
+      // Verify findOne was called with correct time window
+      const findOneCall = mockRepository.findOne.mock.calls[0][0];
+      expect(findOneCall.where.completedAt).toBeDefined();
+    });
+  });
 });
