@@ -94,6 +94,7 @@ async function bootstrap() {
     .setDescription('Financial account management API')
     .setVersion('1.0')
     .addBearerAuth()
+    .addSecurityRequirements('bearer')
     .build();
   const config = { ...baseConfig, openapi: '3.1.0' };
   let document = SwaggerModule.createDocument(app, config);
@@ -109,7 +110,56 @@ async function bootstrap() {
   // Fix nullable $ref patterns for better orval type generation
   document = fixNullableRefs(document) as OpenAPIObject;
 
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+    customCss: `
+      .auth-status {
+        position: absolute;
+        top: 12px;
+        right: 80px;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-family: sans-serif;
+      }
+      .auth-status.logged-in {
+        background: #e8f5e9;
+        color: #2e7d32;
+      }
+      .auth-status.logged-out {
+        background: #fff3e0;
+        color: #e65100;
+      }
+    `,
+    customJsStr: `
+      (function() {
+        function checkAuth() {
+          fetch('/user/me', { credentials: 'include' })
+            .then(res => res.ok ? res.json() : Promise.reject())
+            .then(user => showStatus(user.email, true))
+            .catch(() => showStatus('Not logged in', false));
+        }
+
+        function showStatus(text, isLoggedIn) {
+          let el = document.querySelector('.auth-status');
+          if (!el) {
+            el = document.createElement('div');
+            el.className = 'auth-status';
+            document.querySelector('.topbar')?.appendChild(el);
+          }
+          el.textContent = isLoggedIn ? '✓ ' + text : text;
+          el.className = 'auth-status ' + (isLoggedIn ? 'logged-in' : 'logged-out');
+        }
+
+        // Check on load and periodically (in case of login/logout in another tab)
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', checkAuth);
+        } else {
+          checkAuth();
+        }
+        setInterval(checkAuth, 30000);
+      })();
+    `,
+  });
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
