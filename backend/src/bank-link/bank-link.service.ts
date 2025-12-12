@@ -170,7 +170,7 @@ export class BankLinkService extends OwnedCrudService<
     if (provider.parseStatusWebhook) {
       const statusInfo = provider.parseStatusWebhook(parsedPayload);
       if (statusInfo) {
-        await this.handleStatusWebhook(statusInfo);
+        await this.handleStatusWebhook(statusInfo, parsedPayload);
         return;
       }
     }
@@ -179,7 +179,7 @@ export class BankLinkService extends OwnedCrudService<
     if (provider.parseUpdateWebhook) {
       const updateInfo = provider.parseUpdateWebhook(parsedPayload);
       if (updateInfo) {
-        await this.handleUpdateWebhook(updateInfo);
+        await this.handleUpdateWebhook(updateInfo, parsedPayload);
         return;
       }
     }
@@ -209,53 +209,70 @@ export class BankLinkService extends OwnedCrudService<
   /**
    * Handle update webhooks (e.g., Plaid DEFAULT_UPDATE for transactions/investments)
    * Triggers account sync for the bank link associated with the item
+   * Includes time-based deduplication to prevent redundant syncs from webhook retries
    */
-  private async handleUpdateWebhook(updateInfo: {
-    itemId: string;
-    type: string;
-  }): Promise<void> {
+  private async handleUpdateWebhook(
+    updateInfo: {
+      itemId: string;
+      type: string;
+    },
+    parsedPayload: Record<string, any>,
+  ): Promise<void> {
     this.logger.log(
       { type: updateInfo.type, itemId: updateInfo.itemId },
       'Processing update webhook',
     );
 
     const bankLink = await this.findByPlaidItemId(updateInfo.itemId);
-    this.logger.log(
-      {
-        itemId: updateInfo.itemId,
-        found: !!bankLink,
-        bankLinkId: bankLink?.id,
-        userId: bankLink?.userId,
-      },
-      'Bank link lookup by Plaid item_id',
-    );
-
-    if (bankLink) {
-      await this.syncAccounts(bankLink.id, bankLink.userId);
-      this.logger.log(
-        { bankLinkId: bankLink.id },
-        'Synced accounts for bank link',
-      );
-    } else {
+    if (!bankLink) {
       this.logger.warn(
         { itemId: updateInfo.itemId },
         'No bank link found for item',
       );
+      return;
     }
+
+    // Deduplicate using composite key with 5-minute window
+    const baseWebhookId = `plaid:${updateInfo.type}:DEFAULT_UPDATE:${updateInfo.itemId}`;
+    const result = await this.webhookEventService.tryAcquireWebhook(
+      baseWebhookId,
+      'plaid',
+      bankLink.userId,
+      parsedPayload,
+      5 * 60 * 1000, // 5 minutes
+    );
+
+    if (!result.acquired) {
+      this.logger.log(
+        { baseWebhookId, reason: result.reason },
+        'Skipping duplicate update webhook',
+      );
+      return;
+    }
+
+    await this.syncAccounts(bankLink.id, bankLink.userId);
+    this.logger.log(
+      { bankLinkId: bankLink.id },
+      'Synced accounts for bank link',
+    );
   }
 
   /**
    * Handle status webhooks (e.g., Plaid ITEM webhooks: ERROR, LOGIN_REPAIRED, etc.)
    * Updates bank link status, statusDate, and statusBody fields
    * Optionally triggers account sync (e.g., after LOGIN_REPAIRED)
+   * Includes time-based deduplication to prevent redundant updates from webhook retries
    */
-  private async handleStatusWebhook(statusInfo: {
-    itemId: string;
-    webhookCode: string;
-    status: 'OK' | 'ERROR' | 'PENDING_REAUTH';
-    statusBody: Record<string, any> | null;
-    shouldSync: boolean;
-  }): Promise<void> {
+  private async handleStatusWebhook(
+    statusInfo: {
+      itemId: string;
+      webhookCode: string;
+      status: 'OK' | 'ERROR' | 'PENDING_REAUTH';
+      statusBody: Record<string, any> | null;
+      shouldSync: boolean;
+    },
+    parsedPayload: Record<string, any>,
+  ): Promise<void> {
     this.logger.log(
       { webhookCode: statusInfo.webhookCode, itemId: statusInfo.itemId },
       'Processing ITEM status webhook',
@@ -266,6 +283,24 @@ export class BankLinkService extends OwnedCrudService<
       this.logger.warn(
         { itemId: statusInfo.itemId },
         'No bank link found for item',
+      );
+      return;
+    }
+
+    // Deduplicate using composite key with 1-minute window
+    const baseWebhookId = `plaid:ITEM:${statusInfo.webhookCode}:${statusInfo.itemId}`;
+    const result = await this.webhookEventService.tryAcquireWebhook(
+      baseWebhookId,
+      'plaid',
+      bankLink.userId,
+      parsedPayload,
+      1 * 60 * 1000, // 1 minute
+    );
+
+    if (!result.acquired) {
+      this.logger.log(
+        { baseWebhookId, reason: result.reason },
+        'Skipping duplicate status webhook',
       );
       return;
     }
@@ -645,7 +680,9 @@ export class BankLinkService extends OwnedCrudService<
    * @param itemId - Plaid item_id to search for
    * @returns BankLink entity or null if not found
    */
-  private async findByPlaidItemId(itemId: string): Promise<BankLinkEntity | null> {
+  private async findByPlaidItemId(
+    itemId: string,
+  ): Promise<BankLinkEntity | null> {
     return this.repository
       .createQueryBuilder('bankLink')
       .where('bankLink.providerName = :provider', { provider: 'plaid' })

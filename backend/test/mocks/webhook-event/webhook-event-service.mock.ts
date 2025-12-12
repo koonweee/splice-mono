@@ -11,4 +11,5 @@ export const mockWebhookEventService: jest.Mocked<
   findPendingByWebhookId: jest.fn().mockResolvedValue(mockPendingWebhookEvent),
   markCompleted: jest.fn().mockResolvedValue(mockWebhookEvent),
   markFailed: jest.fn().mockResolvedValue(mockWebhookEvent),
+  tryAcquireWebhook: jest.fn().mockResolvedValue({ acquired: true }),
 };
