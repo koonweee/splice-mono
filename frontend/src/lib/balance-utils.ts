@@ -189,55 +189,66 @@ export function transformToDashboardData(
   const liabilities: AccountSummaryData[] = []
 
   if (lastResult) {
-    Object.entries(lastResult.balances).forEach(([accountId, accountResult]) => {
-      // Find this account in first result for change calculation
-      const firstAccountResult = firstResult?.balances[accountId]
+    Object.entries(lastResult.balances).forEach(
+      ([accountId, accountResult]) => {
+        // Find this account in first result for change calculation
+        const firstAccountResult = firstResult?.balances[accountId]
 
-      const currentEffective = resolveEffectiveBalance(
-        accountResult.effectiveBalance,
-      )
-      const currentAmount = getSignedAmount(currentEffective)
-
-      let accountChangePercent: number | undefined = undefined
-      if (firstAccountResult) {
-        const previousEffective = resolveEffectiveBalance(
-          firstAccountResult.effectiveBalance,
+        const currentEffective = resolveEffectiveBalance(
+          accountResult.effectiveBalance,
         )
-        const previousAmount = getSignedAmount(previousEffective)
-        accountChangePercent = calculateChangePercent(
-          currentAmount,
-          previousAmount,
-        )
-      }
+        const currentAmount = getSignedAmount(currentEffective)
 
-      const summary: AccountSummaryData = {
-        id: accountId,
-        name: accountResult.account.name ?? '',
-        type: accountResult.account.type,
-        subType: accountResult.account.subType ?? undefined,
-        effectiveBalance: accountResult.effectiveBalance.balance,
-        convertedEffectiveBalance:
-          accountResult.effectiveBalance.convertedBalance,
-        changePercent: accountChangePercent,
-        institutionName:
-          accountResult.account.bankLink?.institutionName ?? undefined,
-      }
+        let accountChangePercent: number | undefined = undefined
+        if (firstAccountResult) {
+          const previousEffective = resolveEffectiveBalance(
+            firstAccountResult.effectiveBalance,
+          )
+          const previousAmount = getSignedAmount(previousEffective)
+          accountChangePercent = calculateChangePercent(
+            currentAmount,
+            previousAmount,
+          )
+        }
 
-      if (isLiabilityType(accountResult.account.type)) {
-        liabilities.push(summary)
-      } else {
-        assets.push(summary)
-      }
-    })
+        const summary: AccountSummaryData = {
+          id: accountId,
+          name: accountResult.account.name ?? '',
+          type: accountResult.account.type,
+          subType: accountResult.account.subType ?? undefined,
+          effectiveBalance: accountResult.effectiveBalance.balance,
+          convertedEffectiveBalance:
+            accountResult.effectiveBalance.convertedBalance,
+          changePercent: accountChangePercent,
+          institutionName:
+            accountResult.account.bankLink?.institutionName ?? undefined,
+        }
+
+        if (isLiabilityType(accountResult.account.type)) {
+          liabilities.push(summary)
+        } else {
+          assets.push(summary)
+        }
+      },
+    )
   }
+  // Sort assets and liabilities by effective balance of the last result (descending)
+  const sortedAssets = assets.sort(
+    (a, b) =>
+      getSignedAmount(b.effectiveBalance) - getSignedAmount(a.effectiveBalance),
+  )
+  const sortedLiabilities = liabilities.sort(
+    (a, b) =>
+      getSignedAmount(b.effectiveBalance) - getSignedAmount(a.effectiveBalance),
+  )
 
   return {
     netWorth: createMoneyWithSign(lastNetWorth, currency),
     changePercent,
     comparisonPeriod: period,
     chartData,
-    assets,
-    liabilities,
+    assets: sortedAssets,
+    liabilities: sortedLiabilities,
   }
 }
 

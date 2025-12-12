@@ -43,14 +43,19 @@ export function NetWorthCard({
         <Title order={2} size="h1">
           {displayValue}
         </Title>
-        {!hoveredPoint &&
-          changePercent !== undefined &&
-          changePercent !== 0 && (
-            <Text size="sm" c={getChangeColorMantine(false, changePercent)}>
-              {formatPercent(changePercent)} from last{' '}
-              {TIME_PERIOD_LABELS[comparisonPeriod].toLowerCase()}
-            </Text>
-          )}
+        <Text
+          size="sm"
+          c={getChangeColorMantine(false, changePercent ?? 0)}
+          style={{
+            visibility:
+              !hoveredPoint && changePercent !== undefined && changePercent !== 0
+                ? 'visible'
+                : 'hidden',
+          }}
+        >
+          {formatPercent(changePercent ?? 0)} from last{' '}
+          {TIME_PERIOD_LABELS[comparisonPeriod].toLowerCase()}
+        </Text>
       </Box>
       {hasChartData && (
         <Box mt="md">
