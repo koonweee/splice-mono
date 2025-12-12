@@ -6,12 +6,12 @@
  * OpenAPI spec version: 1.0
  */
 
-export type SanitizedBankLinkStatus = typeof SanitizedBankLinkStatus[keyof typeof SanitizedBankLinkStatus];
-
+export type SanitizedBankLinkStatus =
+  (typeof SanitizedBankLinkStatus)[keyof typeof SanitizedBankLinkStatus]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SanitizedBankLinkStatus = {
   OK: 'OK',
   ERROR: 'ERROR',
   PENDING_REAUTH: 'PENDING_REAUTH',
-} as const;
+} as const

@@ -5,9 +5,9 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { BalanceQueryPerDateResultBalances } from './balanceQueryPerDateResultBalances';
+import type { BalanceQueryPerDateResultBalances } from './balanceQueryPerDateResultBalances'
 
 export interface BalanceQueryPerDateResult {
-  date: string;
-  balances: BalanceQueryPerDateResultBalances;
+  date: string
+  balances: BalanceQueryPerDateResultBalances
 }

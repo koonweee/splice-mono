@@ -1,4 +1,4 @@
-import type { ConvertedBalance, MoneyWithSign } from '../api/models'
+import type { MoneyWithSign } from '../api/models'
 import { MoneyWithSignSign } from '../api/models'
 
 /**
@@ -8,7 +8,7 @@ export interface ResolvedBalance {
   /** The primary balance to display (converted if available, otherwise original) */
   primaryBalance: MoneyWithSign
   /** The original balance in native currency (only set if different from primary) */
-  originalBalance: MoneyWithSign | null
+  originalBalance?: MoneyWithSign
 }
 
 /**
@@ -27,15 +27,13 @@ export interface ResolvedBalance {
  */
 export function resolveBalance(
   currentBalance: MoneyWithSign,
-  convertedBalance: ConvertedBalance | null | undefined,
+  convertedBalance?: MoneyWithSign,
 ): ResolvedBalance {
-  const hasConversion =
-    !!convertedBalance &&
-    convertedBalance.balance.money.currency !== currentBalance.money.currency
+  const hasConversion = !!convertedBalance
 
   return {
-    primaryBalance: hasConversion ? convertedBalance.balance : currentBalance,
-    originalBalance: hasConversion ? currentBalance : null,
+    primaryBalance: hasConversion ? convertedBalance : currentBalance,
+    originalBalance: hasConversion ? currentBalance : undefined,
   }
 }
 
@@ -109,35 +107,18 @@ export function formatMoneyNumber(input: {
  * formatPercent(0)     // => null
  * formatPercent(null)  // => null
  */
-export function formatPercent(value: number | null): string | null {
-  if (value === null || value === 0) return null
+export function formatPercent(value?: number): string | undefined {
+  if (value === undefined || value === 0) return undefined
   const sign = value > 0 ? '+' : ''
   return `${sign}${value.toFixed(2)}%`
 }
 
-/**
- * Get the color class for a percentage change based on context
- *
- * For assets/net worth: positive change is good (green), negative is bad (red)
- * For liabilities: negative change is good (green), positive is bad (red)
- *
- * @param changePercent - The percentage change value
- * @param isLiability - Whether this is for a liability (inverts the color logic)
- * @returns Tailwind color class string
- *
- * @example
- * getChangeColor(5, false)   // => "text-green-600" (asset increased)
- * getChangeColor(-5, false)  // => "text-red-600" (asset decreased)
- * getChangeColor(5, true)    // => "text-red-600" (liability increased - bad)
- * getChangeColor(-5, true)   // => "text-green-600" (liability decreased - good)
- */
-export function getChangeColor(
-  changePercent: number | null,
+export function getChangeColorMantine(
   isLiability: boolean,
+  changePercent?: number,
 ): string {
-  if (changePercent === null) return ''
-  const isPositiveChange = changePercent >= 0
-  // For liabilities, we invert the logic: decreasing debt is good
-  const isGood = isLiability ? !isPositiveChange : isPositiveChange
-  return isGood ? 'text-green-600' : 'text-red-600'
+  if (changePercent === undefined) return 'dimmed'
+  const isPositive = changePercent > 0
+  const isGood = isLiability ? !isPositive : isPositive
+  return isGood ? 'teal' : 'red'
 }

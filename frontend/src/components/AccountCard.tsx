@@ -3,19 +3,10 @@ import type { AccountSummaryData } from '../lib/balance-utils'
 import {
   formatMoneyWithSign,
   formatPercent,
+  getChangeColorMantine,
   resolveBalance,
 } from '../lib/format'
 import styles from './AccountCard.module.css'
-
-function getChangeColorMantine(
-  changePercent: number | null,
-  isLiability: boolean,
-): string {
-  if (changePercent === null) return 'dimmed'
-  const isPositive = changePercent > 0
-  const isGood = isLiability ? !isPositive : isPositive
-  return isGood ? 'teal' : 'red'
-}
 
 export function AccountCard({
   account,
@@ -74,7 +65,7 @@ export function AccountCard({
           {changePercent && (
             <Text
               size="sm"
-              c={getChangeColorMantine(account.changePercent, isLiability)}
+              c={getChangeColorMantine(isLiability, account.changePercent)}
             >
               {changePercent}
             </Text>

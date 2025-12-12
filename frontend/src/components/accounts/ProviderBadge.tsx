@@ -5,7 +5,7 @@ const providerConfig: Record<string, { color: string; label: string }> = {
   simplefin: { color: 'violet', label: 'SimpleFIN' },
 }
 
-export function ProviderBadge({ provider }: { provider?: string | null }) {
+export function ProviderBadge({ provider }: { provider?: string }) {
   if (!provider) {
     return null
   }

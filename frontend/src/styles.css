@@ -11,7 +11,7 @@ code {
 /* Kill all focus rings on Recharts/Mantine chart elements */
 .recharts-wrapper,
 .recharts-surface,
-[id*="recharts-zindex"] {
+[id*='recharts-zindex'] {
   outline: none !important;
   border: none !important;
 }

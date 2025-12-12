@@ -81,13 +81,14 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Setup Swagger/OpenAPI
-  const config = new DocumentBuilder()
+  // Setup Swagger/OpenAPI 3.1 (required for nullable oneOf with type: "null")
+  const baseConfig = new DocumentBuilder()
     .setTitle('Splice API')
     .setDescription('Financial account management API')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
+  const config = { ...baseConfig, openapi: '3.1.0' };
   let document = SwaggerModule.createDocument(app, config);
 
   // Merge Zod schema components into the OpenAPI document

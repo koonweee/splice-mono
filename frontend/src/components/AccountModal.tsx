@@ -1,18 +1,18 @@
 import { Box, Group, Loader, Modal, Stack, Text } from '@mantine/core'
-import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
 import { useAccountControllerFindOne } from '../api/clients/spliceAPI'
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
 import type { AccountSummaryData } from '../lib/balance-utils'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
-import { formatMoneyNumber, formatMoneyWithSign, resolveBalance } from '../lib/format'
+import {
+  formatMoneyNumber,
+  formatMoneyWithSign,
+  resolveBalance,
+} from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
 import { Chart } from './Chart'
 
-dayjs.extend(relativeTime)
-
 interface AccountModalProps {
-  account: AccountSummaryData | null
+  account?: AccountSummaryData
   opened: boolean
   onClose: () => void
 }
@@ -29,7 +29,6 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
     useAccountBalanceHistory(account?.id, opened && !!account?.id)
 
   const isLoading = isLoadingAccount || isLoadingBalances
-  const isSyncedAccount = !!fullAccount?.bankLinkId
 
   // Get balance info from the latest balance result or fall back to account summary
   const latestBalance = balanceHistory.latestBalance
@@ -44,7 +43,10 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
             : null,
       }
     : account
-      ? resolveBalance(account.effectiveBalance, account.convertedEffectiveBalance)
+      ? resolveBalance(
+          account.effectiveBalance,
+          account.convertedEffectiveBalance,
+        )
       : null
 
   return (
@@ -83,13 +85,6 @@ export function AccountModal({ account, opened, onClose }: AccountModalProps) {
                   )}
                 </div>
               </Group>
-
-              {isSyncedAccount && fullAccount.lastSyncedAt && (
-                <Group justify="space-between">
-                  <Text c="dimmed">Last Synced</Text>
-                  <Text>{dayjs(fullAccount.lastSyncedAt).fromNow()}</Text>
-                </Group>
-              )}
 
               {fullAccount.bankLink?.institutionName && (
                 <Group justify="space-between">
