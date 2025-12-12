@@ -705,5 +705,37 @@ export class PlaidProvider implements IBankLinkProvider {
     }
   }
 
+  /**
+   * Update the webhook URL for a Plaid item
+   * Uses Plaid's /item/webhook/update endpoint
+   *
+   * @param authentication - Authentication data containing { accessToken: string }
+   */
+  async updateWebhookUrl(authentication: Record<string, any>): Promise<void> {
+    const accessToken = authentication.accessToken as string;
+    if (!accessToken) {
+      throw new Error('Missing accessToken in authentication data');
+    }
+
+    const webhookUrl = `${process.env.API_DOMAIN}/bank-link/webhook/plaid`;
+
+    try {
+      await this.client.itemWebhookUpdate({
+        access_token: accessToken,
+        webhook: webhookUrl,
+      });
+      this.logger.log(
+        { accessTokenHint: accessToken.slice(-4) },
+        'Updated webhook URL for item',
+      );
+    } catch (error) {
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        'Error updating webhook URL',
+      );
+      throw error;
+    }
+  }
+
   // TODO: Implement Plaid link 'update' flow for using same access token to fix broken links
 }
