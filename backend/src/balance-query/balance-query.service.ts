@@ -401,7 +401,7 @@ export class BalanceQueryService {
   /**
    * Calculate effective balance based on account type.
    * - Investment/brokerage accounts: availableBalance + currentBalance
-   * - All other types: availableBalance
+   * - All other types: currentBalance
    */
   private calculateEffectiveBalance(
     accountType: AccountType,
@@ -422,8 +422,8 @@ export class BalanceQueryService {
       };
     }
 
-    // For all other types: just available balance
-    return availableBalance;
+    // For all other types: just current balance
+    return currentBalance;
   }
 
   /**
