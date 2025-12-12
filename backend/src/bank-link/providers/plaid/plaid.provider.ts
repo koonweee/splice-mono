@@ -59,9 +59,7 @@ export class PlaidProvider implements IBankLinkProvider {
 
   constructor() {
     this.logger.log({}, 'Initializing PlaidProvider');
-    // Log client ID and secret
-    this.logger.log({ clientId: process.env.PLAID_CLIENT_ID }, 'Plaid client ID configured');
-    this.logger.log({}, 'Plaid secret configured');
+    this.logger.log({}, 'Plaid credentials configured');
     const configuration = new Configuration({
       basePath: PlaidEnvironments.production,
       baseOptions: {
@@ -188,7 +186,10 @@ export class PlaidProvider implements IBankLinkProvider {
         linkUrl: response.data.hosted_link_url,
         updatedProviderUserDetails,
       };
-      this.logger.log({ result }, 'Plaid link token created');
+      this.logger.log(
+        { expiresAt: result.expiresAt, hasUserToken: !!result.updatedProviderUserDetails },
+        'Plaid link token created',
+      );
       return result;
     } catch (error) {
       this.logger.error(
@@ -263,8 +264,10 @@ export class PlaidProvider implements IBankLinkProvider {
     // Cast rawPayload to LinkSessionFinishedWebhook
     const castedPayload = rawPayload as LinkSessionFinishedWebhook;
 
-    // Debug: Log casted payload
-    this.logger.log({ payload: castedPayload }, 'Processing Plaid webhook payload');
+    this.logger.log(
+      { publicTokenCount: castedPayload.public_tokens?.length ?? 0 },
+      'Processing Plaid webhook payload',
+    );
 
     const { public_tokens = [] } = castedPayload;
 

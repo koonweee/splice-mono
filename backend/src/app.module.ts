@@ -20,7 +20,33 @@ import { UserModule } from './user/user.module';
   imports: [
     LoggerModule.forRoot({
       pinoHttp: {
-        autoLogging: false,
+        autoLogging: true,
+        redact: {
+          paths: [
+            // Auth headers
+            'req.headers.authorization',
+            'req.headers.cookie',
+            'res.headers["set-cookie"]',
+
+            // Request body credentials
+            'req.body.password',
+            'req.body.refreshToken',
+            'req.body.accessToken',
+
+            // Webhook verification headers
+            'req.headers["plaid-verification"]',
+
+            // Defense-in-depth for service-level logs
+            '*.password',
+            '*.accessToken',
+            '*.refreshToken',
+            '*.userToken',
+            '*.clientId',
+            '*.public_tokens',
+            '*.public_tokens[*]',
+          ],
+          censor: '[REDACTED]',
+        },
         transport: process.env.SEQ_SERVER_URL
           ? {
               target: 'pino-seq',
