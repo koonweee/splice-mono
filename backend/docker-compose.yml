@@ -42,6 +42,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       API_DOMAIN: ${API_DOMAIN}
       FRONTEND_DOMAIN: ${FRONTEND_DOMAIN}
+      SEQ_SERVER_URL: ${SEQ_SERVER_URL}
+      SEQ_API_KEY: ${SEQ_API_KEY}
     volumes:
       # Mount source code for hot reload
       - ./src:/app/src
