@@ -1,6 +1,7 @@
 import { Box, Group, Loader, Modal, Stack, Text } from '@mantine/core'
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
 import type { AccountSummaryData } from '../lib/balance-utils'
+import type { TimePeriod } from '../lib/types'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
 import {
   formatMoneyNumber,
@@ -14,14 +15,16 @@ interface AccountModalProps {
   account?: AccountSummaryData
   opened: boolean
   onClose: () => void
+  period: TimePeriod
 }
 
-export function AccountModal({ account, opened, onClose }: AccountModalProps) {
+export function AccountModal({ account, opened, onClose, period }: AccountModalProps) {
   const isMobile = useIsMobile()
 
   const { data: balanceHistory, isLoading } = useAccountBalanceHistory(
     account?.id,
     opened && !!account?.id,
+    period,
   )
 
   // Get account from balance history if available
