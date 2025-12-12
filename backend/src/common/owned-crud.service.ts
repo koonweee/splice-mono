@@ -220,10 +220,7 @@ export abstract class OwnedCrudService<
     });
 
     if (!entity) {
-      this.logger.warn(
-        { id, userId },
-        `${this.entityName} not found`,
-      );
+      this.logger.warn({ id, userId }, `${this.entityName} not found`);
       return null;
     }
 

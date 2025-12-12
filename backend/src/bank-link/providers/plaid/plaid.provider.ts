@@ -187,7 +187,10 @@ export class PlaidProvider implements IBankLinkProvider {
         updatedProviderUserDetails,
       };
       this.logger.log(
-        { expiresAt: result.expiresAt, hasUserToken: !!result.updatedProviderUserDetails },
+        {
+          expiresAt: result.expiresAt,
+          hasUserToken: !!result.updatedProviderUserDetails,
+        },
         'Plaid link token created',
       );
       return result;
@@ -244,11 +247,17 @@ export class PlaidProvider implements IBankLinkProvider {
     }
     const { webhook_code, link_token, status } = rawPayload;
     if (webhook_code !== 'SESSION_FINISHED') {
-      this.logger.warn({ webhookCode: webhook_code }, 'Not processing Plaid webhook of this type');
+      this.logger.warn(
+        { webhookCode: String(webhook_code) },
+        'Not processing Plaid webhook of this type',
+      );
       return;
     }
     if (status !== 'success') {
-      this.logger.warn({ status }, 'Not processing Plaid webhook of this status');
+      this.logger.warn(
+        { status },
+        'Not processing Plaid webhook of this status',
+      );
       return;
     }
     return link_token;
@@ -278,7 +287,10 @@ export class PlaidProvider implements IBankLinkProvider {
     );
 
     // Log all plaid items
-    this.logger.log({ itemCount: plaidItems.length }, 'Exchanged public tokens for access tokens');
+    this.logger.log(
+      { itemCount: plaidItems.length },
+      'Exchanged public tokens for access tokens',
+    );
 
     // Get accounts and institution info from Plaid
     const accountsResponses = await Promise.all(
@@ -416,7 +428,10 @@ export class PlaidProvider implements IBankLinkProvider {
         headers['plaid-verification'] || headers['Plaid-Verification'];
 
       if (!signedJwt) {
-        this.logger.warn({}, 'Webhook verification failed: Missing Plaid-Verification header');
+        this.logger.warn(
+          {},
+          'Webhook verification failed: Missing Plaid-Verification header',
+        );
         return false;
       }
 
@@ -434,7 +449,10 @@ export class PlaidProvider implements IBankLinkProvider {
 
       const keyId = jwtHeader.kid;
       if (!keyId) {
-        this.logger.warn({}, 'Webhook verification failed: Missing kid in JWT header');
+        this.logger.warn(
+          {},
+          'Webhook verification failed: Missing kid in JWT header',
+        );
         return false;
       }
 
@@ -497,7 +515,10 @@ export class PlaidProvider implements IBankLinkProvider {
         | undefined;
 
       if (!claimedBodyHash) {
-        this.logger.warn({}, 'Webhook verification failed: Missing request_body_sha256 in JWT payload');
+        this.logger.warn(
+          {},
+          'Webhook verification failed: Missing request_body_sha256 in JWT payload',
+        );
         return false;
       }
 
@@ -511,7 +532,10 @@ export class PlaidProvider implements IBankLinkProvider {
       const computedBuffer = Buffer.from(computedBodyHash, 'utf8');
 
       if (claimedBuffer.length !== computedBuffer.length) {
-        this.logger.warn({}, 'Webhook verification failed: Body hash length mismatch');
+        this.logger.warn(
+          {},
+          'Webhook verification failed: Body hash length mismatch',
+        );
         return false;
       }
 
