@@ -704,13 +704,14 @@ export class BankLinkService extends OwnedCrudService<
    * Backfill item IDs for existing Plaid bank links that don't have them
    * Fetches item_id from Plaid API and updates the authentication JSONB
    *
+   * @param userId - ID of the user whose bank links to update
    * @returns Number of bank links updated
    */
-  async backfillPlaidItemIds(): Promise<number> {
-    this.logger.log({}, 'Starting backfill of Plaid item IDs');
+  async backfillPlaidItemIds(userId: string): Promise<number> {
+    this.logger.log({ userId }, 'Starting backfill of Plaid item IDs');
 
     const plaidLinks = await this.repository.find({
-      where: { providerName: 'plaid' },
+      where: { providerName: 'plaid', userId },
     });
 
     const provider = this.providerRegistry.getProvider('plaid');
@@ -766,14 +767,17 @@ export class BankLinkService extends OwnedCrudService<
    * Update webhook URLs for all bank links to use current API_DOMAIN
    * Only updates bank links whose providers support updateWebhookUrl
    *
+   * @param userId - ID of the user whose bank links to update
    * @returns Counts of updated and failed bank links
    */
-  async updateAllWebhookUrls(): Promise<{ updated: number; failed: number }> {
-    this.logger.log({}, 'Starting webhook URL update for all bank links');
+  async updateAllWebhookUrls(
+    userId: string,
+  ): Promise<{ updated: number; failed: number }> {
+    this.logger.log({ userId }, 'Starting webhook URL update for bank links');
 
-    const bankLinks = await this.repository.find();
+    const bankLinks = await this.repository.find({ where: { userId } });
     this.logger.log(
-      { count: bankLinks.length },
+      { count: bankLinks.length, userId },
       'Found bank links for webhook URL update',
     );
 

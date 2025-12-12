@@ -1132,10 +1132,10 @@ describe('BankLinkService', () => {
         bankLinkWithoutItemId,
       ]);
 
-      const result = await service.backfillPlaidItemIds();
+      const result = await service.backfillPlaidItemIds(mockUserId);
 
       expect(mockBankLinkRepository.find).toHaveBeenCalledWith({
-        where: { providerName: 'plaid' },
+        where: { providerName: 'plaid', userId: mockUserId },
       });
       expect(mockPlaidProvider.getItemId).toHaveBeenCalledWith({
         accessToken: 'test-token',
@@ -1158,7 +1158,7 @@ describe('BankLinkService', () => {
       };
       mockBankLinkRepository.find.mockResolvedValueOnce([bankLinkWithItemId]);
 
-      const result = await service.backfillPlaidItemIds();
+      const result = await service.backfillPlaidItemIds(mockUserId);
 
       expect(mockPlaidProvider.getItemId).not.toHaveBeenCalled();
       expect(result).toBe(0);
@@ -1182,7 +1182,7 @@ describe('BankLinkService', () => {
         .mockRejectedValueOnce(new Error('API error'))
         .mockResolvedValueOnce('item-2');
 
-      const result = await service.backfillPlaidItemIds();
+      const result = await service.backfillPlaidItemIds(mockUserId);
 
       // Should have processed both but only succeeded for one
       expect(mockPlaidProvider.getItemId).toHaveBeenCalledTimes(2);
@@ -1192,7 +1192,7 @@ describe('BankLinkService', () => {
     it('should return 0 when no bank links exist', async () => {
       mockBankLinkRepository.find.mockResolvedValueOnce([]);
 
-      const result = await service.backfillPlaidItemIds();
+      const result = await service.backfillPlaidItemIds(mockUserId);
 
       expect(result).toBe(0);
       expect(mockPlaidProvider.getItemId).not.toHaveBeenCalled();
