@@ -52,6 +52,37 @@ yarn orval      # Regenerates src/api/clients and src/api/models
 
 After modifying backend API endpoints, regenerate the frontend client to keep types in sync.
 
+## Code Style
+
+### Loop Preference
+
+Prefer functional array methods over `for` loops:
+- Use `forEach` for iteration with side effects
+- Use `map` for transformations
+- Use `filter`, `find`, `some`, `every` for searching/filtering
+- Use `reduce` for accumulation
+
+For async operations that can run in parallel, use `Promise.all` or `Promise.allSettled`:
+```typescript
+// Parallel execution
+const results = await Promise.all(items.map(item => processItem(item)));
+
+// Parallel with error handling
+const results = await Promise.allSettled(items.map(item => processItem(item)));
+```
+
+### TypeScript
+
+Avoid type casting (`as`, `<Type>`). If types don't match, fix the underlying type definitions rather than casting. Type assertions hide potential bugs and reduce type safety.
+
+### React
+
+Avoid `useEffect` when possible. Prefer:
+- **Derived state**: Compute values directly during render instead of syncing with useEffect
+- **Event handlers**: Handle side effects in response to user actions
+- **TanStack Query**: Use for data fetching instead of useEffect + useState
+- **useMemo/useCallback**: For expensive computations or stable references
+
 ## Architecture Notes
 
 - **Backend**: NestJS with TypeORM, JWT auth, Zod validation. All routes protected by default.
