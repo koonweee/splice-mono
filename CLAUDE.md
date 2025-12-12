@@ -54,21 +54,27 @@ After modifying backend API endpoints, regenerate the frontend client to keep ty
 
 ## Code Style
 
+** ALWAYS FOLLOW DRY PRINCIPLES **
+
 ### Loop Preference
 
 Prefer functional array methods over `for` loops:
+
 - Use `forEach` for iteration with side effects
 - Use `map` for transformations
 - Use `filter`, `find`, `some`, `every` for searching/filtering
 - Use `reduce` for accumulation
 
 For async operations that can run in parallel, use `Promise.all` or `Promise.allSettled`:
+
 ```typescript
 // Parallel execution
-const results = await Promise.all(items.map(item => processItem(item)));
+const results = await Promise.all(items.map((item) => processItem(item)));
 
 // Parallel with error handling
-const results = await Promise.allSettled(items.map(item => processItem(item)));
+const results = await Promise.allSettled(
+  items.map((item) => processItem(item))
+);
 ```
 
 ### TypeScript
@@ -78,6 +84,7 @@ Avoid type casting (`as`, `<Type>`). If types don't match, fix the underlying ty
 ### React
 
 Avoid `useEffect` when possible. Prefer:
+
 - **Derived state**: Compute values directly during render instead of syncing with useEffect
 - **Event handlers**: Handle side effects in response to user actions
 - **TanStack Query**: Use for data fetching instead of useEffect + useState
