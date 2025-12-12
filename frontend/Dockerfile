@@ -23,8 +23,5 @@ EXPOSE 4000
 
 ENV PORT=4000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD wget -q --spider http://localhost:4000/ || exit 1
-
 CMD ["node", ".output/server/index.mjs"]
 
