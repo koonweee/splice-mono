@@ -5,6 +5,8 @@ import { decodeJwt, decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
 import {
   Configuration,
   CountryCode,
+  DefaultUpdateWebhook,
+  HoldingsDefaultUpdateWebhook,
   ItemErrorWebhook,
   ItemLoginRepairedWebhook,
   ItemPublicTokenExchangeRequest,
@@ -31,6 +33,83 @@ import {
   PlaidUserDetailsSchema,
 } from '../../../types/ProviderUserDetails';
 import { IBankLinkProvider } from '../bank-link-provider.interface';
+
+/**
+ * Authentication data for Plaid API calls
+ */
+interface PlaidAuthentication {
+  accessToken: string;
+  itemId?: string;
+}
+
+/**
+ * Type guard for PlaidAuthentication
+ */
+function isPlaidAuthentication(auth: unknown): auth is PlaidAuthentication {
+  return (
+    typeof auth === 'object' &&
+    auth !== null &&
+    'accessToken' in auth &&
+    typeof (auth as Record<string, unknown>).accessToken === 'string'
+  );
+}
+
+/**
+ * Type guard for LINK SESSION_FINISHED webhook
+ */
+function isLinkSessionFinishedWebhook(
+  payload: unknown,
+): payload is LinkSessionFinishedWebhook {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return p.webhook_type === 'LINK' && p.webhook_code === 'SESSION_FINISHED';
+}
+
+/**
+ * Type guard for TRANSACTIONS DEFAULT_UPDATE webhook
+ */
+function isTransactionsDefaultUpdateWebhook(
+  payload: unknown,
+): payload is DefaultUpdateWebhook {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return (
+    p.webhook_type === 'TRANSACTIONS' &&
+    p.webhook_code === 'DEFAULT_UPDATE' &&
+    typeof p.item_id === 'string'
+  );
+}
+
+/**
+ * Type guard for HOLDINGS DEFAULT_UPDATE webhook
+ */
+function isHoldingsDefaultUpdateWebhook(
+  payload: unknown,
+): payload is HoldingsDefaultUpdateWebhook {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return (
+    p.webhook_type === 'HOLDINGS' &&
+    p.webhook_code === 'DEFAULT_UPDATE' &&
+    typeof p.item_id === 'string'
+  );
+}
+
+/**
+ * Type guard for ITEM webhooks (ERROR, LOGIN_REPAIRED, PENDING_DISCONNECT, PENDING_EXPIRATION)
+ */
+function isItemWebhook(
+  payload: unknown,
+): payload is { webhook_type: 'ITEM'; webhook_code: string; item_id: string } {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return (
+    p.webhook_type === 'ITEM' &&
+    typeof p.webhook_code === 'string' &&
+    typeof p.item_id === 'string'
+  );
+}
+
 /**
  * Plaid provider for linking bank accounts
  */
@@ -233,15 +312,12 @@ export class PlaidProvider implements IBankLinkProvider {
   parseLinkCompletionWebhook(
     rawPayload: Record<string, any>,
   ): { linkToken: string } | undefined {
-    const webhookCode = rawPayload.webhook_code as string | undefined;
-
-    // Only process SESSION_FINISHED webhooks
-    if (webhookCode !== 'SESSION_FINISHED') {
+    // Use type guard to validate webhook structure
+    if (!isLinkSessionFinishedWebhook(rawPayload)) {
       return undefined;
     }
 
-    const linkToken = rawPayload.link_token as string | undefined;
-    const status = rawPayload.status as string | undefined;
+    const { link_token: linkToken, status } = rawPayload;
 
     // Validate required fields for SESSION_FINISHED
     if (!linkToken || !status) {
@@ -270,15 +346,17 @@ export class PlaidProvider implements IBankLinkProvider {
   async processLinkCompletion(
     rawPayload: Record<string, any>,
   ): Promise<LinkCompletionResponse[]> {
-    // Cast rawPayload to LinkSessionFinishedWebhook
-    const castedPayload = rawPayload as LinkSessionFinishedWebhook;
+    // Validate webhook structure - should be called after parseLinkCompletionWebhook
+    if (!isLinkSessionFinishedWebhook(rawPayload)) {
+      throw new Error('Invalid webhook payload for processLinkCompletion');
+    }
 
     this.logger.log(
-      { publicTokenCount: castedPayload.public_tokens?.length ?? 0 },
+      { publicTokenCount: rawPayload.public_tokens?.length ?? 0 },
       'Processing Plaid webhook payload',
     );
 
-    const { public_tokens = [] } = castedPayload;
+    const { public_tokens = [] } = rawPayload;
 
     const plaidItems = await Promise.all(
       public_tokens.map(async (public_token) => {
@@ -318,10 +396,10 @@ export class PlaidProvider implements IBankLinkProvider {
   async getAccounts(
     authentication: Record<string, any>,
   ): Promise<GetAccountsResponse> {
-    const accessToken = authentication.accessToken as string;
-    if (!accessToken) {
-      throw new Error('Missing accessToken in authentication data');
+    if (!isPlaidAuthentication(authentication)) {
+      throw new Error('Missing or invalid accessToken in authentication data');
     }
+    const { accessToken } = authentication;
 
     const startTime = Date.now();
     this.logger.log(
@@ -571,18 +649,16 @@ export class PlaidProvider implements IBankLinkProvider {
   parseUpdateWebhook(
     rawPayload: Record<string, any>,
   ): { itemId: string; type: string } | undefined {
-    const webhookType = rawPayload.webhook_type as string | undefined;
-    const webhookCode = rawPayload.webhook_code as string | undefined;
-    const itemId = rawPayload.item_id as string | undefined;
-
-    // Handle TRANSACTIONS DEFAULT_UPDATE and HOLDINGS (investments) DEFAULT_UPDATE
-    if (
-      (webhookType === 'TRANSACTIONS' || webhookType === 'HOLDINGS') &&
-      webhookCode === 'DEFAULT_UPDATE' &&
-      typeof itemId === 'string'
-    ) {
-      return { itemId, type: webhookType };
+    // Check for TRANSACTIONS DEFAULT_UPDATE
+    if (isTransactionsDefaultUpdateWebhook(rawPayload)) {
+      return { itemId: rawPayload.item_id, type: 'TRANSACTIONS' };
     }
+
+    // Check for HOLDINGS DEFAULT_UPDATE
+    if (isHoldingsDefaultUpdateWebhook(rawPayload)) {
+      return { itemId: rawPayload.item_id, type: 'HOLDINGS' };
+    }
+
     return undefined;
   }
 
@@ -602,13 +678,12 @@ export class PlaidProvider implements IBankLinkProvider {
         shouldSync: boolean;
       }
     | undefined {
-    const webhookType = rawPayload.webhook_type as string | undefined;
-    const webhookCode = rawPayload.webhook_code as string | undefined;
-
-    // Only handle ITEM webhooks
-    if (webhookType !== 'ITEM') {
+    // Validate ITEM webhook structure
+    if (!isItemWebhook(rawPayload)) {
       return undefined;
     }
+
+    const { webhook_code: webhookCode } = rawPayload;
 
     switch (webhookCode) {
       case 'ERROR': {
@@ -686,10 +761,10 @@ export class PlaidProvider implements IBankLinkProvider {
    * @returns The item_id from Plaid
    */
   async getItemId(authentication: Record<string, any>): Promise<string> {
-    const accessToken = authentication.accessToken as string;
-    if (!accessToken) {
-      throw new Error('Missing accessToken in authentication data');
+    if (!isPlaidAuthentication(authentication)) {
+      throw new Error('Missing or invalid accessToken in authentication data');
     }
+    const { accessToken } = authentication;
 
     try {
       const response = await this.client.itemGet({
@@ -712,10 +787,10 @@ export class PlaidProvider implements IBankLinkProvider {
    * @param authentication - Authentication data containing { accessToken: string }
    */
   async updateWebhookUrl(authentication: Record<string, any>): Promise<void> {
-    const accessToken = authentication.accessToken as string;
-    if (!accessToken) {
-      throw new Error('Missing accessToken in authentication data');
+    if (!isPlaidAuthentication(authentication)) {
+      throw new Error('Missing or invalid accessToken in authentication data');
     }
+    const { accessToken } = authentication;
 
     const webhookUrl = `${process.env.API_DOMAIN}/bank-link/webhook/plaid`;
 
