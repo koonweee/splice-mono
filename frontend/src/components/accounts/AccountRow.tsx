@@ -1,12 +1,12 @@
 import { Group, Text } from '@mantine/core'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import type { AccountWithConvertedBalance } from '../../api/models'
+import type { Account } from '../../api/models'
 import { StatusBadge } from './StatusBadge'
 
 dayjs.extend(relativeTime)
 
-export function AccountRow({ account }: { account: AccountWithConvertedBalance }) {
+export function AccountRow({ account }: { account: Account }) {
   return (
     <Group
       justify="space-between"

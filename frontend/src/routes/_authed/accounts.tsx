@@ -1,11 +1,12 @@
+import { AddAccountModal } from '@/components/accounts/AddAccountModal'
+import { InstitutionSection } from '@/components/accounts/InstitutionSection'
 import { Alert, Button, Group, Loader, Stack, Text, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconPlus } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { useAccountControllerFindAll } from '../../api/clients/spliceAPI'
-import type { AccountWithConvertedBalance } from '../../api/models'
-import { AddAccountModal, InstitutionSection } from '../../components/accounts'
+import type { Account } from '../../api/models'
 
 export const Route = createFileRoute('/_authed/accounts')({
   component: AccountsPage,
@@ -18,13 +19,13 @@ function AccountsPage() {
 
   // Group accounts by institution
   const groupedAccounts = useMemo(() => {
-    if (!accounts) return new Map<string, AccountWithConvertedBalance[]>()
+    if (!accounts) return new Map<string, Account[]>()
 
-    const groups = new Map<string, AccountWithConvertedBalance[]>()
+    const groups = new Map<string, Account[]>()
     for (const account of accounts) {
       const institution = account.bankLink?.institutionName ?? 'Manual Accounts'
       const existing = groups.get(institution) ?? []
-      groups.set(institution, [...existing, account as AccountWithConvertedBalance])
+      groups.set(institution, [...existing, account])
     }
     return groups
   }, [accounts])

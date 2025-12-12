@@ -25,7 +25,9 @@ interface AddAccountModalProps {
 
 export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
   const initiateLinking = useBankLinkControllerInitiateLinking()
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
+  const [selectedProvider, setSelectedProvider] = useState<string | undefined>(
+    undefined,
+  )
 
   const handleProviderClick = (providerId: string) => {
     setSelectedProvider(providerId)
@@ -47,7 +49,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
           }
         },
         onSettled: () => {
-          setSelectedProvider(null)
+          setSelectedProvider(undefined)
         },
       },
     )

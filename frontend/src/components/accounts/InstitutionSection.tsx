@@ -1,14 +1,7 @@
-import {
-  ActionIcon,
-  Collapse,
-  Group,
-  Paper,
-  Stack,
-  Title,
-} from '@mantine/core'
+import { ActionIcon, Collapse, Group, Paper, Stack, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
-import type { AccountWithConvertedBalance } from '../../api/models'
+import type { Account } from '../../api/models'
 import { AccountRow } from './AccountRow'
 import { ProviderBadge } from './ProviderBadge'
 
@@ -17,7 +10,7 @@ export function InstitutionSection({
   accounts,
 }: {
   institution: string
-  accounts: AccountWithConvertedBalance[]
+  accounts: Account[]
 }) {
   const [opened, { toggle }] = useDisclosure(true)
 

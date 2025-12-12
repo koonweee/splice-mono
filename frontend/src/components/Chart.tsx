@@ -28,7 +28,7 @@ interface ChartProps {
   height?: number
   color?: string
   mb?: string
-  onDataPointHover?: (point: ChartDataPoint | null) => void
+  onDataPointHover?: (point?: ChartDataPoint) => void
 }
 
 export function Chart({
@@ -58,11 +58,11 @@ export function Chart({
       const point = data[Number(activeIndex)]
       onDataPointHover?.(point)
     } else {
-      onDataPointHover?.(null)
+      onDataPointHover?.()
     }
   }
 
-  const handleLeave = () => onDataPointHover?.(null)
+  const handleLeave = () => onDataPointHover?.()
 
   return (
     <AreaChart
