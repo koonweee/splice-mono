@@ -230,44 +230,44 @@ export class PlaidProvider implements IBankLinkProvider {
     }
   }
 
-  shouldProcessWebhook(rawPayload: Record<string, any>): string | undefined {
-    // Check that payload conatins webhook_code and link_token
-    if (
-      !rawPayload.webhook_code ||
-      !rawPayload.link_token ||
-      typeof rawPayload.link_token !== 'string' ||
-      !rawPayload.status ||
-      typeof rawPayload.status !== 'string'
-    ) {
+  parseLinkCompletionWebhook(
+    rawPayload: Record<string, any>,
+  ): { linkToken: string } | undefined {
+    const webhookCode = rawPayload.webhook_code as string | undefined;
+
+    // Only process SESSION_FINISHED webhooks
+    if (webhookCode !== 'SESSION_FINISHED') {
+      return undefined;
+    }
+
+    const linkToken = rawPayload.link_token as string | undefined;
+    const status = rawPayload.status as string | undefined;
+
+    // Validate required fields for SESSION_FINISHED
+    if (!linkToken || !status) {
       this.logger.warn(
         {},
-        'Not processing Plaid webhook: missing webhook_code or link_token or status',
+        'SESSION_FINISHED webhook missing link_token or status',
       );
-      return;
+      return undefined;
     }
-    const { webhook_code, link_token, status } = rawPayload;
-    if (webhook_code !== 'SESSION_FINISHED') {
-      this.logger.warn(
-        { webhookCode: String(webhook_code) },
-        'Not processing Plaid webhook of this type',
-      );
-      return;
-    }
+
     if (status !== 'success') {
       this.logger.warn(
         { status },
-        'Not processing Plaid webhook of this status',
+        'SESSION_FINISHED webhook status is not success',
       );
-      return;
+      return undefined;
     }
-    return link_token;
+
+    return { linkToken };
   }
 
   /**
-   * Process webhook from Plaid
-   * Parses mock webhook payload and returns standardized event
+   * Process link completion webhook from Plaid
+   * Exchanges public tokens for access tokens and retrieves account info
    */
-  async processWebhook(
+  async processLinkCompletion(
     rawPayload: Record<string, any>,
   ): Promise<LinkCompletionResponse[]> {
     // Cast rawPayload to LinkSessionFinishedWebhook
@@ -575,9 +575,9 @@ export class PlaidProvider implements IBankLinkProvider {
     const webhookCode = rawPayload.webhook_code as string | undefined;
     const itemId = rawPayload.item_id as string | undefined;
 
-    // Handle TRANSACTIONS DEFAULT_UPDATE and INVESTMENTS DEFAULT_UPDATE
+    // Handle TRANSACTIONS DEFAULT_UPDATE and HOLDINGS (investments) DEFAULT_UPDATE
     if (
-      (webhookType === 'TRANSACTIONS' || webhookType === 'INVESTMENTS') &&
+      (webhookType === 'TRANSACTIONS' || webhookType === 'HOLDINGS') &&
       webhookCode === 'DEFAULT_UPDATE' &&
       typeof itemId === 'string'
     ) {
