@@ -127,6 +127,34 @@ describe('MoneyWithSign', () => {
     });
   });
 
+  describe('toMajorUnit', () => {
+    it('should convert cents to dollars for USD (2 decimals)', () => {
+      const money = new MoneyWithSign('USD', 19999, MoneySign.POSITIVE);
+      expect(money.toMajorUnit()).toBe(199.99);
+    });
+
+    it('should convert wei to ETH (18 decimals)', () => {
+      // 1.5 ETH = 1.5 * 10^18 wei
+      const money = new MoneyWithSign(
+        'ETH',
+        1500000000000000000,
+        MoneySign.POSITIVE,
+      );
+      expect(money.toMajorUnit()).toBe(1.5);
+    });
+
+    it('should convert satoshis to BTC (8 decimals)', () => {
+      // 0.025 BTC = 2500000 satoshis
+      const money = new MoneyWithSign('BTC', 2500000, MoneySign.POSITIVE);
+      expect(money.toMajorUnit()).toBe(0.025);
+    });
+
+    it('should handle zero-decimal currencies like JPY', () => {
+      const money = new MoneyWithSign('JPY', 1000, MoneySign.POSITIVE);
+      expect(money.toMajorUnit()).toBe(1000);
+    });
+  });
+
   describe('toLocaleString', () => {
     it('should format as locale string with default locale', () => {
       const money = new MoneyWithSign('USD', 19999, MoneySign.POSITIVE);

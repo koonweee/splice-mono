@@ -1,9 +1,48 @@
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import type { MoneyWithSign } from '../api/models'
-import { MoneyWithSignSign } from '../api/models'
+import { AccountSubType, AccountType, MoneyWithSignSign } from '../api/models'
 
 dayjs.extend(relativeTime)
+
+/**
+ * Decimal places for currencies (smallest unit conversion)
+ * Copied from backend/src/types/MoneyWithSign.ts
+ */
+const CURRENCY_DECIMALS: Record<string, number> = {
+  // Major fiat currencies (ISO-4217)
+  USD: 2,
+  EUR: 2,
+  GBP: 2,
+  CAD: 2,
+  AUD: 2,
+  CHF: 2,
+  CNY: 2,
+  INR: 2,
+  MXN: 2,
+  BRL: 2,
+  // Zero-decimal currencies
+  JPY: 0,
+  KRW: 0,
+  // Crypto currencies
+  ETH: 18,
+  BTC: 8,
+}
+
+/**
+ * Check if a currency is a cryptocurrency
+ */
+function isCryptoCurrency(currency: string): boolean {
+  const cryptoCurrencies = ['BTC', 'ETH'] // Add other cryptocurrencies as needed
+  return cryptoCurrencies.includes(currency)
+}
+
+/**
+ * Get decimal places for a currency, defaulting to 2 for unknown currencies
+ */
+export function getDecimalPlaces(currency: string): number {
+  return CURRENCY_DECIMALS[currency] ?? 2
+}
 
 /**
  * Result of resolving which balance to display
@@ -63,14 +102,15 @@ export function formatMoneyWithSign(input: {
   decimals?: number
   appendCurrency?: boolean
 }): string {
-  const { value, decimals = 2, appendCurrency = false } = input
-  const dollars = value.money.amount / 100
+  const { value, decimals, appendCurrency = false } = input
+  const decimalPlaces = getDecimalPlaces(value.money.currency)
+  const dollars = value.money.amount / Math.pow(10, decimalPlaces)
   const signedAmount =
     value.sign === MoneyWithSignSign.negative ? -dollars : dollars
   return formatMoneyNumber({
     value: signedAmount,
     currency: value.money.currency,
-    decimals,
+    decimals: decimals, // Pass undefined if not provided, to let formatMoneyNumber handle crypto defaults
     appendCurrency,
   })
 }
@@ -92,20 +132,38 @@ export function formatMoneyNumber(input: {
   decimals?: number
   appendCurrency?: boolean
 }): string {
-  const {
-    value,
-    currency = 'USD',
-    decimals = 2,
-    appendCurrency = false,
-  } = input
+  const { value, currency = 'USD', decimals, appendCurrency = false } = input
+
+  // Handle crypto currencies differently - without currency symbols
+  if (isCryptoCurrency(currency)) {
+    // Use up to 6 decimal places max for crypto currencies (with currency's specific decimal places as upper limit)
+    const decimalPlaces = getDecimalPlaces(currency)
+    const maxCryptoDecimals = 6 // Cap crypto display at 6 decimals for readability
+    const cryptoDecimals = Math.min(
+      decimals !== undefined ? decimals : decimalPlaces,
+      maxCryptoDecimals,
+      decimalPlaces,
+    )
+    const formattedValue = value.toFixed(cryptoDecimals)
+
+    if (appendCurrency) {
+      return `${formattedValue} (${currency})`
+    } else {
+      return formattedValue
+    }
+  }
+
+  // For non-crypto currencies, use the provided decimals or default to 2
+  const effectiveDecimals = decimals ?? 2
+
   const overrideCurrency =
     CURRENCY_FORMATTING_OVERRIDES.get(currency) ?? currency
   const formatted = new Intl.NumberFormat('en-US', {
     style: 'currency',
     // When appending currency, avoid currency specific formatting
     currency: appendCurrency ? 'USD' : overrideCurrency,
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
+    minimumFractionDigits: effectiveDecimals,
+    maximumFractionDigits: effectiveDecimals,
   }).format(value)
   return appendCurrency ? `${formatted} (${currency})` : formatted
 }
@@ -141,4 +199,121 @@ export function getChangeColorMantine(
  */
 export function formatRelativeTime(date: Date | string): string {
   return dayjs(date).fromNow()
+}
+
+/**
+ * Union type of all possible account type and subType values
+ */
+type AccountTypeValue = (typeof AccountType)[keyof typeof AccountType]
+type AccountSubTypeValue = (typeof AccountSubType)[keyof typeof AccountSubType] // Use the actual values, not the keys
+type AccountTypeOrSubType = AccountTypeValue | AccountSubTypeValue
+
+/**
+ * Format an account type or subType for display
+ * Maps all AccountType and AccountSubType values from the API models to user-friendly labels
+ * Handles special cases like "401k" -> "401(k)", "529" -> "529 Plan", etc.
+ * For unknown types, falls back to capitalizing and formatting the string
+ *
+ * @example
+ * formatAccountType('crypto_wallet')        // => "Crypto Wallet"
+ * formatAccountType('crypto exchange')      // => "Crypto Exchange"
+ * formatAccountType('checking')             // => "Checking"
+ * formatAccountType('401k')                 // => "401(k)"
+ */
+export function formatAccountType(
+  type: AccountTypeOrSubType | string | undefined | null,
+): string {
+  if (!type) return ''
+
+  // Comprehensive mapping for all AccountType and AccountSubType values from API models
+  const typeDisplayMap: Record<AccountTypeOrSubType, string> = {
+    // Account Types from AccountType.ts
+    investment: 'Investment',
+    credit: 'Credit',
+    depository: 'Depository',
+    loan: 'Loan',
+    brokerage: 'Brokerage',
+    other: 'Other',
+    crypto_wallet: 'Crypto Wallet',
+
+    // Account SubTypes from AccountSubType.ts - Alphanumeric
+    '401a': '401(a)',
+    '401k': '401(k)',
+    '403B': '403(b)',
+    '457b': '457(b)',
+    '529': '529 Plan',
+
+    // Account SubTypes - Regular words
+    auto: 'Auto',
+    business: 'Business',
+    'cash isa': 'Cash ISA',
+    'cash management': 'Cash Management',
+    cd: 'CD',
+    checking: 'Checking',
+    commercial: 'Commercial',
+    construction: 'Construction',
+    consumer: 'Consumer',
+    'credit card': 'Credit Card',
+    'crypto exchange': 'Crypto Exchange', // Crypto-specific type
+    ebt: 'EBT',
+    'education savings account': 'Education Savings Account',
+    'fixed annuity': 'Fixed Annuity',
+    gic: 'GIC',
+    'health reimbursement arrangement': 'Health Reimbursement Arrangement',
+    'home equity': 'Home Equity',
+    hsa: 'HSA',
+    isa: 'ISA',
+    ira: 'IRA',
+    keogh: 'Keogh',
+    lif: 'LIF',
+    'life insurance': 'Life Insurance',
+    'line of credit': 'Line of Credit',
+    lira: 'LIRA',
+    lrif: 'LRIF',
+    lrsp: 'LRSP',
+    'money market': 'Money Market',
+    mortgage: 'Mortgage',
+    'mutual fund': 'Mutual Fund',
+    'non-custodial wallet': 'Non-Custodial Wallet', // Crypto-specific type
+    'non-taxable brokerage account': 'Non-Taxable Brokerage Account',
+    'other insurance': 'Other Insurance',
+    'other annuity': 'Other Annuity',
+    overdraft: 'Overdraft',
+    paypal: 'PayPal',
+    payroll: 'Payroll',
+    pension: 'Pension',
+    prepaid: 'Prepaid',
+    prif: 'PRIF',
+    'profit sharing plan': 'Profit Sharing Plan',
+    rdsp: 'RDSP',
+    resp: 'RESP',
+    retirement: 'Retirement',
+    rlif: 'RLIF',
+    roth: 'Roth',
+    'roth 401k': 'Roth 401(k)',
+    rrif: 'RRIF',
+    rrsp: 'RRSP',
+    sarsep: 'SARSEP',
+    savings: 'Savings',
+    'sep ira': 'SEP IRA',
+    'simple ira': 'SIMPLE IRA',
+    sipp: 'SIPP',
+    'stock plan': 'Stock Plan',
+    student: 'Student',
+    'thrift savings plan': 'Thrift Savings Plan',
+    tfsa: 'TFSA',
+    trust: 'Trust',
+    ugma: 'UGMA',
+    utma: 'UTMA',
+    'variable annuity': 'Variable Annuity',
+  }
+
+  // Return mapped value if found, otherwise use default formatting
+  if (type in typeDisplayMap) {
+    return typeDisplayMap[type as AccountTypeOrSubType]
+  }
+
+  // Default formatting: capitalize first letter and convert underscores to spaces
+  // This handles any string values that aren't explicitly in our type definitions
+  return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ')
 }

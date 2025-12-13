@@ -18,6 +18,7 @@ import type { CurrencyPair } from '../types/ExchangeRate';
 import {
   MoneySign,
   type SerializedMoneyWithSign,
+  getDecimalPlaces,
 } from '../types/MoneyWithSign';
 import { UserService } from '../user/user.service';
 
@@ -461,9 +462,16 @@ export class BalanceQueryService {
       const rateInfo = dateRates.get(rateKey);
 
       if (rateInfo) {
+        // Calculate major units (floats) to handle different decimal places
+        const sourceDecimals = getDecimalPlaces(balance.money.currency);
+        const targetDecimals = getDecimalPlaces(targetCurrency);
+        const sourceMajor =
+          balance.money.amount / Math.pow(10, sourceDecimals);
+        const convertedMajor = sourceMajor * rateInfo.rate;
         const convertedAmount = Math.round(
-          balance.money.amount * rateInfo.rate,
+          convertedMajor * Math.pow(10, targetDecimals),
         );
+
         result.convertedBalance = {
           money: {
             amount: convertedAmount,
