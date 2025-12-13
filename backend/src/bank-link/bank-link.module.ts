@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountEntity } from 'src/account/account.entity';
-import { TatumService } from '../common/tatum.service';
+import { CryptoModule } from '../crypto/crypto.module';
 import { UserModule } from '../user/user.module';
 import { WebhookEventModule } from '../webhook-event/webhook-event.module';
 import { BankLinkController } from './bank-link.controller';
@@ -21,6 +21,7 @@ import { ProviderRegistry } from './providers/provider.registry';
     TypeOrmModule.forFeature([BankLinkEntity, AccountEntity]),
     WebhookEventModule,
     UserModule, // For accessing user provider details
+    CryptoModule.forRoot(), // Crypto balance service for wallet linking
   ],
   controllers: [BankLinkController],
   providers: [
@@ -29,11 +30,9 @@ import { ProviderRegistry } from './providers/provider.registry';
     ProviderRegistry,
     PlaidProvider, // Register Plaid provider
     CryptoProvider, // Register Crypto provider
-    TatumService, // Blockchain API client for Crypto provider
   ],
   exports: [
     BankLinkService, // Export for use in other modules
-    TatumService, // Export for exchange rate module
   ],
 })
 export class BankLinkModule {}

@@ -1,9 +1,9 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
 import { In, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
-import { TatumService } from '../common/tatum.service';
+import { CryptoExchangeRateService } from '../crypto/crypto-exchange-rate.service';
 import type {
   CurrencyPair,
   DateRangeRateResponse,
@@ -33,8 +33,7 @@ export class ExchangeRateService {
     private userRepository: Repository<UserEntity>,
     private readonly backfillHelper: ExchangeRateBackfillHelper,
     @Optional()
-    @Inject(TatumService)
-    private readonly tatumService?: TatumService,
+    private readonly cryptoExchangeRateService?: CryptoExchangeRateService,
   ) {}
 
   // ============================================================
@@ -284,16 +283,17 @@ export class ExchangeRateService {
   }
 
   /**
-   * Sync cryptocurrency exchange rates (ETH->USD, BTC->USD)
-   * Called by hourly scheduled job
+   * Sync cryptocurrency exchange rates for all required pairs.
+   * Fetches rates based on users' crypto accounts and their preferred currencies.
+   * Called by hourly scheduled job.
    *
    * @returns Array of synced exchange rates
    */
   async syncCryptoRates(): Promise<ExchangeRate[]> {
-    if (!this.tatumService) {
+    if (!this.cryptoExchangeRateService) {
       this.logger.warn(
         {},
-        'TatumService not available, skipping crypto rate sync',
+        'CryptoExchangeRateService not available, skipping crypto rate sync',
       );
       return [];
     }
@@ -301,38 +301,57 @@ export class ExchangeRateService {
     const today = new Date().toISOString().split('T')[0];
     const results: ExchangeRate[] = [];
 
+    // Get all required currency pairs and filter to crypto base currencies
+    const allPairs = await this.getRequiredCurrencyPairs();
+    const cryptoPairs = allPairs.filter((pair) =>
+      CRYPTO_CURRENCIES.includes(pair.baseCurrency),
+    );
+
+    if (cryptoPairs.length === 0) {
+      this.logger.log({}, 'No crypto currency pairs to sync');
+      return results;
+    }
+
     this.logger.log(
-      { currencies: CRYPTO_CURRENCIES, date: today },
+      { pairCount: cryptoPairs.length, date: today },
       'Syncing crypto exchange rates',
     );
 
-    for (const crypto of CRYPTO_CURRENCIES) {
+    // Fetch rates for each unique crypto → fiat pair
+    for (const pair of cryptoPairs) {
       try {
-        const rate = await this.tatumService.getExchangeRate(crypto);
+        const rate = await this.cryptoExchangeRateService.getRate(
+          pair.baseCurrency,
+          pair.targetCurrency,
+        );
 
         if (rate === 0) {
           this.logger.warn(
-            { currency: crypto },
+            { baseCurrency: pair.baseCurrency, targetCurrency: pair.targetCurrency },
             'Received zero exchange rate, skipping',
           );
           continue;
         }
 
         const exchangeRate = await this.backfillHelper.upsertRate({
-          baseCurrency: crypto,
-          targetCurrency: 'USD',
+          baseCurrency: pair.baseCurrency,
+          targetCurrency: pair.targetCurrency,
           rate,
           rateDate: today,
         });
 
         results.push(exchangeRate);
         this.logger.log(
-          { baseCurrency: crypto, targetCurrency: 'USD', rate },
+          { baseCurrency: pair.baseCurrency, targetCurrency: pair.targetCurrency, rate },
           'Saved crypto exchange rate',
         );
       } catch (error) {
         this.logger.error(
-          { currency: crypto, error: String(error) },
+          {
+            baseCurrency: pair.baseCurrency,
+            targetCurrency: pair.targetCurrency,
+            error: String(error),
+          },
           'Error fetching crypto exchange rate',
         );
       }

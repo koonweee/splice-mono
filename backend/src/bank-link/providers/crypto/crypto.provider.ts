@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { TatumService } from '../../../common/tatum.service';
+import { CryptoBalanceService } from '../../../crypto/crypto-balance.service';
 import { CryptoAccountType } from '../../../types/AccountType';
 import type {
   APIAccount,
@@ -18,7 +18,7 @@ import {
 
 /**
  * Provider for linking cryptocurrency wallets
- * Supports Ethereum and Bitcoin networks via Tatum API
+ * Supports Ethereum and Bitcoin networks
  *
  * Unlike Plaid, this provider uses synchronous linking:
  * - No OAuth flow required
@@ -31,7 +31,7 @@ export class CryptoProvider implements IBankLinkProvider {
   readonly providerName = 'crypto';
   private readonly logger = new Logger(CryptoProvider.name);
 
-  constructor(private readonly tatumService: TatumService) {}
+  constructor(private readonly cryptoBalanceService: CryptoBalanceService) {}
 
   /**
    * Initiate crypto wallet linking
@@ -65,7 +65,10 @@ export class CryptoProvider implements IBankLinkProvider {
     );
 
     // Validate address format
-    const isValid = this.tatumService.validateAddress(network, walletAddress);
+    const isValid = this.cryptoBalanceService.validateAddress(
+      network,
+      walletAddress,
+    );
     if (!isValid) {
       this.logger.warn(
         { network, addressHint: walletAddress.slice(0, 10) },
@@ -128,22 +131,23 @@ export class CryptoProvider implements IBankLinkProvider {
    * Crypto provider doesn't use webhooks - polling only
    */
   // eslint-disable-next-line @typescript-eslint/require-await
-  async verifyWebhook(): Promise<boolean> {
+  async verifyWebhook(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _rawBody: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _headers: Record<string, string>,
+  ): Promise<boolean> {
     return false;
   }
 
   /**
-   * Fetch balance from Tatum API based on network
+   * Fetch balance from the crypto balance service
    */
   private async fetchBalance(
     network: CryptoNetwork,
     address: string,
   ): Promise<string> {
-    if (network === 'ethereum') {
-      return this.tatumService.getEthereumBalance(address);
-    } else {
-      return this.tatumService.getBitcoinBalance(address);
-    }
+    return this.cryptoBalanceService.getBalance(network, address);
   }
 
   /**
