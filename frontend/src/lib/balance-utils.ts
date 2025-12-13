@@ -7,6 +7,7 @@ import type {
 } from '../api/models'
 import { AccountType, MoneyWithSignSign } from '../api/models'
 import type { ChartDataPoint } from '../components/Chart'
+import { getDecimalPlaces } from './format'
 import { TimePeriod } from './types'
 
 type AccountTypeValue = (typeof AccountType)[keyof typeof AccountType]
@@ -51,7 +52,8 @@ export function getDateRange(period: TimePeriod): {
  * Extract a signed numeric value from a MoneyWithSign (in dollars)
  */
 export function getSignedAmount(balance: MoneyWithSign): number {
-  const dollars = balance.money.amount / 100
+  const decimalPlaces = getDecimalPlaces(balance.money.currency)
+  const dollars = balance.money.amount / Math.pow(10, decimalPlaces)
   return balance.sign === MoneyWithSignSign.negative ? -dollars : dollars
 }
 
@@ -110,9 +112,10 @@ export function createMoneyWithSign(
   currency: string,
 ): MoneyWithSign {
   const isNegative = amount < 0
+  const decimalPlaces = getDecimalPlaces(currency)
   return {
     money: {
-      amount: Math.round(Math.abs(amount) * 100),
+      amount: Math.round(Math.abs(amount) * Math.pow(10, decimalPlaces)),
       currency,
     },
     sign: isNegative ? MoneyWithSignSign.negative : MoneyWithSignSign.positive,
