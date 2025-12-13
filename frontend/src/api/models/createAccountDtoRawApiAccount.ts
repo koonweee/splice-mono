@@ -17,7 +17,7 @@ export type CreateAccountDtoRawApiAccount = {
   name: string;
   /** @nullable */
   mask: string | null;
-  type: CreateAccountDtoRawApiAccountType;
+  type: typeof CreateAccountDtoRawApiAccountType[keyof typeof CreateAccountDtoRawApiAccountType] ;
   /** @nullable */
   subType: CreateAccountDtoRawApiAccountSubType;
   availableBalance: MoneyWithSign;
