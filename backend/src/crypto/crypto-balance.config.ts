@@ -1,3 +1,6 @@
+/** Injection token for CryptoBalanceConfig */
+export const CRYPTO_BALANCE_CONFIG = 'CRYPTO_BALANCE_CONFIG';
+
 /**
  * Configuration for CryptoBalanceService
  * Only Ethereum RPC URLs are configurable; Bitcoin API is hardcoded
