@@ -162,12 +162,19 @@ export class MoneyWithSign {
   }
 
   /**
+   * Get the amount in major currency unit (e.g., dollars, ETH)
+   */
+  toMajorUnit(): number {
+    const decimals = getDecimalPlaces(this.currency);
+    return this.amount / Math.pow(10, decimals);
+  }
+
+  /**
    * Format as locale string (e.g., '$199.99')
    * For crypto currencies, formats as number with currency code suffix
    */
   toLocaleString(locale = 'en-US'): string {
-    const decimals = getDecimalPlaces(this.currency);
-    const floatValue = this.amount / Math.pow(10, decimals);
+    const floatValue = this.toMajorUnit();
 
     // Check if this is a known fiat currency for Intl.NumberFormat
     const isFiat = [
