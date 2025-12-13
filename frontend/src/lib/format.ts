@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import type { MoneyWithSign } from '../api/models'
-import { MoneyWithSignSign } from '../api/models'
+import { AccountSubType, AccountType, MoneyWithSignSign } from '../api/models'
 
 dayjs.extend(relativeTime)
 
@@ -199,4 +199,121 @@ export function getChangeColorMantine(
  */
 export function formatRelativeTime(date: Date | string): string {
   return dayjs(date).fromNow()
+}
+
+/**
+ * Union type of all possible account type and subType values
+ */
+type AccountTypeValue = (typeof AccountType)[keyof typeof AccountType]
+type AccountSubTypeValue = (typeof AccountSubType)[keyof typeof AccountSubType] // Use the actual values, not the keys
+type AccountTypeOrSubType = AccountTypeValue | AccountSubTypeValue
+
+/**
+ * Format an account type or subType for display
+ * Maps all AccountType and AccountSubType values from the API models to user-friendly labels
+ * Handles special cases like "401k" -> "401(k)", "529" -> "529 Plan", etc.
+ * For unknown types, falls back to capitalizing and formatting the string
+ *
+ * @example
+ * formatAccountType('crypto_wallet')        // => "Crypto Wallet"
+ * formatAccountType('crypto exchange')      // => "Crypto Exchange"
+ * formatAccountType('checking')             // => "Checking"
+ * formatAccountType('401k')                 // => "401(k)"
+ */
+export function formatAccountType(
+  type: AccountTypeOrSubType | string | undefined | null,
+): string {
+  if (!type) return ''
+
+  // Comprehensive mapping for all AccountType and AccountSubType values from API models
+  const typeDisplayMap: Record<AccountTypeOrSubType, string> = {
+    // Account Types from AccountType.ts
+    investment: 'Investment',
+    credit: 'Credit',
+    depository: 'Depository',
+    loan: 'Loan',
+    brokerage: 'Brokerage',
+    other: 'Other',
+    crypto_wallet: 'Crypto Wallet',
+
+    // Account SubTypes from AccountSubType.ts - Alphanumeric
+    '401a': '401(a)',
+    '401k': '401(k)',
+    '403B': '403(b)',
+    '457b': '457(b)',
+    '529': '529 Plan',
+
+    // Account SubTypes - Regular words
+    auto: 'Auto',
+    business: 'Business',
+    'cash isa': 'Cash ISA',
+    'cash management': 'Cash Management',
+    cd: 'CD',
+    checking: 'Checking',
+    commercial: 'Commercial',
+    construction: 'Construction',
+    consumer: 'Consumer',
+    'credit card': 'Credit Card',
+    'crypto exchange': 'Crypto Exchange', // Crypto-specific type
+    ebt: 'EBT',
+    'education savings account': 'Education Savings Account',
+    'fixed annuity': 'Fixed Annuity',
+    gic: 'GIC',
+    'health reimbursement arrangement': 'Health Reimbursement Arrangement',
+    'home equity': 'Home Equity',
+    hsa: 'HSA',
+    isa: 'ISA',
+    ira: 'IRA',
+    keogh: 'Keogh',
+    lif: 'LIF',
+    'life insurance': 'Life Insurance',
+    'line of credit': 'Line of Credit',
+    lira: 'LIRA',
+    lrif: 'LRIF',
+    lrsp: 'LRSP',
+    'money market': 'Money Market',
+    mortgage: 'Mortgage',
+    'mutual fund': 'Mutual Fund',
+    'non-custodial wallet': 'Non-Custodial Wallet', // Crypto-specific type
+    'non-taxable brokerage account': 'Non-Taxable Brokerage Account',
+    'other insurance': 'Other Insurance',
+    'other annuity': 'Other Annuity',
+    overdraft: 'Overdraft',
+    paypal: 'PayPal',
+    payroll: 'Payroll',
+    pension: 'Pension',
+    prepaid: 'Prepaid',
+    prif: 'PRIF',
+    'profit sharing plan': 'Profit Sharing Plan',
+    rdsp: 'RDSP',
+    resp: 'RESP',
+    retirement: 'Retirement',
+    rlif: 'RLIF',
+    roth: 'Roth',
+    'roth 401k': 'Roth 401(k)',
+    rrif: 'RRIF',
+    rrsp: 'RRSP',
+    sarsep: 'SARSEP',
+    savings: 'Savings',
+    'sep ira': 'SEP IRA',
+    'simple ira': 'SIMPLE IRA',
+    sipp: 'SIPP',
+    'stock plan': 'Stock Plan',
+    student: 'Student',
+    'thrift savings plan': 'Thrift Savings Plan',
+    tfsa: 'TFSA',
+    trust: 'Trust',
+    ugma: 'UGMA',
+    utma: 'UTMA',
+    'variable annuity': 'Variable Annuity',
+  }
+
+  // Return mapped value if found, otherwise use default formatting
+  if (type in typeDisplayMap) {
+    return typeDisplayMap[type as AccountTypeOrSubType]
+  }
+
+  // Default formatting: capitalize first letter and convert underscores to spaces
+  // This handles any string values that aren't explicitly in our type definitions
+  return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ')
 }
