@@ -1,10 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import type { FindOptionsWhere } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import type { Account } from '../types/Account';
 import { BankLinkEntity } from './bank-link.entity';
 import { BankLinkService } from './bank-link.service';
+
+/**
+ * Providers excluded from scheduled sync (use webhooks instead)
+ */
+const WEBHOOK_PROVIDERS = ['plaid'];
+
+/**
+ * Providers that need frequent (hourly) sync due to price volatility
+ */
+const FREQUENT_SYNC_PROVIDERS = ['crypto'];
 
 /**
  * Scheduled service for automated bank link operations
@@ -21,50 +32,86 @@ export class BankLinkScheduledService {
   ) {}
 
   /**
-   * Sync all bank link accounts daily at 5:00 PM PST
+   * Daily sync at 5:00 PM PST for standard providers
+   * Excludes webhook-driven providers (Plaid) and frequent-sync providers (crypto)
    */
   @Cron('0 0 17 * * *', {
-    name: 'syncAllBankLinkAccounts',
+    name: 'dailyBankLinkSync',
     timeZone: 'America/Los_Angeles',
   })
-  async handleSyncAllAccounts(): Promise<void> {
-    this.logger.log({}, 'Starting scheduled sync of all bank link accounts');
+  async handleDailySync(): Promise<void> {
+    this.logger.log({}, 'Starting daily bank link sync');
+
+    const excludedProviders = [
+      ...WEBHOOK_PROVIDERS,
+      ...FREQUENT_SYNC_PROVIDERS,
+    ];
 
     try {
-      const accounts = await this.syncAllAccountsSystem();
+      const accounts = await this.syncBankLinks(
+        { providerName: Not(In(excludedProviders)) },
+        'daily',
+      );
       this.logger.log(
         { accountsSynced: accounts.length },
-        'Scheduled sync completed',
+        'Daily sync completed',
       );
     } catch (error) {
-      this.logger.error({ error: String(error) }, 'Scheduled sync failed');
+      this.logger.error({ error: String(error) }, 'Daily sync failed');
     }
   }
 
   /**
-   * Sync accounts for all bank links across all users (system operation)
-   * Excludes Plaid providers which are synced via webhooks
-   *
-   * @returns Updated accounts from all bank links
+   * Hourly sync for volatile providers (crypto)
+   * More frequent due to price volatility
    */
-  private async syncAllAccountsSystem(): Promise<Account[]> {
-    this.logger.log(
-      {},
-      'Syncing accounts for all bank links (system operation)',
-    );
+  @Cron('0 0 * * * *', {
+    name: 'frequentBankLinkSync',
+    timeZone: 'UTC',
+  })
+  async handleFrequentSync(): Promise<void> {
+    this.logger.log({}, 'Starting frequent bank link sync');
 
-    // Exclude Plaid - it uses webhook-driven sync via DEFAULT_UPDATE
-    const bankLinks = await this.bankLinkRepository.find({
-      where: { providerName: Not('plaid') },
-    });
+    try {
+      const accounts = await this.syncBankLinks(
+        { providerName: In(FREQUENT_SYNC_PROVIDERS) },
+        'frequent',
+      );
+      this.logger.log(
+        { accountsSynced: accounts.length },
+        'Frequent sync completed',
+      );
+    } catch (error) {
+      this.logger.error({ error: String(error) }, 'Frequent sync failed');
+    }
+  }
+
+  /**
+   * Sync accounts for bank links matching the given criteria
+   *
+   * @param where - TypeORM where clause to filter bank links
+   * @param context - Description for logging purposes
+   * @returns Updated accounts from all matching bank links
+   */
+  private async syncBankLinks(
+    where: FindOptionsWhere<BankLinkEntity>,
+    context: string,
+  ): Promise<Account[]> {
+    const bankLinks = await this.bankLinkRepository.find({ where });
+
+    if (bankLinks.length === 0) {
+      this.logger.log({ context }, 'No bank links to sync');
+      return [];
+    }
+
     this.logger.log(
-      { count: bankLinks.length },
-      'Found bank links to sync (system)',
+      { count: bankLinks.length, context },
+      'Found bank links to sync',
     );
 
     const results = await Promise.allSettled(
-      bankLinks.map((bankLink) =>
-        this.bankLinkService.syncAccounts(bankLink.id, bankLink.userId),
+      bankLinks.map((link) =>
+        this.bankLinkService.syncAccounts(link.id, link.userId),
       ),
     );
 
@@ -74,16 +121,16 @@ export class BankLinkScheduledService {
         allAccounts.push(...result.value);
       } else {
         this.logger.error(
-          { bankLinkId: bankLinks[index].id, error: String(result.reason) },
-          'Failed to sync accounts for bank link (system)',
+          {
+            bankLinkId: bankLinks[index].id,
+            context,
+            error: String(result.reason),
+          },
+          'Failed to sync bank link',
         );
       }
     });
 
-    this.logger.log(
-      { count: allAccounts.length },
-      'Synced accounts total (system)',
-    );
     return allAccounts;
   }
 }

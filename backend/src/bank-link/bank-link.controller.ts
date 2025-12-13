@@ -49,6 +49,8 @@ export class BankLinkController {
       provider,
       currentUser.userId,
       body.redirectUri,
+      body.walletAddress,
+      body.network,
     );
   }
 

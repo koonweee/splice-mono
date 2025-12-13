@@ -15,6 +15,7 @@ import type {
   APIAccount,
   CreateBankLinkDto,
   InitiateLinkResponse,
+  LinkCompletionResponse,
   SanitizedBankLink,
   UpdateBankLinkDto,
 } from '../types/BankLink';
@@ -68,26 +69,35 @@ export class BankLinkService extends OwnedCrudService<
    * Step 1: Initiate bank account linking
    * Creates a pending webhook event and returns link info for frontend
    *
-   * @param providerName - Provider to use (e.g., 'plaid', 'simplefin')
+   * For webhook-based providers (Plaid): Returns link URL, creates pending webhook
+   * For immediate providers (crypto): Creates accounts immediately, returns empty response
+   *
+   * @param providerName - Provider to use (e.g., 'plaid', 'crypto')
    * @param userId - User initiating the link
    * @param redirectUri - Optional redirect after linking
+   * @param walletAddress - Optional wallet address for crypto providers
+   * @param network - Optional network for crypto providers
    * @returns Link information for frontend
    */
   async initiateLinking(
     providerName: string,
     userId: string,
     redirectUri?: string,
+    walletAddress?: string,
+    network?: string,
   ): Promise<InitiateLinkResponse> {
     this.logger.log({ providerName, userId }, 'Initiating link with provider');
 
     // Get provider
     const provider = this.providerRegistry.getProvider(providerName);
 
-    // Fetch existing provider-specific user details
-    const providerUserDetails = await this.userService.getProviderDetails(
-      userId,
-      providerName,
-    );
+    // Build provider user details
+    // For crypto: use wallet params directly
+    // For others: fetch existing provider-specific user details
+    const providerUserDetails =
+      walletAddress && network
+        ? { walletAddress, network }
+        : await this.userService.getProviderDetails(userId, providerName);
 
     // Call provider to get link URL/token
     const linkResponse = await provider.initiateLinking({
@@ -109,6 +119,17 @@ export class BankLinkService extends OwnedCrudService<
       );
     }
 
+    // Handle immediate account creation (crypto flow)
+    if (linkResponse.immediateAccounts) {
+      await this.createAccountsFromLinkCompletion(
+        providerName,
+        userId,
+        linkResponse.immediateAccounts,
+      );
+      // Return empty response (accounts created, no redirect needed)
+      return {};
+    }
+
     // Create pending webhook event to track this link request
     // The webhookId (e.g., link_token for Plaid) will be used to correlate the webhook callback
     if (linkResponse.webhookId) {
@@ -125,6 +146,76 @@ export class BankLinkService extends OwnedCrudService<
     }
 
     return linkResponse;
+  }
+
+  /**
+   * Create BankLinks and Accounts from link completion responses
+   * Used for both webhook-based and immediate linking flows
+   */
+  private async createAccountsFromLinkCompletion(
+    providerName: string,
+    userId: string,
+    linkCompletionResponses: LinkCompletionResponse[],
+  ): Promise<void> {
+    this.logger.log(
+      { providerName, userId, responseCount: linkCompletionResponses.length },
+      'Creating accounts from link completion',
+    );
+
+    // Bank links from link completion responses
+    const bankLinks = linkCompletionResponses.map((response) => {
+      return BankLinkEntity.fromDto(
+        {
+          providerName: providerName,
+          authentication: response.authentication,
+          accountIds: response.accounts.map((account) => account.accountId),
+          institutionId: response.institution?.id ?? null,
+          institutionName: response.institution?.name ?? null,
+        },
+        userId,
+      );
+    });
+
+    // Save bank links
+    const savedBankLinks = await this.repository.save(bankLinks);
+    this.logger.log({ count: savedBankLinks.length }, 'Saved bank links');
+
+    // Map of external account ids to bank link entities
+    const accountIdToBankLink = new Map<string, BankLinkEntity>();
+    savedBankLinks.forEach((bankLink) => {
+      bankLink.accountIds.forEach((accountId) => {
+        accountIdToBankLink.set(accountId, bankLink);
+      });
+    });
+
+    // Flat map of all accounts
+    const allAccounts = linkCompletionResponses.flatMap(
+      (response) => response.accounts,
+    );
+
+    // Create accounts from all accounts using helper method
+    const accounts = allAccounts.map((apiAccount) => {
+      const bankLinkId = accountIdToBankLink.get(apiAccount.accountId)?.id;
+      if (!bankLinkId) {
+        throw new Error(
+          `Bank link not found for account ${apiAccount.accountId}`,
+        );
+      }
+      const dto = this.createAccountDtoFromAPIAccount(apiAccount, bankLinkId);
+      return AccountEntity.fromDto(dto, userId);
+    });
+
+    // Save accounts
+    const savedAccounts = await this.accountRepository.save(accounts);
+    this.logger.log({ count: savedAccounts.length }, 'Saved accounts');
+
+    // Emit linked account created events for all new accounts
+    savedAccounts.forEach((account) => {
+      this.eventEmitter.emit(
+        LinkedAccountEvents.CREATED,
+        new LinkedAccountCreatedEvent(account.toObject()),
+      );
+    });
   }
 
   /**
@@ -371,60 +462,12 @@ export class BankLinkService extends OwnedCrudService<
       const linkCompletionResponses =
         await provider.processLinkCompletion(parsedPayload);
 
-      // Bank links from link completion responses
-      const bankLinks = linkCompletionResponses.map((response) => {
-        return BankLinkEntity.fromDto(
-          {
-            providerName: providerName,
-            authentication: response.authentication,
-            accountIds: response.accounts.map((account) => account.accountId),
-            institutionId: response.institution?.id ?? null,
-            institutionName: response.institution?.name ?? null,
-          },
-          userId,
-        );
-      });
-
-      // Save bank links
-      const savedBankLinks = await this.repository.save(bankLinks);
-      this.logger.log({ count: savedBankLinks.length }, 'Saved bank links');
-
-      // Map of external account ids to bank link entities
-      const accountIdToBankLink = new Map<string, BankLinkEntity>();
-      savedBankLinks.forEach((bankLink) => {
-        bankLink.accountIds.forEach((accountId) => {
-          accountIdToBankLink.set(accountId, bankLink);
-        });
-      });
-
-      // Flat map of all accounts
-      const allAccounts = linkCompletionResponses.flatMap(
-        (response) => response.accounts,
+      // Use shared method to create bank links and accounts
+      await this.createAccountsFromLinkCompletion(
+        providerName,
+        userId,
+        linkCompletionResponses,
       );
-
-      // Create accounts from all accounts using helper method
-      const accounts = allAccounts.map((apiAccount) => {
-        const bankLinkId = accountIdToBankLink.get(apiAccount.accountId)?.id;
-        if (!bankLinkId) {
-          throw new Error(
-            `Bank link not found for account ${apiAccount.accountId}`,
-          );
-        }
-        const dto = this.createAccountDtoFromAPIAccount(apiAccount, bankLinkId);
-        return AccountEntity.fromDto(dto, userId);
-      });
-
-      // Save accounts
-      const savedAccounts = await this.accountRepository.save(accounts);
-      this.logger.log({ count: savedAccounts.length }, 'Saved accounts');
-
-      // Emit linked account created events for all new accounts
-      savedAccounts.forEach((account) => {
-        this.eventEmitter.emit(
-          LinkedAccountEvents.CREATED,
-          new LinkedAccountCreatedEvent(account.toObject()),
-        );
-      });
 
       // Mark webhook event as completed
       await this.webhookEventService.markCompleted(webhookId, parsedPayload);

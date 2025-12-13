@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
 import { AccountType } from 'plaid';
 import { Between, In, IsNull, Not, Repository } from 'typeorm';
+import type { ExtendedAccountType } from '../types/AccountType';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { ExchangeRateService } from '../exchange-rate/exchange-rate.service';
@@ -404,11 +405,16 @@ export class BalanceQueryService {
    * - All other types: currentBalance
    */
   private calculateEffectiveBalance(
-    accountType: AccountType,
+    accountType: ExtendedAccountType,
     availableBalance: SerializedMoneyWithSign,
     currentBalance: SerializedMoneyWithSign,
   ): SerializedMoneyWithSign {
-    if ([AccountType.Investment, AccountType.Brokerage].includes(accountType)) {
+    // For Investment/Brokerage accounts, combine available + current balance
+    // For all other types (including crypto), use available balance
+    if (
+      accountType === AccountType.Investment ||
+      accountType === AccountType.Brokerage
+    ) {
       const availableAmount = this.getSignedAmount(availableBalance);
       const currentAmount = this.getSignedAmount(currentBalance);
       const totalAmount = availableAmount + currentAmount;

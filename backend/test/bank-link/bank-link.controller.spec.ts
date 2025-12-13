@@ -51,6 +51,8 @@ describe('BankLinkController', () => {
         provider,
         mockUserId,
         requestBody.redirectUri,
+        undefined, // walletAddress
+        undefined, // network
       );
 
       expect(result).toEqual({
@@ -69,6 +71,8 @@ describe('BankLinkController', () => {
         provider,
         mockUserId,
         undefined,
+        undefined, // walletAddress
+        undefined, // network
       );
     });
   });

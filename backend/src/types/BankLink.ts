@@ -1,8 +1,15 @@
 import { AccountSubtype, AccountType } from 'plaid';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
+import { CryptoAccountType } from './AccountType';
 import { MoneyWithSignSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
+
+/**
+ * Supported crypto networks for wallet linking
+ */
+export const CryptoNetworkSchema = z.enum(['ethereum', 'bitcoin']);
+export type CryptoNetwork = z.infer<typeof CryptoNetworkSchema>;
 
 /**
  * Request to initiate bank account linking
@@ -10,7 +17,11 @@ import { OwnedSchema } from './Timestamps';
 export const InitiateLinkRequestSchema = registerSchema(
   'InitiateLinkRequest',
   z.object({
-    redirectUri: z.string().optional(), // Optional redirect after linking
+    redirectUri: z.string().optional(), // Optional redirect after linking (Plaid)
+    /** Wallet address for crypto linking */
+    walletAddress: z.string().optional(),
+    /** Crypto network for wallet linking */
+    network: CryptoNetworkSchema.optional(),
   }),
 );
 
@@ -36,6 +47,14 @@ export const InitiateLinkResponseSchema = registerSchema(
 
 export type InitiateLinkResponse = z.infer<typeof InitiateLinkResponseSchema>;
 
+/**
+ * Extended account type schema that accepts both Plaid and crypto types
+ */
+const ExtendedAccountTypeSchema = z.union([
+  z.nativeEnum(AccountType),
+  z.nativeEnum(CryptoAccountType),
+]);
+
 export const APIAccountSchema = z.object({
   /** ID of account on external API */
   accountId: z.string(),
@@ -43,8 +62,8 @@ export const APIAccountSchema = z.object({
   name: z.string(),
   /** Mask of account number */
   mask: z.string().nullable(),
-  /** Type of account */
-  type: z.nativeEnum(AccountType),
+  /** Type of account (Plaid AccountType or CryptoAccountType) */
+  type: ExtendedAccountTypeSchema,
   /** Subtype of account */
   subType: z.nativeEnum(AccountSubtype).nullable(),
   /** Available balance */
@@ -134,29 +153,6 @@ export const UpdateBankLinkDtoSchema = CreateBankLinkDtoSchema.partial();
 export type UpdateBankLinkDto = z.infer<typeof UpdateBankLinkDtoSchema>;
 
 /**
- * Response from initiating a link flow (internal provider response)
- * Extends BaseLinkResponseSchema with additional internal fields
- */
-export const LinkInitiationResponseSchema = BaseLinkResponseSchema.extend({
-  /**
-   * Unique ID for matching webhooks
-   * This is set to link token to match the initial create request to the webhook response
-   */
-  webhookId: z.string(),
-  /** Provider-specific data */
-  metadata: z.record(z.string(), z.any()).optional(),
-  /**
-   * Updated provider-specific user details to persist
-   * If returned, these will replace the user's existing provider details for this provider
-   */
-  updatedProviderUserDetails: z.record(z.string(), z.unknown()).optional(),
-});
-
-export type LinkInitiationResponse = z.infer<
-  typeof LinkInitiationResponseSchema
->;
-
-/**
  * Response after processing webhook/linking accounts
  *
  * Account name, identifier and authentication data
@@ -171,6 +167,35 @@ export const LinkCompletionResponseSchema = z.object({
 
 export type LinkCompletionResponse = z.infer<
   typeof LinkCompletionResponseSchema
+>;
+
+/**
+ * Response from initiating a link flow (internal provider response)
+ * Extends BaseLinkResponseSchema with additional internal fields
+ */
+export const LinkInitiationResponseSchema = BaseLinkResponseSchema.extend({
+  /**
+   * Unique ID for matching webhooks
+   * This is set to link token to match the initial create request to the webhook response
+   * Optional for providers that don't use webhooks (e.g., crypto)
+   */
+  webhookId: z.string().optional(),
+  /** Provider-specific data */
+  metadata: z.record(z.string(), z.any()).optional(),
+  /**
+   * Updated provider-specific user details to persist
+   * If returned, these will replace the user's existing provider details for this provider
+   */
+  updatedProviderUserDetails: z.record(z.string(), z.unknown()).optional(),
+  /**
+   * For providers without async webhook flow (e.g., crypto), accounts can be
+   * returned immediately for synchronous creation
+   */
+  immediateAccounts: z.array(LinkCompletionResponseSchema).optional(),
+});
+
+export type LinkInitiationResponse = z.infer<
+  typeof LinkInitiationResponseSchema
 >;
 
 /**

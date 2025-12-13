@@ -36,4 +36,30 @@ export class ExchangeRateScheduledService {
       );
     }
   }
+
+  /**
+   * Sync crypto exchange rates hourly (ETH->USD, BTC->USD)
+   * More frequent than fiat sync due to crypto price volatility
+   * Runs at 5 minutes past the hour to avoid coinciding with balance sync
+   */
+  @Cron('0 5 * * * *', {
+    name: 'syncHourlyCryptoRates',
+    timeZone: 'UTC',
+  })
+  async handleSyncCryptoRates(): Promise<void> {
+    this.logger.log({}, 'Starting hourly sync of crypto exchange rates');
+
+    try {
+      const rates = await this.exchangeRateService.syncCryptoRates();
+      this.logger.log(
+        { ratesSynced: rates.length },
+        'Hourly crypto exchange rate sync completed',
+      );
+    } catch (error) {
+      this.logger.error(
+        { error: String(error) },
+        'Hourly crypto exchange rate sync failed',
+      );
+    }
+  }
 }
