@@ -6,6 +6,37 @@ import { MoneyWithSignSign } from '../api/models'
 dayjs.extend(relativeTime)
 
 /**
+ * Decimal places for currencies (smallest unit conversion)
+ * Copied from backend/src/types/MoneyWithSign.ts
+ */
+const CURRENCY_DECIMALS: Record<string, number> = {
+  // Major fiat currencies (ISO-4217)
+  USD: 2,
+  EUR: 2,
+  GBP: 2,
+  CAD: 2,
+  AUD: 2,
+  CHF: 2,
+  CNY: 2,
+  INR: 2,
+  MXN: 2,
+  BRL: 2,
+  // Zero-decimal currencies
+  JPY: 0,
+  KRW: 0,
+  // Crypto currencies
+  ETH: 18,
+  BTC: 8,
+}
+
+/**
+ * Get decimal places for a currency, defaulting to 2 for unknown currencies
+ */
+export function getDecimalPlaces(currency: string): number {
+  return CURRENCY_DECIMALS[currency] ?? 2
+}
+
+/**
  * Result of resolving which balance to display
  */
 export interface ResolvedBalance {
@@ -64,7 +95,8 @@ export function formatMoneyWithSign(input: {
   appendCurrency?: boolean
 }): string {
   const { value, decimals = 2, appendCurrency = false } = input
-  const dollars = value.money.amount / 100
+  const decimalPlaces = getDecimalPlaces(value.money.currency)
+  const dollars = value.money.amount / Math.pow(10, decimalPlaces)
   const signedAmount =
     value.sign === MoneyWithSignSign.negative ? -dollars : dollars
   return formatMoneyNumber({
