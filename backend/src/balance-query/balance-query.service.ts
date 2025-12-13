@@ -6,7 +6,7 @@ import { Between, In, IsNull, Not, Repository } from 'typeorm';
 import type { ExtendedAccountType } from '../types/AccountType';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
-import { ExchangeRateService } from '../exchange-rate/exchange-rate.service';
+import { CurrencyExchangeService } from '../currency-exchange/currency-exchange.service';
 import type { Account } from '../types/Account';
 import type {
   AccountBalanceResult,
@@ -30,7 +30,7 @@ export class BalanceQueryService {
     private accountRepository: Repository<AccountEntity>,
     @InjectRepository(BalanceSnapshotEntity)
     private snapshotRepository: Repository<BalanceSnapshotEntity>,
-    private exchangeRateService: ExchangeRateService,
+    private currencyExchangeService: CurrencyExchangeService,
     private userService: UserService,
   ) {}
 
@@ -295,11 +295,12 @@ export class BalanceQueryService {
     }
 
     try {
-      const rateResponses = await this.exchangeRateService.getRatesForDateRange(
-        currencyPairs,
-        startDate,
-        endDate,
-      );
+      const rateResponses =
+        await this.currencyExchangeService.getRatesForDateRange(
+          currencyPairs,
+          startDate,
+          endDate,
+        );
 
       // Build lookup: date -> (baseCurrency:targetCurrency -> rate)
       const ratesByDate = new Map<string, Map<string, RateWithSource>>();

@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CryptoBalanceService } from '../../src/crypto/crypto-balance.service';
-import { CRYPTO_BALANCE_CONFIG } from '../../src/crypto/crypto.module';
-import type { CryptoBalanceConfig } from '../../src/crypto/crypto-balance.config';
+import {
+  CRYPTO_BALANCE_CONFIG,
+  type CryptoBalanceConfig,
+} from '../../src/crypto/crypto-balance.config';
 
 // Mock global fetch
 const mockFetch = jest.fn();
@@ -11,10 +13,7 @@ describe('CryptoBalanceService', () => {
   let service: CryptoBalanceService;
 
   const testConfig: CryptoBalanceConfig = {
-    ethereumRpcUrls: [
-      'https://rpc1.example.com',
-      'https://rpc2.example.com',
-    ],
+    ethereumRpcUrls: ['https://rpc1.example.com', 'https://rpc2.example.com'],
   };
 
   beforeEach(async () => {

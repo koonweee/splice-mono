@@ -125,7 +125,6 @@ describe('MoneyWithSign', () => {
       expect(positive.getSign()).toBe(MoneySign.POSITIVE);
       expect(negative.getSign()).toBe(MoneySign.NEGATIVE);
     });
-
   });
 
   describe('toLocaleString', () => {
@@ -245,7 +244,11 @@ describe('MoneyWithSign', () => {
     });
 
     it('should format ETH with currency suffix', () => {
-      const eth = new MoneyWithSign('ETH', 1500000000000000000, MoneySign.POSITIVE);
+      const eth = new MoneyWithSign(
+        'ETH',
+        1500000000000000000,
+        MoneySign.POSITIVE,
+      );
 
       const formatted = eth.toLocaleString();
       expect(formatted).toContain('1.5');

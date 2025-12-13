@@ -132,7 +132,9 @@ describe('BankLinkScheduledService', () => {
       );
 
       // Should not throw
-      await expect(scheduledService.handleFrequentSync()).resolves.not.toThrow();
+      await expect(
+        scheduledService.handleFrequentSync(),
+      ).resolves.not.toThrow();
     });
 
     it('should complete successfully with no bank links', async () => {

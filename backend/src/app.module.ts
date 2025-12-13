@@ -15,7 +15,7 @@ import { BalanceSnapshotModule } from './balance-snapshot/balance-snapshot.modul
 import { BankLinkModule } from './bank-link/bank-link.module';
 import { CategoryModule } from './category/category.module';
 import { dataSourceOptions } from './data-source';
-import { ExchangeRateModule } from './exchange-rate/exchange-rate.module';
+import { CurrencyExchangeModule } from './currency-exchange/currency-exchange.module';
 import { HealthModule } from './health/health.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { UserModule } from './user/user.module';
@@ -88,7 +88,7 @@ import { UserModule } from './user/user.module';
     BalanceSnapshotModule,
     BankLinkModule,
     CategoryModule,
-    ExchangeRateModule,
+    CurrencyExchangeModule,
     HealthModule,
     TransactionModule,
     UserModule,

@@ -1,13 +1,15 @@
 import { Module, type DynamicModule } from '@nestjs/common';
 import { CryptoBalanceService } from './crypto-balance.service';
-import { CryptoExchangeRateService } from './crypto-exchange-rate.service';
-import { CoinGeckoExchangeRateProvider } from './providers/coingecko-exchange-rate.provider';
 import {
   CRYPTO_BALANCE_CONFIG,
   DEFAULT_CRYPTO_BALANCE_CONFIG,
   type CryptoBalanceConfig,
 } from './crypto-balance.config';
 
+/**
+ * Module for crypto balance reading (blockchain interaction).
+ * Exchange rate functionality has been moved to CurrencyExchangeModule.
+ */
 @Module({})
 export class CryptoModule {
   /**
@@ -28,10 +30,8 @@ export class CryptoModule {
           useValue: mergedConfig,
         },
         CryptoBalanceService,
-        CoinGeckoExchangeRateProvider,
-        CryptoExchangeRateService,
       ],
-      exports: [CryptoBalanceService, CryptoExchangeRateService],
+      exports: [CryptoBalanceService],
     };
   }
 }
