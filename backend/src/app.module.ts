@@ -14,8 +14,8 @@ import { BalanceQueryModule } from './balance-query/balance-query.module';
 import { BalanceSnapshotModule } from './balance-snapshot/balance-snapshot.module';
 import { BankLinkModule } from './bank-link/bank-link.module';
 import { CategoryModule } from './category/category.module';
-import { dataSourceOptions } from './data-source';
 import { CurrencyExchangeModule } from './currency-exchange/currency-exchange.module';
+import { dataSourceOptions } from './data-source';
 import { HealthModule } from './health/health.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { UserModule } from './user/user.module';
@@ -27,7 +27,7 @@ import { UserModule } from './user/user.module';
         const pino = await import('pino');
 
         // Build streams array - always include stdout for Docker/Coolify logs
-        const streams: pino.StreamEntry[] = [{ stream: process.stdout }];
+        const streams: NodeJS.WritableStream[] = [process.stdout];
 
         // Add Seq stream if configured
         if (process.env.SEQ_SERVER_URL) {
@@ -38,7 +38,7 @@ import { UserModule } from './user/user.module';
             serverUrl: process.env.SEQ_SERVER_URL,
             apiKey: process.env.SEQ_API_KEY,
           });
-          streams.push({ stream: seqStream });
+          streams.push(seqStream);
         }
 
         return {
