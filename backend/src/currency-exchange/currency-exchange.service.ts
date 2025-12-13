@@ -2,33 +2,57 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
 import { In, Repository } from 'typeorm';
-import { AccountEntity } from '../account/account.entity';
 import type {
+  CreateExchangeRateDto,
   CurrencyPair,
   DateRangeRateResponse,
   ExchangeRate,
   RateWithSource,
 } from '../types/ExchangeRate';
-import { UserEntity } from '../user/user.entity';
-import {
-  ExchangeRateBackfillHelper,
-  normalizeCurrencyPair,
-} from './exchange-rate-backfill.helper';
 import { ExchangeRateEntity } from './exchange-rate.entity';
+import type { ICurrencyRateProvider } from './providers/currency-rate-provider.interface';
+import { CryptoExchangeRateProvider } from './providers/crypto-exchange-rate.provider';
+import { FiatExchangeRateProvider } from './providers/fiat-exchange-rate.provider';
+import {
+  isCryptoCurrency,
+  normalizeCurrencyPair,
+} from './utils/currency-pair.utils';
 
 @Injectable()
-export class ExchangeRateService {
-  private readonly logger = new Logger(ExchangeRateService.name);
+export class CurrencyExchangeService {
+  private readonly logger = new Logger(CurrencyExchangeService.name);
 
   constructor(
     @InjectRepository(ExchangeRateEntity)
     private repository: Repository<ExchangeRateEntity>,
-    @InjectRepository(AccountEntity)
-    private accountRepository: Repository<AccountEntity>,
-    @InjectRepository(UserEntity)
-    private userRepository: Repository<UserEntity>,
-    private readonly backfillHelper: ExchangeRateBackfillHelper,
+    private readonly fiatProvider: FiatExchangeRateProvider,
+    private readonly cryptoProvider: CryptoExchangeRateProvider,
   ) {}
+
+  // ============================================================
+  // PROVIDER ROUTING
+  // ============================================================
+
+  /**
+   * Get the appropriate provider for a currency.
+   */
+  getProviderForCurrency(currency: string): ICurrencyRateProvider {
+    return isCryptoCurrency(currency) ? this.cryptoProvider : this.fiatProvider;
+  }
+
+  /**
+   * Get the FIAT exchange rate provider.
+   */
+  getFiatProvider(): FiatExchangeRateProvider {
+    return this.fiatProvider;
+  }
+
+  /**
+   * Get the Crypto exchange rate provider.
+   */
+  getCryptoProvider(): CryptoExchangeRateProvider {
+    return this.cryptoProvider;
+  }
 
   // ============================================================
   // PUBLIC QUERY METHODS
@@ -169,170 +193,159 @@ export class ExchangeRateService {
     return results;
   }
 
+  /**
+   * Get a single exchange rate for a currency pair.
+   * First checks the database, then fetches from the appropriate provider if not found.
+   *
+   * @param baseCurrency - Source currency
+   * @param targetCurrency - Target currency
+   * @param date - Optional date (YYYY-MM-DD). If not provided, uses today.
+   * @returns Exchange rate as a number
+   */
+  async getRate(
+    baseCurrency: string,
+    targetCurrency: string,
+    date?: string,
+  ): Promise<number> {
+    const rateDate = date ?? dayjs().format('YYYY-MM-DD');
+
+    // Normalize the pair
+    const { base, target, inverted } = normalizeCurrencyPair(
+      baseCurrency,
+      targetCurrency,
+    );
+
+    // Check database first
+    const existing = await this.repository.findOne({
+      where: {
+        baseCurrency: base,
+        targetCurrency: target,
+        rateDate,
+      },
+    });
+
+    if (existing) {
+      const rate =
+        typeof existing.rate === 'string'
+          ? parseFloat(existing.rate)
+          : existing.rate;
+      return inverted ? 1 / rate : rate;
+    }
+
+    // Fetch from provider
+    const provider = this.getProviderForCurrency(baseCurrency);
+    const fetchedRate = await provider.getRate(base, target, rateDate);
+
+    // Store in database
+    await this.upsertRate({
+      baseCurrency: base,
+      targetCurrency: target,
+      rate: fetchedRate,
+      rateDate,
+    });
+
+    return inverted ? 1 / fetchedRate : fetchedRate;
+  }
+
   // ============================================================
-  // SYNC METHODS (for scheduled jobs and controllers)
+  // STORAGE METHODS (used by BackfillService)
   // ============================================================
 
   /**
-   * Sync all required exchange rates for today.
-   * Called by the scheduled job.
-   *
-   * Optimizes API calls by:
-   * 1. Skipping pairs that already have rates for today (batch check)
-   * 2. Grouping remaining pairs by base currency
+   * Create or update an exchange rate for a specific date.
+   * Normalizes the currency pair alphabetically before storing.
    */
-  async syncDailyRates(): Promise<ExchangeRate[]> {
-    const today = new Date().toISOString().split('T')[0];
-    const pairs = await this.getRequiredCurrencyPairs();
-    const results: ExchangeRate[] = [];
-
-    if (pairs.length === 0) {
-      this.logger.log({}, 'No currency pairs to sync');
-      return results;
-    }
-
-    // Check which pairs already have rates for today
-    const allBases = [...new Set(pairs.map((p) => p.baseCurrency))];
-
-    // Get existing keys for today only - check all bases in parallel
-    const existingKeysPromises = allBases.map((baseCurrency) => {
-      const basePairs = pairs.filter((p) => p.baseCurrency === baseCurrency);
-      const baseTargets = basePairs.map((p) => p.targetCurrency);
-      return this.backfillHelper.getExistingRateKeys(
-        baseCurrency,
-        baseTargets,
-        today,
-        today,
-      );
-    });
-
-    const existingKeysArrays = await Promise.all(existingKeysPromises);
-    const existingKeys = new Set<string>();
-    existingKeysArrays.forEach((keys) => {
-      keys.forEach((key) => existingKeys.add(key));
-    });
-
-    // Filter out pairs that already have rates for today
-    const pairsToSync = pairs.filter((pair) => {
-      const key = `${pair.targetCurrency}:${today}`;
-      return !existingKeys.has(key);
-    });
-
-    if (pairsToSync.length === 0) {
-      this.logger.log(
-        { count: pairs.length, date: today },
-        'All currency pairs already have rates for date',
-      );
-      return results;
-    }
-
-    this.logger.log(
-      {
-        pairsToSync: pairsToSync.length,
-        date: today,
-        alreadyExist: pairs.length - pairsToSync.length,
-      },
-      'Syncing exchange rates for currency pairs',
+  async upsertRate(dto: CreateExchangeRateDto): Promise<ExchangeRate> {
+    // Normalize the pair to canonical form (alphabetically sorted)
+    const { base, target, inverted } = normalizeCurrencyPair(
+      dto.baseCurrency,
+      dto.targetCurrency,
     );
 
-    // Group pairs by base currency to minimize API calls
-    const pairsByBase = new Map<string, string[]>();
-    pairsToSync.forEach((pair) => {
-      const targets = pairsByBase.get(pair.baseCurrency) ?? [];
-      targets.push(pair.targetCurrency);
-      pairsByBase.set(pair.baseCurrency, targets);
+    // If inverted, we need to store the inverse rate
+    const normalizedRate = inverted ? 1 / dto.rate : dto.rate;
+
+    // Check if rate already exists for this normalized pair and date
+    const existing = await this.repository.findOne({
+      where: {
+        baseCurrency: base,
+        targetCurrency: target,
+        rateDate: dto.rateDate,
+      },
     });
 
-    // Fetch rates for each base currency (one API call per base)
-    for (const [baseCurrency, targetCurrencies] of pairsByBase) {
-      try {
-        const rates = await this.backfillHelper.fetchExchangeRates(
-          baseCurrency,
-          targetCurrencies,
-        );
-
-        for (const [targetCurrency, rate] of rates) {
-          const exchangeRate = await this.backfillHelper.upsertRate({
-            baseCurrency,
-            targetCurrency,
-            rate,
-            rateDate: today,
-          });
-          results.push(exchangeRate);
-          this.logger.log(
-            { baseCurrency, rate, targetCurrency },
-            'Saved exchange rate',
-          );
-        }
-      } catch (error) {
-        this.logger.error(
-          { baseCurrency, error: String(error) },
-          'Error fetching rates for base currency',
-        );
-      }
+    if (existing) {
+      existing.rate = normalizedRate;
+      const saved = await this.repository.save(existing);
+      return saved.toObject();
     }
 
-    this.logger.log({ count: results.length }, 'Synced exchange rates');
-    return results;
+    const entity = ExchangeRateEntity.fromDto({
+      baseCurrency: base,
+      targetCurrency: target,
+      rate: normalizedRate,
+      rateDate: dto.rateDate,
+    });
+    const saved = await this.repository.save(entity);
+    return saved.toObject();
   }
 
   /**
-   * Determine which currency pairs need to be tracked based on all users and their accounts.
-   * Returns unique normalized pairs (alphabetically sorted) where the user's currency
-   * differs from the account's currency.
+   * Get existing rates for a base currency and multiple targets within a date range.
+   * Returns a Set of "targetCurrency:date" for rates that already exist.
+   *
+   * @param baseCurrency - The base currency (will be normalized)
+   * @param targetCurrencies - Array of target currencies
+   * @param startDate - Start date (YYYY-MM-DD)
+   * @param endDate - End date (YYYY-MM-DD)
+   * @returns Set of "targetCurrency:date" keys that already have rates
    */
-  async getRequiredCurrencyPairs(): Promise<CurrencyPair[]> {
-    // Get all users with their currency setting
-    const users = await this.userRepository.find({
-      select: ['id', 'settings'],
-    });
-
-    // Fetch all user accounts in parallel
-    const userAccountsResults = await Promise.all(
-      users.map(async (user) => ({
-        userCurrency: user.settings.currency,
-        accounts: await this.accountRepository.find({
-          where: { userId: user.id },
-        }),
-      })),
+  async getExistingRateKeys(
+    baseCurrency: string,
+    targetCurrencies: string[],
+    startDate: string,
+    endDate: string,
+  ): Promise<Set<string>> {
+    // Normalize all pairs to get the actual base/target stored in DB
+    const normalizedPairs = targetCurrencies.map((target) =>
+      normalizeCurrencyPair(baseCurrency, target),
     );
 
-    const pairsSet = new Set<string>();
-    const pairs: CurrencyPair[] = [];
+    // Get unique normalized bases and targets
+    const normalizedBases = [...new Set(normalizedPairs.map((p) => p.base))];
+    const normalizedTargets = [
+      ...new Set(normalizedPairs.map((p) => p.target)),
+    ];
 
-    userAccountsResults.forEach(({ userCurrency, accounts }) => {
-      accounts.forEach((account) => {
-        const accountCurrency = account.currentBalance.currency;
+    const entities = await this.repository
+      .createQueryBuilder('rate')
+      .select(['rate.baseCurrency', 'rate.targetCurrency', 'rate.rateDate'])
+      .where('rate.baseCurrency IN (:...bases)', { bases: normalizedBases })
+      .andWhere('rate.targetCurrency IN (:...targets)', {
+        targets: normalizedTargets,
+      })
+      .andWhere('rate.rateDate >= :startDate', { startDate })
+      .andWhere('rate.rateDate <= :endDate', { endDate })
+      .getMany();
 
-        // Skip if currencies are the same
-        if (accountCurrency === userCurrency) {
-          return;
-        }
+    // Build a set of existing keys using the original (non-normalized) target currency
+    // so we can look up by what the caller passed in
+    const existingKeys = new Set<string>();
 
-        // Normalize the pair to canonical form (alphabetically sorted)
-        const { base, target } = normalizeCurrencyPair(
-          accountCurrency,
-          userCurrency,
-        );
-
-        // Create a unique key for this normalized pair
-        const pairKey = `${base}:${target}`;
-
-        if (!pairsSet.has(pairKey)) {
-          pairsSet.add(pairKey);
-          pairs.push({
-            baseCurrency: base,
-            targetCurrency: target,
-          });
+    entities.forEach((entity) => {
+      // Find which original target currency this maps to
+      targetCurrencies.forEach((targetCurrency, i) => {
+        const normalized = normalizedPairs[i];
+        if (
+          entity.baseCurrency === normalized.base &&
+          entity.targetCurrency === normalized.target
+        ) {
+          existingKeys.add(`${targetCurrency}:${entity.rateDate}`);
         }
       });
     });
 
-    this.logger.log(
-      { count: pairs.length },
-      'Found unique currency pairs to track',
-    );
-    return pairs;
+    return existingKeys;
   }
 
   // ============================================================

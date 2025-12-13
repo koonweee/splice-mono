@@ -16,7 +16,7 @@ export interface Account {
   name: string | null;
   /** @nullable */
   mask?: string | null;
-  type: AccountType;
+  type: typeof AccountType[keyof typeof AccountType] ;
   /** @nullable */
   subType: AccountSubType;
   /** @nullable */

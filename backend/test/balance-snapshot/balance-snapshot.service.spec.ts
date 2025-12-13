@@ -1,3 +1,4 @@
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountService } from '../../src/account/account.service';
@@ -15,11 +16,17 @@ import {
 } from '../mocks/balance-snapshot/balance-snapshot.mock';
 import { mockUserService } from '../mocks/user/user-service.mock';
 
+const mockEventEmitter = {
+  emit: jest.fn(),
+};
+
 describe('BalanceSnapshotService', () => {
   let service: BalanceSnapshotService;
   let repository: typeof mockBalanceSnapshotRepository;
 
   beforeEach(async () => {
+    mockEventEmitter.emit.mockReset();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BalanceSnapshotService,
@@ -34,6 +41,10 @@ describe('BalanceSnapshotService', () => {
         {
           provide: AccountService,
           useValue: mockAccountService,
+        },
+        {
+          provide: EventEmitter2,
+          useValue: mockEventEmitter,
         },
       ],
     }).compile();

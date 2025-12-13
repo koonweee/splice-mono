@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.1.0",
-    "@half0wl/money": "^1.0.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/event-emitter": "^3.0.1",

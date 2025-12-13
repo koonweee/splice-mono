@@ -15,7 +15,7 @@ export interface UpdateAccountDto {
   name?: string | null;
   /** @nullable */
   mask?: string | null;
-  type?: UpdateAccountDtoType;
+  type?: typeof UpdateAccountDtoType[keyof typeof UpdateAccountDtoType] ;
   /** @nullable */
   subType?: UpdateAccountDtoSubType;
   /** @nullable */

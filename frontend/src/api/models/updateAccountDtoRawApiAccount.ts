@@ -17,7 +17,7 @@ export type UpdateAccountDtoRawApiAccount = {
   name: string;
   /** @nullable */
   mask: string | null;
-  type: UpdateAccountDtoRawApiAccountType;
+  type: typeof UpdateAccountDtoRawApiAccountType[keyof typeof UpdateAccountDtoRawApiAccountType] ;
   /** @nullable */
   subType: UpdateAccountDtoRawApiAccountSubType;
   availableBalance: MoneyWithSign;

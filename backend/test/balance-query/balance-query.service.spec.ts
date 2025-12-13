@@ -4,7 +4,7 @@ import { AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
 import { BalanceQueryService } from '../../src/balance-query/balance-query.service';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
-import { ExchangeRateService } from '../../src/exchange-rate/exchange-rate.service';
+import { CurrencyExchangeService } from '../../src/currency-exchange/currency-exchange.service';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserService } from '../../src/user/user.service';
@@ -134,7 +134,7 @@ describe('BalanceQueryService', () => {
     find: jest.Mock;
     createQueryBuilder: jest.Mock;
   };
-  let mockExchangeRateService: {
+  let mockCurrencyExchangeService: {
     getRatesForDateRange: jest.Mock;
   };
   let mockUserService: {
@@ -149,7 +149,7 @@ describe('BalanceQueryService', () => {
       find: jest.fn(),
       createQueryBuilder: jest.fn().mockReturnValue(createMockQueryBuilder([])),
     };
-    mockExchangeRateService = {
+    mockCurrencyExchangeService = {
       getRatesForDateRange: jest.fn(),
     };
     mockUserService = {
@@ -168,8 +168,8 @@ describe('BalanceQueryService', () => {
           useValue: mockSnapshotRepository,
         },
         {
-          provide: ExchangeRateService,
-          useValue: mockExchangeRateService,
+          provide: CurrencyExchangeService,
+          useValue: mockCurrencyExchangeService,
         },
         {
           provide: UserService,
@@ -471,7 +471,7 @@ describe('BalanceQueryService', () => {
         mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
         mockAccountRepository.find.mockResolvedValue([accountEntity]);
         mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
-        mockExchangeRateService.getRatesForDateRange.mockResolvedValue([
+        mockCurrencyExchangeService.getRatesForDateRange.mockResolvedValue([
           {
             date: '2024-01-15',
             rates: [
@@ -550,7 +550,7 @@ describe('BalanceQueryService', () => {
         ).toBeUndefined();
         // Exchange rate service should not be called for same-currency
         expect(
-          mockExchangeRateService.getRatesForDateRange,
+          mockCurrencyExchangeService.getRatesForDateRange,
         ).not.toHaveBeenCalled();
       });
 
@@ -572,7 +572,7 @@ describe('BalanceQueryService', () => {
         mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
         mockAccountRepository.find.mockResolvedValue([accountEntity]);
         mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
-        mockExchangeRateService.getRatesForDateRange.mockRejectedValue(
+        mockCurrencyExchangeService.getRatesForDateRange.mockRejectedValue(
           new Error('Rate not found'),
         );
 

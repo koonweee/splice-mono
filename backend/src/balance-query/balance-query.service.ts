@@ -3,9 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
 import { AccountType } from 'plaid';
 import { Between, In, IsNull, Not, Repository } from 'typeorm';
+import type { ExtendedAccountType } from '../types/AccountType';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
-import { ExchangeRateService } from '../exchange-rate/exchange-rate.service';
+import { CurrencyExchangeService } from '../currency-exchange/currency-exchange.service';
 import type { Account } from '../types/Account';
 import type {
   AccountBalanceResult,
@@ -29,7 +30,7 @@ export class BalanceQueryService {
     private accountRepository: Repository<AccountEntity>,
     @InjectRepository(BalanceSnapshotEntity)
     private snapshotRepository: Repository<BalanceSnapshotEntity>,
-    private exchangeRateService: ExchangeRateService,
+    private currencyExchangeService: CurrencyExchangeService,
     private userService: UserService,
   ) {}
 
@@ -294,11 +295,12 @@ export class BalanceQueryService {
     }
 
     try {
-      const rateResponses = await this.exchangeRateService.getRatesForDateRange(
-        currencyPairs,
-        startDate,
-        endDate,
-      );
+      const rateResponses =
+        await this.currencyExchangeService.getRatesForDateRange(
+          currencyPairs,
+          startDate,
+          endDate,
+        );
 
       // Build lookup: date -> (baseCurrency:targetCurrency -> rate)
       const ratesByDate = new Map<string, Map<string, RateWithSource>>();
@@ -404,11 +406,16 @@ export class BalanceQueryService {
    * - All other types: currentBalance
    */
   private calculateEffectiveBalance(
-    accountType: AccountType,
+    accountType: ExtendedAccountType,
     availableBalance: SerializedMoneyWithSign,
     currentBalance: SerializedMoneyWithSign,
   ): SerializedMoneyWithSign {
-    if ([AccountType.Investment, AccountType.Brokerage].includes(accountType)) {
+    // For Investment/Brokerage accounts, combine available + current balance
+    // For all other types (including crypto), use available balance
+    if (
+      accountType === AccountType.Investment ||
+      accountType === AccountType.Brokerage
+    ) {
       const availableAmount = this.getSignedAmount(availableBalance);
       const currentAmount = this.getSignedAmount(currentBalance);
       const totalAmount = availableAmount + currentAmount;

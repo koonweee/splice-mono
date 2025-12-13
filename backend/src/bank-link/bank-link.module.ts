@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountEntity } from 'src/account/account.entity';
+import { CryptoModule } from '../crypto/crypto.module';
 import { UserModule } from '../user/user.module';
 import { WebhookEventModule } from '../webhook-event/webhook-event.module';
 import { BankLinkController } from './bank-link.controller';
 import { BankLinkEntity } from './bank-link.entity';
 import { BankLinkScheduledService } from './bank-link.scheduled';
 import { BankLinkService } from './bank-link.service';
+import { CryptoProvider } from './providers/crypto/crypto.provider';
 import { PlaidProvider } from './providers/plaid/plaid.provider';
 import { ProviderRegistry } from './providers/provider.registry';
 
@@ -19,6 +21,7 @@ import { ProviderRegistry } from './providers/provider.registry';
     TypeOrmModule.forFeature([BankLinkEntity, AccountEntity]),
     WebhookEventModule,
     UserModule, // For accessing user provider details
+    CryptoModule.forRoot(), // Crypto balance service for wallet linking
   ],
   controllers: [BankLinkController],
   providers: [
@@ -26,6 +29,7 @@ import { ProviderRegistry } from './providers/provider.registry';
     BankLinkScheduledService, // Scheduled tasks for bank link operations
     ProviderRegistry,
     PlaidProvider, // Register Plaid provider
+    CryptoProvider, // Register Crypto provider
   ],
   exports: [
     BankLinkService, // Export for use in other modules

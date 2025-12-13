@@ -1,10 +1,40 @@
-import { ISOCurrencyCode, Money } from '@half0wl/money';
 import { registerSchema } from 'src/common/zod-api-response';
 import { z } from 'zod';
 
 export enum MoneySign {
   POSITIVE = 'positive',
   NEGATIVE = 'negative',
+}
+
+/**
+ * Decimal places for currencies (smallest unit conversion)
+ * ISO-4217 fiat currencies + crypto currencies
+ */
+const CURRENCY_DECIMALS: Record<string, number> = {
+  // Major fiat currencies (ISO-4217)
+  USD: 2,
+  EUR: 2,
+  GBP: 2,
+  CAD: 2,
+  AUD: 2,
+  CHF: 2,
+  CNY: 2,
+  INR: 2,
+  MXN: 2,
+  BRL: 2,
+  // Zero-decimal currencies
+  JPY: 0,
+  KRW: 0,
+  // Crypto currencies
+  ETH: 18,
+  BTC: 8,
+};
+
+/**
+ * Get decimal places for a currency, defaulting to 2 for unknown currencies
+ */
+function getDecimalPlaces(currency: string): number {
+  return CURRENCY_DECIMALS[currency] ?? 2;
 }
 
 /**
@@ -48,10 +78,11 @@ export const CurrentAndAvailableBalanceSchema = z.object({
 });
 
 /**
- * MoneyWithSign wrapper class over @half0wl/money
+ * MoneyWithSign class for handling monetary amounts with sign tracking
  *
  * Stores monetary amounts as integers in the smallest currency unit (e.g., cents)
- * while tracking credit/debit sign separately.
+ * while tracking credit/debit sign separately. Supports both fiat (ISO-4217)
+ * and crypto currencies.
  *
  * @example
  * // Create from float (e.g., from Plaid API)
@@ -61,70 +92,66 @@ export const CurrentAndAvailableBalanceSchema = z.object({
  *
  * // Create from integer (e.g., from database)
  * const balance2 = new MoneyWithSign('USD', 19999, MoneySign.POSITIVE);
+ *
+ * // Crypto currencies work too
+ * const eth = MoneyWithSign.fromFloat('ETH', 1.5, MoneySign.POSITIVE);
+ * eth.getAmount(); // => 1500000000000000000 (wei)
  */
 export class MoneyWithSign {
-  private readonly money: Money;
+  private readonly currency: string;
+  private readonly amount: number;
   private readonly sign: MoneySign;
 
   /**
    * Create a MoneyWithSign instance from integer amount (smallest currency unit)
-   * @param currency - ISO 4217 currency code (e.g., 'USD')
-   * @param amount - Amount in smallest currency unit (e.g., cents)
+   * @param currency - Currency code (e.g., 'USD', 'ETH')
+   * @param amount - Amount in smallest currency unit (e.g., cents, wei)
    * @param sign - Credit or debit
    */
-  constructor(currency: ISOCurrencyCode, amount: number, sign: MoneySign) {
-    this.money = new Money(currency, Math.abs(amount));
+  constructor(currency: string, amount: number, sign: MoneySign) {
+    this.currency = currency;
+    this.amount = Math.abs(Math.round(amount));
     this.sign = sign;
   }
 
   /**
    * Create a MoneyWithSign instance from a float amount
-   * Useful for converting from external APIs (e.g., Plaid)
-   * @param currency - ISO 4217 currency code (e.g., 'USD')
+   * Useful for converting from external APIs (e.g., Plaid, Tatum)
+   * @param currency - Currency code (e.g., 'USD', 'ETH')
    * @param floatAmount - Amount as decimal (e.g., 199.99)
    * @param sign - Credit or debit
    */
   static fromFloat(
-    currency: ISOCurrencyCode,
+    currency: string,
     floatAmount: number,
     sign: MoneySign,
   ): MoneyWithSign {
-    const absAmount = Math.abs(floatAmount);
-
-    // Money.fromFloat() throws for integers (including 0), so handle those directly
-    // by converting to cents ourselves
-    if (Number.isInteger(absAmount)) {
-      const cents = absAmount * 100;
-      return new MoneyWithSign(currency, cents, sign);
-    }
-
-    const money = Money.fromFloat(currency, absAmount);
-    return new MoneyWithSign(currency, money.getAmount(), sign);
+    const decimals = getDecimalPlaces(currency);
+    const smallestUnit = Math.round(
+      Math.abs(floatAmount) * Math.pow(10, decimals),
+    );
+    return new MoneyWithSign(currency, smallestUnit, sign);
   }
 
   /**
    * Create a MoneyWithSign instance from serialized data (e.g., from database or DTO)
    */
   static fromSerialized(data: SerializedMoneyWithSign): MoneyWithSign {
-    return new MoneyWithSign(
-      data.money.currency as ISOCurrencyCode,
-      data.money.amount,
-      data.sign,
-    );
+    return new MoneyWithSign(data.money.currency, data.money.amount, data.sign);
   }
 
   /**
    * Get the amount in smallest currency unit (e.g., cents)
    */
   getAmount(): number {
-    return this.money.getAmount();
+    return this.amount;
   }
 
   /**
    * Get the currency code
    */
-  getCurrency(): ISOCurrencyCode {
-    return this.money.getCurrency();
+  getCurrency(): string {
+    return this.currency;
   }
 
   /**
@@ -135,19 +162,38 @@ export class MoneyWithSign {
   }
 
   /**
-   * Get the underlying Money instance
-   */
-  getMoney(): Money {
-    return this.money;
-  }
-
-  /**
    * Format as locale string (e.g., '$199.99')
+   * For crypto currencies, formats as number with currency code suffix
    */
-  toLocaleString(locale?: string): string {
-    // Money class has proper toLocaleString implementation
-    // eslint-disable-next-line @typescript-eslint/no-base-to-string
-    return this.money.toLocaleString(locale);
+  toLocaleString(locale = 'en-US'): string {
+    const decimals = getDecimalPlaces(this.currency);
+    const floatValue = this.amount / Math.pow(10, decimals);
+
+    // Check if this is a known fiat currency for Intl.NumberFormat
+    const isFiat = [
+      'USD',
+      'EUR',
+      'GBP',
+      'CAD',
+      'AUD',
+      'CHF',
+      'CNY',
+      'INR',
+      'MXN',
+      'BRL',
+      'JPY',
+      'KRW',
+    ].includes(this.currency);
+
+    if (isFiat) {
+      return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: this.currency,
+      }).format(floatValue);
+    }
+
+    // For crypto, format as number with currency suffix
+    return `${floatValue.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 8 })} ${this.currency}`;
   }
 
   /**
@@ -164,8 +210,8 @@ export class MoneyWithSign {
   toSerialized(): SerializedMoneyWithSign {
     return {
       money: {
-        currency: this.money.getCurrency(),
-        amount: this.money.getAmount(),
+        currency: this.currency,
+        amount: this.amount,
       },
       sign: this.sign,
     };
