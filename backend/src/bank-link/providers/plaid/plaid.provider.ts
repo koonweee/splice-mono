@@ -1,4 +1,3 @@
-import { ISOCurrencyCode } from '@half0wl/money';
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash, timingSafeEqual } from 'crypto';
 import { decodeJwt, decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
@@ -445,9 +444,7 @@ export class PlaidProvider implements IBankLinkProvider {
         const accountName = official_name ?? name;
 
         // Pre-process shared currency code (default to USD if not available)
-        const currency = (iso_currency_code ??
-          unofficial_currency_code ??
-          'USD') as ISOCurrencyCode;
+        const currency = iso_currency_code ?? unofficial_currency_code ?? 'USD';
 
         // Pre-process available balance (Plaid returns float amounts like 199.99)
         const availableAmount = available ?? 0;

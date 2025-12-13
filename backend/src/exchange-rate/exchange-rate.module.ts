@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
+import { BankLinkModule } from '../bank-link/bank-link.module';
 import { UserEntity } from '../user/user.entity';
 import { ExchangeRateBackfillHelper } from './exchange-rate-backfill.helper';
 import { ExchangeRateEntity } from './exchange-rate.entity';
@@ -17,6 +18,7 @@ import { ExchangeRateService } from './exchange-rate.service';
       UserEntity,
       BalanceSnapshotEntity,
     ]),
+    forwardRef(() => BankLinkModule), // For TatumService (crypto exchange rates)
   ],
   providers: [
     ExchangeRateBackfillHelper,

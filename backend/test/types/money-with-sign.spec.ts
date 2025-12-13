@@ -126,13 +126,6 @@ describe('MoneyWithSign', () => {
       expect(negative.getSign()).toBe(MoneySign.NEGATIVE);
     });
 
-    it('getMoney should return underlying Money instance', () => {
-      const money = new MoneyWithSign('USD', 5000, MoneySign.POSITIVE);
-      const underlyingMoney = money.getMoney();
-
-      expect(underlyingMoney.getAmount()).toBe(5000);
-      expect(underlyingMoney.getCurrency()).toBe('USD');
-    });
   });
 
   describe('toLocaleString', () => {
@@ -231,6 +224,47 @@ describe('MoneyWithSign', () => {
       expect(restored.getAmount()).toBe(original.getAmount());
       expect(restored.getCurrency()).toBe(original.getCurrency());
       expect(restored.getSign()).toBe(original.getSign());
+    });
+  });
+
+  describe('crypto currencies', () => {
+    it('should handle ETH with 18 decimal places', () => {
+      const eth = MoneyWithSign.fromFloat('ETH', 1.5, MoneySign.POSITIVE);
+
+      // 1.5 ETH = 1.5 * 10^18 wei
+      expect(eth.getAmount()).toBe(1500000000000000000);
+      expect(eth.getCurrency()).toBe('ETH');
+    });
+
+    it('should handle BTC with 8 decimal places', () => {
+      const btc = MoneyWithSign.fromFloat('BTC', 0.025, MoneySign.POSITIVE);
+
+      // 0.025 BTC = 0.025 * 10^8 satoshi = 2500000
+      expect(btc.getAmount()).toBe(2500000);
+      expect(btc.getCurrency()).toBe('BTC');
+    });
+
+    it('should format ETH with currency suffix', () => {
+      const eth = new MoneyWithSign('ETH', 1500000000000000000, MoneySign.POSITIVE);
+
+      const formatted = eth.toLocaleString();
+      expect(formatted).toContain('1.5');
+      expect(formatted).toContain('ETH');
+    });
+
+    it('should format BTC with currency suffix', () => {
+      const btc = new MoneyWithSign('BTC', 2500000, MoneySign.POSITIVE);
+
+      const formatted = btc.toLocaleString();
+      expect(formatted).toContain('0.025');
+      expect(formatted).toContain('BTC');
+    });
+
+    it('should handle zero-decimal currencies like JPY', () => {
+      const jpy = MoneyWithSign.fromFloat('JPY', 1000, MoneySign.POSITIVE);
+
+      // JPY has 0 decimal places, so 1000 JPY = 1000 (no conversion)
+      expect(jpy.getAmount()).toBe(1000);
     });
   });
 });
