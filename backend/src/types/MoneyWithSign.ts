@@ -33,7 +33,7 @@ const CURRENCY_DECIMALS: Record<string, number> = {
 /**
  * Get decimal places for a currency, defaulting to 2 for unknown currencies
  */
-function getDecimalPlaces(currency: string): number {
+export function getDecimalPlaces(currency: string): number {
   return CURRENCY_DECIMALS[currency] ?? 2;
 }
 
