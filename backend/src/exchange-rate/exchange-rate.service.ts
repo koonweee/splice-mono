@@ -327,7 +327,10 @@ export class ExchangeRateService {
 
         if (rate === 0) {
           this.logger.warn(
-            { baseCurrency: pair.baseCurrency, targetCurrency: pair.targetCurrency },
+            {
+              baseCurrency: pair.baseCurrency,
+              targetCurrency: pair.targetCurrency,
+            },
             'Received zero exchange rate, skipping',
           );
           continue;
@@ -342,7 +345,11 @@ export class ExchangeRateService {
 
         results.push(exchangeRate);
         this.logger.log(
-          { baseCurrency: pair.baseCurrency, targetCurrency: pair.targetCurrency, rate },
+          {
+            baseCurrency: pair.baseCurrency,
+            targetCurrency: pair.targetCurrency,
+            rate,
+          },
           'Saved crypto exchange rate',
         );
       } catch (error) {

@@ -9,6 +9,7 @@ import { ExchangeRateEntity } from './exchange-rate.entity';
 import { ExchangeRateListener } from './exchange-rate.listener';
 import { ExchangeRateScheduledService } from './exchange-rate.scheduled';
 import { ExchangeRateService } from './exchange-rate.service';
+import { SnapshotExchangeRateService } from './snapshot-exchange-rate.service';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ExchangeRateService } from './exchange-rate.service';
     ExchangeRateService,
     ExchangeRateScheduledService,
     ExchangeRateListener,
+    SnapshotExchangeRateService,
   ],
   exports: [ExchangeRateService, ExchangeRateBackfillHelper],
 })
