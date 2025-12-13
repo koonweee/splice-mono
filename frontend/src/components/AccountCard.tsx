@@ -1,6 +1,7 @@
 import { Group, Paper, Text } from '@mantine/core'
 import type { AccountSummaryData } from '../lib/balance-utils'
 import {
+  formatAccountType,
   formatMoneyWithSign,
   formatPercent,
   getChangeColorMantine,
@@ -48,8 +49,8 @@ export function AccountCard({
           </Text>
           <Text size="sm" c="dimmed" tt="capitalize" truncate>
             {account.institutionName
-              ? `${account.institutionName} · ${account.subType || account.type}`
-              : account.subType || account.type}
+              ? `${account.institutionName} · ${formatAccountType(account.subType || account.type)}`
+              : formatAccountType(account.subType || account.type)}
           </Text>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>

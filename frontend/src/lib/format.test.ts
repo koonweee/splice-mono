@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MoneyWithSignSign } from '../api/models'
 import {
+  formatAccountType,
   formatMoneyWithSign,
   getDecimalPlaces,
   formatPercent,
@@ -124,6 +125,36 @@ describe('format utils', () => {
 
     it('should return undefined for 0', () => {
       expect(formatPercent(0)).toBeUndefined()
+    })
+  })
+
+  describe('formatAccountType', () => {
+    it('should format crypto wallet type correctly', () => {
+      expect(formatAccountType('crypto_wallet')).toBe('Crypto Wallet')
+    })
+
+    it('should format crypto exchange subType correctly', () => {
+      expect(formatAccountType('crypto exchange')).toBe('Crypto Exchange')
+    })
+
+    it('should format non-custodial wallet subType correctly', () => {
+      expect(formatAccountType('non-custodial wallet')).toBe('Non-Custodial Wallet')
+    })
+
+    it('should handle regular account types with default formatting', () => {
+      expect(formatAccountType('checking')).toBe('Checking')
+      expect(formatAccountType('savings')).toBe('Savings')
+      expect(formatAccountType('home equity')).toBe('Home Equity') // API model has space, not underscore
+    })
+
+    it('should handle undefined and null values', () => {
+      expect(formatAccountType(undefined)).toBe('')
+      expect(formatAccountType(null)).toBe('')
+    })
+
+    it('should format unknown types with capitalized first letter and spaces', () => {
+      expect(formatAccountType('unknown_type')).toBe('Unknown type')
+      expect(formatAccountType('another_cool_type')).toBe('Another cool type')
     })
   })
 })
