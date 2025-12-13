@@ -24,16 +24,21 @@ import { UserModule } from './user/user.module';
   imports: [
     LoggerModule.forRootAsync({
       useFactory: async () => {
-        let stream: NodeJS.WritableStream | undefined;
+        const pino = await import('pino');
 
+        // Build streams array - always include stdout for Docker/Coolify logs
+        const streams: pino.StreamEntry[] = [{ stream: process.stdout }];
+
+        // Add Seq stream if configured
         if (process.env.SEQ_SERVER_URL) {
           const pinoSeq = (await import('pino-seq')) as any;
           const createStream =
             pinoSeq.default?.createStream ?? pinoSeq.createStream;
-          stream = createStream({
+          const seqStream = createStream({
             serverUrl: process.env.SEQ_SERVER_URL,
             apiKey: process.env.SEQ_API_KEY,
           });
+          streams.push({ stream: seqStream });
         }
 
         return {
@@ -65,16 +70,7 @@ import { UserModule } from './user/user.module';
               ],
               censor: '[REDACTED]',
             },
-            stream,
-            ...(!stream && {
-              transport: {
-                target: 'pino-pretty',
-                options: {
-                  colorize: true,
-                  singleLine: true,
-                },
-              },
-            }),
+            stream: pino.multistream(streams),
             level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
           },
         };
