@@ -442,11 +442,6 @@
     "@eslint/core" "^0.17.0"
     levn "^0.4.1"
 
-"@half0wl/money@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/@half0wl/money/-/money-1.0.2.tgz"
-  integrity sha512-pGOGJlJQsMTNXYixzbstDRlylpzzXHNGvxGW7YzK2BOG/3njpJZXx7NwQg2LNbnJwLRHDlG7sZq4eUXPspdhTA==
-
 "@humanfs/core@^0.19.1":
   version "0.19.1"
   resolved "https://registry.npmjs.org/@humanfs/core/-/core-0.19.1.tgz"
