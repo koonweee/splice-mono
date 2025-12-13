@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import type {
   CreateExchangeRateDto,
   CurrencyPair,
@@ -92,14 +92,47 @@ export class CurrencyExchangeService {
       ...new Set(normalizedPairs.map((p) => p.normalized.target)),
     ];
 
-    // Query all matching rates from database
-    const entities = await this.repository.find({
-      where: {
-        baseCurrency: In(normalizedBases),
-        targetCurrency: In(normalizedTargets),
-      },
-      order: { rateDate: 'ASC' },
-    });
+    // Query rates within the date range
+    const entitiesInRange = await this.repository
+      .createQueryBuilder('rate')
+      .where('rate.baseCurrency IN (:...bases)', { bases: normalizedBases })
+      .andWhere('rate.targetCurrency IN (:...targets)', {
+        targets: normalizedTargets,
+      })
+      .andWhere('rate.rateDate >= :startDate', { startDate })
+      .andWhere('rate.rateDate <= :endDate', { endDate })
+      .orderBy('rate.rateDate', 'ASC')
+      .getMany();
+
+    // For fill-forward: get the most recent rate before startDate for each pair
+    const priorRates = await this.repository
+      .createQueryBuilder('rate')
+      .distinctOn(['rate.baseCurrency', 'rate.targetCurrency'])
+      .where('rate.baseCurrency IN (:...bases)', { bases: normalizedBases })
+      .andWhere('rate.targetCurrency IN (:...targets)', {
+        targets: normalizedTargets,
+      })
+      .andWhere('rate.rateDate < :startDate', { startDate })
+      .orderBy('rate.baseCurrency')
+      .addOrderBy('rate.targetCurrency')
+      .addOrderBy('rate.rateDate', 'DESC')
+      .getMany();
+
+    // For fill-backward: get the earliest rate after endDate for each pair (fallback)
+    const futureRates = await this.repository
+      .createQueryBuilder('rate')
+      .distinctOn(['rate.baseCurrency', 'rate.targetCurrency'])
+      .where('rate.baseCurrency IN (:...bases)', { bases: normalizedBases })
+      .andWhere('rate.targetCurrency IN (:...targets)', {
+        targets: normalizedTargets,
+      })
+      .andWhere('rate.rateDate > :endDate', { endDate })
+      .orderBy('rate.baseCurrency')
+      .addOrderBy('rate.targetCurrency')
+      .addOrderBy('rate.rateDate', 'ASC')
+      .getMany();
+
+    const entities = [...priorRates, ...entitiesInRange, ...futureRates];
 
     // Build lookup map: "base:target:date" -> rate
     const rateMap = new Map<string, number>();
