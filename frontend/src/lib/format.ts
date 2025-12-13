@@ -136,10 +136,12 @@ export function formatMoneyNumber(input: {
 
   // Handle crypto currencies differently - without currency symbols
   if (isCryptoCurrency(currency)) {
-    // Use the currency's specific decimal places or the provided decimals, whichever is smaller
+    // Use up to 6 decimal places max for crypto currencies (with currency's specific decimal places as upper limit)
     const decimalPlaces = getDecimalPlaces(currency)
+    const maxCryptoDecimals = 6 // Cap crypto display at 6 decimals for readability
     const cryptoDecimals = Math.min(
       decimals !== undefined ? decimals : decimalPlaces,
+      maxCryptoDecimals,
       decimalPlaces,
     )
     const formattedValue = value.toFixed(cryptoDecimals)
