@@ -592,6 +592,67 @@ describe('BalanceQueryService', () => {
           result[0].balances['acc-1'].availableBalance.convertedBalance,
         ).toBeUndefined();
       });
+
+      it('should correctly handle conversion between currencies with different decimals (ETH to SGD)', async () => {
+        const accountEntity = createMockAccountEntity(
+          'acc-1',
+          AccountType.Depository,
+          'ETH',
+        );
+        // 1 ETH = 10^18 wei
+        const ethAmount = 1000000000000000000;
+        const snapshotEntity = createMockSnapshotEntity(
+          'acc-1',
+          '2024-01-15',
+          ethAmount,
+          ethAmount,
+          'ETH',
+        );
+
+        // User's preferred currency is SGD (2 decimals)
+        mockUserService.findOne.mockResolvedValue(createMockUser('SGD'));
+        mockAccountRepository.find.mockResolvedValue([accountEntity]);
+        mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
+        
+        // Exchange rate: 1 ETH = 3000 SGD
+        mockCurrencyExchangeService.getRatesForDateRange.mockResolvedValue([
+          {
+            date: '2024-01-15',
+            rates: [
+              {
+                baseCurrency: 'ETH',
+                targetCurrency: 'SGD',
+                rate: 3000,
+                source: 'DB',
+              },
+            ],
+          },
+        ]);
+
+        const result = await service.getSnapshotBalancesForDateRange(
+          ['acc-1'],
+          '2024-01-15',
+          '2024-01-15',
+          mockUserId,
+        );
+
+        expect(
+          result[0].balances['acc-1'].availableBalance.convertedBalance,
+        ).toBeDefined();
+        
+        // Calculation:
+        // 1.0 ETH (from 10^18 wei) * 3000 Rate = 3000.0 SGD
+        // 3000.0 SGD in cents (2 decimals) = 300000
+        expect(
+          result[0].balances['acc-1'].availableBalance.convertedBalance?.money
+            .amount,
+        ).toBe(300000);
+        
+        expect(
+          result[0].balances['acc-1'].availableBalance.convertedBalance?.money
+            .currency,
+        ).toBe('SGD');
+      });
     });
 
     describe('snapshot fill-forward logic', () => {
