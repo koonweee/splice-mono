@@ -9,15 +9,17 @@ import { AccountType, MoneyWithSignSign } from '../api/models'
 import type { ChartDataPoint } from '../components/Chart'
 import { TimePeriod } from './types'
 
+type AccountTypeValue = (typeof AccountType)[keyof typeof AccountType]
+
 /**
  * Liability account types - debt that decreases net worth
  */
-const LIABILITY_TYPES: AccountType[] = [AccountType.credit, AccountType.loan]
+const LIABILITY_TYPES: AccountTypeValue[] = [AccountType.credit, AccountType.loan]
 
 /**
  * Check if an account type is a liability
  */
-export function isLiabilityType(type: AccountType): boolean {
+export function isLiabilityType(type: AccountTypeValue): boolean {
   return LIABILITY_TYPES.includes(type)
 }
 
@@ -124,7 +126,7 @@ export function createMoneyWithSign(
 export interface AccountSummaryData {
   id: string
   name: string
-  type: AccountType
+  type: AccountTypeValue
   subType?: string
   effectiveBalance: MoneyWithSign
   convertedEffectiveBalance?: MoneyWithSign

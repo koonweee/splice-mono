@@ -5,7 +5,10 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { InitiateLinkRequestNetwork } from './initiateLinkRequestNetwork';
 
 export interface InitiateLinkRequest {
   redirectUri?: string;
+  walletAddress?: string;
+  network?: InitiateLinkRequestNetwork;
 }

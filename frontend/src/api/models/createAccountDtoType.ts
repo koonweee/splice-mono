@@ -6,15 +6,12 @@
  * OpenAPI spec version: 1.0
  */
 
-export type CreateAccountDtoType = typeof CreateAccountDtoType[keyof typeof CreateAccountDtoType];
-
-
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CreateAccountDtoType = {
-  investment: 'investment',
+export const CreateAccountDtoType = {  investment: 'investment',
   credit: 'credit',
   depository: 'depository',
   loan: 'loan',
   brokerage: 'brokerage',
   other: 'other',
-} as const;
+  crypto_wallet: 'crypto_wallet',
+} as const
