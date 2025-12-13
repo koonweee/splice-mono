@@ -1,8 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
+import {
+  BalanceSnapshotCreatedEvent,
+  BalanceSnapshotEvents,
+  BalanceSnapshotUpdatedEvent,
+} from '../events/balance-snapshot.events';
 import {
   BalanceSnapshot,
   CreateBalanceSnapshotDto,
@@ -24,6 +30,7 @@ export class BalanceSnapshotService extends OwnedCrudService<
   constructor(
     @InjectRepository(BalanceSnapshotEntity)
     repository: Repository<BalanceSnapshotEntity>,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     super(repository);
   }
@@ -120,8 +127,16 @@ export class BalanceSnapshotService extends OwnedCrudService<
       existingEntity.snapshotType = dto.snapshotType;
 
       const savedEntity = await this.repository.save(existingEntity);
+      const snapshot = savedEntity.toObject();
+
+      // Emit updated event
+      this.eventEmitter.emit(
+        BalanceSnapshotEvents.UPDATED,
+        new BalanceSnapshotUpdatedEvent(snapshot),
+      );
+
       this.logger.log({ id: savedEntity.id }, 'Balance snapshot updated');
-      return savedEntity.toObject();
+      return snapshot;
     }
 
     // Create new snapshot
@@ -134,7 +149,15 @@ export class BalanceSnapshotService extends OwnedCrudService<
       userId,
     );
     const savedEntity = await this.repository.save(entity);
+    const snapshot = savedEntity.toObject();
+
+    // Emit created event
+    this.eventEmitter.emit(
+      BalanceSnapshotEvents.CREATED,
+      new BalanceSnapshotCreatedEvent(snapshot),
+    );
+
     this.logger.log({ id: savedEntity.id }, 'Balance snapshot created');
-    return savedEntity.toObject();
+    return snapshot;
   }
 }

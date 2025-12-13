@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import {
+  BalanceSnapshotCreatedEvent,
+  BalanceSnapshotEvents,
+  BalanceSnapshotUpdatedEvent,
+} from '../events/balance-snapshot.events';
 import { UserEvents, UserSettingsUpdatedEvent } from '../events/user.events';
 import { ExchangeRateBackfillHelper } from './exchange-rate-backfill.helper';
+import { SnapshotExchangeRateService } from './snapshot-exchange-rate.service';
 
 /**
  * Listener for events that require exchange rate backfill
@@ -10,7 +16,10 @@ import { ExchangeRateBackfillHelper } from './exchange-rate-backfill.helper';
 export class ExchangeRateListener {
   private readonly logger = new Logger(ExchangeRateListener.name);
 
-  constructor(private readonly backfillHelper: ExchangeRateBackfillHelper) {}
+  constructor(
+    private readonly backfillHelper: ExchangeRateBackfillHelper,
+    private readonly snapshotExchangeRateService: SnapshotExchangeRateService,
+  ) {}
 
   /**
    * Handle user settings updated event.
@@ -51,5 +60,37 @@ export class ExchangeRateListener {
         'Failed to backfill exchange rates for user',
       );
     }
+  }
+
+  /**
+   * Handle balance snapshot created/updated events.
+   * Ensures exchange rate exists for the snapshot's currency pair.
+   * Fire-and-forget - does not block snapshot creation.
+   */
+  @OnEvent(BalanceSnapshotEvents.CREATED)
+  @OnEvent(BalanceSnapshotEvents.UPDATED)
+  handleBalanceSnapshotChanged(
+    event: BalanceSnapshotCreatedEvent | BalanceSnapshotUpdatedEvent,
+  ): void {
+    const eventType =
+      event instanceof BalanceSnapshotCreatedEvent ? 'created' : 'updated';
+
+    this.logger.log(
+      { eventType, snapshotId: event.snapshot.id },
+      'Handling balance snapshot event',
+    );
+
+    // Fire-and-forget: don't await, let it run in background
+    this.snapshotExchangeRateService
+      .ensureRateForSnapshot(event.snapshot)
+      .catch((error) => {
+        this.logger.error(
+          {
+            snapshotId: event.snapshot.id,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Error in fire-and-forget exchange rate fetch',
+        );
+      });
   }
 }
