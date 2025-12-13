@@ -173,7 +173,8 @@ export class CurrencyExchangeService {
           .map((e) => ({
             date: e.rateDate,
             rate: typeof e.rate === 'string' ? parseFloat(e.rate) : e.rate,
-          }));
+          }))
+          .sort((a, b) => a.date.localeCompare(b.date));
         pairRateDates.set(pairKey, pairEntities);
       }
     });
