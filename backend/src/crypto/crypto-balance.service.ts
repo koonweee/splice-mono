@@ -1,8 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { CryptoNetwork } from '../bank-link/providers/crypto/crypto.types';
 import { NETWORK_DECIMALS } from '../bank-link/providers/crypto/crypto.types';
-import type { CryptoBalanceConfig } from './crypto-balance.config';
-import { CRYPTO_BALANCE_CONFIG } from './crypto.module';
+import {
+  CRYPTO_BALANCE_CONFIG,
+  type CryptoBalanceConfig,
+} from './crypto-balance.config';
 
 /** Bitcoin mempool.space API base URL (hardcoded) */
 const BITCOIN_API_URL = 'https://mempool.space/api';

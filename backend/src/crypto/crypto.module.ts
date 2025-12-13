@@ -3,11 +3,10 @@ import { CryptoBalanceService } from './crypto-balance.service';
 import { CryptoExchangeRateService } from './crypto-exchange-rate.service';
 import { CoinGeckoExchangeRateProvider } from './providers/coingecko-exchange-rate.provider';
 import {
-  type CryptoBalanceConfig,
+  CRYPTO_BALANCE_CONFIG,
   DEFAULT_CRYPTO_BALANCE_CONFIG,
+  type CryptoBalanceConfig,
 } from './crypto-balance.config';
-
-export const CRYPTO_BALANCE_CONFIG = 'CRYPTO_BALANCE_CONFIG';
 
 @Module({})
 export class CryptoModule {
