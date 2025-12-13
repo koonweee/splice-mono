@@ -6,19 +6,17 @@ import {
   BalanceSnapshotUpdatedEvent,
 } from '../events/balance-snapshot.events';
 import { UserEvents, UserSettingsUpdatedEvent } from '../events/user.events';
-import { ExchangeRateBackfillHelper } from './exchange-rate-backfill.helper';
-import { SnapshotExchangeRateService } from './snapshot-exchange-rate.service';
+import { CurrencyBackfillService } from './currency-backfill.service';
 
 /**
- * Listener for events that require exchange rate backfill
+ * Listener for events that require exchange rate backfill.
  */
 @Injectable()
-export class ExchangeRateListener {
-  private readonly logger = new Logger(ExchangeRateListener.name);
+export class CurrencyExchangeListener {
+  private readonly logger = new Logger(CurrencyExchangeListener.name);
 
   constructor(
-    private readonly backfillHelper: ExchangeRateBackfillHelper,
-    private readonly snapshotExchangeRateService: SnapshotExchangeRateService,
+    private readonly currencyBackfillService: CurrencyBackfillService,
   ) {}
 
   /**
@@ -47,7 +45,7 @@ export class ExchangeRateListener {
     );
 
     try {
-      const rates = await this.backfillHelper.backfillRatesForUser(
+      const rates = await this.currencyBackfillService.backfillRatesForUser(
         event.userId,
       );
       this.logger.log(
@@ -81,7 +79,7 @@ export class ExchangeRateListener {
     );
 
     // Fire-and-forget: don't await, let it run in background
-    this.snapshotExchangeRateService
+    this.currencyBackfillService
       .ensureRateForSnapshot(event.snapshot)
       .catch((error) => {
         this.logger.error(

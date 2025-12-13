@@ -232,11 +232,16 @@ describe('WebhookEventService', () => {
 
   describe('tryAcquireWebhook', () => {
     const baseWebhookId = 'plaid:TRANSACTIONS:DEFAULT_UPDATE:item_abc123';
-    const webhookContent = { webhook_type: 'TRANSACTIONS', item_id: 'item_abc123' };
+    const webhookContent = {
+      webhook_type: 'TRANSACTIONS',
+      item_id: 'item_abc123',
+    };
 
     it('should acquire lock on first call (no recent webhook)', async () => {
       mockRepository.findOne.mockResolvedValue(null);
-      mockRepository.save.mockImplementation((entity) => Promise.resolve(entity));
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
 
       const result = await service.tryAcquireWebhook(
         baseWebhookId,
@@ -251,7 +256,9 @@ describe('WebhookEventService', () => {
 
       // Verify saved entity has timestamped webhookId
       const savedEntity = mockRepository.save.mock.calls[0][0];
-      expect(savedEntity.webhookId).toMatch(new RegExp(`^${baseWebhookId}:\\d+$`));
+      expect(savedEntity.webhookId).toMatch(
+        new RegExp(`^${baseWebhookId}:\\d+$`),
+      );
       expect(savedEntity.status).toBe(WebhookEventStatus.COMPLETED);
       expect(savedEntity.completedAt).toBeInstanceOf(Date);
     });
@@ -272,14 +279,18 @@ describe('WebhookEventService', () => {
       );
 
       expect(result.acquired).toBe(false);
-      expect('reason' in result && result.reason).toContain('Duplicate webhook');
+      expect('reason' in result && result.reason).toContain(
+        'Duplicate webhook',
+      );
       expect(mockRepository.save).not.toHaveBeenCalled();
     });
 
     it('should acquire lock when no recent webhook within window', async () => {
       // No recent webhook found
       mockRepository.findOne.mockResolvedValue(null);
-      mockRepository.save.mockImplementation((entity) => Promise.resolve(entity));
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
 
       const result = await service.tryAcquireWebhook(
         baseWebhookId,
@@ -295,7 +306,9 @@ describe('WebhookEventService', () => {
 
     it('should use custom deduplication window', async () => {
       mockRepository.findOne.mockResolvedValue(null);
-      mockRepository.save.mockImplementation((entity) => Promise.resolve(entity));
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
 
       const customWindowMs = 1 * 60 * 1000; // 1 minute
 
