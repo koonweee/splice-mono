@@ -75,6 +75,18 @@ describe('format utils', () => {
       expect(result).toBe('¥12,345')
     })
 
+    it('should format BTC correctly without currency symbol', () => {
+      // 0.01234567 BTC = 1234567 satoshis
+      const result = formatMoneyWithSign({
+        value: {
+          money: { amount: 1234567, currency: 'BTC' },
+          sign: MoneyWithSignSign.positive,
+        },
+      })
+      // BTC should format without the $ symbol and with up to 8 decimal places
+      expect(result).toBe('0.01234567')
+    })
+
     it('should format ETH correctly', () => {
       // 1.5 ETH = 1.5 * 10^18
       const result = formatMoneyWithSign({
@@ -84,11 +96,20 @@ describe('format utils', () => {
         },
         appendCurrency: true,
       })
-      // formatMoneyNumber uses 'USD' as currency when appendCurrency is true, to get $ symbol? 
-      // No, formatMoneyNumber logic:
-      // currency: appendCurrency ? 'USD' : overrideCurrency
-      // So it formats as $1.50 (ETH)
-      expect(result).toBe('$1.50 (ETH)')
+      // Crypto currencies should format without the $ symbol and with appropriate decimal precision
+      expect(result).toBe('1.500000000000000000 (ETH)')
+    })
+
+    it('should format BTC with appendCurrency correctly', () => {
+      const result = formatMoneyWithSign({
+        value: {
+          money: { amount: 123456789, currency: 'BTC' }, // 123456789 satoshis = 1.23456789 BTC
+          sign: MoneyWithSignSign.positive,
+        },
+        appendCurrency: true,
+      })
+      // BTC should format without $ symbol and with currency appended
+      expect(result).toBe('1.23456789 (BTC)')
     })
   })
 
