@@ -30,6 +30,14 @@ const CURRENCY_DECIMALS: Record<string, number> = {
 }
 
 /**
+ * Check if a currency is a cryptocurrency
+ */
+function isCryptoCurrency(currency: string): boolean {
+  const cryptoCurrencies = ['BTC', 'ETH'] // Add other cryptocurrencies as needed
+  return cryptoCurrencies.includes(currency)
+}
+
+/**
  * Get decimal places for a currency, defaulting to 2 for unknown currencies
  */
 export function getDecimalPlaces(currency: string): number {
@@ -94,7 +102,7 @@ export function formatMoneyWithSign(input: {
   decimals?: number
   appendCurrency?: boolean
 }): string {
-  const { value, decimals = 2, appendCurrency = false } = input
+  const { value, decimals, appendCurrency = false } = input
   const decimalPlaces = getDecimalPlaces(value.money.currency)
   const dollars = value.money.amount / Math.pow(10, decimalPlaces)
   const signedAmount =
@@ -102,7 +110,7 @@ export function formatMoneyWithSign(input: {
   return formatMoneyNumber({
     value: signedAmount,
     currency: value.money.currency,
-    decimals,
+    decimals: decimals, // Pass undefined if not provided, to let formatMoneyNumber handle crypto defaults
     appendCurrency,
   })
 }
@@ -124,20 +132,36 @@ export function formatMoneyNumber(input: {
   decimals?: number
   appendCurrency?: boolean
 }): string {
-  const {
-    value,
-    currency = 'USD',
-    decimals = 2,
-    appendCurrency = false,
-  } = input
+  const { value, currency = 'USD', decimals, appendCurrency = false } = input
+
+  // Handle crypto currencies differently - without currency symbols
+  if (isCryptoCurrency(currency)) {
+    // Use the currency's specific decimal places or the provided decimals, whichever is smaller
+    const decimalPlaces = getDecimalPlaces(currency)
+    const cryptoDecimals = Math.min(
+      decimals !== undefined ? decimals : decimalPlaces,
+      decimalPlaces,
+    )
+    const formattedValue = value.toFixed(cryptoDecimals)
+
+    if (appendCurrency) {
+      return `${formattedValue} (${currency})`
+    } else {
+      return formattedValue
+    }
+  }
+
+  // For non-crypto currencies, use the provided decimals or default to 2
+  const effectiveDecimals = decimals ?? 2
+
   const overrideCurrency =
     CURRENCY_FORMATTING_OVERRIDES.get(currency) ?? currency
   const formatted = new Intl.NumberFormat('en-US', {
     style: 'currency',
     // When appending currency, avoid currency specific formatting
     currency: appendCurrency ? 'USD' : overrideCurrency,
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
+    minimumFractionDigits: effectiveDecimals,
+    maximumFractionDigits: effectiveDecimals,
   }).format(value)
   return appendCurrency ? `${formatted} (${currency})` : formatted
 }
