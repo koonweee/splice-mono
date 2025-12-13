@@ -83,8 +83,8 @@ describe('format utils', () => {
           sign: MoneyWithSignSign.positive,
         },
       })
-      // BTC should format without the $ symbol and with up to 8 decimal places
-      expect(result).toBe('0.01234567')
+      // BTC should format without the $ symbol and with max 6 decimal places (rounded)
+      expect(result).toBe('0.012346')
     })
 
     it('should format ETH correctly', () => {
@@ -96,8 +96,8 @@ describe('format utils', () => {
         },
         appendCurrency: true,
       })
-      // Crypto currencies should format without the $ symbol and with appropriate decimal precision
-      expect(result).toBe('1.500000000000000000 (ETH)')
+      // Crypto currencies should format without the $ symbol and with max 6 decimal places
+      expect(result).toBe('1.500000 (ETH)')
     })
 
     it('should format BTC with appendCurrency correctly', () => {
@@ -108,8 +108,8 @@ describe('format utils', () => {
         },
         appendCurrency: true,
       })
-      // BTC should format without $ symbol and with currency appended
-      expect(result).toBe('1.23456789 (BTC)')
+      // BTC should format without $ symbol and with max 6 decimal places with currency appended (rounded)
+      expect(result).toBe('1.234568 (BTC)')
     })
   })
 
