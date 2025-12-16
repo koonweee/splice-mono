@@ -732,7 +732,7 @@ export class BankLinkService extends OwnedCrudService<
     return this.repository
       .createQueryBuilder('bankLink')
       .where('bankLink.providerName = :provider', { provider: 'plaid' })
-      .andWhere("bankLink.authentication->>'itemId' = :itemId", { itemId })
+      .andWhere(`"bankLink"."authentication"->>'itemId' = :itemId`, { itemId })
       .getOne();
   }
 
