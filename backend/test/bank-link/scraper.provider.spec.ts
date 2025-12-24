@@ -108,6 +108,47 @@ describe('ScraperProvider', () => {
     });
   });
 
+  describe('initiateLinking', () => {
+    it('should return immediate accounts using default credentials', async () => {
+      (mockStrategy.scrape as jest.Mock).mockResolvedValue({
+        accounts: [
+          {
+            accountId: 'scraper:dbs:DBS Savings',
+            name: 'DBS Savings',
+            mask: null,
+            type: 'depository',
+            subType: null,
+            availableBalance: {
+              money: { currency: 'SGD', amount: 12345 },
+              sign: 'positive',
+            },
+            currentBalance: {
+              money: { currency: 'SGD', amount: 12345 },
+              sign: 'positive',
+            },
+          },
+        ],
+        institution: { id: 'dbs', name: 'DBS Bank' },
+      });
+
+      const result = await provider.initiateLinking({
+        userId: 'user-123',
+      });
+
+      expect(result.immediateAccounts).toHaveLength(1);
+      expect(result.immediateAccounts![0].authentication).toEqual({
+        bankId: 'dbs',
+        username: 'user',
+        password: 'pass',
+      });
+      expect(result.immediateAccounts![0].accounts).toHaveLength(1);
+      expect(result.immediateAccounts![0].institution).toEqual({
+        id: 'dbs',
+        name: 'DBS Bank',
+      });
+    });
+  });
+
   describe('verifyWebhook', () => {
     it('should always return false', async () => {
       const result = await provider.verifyWebhook('', {});
