@@ -3,8 +3,8 @@ import { AccountSubtype, AccountType } from 'plaid';
 import type { Page } from 'playwright';
 import type { APIAccount, Institution } from '../../../../types/BankLink';
 import { MoneySign, MoneyWithSign } from '../../../../types/MoneyWithSign';
-import { parseDBSCSV } from './parsers/dbs-checking-savings-csv.parser';
 import { BaseScraperStrategy } from './base-scraper.strategy';
+import { parseDBSCSV } from './parsers/dbs-checking-savings-csv.parser';
 
 interface AccountSelectorOption {
   text: string;
@@ -282,19 +282,14 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
     const balance = MoneyWithSign.fromFloat('SGD', info.totalBalance, sign);
 
     const accountType =
-      info.type === 'credit_card'
-        ? AccountType.Credit
-        : AccountType.Depository;
+      info.type === 'credit_card' ? AccountType.Credit : AccountType.Depository;
 
     return {
       accountId: `scraper:${this.name}:${accountName}`,
       name: accountName,
       mask: null,
       type: accountType,
-      subType:
-        info.type === 'credit_card'
-          ? AccountSubtype.CreditCard
-          : null,
+      subType: info.type === 'credit_card' ? AccountSubtype.CreditCard : null,
       availableBalance: balance.toSerialized(),
       currentBalance: balance.toSerialized(),
     };
