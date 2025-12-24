@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY . .
 RUN yarn build
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:20-bullseye AS production
 
 WORKDIR /app
 
@@ -27,8 +27,9 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy package files
 COPY package.json yarn.lock ./
 
-# Install only production dependencies
+# Install only production dependencies and Playwright browsers
 RUN yarn install --frozen-lockfile --production && \
+    npx playwright install --with-deps && \
     yarn cache clean
 
 # Copy built application from builder stage
