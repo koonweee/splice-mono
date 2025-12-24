@@ -1,18 +1,14 @@
 import type { Logger } from '@nestjs/common';
 import type { Page } from 'playwright';
-import type { ScrapedData } from '../scraper.types';
+import type { APIAccount, Institution } from '../../../../types/BankLink';
 
 export interface ScraperStrategy<Credentials = unknown> {
   name: string;
   startUrl: string;
-  defaultCurrency: string;
-  institution?: {
-    id?: string | null;
-    name?: string | null;
-  };
+  institution?: Institution;
   scrape(
     credentials: Credentials,
     page: Page,
     logger: Logger,
-  ): Promise<ScrapedData>;
+  ): Promise<{ accounts: APIAccount[]; institution?: Institution }>;
 }

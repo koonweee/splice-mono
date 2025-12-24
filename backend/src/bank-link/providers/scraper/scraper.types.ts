@@ -9,13 +9,3 @@ export const ScraperAuthenticationSchema = z
   .passthrough();
 
 export type ScraperAuthentication = z.infer<typeof ScraperAuthenticationSchema>;
-
-export type ScrapedAccountType = 'savings_or_checking' | 'credit_card';
-
-export interface ScrapedAccountData {
-  transactions: unknown[];
-  totalBalance: number;
-  type: ScrapedAccountType;
-}
-
-export type ScrapedData = Record<string, ScrapedAccountData>;

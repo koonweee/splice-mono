@@ -1,5 +1,8 @@
 import { Injectable, type Logger } from '@nestjs/common';
+import { AccountSubtype, AccountType } from 'plaid';
 import type { Page } from 'playwright';
+import type { APIAccount, Institution } from '../../../../types/BankLink';
+import { MoneySign, MoneyWithSign } from '../../../../types/MoneyWithSign';
 import { parseDBSCSV } from './parsers/dbs-checking-savings-csv.parser';
 import { BaseScraperStrategy } from './base-scraper.strategy';
 
@@ -8,7 +11,7 @@ interface AccountSelectorOption {
   value: string;
 }
 
-enum AccountType {
+enum DBSAccountType {
   SAVINGS_OR_CHECKING = 'savings_or_checking',
   CREDIT_CARD = 'credit_card',
 }
@@ -16,7 +19,7 @@ enum AccountType {
 interface AccountInformation {
   transactions: object[];
   totalBalance: number;
-  type: AccountType;
+  type: DBSAccountType;
 }
 
 interface DBSCredentials {
@@ -28,7 +31,6 @@ interface DBSCredentials {
 export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
   name = 'dbs';
   startUrl = 'https://internet-banking.dbs.com.sg/IB/Welcome';
-  defaultCurrency = 'SGD';
   institution = {
     id: 'dbs',
     name: 'DBS Bank',
@@ -38,7 +40,7 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
     credentials: DBSCredentials,
     page: Page,
     logger: Logger,
-  ): Promise<Record<string, AccountInformation>> {
+  ): Promise<{ accounts: APIAccount[]; institution?: Institution }> {
     const { username, password } = credentials;
     logger.log({ bankId: this.name }, 'Starting DBS scraping process');
 
@@ -127,7 +129,7 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
       'Found accounts for scraping',
     );
 
-    const accountInformation: Record<string, AccountInformation> = {};
+    const accounts: APIAccount[] = [];
 
     for (const account of filteredAccounts) {
       logger.log(
@@ -135,10 +137,13 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
         'Scraping account',
       );
       const info = await this.getAccountInformation(page, account, logger);
-      accountInformation[account.text] = info;
+      const apiAccount = this.buildApiAccount(account.text, info, logger);
+      if (apiAccount) {
+        accounts.push(apiAccount);
+      }
     }
 
-    return accountInformation;
+    return { accounts, institution: this.institution };
   }
 
   private async getAccountInformation(
@@ -166,19 +171,19 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
       .contentFrame()
       .locator('#selectRange');
 
-    let accountType: AccountType;
+    let accountType: DBSAccountType;
     try {
       await transactionPeriodInput.waitFor({ state: 'visible', timeout: 2000 });
-      accountType = AccountType.SAVINGS_OR_CHECKING;
+      accountType = DBSAccountType.SAVINGS_OR_CHECKING;
     } catch {
       logger.log(
         { bankId: this.name, accountName: accountSelectorOption.text },
         'Transaction period selector not found, assuming credit card',
       );
-      accountType = AccountType.CREDIT_CARD;
+      accountType = DBSAccountType.CREDIT_CARD;
     }
 
-    if (accountType === AccountType.SAVINGS_OR_CHECKING) {
+    if (accountType === DBSAccountType.SAVINGS_OR_CHECKING) {
       await transactionPeriodInput.click();
       const last3MonthsOption = page
         .locator('frame[name="user_area"]')
@@ -259,6 +264,42 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
       transactions: parsedCSV.transactions,
       totalBalance: parsedCSV.availableBalance,
       type: accountType,
+    };
+  }
+
+  private buildApiAccount(
+    accountName: string,
+    info: AccountInformation,
+    logger: Logger,
+  ): APIAccount | null {
+    if (!Number.isFinite(info.totalBalance)) {
+      logger.warn(
+        { bankId: this.name, accountName, balance: info.totalBalance },
+        'Skipping account with invalid balance',
+      );
+      return null;
+    }
+
+    const sign =
+      info.totalBalance >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
+    const balance = MoneyWithSign.fromFloat('SGD', info.totalBalance, sign);
+
+    const accountType =
+      info.type === DBSAccountType.CREDIT_CARD
+        ? AccountType.Credit
+        : AccountType.Depository;
+
+    return {
+      accountId: `scraper:${this.name}:${accountName}`,
+      name: accountName,
+      mask: null,
+      type: accountType,
+      subType:
+        info.type === DBSAccountType.CREDIT_CARD
+          ? AccountSubtype.CreditCard
+          : null,
+      availableBalance: balance.toSerialized(),
+      currentBalance: balance.toSerialized(),
     };
   }
 }

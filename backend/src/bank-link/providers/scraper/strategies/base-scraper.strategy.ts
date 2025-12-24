@@ -1,6 +1,6 @@
 import type { Logger } from '@nestjs/common';
 import type { Page } from 'playwright';
-import type { ScrapedData } from '../scraper.types';
+import type { APIAccount, Institution } from '../../../../types/BankLink';
 import type { ScraperStrategy } from './scraper-strategy.interface';
 
 export abstract class BaseScraperStrategy<Credentials>
@@ -8,8 +8,7 @@ export abstract class BaseScraperStrategy<Credentials>
 {
   abstract name: string;
   abstract startUrl: string;
-  abstract defaultCurrency: string;
-  institution?: { id?: string | null; name?: string | null };
+  institution?: Institution;
 
   protected async screenshotStep(
     page: Page,
@@ -34,5 +33,5 @@ export abstract class BaseScraperStrategy<Credentials>
     credentials: Credentials,
     page: Page,
     logger: Logger,
-  ): Promise<ScrapedData>;
+  ): Promise<{ accounts: APIAccount[]; institution?: Institution }>;
 }

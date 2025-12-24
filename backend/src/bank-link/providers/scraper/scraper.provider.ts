@@ -1,19 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { chromium } from 'playwright';
-import { AccountSubtype, AccountType } from 'plaid';
 import type {
   APIAccount,
   GetAccountsResponse,
   Institution,
   LinkInitiationResponse,
 } from '../../../types/BankLink';
-import { MoneySign, MoneyWithSign } from '../../../types/MoneyWithSign';
 import type { IBankLinkProvider } from '../bank-link-provider.interface';
-import {
-  type ScrapedAccountData,
-  type ScrapedData,
-  ScraperAuthenticationSchema,
-} from './scraper.types';
+import { ScraperAuthenticationSchema } from './scraper.types';
 import type { ScraperStrategy } from './strategies/scraper-strategy.interface';
 
 const SCRAPER_TIMEOUT_MS = 20000;
@@ -61,23 +55,15 @@ export class ScraperProvider implements IBankLinkProvider {
 
     this.logger.log({ bankId }, 'Fetching accounts via scraper');
 
-    const scrapedData = await this.scrapeWithStrategy(strategy, {
+    const { accounts, institution } = await this.scrapeWithStrategy(strategy, {
       username,
       password,
     });
 
-    const accounts = this.mapScrapedDataToAccounts(
-      scrapedData,
-      bankId,
-      strategy,
-    );
+    const resolvedInstitution: Institution = institution ??
+      strategy.institution ?? { id: bankId, name: bankId };
 
-    const institution: Institution = strategy.institution ?? {
-      id: bankId,
-      name: bankId,
-    };
-
-    return { accounts, institution };
+    return { accounts, institution: resolvedInstitution };
   }
 
   verifyWebhook(
@@ -92,7 +78,7 @@ export class ScraperProvider implements IBankLinkProvider {
   private async scrapeWithStrategy(
     strategy: ScraperStrategy,
     credentials: Record<string, string>,
-  ): Promise<ScrapedData> {
+  ): Promise<{ accounts: APIAccount[]; institution?: Institution }> {
     const browser = await chromium.launch({ headless: true });
     try {
       const page = await browser.newPage({ acceptDownloads: true });
@@ -127,69 +113,5 @@ export class ScraperProvider implements IBankLinkProvider {
     } finally {
       await browser.close();
     }
-  }
-
-  private mapScrapedDataToAccounts(
-    scrapedData: ScrapedData,
-    bankId: string,
-    strategy: ScraperStrategy,
-  ): APIAccount[] {
-    const accounts: APIAccount[] = [];
-
-    for (const [accountName, accountData] of Object.entries(scrapedData)) {
-      if (!this.isScrapedAccountData(accountData)) {
-        this.logger.warn(
-          { bankId, accountName },
-          'Skipping invalid scraped account data',
-        );
-        continue;
-      }
-
-      const balanceValue = accountData.totalBalance;
-      if (!Number.isFinite(balanceValue)) {
-        this.logger.warn(
-          { bankId, accountName, balanceValue },
-          'Skipping account with invalid balance',
-        );
-        continue;
-      }
-
-      const sign = balanceValue >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
-      const balance = MoneyWithSign.fromFloat(
-        strategy.defaultCurrency,
-        balanceValue,
-        sign,
-      );
-
-      const accountType =
-        accountData.type === 'credit_card'
-          ? AccountType.Credit
-          : AccountType.Depository;
-
-      accounts.push({
-        accountId: `scraper:${bankId}:${accountName}`,
-        name: accountName,
-        mask: null,
-        type: accountType,
-        subType:
-          accountData.type === 'credit_card' ? AccountSubtype.CreditCard : null,
-        availableBalance: balance.toSerialized(),
-        currentBalance: balance.toSerialized(),
-      });
-    }
-
-    return accounts;
-  }
-
-  private isScrapedAccountData(value: unknown): value is ScrapedAccountData {
-    if (!value || typeof value !== 'object') {
-      return false;
-    }
-
-    const record = value as ScrapedAccountData;
-    return (
-      typeof record.totalBalance === 'number' &&
-      (record.type === 'savings_or_checking' || record.type === 'credit_card')
-    );
   }
 }

@@ -16,7 +16,6 @@ describe('ScraperProvider', () => {
   const mockStrategy: ScraperStrategy = {
     name: 'dbs',
     startUrl: 'https://example.com/dbs',
-    defaultCurrency: 'SGD',
     institution: { id: 'dbs', name: 'DBS Bank' },
     scrape: jest.fn(),
   };
@@ -56,11 +55,23 @@ describe('ScraperProvider', () => {
   describe('getAccounts', () => {
     it('should fetch accounts using the scraper strategy', async () => {
       (mockStrategy.scrape as jest.Mock).mockResolvedValue({
-        'DBS Savings': {
-          transactions: [],
-          totalBalance: 123.45,
-          type: 'savings_or_checking',
-        },
+        accounts: [
+          {
+            accountId: 'scraper:dbs:DBS Savings',
+            name: 'DBS Savings',
+            mask: null,
+            type: 'depository',
+            subType: null,
+            availableBalance: {
+              money: { currency: 'SGD', amount: 12345 },
+              sign: 'positive',
+            },
+            currentBalance: {
+              money: { currency: 'SGD', amount: 12345 },
+              sign: 'positive',
+            },
+          },
+        ],
       });
 
       const result = await provider.getAccounts({
