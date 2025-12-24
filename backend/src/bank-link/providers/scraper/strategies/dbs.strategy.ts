@@ -11,10 +11,7 @@ interface AccountSelectorOption {
   value: string;
 }
 
-enum DBSAccountType {
-  SAVINGS_OR_CHECKING = 'savings_or_checking',
-  CREDIT_CARD = 'credit_card',
-}
+type DBSAccountType = 'savings_or_checking' | 'credit_card';
 
 interface AccountInformation {
   transactions: object[];
@@ -174,16 +171,16 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
     let accountType: DBSAccountType;
     try {
       await transactionPeriodInput.waitFor({ state: 'visible', timeout: 2000 });
-      accountType = DBSAccountType.SAVINGS_OR_CHECKING;
+      accountType = 'savings_or_checking';
     } catch {
       logger.log(
         { bankId: this.name, accountName: accountSelectorOption.text },
         'Transaction period selector not found, assuming credit card',
       );
-      accountType = DBSAccountType.CREDIT_CARD;
+      accountType = 'credit_card';
     }
 
-    if (accountType === DBSAccountType.SAVINGS_OR_CHECKING) {
+    if (accountType === 'savings_or_checking') {
       await transactionPeriodInput.click();
       const last3MonthsOption = page
         .locator('frame[name="user_area"]')
@@ -285,7 +282,7 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
     const balance = MoneyWithSign.fromFloat('SGD', info.totalBalance, sign);
 
     const accountType =
-      info.type === DBSAccountType.CREDIT_CARD
+      info.type === 'credit_card'
         ? AccountType.Credit
         : AccountType.Depository;
 
@@ -295,7 +292,7 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
       mask: null,
       type: accountType,
       subType:
-        info.type === DBSAccountType.CREDIT_CARD
+        info.type === 'credit_card'
           ? AccountSubtype.CreditCard
           : null,
       availableBalance: balance.toSerialized(),
