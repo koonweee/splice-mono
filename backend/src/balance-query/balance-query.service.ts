@@ -465,8 +465,7 @@ export class BalanceQueryService {
         // Calculate major units (floats) to handle different decimal places
         const sourceDecimals = getDecimalPlaces(balance.money.currency);
         const targetDecimals = getDecimalPlaces(targetCurrency);
-        const sourceMajor =
-          balance.money.amount / Math.pow(10, sourceDecimals);
+        const sourceMajor = balance.money.amount / Math.pow(10, sourceDecimals);
         const convertedMajor = sourceMajor * rateInfo.rate;
         const convertedAmount = Math.round(
           convertedMajor * Math.pow(10, targetDecimals),

@@ -117,9 +117,7 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
           return { text: text.trim(), value: optionValue };
         }),
       )
-    ).filter(
-      (account): account is AccountSelectorOption => account !== null,
-    );
+    ).filter((account): account is AccountSelectorOption => account !== null);
 
     const filteredAccounts = accountSelectorOptions.filter(
       (account) => account && !account.text.includes('Please select'),
@@ -172,7 +170,7 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
     try {
       await transactionPeriodInput.waitFor({ state: 'visible', timeout: 2000 });
       accountType = AccountType.SAVINGS_OR_CHECKING;
-    } catch (_error) {
+    } catch {
       logger.log(
         { bankId: this.name, accountName: accountSelectorOption.text },
         'Transaction period selector not found, assuming credit card',
@@ -242,16 +240,18 @@ export class DBSStrategy extends BaseScraperStrategy<DBSCredentials> {
       throw new Error('Failed to download DBS transactions CSV');
     }
 
-    const csvContent = await download.createReadStream().then(async (stream) => {
-      if (!stream) {
-        throw new Error('Failed to read DBS transactions CSV stream');
-      }
-      const chunks: Buffer[] = [];
-      for await (const chunk of stream) {
-        chunks.push(Buffer.from(chunk));
-      }
-      return Buffer.concat(chunks).toString('utf8');
-    });
+    const csvContent = await download
+      .createReadStream()
+      .then(async (stream) => {
+        if (!stream) {
+          throw new Error('Failed to read DBS transactions CSV stream');
+        }
+        const chunks: Buffer[] = [];
+        for await (const chunk of stream) {
+          chunks.push(Buffer.from(chunk as Uint8Array));
+        }
+        return Buffer.concat(chunks).toString('utf8');
+      });
 
     const parsedCSV = parseDBSCSV(csvContent);
 

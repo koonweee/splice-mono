@@ -33,13 +33,14 @@ export class ScraperProvider implements IBankLinkProvider {
     });
   }
 
-  async initiateLinking(_input: {
+  initiateLinking(input: {
     userId: string;
     redirectUri?: string;
     providerUserDetails?: Record<string, unknown>;
   }): Promise<LinkInitiationResponse> {
+    void input;
     this.logger.log({}, 'Scraper provider does not initiate linking flow');
-    return {};
+    return Promise.resolve({});
   }
 
   async getAccounts(
@@ -79,12 +80,13 @@ export class ScraperProvider implements IBankLinkProvider {
     return { accounts, institution };
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async verifyWebhook(
-    _rawBody: string,
-    _headers: Record<string, string>,
+  verifyWebhook(
+    rawBody: string,
+    headers: Record<string, string>,
   ): Promise<boolean> {
-    return false;
+    void rawBody;
+    void headers;
+    return Promise.resolve(false);
   }
 
   private async scrapeWithStrategy(
@@ -152,8 +154,7 @@ export class ScraperProvider implements IBankLinkProvider {
         continue;
       }
 
-      const sign =
-        balanceValue >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
+      const sign = balanceValue >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
       const balance = MoneyWithSign.fromFloat(
         strategy.defaultCurrency,
         balanceValue,
@@ -171,9 +172,7 @@ export class ScraperProvider implements IBankLinkProvider {
         mask: null,
         type: accountType,
         subType:
-          accountData.type === 'credit_card'
-            ? AccountSubtype.CreditCard
-            : null,
+          accountData.type === 'credit_card' ? AccountSubtype.CreditCard : null,
         availableBalance: balance.toSerialized(),
         currentBalance: balance.toSerialized(),
       });
@@ -182,9 +181,7 @@ export class ScraperProvider implements IBankLinkProvider {
     return accounts;
   }
 
-  private isScrapedAccountData(
-    value: unknown,
-  ): value is ScrapedAccountData {
+  private isScrapedAccountData(value: unknown): value is ScrapedAccountData {
     if (!value || typeof value !== 'object') {
       return false;
     }

@@ -15,7 +15,7 @@ import { ScraperProvider } from './providers/scraper/scraper.provider';
 import { DBSStrategy } from './providers/scraper/strategies/dbs.strategy';
 import type { ScraperStrategy } from './providers/scraper/strategies/scraper-strategy.interface';
 
-const SCRAPER_STRATEGIES = [DBSStrategy] as const;
+const SCRAPER_STRATEGIES = [DBSStrategy];
 
 /**
  * Module for bank account linking functionality
