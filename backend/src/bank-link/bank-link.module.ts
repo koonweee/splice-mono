@@ -11,6 +11,11 @@ import { BankLinkService } from './bank-link.service';
 import { CryptoProvider } from './providers/crypto/crypto.provider';
 import { PlaidProvider } from './providers/plaid/plaid.provider';
 import { ProviderRegistry } from './providers/provider.registry';
+import { ScraperProvider } from './providers/scraper/scraper.provider';
+import { DBSStrategy } from './providers/scraper/strategies/dbs.strategy';
+import type { ScraperStrategy } from './providers/scraper/strategies/scraper-strategy.interface';
+
+const SCRAPER_STRATEGIES = [DBSStrategy] as const;
 
 /**
  * Module for bank account linking functionality
@@ -30,6 +35,13 @@ import { ProviderRegistry } from './providers/provider.registry';
     ProviderRegistry,
     PlaidProvider, // Register Plaid provider
     CryptoProvider, // Register Crypto provider
+    ScraperProvider,
+    ...SCRAPER_STRATEGIES,
+    {
+      provide: 'SCRAPER_STRATEGIES',
+      useFactory: (...strategies: ScraperStrategy[]) => strategies,
+      inject: SCRAPER_STRATEGIES,
+    },
   ],
   exports: [
     BankLinkService, // Export for use in other modules

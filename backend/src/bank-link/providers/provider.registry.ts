@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { IBankLinkProvider } from './bank-link-provider.interface';
 import { CryptoProvider } from './crypto/crypto.provider';
 import { PlaidProvider } from './plaid/plaid.provider';
+import { ScraperProvider } from './scraper/scraper.provider';
 
 /**
  * Registry for managing all bank link providers
@@ -14,10 +15,12 @@ export class ProviderRegistry {
   constructor(
     private plaidProvider: PlaidProvider,
     private cryptoProvider: CryptoProvider,
+    private scraperProvider: ScraperProvider,
   ) {
     // Auto-register all injected providers
     this.registerProvider(plaidProvider);
     this.registerProvider(cryptoProvider);
+    this.registerProvider(scraperProvider);
   }
 
   /**

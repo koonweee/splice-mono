@@ -8,5 +8,5 @@ export const mockProviderRegistry = {
     }
     throw new NotFoundException(`Provider '${providerName}' not found`);
   }),
-  getAllProviderNames: jest.fn().mockReturnValue(['plaid', 'simplefin']),
+  getAllProviderNames: jest.fn().mockReturnValue(['plaid', 'scraper']),
 };
