@@ -52,6 +52,11 @@ describe('ScraperProvider', () => {
     provider = module.get<ScraperProvider>(ScraperProvider);
   });
 
+  afterEach(() => {
+    delete process.env.DBS_USER;
+    delete process.env.DBS_PASS;
+  });
+
   describe('getAccounts', () => {
     it('should fetch accounts using the scraper strategy', async () => {
       (mockStrategy.scrape as jest.Mock).mockResolvedValue({
@@ -110,6 +115,9 @@ describe('ScraperProvider', () => {
 
   describe('initiateLinking', () => {
     it('should return immediate accounts using default credentials', async () => {
+      process.env.DBS_USER = 'user';
+      process.env.DBS_PASS = 'pass';
+
       (mockStrategy.scrape as jest.Mock).mockResolvedValue({
         accounts: [
           {
@@ -146,6 +154,17 @@ describe('ScraperProvider', () => {
         id: 'dbs',
         name: 'DBS Bank',
       });
+    });
+
+    it('should throw when DBS credentials are missing', async () => {
+      delete process.env.DBS_USER;
+      delete process.env.DBS_PASS;
+
+      await expect(
+        provider.initiateLinking({
+          userId: 'user-123',
+        }),
+      ).rejects.toThrow('Missing DBS_USER or DBS_PASS');
     });
   });
 

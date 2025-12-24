@@ -11,11 +11,7 @@ import { ScraperAuthenticationSchema } from './scraper.types';
 import type { ScraperStrategy } from './strategies/scraper-strategy.interface';
 
 const SCRAPER_TIMEOUT_MS = 20000;
-const DEFAULT_SCRAPER_AUTH = {
-  bankId: 'dbs',
-  username: 'user',
-  password: 'pass',
-} as const;
+const DEFAULT_SCRAPER_BANK_ID = 'dbs';
 
 @Injectable()
 export class ScraperProvider implements IBankLinkProvider {
@@ -38,27 +34,34 @@ export class ScraperProvider implements IBankLinkProvider {
     providerUserDetails?: Record<string, unknown>;
   }): Promise<LinkInitiationResponse> {
     void input;
-    this.logger.log({}, 'Initiating scraper link with default credentials');
+    const username = process.env.DBS_USER ?? '';
+    const password = process.env.DBS_PASS ?? '';
 
-    const strategy = this.strategies.get(DEFAULT_SCRAPER_AUTH.bankId);
+    if (!username || !password) {
+      throw new Error('Missing DBS_USER or DBS_PASS for scraper linking');
+    }
+
+    this.logger.log({}, 'Initiating scraper link with DBS credentials');
+
+    const strategy = this.strategies.get(DEFAULT_SCRAPER_BANK_ID);
     if (!strategy) {
       throw new Error(
-        `No scraper strategy found for bankId: ${DEFAULT_SCRAPER_AUTH.bankId}`,
+        `No scraper strategy found for bankId: ${DEFAULT_SCRAPER_BANK_ID}`,
       );
     }
 
     const { accounts, institution } = await this.scrapeWithStrategy(strategy, {
-      username: DEFAULT_SCRAPER_AUTH.username,
-      password: DEFAULT_SCRAPER_AUTH.password,
+      username,
+      password,
     });
 
     return {
       immediateAccounts: [
         {
           authentication: {
-            bankId: DEFAULT_SCRAPER_AUTH.bankId,
-            username: DEFAULT_SCRAPER_AUTH.username,
-            password: DEFAULT_SCRAPER_AUTH.password,
+            bankId: DEFAULT_SCRAPER_BANK_ID,
+            username,
+            password,
           },
           accounts,
           institution: institution ?? strategy.institution,
