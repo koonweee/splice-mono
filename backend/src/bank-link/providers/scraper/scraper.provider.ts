@@ -10,7 +10,7 @@ import type { IBankLinkProvider } from '../bank-link-provider.interface';
 import { ScraperAuthenticationSchema } from './scraper.types';
 import type { ScraperStrategy } from './strategies/scraper-strategy.interface';
 
-const SCRAPER_TIMEOUT_MS = 20000;
+const SCRAPER_TIMEOUT_MS = 420000;
 const DEFAULT_SCRAPER_BANK_ID = 'dbs';
 
 @Injectable()
