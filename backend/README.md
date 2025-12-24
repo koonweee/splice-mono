@@ -254,6 +254,8 @@ Key environment variables (see `.env.example` for all variables):
 - `POSTGRES_DB` - Database name
 - `POSTGRES_USER` - Database user
 - `POSTGRES_PASSWORD` - Database password
+- `DBS_USER` - DBS scraper username (for scraper linking)
+- `DBS_PASS` - DBS scraper password (for scraper linking)
 
 Any environment variables added to .env should also be added to the docker-compose
 
