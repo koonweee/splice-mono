@@ -1,23 +1,22 @@
 import {
   ColorSchemeScript,
-  mantineHtmlProps,
   MantineProvider,
+  mantineHtmlProps,
 } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 import {
-  createRootRouteWithContext,
   HeadContent,
   Outlet,
   Scripts,
+  createRootRouteWithContext,
 } from '@tanstack/react-router'
 
-import type { RouterContext } from '../router'
-
-import { themes } from '@/lib/theme'
 import mantineChartsCss from '@mantine/charts/styles.css?url'
 import mantineCss from '@mantine/core/styles.css?url'
 import mantineNotificationsCss from '@mantine/notifications/styles.css?url'
 import appCss from '../styles.css?url'
+import type { RouterContext } from '../router'
+import { themes } from '@/lib/theme'
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({

@@ -1,4 +1,5 @@
-import { createTheme, MantineColorsTuple } from '@mantine/core'
+import { createTheme } from '@mantine/core'
+import type { MantineColorsTuple } from '@mantine/core'
 
 /** Mantine theme */
 const brand: MantineColorsTuple = [

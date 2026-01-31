@@ -1,21 +1,24 @@
 import dayjs from 'dayjs'
+import { AccountType, MoneyWithSignSign } from '../api/models'
+import { getDecimalPlaces } from './format'
+import { TimePeriod } from './types'
+import type { ChartDataPoint } from '../components/Chart'
 import type {
   AccountBalanceResult,
   BalanceQueryPerDateResult,
   BalanceWithConvertedBalance,
   MoneyWithSign,
 } from '../api/models'
-import { AccountType, MoneyWithSignSign } from '../api/models'
-import type { ChartDataPoint } from '../components/Chart'
-import { getDecimalPlaces } from './format'
-import { TimePeriod } from './types'
 
 type AccountTypeValue = (typeof AccountType)[keyof typeof AccountType]
 
 /**
  * Liability account types - debt that decreases net worth
  */
-const LIABILITY_TYPES: AccountTypeValue[] = [AccountType.credit, AccountType.loan]
+const LIABILITY_TYPES: Array<AccountTypeValue> = [
+  AccountType.credit,
+  AccountType.loan,
+]
 
 /**
  * Check if an account type is a liability
@@ -144,16 +147,16 @@ export interface DashboardData {
   netWorth: MoneyWithSign
   changePercent?: number
   comparisonPeriod: TimePeriod
-  chartData: ChartDataPoint[]
-  assets: AccountSummaryData[]
-  liabilities: AccountSummaryData[]
+  chartData: Array<ChartDataPoint>
+  assets: Array<AccountSummaryData>
+  liabilities: Array<AccountSummaryData>
 }
 
 /**
  * Transform balance query results into dashboard data
  */
 export function transformToDashboardData(
-  results: BalanceQueryPerDateResult[],
+  results: Array<BalanceQueryPerDateResult>,
   period: TimePeriod,
 ): DashboardData {
   // Sort results by date ascending
@@ -184,14 +187,14 @@ export function transformToDashboardData(
     : 'USD'
 
   // Build chart data from all dates
-  const chartData: ChartDataPoint[] = sortedResults.map((result) => ({
+  const chartData: Array<ChartDataPoint> = sortedResults.map((result) => ({
     label: dayjs(result.date).format('MMM D'),
     value: calculateNetWorthForDate(result.balances),
   }))
 
   // Build account summaries from last result
-  const assets: AccountSummaryData[] = []
-  const liabilities: AccountSummaryData[] = []
+  const assets: Array<AccountSummaryData> = []
+  const liabilities: Array<AccountSummaryData> = []
 
   if (lastResult) {
     Object.entries(lastResult.balances).forEach(
@@ -261,9 +264,9 @@ export function transformToDashboardData(
  * Transform balance query results into chart data for a single account
  */
 export function transformToAccountChartData(
-  results: BalanceQueryPerDateResult[],
+  results: Array<BalanceQueryPerDateResult>,
   accountId: string,
-): ChartDataPoint[] {
+): Array<ChartDataPoint> {
   // Sort results by date ascending
   const sortedResults = [...results].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
@@ -291,7 +294,7 @@ export function transformToAccountChartData(
  * Get the latest balance result for an account from query results
  */
 export function getLatestAccountBalance(
-  results: BalanceQueryPerDateResult[],
+  results: Array<BalanceQueryPerDateResult>,
   accountId: string,
 ): AccountBalanceResult | undefined {
   // Sort by date descending to get latest
@@ -310,7 +313,7 @@ export function getLatestAccountBalance(
  * Returns undefined if no synced snapshots exist (all were forward-filled)
  */
 export function getLatestSyncedAt(
-  results: BalanceQueryPerDateResult[],
+  results: Array<BalanceQueryPerDateResult>,
   accountId: string,
 ): Date | undefined {
   let latest: Date | undefined

@@ -9,7 +9,6 @@
 export type RateWithSourceSource =
   (typeof RateWithSourceSource)[keyof typeof RateWithSourceSource]
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const RateWithSourceSource = {
   DB: 'DB',
   FILLED: 'FILLED',

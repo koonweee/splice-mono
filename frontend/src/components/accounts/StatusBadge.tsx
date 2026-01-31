@@ -1,5 +1,5 @@
-import { SanitizedBankLinkStatus } from '@/api/models/sanitizedBankLinkStatus'
 import { Badge } from '@mantine/core'
+import { SanitizedBankLinkStatus } from '@/api/models/sanitizedBankLinkStatus'
 
 const statusConfig: Record<string, { color: string; label: string }> = {
   [SanitizedBankLinkStatus.OK]: { color: 'green', label: 'Connected' },

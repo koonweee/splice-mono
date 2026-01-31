@@ -9,7 +9,6 @@
 export type InitiateLinkRequestNetwork =
   (typeof InitiateLinkRequestNetwork)[keyof typeof InitiateLinkRequestNetwork]
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const InitiateLinkRequestNetwork = {
   ethereum: 'ethereum',
   bitcoin: 'bitcoin',

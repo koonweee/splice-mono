@@ -1,8 +1,8 @@
 import { ActionIcon, Collapse, Group, Stack, Text, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
-import type { AccountSummaryData } from '../lib/balance-utils'
 import { AccountCard } from './AccountCard'
+import type { AccountSummaryData } from '../lib/balance-utils'
 
 export function AccountSection({
   title,
@@ -11,7 +11,7 @@ export function AccountSection({
   onAccountClick,
 }: {
   title: string
-  accounts: AccountSummaryData[]
+  accounts: Array<AccountSummaryData>
   isLiability: boolean
   onAccountClick: (account: AccountSummaryData) => void
 }) {
