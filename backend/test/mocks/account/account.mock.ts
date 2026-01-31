@@ -1,5 +1,6 @@
 import { AccountType } from 'plaid';
 import { Account, CreateAccountDto } from '../../../src/types/Account';
+import { ManualAccountType } from '../../../src/types/AccountType';
 import { MoneySign } from '../../../src/types/MoneyWithSign';
 
 /** Standard mock timestamps for testing */
@@ -58,6 +59,45 @@ export const mockAccount2: Account = {
 /**
  * Mock DTO for creating account with $500.00 balance (stored as cents)
  */
+/**
+ * Mock manual account with $200.00 balance
+ */
+export const mockManualAccount: Account = {
+  id: 'manual-id-789',
+  userId: mockUserId,
+  name: 'Manual Cash Account',
+  availableBalance: {
+    money: { currency: 'USD', amount: 20000 },
+    sign: MoneySign.POSITIVE,
+  },
+  currentBalance: {
+    money: { currency: 'USD', amount: 20000 },
+    sign: MoneySign.POSITIVE,
+  },
+  type: ManualAccountType.MANUAL,
+  subType: null,
+  externalAccountId: null,
+  bankLinkId: null,
+  ...mockTimestamps,
+};
+
+/**
+ * Mock DTO for creating a manual account
+ */
+export const mockCreateManualAccountDto: CreateAccountDto = {
+  name: 'Manual Cash Account',
+  availableBalance: {
+    money: { currency: 'USD', amount: 20000 },
+    sign: MoneySign.POSITIVE,
+  },
+  currentBalance: {
+    money: { currency: 'USD', amount: 20000 },
+    sign: MoneySign.POSITIVE,
+  },
+  type: ManualAccountType.MANUAL,
+  subType: null,
+};
+
 export const mockCreateAccountDto: CreateAccountDto = {
   name: 'New Test Account',
   availableBalance: {

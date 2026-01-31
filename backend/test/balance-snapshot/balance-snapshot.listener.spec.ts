@@ -4,10 +4,12 @@ import { BalanceSnapshotService } from '../../src/balance-snapshot/balance-snaps
 import {
   LinkedAccountCreatedEvent,
   LinkedAccountUpdatedEvent,
+  ManualAccountBalanceUpdatedEvent,
+  ManualAccountCreatedEvent,
 } from '../../src/events/account.events';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { UserService } from '../../src/user/user.service';
-import { mockAccount } from '../mocks/account/account.mock';
+import { mockAccount, mockManualAccount } from '../mocks/account/account.mock';
 import { mockBalanceSnapshot } from '../mocks/balance-snapshot/balance-snapshot.mock';
 import { mockUserService } from '../mocks/user/user-service.mock';
 
@@ -98,6 +100,49 @@ describe('BalanceSnapshotListener', () => {
       // Should not throw
       await expect(
         listener.handleLinkedAccountChanged(event),
+      ).resolves.not.toThrow();
+    });
+  });
+
+  describe('handleManualAccountUpdate', () => {
+    it('should upsert a USER_UPDATE snapshot when manual account is created', async () => {
+      const event = new ManualAccountCreatedEvent(mockManualAccount);
+
+      await listener.handleManualAccountUpdate(event);
+
+      expect(balanceSnapshotService.upsert).toHaveBeenCalledWith(
+        {
+          accountId: mockManualAccount.id,
+          currentBalance: mockManualAccount.currentBalance,
+          availableBalance: mockManualAccount.availableBalance,
+          snapshotType: BalanceSnapshotType.USER_UPDATE,
+          snapshotDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) as string,
+        },
+        mockManualAccount.userId,
+      );
+    });
+
+    it('should upsert a USER_UPDATE snapshot when manual balance is updated', async () => {
+      const event = new ManualAccountBalanceUpdatedEvent(mockManualAccount);
+
+      await listener.handleManualAccountUpdate(event);
+
+      expect(balanceSnapshotService.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          snapshotType: BalanceSnapshotType.USER_UPDATE,
+        }),
+        mockManualAccount.userId,
+      );
+    });
+
+    it('should handle errors gracefully', async () => {
+      const event = new ManualAccountCreatedEvent(mockManualAccount);
+      balanceSnapshotService.upsert.mockRejectedValueOnce(
+        new Error('Database error'),
+      );
+
+      await expect(
+        listener.handleManualAccountUpdate(event),
       ).resolves.not.toThrow();
     });
   });
