@@ -1,6 +1,6 @@
-import { AreaChart } from '@mantine/charts'
-import { Paper, Text } from '@mantine/core'
-import isNumber from 'lodash/isNumber'
+import { AreaChart } from '@mantine/charts';
+import { Paper, Text } from '@mantine/core';
+import isNumber from 'lodash/isNumber';
 
 function ChartTooltip({ label, value }: { label: string; value?: string }) {
   return (
@@ -89,7 +89,7 @@ export function Chart({
       }}
       tooltipProps={{
         content: ({ label, payload }) => {
-          if (!label || !payload) return null
+          if (!label) return null
           const point = payload[0]
           return (
             <ChartTooltip
