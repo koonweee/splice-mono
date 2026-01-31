@@ -138,6 +138,7 @@ export interface AccountSummaryData {
   convertedEffectiveBalance?: MoneyWithSign
   changePercent?: number
   institutionName?: string
+  syncedAt?: string
 }
 
 /**
@@ -232,6 +233,7 @@ export function transformToDashboardData(
           changePercent: accountChangePercent,
           institutionName:
             accountResult.account.bankLink?.institutionName ?? undefined,
+          syncedAt: getLatestSyncedAt(sortedResults, accountId)?.toISOString(),
         }
 
         if (isLiabilityType(accountResult.account.type)) {

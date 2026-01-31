@@ -46,11 +46,15 @@ function HomePage() {
       : undefined
 
   const handleAccountClick = (account: AccountSummaryData) => {
-    navigate({ to: '/home', search: { accountId: account.id, period } })
+    navigate({
+      to: '/home',
+      search: { accountId: account.id, period },
+      resetScroll: false,
+    })
   }
 
   const handleCloseModal = () => {
-    navigate({ to: '/home', search: { period } })
+    navigate({ to: '/home', search: { period }, resetScroll: false })
   }
 
   const handlePeriodChange = (value: string | null) => {
