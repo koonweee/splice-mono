@@ -7,16 +7,16 @@
  */
 
 export type BalanceQueryControllerGetBalancesParams = {
-/**
- * End date (YYYY-MM-DD, inclusive)
- */
-endDate: unknown;
-/**
- * Start date (YYYY-MM-DD, inclusive)
- */
-startDate: unknown;
-/**
- * Comma-separated list of account UUIDs
- */
-accountIds: unknown;
-};
+  /**
+   * End date (YYYY-MM-DD, inclusive)
+   */
+  endDate: unknown
+  /**
+   * Start date (YYYY-MM-DD, inclusive)
+   */
+  startDate: unknown
+  /**
+   * Comma-separated list of account UUIDs
+   */
+  accountIds: unknown
+}

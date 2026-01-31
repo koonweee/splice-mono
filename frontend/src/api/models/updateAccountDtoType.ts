@@ -7,11 +7,13 @@
  */
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const UpdateAccountDtoType = {  investment: 'investment',
+export const UpdateAccountDtoType = {
+  investment: 'investment',
   credit: 'credit',
   depository: 'depository',
   loan: 'loan',
   brokerage: 'brokerage',
   other: 'other',
   crypto_wallet: 'crypto_wallet',
+  manual: 'manual',
 } as const

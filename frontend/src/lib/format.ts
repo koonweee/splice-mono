@@ -235,6 +235,7 @@ export function formatAccountType(
     brokerage: 'Brokerage',
     other: 'Other',
     crypto_wallet: 'Crypto Wallet',
+    manual: 'Manual',
 
     // Account SubTypes from AccountSubType.ts - Alphanumeric
     '401a': '401(a)',
