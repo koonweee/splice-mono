@@ -26,7 +26,7 @@ export function UpdateBalanceModal({
 
   const form = useForm({
     initialValues: {
-      amount: (account.currentBalance.money.amount) / 100,
+      amount: account.currentBalance.money.amount / 100,
     },
   })
 
@@ -83,9 +83,7 @@ export function UpdateBalanceModal({
             placeholder="0.00"
             decimalScale={2}
             fixedDecimalScale
-            prefix={
-              account.currentBalance.money.currency === 'USD' ? '$' : ''
-            }
+            prefix={account.currentBalance.money.currency === 'USD' ? '$' : ''}
             {...form.getInputProps('amount')}
           />
           <Button type="submit" loading={updateBalance.isPending}>

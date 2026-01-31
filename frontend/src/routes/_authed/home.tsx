@@ -41,8 +41,8 @@ function HomePage() {
   const selectedAccount: AccountSummaryData | undefined =
     accountId && dashboard
       ? ([...dashboard.assets, ...dashboard.liabilities].find(
-        (a) => a.id === accountId,
-      ) ?? undefined)
+          (a) => a.id === accountId,
+        ) ?? undefined)
       : undefined
 
   const handleAccountClick = (account: AccountSummaryData) => {
