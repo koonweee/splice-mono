@@ -1,3 +1,4 @@
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountType } from 'plaid';
@@ -41,6 +42,10 @@ describe('AccountService', () => {
         {
           provide: UserService,
           useValue: mockUserService,
+        },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn() },
         },
       ],
     }).compile();

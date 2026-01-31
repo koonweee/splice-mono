@@ -7,6 +7,9 @@ import {
   LinkedAccountCreatedEvent,
   LinkedAccountEvents,
   LinkedAccountUpdatedEvent,
+  ManualAccountBalanceUpdatedEvent,
+  ManualAccountCreatedEvent,
+  ManualAccountEvents,
 } from '../events/account.events';
 import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import { UserService } from '../user/user.service';
@@ -65,6 +68,50 @@ export class BalanceSnapshotListener {
       this.logger.error(
         { eventType, accountId: event.account.id, error: String(error) },
         'Failed to upsert balance snapshot for linked account',
+      );
+    }
+  }
+
+  /**
+   * Handle manual account created/updated events - upsert balance snapshot
+   */
+  @OnEvent(ManualAccountEvents.CREATED)
+  @OnEvent(ManualAccountEvents.BALANCE_UPDATED)
+  async handleManualAccountUpdate(
+    event: ManualAccountCreatedEvent | ManualAccountBalanceUpdatedEvent,
+  ): Promise<void> {
+    const eventType =
+      event instanceof ManualAccountCreatedEvent
+        ? 'manual_created'
+        : 'manual_updated';
+
+    this.logger.log(
+      { eventType, accountId: event.account.id },
+      'Handling manual account event',
+    );
+
+    try {
+      const snapshotDate = await this.getSnapshotDate(event.account.userId);
+
+      await this.balanceSnapshotService.upsert(
+        {
+          accountId: event.account.id,
+          currentBalance: event.account.currentBalance,
+          availableBalance: event.account.availableBalance,
+          snapshotType: BalanceSnapshotType.USER_UPDATE,
+          snapshotDate,
+        },
+        event.account.userId,
+      );
+
+      this.logger.log(
+        { eventType, accountId: event.account.id },
+        'Balance snapshot upserted for manual account',
+      );
+    } catch (error) {
+      this.logger.error(
+        { eventType, accountId: event.account.id, error: String(error) },
+        'Failed to upsert balance snapshot for manual account',
       );
     }
   }
