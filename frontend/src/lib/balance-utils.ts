@@ -165,8 +165,11 @@ export function transformToDashboardData(
   )
 
   // Get first and last results for change calculation
-  const firstResult = sortedResults[0]
-  const lastResult = sortedResults[sortedResults.length - 1]
+  const firstResult = sortedResults.length > 0 ? sortedResults[0] : undefined
+  const lastResult =
+    sortedResults.length > 0
+      ? sortedResults[sortedResults.length - 1]
+      : undefined
 
   // Calculate net worth for first and last dates
   const firstNetWorth = firstResult
@@ -182,8 +185,7 @@ export function transformToDashboardData(
   // Determine currency from first account (assume all converted to same currency)
   const firstAccount = lastResult ? Object.values(lastResult.balances)[0] : null
   const currency = firstAccount
-    ? (resolveEffectiveBalance(firstAccount.effectiveBalance).money.currency ??
-      'USD')
+    ? resolveEffectiveBalance(firstAccount.effectiveBalance).money.currency
     : 'USD'
 
   // Build chart data from all dates
@@ -274,7 +276,8 @@ export function transformToAccountChartData(
 
   return sortedResults
     .map((result) => {
-      const accountResult = result.balances[accountId]
+      const accountResult =
+        accountId in result.balances ? result.balances[accountId] : undefined
       if (!accountResult) return null
 
       const effectiveBalance = resolveEffectiveBalance(
@@ -303,7 +306,7 @@ export function getLatestAccountBalance(
   )
 
   const matchingResult = sortedResults.find(
-    (result) => result.balances[accountId],
+    (result) => accountId in result.balances,
   )
   return matchingResult?.balances[accountId]
 }
@@ -319,7 +322,8 @@ export function getLatestSyncedAt(
   let latest: Date | undefined
 
   results.forEach((result) => {
-    const balance = result.balances[accountId]
+    const balance =
+      accountId in result.balances ? result.balances[accountId] : undefined
     if (balance?.syncedAt) {
       const syncedAt = new Date(balance.syncedAt)
       if (!latest || syncedAt > latest) {
