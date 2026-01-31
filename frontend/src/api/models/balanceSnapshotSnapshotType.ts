@@ -6,12 +6,12 @@
  * OpenAPI spec version: 1.0
  */
 
-export type BalanceSnapshotSnapshotType = typeof BalanceSnapshotSnapshotType[keyof typeof BalanceSnapshotSnapshotType];
-
+export type BalanceSnapshotSnapshotType =
+  (typeof BalanceSnapshotSnapshotType)[keyof typeof BalanceSnapshotSnapshotType]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const BalanceSnapshotSnapshotType = {
   USER_UPDATE: 'USER_UPDATE',
   SYNC: 'SYNC',
   FORWARD_FILL: 'FORWARD_FILL',
-} as const;
+} as const

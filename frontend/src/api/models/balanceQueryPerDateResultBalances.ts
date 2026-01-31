@@ -5,6 +5,8 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { AccountBalanceResult } from './accountBalanceResult';
+import type { AccountBalanceResult } from './accountBalanceResult'
 
-export type BalanceQueryPerDateResultBalances = {[key: string]: AccountBalanceResult};
+export type BalanceQueryPerDateResultBalances = {
+  [key: string]: AccountBalanceResult
+}

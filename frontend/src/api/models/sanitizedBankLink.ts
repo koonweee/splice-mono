@@ -5,23 +5,23 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { SanitizedBankLinkStatus } from './sanitizedBankLinkStatus';
-import type { SanitizedBankLinkStatusBody } from './sanitizedBankLinkStatusBody';
+import type { SanitizedBankLinkStatus } from './sanitizedBankLinkStatus'
+import type { SanitizedBankLinkStatusBody } from './sanitizedBankLinkStatusBody'
 
 export interface SanitizedBankLink {
-  id: string;
-  providerName: string;
-  accountIds: string[];
+  id: string
+  providerName: string
+  accountIds: string[]
   /** @nullable */
-  institutionId?: string | null;
+  institutionId?: string | null
   /** @nullable */
-  institutionName?: string | null;
-  status: SanitizedBankLinkStatus;
+  institutionName?: string | null
+  status: SanitizedBankLinkStatus
   /** @nullable */
-  statusDate: string | null;
+  statusDate: string | null
   /** @nullable */
-  statusBody?: SanitizedBankLinkStatusBody;
-  createdAt: string;
-  updatedAt: string;
-  userId: string;
+  statusBody?: SanitizedBankLinkStatusBody
+  createdAt: string
+  updatedAt: string
+  userId: string
 }

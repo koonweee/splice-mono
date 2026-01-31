@@ -7,7 +7,8 @@
  */
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CreateAccountDtoRawApiAccountType = {  investment: 'investment',
+export const CreateAccountDtoRawApiAccountType = {
+  investment: 'investment',
   credit: 'credit',
   depository: 'depository',
   loan: 'loan',

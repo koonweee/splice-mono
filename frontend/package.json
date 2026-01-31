@@ -15,6 +15,7 @@
   "dependencies": {
     "@mantine/charts": "^8.3.9",
     "@mantine/core": "^8.3.9",
+    "@mantine/form": "^8.3.13",
     "@mantine/hooks": "^8.3.9",
     "@mantine/notifications": "^8.3.10",
     "@tabler/icons-react": "^3.35.0",
