@@ -19,7 +19,7 @@ export function AccountRow({ account }: { account: Account }) {
           {formatAccountType(account.subType || account.type)}
         </Text>
       </div>
-      <StatusBadge status={account.bankLink?.status} />
+      <StatusBadge status={account.bankLink?.status} statusBody={account.bankLink?.statusBody} />
     </Group>
   )
 }
