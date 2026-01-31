@@ -1,8 +1,8 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
 import { AccountType } from 'plaid';
-import { Between, In, IsNull, Not, Repository } from 'typeorm';
+import { Between, In, Repository } from 'typeorm';
 import type { ExtendedAccountType } from '../types/AccountType';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
@@ -179,14 +179,11 @@ export class BalanceQueryService {
 
   /**
    * Get balances for specific accounts over a date range.
-   * Routes to appropriate balance source based on account type (linked vs manual).
-   *
    * @param accountIds - List of account IDs to query
    * @param startDate - Start date (YYYY-MM-DD, inclusive)
    * @param endDate - End date (YYYY-MM-DD, inclusive)
    * @param userId - User ID for ownership verification
    * @returns Array of balance results per date
-   * @throws BadRequestException if any manual accounts are included
    */
   async getBalancesForDateRange(
     accountIds: string[],
@@ -199,24 +196,6 @@ export class BalanceQueryService {
       'Getting balances for accounts',
     );
 
-    // Fetch accounts to check their types
-    const accounts = await this.accountRepository.find({
-      where: {
-        id: In(accountIds),
-        userId,
-      },
-    });
-
-    // Check for manual accounts (no bankLinkId)
-    const manualAccounts = accounts.filter((a) => a.bankLinkId === null);
-    if (manualAccounts.length > 0) {
-      const manualIds = manualAccounts.map((a) => a.id).join(', ');
-      throw new BadRequestException(
-        `Manual accounts are not yet supported for balance queries: ${manualIds}`,
-      );
-    }
-
-    // All accounts are linked - route to snapshot-based balances
     return this.getSnapshotBalancesForDateRange(
       accountIds,
       startDate,
@@ -226,7 +205,7 @@ export class BalanceQueryService {
   }
 
   /**
-   * Get balances for all linked accounts over a date range.
+   * Get balances for all accounts over a date range.
    *
    * @param startDate - Start date (YYYY-MM-DD, inclusive)
    * @param endDate - End date (YYYY-MM-DD, inclusive)
@@ -243,19 +222,16 @@ export class BalanceQueryService {
       'Getting all balances for user',
     );
 
-    // Fetch all linked accounts for the user
-    const linkedAccounts = await this.accountRepository.find({
-      where: {
-        userId,
-        bankLinkId: Not(IsNull()),
-      },
+    // Fetch all accounts for the user
+    const accounts = await this.accountRepository.find({
+      where: { userId },
     });
 
-    if (linkedAccounts.length === 0) {
+    if (accounts.length === 0) {
       return [];
     }
 
-    const accountIds = linkedAccounts.map((a) => a.id);
+    const accountIds = accounts.map((a) => a.id);
     return this.getSnapshotBalancesForDateRange(
       accountIds,
       startDate,
@@ -465,8 +441,7 @@ export class BalanceQueryService {
         // Calculate major units (floats) to handle different decimal places
         const sourceDecimals = getDecimalPlaces(balance.money.currency);
         const targetDecimals = getDecimalPlaces(targetCurrency);
-        const sourceMajor =
-          balance.money.amount / Math.pow(10, sourceDecimals);
+        const sourceMajor = balance.money.amount / Math.pow(10, sourceDecimals);
         const convertedMajor = sourceMajor * rateInfo.rate;
         const convertedAmount = Math.round(
           convertedMajor * Math.pow(10, targetDecimals),

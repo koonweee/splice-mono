@@ -1,18 +1,27 @@
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { NotFoundException } from '@nestjs/common';
 import { AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
 import { AccountService } from '../../src/account/account.service';
+import {
+  ManualAccountEvents,
+  ManualAccountCreatedEvent,
+  ManualAccountBalanceUpdatedEvent,
+} from '../../src/events/account.events';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserService } from '../../src/user/user.service';
 import {
   mockCreateAccountDto,
+  mockCreateManualAccountDto,
   mockUserId,
 } from '../mocks/account/account.mock';
 import { mockUserService } from '../mocks/user/user-service.mock';
 
 describe('AccountService', () => {
   let service: AccountService;
+  let mockEventEmitter: { emit: jest.Mock };
 
   // Mock repository methods
   const mockRepository = {
@@ -41,6 +50,13 @@ describe('AccountService', () => {
         {
           provide: UserService,
           useValue: mockUserService,
+        },
+        {
+          provide: EventEmitter2,
+          useFactory: () => {
+            mockEventEmitter = { emit: jest.fn() };
+            return mockEventEmitter;
+          },
         },
       ],
     }).compile();
@@ -145,6 +161,35 @@ describe('AccountService', () => {
       expect(result.subType).toBeNull();
       expect(result.externalAccountId).toBeNull();
       expect(result.bankLinkId).toBeNull();
+    });
+
+    it('should emit ManualAccountCreatedEvent when creating a manual account', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateManualAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'manual-uuid';
+      mockRepository.save.mockResolvedValue(mockEntity);
+
+      await service.create(mockCreateManualAccountDto, mockUserId);
+
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        ManualAccountEvents.CREATED,
+        expect.any(ManualAccountCreatedEvent),
+      );
+    });
+
+    it('should not emit ManualAccountCreatedEvent for non-manual accounts', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'generated-uuid';
+      mockRepository.save.mockResolvedValue(mockEntity);
+
+      await service.create(mockCreateAccountDto, mockUserId);
+
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should associate BankLink when bankLinkId is provided', async () => {
@@ -439,6 +484,47 @@ describe('AccountService', () => {
           bankLinkId: null,
         }),
       );
+    });
+  });
+
+  describe('updateManualBalance', () => {
+    const newBalance = {
+      money: { currency: 'USD', amount: 75000 },
+      sign: MoneySign.POSITIVE,
+    };
+
+    it('should update balance and emit event', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateManualAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'manual-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockResolvedValue(mockEntity);
+
+      const result = await service.updateManualBalance(
+        'manual-id',
+        mockUserId,
+        newBalance,
+      );
+
+      expect(result).toBeDefined();
+      expect(mockRepository.save).toHaveBeenCalled();
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        ManualAccountEvents.BALANCE_UPDATED,
+        expect.any(ManualAccountBalanceUpdatedEvent),
+      );
+    });
+
+    it('should throw NotFoundException when account not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.updateManualBalance('non-existent', mockUserId, newBalance),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockRepository.save).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 
