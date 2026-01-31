@@ -1,9 +1,6 @@
 import { Box, Button, Group, Loader, Modal, Stack, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { UpdateBalanceModal } from './accounts/UpdateBalanceModal'
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
-import type { AccountSummaryData } from '../lib/balance-utils'
-import type { TimePeriod } from '../lib/types'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
 import {
   formatMoneyNumber,
@@ -11,7 +8,10 @@ import {
   formatRelativeTime,
 } from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
+import { UpdateBalanceModal } from './accounts/UpdateBalanceModal'
 import { Chart } from './Chart'
+import type { TimePeriod } from '../lib/types'
+import type { AccountSummaryData } from '../lib/balance-utils'
 
 interface AccountModalProps {
   account?: AccountSummaryData

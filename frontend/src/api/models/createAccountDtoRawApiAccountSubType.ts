@@ -13,7 +13,6 @@ export type CreateAccountDtoRawApiAccountSubType =
   | (typeof CreateAccountDtoRawApiAccountSubType)[keyof typeof CreateAccountDtoRawApiAccountSubType]
   | null
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateAccountDtoRawApiAccountSubType = {
   '401a': '401a',
   '401k': '401k',

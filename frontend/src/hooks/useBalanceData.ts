@@ -1,22 +1,22 @@
-import { TimePeriod } from '@/lib/types'
 import { useMemo } from 'react'
 import {
   useBalanceQueryControllerGetAllBalances,
   useBalanceQueryControllerGetBalances,
 } from '../api/clients/spliceAPI'
-import type {
-  AccountBalanceResult,
-  BalanceQueryPerDateResult,
-} from '../api/models'
-import type { ChartDataPoint } from '../components/Chart'
 import {
   getDateRange,
   getLatestAccountBalance,
   getLatestSyncedAt,
   transformToAccountChartData,
   transformToDashboardData,
-  type DashboardData,
 } from '../lib/balance-utils'
+import type { DashboardData } from '../lib/balance-utils'
+import type {
+  AccountBalanceResult,
+  BalanceQueryPerDateResult,
+} from '../api/models'
+import type { ChartDataPoint } from '../components/Chart'
+import { TimePeriod } from '@/lib/types'
 
 /**
  * Hook for fetching all account balances for the dashboard
@@ -44,10 +44,10 @@ export function useBalanceData(period: TimePeriod) {
  * Result from useAccountBalanceHistory hook
  */
 export interface AccountBalanceHistoryResult {
-  chartData: ChartDataPoint[]
+  chartData: Array<ChartDataPoint>
   latestBalance?: AccountBalanceResult
   latestSyncedAt?: Date
-  rawResults: BalanceQueryPerDateResult[]
+  rawResults: Array<BalanceQueryPerDateResult>
 }
 
 /**

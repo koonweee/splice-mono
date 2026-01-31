@@ -1,5 +1,5 @@
 import { Button, Container, Stack, Text, Title } from '@mantine/core'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { AlertCircle, Home } from 'lucide-react'
 
 export const Route = createFileRoute('/_authed/$')({
@@ -29,4 +29,3 @@ function NotFoundPage() {
     </Container>
   )
 }
-

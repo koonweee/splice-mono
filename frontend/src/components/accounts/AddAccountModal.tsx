@@ -19,7 +19,6 @@ import {
   IconPencil,
   IconWallet,
 } from '@tabler/icons-react'
-import type { ComponentType } from 'react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -27,6 +26,7 @@ import {
   useAccountControllerCreate,
   useBankLinkControllerInitiateLinking,
 } from '../../api/clients/spliceAPI'
+import type { ComponentType } from 'react'
 import type { InitiateLinkRequestNetwork } from '../../api/models'
 
 interface Provider {
@@ -35,7 +35,7 @@ interface Provider {
   icon: ComponentType<{ size: number }>
 }
 
-const PROVIDERS: Provider[] = [
+const PROVIDERS: Array<Provider> = [
   {
     id: 'plaid',
     name: 'Plaid',

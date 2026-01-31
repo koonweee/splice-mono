@@ -6,7 +6,6 @@
  * OpenAPI spec version: 1.0
  */
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const UpdateAccountDtoRawApiAccountType = {
   investment: 'investment',
   credit: 'credit',
