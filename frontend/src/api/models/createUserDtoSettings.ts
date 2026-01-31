@@ -7,6 +7,6 @@
  */
 
 export type CreateUserDtoSettings = {
-  currency?: string;
-  timezone?: string;
-};
+  currency?: string
+  timezone?: string
+}

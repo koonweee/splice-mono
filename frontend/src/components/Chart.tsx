@@ -23,7 +23,7 @@ export interface ChartDataPoint {
 }
 
 interface ChartProps {
-  data: ChartDataPoint[]
+  data: Array<ChartDataPoint>
   valueFormatter: (value: number) => string
   height?: number
   color?: string

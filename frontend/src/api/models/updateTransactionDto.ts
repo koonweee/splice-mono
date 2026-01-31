@@ -5,25 +5,25 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { MoneyWithSign } from './moneyWithSign';
+import type { MoneyWithSign } from './moneyWithSign'
 
 export interface UpdateTransactionDto {
-  amount?: MoneyWithSign;
-  accountId?: string;
+  amount?: MoneyWithSign
+  accountId?: string
   /** @nullable */
-  merchantName?: string | null;
-  pending?: boolean;
+  merchantName?: string | null
+  pending?: boolean
   /** @nullable */
-  externalTransactionId?: string | null;
+  externalTransactionId?: string | null
   /** @nullable */
-  logoUrl?: string | null;
-  date?: string;
+  logoUrl?: string | null
+  date?: string
   /** @nullable */
-  datetime?: string | null;
+  datetime?: string | null
   /** @nullable */
-  authorizedDate?: string | null;
+  authorizedDate?: string | null
   /** @nullable */
-  authorizedDatetime?: string | null;
+  authorizedDatetime?: string | null
   /** @nullable */
-  categoryId?: string | null;
+  categoryId?: string | null
 }

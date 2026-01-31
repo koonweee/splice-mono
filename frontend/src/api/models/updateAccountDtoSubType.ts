@@ -9,10 +9,10 @@
 /**
  * @nullable
  */
-export type UpdateAccountDtoSubType = typeof UpdateAccountDtoSubType[keyof typeof UpdateAccountDtoSubType] | null;
+export type UpdateAccountDtoSubType =
+  | (typeof UpdateAccountDtoSubType)[keyof typeof UpdateAccountDtoSubType]
+  | null
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const UpdateAccountDtoSubType = {
   '401a': '401a',
   '401k': '401k',
@@ -84,4 +84,4 @@ export const UpdateAccountDtoSubType = {
   ugma: 'ugma',
   utma: 'utma',
   variable_annuity: 'variable annuity',
-} as const;
+} as const

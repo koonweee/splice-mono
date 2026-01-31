@@ -1,4 +1,5 @@
-import Axios, { AxiosError, AxiosRequestConfig } from 'axios'
+import Axios from 'axios'
+import type { AxiosError, AxiosRequestConfig } from 'axios'
 
 const AUTH_FLAG_KEY = 'splice_authenticated'
 

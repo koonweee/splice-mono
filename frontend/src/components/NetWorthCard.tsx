@@ -1,14 +1,16 @@
-import { TIME_PERIOD_LABELS, TimePeriod } from '@/lib/types'
 import { Box, Paper, Text, Title } from '@mantine/core'
 import { useState } from 'react'
-import type { MoneyWithSign } from '../api/models'
 import {
   formatMoneyNumber,
   formatMoneyWithSign,
   formatPercent,
   getChangeColorMantine,
 } from '../lib/format'
-import { Chart, type ChartDataPoint } from './Chart'
+import { Chart } from './Chart'
+import type { ChartDataPoint } from './Chart'
+import type { TimePeriod } from '@/lib/types'
+import type { MoneyWithSign } from '../api/models'
+import { TIME_PERIOD_LABELS } from '@/lib/types'
 
 export function NetWorthCard({
   netWorth,
@@ -19,7 +21,7 @@ export function NetWorthCard({
   netWorth: MoneyWithSign
   changePercent?: number
   comparisonPeriod: TimePeriod
-  chartData?: ChartDataPoint[]
+  chartData?: Array<ChartDataPoint>
 }) {
   const hasChartData = chartData && chartData.length > 0
   const [hoveredPoint, setHoveredPoint] = useState<ChartDataPoint | undefined>(
@@ -48,7 +50,9 @@ export function NetWorthCard({
           c={getChangeColorMantine(false, changePercent ?? 0)}
           style={{
             visibility:
-              !hoveredPoint && changePercent !== undefined && changePercent !== 0
+              !hoveredPoint &&
+              changePercent !== undefined &&
+              changePercent !== 0
                 ? 'visible'
                 : 'hidden',
           }}

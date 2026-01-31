@@ -7,6 +7,6 @@
  */
 
 export interface UpdateUserSettingsDto {
-  currency?: string;
-  timezone?: string;
+  currency?: string
+  timezone?: string
 }
