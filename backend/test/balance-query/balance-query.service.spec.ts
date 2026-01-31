@@ -739,54 +739,6 @@ describe('BalanceQueryService', () => {
       ).toBe(95000);
     });
 
-    it('should throw BadRequestException for manual accounts', async () => {
-      const manualAccount = createMockAccountEntity(
-        'acc-1',
-        AccountType.Depository,
-        'USD',
-        null, // No bankLinkId = manual account
-      );
-
-      mockAccountRepository.find.mockResolvedValue([manualAccount]);
-
-      await expect(
-        service.getBalancesForDateRange(
-          ['acc-1'],
-          '2024-01-15',
-          '2024-01-15',
-          mockUserId,
-        ),
-      ).rejects.toThrow('Manual accounts are not yet supported');
-    });
-
-    it('should throw BadRequestException when mix of linked and manual accounts', async () => {
-      const linkedAccount = createMockAccountEntity(
-        'acc-1',
-        AccountType.Depository,
-        'USD',
-        'bank-link-123',
-      );
-      const manualAccount = createMockAccountEntity(
-        'acc-2',
-        AccountType.Depository,
-        'USD',
-        null,
-      );
-
-      mockAccountRepository.find.mockResolvedValue([
-        linkedAccount,
-        manualAccount,
-      ]);
-
-      await expect(
-        service.getBalancesForDateRange(
-          ['acc-1', 'acc-2'],
-          '2024-01-15',
-          '2024-01-15',
-          mockUserId,
-        ),
-      ).rejects.toThrow('Manual accounts are not yet supported');
-    });
   });
 
   describe('getAllBalancesForDateRange', () => {
@@ -849,13 +801,18 @@ describe('BalanceQueryService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should exclude manual accounts from results', async () => {
-      // Only linked accounts should be fetched (query uses Not(IsNull()) on bankLinkId)
+    it('should include all accounts including manual ones', async () => {
       const linkedAccount = createMockAccountEntity(
         'acc-1',
         AccountType.Depository,
         'USD',
         'bank-link-123',
+      );
+      const manualAccount = createMockAccountEntity(
+        'acc-2',
+        AccountType.Depository,
+        'USD',
+        null,
       );
       const snapshotEntity = createMockSnapshotEntity(
         'acc-1',
@@ -865,8 +822,8 @@ describe('BalanceQueryService', () => {
       );
 
       mockAccountRepository.find
-        .mockResolvedValueOnce([linkedAccount]) // getAllBalancesForDateRange - only linked
-        .mockResolvedValueOnce([linkedAccount]); // getSnapshotBalancesForDateRange
+        .mockResolvedValueOnce([linkedAccount, manualAccount]) // getAllBalancesForDateRange
+        .mockResolvedValueOnce([linkedAccount, manualAccount]); // getSnapshotBalancesForDateRange
       mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
 
       const result = await service.getAllBalancesForDateRange(
@@ -876,13 +833,10 @@ describe('BalanceQueryService', () => {
       );
 
       expect(result).toHaveLength(1);
-      // Verify the query included Not(IsNull()) on bankLinkId
+      // Verify the query fetches all accounts (no bankLinkId filter)
       expect(mockAccountRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            userId: mockUserId,
-            bankLinkId: expect.anything(), // Not(IsNull())
-          }),
+          where: { userId: mockUserId },
         }),
       );
     });
