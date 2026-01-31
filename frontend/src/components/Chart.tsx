@@ -23,7 +23,7 @@ export interface ChartDataPoint {
 }
 
 interface ChartProps {
-  data: ChartDataPoint[]
+  data: Array<ChartDataPoint>
   valueFormatter: (value: number) => string
   height?: number
   color?: string
@@ -89,7 +89,7 @@ export function Chart({
       }}
       tooltipProps={{
         content: ({ label, payload }) => {
-          if (!label || !payload) return null
+          if (!label) return null
           const point = payload[0]
           return (
             <ChartTooltip

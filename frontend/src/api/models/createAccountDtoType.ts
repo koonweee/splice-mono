@@ -6,12 +6,13 @@
  * OpenAPI spec version: 1.0
  */
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CreateAccountDtoType = {  investment: 'investment',
+export const CreateAccountDtoType = {
+  investment: 'investment',
   credit: 'credit',
   depository: 'depository',
   loan: 'loan',
   brokerage: 'brokerage',
   other: 'other',
   crypto_wallet: 'crypto_wallet',
+  manual: 'manual',
 } as const

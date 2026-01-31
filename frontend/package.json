@@ -8,13 +8,15 @@
     "serve": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
+    "lint:fix": "eslint --fix",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "orval": "orval"
+    "orval": "orval && prettier --write src/api/"
   },
   "dependencies": {
     "@mantine/charts": "^8.3.9",
     "@mantine/core": "^8.3.9",
+    "@mantine/form": "^8.3.13",
     "@mantine/hooks": "^8.3.9",
     "@mantine/notifications": "^8.3.10",
     "@tabler/icons-react": "^3.35.0",
@@ -45,6 +47,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "eslint": "9.39.2",
     "jsdom": "^27.0.0",
     "orval": "^7.17.0",
     "prettier": "^3.5.3",

@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import type { MoneyWithSign } from '../api/models'
-import { AccountSubType, AccountType, MoneyWithSignSign } from '../api/models'
+import { MoneyWithSignSign } from '../api/models'
+import type { AccountSubType, AccountType, MoneyWithSign } from '../api/models'
 
 dayjs.extend(relativeTime)
 
@@ -235,6 +235,7 @@ export function formatAccountType(
     brokerage: 'Brokerage',
     other: 'Other',
     crypto_wallet: 'Crypto Wallet',
+    manual: 'Manual',
 
     // Account SubTypes from AccountSubType.ts - Alphanumeric
     '401a': '401(a)',

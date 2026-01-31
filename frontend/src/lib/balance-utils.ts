@@ -1,21 +1,24 @@
 import dayjs from 'dayjs'
+import { AccountType, MoneyWithSignSign } from '../api/models'
+import { getDecimalPlaces } from './format'
+import { TimePeriod } from './types'
+import type { ChartDataPoint } from '../components/Chart'
 import type {
   AccountBalanceResult,
   BalanceQueryPerDateResult,
   BalanceWithConvertedBalance,
   MoneyWithSign,
 } from '../api/models'
-import { AccountType, MoneyWithSignSign } from '../api/models'
-import type { ChartDataPoint } from '../components/Chart'
-import { getDecimalPlaces } from './format'
-import { TimePeriod } from './types'
 
 type AccountTypeValue = (typeof AccountType)[keyof typeof AccountType]
 
 /**
  * Liability account types - debt that decreases net worth
  */
-const LIABILITY_TYPES: AccountTypeValue[] = [AccountType.credit, AccountType.loan]
+const LIABILITY_TYPES: Array<AccountTypeValue> = [
+  AccountType.credit,
+  AccountType.loan,
+]
 
 /**
  * Check if an account type is a liability
@@ -135,6 +138,7 @@ export interface AccountSummaryData {
   convertedEffectiveBalance?: MoneyWithSign
   changePercent?: number
   institutionName?: string
+  syncedAt?: string
 }
 
 /**
@@ -144,16 +148,16 @@ export interface DashboardData {
   netWorth: MoneyWithSign
   changePercent?: number
   comparisonPeriod: TimePeriod
-  chartData: ChartDataPoint[]
-  assets: AccountSummaryData[]
-  liabilities: AccountSummaryData[]
+  chartData: Array<ChartDataPoint>
+  assets: Array<AccountSummaryData>
+  liabilities: Array<AccountSummaryData>
 }
 
 /**
  * Transform balance query results into dashboard data
  */
 export function transformToDashboardData(
-  results: BalanceQueryPerDateResult[],
+  results: Array<BalanceQueryPerDateResult>,
   period: TimePeriod,
 ): DashboardData {
   // Sort results by date ascending
@@ -162,8 +166,11 @@ export function transformToDashboardData(
   )
 
   // Get first and last results for change calculation
-  const firstResult = sortedResults[0]
-  const lastResult = sortedResults[sortedResults.length - 1]
+  const firstResult = sortedResults.length > 0 ? sortedResults[0] : undefined
+  const lastResult =
+    sortedResults.length > 0
+      ? sortedResults[sortedResults.length - 1]
+      : undefined
 
   // Calculate net worth for first and last dates
   const firstNetWorth = firstResult
@@ -179,19 +186,18 @@ export function transformToDashboardData(
   // Determine currency from first account (assume all converted to same currency)
   const firstAccount = lastResult ? Object.values(lastResult.balances)[0] : null
   const currency = firstAccount
-    ? (resolveEffectiveBalance(firstAccount.effectiveBalance).money.currency ??
-      'USD')
+    ? resolveEffectiveBalance(firstAccount.effectiveBalance).money.currency
     : 'USD'
 
   // Build chart data from all dates
-  const chartData: ChartDataPoint[] = sortedResults.map((result) => ({
+  const chartData: Array<ChartDataPoint> = sortedResults.map((result) => ({
     label: dayjs(result.date).format('MMM D'),
     value: calculateNetWorthForDate(result.balances),
   }))
 
   // Build account summaries from last result
-  const assets: AccountSummaryData[] = []
-  const liabilities: AccountSummaryData[] = []
+  const assets: Array<AccountSummaryData> = []
+  const liabilities: Array<AccountSummaryData> = []
 
   if (lastResult) {
     Object.entries(lastResult.balances).forEach(
@@ -227,6 +233,7 @@ export function transformToDashboardData(
           changePercent: accountChangePercent,
           institutionName:
             accountResult.account.bankLink?.institutionName ?? undefined,
+          syncedAt: getLatestSyncedAt(sortedResults, accountId)?.toISOString(),
         }
 
         if (isLiabilityType(accountResult.account.type)) {
@@ -261,9 +268,9 @@ export function transformToDashboardData(
  * Transform balance query results into chart data for a single account
  */
 export function transformToAccountChartData(
-  results: BalanceQueryPerDateResult[],
+  results: Array<BalanceQueryPerDateResult>,
   accountId: string,
-): ChartDataPoint[] {
+): Array<ChartDataPoint> {
   // Sort results by date ascending
   const sortedResults = [...results].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
@@ -271,7 +278,8 @@ export function transformToAccountChartData(
 
   return sortedResults
     .map((result) => {
-      const accountResult = result.balances[accountId]
+      const accountResult =
+        accountId in result.balances ? result.balances[accountId] : undefined
       if (!accountResult) return null
 
       const effectiveBalance = resolveEffectiveBalance(
@@ -291,7 +299,7 @@ export function transformToAccountChartData(
  * Get the latest balance result for an account from query results
  */
 export function getLatestAccountBalance(
-  results: BalanceQueryPerDateResult[],
+  results: Array<BalanceQueryPerDateResult>,
   accountId: string,
 ): AccountBalanceResult | undefined {
   // Sort by date descending to get latest
@@ -300,7 +308,7 @@ export function getLatestAccountBalance(
   )
 
   const matchingResult = sortedResults.find(
-    (result) => result.balances[accountId],
+    (result) => accountId in result.balances,
   )
   return matchingResult?.balances[accountId]
 }
@@ -310,13 +318,14 @@ export function getLatestAccountBalance(
  * Returns undefined if no synced snapshots exist (all were forward-filled)
  */
 export function getLatestSyncedAt(
-  results: BalanceQueryPerDateResult[],
+  results: Array<BalanceQueryPerDateResult>,
   accountId: string,
 ): Date | undefined {
   let latest: Date | undefined
 
   results.forEach((result) => {
-    const balance = result.balances[accountId]
+    const balance =
+      accountId in result.balances ? result.balances[accountId] : undefined
     if (balance?.syncedAt) {
       const syncedAt = new Date(balance.syncedAt)
       if (!latest || syncedAt > latest) {

@@ -141,6 +141,7 @@ function SettingsPage() {
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (error) {
     return (
       <Alert color="red" title="Error">
