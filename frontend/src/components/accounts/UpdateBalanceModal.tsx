@@ -4,6 +4,8 @@ import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   getAccountControllerFindAllQueryKey,
+  getBalanceQueryControllerGetAllBalancesQueryKey,
+  getBalanceQueryControllerGetBalancesQueryKey,
   useAccountControllerUpdateBalance,
 } from '../../api/clients/spliceAPI'
 import type { Account } from '../../api/models'
@@ -48,6 +50,12 @@ export function UpdateBalanceModal({
         onSuccess: () => {
           queryClient.invalidateQueries({
             queryKey: getAccountControllerFindAllQueryKey(),
+          })
+          queryClient.invalidateQueries({
+            queryKey: getBalanceQueryControllerGetBalancesQueryKey(),
+          })
+          queryClient.invalidateQueries({
+            queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
           })
           notifications.show({
             title: 'Balance Updated',
