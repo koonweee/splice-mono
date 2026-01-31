@@ -1,7 +1,6 @@
 import { ActionIcon, Collapse, Group, Paper, Stack, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
-import type { Account } from '../../api/models'
 import {
   CRYPTO_COLORS,
   CRYPTO_ICONS,
@@ -9,13 +8,14 @@ import {
 } from '../../lib/crypto-utils'
 import { AccountRow } from './AccountRow'
 import { ProviderBadge } from './ProviderBadge'
+import type { Account } from '../../api/models'
 
 export function InstitutionSection({
   institution,
   accounts,
 }: {
   institution: string
-  accounts: Account[]
+  accounts: Array<Account>
 }) {
   const [opened, { toggle }] = useDisclosure(true)
 
@@ -34,7 +34,9 @@ export function InstitutionSection({
         <Group gap="sm">
           <Title order={3}>
             {cryptoNetwork && (
-              <span style={{ color: CRYPTO_COLORS[cryptoNetwork], marginRight: 8 }}>
+              <span
+                style={{ color: CRYPTO_COLORS[cryptoNetwork], marginRight: 8 }}
+              >
                 {CRYPTO_ICONS[cryptoNetwork]}
               </span>
             )}

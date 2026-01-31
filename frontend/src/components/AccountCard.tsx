@@ -1,5 +1,4 @@
 import { Group, Paper, Text } from '@mantine/core'
-import type { AccountSummaryData } from '../lib/balance-utils'
 import {
   formatAccountType,
   formatMoneyWithSign,
@@ -8,6 +7,7 @@ import {
   resolveBalance,
 } from '../lib/format'
 import styles from './AccountCard.module.css'
+import type { AccountSummaryData } from '../lib/balance-utils'
 
 export function AccountCard({
   account,

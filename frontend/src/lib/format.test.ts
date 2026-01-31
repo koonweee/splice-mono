@@ -3,8 +3,8 @@ import { MoneyWithSignSign } from '../api/models'
 import {
   formatAccountType,
   formatMoneyWithSign,
-  getDecimalPlaces,
   formatPercent,
+  getDecimalPlaces,
 } from './format'
 
 describe('format utils', () => {
@@ -64,14 +64,14 @@ describe('format utils', () => {
       // Let's verify behavior.
       expect(result).toBe('¥12,345.00') // Because default decimals is 2
     })
-    
+
     it('should format JPY correctly with 0 decimals override', () => {
       const result = formatMoneyWithSign({
         value: {
           money: { amount: 12345, currency: 'JPY' },
           sign: MoneyWithSignSign.positive,
         },
-        decimals: 0
+        decimals: 0,
       })
       expect(result).toBe('¥12,345')
     })
@@ -138,7 +138,9 @@ describe('format utils', () => {
     })
 
     it('should format non-custodial wallet subType correctly', () => {
-      expect(formatAccountType('non-custodial wallet')).toBe('Non-Custodial Wallet')
+      expect(formatAccountType('non-custodial wallet')).toBe(
+        'Non-Custodial Wallet',
+      )
     })
 
     it('should handle regular account types with default formatting', () => {

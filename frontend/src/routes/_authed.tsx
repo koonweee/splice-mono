@@ -10,9 +10,9 @@ import {
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
-  createFileRoute,
   Link,
   Outlet,
+  createFileRoute,
   redirect,
   useLocation,
 } from '@tanstack/react-router'

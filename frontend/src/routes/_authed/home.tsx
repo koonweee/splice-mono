@@ -1,4 +1,3 @@
-import { TIME_PERIOD_LABELS, TimePeriod } from '@/lib/types'
 import { Alert, Grid, Group, Loader, Select, Title } from '@mantine/core'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AccountModal } from '../../components/AccountModal'
@@ -6,6 +5,7 @@ import { AccountSection } from '../../components/AccountSection'
 import { NetWorthCard } from '../../components/NetWorthCard'
 import { useBalanceData } from '../../hooks/useBalanceData'
 import type { AccountSummaryData } from '../../lib/balance-utils'
+import { TIME_PERIOD_LABELS, TimePeriod } from '@/lib/types'
 
 type HomeSearch = {
   accountId?: string
@@ -13,7 +13,8 @@ type HomeSearch = {
 }
 
 const isValidTimePeriod = (value: unknown): value is TimePeriod =>
-  typeof value === 'string' && Object.values(TimePeriod).includes(value as TimePeriod)
+  typeof value === 'string' &&
+  Object.values(TimePeriod).includes(value as TimePeriod)
 
 export const Route = createFileRoute('/_authed/home')({
   component: HomePage,
