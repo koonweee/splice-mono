@@ -89,7 +89,7 @@ export function Chart({
       }}
       tooltipProps={{
         content: ({ label, payload }) => {
-          if (!label || !payload) return null
+          if (!label) return null
           const point = payload[0]
           return (
             <ChartTooltip

@@ -104,11 +104,11 @@ function AccountsPage() {
       </Group>
       <Stack gap="lg">
         {Array.from(groupedAccounts.entries()).map(
-          ([institution, accounts]) => (
+          ([institution, groupAccount]) => (
             <InstitutionSection
               key={institution}
               institution={institution}
-              accounts={accounts}
+              accounts={groupAccount}
             />
           ),
         )}

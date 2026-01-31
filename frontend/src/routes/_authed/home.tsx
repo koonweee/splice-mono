@@ -78,6 +78,7 @@ function HomePage() {
         </Group>
       )}
 
+      {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */}
       {error && (
         <Alert color="red" title="Error" mb="lg">
           Error loading dashboard. Please try again.
