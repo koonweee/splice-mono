@@ -1,5 +1,3 @@
-import { AddAccountModal } from '@/components/accounts/AddAccountModal'
-import { InstitutionSection } from '@/components/accounts/InstitutionSection'
 import { Alert, Button, Group, Loader, Stack, Text, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { showNotification } from '@mantine/notifications'
@@ -13,6 +11,8 @@ import {
   useBankLinkControllerSyncAllAccounts,
 } from '../../api/clients/spliceAPI'
 import type { Account } from '../../api/models'
+import { InstitutionSection } from '@/components/accounts/InstitutionSection'
+import { AddAccountModal } from '@/components/accounts/AddAccountModal'
 
 export const Route = createFileRoute('/_authed/accounts')({
   component: AccountsPage,
@@ -47,9 +47,9 @@ function AccountsPage() {
 
   // Group accounts by institution
   const groupedAccounts = useMemo(() => {
-    if (!accounts) return new Map<string, Account[]>()
+    if (!accounts) return new Map<string, Array<Account>>()
 
-    const groups = new Map<string, Account[]>()
+    const groups = new Map<string, Array<Account>>()
     accounts.forEach((account) => {
       const institution = account.bankLink?.institutionName ?? 'Manual Accounts'
       const existing = groups.get(institution) ?? []
@@ -104,11 +104,11 @@ function AccountsPage() {
       </Group>
       <Stack gap="lg">
         {Array.from(groupedAccounts.entries()).map(
-          ([institution, accounts]) => (
+          ([institution, groupAccount]) => (
             <InstitutionSection
               key={institution}
               institution={institution}
-              accounts={accounts}
+              accounts={groupAccount}
             />
           ),
         )}

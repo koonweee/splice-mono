@@ -5,11 +5,11 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { RateWithSourceSource } from './rateWithSourceSource';
+import type { RateWithSourceSource } from './rateWithSourceSource'
 
 export interface RateWithSource {
-  baseCurrency: string;
-  targetCurrency: string;
-  rate: number;
-  source: RateWithSourceSource;
+  baseCurrency: string
+  targetCurrency: string
+  rate: number
+  source: RateWithSourceSource
 }

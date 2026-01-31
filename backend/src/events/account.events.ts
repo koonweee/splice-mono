@@ -21,3 +21,25 @@ export class LinkedAccountCreatedEvent {
 export class LinkedAccountUpdatedEvent {
   constructor(public readonly account: Account) {}
 }
+
+/**
+ * Event names for manual account events
+ */
+export const ManualAccountEvents = {
+  CREATED: 'manual-account.created',
+  BALANCE_UPDATED: 'manual-account.balance-updated',
+} as const;
+
+/**
+ * Payload for manual account created event
+ */
+export class ManualAccountCreatedEvent {
+  constructor(public readonly account: Account) {}
+}
+
+/**
+ * Payload for manual account balance updated event
+ */
+export class ManualAccountBalanceUpdatedEvent {
+  constructor(public readonly account: Account) {}
+}

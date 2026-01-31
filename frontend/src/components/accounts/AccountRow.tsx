@@ -1,7 +1,7 @@
 import { Group, Text } from '@mantine/core'
-import type { Account } from '../../api/models'
 import { formatAccountType } from '../../lib/format'
 import { StatusBadge } from './StatusBadge'
+import type { Account } from '../../api/models'
 
 export function AccountRow({ account }: { account: Account }) {
   return (

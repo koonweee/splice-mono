@@ -1,13 +1,23 @@
-import { Group, Paper, Text } from '@mantine/core'
-import type { AccountSummaryData } from '../lib/balance-utils'
+import dayjs from 'dayjs'
+import { Group, Paper, Text, Tooltip } from '@mantine/core'
+import { AlertTriangle } from 'lucide-react'
 import {
   formatAccountType,
   formatMoneyWithSign,
   formatPercent,
+  formatRelativeTime,
   getChangeColorMantine,
   resolveBalance,
 } from '../lib/format'
 import styles from './AccountCard.module.css'
+import type { AccountSummaryData } from '../lib/balance-utils'
+
+const STALE_THRESHOLD_DAYS = 7
+
+function isSyncStale(syncedAt?: string): boolean {
+  if (!syncedAt) return false
+  return dayjs().diff(dayjs(syncedAt), 'day') >= STALE_THRESHOLD_DAYS
+}
 
 export function AccountCard({
   account,
@@ -23,6 +33,7 @@ export function AccountCard({
     account.effectiveBalance,
     account.convertedEffectiveBalance,
   )
+  const stale = isSyncStale(account.syncedAt)
 
   return (
     <Paper
@@ -44,9 +55,22 @@ export function AccountCard({
         wrap="nowrap"
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Text fw={500} truncate>
-            {account.name || 'Unnamed Account'}
-          </Text>
+          <Group gap={6} wrap="nowrap">
+            <Text fw={500} truncate>
+              {account.name || 'Unnamed Account'}
+            </Text>
+            {stale && (
+              <Tooltip
+                label={`Last synced ${formatRelativeTime(new Date(account.syncedAt ?? ''))}`}
+                withArrow
+              >
+                <AlertTriangle
+                  size={14}
+                  color="var(--mantine-color-yellow-6)"
+                />
+              </Tooltip>
+            )}
+          </Group>
           <Text size="sm" c="dimmed" tt="capitalize" truncate>
             {account.institutionName
               ? `${account.institutionName} · ${formatAccountType(account.subType || account.type)}`

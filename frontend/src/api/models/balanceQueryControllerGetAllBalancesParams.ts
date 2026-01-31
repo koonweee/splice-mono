@@ -7,12 +7,12 @@
  */
 
 export type BalanceQueryControllerGetAllBalancesParams = {
-/**
- * End date (YYYY-MM-DD, inclusive)
- */
-endDate: unknown;
-/**
- * Start date (YYYY-MM-DD, inclusive)
- */
-startDate: unknown;
-};
+  /**
+   * End date (YYYY-MM-DD, inclusive)
+   */
+  endDate: unknown
+  /**
+   * Start date (YYYY-MM-DD, inclusive)
+   */
+  startDate: unknown
+}
