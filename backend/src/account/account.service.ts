@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AccountType } from 'plaid';
 import { Repository } from 'typeorm';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
@@ -10,7 +11,7 @@ import {
   ManualAccountEvents,
 } from '../events/account.events';
 import { Account, CreateAccountDto, UpdateAccountDto } from '../types/Account';
-import { SerializedMoneyWithSign } from '../types/MoneyWithSign';
+import { MoneySign, SerializedMoneyWithSign } from '../types/MoneyWithSign';
 import { AccountEntity } from './account.entity';
 
 @Injectable()
@@ -65,8 +66,20 @@ export class AccountService extends OwnedCrudService<
     }
 
     accountEntity.currentBalance = BalanceColumns.fromMoneyWithSign(newBalance);
+
+    // For investment/brokerage accounts, effective balance = available + current,
+    // so set available to zero to avoid doubling the balance.
+    const isInvestmentType =
+      accountEntity.type === String(AccountType.Investment) ||
+      accountEntity.type === String(AccountType.Brokerage);
+    const availableBalance: SerializedMoneyWithSign = isInvestmentType
+      ? {
+          money: { amount: 0, currency: newBalance.money.currency },
+          sign: MoneySign.POSITIVE,
+        }
+      : newBalance;
     accountEntity.availableBalance =
-      BalanceColumns.fromMoneyWithSign(newBalance);
+      BalanceColumns.fromMoneyWithSign(availableBalance);
 
     const savedEntity = await this.repository.save(accountEntity);
     const account = savedEntity.toObject();
