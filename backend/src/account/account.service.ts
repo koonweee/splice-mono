@@ -10,7 +10,6 @@ import {
   ManualAccountEvents,
 } from '../events/account.events';
 import { Account, CreateAccountDto, UpdateAccountDto } from '../types/Account';
-import { ManualAccountType } from '../types/AccountType';
 import { SerializedMoneyWithSign } from '../types/MoneyWithSign';
 import { AccountEntity } from './account.entity';
 
@@ -40,7 +39,7 @@ export class AccountService extends OwnedCrudService<
   async create(dto: CreateAccountDto, userId: string): Promise<Account> {
     const account = await super.create(dto, userId);
 
-    if (account.type === ManualAccountType.MANUAL) {
+    if (!account.bankLinkId) {
       this.eventEmitter.emit(
         ManualAccountEvents.CREATED,
         new ManualAccountCreatedEvent(account),
