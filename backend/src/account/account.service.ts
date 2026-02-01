@@ -70,8 +70,8 @@ export class AccountService extends OwnedCrudService<
     // For investment/brokerage accounts, effective balance = available + current,
     // so set available to zero to avoid doubling the balance.
     const isInvestmentType =
-      accountEntity.type === AccountType.Investment ||
-      accountEntity.type === AccountType.Brokerage;
+      accountEntity.type === String(AccountType.Investment) ||
+      accountEntity.type === String(AccountType.Brokerage);
     const availableBalance: SerializedMoneyWithSign = isInvestmentType
       ? {
           money: { amount: 0, currency: newBalance.money.currency },
