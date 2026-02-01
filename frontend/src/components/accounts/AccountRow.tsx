@@ -1,9 +1,36 @@
 import { Group, Text } from '@mantine/core'
+import { SanitizedBankLinkStatus } from '../../api/models/sanitizedBankLinkStatus'
+import { useBankLinkControllerInitiateLinking } from '../../api/clients/spliceAPI'
 import { formatAccountType } from '../../lib/format'
 import { StatusBadge } from './StatusBadge'
 import type { Account } from '../../api/models'
 
 export function AccountRow({ account }: { account: Account }) {
+  const initiateLinking = useBankLinkControllerInitiateLinking()
+
+  const needsFix =
+    account.bankLink &&
+    account.bankLink.status !== SanitizedBankLinkStatus.OK
+
+  const handleFixConnection = needsFix
+    ? () => {
+        const redirectUri = window.location.href
+        initiateLinking.mutate(
+          {
+            provider: account.bankLink!.providerName,
+            data: { bankLinkId: account.bankLink!.id, redirectUri },
+          },
+          {
+            onSuccess: (response) => {
+              if (response.linkUrl) {
+                window.location.href = response.linkUrl
+              }
+            },
+          },
+        )
+      }
+    : undefined
+
   return (
     <Group
       justify="space-between"
@@ -22,6 +49,7 @@ export function AccountRow({ account }: { account: Account }) {
       <StatusBadge
         status={account.bankLink?.status}
         statusBody={account.bankLink?.statusBody}
+        onFix={handleFixConnection}
       />
     </Group>
   )
