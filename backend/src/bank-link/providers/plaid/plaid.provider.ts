@@ -239,6 +239,8 @@ export class PlaidProvider implements IBankLinkProvider {
     }
 
     // Construct link token request
+    // In update mode (access_token provided), user_token must be omitted —
+    // Plaid does not allow both in the same request.
     const request: LinkTokenCreateRequest = {
       client_name: 'Splice',
       language: 'en',
@@ -250,12 +252,11 @@ export class PlaidProvider implements IBankLinkProvider {
       hosted_link: {
         completion_redirect_uri: redirectUri,
       },
-      user_token: userToken,
       webhook: `${process.env.API_DOMAIN}/bank-link/webhook/plaid`,
-      // Update mode: use existing access_token, skip products/multi-item
       ...(accessToken
         ? { access_token: accessToken }
         : {
+            user_token: userToken,
             products: [Products.Transactions],
             optional_products: [Products.Investments],
             enable_multi_item_link: true,
