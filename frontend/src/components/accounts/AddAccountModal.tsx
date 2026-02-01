@@ -28,12 +28,26 @@ import {
 } from '../../api/clients/spliceAPI'
 import type { ComponentType } from 'react'
 import type { InitiateLinkRequestNetwork } from '../../api/models'
+import { CreateAccountDtoType } from '../../api/models/createAccountDtoType'
+import { CreateAccountDtoSubType } from '../../api/models/createAccountDtoSubType'
 
 interface Provider {
   id: string
   name: string
   icon: ComponentType<{ size: number }>
 }
+
+const MANUAL_ACCOUNT_TYPES = [
+  { label: 'Cash', value: 'cash', type: CreateAccountDtoType.manual, subType: null },
+  { label: 'Savings', value: 'savings', type: CreateAccountDtoType.depository, subType: CreateAccountDtoSubType.savings },
+  { label: 'Checking', value: 'checking', type: CreateAccountDtoType.depository, subType: CreateAccountDtoSubType.checking },
+  { label: 'Credit Card', value: 'credit_card', type: CreateAccountDtoType.credit, subType: CreateAccountDtoSubType.credit_card },
+  { label: 'Loan', value: 'loan', type: CreateAccountDtoType.loan, subType: CreateAccountDtoSubType.loan },
+  { label: 'Investment', value: 'investment', type: CreateAccountDtoType.investment, subType: CreateAccountDtoSubType.brokerage },
+  { label: 'Investment (401k)', value: '401k', type: CreateAccountDtoType.investment, subType: CreateAccountDtoSubType['401k'] },
+  { label: 'Investment (HSA)', value: 'hsa', type: CreateAccountDtoType.investment, subType: CreateAccountDtoSubType.hsa },
+  { label: 'Other', value: 'other', type: CreateAccountDtoType.other, subType: CreateAccountDtoSubType.other },
+] as const
 
 const PROVIDERS: Array<Provider> = [
   {
@@ -72,6 +86,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
   const [manualName, setManualName] = useState('')
   const [manualCurrency, setManualCurrency] = useState('USD')
   const [manualBalance, setManualBalance] = useState<number | string>(0)
+  const [manualTypeSelection, setManualTypeSelection] = useState('cash')
 
   const handleClose = () => {
     setShowCryptoForm(false)
@@ -80,6 +95,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
     setNetwork('ethereum')
     setManualName('')
     setManualBalance(0)
+    setManualTypeSelection('cash')
     setSelectedProvider(undefined)
     onClose()
   }
@@ -150,13 +166,16 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
 
   const handleManualSubmit = () => {
     const amountInCents = Math.round(Number(manualBalance) * 100)
+    const typeDef = MANUAL_ACCOUNT_TYPES.find(
+      (t) => t.value === manualTypeSelection,
+    ) ?? MANUAL_ACCOUNT_TYPES[0]
 
     createAccount.mutate(
       {
         data: {
           name: manualName,
-          type: 'manual',
-          subType: null,
+          type: typeDef.type,
+          subType: typeDef.subType,
           availableBalance: {
             money: { amount: amountInCents, currency: manualCurrency },
             sign: amountInCents >= 0 ? 'positive' : 'negative',
@@ -194,10 +213,21 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
 
       <TextInput
         label="Account Name"
-        placeholder="e.g. Cash in Wallet"
+        placeholder="e.g. Emergency Fund"
         required
         value={manualName}
         onChange={(e) => setManualName(e.target.value)}
+      />
+
+      <Select
+        label="Account Type"
+        data={MANUAL_ACCOUNT_TYPES.map((t) => ({
+          value: t.value,
+          label: t.label,
+        }))}
+        value={manualTypeSelection}
+        onChange={(v) => setManualTypeSelection(v || 'cash')}
+        allowDeselect={false}
       />
 
       <Select

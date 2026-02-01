@@ -6,7 +6,6 @@
  * OpenAPI spec version: 1.0
  */
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { axios } from '../axios'
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -45,11 +44,12 @@ import type {
   UserSettings,
 } from '../models'
 
+import { axios } from '../axios'
 /**
  * Get all accounts
  */
 export const accountControllerFindAll = (signal?: AbortSignal) => {
-  return axios<Array<Account>>({ url: `/account`, method: 'GET', signal })
+  return axios<Account[]>({ url: `/account`, method: 'GET', signal })
 }
 
 export const getAccountControllerFindAllQueryKey = () => {
@@ -586,7 +586,7 @@ export const balanceQueryControllerGetBalances = (
   params: BalanceQueryControllerGetBalancesParams,
   signal?: AbortSignal,
 ) => {
-  return axios<Array<BalanceQueryPerDateResult>>({
+  return axios<BalanceQueryPerDateResult[]>({
     url: `/balance-query/balances`,
     method: 'GET',
     params,
@@ -748,7 +748,7 @@ export const balanceQueryControllerGetAllBalances = (
   params: BalanceQueryControllerGetAllBalancesParams,
   signal?: AbortSignal,
 ) => {
-  return axios<Array<BalanceQueryPerDateResult>>({
+  return axios<BalanceQueryPerDateResult[]>({
     url: `/balance-query/all-balances`,
     method: 'GET',
     params,
@@ -1684,7 +1684,7 @@ export const useBankLinkControllerHandleWebhook = <
  * Sync accounts for all bank links
  */
 export const bankLinkControllerSyncAllAccounts = (signal?: AbortSignal) => {
-  return axios<Array<Account>>({
+  return axios<Account[]>({
     url: `/bank-link/sync-all`,
     method: 'POST',
     signal,
@@ -2057,7 +2057,7 @@ export const transactionControllerFindAll = (
   params?: TransactionControllerFindAllParams,
   signal?: AbortSignal,
 ) => {
-  return axios<Array<Transaction>>({
+  return axios<Transaction[]>({
     url: `/transaction`,
     method: 'GET',
     params,
