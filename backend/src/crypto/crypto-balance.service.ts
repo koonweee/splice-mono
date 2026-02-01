@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Alchemy, Network } from 'alchemy-sdk';
 import type { CryptoNetwork } from '../bank-link/providers/crypto/crypto.types';
 import { NETWORK_DECIMALS } from '../bank-link/providers/crypto/crypto.types';
 import {
@@ -8,14 +9,6 @@ import {
 
 /** Bitcoin mempool.space API base URL (hardcoded) */
 const BITCOIN_API_URL = 'https://mempool.space/api';
-
-/** Response shape from Ethereum JSON-RPC eth_getBalance */
-interface EthRpcResponse {
-  jsonrpc: string;
-  id: number;
-  result?: string;
-  error?: { code: number; message: string };
-}
 
 /** Response shape from mempool.space address endpoint */
 interface MempoolAddressResponse {
@@ -32,19 +25,24 @@ interface MempoolAddressResponse {
 @Injectable()
 export class CryptoBalanceService {
   private readonly logger = new Logger(CryptoBalanceService.name);
+  private readonly alchemy: Alchemy;
 
   constructor(
     @Inject(CRYPTO_BALANCE_CONFIG)
     private readonly config: CryptoBalanceConfig,
-  ) {}
+  ) {
+    this.alchemy = new Alchemy({
+      apiKey: config.alchemyApiKey,
+      network: Network.ETH_MAINNET,
+    });
+  }
 
   /**
    * Get balance for an address on a given network
-   * Tries multiple RPC URLs sequentially on failure for Ethereum
    * @param network - The cryptocurrency network (ethereum or bitcoin)
    * @param address - The wallet address
    * @returns Balance as a string in native units (ETH, not wei; BTC, not satoshis)
-   * @throws Error if all URLs fail or the request fails
+   * @throws Error if the request fails
    */
   async getBalance(network: CryptoNetwork, address: string): Promise<string> {
     if (network === 'ethereum') {
@@ -75,53 +73,21 @@ export class CryptoBalanceService {
   }
 
   /**
-   * Fetch Ethereum balance via JSON-RPC
-   * Tries each configured RPC URL sequentially until one succeeds
+   * Fetch Ethereum balance via Alchemy SDK
    */
   private async getEthereumBalance(address: string): Promise<string> {
-    const urls = this.config.ethereumRpcUrls;
-    let lastError: Error | null = null;
-
-    for (const url of urls) {
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'eth_getBalance',
-            params: [address, 'latest'],
-            id: 1,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = (await response.json()) as EthRpcResponse;
-
-        if (data.error) {
-          throw new Error(data.error.message);
-        }
-
-        // Convert wei to ETH using BigInt for precision
-        const balanceWei = BigInt(data.result ?? '0');
-        return this.weiToEth(balanceWei);
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        this.logger.warn(
-          { url, error: lastError.message, address: address.slice(0, 10) },
-          'Ethereum RPC request failed, trying next',
-        );
-      }
+    try {
+      const balanceWei = await this.alchemy.core.getBalance(address);
+      return this.weiToEth(balanceWei.toBigInt());
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        { address: address.slice(0, 10), error: errorMessage },
+        'Alchemy ETH balance request failed',
+      );
+      throw error;
     }
-
-    this.logger.error(
-      { address: address.slice(0, 10), error: lastError?.message },
-      'All Ethereum RPC URLs failed',
-    );
-    throw lastError ?? new Error('All Ethereum RPC URLs failed');
   }
 
   /**
