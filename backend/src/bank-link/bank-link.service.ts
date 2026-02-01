@@ -85,11 +85,33 @@ export class BankLinkService extends OwnedCrudService<
     redirectUri?: string,
     walletAddress?: string,
     network?: string,
+    bankLinkId?: string,
   ): Promise<InitiateLinkResponse> {
-    this.logger.log({ providerName, userId }, 'Initiating link with provider');
+    this.logger.log(
+      { providerName, userId, bankLinkId },
+      'Initiating link with provider',
+    );
 
     // Get provider
     const provider = this.providerRegistry.getProvider(providerName);
+
+    // If bankLinkId is provided, look up existing bank link for update mode
+    let accessToken: string | undefined;
+    if (bankLinkId) {
+      const existingLink = await this.repository.findOne({
+        where: { id: bankLinkId, userId },
+      });
+      if (!existingLink) {
+        throw new Error(`Bank link not found: ${bankLinkId}`);
+      }
+      accessToken = existingLink.authentication?.accessToken as
+        | string
+        | undefined;
+      this.logger.log(
+        { bankLinkId },
+        'Using existing bank link for update mode',
+      );
+    }
 
     // Build provider user details
     // For crypto: use wallet params directly
@@ -104,6 +126,7 @@ export class BankLinkService extends OwnedCrudService<
       userId,
       redirectUri,
       providerUserDetails,
+      accessToken,
     });
 
     // If provider returned updated user details, persist them
@@ -162,60 +185,70 @@ export class BankLinkService extends OwnedCrudService<
       'Creating accounts from link completion',
     );
 
-    // Bank links from link completion responses
-    const bankLinks = linkCompletionResponses.map((response) => {
-      return BankLinkEntity.fromDto(
-        {
-          providerName: providerName,
-          authentication: response.authentication,
-          accountIds: response.accounts.map((account) => account.accountId),
-          institutionId: response.institution?.id ?? null,
-          institutionName: response.institution?.name ?? null,
-        },
-        userId,
-      );
-    });
+    const savedBankLinks: BankLinkEntity[] = [];
 
-    // Save bank links
-    const savedBankLinks = await this.repository.save(bankLinks);
-    this.logger.log({ count: savedBankLinks.length }, 'Saved bank links');
+    // For each response, check if a bank link already exists (by itemId) or create a new one
+    for (const response of linkCompletionResponses) {
+      const itemId = response.authentication.itemId as string | undefined;
+      let bankLink: BankLinkEntity | null = null;
 
-    // Map of external account ids to bank link entities
-    const accountIdToBankLink = new Map<string, BankLinkEntity>();
-    savedBankLinks.forEach((bankLink) => {
-      bankLink.accountIds.forEach((accountId) => {
-        accountIdToBankLink.set(accountId, bankLink);
-      });
-    });
+      if (itemId) {
+        bankLink = await this.findByPlaidItemId(itemId);
+      }
 
-    // Flat map of all accounts
-    const allAccounts = linkCompletionResponses.flatMap(
-      (response) => response.accounts,
-    );
-
-    // Create accounts from all accounts using helper method
-    const accounts = allAccounts.map((apiAccount) => {
-      const bankLinkId = accountIdToBankLink.get(apiAccount.accountId)?.id;
-      if (!bankLinkId) {
-        throw new Error(
-          `Bank link not found for account ${apiAccount.accountId}`,
+      if (bankLink) {
+        // Update existing bank link
+        this.logger.log(
+          { bankLinkId: bankLink.id, itemId },
+          'Found existing bank link, updating',
+        );
+        bankLink.authentication = response.authentication;
+        bankLink.status = 'OK';
+        bankLink.statusDate = new Date();
+        bankLink.statusBody = null;
+        bankLink.accountIds = response.accounts.map((a) => a.accountId);
+        if (response.institution?.id !== undefined) {
+          bankLink.institutionId = response.institution.id ?? null;
+        }
+        if (response.institution?.name !== undefined) {
+          bankLink.institutionName = response.institution.name ?? null;
+        }
+      } else {
+        // Create new bank link
+        bankLink = BankLinkEntity.fromDto(
+          {
+            providerName,
+            authentication: response.authentication,
+            accountIds: response.accounts.map((a) => a.accountId),
+            institutionId: response.institution?.id ?? null,
+            institutionName: response.institution?.name ?? null,
+          },
+          userId,
         );
       }
-      const dto = this.createAccountDtoFromAPIAccount(apiAccount, bankLinkId);
-      return AccountEntity.fromDto(dto, userId);
-    });
 
-    // Save accounts
-    const savedAccounts = await this.accountRepository.save(accounts);
-    this.logger.log({ count: savedAccounts.length }, 'Saved accounts');
+      const saved = await this.repository.save(bankLink);
+      savedBankLinks.push(saved);
+    }
 
-    // Emit linked account created events for all new accounts
-    savedAccounts.forEach((account) => {
-      this.eventEmitter.emit(
-        LinkedAccountEvents.CREATED,
-        new LinkedAccountCreatedEvent(account.toObject()),
+    this.logger.log({ count: savedBankLinks.length }, 'Saved bank links');
+
+    // Upsert accounts for each bank link using the shared method
+    for (let i = 0; i < linkCompletionResponses.length; i++) {
+      const response = linkCompletionResponses[i];
+      const bankLink = savedBankLinks[i];
+
+      const accountIdToBankLinkId = new Map<string, string>();
+      response.accounts.forEach((a) => {
+        accountIdToBankLinkId.set(a.accountId, bankLink.id);
+      });
+
+      await this.upsertAccountsFromAPI(
+        response.accounts,
+        accountIdToBankLinkId,
+        userId,
       );
-    });
+    }
   }
 
   /**

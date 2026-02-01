@@ -53,6 +53,7 @@ describe('BankLinkController', () => {
         requestBody.redirectUri,
         undefined, // walletAddress
         undefined, // network
+        undefined, // bankLinkId
       );
 
       expect(result).toEqual({
@@ -73,6 +74,7 @@ describe('BankLinkController', () => {
         undefined,
         undefined, // walletAddress
         undefined, // network
+        undefined, // bankLinkId
       );
     });
   });

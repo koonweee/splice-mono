@@ -397,6 +397,46 @@ describe('BankLinkService', () => {
 
       expect(userService.updateProviderDetails).not.toHaveBeenCalled();
     });
+
+    it('should pass accessToken to provider when bankLinkId is provided', async () => {
+      const providerName = 'plaid';
+      const bankLinkId = mockBankLinkEntity.id;
+
+      await service.initiateLinking(
+        providerName,
+        mockUserId,
+        undefined,
+        undefined,
+        undefined,
+        bankLinkId,
+      );
+
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { id: bankLinkId, userId: mockUserId },
+      });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
+        userId: mockUserId,
+        redirectUri: undefined,
+        providerUserDetails: undefined,
+        accessToken: 'test-token',
+      });
+    });
+
+    it('should throw error when bankLinkId not found', async () => {
+      repository.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.initiateLinking(
+          'plaid',
+          mockUserId,
+          undefined,
+          undefined,
+          undefined,
+          'non-existent-id',
+        ),
+      ).rejects.toThrow('Bank link not found: non-existent-id');
+    });
   });
 
   describe('handleWebhook', () => {
@@ -526,12 +566,68 @@ describe('BankLinkService', () => {
 
       // Verify bank links are saved with institution info
       expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            institutionId: mockInstitution.id,
-            institutionName: mockInstitution.name,
-          }),
-        ]),
+        expect.objectContaining({
+          institutionId: mockInstitution.id,
+          institutionName: mockInstitution.name,
+        }),
+      );
+    });
+
+    it('should update existing bank link instead of creating new one when itemId matches', async () => {
+      const providerName = 'plaid';
+
+      await service.handleWebhook(
+        providerName,
+        mockRawBody,
+        mockHeaders,
+        mockParsedPayload,
+      );
+
+      // findByPlaidItemId is called (via createQueryBuilder) to check for existing link
+      expect(mockBankLinkRepository.createQueryBuilder).toHaveBeenCalled();
+
+      // Should save the updated existing entity (not create a new one via fromDto)
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: mockBankLinkEntity.id, // Same entity ID = update, not create
+          status: 'OK',
+          statusBody: null,
+          authentication: {
+            accessToken: 'access-token-123',
+            itemId: 'item-mock-123',
+          },
+        }),
+      );
+    });
+
+    it('should create new bank link when no existing link found by itemId', async () => {
+      const providerName = 'plaid';
+
+      // Make findByPlaidItemId return null (no existing link)
+      mockBankLinkRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue({
+          where: jest.fn().mockReturnThis(),
+          andWhere: jest.fn().mockReturnThis(),
+          getOne: jest.fn().mockResolvedValue(null),
+        });
+
+      await service.handleWebhook(
+        providerName,
+        mockRawBody,
+        mockHeaders,
+        mockParsedPayload,
+      );
+
+      // Should save a new entity (without the existing entity's id)
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerName: 'plaid',
+          authentication: {
+            accessToken: 'access-token-123',
+            itemId: 'item-mock-123',
+          },
+        }),
       );
     });
 
@@ -596,7 +692,7 @@ describe('BankLinkService', () => {
       );
       // Should have looked up bank link by item_id
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        "bankLink.authentication->>'itemId' = :itemId",
+        "\"bankLink\".\"authentication\"->>'itemId' = :itemId",
         { itemId: 'item-mock-123' },
       );
       // Should NOT have processed as link completion
