@@ -215,8 +215,9 @@ export class PlaidProvider implements IBankLinkProvider {
     userId: string;
     redirectUri?: string;
     providerUserDetails?: Record<string, unknown>;
+    accessToken?: string;
   }): Promise<LinkInitiationResponse> {
-    const { userId, redirectUri, providerUserDetails } = input;
+    const { userId, redirectUri, providerUserDetails, accessToken } = input;
     this.logger.log({ userId, redirectUri }, 'Plaid link initiated');
 
     // Parse and validate existing provider details
@@ -245,15 +246,20 @@ export class PlaidProvider implements IBankLinkProvider {
       user: {
         client_user_id: userId,
       },
-      products: [Products.Transactions],
-      optional_products: [Products.Investments], // Optional since we don't want to fail if we don't have it
       redirect_uri: redirectUri,
       hosted_link: {
         completion_redirect_uri: redirectUri,
       },
-      enable_multi_item_link: true,
       user_token: userToken,
       webhook: `${process.env.API_DOMAIN}/bank-link/webhook/plaid`,
+      // Update mode: use existing access_token, skip products/multi-item
+      ...(accessToken
+        ? { access_token: accessToken }
+        : {
+            products: [Products.Transactions],
+            optional_products: [Products.Investments],
+            enable_multi_item_link: true,
+          }),
     };
 
     try {

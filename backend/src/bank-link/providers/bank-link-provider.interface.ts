@@ -26,6 +26,7 @@ export interface IBankLinkProvider {
     userId: string;
     redirectUri?: string;
     providerUserDetails?: Record<string, unknown>;
+    accessToken?: string;
   }): Promise<LinkInitiationResponse>;
 
   /**

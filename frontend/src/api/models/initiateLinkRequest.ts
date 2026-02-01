@@ -9,6 +9,7 @@ import type { InitiateLinkRequestNetwork } from './initiateLinkRequestNetwork'
 
 export interface InitiateLinkRequest {
   redirectUri?: string
+  bankLinkId?: string
   walletAddress?: string
   network?: InitiateLinkRequestNetwork
 }

@@ -51,6 +51,7 @@ export class BankLinkController {
       body.redirectUri,
       body.walletAddress,
       body.network,
+      body.bankLinkId,
     );
   }
 
