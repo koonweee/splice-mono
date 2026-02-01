@@ -18,6 +18,8 @@ export const InitiateLinkRequestSchema = registerSchema(
   'InitiateLinkRequest',
   z.object({
     redirectUri: z.string().optional(), // Optional redirect after linking (Plaid)
+    /** Existing bank link ID for update/reauth flows */
+    bankLinkId: z.string().uuid().optional(),
     /** Wallet address for crypto linking */
     walletAddress: z.string().optional(),
     /** Crypto network for wallet linking */

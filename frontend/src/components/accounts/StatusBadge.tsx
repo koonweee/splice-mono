@@ -1,6 +1,6 @@
-import { Badge, Tooltip } from '@mantine/core'
-import { SanitizedBankLinkStatus } from '@/api/models/sanitizedBankLinkStatus'
+import { Badge, Button, Group, Tooltip } from '@mantine/core'
 import type { SanitizedBankLinkStatusBody } from '@/api/models/sanitizedBankLinkStatusBody'
+import { SanitizedBankLinkStatus } from '@/api/models/sanitizedBankLinkStatus'
 
 const statusConfig: Record<string, { color: string; label: string }> = {
   [SanitizedBankLinkStatus.OK]: { color: 'green', label: 'Connected' },
@@ -23,20 +23,19 @@ function getTooltipLabel(
     const displayMessage = statusBody.display_message as string | undefined
     const errorMessage = statusBody.error_message as string | undefined
     const suggestedAction = statusBody.suggested_action as string | undefined
-    const parts: string[] = []
+    const parts: Array<string> = []
     if (displayMessage) parts.push(displayMessage)
     else if (errorMessage) parts.push(errorMessage)
     if (suggestedAction) parts.push(suggestedAction)
     return parts.length > 0 ? parts.join('. ') : null
   }
 
-  if (status === SanitizedBankLinkStatus.PENDING_REAUTH) {
-    const reason = statusBody.reason as string | undefined
-    const expiration = statusBody.consent_expiration_time as string | undefined
-    if (reason) return `Reason: ${reason}`
-    if (expiration)
-      return `Consent expires: ${new Date(expiration).toLocaleDateString()}`
-  }
+  // PENDING_REAUTH (only remaining status after OK and ERROR checks above)
+  const reason = statusBody.reason as string | undefined
+  const expiration = statusBody.consent_expiration_time as string | undefined
+  if (reason) return `Reason: ${reason}`
+  if (expiration)
+    return `Consent expires: ${new Date(expiration).toLocaleDateString()}`
 
   return null
 }
@@ -44,9 +43,10 @@ function getTooltipLabel(
 interface StatusBadgeProps {
   status?: SanitizedBankLinkStatus
   statusBody?: SanitizedBankLinkStatusBody
+  onFix?: () => void
 }
 
-export function StatusBadge({ status, statusBody }: StatusBadgeProps) {
+export function StatusBadge({ status, statusBody, onFix }: StatusBadgeProps) {
   if (!status) {
     return (
       <Badge color="gray" variant="light">
@@ -68,13 +68,24 @@ export function StatusBadge({ status, statusBody }: StatusBadgeProps) {
     </Badge>
   )
 
-  if (tooltipLabel) {
+  const renderedBadge = tooltipLabel ? (
+    <Tooltip label={tooltipLabel} multiline maw={300} withArrow>
+      {badge}
+    </Tooltip>
+  ) : (
+    badge
+  )
+
+  if (onFix && status !== SanitizedBankLinkStatus.OK) {
     return (
-      <Tooltip label={tooltipLabel} multiline maw={300} withArrow>
-        {badge}
-      </Tooltip>
+      <Group gap="xs">
+        {renderedBadge}
+        <Button size="compact-xs" variant="light" onClick={onFix}>
+          Fix
+        </Button>
+      </Group>
     )
   }
 
-  return badge
+  return renderedBadge
 }
