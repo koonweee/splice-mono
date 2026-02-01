@@ -52,6 +52,7 @@
     "@nestjs/schedule": "^6.0.1",
     "@nestjs/swagger": "^11.2.3",
     "@nestjs/typeorm": "^11.0.0",
+    "alchemy-sdk": "^3.6.5",
     "cookie-parser": "^1.4.7",
     "dayjs": "^1.11.19",
     "eventemitter2": "^6.4.9",

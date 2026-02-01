@@ -21,7 +21,9 @@ import { ProviderRegistry } from './providers/provider.registry';
     TypeOrmModule.forFeature([BankLinkEntity, AccountEntity]),
     WebhookEventModule,
     UserModule, // For accessing user provider details
-    CryptoModule.forRoot(), // Crypto balance service for wallet linking
+    CryptoModule.forRoot({
+      alchemyApiKey: process.env.ALCHEMY_API_KEY ?? '',
+    }), // Crypto balance service for wallet linking
   ],
   controllers: [BankLinkController],
   providers: [
