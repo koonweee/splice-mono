@@ -280,11 +280,15 @@ export class PlaidProvider implements IBankLinkProvider {
       );
       return result;
     } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: unknown } };
+      const axiosError = error as {
+        response?: { data?: unknown; status?: number };
+        message?: string;
+      };
       this.logger.error(
         {
-          err: error instanceof Error ? error : { message: String(error) },
+          errorMessage: axiosError.message ?? String(error),
           plaidError: axiosError.response?.data,
+          statusCode: axiosError.response?.status,
           requestParams: {
             hasAccessToken: !!accessToken,
             hasUserToken: !!request.user_token,
