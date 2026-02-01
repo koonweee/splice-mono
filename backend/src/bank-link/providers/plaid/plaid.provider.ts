@@ -280,8 +280,18 @@ export class PlaidProvider implements IBankLinkProvider {
       );
       return result;
     } catch (error) {
+      const plaidError = (error as any)?.response?.data;
       this.logger.error(
-        { error: error instanceof Error ? error.message : String(error) },
+        {
+          error: error instanceof Error ? error.message : String(error),
+          plaidError,
+          requestParams: {
+            hasAccessToken: !!accessToken,
+            hasUserToken: !!request.user_token,
+            products: (request as any).products,
+            hasHostedLink: !!request.hosted_link,
+          },
+        },
         'Error creating link token',
       );
       throw error;
