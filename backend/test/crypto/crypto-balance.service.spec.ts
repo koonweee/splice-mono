@@ -5,7 +5,16 @@ import {
   type CryptoBalanceConfig,
 } from '../../src/crypto/crypto-balance.config';
 
-// Mock global fetch
+// Mock Alchemy SDK
+const mockGetBalance = jest.fn();
+jest.mock('alchemy-sdk', () => ({
+  Alchemy: jest.fn().mockImplementation(() => ({
+    core: { getBalance: mockGetBalance },
+  })),
+  Network: { ETH_MAINNET: 'eth-mainnet' },
+}));
+
+// Mock global fetch (for Bitcoin tests)
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
@@ -13,7 +22,7 @@ describe('CryptoBalanceService', () => {
   let service: CryptoBalanceService;
 
   const testConfig: CryptoBalanceConfig = {
-    ethereumRpcUrls: ['https://rpc1.example.com', 'https://rpc2.example.com'],
+    alchemyApiKey: 'test-api-key',
   };
 
   beforeEach(async () => {
@@ -110,35 +119,19 @@ describe('CryptoBalanceService', () => {
 
       it('should fetch ETH balance and convert wei to ETH', async () => {
         // 1.5 ETH in wei = 1500000000000000000
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            jsonrpc: '2.0',
-            id: 1,
-            result: '0x14d1120d7b160000', // 1.5 ETH in hex
-          }),
+        mockGetBalance.mockResolvedValueOnce({
+          toBigInt: () => BigInt('1500000000000000000'),
         });
 
         const balance = await service.getBalance('ethereum', validEthAddress);
 
         expect(balance).toBe('1.5');
-        expect(mockFetch).toHaveBeenCalledWith(
-          'https://rpc1.example.com',
-          expect.objectContaining({
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-          }),
-        );
+        expect(mockGetBalance).toHaveBeenCalledWith(validEthAddress);
       });
 
       it('should return 0 for zero balance', async () => {
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            jsonrpc: '2.0',
-            id: 1,
-            result: '0x0',
-          }),
+        mockGetBalance.mockResolvedValueOnce({
+          toBigInt: () => BigInt(0),
         });
 
         const balance = await service.getBalance('ethereum', validEthAddress);
@@ -146,49 +139,12 @@ describe('CryptoBalanceService', () => {
         expect(balance).toBe('0');
       });
 
-      it('should retry with next RPC URL on failure', async () => {
-        // First RPC fails
-        mockFetch.mockRejectedValueOnce(new Error('Connection refused'));
-        // Second RPC succeeds
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            jsonrpc: '2.0',
-            id: 1,
-            result: '0xde0b6b3a7640000', // 1 ETH
-          }),
-        });
-
-        const balance = await service.getBalance('ethereum', validEthAddress);
-
-        expect(balance).toBe('1');
-        expect(mockFetch).toHaveBeenCalledTimes(2);
-      });
-
-      it('should throw error when all RPC URLs fail', async () => {
-        mockFetch.mockRejectedValueOnce(new Error('Connection refused'));
-        mockFetch.mockRejectedValueOnce(new Error('Timeout'));
+      it('should throw error when Alchemy request fails', async () => {
+        mockGetBalance.mockRejectedValueOnce(new Error('Alchemy error'));
 
         await expect(
           service.getBalance('ethereum', validEthAddress),
-        ).rejects.toThrow();
-        expect(mockFetch).toHaveBeenCalledTimes(2);
-      });
-
-      it('should handle RPC error response', async () => {
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            jsonrpc: '2.0',
-            id: 1,
-            error: { code: -32602, message: 'Invalid params' },
-          }),
-        });
-        mockFetch.mockRejectedValueOnce(new Error('Fallback failed'));
-
-        await expect(
-          service.getBalance('ethereum', validEthAddress),
-        ).rejects.toThrow();
+        ).rejects.toThrow('Alchemy error');
       });
     });
 
