@@ -170,20 +170,27 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
       (t) => t.value === manualTypeSelection,
     ) ?? MANUAL_ACCOUNT_TYPES[0]
 
+    // For investment/brokerage accounts, effective balance = available + current,
+    // so set available to zero to avoid doubling.
+    const isInvestmentType =
+      typeDef.type === CreateAccountDtoType.investment
+    const balancePayload = {
+      money: { amount: amountInCents, currency: manualCurrency },
+      sign: (amountInCents >= 0 ? 'positive' : 'negative') as 'positive' | 'negative',
+    }
+    const zeroBalance = {
+      money: { amount: 0, currency: manualCurrency },
+      sign: 'positive' as const,
+    }
+
     createAccount.mutate(
       {
         data: {
           name: manualName,
           type: typeDef.type,
           subType: typeDef.subType,
-          availableBalance: {
-            money: { amount: amountInCents, currency: manualCurrency },
-            sign: amountInCents >= 0 ? 'positive' : 'negative',
-          },
-          currentBalance: {
-            money: { amount: amountInCents, currency: manualCurrency },
-            sign: amountInCents >= 0 ? 'positive' : 'negative',
-          },
+          availableBalance: isInvestmentType ? zeroBalance : balancePayload,
+          currentBalance: balancePayload,
         },
       },
       {
