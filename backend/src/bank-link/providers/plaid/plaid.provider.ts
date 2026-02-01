@@ -279,9 +279,18 @@ export class PlaidProvider implements IBankLinkProvider {
         'Plaid link token created',
       );
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: unknown } };
       this.logger.error(
-        { error: error instanceof Error ? error.message : String(error) },
+        {
+          err: error instanceof Error ? error : { message: String(error) },
+          plaidError: axiosError.response?.data,
+          requestParams: {
+            hasAccessToken: !!accessToken,
+            hasUserToken: !!request.user_token,
+            hasHostedLink: !!request.hosted_link,
+          },
+        },
         'Error creating link token',
       );
       throw error;
