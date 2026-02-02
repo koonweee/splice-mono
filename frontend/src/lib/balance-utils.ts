@@ -191,10 +191,17 @@ export function transformToDashboardData(
     : 'USD'
 
   // Build chart data from all dates
-  const chartData: Array<ChartDataPoint> = sortedResults.map((result) => ({
-    label: dayjs(result.date).format('MMM D'),
-    value: calculateNetWorthForDate(result.balances),
-  }))
+  const chartData: Array<ChartDataPoint> = sortedResults
+    .filter((result) => {
+      if (period === TimePeriod.year) {
+        return dayjs(result.date).date() === 1
+      }
+      return true
+    })
+    .map((result) => ({
+      label: dayjs(result.date).format('MMM D'),
+      value: calculateNetWorthForDate(result.balances),
+    }))
 
   // Build account summaries from last result
   const assets: Array<AccountSummaryData> = []
@@ -272,6 +279,7 @@ export function transformToDashboardData(
 export function transformToAccountChartData(
   results: Array<BalanceQueryPerDateResult>,
   accountId: string,
+  period: TimePeriod,
 ): Array<ChartDataPoint> {
   // Sort results by date ascending
   const sortedResults = [...results].sort(
@@ -279,6 +287,12 @@ export function transformToAccountChartData(
   )
 
   return sortedResults
+    .filter((result) => {
+      if (period === TimePeriod.year) {
+        return dayjs(result.date).date() === 1
+      }
+      return true
+    })
     .map((result) => {
       const accountResult =
         accountId in result.balances ? result.balances[accountId] : undefined
