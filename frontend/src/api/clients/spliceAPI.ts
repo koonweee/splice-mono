@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { axios } from '../axios'
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -38,18 +39,18 @@ import type {
   TokenResponse,
   Transaction,
   TransactionControllerFindAllParams,
+  UpdateAccountDto,
   UpdateTransactionDto,
   UpdateUserSettingsDto,
   User,
   UserSettings,
 } from '../models'
 
-import { axios } from '../axios'
 /**
  * Get all accounts
  */
 export const accountControllerFindAll = (signal?: AbortSignal) => {
-  return axios<Account[]>({ url: `/account`, method: 'GET', signal })
+  return axios<Array<Account>>({ url: `/account`, method: 'GET', signal })
 }
 
 export const getAccountControllerFindAllQueryKey = () => {
@@ -423,6 +424,85 @@ export function useAccountControllerFindOne<
 }
 
 /**
+ * Update an account
+ */
+export const accountControllerUpdate = (
+  id: string,
+  updateAccountDto: UpdateAccountDto,
+) => {
+  return axios<Account>({
+    url: `/account/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateAccountDto,
+  })
+}
+
+export const getAccountControllerUpdateMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof accountControllerUpdate>>,
+    TError,
+    { id: string; data: UpdateAccountDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof accountControllerUpdate>>,
+  TError,
+  { id: string; data: UpdateAccountDto },
+  TContext
+> => {
+  const mutationKey = ['accountControllerUpdate']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof accountControllerUpdate>>,
+    { id: string; data: UpdateAccountDto }
+  > = (props) => {
+    const { id, data } = props ?? {}
+
+    return accountControllerUpdate(id, data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type AccountControllerUpdateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof accountControllerUpdate>>
+>
+export type AccountControllerUpdateMutationBody = UpdateAccountDto
+export type AccountControllerUpdateMutationError = void
+
+export const useAccountControllerUpdate = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof accountControllerUpdate>>,
+      TError,
+      { id: string; data: UpdateAccountDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof accountControllerUpdate>>,
+  TError,
+  { id: string; data: UpdateAccountDto },
+  TContext
+> => {
+  const mutationOptions = getAccountControllerUpdateMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
  * Delete an account
  */
 export const accountControllerRemove = (id: string) => {
@@ -586,7 +666,7 @@ export const balanceQueryControllerGetBalances = (
   params: BalanceQueryControllerGetBalancesParams,
   signal?: AbortSignal,
 ) => {
-  return axios<BalanceQueryPerDateResult[]>({
+  return axios<Array<BalanceQueryPerDateResult>>({
     url: `/balance-query/balances`,
     method: 'GET',
     params,
@@ -748,7 +828,7 @@ export const balanceQueryControllerGetAllBalances = (
   params: BalanceQueryControllerGetAllBalancesParams,
   signal?: AbortSignal,
 ) => {
-  return axios<BalanceQueryPerDateResult[]>({
+  return axios<Array<BalanceQueryPerDateResult>>({
     url: `/balance-query/all-balances`,
     method: 'GET',
     params,
@@ -1684,7 +1764,7 @@ export const useBankLinkControllerHandleWebhook = <
  * Sync accounts for all bank links
  */
 export const bankLinkControllerSyncAllAccounts = (signal?: AbortSignal) => {
-  return axios<Account[]>({
+  return axios<Array<Account>>({
     url: `/bank-link/sync-all`,
     method: 'POST',
     signal,
@@ -2057,7 +2137,7 @@ export const transactionControllerFindAll = (
   params?: TransactionControllerFindAllParams,
   signal?: AbortSignal,
 ) => {
-  return axios<Transaction[]>({
+  return axios<Array<Transaction>>({
     url: `/transaction`,
     method: 'GET',
     params,

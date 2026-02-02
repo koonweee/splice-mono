@@ -2,8 +2,13 @@ html {
   scrollbar-gutter: stable;
 }
 
-body {
+/* Doubled attribute selector beats react-remove-scroll-bar's injected
+   body[data-scroll-locked] style. scrollbar-gutter: stable on html already
+   reserves scrollbar space, so the library's margin-right compensation is
+   redundant and causes a layout shift when modals open. */
+body, body[data-scroll-locked][data-scroll-locked] {
   margin: 0;
+  margin-right: 0 !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

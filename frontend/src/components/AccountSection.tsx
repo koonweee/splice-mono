@@ -2,8 +2,8 @@ import { ActionIcon, Collapse, Group, Stack, Text, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { AccountType } from '../api/models'
-import { AccountCard } from './AccountCard'
 import { getSignedAmount } from '../lib/balance-utils'
+import { AccountCard } from './AccountCard'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
 const ASSET_TYPE_LABELS: Record<string, string> = {
@@ -21,14 +21,17 @@ function getAssetTypeGroup(type: string): string {
 
 function getGroupTotal(accounts: Array<AccountSummaryData>): number {
   return accounts.reduce(
-    (sum, a) => sum + getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance),
+    (sum, a) =>
+      sum + getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance),
     0,
   )
 }
 
-function groupAccountsByType(
-  accounts: Array<AccountSummaryData>,
-): Array<{ label: string; accounts: Array<AccountSummaryData>; percent: number }> {
+function groupAccountsByType(accounts: Array<AccountSummaryData>): Array<{
+  label: string
+  accounts: Array<AccountSummaryData>
+  percent: number
+}> {
   const groupOrder = ['Investment', 'Depository', 'Other']
   const grouped = new Map<string, Array<AccountSummaryData>>()
 
