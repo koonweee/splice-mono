@@ -31,6 +31,8 @@ import {
 } from '../types/BalanceSnapshot';
 import { MoneySign, MoneyWithSign } from '../types/MoneyWithSign';
 import { BalanceSnapshotService } from './balance-snapshot.service';
+import { AccountType } from 'plaid';
+import { CryptoAccountType } from 'src/types/AccountType';
 
 const ImportResponseSchema = z.object({
   imported: z.number(),
@@ -206,12 +208,23 @@ export class BalanceSnapshotController {
           sign,
         ).toSerialized();
 
+        const zeroMoneyWithSign = MoneyWithSign.fromFloat(
+          currency,
+          0,
+          MoneySign.POSITIVE,
+        ).toSerialized();
+
         snapshotsToCreate.push({
           accountId,
           snapshotDate: dateStr,
           currentBalance: moneyWithSign,
-          availableBalance: moneyWithSign,
-          snapshotType: BalanceSnapshotType.USER_UPDATE,
+          availableBalance:
+            account.type === AccountType.Brokerage ||
+            account.type === AccountType.Investment ||
+            account.type === CryptoAccountType.CRYPTO_WALLET
+              ? zeroMoneyWithSign
+              : moneyWithSign,
+          snapshotType: BalanceSnapshotType.CSV_IMPORT,
         });
       }
     }

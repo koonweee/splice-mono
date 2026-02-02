@@ -13,6 +13,8 @@ export enum BalanceSnapshotType {
   SYNC = 'SYNC',
   /** Balance forward-filled from previous snapshot (e.g., if a snapshot is missing) */
   FORWARD_FILL = 'FORWARD_FILL',
+  /** Balance imported from CSV */
+  CSV_IMPORT = 'CSV_IMPORT',
 }
 
 export const BalanceSnapshotTypeSchema = z.nativeEnum(BalanceSnapshotType);
