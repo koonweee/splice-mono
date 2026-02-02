@@ -35,6 +35,12 @@ function groupAccountsByType(accounts: Array<AccountSummaryData>): Array<{
   const groupOrder = ['Investment', 'Depository', 'Other']
   const grouped = new Map<string, Array<AccountSummaryData>>()
 
+  accounts.sort(
+    (a, b) =>
+      getSignedAmount(b.convertedEffectiveBalance ?? b.effectiveBalance) -
+      getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance),
+  )
+
   accounts.forEach((account) => {
     const group = getAssetTypeGroup(account.type)
     const existing = grouped.get(group) ?? []
