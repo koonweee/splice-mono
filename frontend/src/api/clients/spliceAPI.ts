@@ -28,6 +28,8 @@ import type {
   BalanceQueryControllerGetAllBalancesParams,
   BalanceQueryControllerGetBalancesParams,
   BalanceQueryPerDateResult,
+  BalanceSnapshotControllerImportCsv201,
+  BalanceSnapshotControllerImportCsvBody,
   CreateAccountDto,
   CreateTransactionDto,
   CreateUserDto,
@@ -1589,6 +1591,248 @@ export const useUserControllerLogoutAll = <
   TContext
 > => {
   const mutationOptions = getUserControllerLogoutAllMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * @summary Download CSV template for manual backfill
+ */
+export const balanceSnapshotControllerGetTemplate = (signal?: AbortSignal) => {
+  return axios<void>({
+    url: `/balance-snapshot/template`,
+    method: 'GET',
+    signal,
+  })
+}
+
+export const getBalanceSnapshotControllerGetTemplateQueryKey = () => {
+  return [`/balance-snapshot/template`] as const
+}
+
+export const getBalanceSnapshotControllerGetTemplateQueryOptions = <
+  TData = Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+      TError,
+      TData
+    >
+  >
+}) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getBalanceSnapshotControllerGetTemplateQueryKey()
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>
+  > = ({ signal }) => balanceSnapshotControllerGetTemplate(signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type BalanceSnapshotControllerGetTemplateQueryResult = NonNullable<
+  Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>
+>
+export type BalanceSnapshotControllerGetTemplateQueryError = unknown
+
+export function useBalanceSnapshotControllerGetTemplate<
+  TData = Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+          TError,
+          Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useBalanceSnapshotControllerGetTemplate<
+  TData = Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+          TError,
+          Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useBalanceSnapshotControllerGetTemplate<
+  TData = Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+/**
+ * @summary Download CSV template for manual backfill
+ */
+
+export function useBalanceSnapshotControllerGetTemplate<
+  TData = Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof balanceSnapshotControllerGetTemplate>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getBalanceSnapshotControllerGetTemplateQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * @summary Import balance snapshots from CSV
+ */
+export const balanceSnapshotControllerImportCsv = (
+  balanceSnapshotControllerImportCsvBody: BalanceSnapshotControllerImportCsvBody,
+  signal?: AbortSignal,
+) => {
+  const formData = new FormData()
+  if (balanceSnapshotControllerImportCsvBody.file !== undefined) {
+    formData.append(`file`, balanceSnapshotControllerImportCsvBody.file)
+  }
+
+  return axios<BalanceSnapshotControllerImportCsv201>({
+    url: `/balance-snapshot/import`,
+    method: 'POST',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data: formData,
+    signal,
+  })
+}
+
+export const getBalanceSnapshotControllerImportCsvMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof balanceSnapshotControllerImportCsv>>,
+    TError,
+    { data: BalanceSnapshotControllerImportCsvBody },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof balanceSnapshotControllerImportCsv>>,
+  TError,
+  { data: BalanceSnapshotControllerImportCsvBody },
+  TContext
+> => {
+  const mutationKey = ['balanceSnapshotControllerImportCsv']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof balanceSnapshotControllerImportCsv>>,
+    { data: BalanceSnapshotControllerImportCsvBody }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return balanceSnapshotControllerImportCsv(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type BalanceSnapshotControllerImportCsvMutationResult = NonNullable<
+  Awaited<ReturnType<typeof balanceSnapshotControllerImportCsv>>
+>
+export type BalanceSnapshotControllerImportCsvMutationBody =
+  BalanceSnapshotControllerImportCsvBody
+export type BalanceSnapshotControllerImportCsvMutationError = unknown
+
+/**
+ * @summary Import balance snapshots from CSV
+ */
+export const useBalanceSnapshotControllerImportCsv = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof balanceSnapshotControllerImportCsv>>,
+      TError,
+      { data: BalanceSnapshotControllerImportCsvBody },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof balanceSnapshotControllerImportCsv>>,
+  TError,
+  { data: BalanceSnapshotControllerImportCsvBody },
+  TContext
+> => {
+  const mutationOptions =
+    getBalanceSnapshotControllerImportCsvMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }
