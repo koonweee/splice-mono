@@ -18,6 +18,7 @@ function ChartTooltip({ label, value }: { label: string; value?: string }) {
 }
 
 export interface ChartDataPoint {
+  date: string
   label: string
   value: number
 }
@@ -69,7 +70,7 @@ export function Chart({
       h={height}
       mb={mb}
       data={data}
-      dataKey="label"
+      dataKey="date"
       series={[{ name: 'value', color }]}
       curveType="monotone"
       withDots
@@ -89,11 +90,11 @@ export function Chart({
       }}
       tooltipProps={{
         content: ({ label, payload }) => {
-          if (!label) return null
+          if (!label || !payload || !payload[0]) return null
           const point = payload[0]
           return (
             <ChartTooltip
-              label={String(label)}
+              label={point.payload.label}
               value={onDataPointHover ? undefined : valueFormatter(point.value)}
             />
           )
