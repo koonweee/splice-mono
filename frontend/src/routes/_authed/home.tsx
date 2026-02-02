@@ -30,6 +30,18 @@ const PERIOD_OPTIONS = [
   { value: TimePeriod.week, label: TIME_PERIOD_LABELS[TimePeriod.week] },
   { value: TimePeriod.month, label: TIME_PERIOD_LABELS[TimePeriod.month] },
   { value: TimePeriod.year, label: TIME_PERIOD_LABELS[TimePeriod.year] },
+  {
+    value: TimePeriod.threeYears,
+    label: TIME_PERIOD_LABELS[TimePeriod.threeYears],
+  },
+  {
+    value: TimePeriod.fiveYears,
+    label: TIME_PERIOD_LABELS[TimePeriod.fiveYears],
+  },
+  {
+    value: TimePeriod.tenYears,
+    label: TIME_PERIOD_LABELS[TimePeriod.tenYears],
+  },
 ]
 
 function HomePage() {
