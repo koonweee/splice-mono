@@ -60,7 +60,7 @@ export function AccountModal({
       <Modal
         opened={opened}
         onClose={onClose}
-        title={account?.name || 'Account Details'}
+        title={account?.customName ?? account?.name ?? 'Account Details'}
         size="xl"
         fullScreen={isMobile}
         transitionProps={{ transition: 'fade', duration: 200 }}

@@ -604,13 +604,11 @@ describe('BankLinkService', () => {
       const providerName = 'plaid';
 
       // Make findByPlaidItemId return null (no existing link)
-      mockBankLinkRepository.createQueryBuilder = jest
-        .fn()
-        .mockReturnValue({
-          where: jest.fn().mockReturnThis(),
-          andWhere: jest.fn().mockReturnThis(),
-          getOne: jest.fn().mockResolvedValue(null),
-        });
+      mockBankLinkRepository.createQueryBuilder = jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      });
 
       await service.handleWebhook(
         providerName,
@@ -692,7 +690,7 @@ describe('BankLinkService', () => {
       );
       // Should have looked up bank link by item_id
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        "\"bankLink\".\"authentication\"->>'itemId' = :itemId",
+        '"bankLink"."authentication"->>\'itemId\' = :itemId',
         { itemId: 'item-mock-123' },
       );
       // Should NOT have processed as link completion
@@ -1346,6 +1344,35 @@ describe('BankLinkService', () => {
           }),
         ]),
       );
+    });
+
+    it('should preserve customName when syncing existing accounts', async () => {
+      const existingAccountEntity = {
+        id: 'existing-account-id',
+        externalAccountId: mockApiAccount.accountId,
+        name: 'Old Name',
+        customName: 'My Custom Name',
+        currentBalance: { currency: 'USD', amount: 10000, sign: 'positive' },
+        toObject: jest.fn().mockReturnValue({
+          id: 'existing-account-id',
+          name: mockApiAccount.name,
+          customName: 'My Custom Name',
+          externalAccountId: mockApiAccount.accountId,
+        }),
+      };
+      mockAccountRepository.find.mockResolvedValueOnce([existingAccountEntity]);
+
+      const accountIdToBankLinkId = new Map<string, string>();
+      accountIdToBankLinkId.set(mockApiAccount.accountId, bankLinkId);
+
+      await service.upsertAccountsFromAPI(
+        [mockApiAccount],
+        accountIdToBankLinkId,
+        mockUserId,
+      );
+
+      // customName should be preserved (applyAccountDtoToEntity doesn't touch it)
+      expect(existingAccountEntity.customName).toBe('My Custom Name');
     });
 
     it('should throw error when bankLinkId is missing from map', async () => {
