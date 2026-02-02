@@ -199,6 +199,7 @@ export function transformToDashboardData(
       return true
     })
     .map((result) => ({
+      date: result.date,
       label: dayjs(result.date).format('MMM D'),
       value: calculateNetWorthForDate(result.balances),
     }))
@@ -304,6 +305,7 @@ export function transformToAccountChartData(
       const amount = getSignedAmount(effectiveBalance)
 
       return {
+        date: result.date,
         label: dayjs(result.date).format('MMM D'),
         value: amount,
       }
