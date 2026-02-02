@@ -28,8 +28,9 @@ import {
 } from '../../api/clients/spliceAPI'
 import { CreateAccountDtoType } from '../../api/models/createAccountDtoType'
 import { CreateAccountDtoSubType } from '../../api/models/createAccountDtoSubType'
-import type { ComponentType } from 'react'
+import { MoneyWithSignSign } from '../../api/models'
 import type { InitiateLinkRequestNetwork } from '../../api/models'
+import type { ComponentType } from 'react'
 
 interface Provider {
   id: string
@@ -220,11 +221,14 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
     const isInvestmentType = typeDef.type === CreateAccountDtoType.investment
     const balancePayload = {
       money: { amount: amountInCents, currency: manualCurrency },
-      sign: amountInCents >= 0 ? 'positive' : 'negative',
+      sign:
+        amountInCents >= 0
+          ? MoneyWithSignSign.positive
+          : MoneyWithSignSign.negative,
     }
     const zeroBalance = {
       money: { amount: 0, currency: manualCurrency },
-      sign: 'positive' as const,
+      sign: MoneyWithSignSign.positive,
     }
 
     createAccount.mutate(
