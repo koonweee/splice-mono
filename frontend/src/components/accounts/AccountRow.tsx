@@ -110,22 +110,45 @@ export function AccountRow({ account }: { account: Account }) {
               autoFocus
               style={{ flex: 1 }}
             />
-            <ActionIcon variant="subtle" color="green" onClick={saveName} size="sm">
+            <ActionIcon
+              variant="subtle"
+              color="green"
+              onClick={saveName}
+              size="sm"
+            >
               <Check size={14} />
             </ActionIcon>
-            <ActionIcon variant="subtle" color="gray" onClick={cancelEditing} size="sm">
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              onClick={cancelEditing}
+              size="sm"
+            >
               <X size={14} />
             </ActionIcon>
           </Group>
         ) : (
           <Group gap={6} wrap="nowrap">
             <Text fw={500}>{displayName}</Text>
-            <ActionIcon variant="subtle" color="gray" onClick={startEditing} size="sm">
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              onClick={startEditing}
+              size="sm"
+            >
               <Pencil size={14} />
             </ActionIcon>
             {isLinked && account.customName && (
-              <Tooltip label={`Reset to synced name: ${account.name}`} withArrow>
-                <ActionIcon variant="subtle" color="gray" onClick={resetToSyncedName} size="sm">
+              <Tooltip
+                label={`Reset to synced name: ${account.name}`}
+                withArrow
+              >
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  onClick={resetToSyncedName}
+                  size="sm"
+                >
                   <RotateCcw size={14} />
                 </ActionIcon>
               </Tooltip>
