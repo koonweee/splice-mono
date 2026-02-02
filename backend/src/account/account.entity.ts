@@ -20,6 +20,10 @@ export class AccountEntity extends OwnedEntity {
   @Column({ type: 'varchar', nullable: true })
   name: string | null;
 
+  /** User-defined custom name override. When set, displayed instead of the synced name. */
+  @Column({ type: 'varchar', nullable: true })
+  customName: string | null;
+
   /** Mask of account number (e.g., last 4 digits) */
   @Column({ type: 'varchar', nullable: true })
   mask: string | null;
@@ -62,6 +66,7 @@ export class AccountEntity extends OwnedEntity {
     const entity = new AccountEntity();
     entity.userId = userId;
     entity.name = dto.name;
+    entity.customName = dto.customName ?? null;
     entity.mask = dto.mask ?? null;
     entity.availableBalance = BalanceColumns.fromMoneyWithSign(
       dto.availableBalance,
@@ -85,6 +90,7 @@ export class AccountEntity extends OwnedEntity {
       id: this.id,
       userId: this.userId,
       name: this.name,
+      customName: this.customName,
       mask: this.mask,
       availableBalance: this.availableBalance.toMoneyWithSign(),
       currentBalance: this.currentBalance.toMoneyWithSign(),

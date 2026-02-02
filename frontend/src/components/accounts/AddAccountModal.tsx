@@ -26,10 +26,10 @@ import {
   useAccountControllerCreate,
   useBankLinkControllerInitiateLinking,
 } from '../../api/clients/spliceAPI'
-import type { ComponentType } from 'react'
-import type { InitiateLinkRequestNetwork } from '../../api/models'
 import { CreateAccountDtoType } from '../../api/models/createAccountDtoType'
 import { CreateAccountDtoSubType } from '../../api/models/createAccountDtoSubType'
+import type { ComponentType } from 'react'
+import type { InitiateLinkRequestNetwork } from '../../api/models'
 
 interface Provider {
   id: string
@@ -38,15 +38,60 @@ interface Provider {
 }
 
 const MANUAL_ACCOUNT_TYPES = [
-  { label: 'Cash', value: 'cash', type: CreateAccountDtoType.manual, subType: null },
-  { label: 'Savings', value: 'savings', type: CreateAccountDtoType.depository, subType: CreateAccountDtoSubType.savings },
-  { label: 'Checking', value: 'checking', type: CreateAccountDtoType.depository, subType: CreateAccountDtoSubType.checking },
-  { label: 'Credit Card', value: 'credit_card', type: CreateAccountDtoType.credit, subType: CreateAccountDtoSubType.credit_card },
-  { label: 'Loan', value: 'loan', type: CreateAccountDtoType.loan, subType: CreateAccountDtoSubType.loan },
-  { label: 'Investment', value: 'investment', type: CreateAccountDtoType.investment, subType: CreateAccountDtoSubType.brokerage },
-  { label: 'Investment (401k)', value: '401k', type: CreateAccountDtoType.investment, subType: CreateAccountDtoSubType['401k'] },
-  { label: 'Investment (HSA)', value: 'hsa', type: CreateAccountDtoType.investment, subType: CreateAccountDtoSubType.hsa },
-  { label: 'Other', value: 'other', type: CreateAccountDtoType.other, subType: CreateAccountDtoSubType.other },
+  {
+    label: 'Cash',
+    value: 'cash',
+    type: CreateAccountDtoType.manual,
+    subType: null,
+  },
+  {
+    label: 'Savings',
+    value: 'savings',
+    type: CreateAccountDtoType.depository,
+    subType: CreateAccountDtoSubType.savings,
+  },
+  {
+    label: 'Checking',
+    value: 'checking',
+    type: CreateAccountDtoType.depository,
+    subType: CreateAccountDtoSubType.checking,
+  },
+  {
+    label: 'Credit Card',
+    value: 'credit_card',
+    type: CreateAccountDtoType.credit,
+    subType: CreateAccountDtoSubType.credit_card,
+  },
+  {
+    label: 'Loan',
+    value: 'loan',
+    type: CreateAccountDtoType.loan,
+    subType: CreateAccountDtoSubType.loan,
+  },
+  {
+    label: 'Investment',
+    value: 'investment',
+    type: CreateAccountDtoType.investment,
+    subType: CreateAccountDtoSubType.brokerage,
+  },
+  {
+    label: 'Investment (401k)',
+    value: '401k',
+    type: CreateAccountDtoType.investment,
+    subType: CreateAccountDtoSubType['401k'],
+  },
+  {
+    label: 'Investment (HSA)',
+    value: 'hsa',
+    type: CreateAccountDtoType.investment,
+    subType: CreateAccountDtoSubType.hsa,
+  },
+  {
+    label: 'Other',
+    value: 'other',
+    type: CreateAccountDtoType.other,
+    subType: CreateAccountDtoSubType.other,
+  },
 ] as const
 
 const PROVIDERS: Array<Provider> = [
@@ -166,17 +211,16 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
 
   const handleManualSubmit = () => {
     const amountInCents = Math.round(Number(manualBalance) * 100)
-    const typeDef = MANUAL_ACCOUNT_TYPES.find(
-      (t) => t.value === manualTypeSelection,
-    ) ?? MANUAL_ACCOUNT_TYPES[0]
+    const typeDef =
+      MANUAL_ACCOUNT_TYPES.find((t) => t.value === manualTypeSelection) ??
+      MANUAL_ACCOUNT_TYPES[0]
 
     // For investment/brokerage accounts, effective balance = available + current,
     // so set available to zero to avoid doubling.
-    const isInvestmentType =
-      typeDef.type === CreateAccountDtoType.investment
+    const isInvestmentType = typeDef.type === CreateAccountDtoType.investment
     const balancePayload = {
       money: { amount: amountInCents, currency: manualCurrency },
-      sign: (amountInCents >= 0 ? 'positive' : 'negative') as 'positive' | 'negative',
+      sign: amountInCents >= 0 ? 'positive' : 'negative',
     }
     const zeroBalance = {
       money: { amount: 0, currency: manualCurrency },

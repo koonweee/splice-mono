@@ -19,6 +19,7 @@ export const mockAccount: Account = {
   id: 'test-id-123',
   userId: mockUserId,
   name: 'Test Checking Account',
+  customName: null,
   availableBalance: {
     money: { currency: 'USD', amount: 100000 }, // $1,000.00 in cents
     sign: MoneySign.POSITIVE,
@@ -41,6 +42,7 @@ export const mockAccount2: Account = {
   id: 'test-id-456',
   userId: mockUserId,
   name: 'Test Savings Account',
+  customName: null,
   availableBalance: {
     money: { currency: 'USD', amount: 500000 }, // $5,000.00 in cents
     sign: MoneySign.POSITIVE,
@@ -66,6 +68,7 @@ export const mockManualAccount: Account = {
   id: 'manual-id-789',
   userId: mockUserId,
   name: 'Manual Cash Account',
+  customName: null,
   availableBalance: {
     money: { currency: 'USD', amount: 20000 },
     sign: MoneySign.POSITIVE,

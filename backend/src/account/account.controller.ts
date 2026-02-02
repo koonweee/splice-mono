@@ -5,6 +5,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -14,8 +15,16 @@ import {
 } from '../auth/decorators/current-user.decorator';
 import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import { z } from 'zod';
-import type { Account, CreateAccountDto } from '../types/Account';
-import { AccountSchema, CreateAccountDtoSchema } from '../types/Account';
+import type {
+  Account,
+  CreateAccountDto,
+  UpdateAccountDto,
+} from '../types/Account';
+import {
+  AccountSchema,
+  CreateAccountDtoSchema,
+  UpdateAccountDtoSchema,
+} from '../types/Account';
 import { CurrentAndAvailableBalanceSchema } from '../types/MoneyWithSign';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { AccountService } from './account.service';
@@ -75,6 +84,32 @@ export class AccountController {
     @CurrentUser() user: JwtUser,
   ): Promise<Account> {
     const account = await this.accountService.findOne(id, user.userId);
+    if (!account) {
+      throw new NotFoundException(`Account with id ${id} not found`);
+    }
+    return account;
+  }
+
+  @Patch(':id')
+  @ApiOperation({ description: 'Update an account' })
+  @ZodApiBody({ schema: UpdateAccountDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Returns the updated account',
+    schema: AccountSchema,
+  })
+  @ApiResponse({ status: 404, description: 'Account not found' })
+  async update(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(UpdateAccountDtoSchema))
+    updateAccountDto: UpdateAccountDto,
+  ): Promise<Account> {
+    const account = await this.accountService.update(
+      id,
+      updateAccountDto,
+      user.userId,
+    );
     if (!account) {
       throw new NotFoundException(`Account with id ${id} not found`);
     }
