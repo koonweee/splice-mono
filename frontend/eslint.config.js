@@ -3,6 +3,11 @@
 import { tanstackConfig } from '@tanstack/eslint-config'
 
 export default [
-  { ignores: ['*.config.js', 'src/api/clients/**', 'src/api/models/**'] },
+  { ignores: ['*.config.js'] },
   ...tanstackConfig,
+  {
+    rules: {
+      '@typescript-eslint/no-unnecessary-condition': 'warn',
+    },
+  },
 ]

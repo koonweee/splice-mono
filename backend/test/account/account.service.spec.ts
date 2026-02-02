@@ -459,6 +459,64 @@ describe('AccountService', () => {
       );
     });
 
+    it('should set customName when provided in update DTO', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockResolvedValue(mockEntity);
+
+      await service.update(
+        'test-id',
+        { customName: 'My Custom Name' },
+        mockUserId,
+      );
+
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customName: 'My Custom Name',
+        }),
+      );
+    });
+
+    it('should null out customName when null is passed', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        { ...mockCreateAccountDto, customName: 'Old Name' },
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockResolvedValue(mockEntity);
+
+      await service.update('test-id', { customName: null }, mockUserId);
+
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customName: null,
+        }),
+      );
+    });
+
+    it('should leave customName unchanged when not in DTO', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        { ...mockCreateAccountDto, customName: 'Keep This' },
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockResolvedValue(mockEntity);
+
+      await service.update('test-id', { name: 'Updated Name' }, mockUserId);
+
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customName: 'Keep This',
+        }),
+      );
+    });
+
     it('should remove bankLink association when bankLinkId is null', async () => {
       const mockEntity = AccountEntity.fromDto(
         {

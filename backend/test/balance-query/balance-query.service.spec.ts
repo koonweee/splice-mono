@@ -613,7 +613,7 @@ describe('BalanceQueryService', () => {
         mockUserService.findOne.mockResolvedValue(createMockUser('SGD'));
         mockAccountRepository.find.mockResolvedValue([accountEntity]);
         mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
-        
+
         // Exchange rate: 1 ETH = 3000 SGD
         mockCurrencyExchangeService.getRatesForDateRange.mockResolvedValue([
           {
@@ -639,7 +639,7 @@ describe('BalanceQueryService', () => {
         expect(
           result[0].balances['acc-1'].availableBalance.convertedBalance,
         ).toBeDefined();
-        
+
         // Calculation:
         // 1.0 ETH (from 10^18 wei) * 3000 Rate = 3000.0 SGD
         // 3000.0 SGD in cents (2 decimals) = 300000
@@ -647,7 +647,7 @@ describe('BalanceQueryService', () => {
           result[0].balances['acc-1'].availableBalance.convertedBalance?.money
             .amount,
         ).toBe(300000);
-        
+
         expect(
           result[0].balances['acc-1'].availableBalance.convertedBalance?.money
             .currency,
@@ -738,7 +738,6 @@ describe('BalanceQueryService', () => {
         result[0].balances['acc-1'].availableBalance.balance.money.amount,
       ).toBe(95000);
     });
-
   });
 
   describe('getAllBalancesForDateRange', () => {

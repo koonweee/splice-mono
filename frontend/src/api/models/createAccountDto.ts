@@ -14,6 +14,8 @@ export interface CreateAccountDto {
   /** @nullable */
   name: string | null
   /** @nullable */
+  customName?: string | null
+  /** @nullable */
   mask?: string | null
   type: (typeof CreateAccountDtoType)[keyof typeof CreateAccountDtoType]
   /** @nullable */

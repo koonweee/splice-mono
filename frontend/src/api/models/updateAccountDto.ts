@@ -14,6 +14,8 @@ export interface UpdateAccountDto {
   /** @nullable */
   name?: string | null
   /** @nullable */
+  customName?: string | null
+  /** @nullable */
   mask?: string | null
   type?: (typeof UpdateAccountDtoType)[keyof typeof UpdateAccountDtoType]
   /** @nullable */
