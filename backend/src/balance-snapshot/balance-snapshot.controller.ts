@@ -220,10 +220,11 @@ export class BalanceSnapshotController {
           currentBalance: moneyWithSign,
           availableBalance:
             account.type === AccountType.Brokerage ||
+            account.type === AccountType.Investment ||
             account.type === CryptoAccountType.CRYPTO_WALLET
               ? zeroMoneyWithSign
               : moneyWithSign,
-          snapshotType: BalanceSnapshotType.USER_UPDATE,
+          snapshotType: BalanceSnapshotType.CSV_IMPORT,
         });
       }
     }
