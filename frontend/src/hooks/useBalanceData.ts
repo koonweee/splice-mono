@@ -82,12 +82,12 @@ export function useAccountBalanceHistory(
     }
 
     return {
-      chartData: transformToAccountChartData(query.data, accountId),
+      chartData: transformToAccountChartData(query.data, accountId, period),
       latestBalance: getLatestAccountBalance(query.data, accountId),
       latestSyncedAt: getLatestSyncedAt(query.data, accountId),
       rawResults: query.data,
     }
-  }, [query.data, accountId])
+  }, [query.data, accountId, period])
 
   return {
     data: result,
