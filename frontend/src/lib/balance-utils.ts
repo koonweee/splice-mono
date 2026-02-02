@@ -35,6 +35,9 @@ const PERIOD_DAYS: Record<TimePeriod, number> = {
   [TimePeriod.week]: 7,
   [TimePeriod.month]: 30,
   [TimePeriod.year]: 365,
+  [TimePeriod.threeYears]: 365 * 3,
+  [TimePeriod.fiveYears]: 365 * 5,
+  [TimePeriod.tenYears]: 365 * 10,
 }
 
 /**
@@ -193,7 +196,14 @@ export function transformToDashboardData(
   // Build chart data from all dates
   const chartData: Array<ChartDataPoint> = sortedResults
     .filter((result) => {
-      if (period === TimePeriod.year) {
+      if (
+        [
+          TimePeriod.year,
+          TimePeriod.threeYears,
+          TimePeriod.fiveYears,
+          TimePeriod.tenYears,
+        ].includes(period)
+      ) {
         return dayjs(result.date).date() === 1
       }
       return true
@@ -289,7 +299,14 @@ export function transformToAccountChartData(
 
   return sortedResults
     .filter((result) => {
-      if (period === TimePeriod.year) {
+      if (
+        [
+          TimePeriod.year,
+          TimePeriod.threeYears,
+          TimePeriod.fiveYears,
+          TimePeriod.tenYears,
+        ].includes(period)
+      ) {
         return dayjs(result.date).date() === 1
       }
       return true
