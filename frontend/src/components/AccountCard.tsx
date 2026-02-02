@@ -57,7 +57,7 @@ export function AccountCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <Group gap={6} wrap="nowrap">
             <Text fw={500} truncate>
-              {account.name || 'Unnamed Account'}
+              {account.customName ?? account.name}
             </Text>
             {stale && (
               <Tooltip
