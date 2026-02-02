@@ -132,6 +132,7 @@ export function createMoneyWithSign(
 export interface AccountSummaryData {
   id: string
   name: string
+  customName?: string | null
   type: AccountTypeValue
   subType?: string
   effectiveBalance: MoneyWithSign
@@ -225,6 +226,7 @@ export function transformToDashboardData(
         const summary: AccountSummaryData = {
           id: accountId,
           name: accountResult.account.name ?? '',
+          customName: accountResult.account.customName,
           type: accountResult.account.type,
           subType: accountResult.account.subType ?? undefined,
           effectiveBalance: accountResult.effectiveBalance.balance,
