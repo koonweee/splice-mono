@@ -160,4 +160,38 @@ export class BalanceSnapshotService extends OwnedCrudService<
     this.logger.log({ id: savedEntity.id }, 'Balance snapshot created');
     return snapshot;
   }
+
+  /**
+   * Bulk upsert balance snapshots
+   *
+   * @param dtos - Array of balance snapshot data
+   * @param userId - ID of the user who owns these snapshots
+   * @returns Number of successfully upserted snapshots
+   */
+  async bulkUpsert(
+    dtos: CreateBalanceSnapshotDto[],
+    userId: string,
+  ): Promise<number> {
+    this.logger.log(
+      { count: dtos.length, userId },
+      'Bulk upserting balance snapshots',
+    );
+
+    let count = 0;
+    for (const dto of dtos) {
+      try {
+        await this.upsert(dto, userId);
+        count++;
+      } catch (error) {
+        this.logger.error(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          { error, dto, userId },
+          'Failed to upsert balance snapshot in bulk operation',
+        );
+        // Continue with others
+      }
+    }
+
+    return count;
+  }
 }
