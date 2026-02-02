@@ -42,6 +42,7 @@ describe('balance-utils transform', () => {
       const data = transformToDashboardData(mockResults as any, TimePeriod.year)
       expect(data.chartData).toHaveLength(2)
       expect(data.chartData[0].label).toContain('Jan 1')
+      expect(data.chartData[0].date).toBe('2023-01-01')
       expect(data.chartData[1].label).toContain('Feb 1')
     })
 
@@ -63,6 +64,7 @@ describe('balance-utils transform', () => {
       )
       expect(data).toHaveLength(2)
       expect(data[0].label).toContain('Jan 1')
+      expect(data[0].date).toBe('2023-01-01')
       expect(data[1].label).toContain('Feb 1')
     })
 
