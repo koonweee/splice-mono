@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { CategoryEntity } from '../../src/category/category.entity';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import type { TransactionSyncResponse } from '../../src/types/BankLink';
@@ -37,6 +38,11 @@ describe('TransactionService', () => {
     },
   };
 
+  // Mock category repository for category lookup
+  const mockCategoryRepository = {
+    find: jest.fn().mockResolvedValue([]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -44,6 +50,10 @@ describe('TransactionService', () => {
         {
           provide: getRepositoryToken(TransactionEntity),
           useValue: mockRepository,
+        },
+        {
+          provide: getRepositoryToken(CategoryEntity),
+          useValue: mockCategoryRepository,
         },
       ],
     }).compile();

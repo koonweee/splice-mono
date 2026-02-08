@@ -977,6 +977,7 @@ export class PlaidProvider implements IBankLinkProvider {
       authorized_date,
       authorized_datetime,
       logo_url,
+      personal_finance_category,
     } = plaidTransaction;
 
     const currency = iso_currency_code ?? unofficial_currency_code ?? 'USD';
@@ -1003,6 +1004,12 @@ export class PlaidProvider implements IBankLinkProvider {
       datetime: datetime ?? null,
       authorizedDate: authorized_date ?? null,
       authorizedDatetime: authorized_datetime ?? null,
+      ...(personal_finance_category && {
+        personalFinanceCategory: {
+          primary: personal_finance_category.primary,
+          detailed: personal_finance_category.detailed,
+        },
+      }),
     };
   }
 
