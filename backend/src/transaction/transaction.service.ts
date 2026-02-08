@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
@@ -26,8 +27,22 @@ export class TransactionService extends OwnedCrudService<
   constructor(
     @InjectRepository(TransactionEntity)
     repository: Repository<TransactionEntity>,
+    @InjectRepository(CategoryEntity)
+    private readonly categoryRepository: Repository<CategoryEntity>,
   ) {
     super(repository);
+  }
+
+  /**
+   * Build a lookup map of "primary:detailed" -> category UUID
+   */
+  private async buildCategoryLookup(): Promise<Map<string, string>> {
+    const categories = await this.categoryRepository.find();
+    const map = new Map<string, string>();
+    categories.forEach((cat) => {
+      map.set(`${cat.primary}:${cat.detailed}`, cat.id);
+    });
+    return map;
   }
 
   protected applyUpdate(
@@ -94,6 +109,9 @@ export class TransactionService extends OwnedCrudService<
       'Processing transaction sync results',
     );
 
+    // Build category lookup once for the entire sync batch
+    const categoryLookup = await this.buildCategoryLookup();
+
     await this.repository.manager.transaction(async (manager) => {
       const txnRepo = manager.getRepository(TransactionEntity);
 
@@ -109,8 +127,9 @@ export class TransactionService extends OwnedCrudService<
               );
               return null;
             }
+            const resolvedDto = this.resolveCategoryId(dto, categoryLookup);
             return TransactionEntity.fromDto(
-              { ...dto, accountId: internalAccountId },
+              { ...resolvedDto, accountId: internalAccountId },
               userId,
             );
           })
@@ -138,6 +157,8 @@ export class TransactionService extends OwnedCrudService<
               return;
             }
 
+            const resolvedDto = this.resolveCategoryId(dto, categoryLookup);
+
             const existing = await txnRepo.findOne({
               where: {
                 externalTransactionId: dto.externalTransactionId ?? undefined,
@@ -153,7 +174,7 @@ export class TransactionService extends OwnedCrudService<
               );
               await txnRepo.save(
                 TransactionEntity.fromDto(
-                  { ...dto, accountId: internalAccountId },
+                  { ...resolvedDto, accountId: internalAccountId },
                   userId,
                 ),
               );
@@ -161,7 +182,7 @@ export class TransactionService extends OwnedCrudService<
             }
 
             this.applyUpdate(existing, {
-              ...dto,
+              ...resolvedDto,
               accountId: internalAccountId,
             });
             await txnRepo.save(existing);
@@ -201,5 +222,31 @@ export class TransactionService extends OwnedCrudService<
     });
 
     this.logger.log({}, 'Transaction sync results processed successfully');
+  }
+
+  /**
+   * Resolve categoryId from personalFinanceCategory strings using the lookup map.
+   * Returns a new DTO with categoryId set if a match is found.
+   */
+  private resolveCategoryId(
+    dto: CreateTransactionDto,
+    categoryLookup: Map<string, string>,
+  ): CreateTransactionDto {
+    if (!dto.personalFinanceCategory) {
+      return dto;
+    }
+
+    const { primary, detailed } = dto.personalFinanceCategory;
+    const categoryId = categoryLookup.get(`${primary}:${detailed}`);
+
+    if (!categoryId) {
+      this.logger.warn(
+        { primary, detailed },
+        'No category found for personal finance category',
+      );
+      return dto;
+    }
+
+    return { ...dto, categoryId };
   }
 }

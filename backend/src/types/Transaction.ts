@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CategorySchema } from './Category';
 import { registerSchema } from '../common/zod-api-response';
 import { MoneyWithSignSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
@@ -33,6 +34,8 @@ export const TransactionSchema = registerSchema(
       authorizedDatetime: z.string().datetime().nullable(),
       /** Category ID for transaction categorization (nullable) */
       categoryId: z.string().uuid().nullable(),
+      /** Joined category details (nullable) */
+      category: CategorySchema.nullable().optional(),
     })
     .merge(OwnedSchema),
 );
@@ -56,6 +59,13 @@ export const CreateTransactionDtoSchema = registerSchema(
     authorizedDate: z.string().nullable().optional(),
     authorizedDatetime: z.string().datetime().nullable().optional(),
     categoryId: z.string().uuid().nullable().optional(),
+    /** Plaid personal_finance_category strings for category resolution */
+    personalFinanceCategory: z
+      .object({
+        primary: z.string(),
+        detailed: z.string(),
+      })
+      .optional(),
   }),
 );
 
