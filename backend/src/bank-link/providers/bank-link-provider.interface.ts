@@ -2,6 +2,7 @@ import type {
   GetAccountsResponse,
   LinkCompletionResponse,
   LinkInitiationResponse,
+  TransactionSyncResponse,
 } from '../../types/BankLink';
 
 /**
@@ -120,4 +121,18 @@ export interface IBankLinkProvider {
    * @returns void
    */
   updateWebhookUrl?(authentication: Record<string, any>): Promise<void>;
+
+  /**
+   * Sync transactions using cursor-based pagination
+   * Optional - only implemented by providers that support incremental transaction sync
+   * (e.g., Plaid /transactions/sync)
+   *
+   * @param authentication - Provider-specific authentication data
+   * @param cursor - Cursor from previous sync call (undefined for initial sync)
+   * @returns Transaction sync results including added/modified/removed transactions and next cursor
+   */
+  syncTransactions?(
+    authentication: Record<string, any>,
+    cursor?: string,
+  ): Promise<TransactionSyncResponse>;
 }
