@@ -2,12 +2,13 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionController } from '../../src/transaction/transaction.controller';
 import { TransactionService } from '../../src/transaction/transaction.service';
-import { mockTransactionService } from '../mocks/transaction/transaction-service.mock';
 import {
-  mockAccountId,
+  mockPaginatedTransactions,
+  mockTransactionService,
+} from '../mocks/transaction/transaction-service.mock';
+import {
   mockCreateTransactionDto,
   mockTransaction,
-  mockTransaction2,
   mockUpdateTransactionDto,
 } from '../mocks/transaction/transaction.mock';
 
@@ -39,34 +40,31 @@ describe('TransactionController', () => {
 
   describe('findAll', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
+    const defaultFilters = { page: 1, limit: 50 };
 
-    it('should return an array of transactions', async () => {
-      const result = await controller.findAll(mockUser);
+    it('should return paginated transactions', async () => {
+      const result = await controller.findAll(mockUser, defaultFilters);
 
-      expect(result).toEqual([mockTransaction, mockTransaction2]);
-      expect(mockTransactionService.findAll).toHaveBeenCalledWith(
+      expect(result).toEqual(mockPaginatedTransactions);
+      expect(mockTransactionService.findFiltered).toHaveBeenCalledWith(
         mockUser.userId,
+        defaultFilters,
       );
     });
 
-    it('should call transactionService.findAll with userId', async () => {
-      await controller.findAll(mockUser);
+    it('should pass filter params to the service', async () => {
+      const filters = {
+        page: 2,
+        limit: 25,
+        accountId: 'account-uuid-123',
+        search: 'starbucks',
+      };
+      await controller.findAll(mockUser, filters);
 
-      expect(mockTransactionService.findAll).toHaveBeenCalledTimes(1);
-      expect(mockTransactionService.findAll).toHaveBeenCalledWith(
+      expect(mockTransactionService.findFiltered).toHaveBeenCalledWith(
         mockUser.userId,
+        filters,
       );
-    });
-
-    it('should filter by accountId when provided', async () => {
-      const result = await controller.findAll(mockUser, mockAccountId);
-
-      expect(result).toEqual([mockTransaction, mockTransaction2]);
-      expect(mockTransactionService.findByAccountId).toHaveBeenCalledWith(
-        mockAccountId,
-        mockUser.userId,
-      );
-      expect(mockTransactionService.findAll).not.toHaveBeenCalled();
     });
   });
 

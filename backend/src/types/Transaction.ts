@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AccountSchema } from './Account';
 import { CategorySchema } from './Category';
 import { registerSchema } from '../common/zod-api-response';
 import { MoneyWithSignSchema } from './MoneyWithSign';
@@ -16,6 +17,11 @@ export const TransactionSchema = registerSchema(
       amount: MoneyWithSignSchema,
       /** Account this transaction belongs to */
       accountId: z.string().uuid(),
+      /** Joined account details (nullable, lazy to avoid circular import) */
+      account: z
+        .lazy(() => AccountSchema)
+        .nullable()
+        .optional(),
       /** Merchant name (e.g., "Starbucks") */
       merchantName: z.string().nullable(),
       /** Whether the transaction is pending (unsettled) */
@@ -34,8 +40,11 @@ export const TransactionSchema = registerSchema(
       authorizedDatetime: z.string().datetime().nullable(),
       /** Category ID for transaction categorization (nullable) */
       categoryId: z.string().uuid().nullable(),
-      /** Joined category details (nullable) */
-      category: CategorySchema.nullable().optional(),
+      /** Joined category details (nullable, lazy to avoid circular import) */
+      category: z
+        .lazy(() => CategorySchema)
+        .nullable()
+        .optional(),
     })
     .merge(OwnedSchema),
 );
@@ -80,3 +89,43 @@ export const UpdateTransactionDtoSchema = registerSchema(
 );
 
 export type UpdateTransactionDto = z.infer<typeof UpdateTransactionDtoSchema>;
+
+/**
+ * Filter/pagination DTO for querying transactions
+ */
+export const TransactionFilterDtoSchema = registerSchema(
+  'TransactionFilterDto',
+  z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(200).default(50),
+    accountId: z
+      .union([z.string().uuid(), z.array(z.string().uuid())])
+      .optional(),
+    categoryId: z
+      .union([z.string().uuid(), z.array(z.string().uuid())])
+      .optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    search: z.string().optional(),
+    minAmount: z.coerce.number().optional(),
+    maxAmount: z.coerce.number().optional(),
+  }),
+);
+
+export type TransactionFilterDto = z.infer<typeof TransactionFilterDtoSchema>;
+
+/**
+ * Paginated response wrapper for transactions
+ */
+export const PaginatedTransactionsSchema = registerSchema(
+  'PaginatedTransactions',
+  z.object({
+    data: z.array(TransactionSchema),
+    total: z.number(),
+    page: z.number(),
+    limit: z.number(),
+    hasMore: z.boolean(),
+  }),
+);
+
+export type PaginatedTransactions = z.infer<typeof PaginatedTransactionsSchema>;

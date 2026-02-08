@@ -6,11 +6,15 @@
  * OpenAPI spec version: 1.0
  */
 import type { MoneyWithSign } from './moneyWithSign'
+import type { Account } from './account'
+import type { Category } from './category'
 
 export interface Transaction {
   id: string
   amount: MoneyWithSign
   accountId: string
+  /** @nullable */
+  account?: Account | null
   /** @nullable */
   merchantName: string | null
   pending: boolean
@@ -27,6 +31,8 @@ export interface Transaction {
   authorizedDatetime: string | null
   /** @nullable */
   categoryId: string | null
+  /** @nullable */
+  category?: Category | null
   createdAt: string
   updatedAt: string
   userId: string

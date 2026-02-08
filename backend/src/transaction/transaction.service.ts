@@ -7,7 +7,9 @@ import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
 import {
   CreateTransactionDto,
+  PaginatedTransactions,
   Transaction,
+  TransactionFilterDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
 import { TransactionEntity } from './transaction.entity';
@@ -71,17 +73,114 @@ export class TransactionService extends OwnedCrudService<
   }
 
   /**
-   * Find all transactions for a specific account
+   * Find all transactions owned by the specified user, sorted by date descending.
    */
-  async findByAccountId(
-    accountId: string,
-    userId: string,
-  ): Promise<Transaction[]> {
+  override async findAll(userId: string): Promise<Transaction[]> {
+    this.logger.log(
+      { userId },
+      `Finding all ${this.entityName}s sorted by date`,
+    );
+
     const entities = await this.repository.find({
-      where: { accountId, userId },
+      where: { userId },
       relations: this.relations,
+      order: { date: 'DESC', datetime: { direction: 'DESC', nulls: 'LAST' } },
     });
+
+    this.logger.log(
+      { userId, count: entities.length },
+      `Found ${this.entityName}s`,
+    );
     return entities.map((entity) => entity.toObject());
+  }
+
+  /**
+   * Find transactions with filtering, search, and pagination using QueryBuilder.
+   */
+  async findFiltered(
+    userId: string,
+    filters: TransactionFilterDto,
+  ): Promise<PaginatedTransactions> {
+    const {
+      page,
+      limit,
+      accountId,
+      categoryId,
+      startDate,
+      endDate,
+      search,
+      minAmount,
+      maxAmount,
+    } = filters;
+
+    this.logger.log({ userId, filters }, 'Finding filtered transactions');
+
+    const qb = this.repository
+      .createQueryBuilder('txn')
+      .leftJoinAndSelect('txn.account', 'account')
+      .leftJoinAndSelect('txn.category', 'category')
+      .where('txn.userId = :userId', { userId });
+
+    // Filter by account IDs
+    if (accountId) {
+      const accountIds = Array.isArray(accountId) ? accountId : [accountId];
+      qb.andWhere('txn.accountId IN (:...accountIds)', { accountIds });
+    }
+
+    // Filter by category IDs
+    if (categoryId) {
+      const categoryIds = Array.isArray(categoryId) ? categoryId : [categoryId];
+      qb.andWhere('txn.categoryId IN (:...categoryIds)', { categoryIds });
+    }
+
+    // Filter by date range
+    if (startDate) {
+      qb.andWhere('txn.date >= :startDate', { startDate });
+    }
+    if (endDate) {
+      qb.andWhere('txn.date <= :endDate', { endDate });
+    }
+
+    // Case-insensitive search on merchant name
+    if (search) {
+      qb.andWhere('txn.merchantName ILIKE :search', {
+        search: `%${search}%`,
+      });
+    }
+
+    // Filter by amount range (compare on the stored integer amount in cents)
+    if (minAmount !== undefined) {
+      qb.andWhere('txn.amountAmount >= :minAmount', {
+        minAmount: Math.round(minAmount * 100),
+      });
+    }
+    if (maxAmount !== undefined) {
+      qb.andWhere('txn.amountAmount <= :maxAmount', {
+        maxAmount: Math.round(maxAmount * 100),
+      });
+    }
+
+    // Order by date descending
+    qb.orderBy('txn.date', 'DESC').addOrderBy('txn.datetime', 'DESC');
+
+    // Pagination
+    const skip = (page - 1) * limit;
+    qb.skip(skip).take(limit);
+
+    const [entities, total] = await qb.getManyAndCount();
+
+    this.logger.log(
+      { userId, total, page, limit },
+      'Found filtered transactions',
+    );
+
+    return {
+      data: entities.map((entity) => entity.toObject()),
+      total,
+      page,
+      limit,
+      hasMore: skip + entities.length < total,
+    };
   }
 
   /**

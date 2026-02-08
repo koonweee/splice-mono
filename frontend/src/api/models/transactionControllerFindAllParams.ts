@@ -7,8 +7,13 @@
  */
 
 export type TransactionControllerFindAllParams = {
-  /**
-   * Filter by account ID
-   */
-  accountId?: string
+  page?: number
+  limit?: number
+  accountId?: string | Array<string>
+  categoryId?: string | Array<string>
+  startDate?: string
+  endDate?: string
+  search?: string
+  minAmount?: number
+  maxAmount?: number
 }

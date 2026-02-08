@@ -9,7 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   CurrentUser,
   type JwtUser,
@@ -17,11 +17,15 @@ import {
 import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import type {
   CreateTransactionDto,
+  PaginatedTransactions,
   Transaction,
+  TransactionFilterDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
 import {
   CreateTransactionDtoSchema,
+  PaginatedTransactionsSchema,
+  TransactionFilterDtoSchema,
   TransactionSchema,
   UpdateTransactionDtoSchema,
 } from '../types/Transaction';
@@ -34,26 +38,20 @@ export class TransactionController {
   constructor(private transactionService: TransactionService) {}
 
   @Get()
-  @ApiOperation({ description: 'Get all transactions' })
+  @ApiOperation({
+    description: 'Get transactions with filtering and pagination',
+  })
   @ZodApiResponse({
     status: 200,
-    description: 'Returns all transactions',
-    schema: TransactionSchema,
-    isArray: true,
-  })
-  @ApiQuery({
-    name: 'accountId',
-    required: false,
-    description: 'Filter by account ID',
+    description: 'Returns paginated transactions',
+    schema: PaginatedTransactionsSchema,
   })
   async findAll(
     @CurrentUser() user: JwtUser,
-    @Query('accountId') accountId?: string,
-  ): Promise<Transaction[]> {
-    if (accountId) {
-      return this.transactionService.findByAccountId(accountId, user.userId);
-    }
-    return this.transactionService.findAll(user.userId);
+    @Query(new ZodValidationPipe(TransactionFilterDtoSchema))
+    filters: TransactionFilterDto,
+  ): Promise<PaginatedTransactions> {
+    return this.transactionService.findFiltered(user.userId, filters);
   }
 
   @Post()

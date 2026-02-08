@@ -205,6 +205,7 @@ describe('TransactionService', () => {
       expect(mockRepository.find).toHaveBeenCalledWith({
         where: { userId: mockUserId },
         relations: ['account', 'category'],
+        order: { date: 'DESC', datetime: { direction: 'DESC', nulls: 'LAST' } },
       });
     });
 
@@ -233,36 +234,118 @@ describe('TransactionService', () => {
     });
   });
 
-  describe('findByAccountId', () => {
-    it('should return transactions for a specific account', async () => {
-      const mockEntity1 = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity1.id = 'id-1';
-      const mockEntity2 = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity2.id = 'id-2';
+  describe('findFiltered', () => {
+    const mockQb = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn(),
+    };
 
-      mockRepository.find.mockResolvedValue([mockEntity1, mockEntity2]);
-
-      const result = await service.findByAccountId(mockAccountId, mockUserId);
-
-      expect(result).toHaveLength(2);
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        where: { accountId: mockAccountId, userId: mockUserId },
-        relations: ['account', 'category'],
+    beforeEach(() => {
+      mockRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQb);
+      Object.values(mockQb).forEach((fn) => {
+        if (typeof fn === 'function' && 'mockClear' in fn) {
+          (fn as jest.Mock).mockClear();
+          // Re-chain for fluent API
+          if (fn !== mockQb.getManyAndCount) {
+            (fn as jest.Mock).mockReturnThis();
+          }
+        }
       });
     });
 
-    it('should return empty array when no transactions exist for account', async () => {
-      mockRepository.find.mockResolvedValue([]);
+    it('should return paginated results with defaults', async () => {
+      const mockEntity = TransactionEntity.fromDto(
+        mockCreateTransactionDto,
+        mockUserId,
+      );
+      mockEntity.id = 'id-1';
+      mockQb.getManyAndCount.mockResolvedValue([[mockEntity], 1]);
 
-      const result = await service.findByAccountId(mockAccountId, mockUserId);
+      const result = await service.findFiltered(mockUserId, {
+        page: 1,
+        limit: 50,
+      });
 
-      expect(result).toEqual([]);
+      expect(result.data).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(50);
+      expect(result.hasMore).toBe(false);
+    });
+
+    it('should apply account filter', async () => {
+      mockQb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findFiltered(mockUserId, {
+        page: 1,
+        limit: 50,
+        accountId: mockAccountId,
+      });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'txn.accountId IN (:...accountIds)',
+        { accountIds: [mockAccountId] },
+      );
+    });
+
+    it('should apply search filter', async () => {
+      mockQb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findFiltered(mockUserId, {
+        page: 1,
+        limit: 50,
+        search: 'starbucks',
+      });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'txn.merchantName ILIKE :search',
+        { search: '%starbucks%' },
+      );
+    });
+
+    it('should apply date range filters', async () => {
+      mockQb.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findFiltered(mockUserId, {
+        page: 1,
+        limit: 50,
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+      });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'txn.date >= :startDate',
+        { startDate: '2024-01-01' },
+      );
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'txn.date <= :endDate',
+        { endDate: '2024-01-31' },
+      );
+    });
+
+    it('should calculate hasMore correctly', async () => {
+      const entities = Array.from({ length: 10 }, (_, i) => {
+        const entity = TransactionEntity.fromDto(
+          mockCreateTransactionDto,
+          mockUserId,
+        );
+        entity.id = `id-${i}`;
+        return entity;
+      });
+      mockQb.getManyAndCount.mockResolvedValue([entities, 25]);
+
+      const result = await service.findFiltered(mockUserId, {
+        page: 1,
+        limit: 10,
+      });
+
+      expect(result.hasMore).toBe(true);
     });
   });
 

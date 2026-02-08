@@ -101,6 +101,7 @@ export class TransactionEntity extends OwnedEntity {
       userId: this.userId,
       amount: this.amount.toMoneyWithSign(),
       accountId: this.accountId,
+      account: this.account ? this.account.toObject() : null,
       merchantName: this.merchantName,
       pending: this.pending,
       externalTransactionId: this.externalTransactionId,

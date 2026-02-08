@@ -37,6 +37,7 @@ import type {
   InitiateLinkResponse,
   LoginDto,
   LoginResponse,
+  PaginatedTransactions,
   RefreshTokenDto,
   TokenResponse,
   Transaction,
@@ -2381,7 +2382,7 @@ export const transactionControllerFindAll = (
   params?: TransactionControllerFindAllParams,
   signal?: AbortSignal,
 ) => {
-  return axios<Array<Transaction>>({
+  return axios<PaginatedTransactions>({
     url: `/transaction`,
     method: 'GET',
     params,
