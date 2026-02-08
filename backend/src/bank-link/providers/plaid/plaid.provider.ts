@@ -17,6 +17,8 @@ import {
   PlaidApi,
   PlaidEnvironments,
   Products,
+  SyncUpdatesAvailableWebhook,
+  Transaction as PlaidTransaction,
   UserCreateRequest,
 } from 'plaid';
 import {
@@ -25,8 +27,10 @@ import {
   type Institution,
   LinkCompletionResponse,
   LinkInitiationResponse,
+  type TransactionSyncResponse,
 } from '../../../types/BankLink';
 import { MoneySign, MoneyWithSign } from '../../../types/MoneyWithSign';
+import type { CreateTransactionDto } from '../../../types/Transaction';
 import {
   PlaidUserDetails,
   PlaidUserDetailsSchema,
@@ -75,6 +79,43 @@ function isTransactionsDefaultUpdateWebhook(
   return (
     p.webhook_type === 'TRANSACTIONS' &&
     p.webhook_code === 'DEFAULT_UPDATE' &&
+    typeof p.item_id === 'string'
+  );
+}
+
+/**
+ * Type guard for TRANSACTIONS SYNC_UPDATES_AVAILABLE webhook
+ */
+function isSyncUpdatesAvailableWebhook(
+  payload: unknown,
+): payload is SyncUpdatesAvailableWebhook {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return (
+    p.webhook_type === 'TRANSACTIONS' &&
+    p.webhook_code === 'SYNC_UPDATES_AVAILABLE' &&
+    typeof p.item_id === 'string'
+  );
+}
+
+/**
+ * Type guard for TRANSACTIONS webhook codes that should trigger a sync
+ * Covers: INITIAL_UPDATE, HISTORICAL_UPDATE, TRANSACTIONS_REMOVED
+ */
+function isTransactionsSyncTriggerWebhook(
+  payload: unknown,
+): payload is { webhook_type: string; webhook_code: string; item_id: string } {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  const syncTriggerCodes = [
+    'INITIAL_UPDATE',
+    'HISTORICAL_UPDATE',
+    'TRANSACTIONS_REMOVED',
+  ];
+  return (
+    p.webhook_type === 'TRANSACTIONS' &&
+    typeof p.webhook_code === 'string' &&
+    syncTriggerCodes.includes(p.webhook_code) &&
     typeof p.item_id === 'string'
   );
 }
@@ -666,8 +707,19 @@ export class PlaidProvider implements IBankLinkProvider {
   parseUpdateWebhook(
     rawPayload: Record<string, any>,
   ): { itemId: string; type: string } | undefined {
+    // Check for TRANSACTIONS SYNC_UPDATES_AVAILABLE (preferred for /transactions/sync)
+    if (isSyncUpdatesAvailableWebhook(rawPayload)) {
+      return { itemId: rawPayload.item_id, type: 'TRANSACTIONS' };
+    }
+
     // Check for TRANSACTIONS DEFAULT_UPDATE
     if (isTransactionsDefaultUpdateWebhook(rawPayload)) {
+      return { itemId: rawPayload.item_id, type: 'TRANSACTIONS' };
+    }
+
+    // Check for other transaction webhook codes that should trigger sync
+    // (INITIAL_UPDATE, HISTORICAL_UPDATE, TRANSACTIONS_REMOVED)
+    if (isTransactionsSyncTriggerWebhook(rawPayload)) {
       return { itemId: rawPayload.item_id, type: 'TRANSACTIONS' };
     }
 
@@ -827,6 +879,131 @@ export class PlaidProvider implements IBankLinkProvider {
       );
       throw error;
     }
+  }
+
+  /**
+   * Sync transactions using Plaid's /transactions/sync cursor-based API
+   * Fetches all available pages in a single call, accumulating results
+   *
+   * @param authentication - Authentication data containing { accessToken: string }
+   * @param cursor - Cursor from previous sync (undefined for initial sync)
+   * @returns Accumulated sync results with next cursor
+   */
+  async syncTransactions(
+    authentication: Record<string, any>,
+    cursor?: string,
+  ): Promise<TransactionSyncResponse> {
+    if (!isPlaidAuthentication(authentication)) {
+      throw new Error('Missing or invalid accessToken in authentication data');
+    }
+    const { accessToken } = authentication;
+
+    const allAdded: CreateTransactionDto[] = [];
+    const allModified: CreateTransactionDto[] = [];
+    const allRemoved: string[] = [];
+    let currentCursor = cursor ?? '';
+    let hasMore = true;
+
+    this.logger.log(
+      { accessTokenHint: accessToken.slice(-4), hasCursor: !!cursor },
+      'Starting transaction sync',
+    );
+
+    while (hasMore) {
+      const response = await this.client.transactionsSync({
+        access_token: accessToken,
+        cursor: currentCursor,
+        count: 500,
+      });
+
+      const { added, modified, removed, next_cursor, has_more } = response.data;
+
+      allAdded.push(...added.map((t) => this.mapPlaidTransactionToDto(t)));
+      allModified.push(
+        ...modified.map((t) => this.mapPlaidTransactionToDto(t)),
+      );
+      allRemoved.push(...removed.map((r) => r.transaction_id));
+
+      currentCursor = next_cursor;
+      hasMore = has_more;
+
+      this.logger.log(
+        {
+          addedCount: added.length,
+          modifiedCount: modified.length,
+          removedCount: removed.length,
+          hasMore,
+        },
+        'Fetched transaction sync page',
+      );
+    }
+
+    this.logger.log(
+      {
+        totalAdded: allAdded.length,
+        totalModified: allModified.length,
+        totalRemoved: allRemoved.length,
+      },
+      'Transaction sync complete',
+    );
+
+    return {
+      added: allAdded,
+      modified: allModified,
+      removed: allRemoved,
+      nextCursor: currentCursor,
+      hasMore: false,
+    };
+  }
+
+  /**
+   * Map a Plaid Transaction to a CreateTransactionDto
+   * Note: accountId is set to the Plaid external account ID here;
+   * the service layer will map it to the internal account ID
+   */
+  private mapPlaidTransactionToDto(
+    plaidTransaction: PlaidTransaction,
+  ): CreateTransactionDto {
+    const {
+      transaction_id,
+      account_id,
+      amount,
+      iso_currency_code,
+      unofficial_currency_code,
+      merchant_name,
+      pending,
+      date,
+      datetime,
+      authorized_date,
+      authorized_datetime,
+      logo_url,
+    } = plaidTransaction;
+
+    const currency = iso_currency_code ?? unofficial_currency_code ?? 'USD';
+
+    // Plaid: positive = money out, negative = money in
+    // We store: negative = expense/money out, positive = income/money in
+    // So we invert the sign from Plaid's convention
+    const invertedAmount = -amount;
+    const sign = invertedAmount >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
+    const serializedAmount = MoneyWithSign.fromFloat(
+      currency,
+      invertedAmount,
+      sign,
+    ).toSerialized();
+
+    return {
+      amount: serializedAmount,
+      accountId: account_id, // External account ID; mapped to internal ID by service
+      merchantName: merchant_name ?? null,
+      pending,
+      externalTransactionId: transaction_id,
+      logoUrl: logo_url ?? null,
+      date,
+      datetime: datetime ?? null,
+      authorizedDate: authorized_date ?? null,
+      authorizedDatetime: authorized_datetime ?? null,
+    };
   }
 
   // TODO: Implement Plaid link 'update' flow for using same access token to fix broken links

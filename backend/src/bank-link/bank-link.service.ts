@@ -10,6 +10,7 @@ import {
   LinkedAccountEvents,
   LinkedAccountUpdatedEvent,
 } from '../events/account.events';
+import { TransactionService } from '../transaction/transaction.service';
 import type { Account, CreateAccountDto } from '../types/Account';
 import type {
   APIAccount,
@@ -49,6 +50,7 @@ export class BankLinkService extends OwnedCrudService<
     private accountRepository: Repository<AccountEntity>,
     private eventEmitter: EventEmitter2,
     private userService: UserService,
+    private transactionService: TransactionService,
   ) {
     super(bankLinkRepository);
   }
@@ -249,6 +251,27 @@ export class BankLinkService extends OwnedCrudService<
         userId,
       );
     }
+
+    // Trigger initial transaction sync for each new bank link
+    const provider = this.providerRegistry.getProvider(providerName);
+    if (provider.syncTransactions) {
+      const syncResults = await Promise.allSettled(
+        savedBankLinks.map((bankLink) =>
+          this.syncTransactions(bankLink.id, userId),
+        ),
+      );
+      syncResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          this.logger.error(
+            {
+              bankLinkId: savedBankLinks[index].id,
+              error: String(result.reason),
+            },
+            'Failed initial transaction sync for new bank link',
+          );
+        }
+      });
+    }
   }
 
   /**
@@ -381,6 +404,25 @@ export class BankLinkService extends OwnedCrudService<
       { bankLinkId: bankLink.id },
       'Synced accounts for bank link',
     );
+
+    // Also sync transactions if this is a TRANSACTIONS webhook
+    if (updateInfo.type === 'TRANSACTIONS') {
+      try {
+        await this.syncTransactions(bankLink.id, bankLink.userId);
+        this.logger.log(
+          { bankLinkId: bankLink.id },
+          'Synced transactions for bank link',
+        );
+      } catch (error) {
+        this.logger.error(
+          {
+            bankLinkId: bankLink.id,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Failed to sync transactions for bank link',
+        );
+      }
+    }
   }
 
   /**
@@ -627,6 +669,95 @@ export class BankLinkService extends OwnedCrudService<
     this.logger.log({ count: savedAccounts.length }, 'Synced accounts');
 
     return savedAccounts;
+  }
+
+  /**
+   * Sync transactions for a bank link using the provider's cursor-based sync API
+   * Fetches sync results, maps external account IDs to internal IDs, processes results,
+   * and updates the stored cursor
+   *
+   * @param bankLinkId - The ID of the bank link to sync transactions for
+   * @param userId - ID of the user who owns this bank link
+   */
+  async syncTransactions(bankLinkId: string, userId: string): Promise<void> {
+    const bankLink = await this.repository.findOne({
+      where: { id: bankLinkId, userId },
+    });
+    if (!bankLink) {
+      throw new Error(`Bank link not found: ${bankLinkId}`);
+    }
+
+    const provider = this.providerRegistry.getProvider(bankLink.providerName);
+    if (!provider.syncTransactions) {
+      this.logger.log(
+        { providerName: bankLink.providerName },
+        'Provider does not support transaction sync, skipping',
+      );
+      return;
+    }
+
+    // Get current cursor from authentication data
+    const currentCursor = bankLink.authentication.nextCursor as
+      | string
+      | undefined;
+
+    this.logger.log(
+      {
+        bankLinkId,
+        hasCursor: !!currentCursor,
+        providerName: bankLink.providerName,
+      },
+      'Starting transaction sync for bank link',
+    );
+
+    // Call provider to get sync results
+    const syncResults = await provider.syncTransactions(
+      bankLink.authentication,
+      currentCursor,
+    );
+
+    // Build external account ID -> internal account ID map
+    const externalAccountIds = bankLink.accountIds;
+    const accounts = await this.accountRepository.find({
+      where: {
+        externalAccountId: In(externalAccountIds),
+        userId,
+      },
+    });
+
+    const accountIdMap = new Map<string, string>();
+    accounts.forEach((account) => {
+      if (account.externalAccountId) {
+        accountIdMap.set(account.externalAccountId, account.id);
+      }
+    });
+
+    this.logger.log(
+      {
+        mappedAccounts: accountIdMap.size,
+        totalExternalIds: externalAccountIds.length,
+      },
+      'Built account ID map for transaction sync',
+    );
+
+    // Process sync results (add/modify/remove transactions)
+    await this.transactionService.processSyncResults(
+      userId,
+      accountIdMap,
+      syncResults,
+    );
+
+    // Update cursor in authentication data
+    bankLink.authentication = {
+      ...bankLink.authentication,
+      nextCursor: syncResults.nextCursor,
+    };
+    await this.repository.save(bankLink);
+
+    this.logger.log(
+      { bankLinkId, newCursor: syncResults.nextCursor },
+      'Transaction sync completed, cursor updated',
+    );
   }
 
   /**
