@@ -559,5 +559,134 @@ describe('TransactionService', () => {
       expect(mockTxnRepo.save).not.toHaveBeenCalled();
       expect(mockTxnRepo.delete).not.toHaveBeenCalled();
     });
+
+    it('should resolve categoryId from personalFinanceCategory on added transactions', async () => {
+      mockCategoryRepository.find.mockResolvedValue([
+        { id: 'cat-uuid-1', primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_COFFEE' },
+      ]);
+
+      const syncResults: TransactionSyncResponse = {
+        added: [
+          {
+            ...mockSyncTransaction,
+            personalFinanceCategory: {
+              primary: 'FOOD_AND_DRINK',
+              detailed: 'FOOD_AND_DRINK_COFFEE',
+            },
+          },
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor-1',
+        hasMore: false,
+      };
+
+      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
+
+      expect(mockTxnRepo.save).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            categoryId: 'cat-uuid-1',
+            accountId: 'int-acc-1',
+          }),
+        ]),
+      );
+    });
+
+    it('should leave categoryId null when personalFinanceCategory is not provided', async () => {
+      mockCategoryRepository.find.mockResolvedValue([
+        { id: 'cat-uuid-1', primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_COFFEE' },
+      ]);
+
+      const syncResults: TransactionSyncResponse = {
+        added: [mockSyncTransaction], // no personalFinanceCategory
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor-1',
+        hasMore: false,
+      };
+
+      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
+
+      expect(mockTxnRepo.save).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            categoryId: null,
+            accountId: 'int-acc-1',
+          }),
+        ]),
+      );
+    });
+
+    it('should leave categoryId null when personalFinanceCategory is unknown', async () => {
+      mockCategoryRepository.find.mockResolvedValue([
+        { id: 'cat-uuid-1', primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_COFFEE' },
+      ]);
+
+      const syncResults: TransactionSyncResponse = {
+        added: [
+          {
+            ...mockSyncTransaction,
+            personalFinanceCategory: {
+              primary: 'UNKNOWN',
+              detailed: 'UNKNOWN_SUBCATEGORY',
+            },
+          },
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor-1',
+        hasMore: false,
+      };
+
+      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
+
+      expect(mockTxnRepo.save).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            categoryId: null,
+            accountId: 'int-acc-1',
+          }),
+        ]),
+      );
+    });
+
+    it('should resolve categoryId on modified transactions', async () => {
+      mockCategoryRepository.find.mockResolvedValue([
+        { id: 'cat-uuid-2', primary: 'TRANSPORTATION', detailed: 'TRANSPORTATION_GAS' },
+      ]);
+
+      const existingEntity = TransactionEntity.fromDto(
+        { ...mockCreateTransactionDto, accountId: 'int-acc-1' },
+        mockUserId,
+      );
+      existingEntity.id = 'existing-id';
+      mockTxnRepo.findOne.mockResolvedValue(existingEntity);
+
+      const syncResults: TransactionSyncResponse = {
+        added: [],
+        modified: [
+          {
+            ...mockSyncTransaction,
+            personalFinanceCategory: {
+              primary: 'TRANSPORTATION',
+              detailed: 'TRANSPORTATION_GAS',
+            },
+          },
+        ],
+        removed: [],
+        nextCursor: 'cursor-1',
+        hasMore: false,
+      };
+
+      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
+
+      expect(mockTxnRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'existing-id',
+          categoryId: 'cat-uuid-2',
+        }),
+      );
+    });
   });
 });
