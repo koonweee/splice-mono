@@ -599,6 +599,56 @@ export class BankLinkService extends OwnedCrudService<
   }
 
   /**
+   * Sync transactions for all bank links for a user
+   * Used to backfill transactions for existing Plaid links that were created
+   * before transaction sync was implemented
+   *
+   * @param userId - ID of the user whose bank links to sync transactions for
+   * @returns Counts of synced and failed bank links
+   */
+  async syncAllTransactions(
+    userId: string,
+  ): Promise<{ synced: number; failed: number }> {
+    this.logger.log({ userId }, 'Syncing transactions for all bank links');
+
+    const bankLinks = await this.repository.find({
+      where: { userId },
+    });
+    this.logger.log(
+      { count: bankLinks.length },
+      'Found bank links for transaction sync',
+    );
+
+    let synced = 0;
+    let failed = 0;
+
+    const results = await Promise.allSettled(
+      bankLinks.map((bankLink) => this.syncTransactions(bankLink.id, userId)),
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        synced++;
+      } else {
+        failed++;
+        this.logger.error(
+          {
+            bankLinkId: bankLinks[index].id,
+            error: String(result.reason),
+          },
+          'Failed to sync transactions for bank link',
+        );
+      }
+    });
+
+    this.logger.log(
+      { synced, failed, total: bankLinks.length },
+      'Transaction sync complete for all bank links',
+    );
+    return { synced, failed };
+  }
+
+  /**
    * Sync accounts for a bank link by fetching latest data from the provider
    *
    * @param bankLinkId - The ID of the bank link to sync
