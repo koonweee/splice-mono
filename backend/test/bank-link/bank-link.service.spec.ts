@@ -5,6 +5,7 @@ import { AccountEntity } from '../../src/account/account.entity';
 import { BankLinkEntity } from '../../src/bank-link/bank-link.entity';
 import { BankLinkService } from '../../src/bank-link/bank-link.service';
 import { ProviderRegistry } from '../../src/bank-link/providers/provider.registry';
+import { TransactionService } from '../../src/transaction/transaction.service';
 import { UserService } from '../../src/user/user.service';
 import { WebhookEventService } from '../../src/webhook-event/webhook-event.service';
 import { mockProviderRegistry } from '../mocks/bank-link/provider-registry.mock';
@@ -19,6 +20,10 @@ import { mockWebhookEventService } from '../mocks/webhook-event/webhook-event-se
 
 const mockEventEmitter = {
   emit: jest.fn(),
+};
+
+const mockTransactionService = {
+  processSyncResults: jest.fn().mockResolvedValue(undefined),
 };
 
 const mockUserId = 'user-uuid-123';
@@ -136,6 +141,10 @@ describe('BankLinkService', () => {
         {
           provide: UserService,
           useValue: mockUserService,
+        },
+        {
+          provide: TransactionService,
+          useValue: mockTransactionService,
         },
       ],
     }).compile();
@@ -587,15 +596,16 @@ describe('BankLinkService', () => {
       expect(mockBankLinkRepository.createQueryBuilder).toHaveBeenCalled();
 
       // Should save the updated existing entity (not create a new one via fromDto)
+      // The authentication now includes nextCursor from initial transaction sync
       expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           id: mockBankLinkEntity.id, // Same entity ID = update, not create
           status: 'OK',
           statusBody: null,
-          authentication: {
+          authentication: expect.objectContaining({
             accessToken: 'access-token-123',
             itemId: 'item-mock-123',
-          },
+          }),
         }),
       );
     });
@@ -1383,6 +1393,95 @@ describe('BankLinkService', () => {
       ).rejects.toThrow(
         `Bank link ID not found for account ${mockApiAccount.accountId}`,
       );
+    });
+  });
+
+  describe('syncTransactions', () => {
+    beforeEach(() => {
+      mockBankLinkRepository.findOne.mockResolvedValue({
+        ...mockBankLinkEntity,
+        userId: mockUserId,
+      });
+      mockAccountRepository.find.mockResolvedValue([
+        {
+          id: 'internal-acc-1',
+          externalAccountId: 'acc-1',
+        },
+        {
+          id: 'internal-acc-2',
+          externalAccountId: 'acc-2',
+        },
+      ]);
+    });
+
+    it('should call provider syncTransactions and process results', async () => {
+      await service.syncTransactions(mockBankLink.id, mockUserId);
+
+      expect(mockPlaidProvider.syncTransactions).toHaveBeenCalledWith(
+        { accessToken: 'test-token' },
+        undefined,
+      );
+      expect(mockTransactionService.processSyncResults).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Map),
+        expect.objectContaining({
+          added: [],
+          modified: [],
+          removed: [],
+          nextCursor: 'cursor-mock-123',
+        }),
+      );
+    });
+
+    it('should update cursor in authentication after sync', async () => {
+      await service.syncTransactions(mockBankLink.id, mockUserId);
+
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authentication: expect.objectContaining({
+            nextCursor: 'cursor-mock-123',
+          }),
+        }),
+      );
+    });
+
+    it('should pass existing cursor to provider when available', async () => {
+      mockBankLinkRepository.findOne.mockResolvedValue({
+        ...mockBankLinkEntity,
+        userId: mockUserId,
+        authentication: {
+          accessToken: 'test-token',
+          nextCursor: 'existing-cursor',
+        },
+      });
+
+      await service.syncTransactions(mockBankLink.id, mockUserId);
+
+      expect(mockPlaidProvider.syncTransactions).toHaveBeenCalledWith(
+        { accessToken: 'test-token', nextCursor: 'existing-cursor' },
+        'existing-cursor',
+      );
+    });
+
+    it('should throw when bank link not found', async () => {
+      mockBankLinkRepository.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.syncTransactions('non-existent', mockUserId),
+      ).rejects.toThrow('Bank link not found: non-existent');
+    });
+
+    it('should skip if provider does not support syncTransactions', async () => {
+      // Create a provider without syncTransactions
+      const providerWithoutSync = {
+        ...mockPlaidProvider,
+        syncTransactions: undefined,
+      };
+      providerRegistry.getProvider.mockReturnValueOnce(providerWithoutSync);
+
+      await service.syncTransactions(mockBankLink.id, mockUserId);
+
+      expect(mockTransactionService.processSyncResults).not.toHaveBeenCalled();
     });
   });
 });

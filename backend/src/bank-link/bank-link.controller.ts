@@ -129,6 +129,21 @@ export class BankLinkController {
     return { updated };
   }
 
+  @Post('sync-all-transactions')
+  @ApiOperation({
+    description:
+      'Sync transactions for all bank links. Use this to backfill transactions for existing Plaid links.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Returns counts of synced and failed bank links',
+  })
+  async syncAllTransactions(
+    @CurrentUser() user: JwtUser,
+  ): Promise<{ synced: number; failed: number }> {
+    return this.bankLinkService.syncAllTransactions(user.userId);
+  }
+
   @Post('update-webhook-urls')
   @ApiOperation({
     description:

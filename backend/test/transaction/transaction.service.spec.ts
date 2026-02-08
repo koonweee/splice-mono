@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
+import type { TransactionSyncResponse } from '../../src/types/BankLink';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import {
   mockAccountId,
@@ -12,12 +13,28 @@ import {
 describe('TransactionService', () => {
   let service: TransactionService;
 
+  // Mock transaction repository for manager.transaction
+  const mockTxnRepo = {
+    save: jest.fn().mockImplementation((entities) => Promise.resolve(entities)),
+    findOne: jest.fn(),
+    delete: jest.fn().mockResolvedValue({ affected: 0 }),
+  };
+
+  const mockManager = {
+    getRepository: jest.fn().mockReturnValue(mockTxnRepo),
+  };
+
   // Mock repository methods
   const mockRepository = {
     save: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
     delete: jest.fn(),
+    manager: {
+      transaction: jest.fn(
+        (cb: (manager: typeof mockManager) => Promise<void>) => cb(mockManager),
+      ),
+    },
   };
 
   beforeEach(async () => {
@@ -369,6 +386,168 @@ describe('TransactionService', () => {
       const result = await service.remove('test-id', mockUserId);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('processSyncResults', () => {
+    const accountIdMap = new Map<string, string>([
+      ['ext-acc-1', 'int-acc-1'],
+      ['ext-acc-2', 'int-acc-2'],
+    ]);
+
+    const mockSyncTransaction = {
+      amount: {
+        money: { currency: 'USD', amount: 5000 },
+        sign: MoneySign.NEGATIVE,
+      },
+      accountId: 'ext-acc-1',
+      merchantName: 'Test Store',
+      pending: false,
+      externalTransactionId: 'ext-txn-1',
+      logoUrl: null,
+      date: '2024-01-15',
+      datetime: null,
+      authorizedDate: null,
+      authorizedDatetime: null,
+    };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockTxnRepo.save.mockImplementation((entities) =>
+        Promise.resolve(entities),
+      );
+      mockTxnRepo.findOne.mockResolvedValue(null);
+      mockTxnRepo.delete.mockResolvedValue({ affected: 0 });
+    });
+
+    it('should insert added transactions with mapped account IDs', async () => {
+      const syncResults: TransactionSyncResponse = {
+        added: [mockSyncTransaction],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor-1',
+        hasMore: false,
+      };
+
+      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
+
+      expect(mockTxnRepo.save).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            accountId: 'int-acc-1', // Mapped from ext-acc-1
+            userId: mockUserId,
+          }),
+        ]),
+      );
+    });
+
+    it('should skip transactions with unmapped account IDs', async () => {
+      const syncResults: TransactionSyncResponse = {
+        added: [{ ...mockSyncTransaction, accountId: 'unknown-ext-acc' }],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor-1',
+        hasMore: false,
+      };
+
+      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
+
+      // save should not be called for added (all filtered out)
+      expect(mockTxnRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('should update modified transactions when found', async () => {
+      const existingEntity = TransactionEntity.fromDto(
+        { ...mockCreateTransactionDto, accountId: 'int-acc-1' },
+        mockUserId,
+      );
+      existingEntity.id = 'existing-id';
+      mockTxnRepo.findOne.mockResolvedValue(existingEntity);
+
+      const syncResults: TransactionSyncResponse = {
+        added: [],
+        modified: [{ ...mockSyncTransaction, merchantName: 'Updated Store' }],
+        removed: [],
+        nextCursor: 'cursor-1',
+        hasMore: false,
+      };
+
+      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
+
+      expect(mockTxnRepo.findOne).toHaveBeenCalledWith({
+        where: {
+          externalTransactionId: 'ext-txn-1',
+          accountId: 'int-acc-1',
+          userId: mockUserId,
+        },
+      });
+      expect(mockTxnRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'existing-id',
+          merchantName: 'Updated Store',
+        }),
+      );
+    });
+
+    it('should insert modified transactions that are not found locally', async () => {
+      mockTxnRepo.findOne.mockResolvedValue(null);
+
+      const syncResults: TransactionSyncResponse = {
+        added: [],
+        modified: [mockSyncTransaction],
+        removed: [],
+        nextCursor: 'cursor-1',
+        hasMore: false,
+      };
+
+      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
+
+      // Should save a new entity since the modified one wasn't found
+      expect(mockTxnRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: 'int-acc-1',
+          userId: mockUserId,
+        }),
+      );
+    });
+
+    it('should delete removed transactions', async () => {
+      mockTxnRepo.delete.mockResolvedValue({ affected: 2 });
+
+      const syncResults: TransactionSyncResponse = {
+        added: [],
+        modified: [],
+        removed: ['ext-txn-1', 'ext-txn-2'],
+        nextCursor: 'cursor-1',
+        hasMore: false,
+      };
+
+      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
+
+      expect(mockTxnRepo.delete).toHaveBeenCalledWith({
+        externalTransactionId: expect.objectContaining({
+          _value: ['ext-txn-1', 'ext-txn-2'],
+        }),
+        accountId: expect.objectContaining({
+          _value: ['int-acc-1', 'int-acc-2'],
+        }),
+        userId: mockUserId,
+      });
+    });
+
+    it('should handle empty sync results', async () => {
+      const syncResults: TransactionSyncResponse = {
+        added: [],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor-1',
+        hasMore: false,
+      };
+
+      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
+
+      expect(mockTxnRepo.save).not.toHaveBeenCalled();
+      expect(mockTxnRepo.delete).not.toHaveBeenCalled();
     });
   });
 });
