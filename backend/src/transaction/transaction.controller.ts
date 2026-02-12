@@ -63,7 +63,7 @@ export class TransactionController {
   @ApiQuery({
     name: 'sortBy',
     required: false,
-    description: 'Sort column (date, merchantName, pending)',
+    description: 'Sort column (date, merchantName, pending, amount)',
   })
   @ApiQuery({
     name: 'sortOrder',

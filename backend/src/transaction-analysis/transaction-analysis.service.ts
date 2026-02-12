@@ -49,6 +49,9 @@ export class TransactionAnalysisService {
     const preferredCurrency =
       await this.currencyConversionService.getPreferredCurrency(userId);
 
+    const EXCLUDED_PRIMARY_CATEGORIES = ['TRANSFER_IN', 'TRANSFER_OUT'];
+    const EXCLUDED_DETAILED_CATEGORIES = ['LOAN_PAYMENTS_CREDIT_CARD_PAYMENT'];
+
     // 2. Run aggregation query
     const rows: RawAggregateRow[] = await this.transactionRepository
       .createQueryBuilder('t')
@@ -62,8 +65,11 @@ export class TransactionAnalysisService {
       .andWhere('t.date >= :startDate', { startDate })
       .andWhere('t.date <= :endDate', { endDate })
       .andWhere(
-        '(c.primary IS NULL OR c.primary NOT IN (:...excludedCategories))',
-        { excludedCategories: ['TRANSFER_IN', 'TRANSFER_OUT'] },
+        '(c.primary IS NULL OR (c.primary NOT IN (:...excludedPrimary) AND c.detailed NOT IN (:...excludedDetailed)))',
+        {
+          excludedPrimary: EXCLUDED_PRIMARY_CATEGORIES,
+          excludedDetailed: EXCLUDED_DETAILED_CATEGORIES,
+        },
       )
       .groupBy('c.primary')
       .addGroupBy('t."amountSign"')
