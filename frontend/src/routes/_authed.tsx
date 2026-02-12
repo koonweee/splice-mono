@@ -59,19 +59,14 @@ function AuthedLayout() {
       navbar={{
         width: 260,
         breakpoint: 'sm',
-        collapsed: { mobile: !opened },
+        collapsed: { mobile: !opened, desktop: !opened },
       }}
       padding="md"
     >
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
           <Group>
-            <Burger
-              opened={opened}
-              onClick={toggle}
-              hiddenFrom="sm"
-              size="sm"
-            />
+            <Burger opened={opened} onClick={toggle} size="sm" />
             <Text fw={700} size="lg">
               Splice
             </Text>
