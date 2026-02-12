@@ -38,6 +38,8 @@ export const TransactionSchema = registerSchema(
       category: CategorySchema.nullable().optional(),
       /** Display name of the associated account (customName or name) */
       accountName: z.string().nullable().optional(),
+      /** Converted amount in user's preferred currency (set when convert=true) */
+      convertedAmount: MoneyWithSignSchema.nullable().optional(),
     })
     .merge(OwnedSchema),
 );

@@ -3,7 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { UserEntity } from '../user/user.entity';
+import { UserModule } from '../user/user.module';
 import { CurrencyBackfillService } from './currency-backfill.service';
+import { CurrencyConversionService } from './currency-conversion.service';
 import { CurrencyExchangeListener } from './currency-exchange.listener';
 import { CurrencyExchangeScheduledService } from './currency-exchange.scheduled';
 import { CurrencyExchangeService } from './currency-exchange.service';
@@ -19,6 +21,7 @@ import { FiatExchangeRateProvider } from './providers/fiat-exchange-rate.provide
       UserEntity,
       BalanceSnapshotEntity,
     ]),
+    UserModule,
   ],
   providers: [
     // Providers (pure API callers)
@@ -28,11 +31,16 @@ import { FiatExchangeRateProvider } from './providers/fiat-exchange-rate.provide
     // Services
     CurrencyExchangeService,
     CurrencyBackfillService,
+    CurrencyConversionService,
 
     // Infrastructure
     CurrencyExchangeScheduledService,
     CurrencyExchangeListener,
   ],
-  exports: [CurrencyExchangeService, CurrencyBackfillService],
+  exports: [
+    CurrencyExchangeService,
+    CurrencyBackfillService,
+    CurrencyConversionService,
+  ],
 })
 export class CurrencyExchangeModule {}
