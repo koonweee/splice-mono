@@ -25,7 +25,7 @@ export class TransactionAnalysisController {
     description:
       'Get cash flow analysis grouped by category for a date range. ' +
       'Returns inflow/outflow breakdowns with amounts converted to user preferred currency. ' +
-      'Transfer categories (TRANSFER_IN, TRANSFER_OUT) are excluded.',
+      'Transfer categories (TRANSFER_IN, TRANSFER_OUT) and credit card payments are excluded.',
   })
   @ApiQuery({
     name: 'startDate',
