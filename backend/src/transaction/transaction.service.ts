@@ -1,6 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, In, Repository } from 'typeorm';
+import {
+  Between,
+  FindOptionsWhere,
+  In,
+  IsNull,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
@@ -77,7 +85,7 @@ export class TransactionService extends OwnedCrudService<
   ]);
 
   /**
-   * Find all transactions with pagination, sorting, and optional account filter
+   * Find all transactions with pagination, sorting, and optional filters
    */
   async findAllPaginated(
     userId: string,
@@ -87,6 +95,10 @@ export class TransactionService extends OwnedCrudService<
       sortBy?: string;
       sortOrder?: 'ASC' | 'DESC';
       accountId?: string;
+      startDate?: string;
+      endDate?: string;
+      categoryPrimary?: string;
+      amountSign?: string;
     },
   ): Promise<{ data: Transaction[]; total: number }> {
     const {
@@ -95,6 +107,10 @@ export class TransactionService extends OwnedCrudService<
       sortBy,
       sortOrder = 'DESC',
       accountId,
+      startDate,
+      endDate,
+      categoryPrimary,
+      amountSign,
     } = options;
 
     const sortColumn =
@@ -108,8 +124,48 @@ export class TransactionService extends OwnedCrudService<
       where.accountId = accountId;
     }
 
+    // Date range filters
+    if (startDate && endDate) {
+      where.date = Between(startDate, endDate);
+    } else if (startDate) {
+      where.date = MoreThanOrEqual(startDate);
+    } else if (endDate) {
+      where.date = LessThanOrEqual(endDate);
+    }
+
+    // Amount sign filter
+    if (amountSign === 'positive' || amountSign === 'negative') {
+      where.amount = { sign: amountSign } as unknown as BalanceColumns;
+    }
+
+    // Category primary filter
+    if (categoryPrimary) {
+      if (categoryPrimary === 'UNCATEGORIZED') {
+        where.categoryId = IsNull();
+      } else {
+        const matchingCategories = await this.categoryRepository.find({
+          where: { primary: categoryPrimary },
+        });
+        if (matchingCategories.length === 0) {
+          return { data: [], total: 0 };
+        }
+        where.categoryId = In(matchingCategories.map((c) => c.id));
+      }
+    }
+
     this.logger.log(
-      { userId, pageIndex, pageSize, sortColumn, order, accountId },
+      {
+        userId,
+        pageIndex,
+        pageSize,
+        sortColumn,
+        order,
+        accountId,
+        startDate,
+        endDate,
+        categoryPrimary,
+        amountSign,
+      },
       'Finding paginated transactions',
     );
 

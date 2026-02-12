@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { TransactionController } from '../../src/transaction/transaction.controller';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import { mockTransactionService } from '../mocks/transaction/transaction-service.mock';
@@ -10,6 +11,12 @@ import {
   mockTransaction2,
   mockUpdateTransactionDto,
 } from '../mocks/transaction/transaction.mock';
+
+const mockCurrencyConversionService = {
+  getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
+  getRateMap: jest.fn().mockResolvedValue(new Map()),
+  convertAmount: jest.fn().mockReturnValue(0),
+};
 
 describe('TransactionController', () => {
   let controller: TransactionController;
@@ -22,6 +29,10 @@ describe('TransactionController', () => {
         {
           provide: TransactionService,
           useValue: mockTransactionService,
+        },
+        {
+          provide: CurrencyConversionService,
+          useValue: mockCurrencyConversionService,
         },
       ],
     }).compile();

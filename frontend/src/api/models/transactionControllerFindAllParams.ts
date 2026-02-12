@@ -5,6 +5,7 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { TransactionControllerFindAllAmountSign } from './transactionControllerFindAllAmountSign'
 
 export type TransactionControllerFindAllParams = {
   /**
@@ -27,4 +28,24 @@ export type TransactionControllerFindAllParams = {
    * Filter by account ID
    */
   accountId?: string
+  /**
+   * Filter by start date (YYYY-MM-DD)
+   */
+  startDate?: string
+  /**
+   * Filter by end date (YYYY-MM-DD)
+   */
+  endDate?: string
+  /**
+   * Filter by primary category (e.g. FOOD_AND_DRINK, UNCATEGORIZED)
+   */
+  categoryPrimary?: string
+  /**
+   * Filter by amount sign (positive or negative)
+   */
+  amountSign?: TransactionControllerFindAllAmountSign
+  /**
+   * When true, adds convertedAmount in user preferred currency to each transaction
+   */
+  convert?: boolean
 }
