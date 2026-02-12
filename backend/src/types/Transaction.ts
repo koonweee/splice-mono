@@ -36,6 +36,8 @@ export const TransactionSchema = registerSchema(
       categoryId: z.string().uuid().nullable(),
       /** Joined category details (nullable) */
       category: CategorySchema.nullable().optional(),
+      /** Display name of the associated account (customName or name) */
+      accountName: z.string().nullable().optional(),
     })
     .merge(OwnedSchema),
 );
@@ -80,3 +82,20 @@ export const UpdateTransactionDtoSchema = registerSchema(
 );
 
 export type UpdateTransactionDto = z.infer<typeof UpdateTransactionDtoSchema>;
+
+/**
+ * Paginated transaction response with metadata for table rendering
+ */
+export const PaginatedTransactionResponseSchema = registerSchema(
+  'PaginatedTransactionResponse',
+  z.object({
+    data: z.array(TransactionSchema),
+    total: z.number().int(),
+    pageIndex: z.number().int(),
+    pageSize: z.number().int(),
+  }),
+);
+
+export type PaginatedTransactionResponse = z.infer<
+  typeof PaginatedTransactionResponseSchema
+>;

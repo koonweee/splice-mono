@@ -13,4 +13,5 @@ export const CreateBalanceSnapshotDtoSnapshotType = {
   USER_UPDATE: 'USER_UPDATE',
   SYNC: 'SYNC',
   FORWARD_FILL: 'FORWARD_FILL',
+  CSV_IMPORT: 'CSV_IMPORT',
 } as const
