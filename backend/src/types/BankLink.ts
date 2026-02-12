@@ -4,6 +4,7 @@ import { registerSchema } from '../common/zod-api-response';
 import { CryptoAccountType } from './AccountType';
 import { MoneyWithSignSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
+import { CreateTransactionDtoSchema } from './Transaction';
 
 /**
  * Supported crypto networks for wallet linking
@@ -210,3 +211,24 @@ export const GetAccountsResponseSchema = z.object({
 });
 
 export type GetAccountsResponse = z.infer<typeof GetAccountsResponseSchema>;
+
+/**
+ * Response from a transaction sync operation (e.g., Plaid /transactions/sync)
+ * Contains added, modified, and removed transactions along with cursor state
+ */
+export const TransactionSyncResponseSchema = z.object({
+  /** New transactions to add */
+  added: z.array(CreateTransactionDtoSchema),
+  /** Existing transactions that have been modified */
+  modified: z.array(CreateTransactionDtoSchema),
+  /** External transaction IDs of removed transactions */
+  removed: z.array(z.string()),
+  /** Cursor for the next sync call */
+  nextCursor: z.string(),
+  /** Whether there are more pages to fetch */
+  hasMore: z.boolean(),
+});
+
+export type TransactionSyncResponse = z.infer<
+  typeof TransactionSyncResponseSchema
+>;

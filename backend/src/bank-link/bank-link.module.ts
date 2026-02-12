@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountEntity } from 'src/account/account.entity';
 import { CryptoModule } from '../crypto/crypto.module';
+import { TransactionModule } from '../transaction/transaction.module';
 import { UserModule } from '../user/user.module';
 import { WebhookEventModule } from '../webhook-event/webhook-event.module';
 import { BankLinkController } from './bank-link.controller';
@@ -21,6 +22,7 @@ import { ProviderRegistry } from './providers/provider.registry';
     TypeOrmModule.forFeature([BankLinkEntity, AccountEntity]),
     WebhookEventModule,
     UserModule, // For accessing user provider details
+    TransactionModule, // For transaction sync processing
     CryptoModule.forRoot({
       alchemyApiKey: process.env.ALCHEMY_API_KEY ?? '',
     }), // Crypto balance service for wallet linking

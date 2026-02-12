@@ -42,6 +42,14 @@ export const mockGetAccountsResponse = {
   institution: mockInstitution,
 };
 
+export const mockTransactionSyncResponse = {
+  added: [],
+  modified: [],
+  removed: [],
+  nextCursor: 'cursor-mock-123',
+  hasMore: false,
+};
+
 export const mockPlaidProvider: IBankLinkProvider = {
   providerName: 'plaid',
   initiateLinking: jest.fn(function (this: void) {
@@ -67,5 +75,8 @@ export const mockPlaidProvider: IBankLinkProvider = {
   }),
   parseStatusWebhook: jest.fn(function (this: void) {
     return undefined; // Default: not a status webhook
+  }),
+  syncTransactions: jest.fn(function (this: void) {
+    return Promise.resolve(mockTransactionSyncResponse);
   }),
 };

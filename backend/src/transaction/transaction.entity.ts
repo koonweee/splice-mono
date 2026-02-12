@@ -110,6 +110,7 @@ export class TransactionEntity extends OwnedEntity {
       authorizedDate: this.authorizedDate,
       authorizedDatetime: this.authorizedDatetime,
       categoryId: this.categoryId,
+      category: this.category ? this.category.toObject() : null,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
