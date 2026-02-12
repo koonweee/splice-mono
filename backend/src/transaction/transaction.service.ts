@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Between,
+  FindOptionsOrder,
   FindOptionsWhere,
   In,
   IsNull,
@@ -82,6 +83,7 @@ export class TransactionService extends OwnedCrudService<
     'date',
     'merchantName',
     'pending',
+    'amount',
   ]);
 
   /**
@@ -117,7 +119,7 @@ export class TransactionService extends OwnedCrudService<
       sortBy && TransactionService.SORTABLE_COLUMNS.has(sortBy)
         ? sortBy
         : 'date';
-    const order = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    const order: 'ASC' | 'DESC' = sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
     const where: FindOptionsWhere<TransactionEntity> = { userId };
     if (accountId) {
@@ -169,10 +171,16 @@ export class TransactionService extends OwnedCrudService<
       'Finding paginated transactions',
     );
 
+    // Embedded columns (e.g. amount) need nested order syntax for TypeORM
+    const orderClause: FindOptionsOrder<TransactionEntity> =
+      sortColumn === 'amount'
+        ? { amount: { amount: order } }
+        : { [sortColumn]: order };
+
     const [entities, total] = await this.repository.findAndCount({
       where,
       relations: this.relations,
-      order: { [sortColumn]: order },
+      order: orderClause,
       skip: pageIndex * pageSize,
       take: pageSize,
     });
