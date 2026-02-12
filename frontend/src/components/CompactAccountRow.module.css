@@ -1,0 +1,15 @@
+.clickable {
+  transition: background-color 150ms ease;
+}
+
+@media (hover: hover) {
+  .clickable:hover {
+    background-color: var(--mantine-color-default-hover);
+  }
+}
+
+@media (hover: none) {
+  .clickable:active {
+    background-color: var(--mantine-color-default-hover);
+  }
+}
