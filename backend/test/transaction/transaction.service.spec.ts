@@ -30,6 +30,7 @@ describe('TransactionService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
     delete: jest.fn(),
     manager: {
       transaction: jest.fn(
@@ -263,6 +264,118 @@ describe('TransactionService', () => {
       const result = await service.findByAccountId(mockAccountId, mockUserId);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('findAllPaginated', () => {
+    it('should return paginated results with default sort', async () => {
+      const mockEntity1 = TransactionEntity.fromDto(
+        mockCreateTransactionDto,
+        mockUserId,
+      );
+      mockEntity1.id = 'id-1';
+      const mockEntity2 = TransactionEntity.fromDto(
+        { ...mockCreateTransactionDto, merchantName: 'Second' },
+        mockUserId,
+      );
+      mockEntity2.id = 'id-2';
+
+      mockRepository.findAndCount.mockResolvedValue([
+        [mockEntity1, mockEntity2],
+        5,
+      ]);
+
+      const result = await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 2,
+      });
+
+      expect(result.data).toHaveLength(2);
+      expect(result.total).toBe(5);
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith({
+        where: { userId: mockUserId },
+        relations: ['account', 'category'],
+        order: { date: 'DESC' },
+        skip: 0,
+        take: 2,
+      });
+    });
+
+    it('should apply custom sort column and order', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        sortBy: 'merchantName',
+        sortOrder: 'ASC',
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order: { merchantName: 'ASC' },
+        }),
+      );
+    });
+
+    it('should fall back to date sort for invalid sortBy', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        sortBy: 'invalidColumn',
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          order: { date: 'DESC' },
+        }),
+      );
+    });
+
+    it('should calculate skip correctly from pageIndex', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 3,
+        pageSize: 15,
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 45,
+          take: 15,
+        }),
+      );
+    });
+
+    it('should filter by accountId when provided', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        accountId: mockAccountId,
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: mockUserId, accountId: mockAccountId },
+        }),
+      );
+    });
+
+    it('should return empty data with total 0 when no results', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      const result = await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+      });
+
+      expect(result.data).toEqual([]);
+      expect(result.total).toBe(0);
     });
   });
 
@@ -562,7 +675,11 @@ describe('TransactionService', () => {
 
     it('should resolve categoryId from personalFinanceCategory on added transactions', async () => {
       mockCategoryRepository.find.mockResolvedValue([
-        { id: 'cat-uuid-1', primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_COFFEE' },
+        {
+          id: 'cat-uuid-1',
+          primary: 'FOOD_AND_DRINK',
+          detailed: 'FOOD_AND_DRINK_COFFEE',
+        },
       ]);
 
       const syncResults: TransactionSyncResponse = {
@@ -595,7 +712,11 @@ describe('TransactionService', () => {
 
     it('should leave categoryId null when personalFinanceCategory is not provided', async () => {
       mockCategoryRepository.find.mockResolvedValue([
-        { id: 'cat-uuid-1', primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_COFFEE' },
+        {
+          id: 'cat-uuid-1',
+          primary: 'FOOD_AND_DRINK',
+          detailed: 'FOOD_AND_DRINK_COFFEE',
+        },
       ]);
 
       const syncResults: TransactionSyncResponse = {
@@ -620,7 +741,11 @@ describe('TransactionService', () => {
 
     it('should leave categoryId null when personalFinanceCategory is unknown', async () => {
       mockCategoryRepository.find.mockResolvedValue([
-        { id: 'cat-uuid-1', primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_COFFEE' },
+        {
+          id: 'cat-uuid-1',
+          primary: 'FOOD_AND_DRINK',
+          detailed: 'FOOD_AND_DRINK_COFFEE',
+        },
       ]);
 
       const syncResults: TransactionSyncResponse = {
@@ -653,7 +778,11 @@ describe('TransactionService', () => {
 
     it('should resolve categoryId on modified transactions', async () => {
       mockCategoryRepository.find.mockResolvedValue([
-        { id: 'cat-uuid-2', primary: 'TRANSPORTATION', detailed: 'TRANSPORTATION_GAS' },
+        {
+          id: 'cat-uuid-2',
+          primary: 'TRANSPORTATION',
+          detailed: 'TRANSPORTATION_GAS',
+        },
       ]);
 
       const existingEntity = TransactionEntity.fromDto(

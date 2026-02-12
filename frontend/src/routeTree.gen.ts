@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthedTransactionsRouteImport } from './routes/_authed/transactions'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedHomeRouteImport } from './routes/_authed/home'
 import { Route as AuthedAccountsRouteImport } from './routes/_authed/accounts'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedTransactionsRoute = AuthedTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/accounts': typeof AuthedAccountsRoute
   '/home': typeof AuthedHomeRoute
   '/settings': typeof AuthedSettingsRoute
+  '/transactions': typeof AuthedTransactionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/accounts': typeof AuthedAccountsRoute
   '/home': typeof AuthedHomeRoute
   '/settings': typeof AuthedSettingsRoute
+  '/transactions': typeof AuthedTransactionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,12 +76,13 @@ export interface FileRoutesById {
   '/_authed/accounts': typeof AuthedAccountsRoute
   '/_authed/home': typeof AuthedHomeRoute
   '/_authed/settings': typeof AuthedSettingsRoute
+  '/_authed/transactions': typeof AuthedTransactionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$' | '/accounts' | '/home' | '/settings'
+  fullPaths: '/' | '/$' | '/accounts' | '/home' | '/settings' | '/transactions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$' | '/accounts' | '/home' | '/settings'
+  to: '/' | '/$' | '/accounts' | '/home' | '/settings' | '/transactions'
   id:
     | '__root__'
     | '/'
@@ -82,6 +91,7 @@ export interface FileRouteTypes {
     | '/_authed/accounts'
     | '/_authed/home'
     | '/_authed/settings'
+    | '/_authed/transactions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -104,6 +114,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/transactions': {
+      id: '/_authed/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof AuthedTransactionsRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings': {
       id: '/_authed/settings'
@@ -141,6 +158,7 @@ interface AuthedRouteChildren {
   AuthedAccountsRoute: typeof AuthedAccountsRoute
   AuthedHomeRoute: typeof AuthedHomeRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
+  AuthedTransactionsRoute: typeof AuthedTransactionsRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
@@ -148,6 +166,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAccountsRoute: AuthedAccountsRoute,
   AuthedHomeRoute: AuthedHomeRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
+  AuthedTransactionsRoute: AuthedTransactionsRoute,
 }
 
 const AuthedRouteWithChildren =

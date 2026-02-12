@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { MoneyWithSign } from './moneyWithSign'
+import type { UpdateTransactionDtoPersonalFinanceCategory } from './updateTransactionDtoPersonalFinanceCategory'
 
 export interface UpdateTransactionDto {
   amount?: MoneyWithSign
@@ -26,4 +27,5 @@ export interface UpdateTransactionDto {
   authorizedDatetime?: string | null
   /** @nullable */
   categoryId?: string | null
+  personalFinanceCategory?: UpdateTransactionDtoPersonalFinanceCategory
 }
