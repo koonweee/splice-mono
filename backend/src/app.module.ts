@@ -17,6 +17,7 @@ import { CategoryModule } from './category/category.module';
 import { CurrencyExchangeModule } from './currency-exchange/currency-exchange.module';
 import { dataSourceOptions } from './data-source';
 import { HealthModule } from './health/health.module';
+import { TransactionAnalysisModule } from './transaction-analysis/transaction-analysis.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { UserModule } from './user/user.module';
 
@@ -86,6 +87,7 @@ import { UserModule } from './user/user.module';
     CategoryModule,
     CurrencyExchangeModule,
     HealthModule,
+    TransactionAnalysisModule,
     TransactionModule,
     UserModule,
     TypeOrmModule.forRoot({

@@ -16,7 +16,14 @@ import {
   redirect,
   useLocation,
 } from '@tanstack/react-router'
-import { CreditCard, Home, LogOut, Settings, TrendingUp } from 'lucide-react'
+import {
+  CreditCard,
+  Home,
+  LogOut,
+  PieChart,
+  Settings,
+  TrendingUp,
+} from 'lucide-react'
 import { useLogout } from '../lib/auth'
 
 export const Route = createFileRoute('/_authed')({
@@ -46,6 +53,7 @@ function AuthedLayout() {
     { to: '/home', label: 'Home', icon: Home },
     { to: '/accounts', label: 'Accounts', icon: CreditCard },
     { to: '/transactions', label: 'Transactions', icon: TrendingUp },
+    { to: '/analysis', label: 'Analysis', icon: PieChart },
     { to: '/settings', label: 'Settings', icon: Settings },
   ]
 
