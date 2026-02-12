@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { FindOptionsWhere, In, Repository } from 'typeorm';
 import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
@@ -68,6 +68,68 @@ export class TransactionService extends OwnedCrudService<
       entity.authorizedDatetime = dto.authorizedDatetime;
     }
     if (dto.categoryId !== undefined) entity.categoryId = dto.categoryId;
+  }
+
+  private static readonly SORTABLE_COLUMNS = new Set([
+    'date',
+    'merchantName',
+    'pending',
+  ]);
+
+  /**
+   * Find all transactions with pagination, sorting, and optional account filter
+   */
+  async findAllPaginated(
+    userId: string,
+    options: {
+      pageIndex: number;
+      pageSize: number;
+      sortBy?: string;
+      sortOrder?: 'ASC' | 'DESC';
+      accountId?: string;
+    },
+  ): Promise<{ data: Transaction[]; total: number }> {
+    const {
+      pageIndex,
+      pageSize,
+      sortBy,
+      sortOrder = 'DESC',
+      accountId,
+    } = options;
+
+    const sortColumn =
+      sortBy && TransactionService.SORTABLE_COLUMNS.has(sortBy)
+        ? sortBy
+        : 'date';
+    const order = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
+    const where: FindOptionsWhere<TransactionEntity> = { userId };
+    if (accountId) {
+      where.accountId = accountId;
+    }
+
+    this.logger.log(
+      { userId, pageIndex, pageSize, sortColumn, order, accountId },
+      'Finding paginated transactions',
+    );
+
+    const [entities, total] = await this.repository.findAndCount({
+      where,
+      relations: this.relations,
+      order: { [sortColumn]: order },
+      skip: pageIndex * pageSize,
+      take: pageSize,
+    });
+
+    this.logger.log(
+      { userId, count: entities.length, total },
+      'Found paginated transactions',
+    );
+
+    return {
+      data: entities.map((entity) => entity.toObject()),
+      total,
+    };
   }
 
   /**
