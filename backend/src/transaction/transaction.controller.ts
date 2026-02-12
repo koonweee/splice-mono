@@ -17,11 +17,13 @@ import {
 import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import type {
   CreateTransactionDto,
+  PaginatedTransactionResponse,
   Transaction,
   UpdateTransactionDto,
 } from '../types/Transaction';
 import {
   CreateTransactionDtoSchema,
+  PaginatedTransactionResponseSchema,
   TransactionSchema,
   UpdateTransactionDtoSchema,
 } from '../types/Transaction';
@@ -34,12 +36,34 @@ export class TransactionController {
   constructor(private transactionService: TransactionService) {}
 
   @Get()
-  @ApiOperation({ description: 'Get all transactions' })
+  @ApiOperation({ description: 'Get all transactions (paginated)' })
   @ZodApiResponse({
     status: 200,
-    description: 'Returns all transactions',
-    schema: TransactionSchema,
-    isArray: true,
+    description: 'Returns paginated transactions',
+    schema: PaginatedTransactionResponseSchema,
+  })
+  @ApiQuery({
+    name: 'pageIndex',
+    required: false,
+    description: 'Page index (0-based)',
+    example: 0,
+  })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    description: 'Page size',
+    example: 20,
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    description: 'Sort column (date, merchantName, pending)',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    description: 'Sort order (ASC or DESC)',
+    example: 'DESC',
   })
   @ApiQuery({
     name: 'accountId',
@@ -48,12 +72,25 @@ export class TransactionController {
   })
   async findAll(
     @CurrentUser() user: JwtUser,
+    @Query('pageIndex') pageIndexStr?: string,
+    @Query('pageSize') pageSizeStr?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
     @Query('accountId') accountId?: string,
-  ): Promise<Transaction[]> {
-    if (accountId) {
-      return this.transactionService.findByAccountId(accountId, user.userId);
-    }
-    return this.transactionService.findAll(user.userId);
+  ): Promise<PaginatedTransactionResponse> {
+    const pageIndex = Math.max(0, parseInt(pageIndexStr ?? '0', 10) || 0);
+    const pageSize = Math.min(
+      100,
+      Math.max(1, parseInt(pageSizeStr ?? '20', 10) || 20),
+    );
+    const order = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
+    const { data, total } = await this.transactionService.findAllPaginated(
+      user.userId,
+      { pageIndex, pageSize, sortBy, sortOrder: order, accountId },
+    );
+
+    return { data, total, pageIndex, pageSize };
   }
 
   @Post()
