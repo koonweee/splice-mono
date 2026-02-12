@@ -228,6 +228,23 @@ export function formatCategoryName(category: {
 }
 
 /**
+ * Format a primary category string for display.
+ * Converts SCREAMING_SNAKE_CASE to Title Case.
+ *
+ * @example
+ * formatPrimaryCategory('FOOD_AND_DRINK') // => "Food And Drink"
+ * formatPrimaryCategory('RENT_AND_UTILITIES') // => "Rent And Utilities"
+ * formatPrimaryCategory('UNCATEGORIZED') // => "Uncategorized"
+ */
+export function formatPrimaryCategory(primary: string): string {
+  return primary
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/**
  * Union type of all possible account type and subType values
  */
 type AccountTypeValue = (typeof AccountType)[keyof typeof AccountType]

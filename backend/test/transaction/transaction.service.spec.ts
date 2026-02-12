@@ -377,6 +377,232 @@ describe('TransactionService', () => {
       expect(result.data).toEqual([]);
       expect(result.total).toBe(0);
     });
+
+    it('should filter by date range when startDate and endDate are provided', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            date: expect.objectContaining({
+              _type: 'between',
+              _value: ['2024-01-01', '2024-01-31'],
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('should apply MoreThanOrEqual when only startDate is provided', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        startDate: '2024-01-01',
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            date: expect.objectContaining({
+              _type: 'moreThanOrEqual',
+              _value: '2024-01-01',
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('should apply LessThanOrEqual when only endDate is provided', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        endDate: '2024-01-31',
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            date: expect.objectContaining({
+              _type: 'lessThanOrEqual',
+              _value: '2024-01-31',
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('should filter by categoryPrimary using category IDs', async () => {
+      mockCategoryRepository.find.mockResolvedValue([
+        { id: 'cat-1', primary: 'FOOD_AND_DRINK', detailed: 'COFFEE' },
+        { id: 'cat-2', primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
+      ]);
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        categoryPrimary: 'FOOD_AND_DRINK',
+      });
+
+      expect(mockCategoryRepository.find).toHaveBeenCalledWith({
+        where: { primary: 'FOOD_AND_DRINK' },
+      });
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            categoryId: expect.objectContaining({
+              _type: 'in',
+              _value: ['cat-1', 'cat-2'],
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('should filter uncategorized using IsNull', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        categoryPrimary: 'UNCATEGORIZED',
+      });
+
+      expect(mockCategoryRepository.find).not.toHaveBeenCalled();
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            categoryId: expect.objectContaining({ _type: 'isNull' }),
+          }),
+        }),
+      );
+    });
+
+    it('should return empty results when categoryPrimary has no matching categories', async () => {
+      mockCategoryRepository.find.mockResolvedValue([]);
+
+      const result = await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        categoryPrimary: 'NONEXISTENT_CATEGORY',
+      });
+
+      expect(result).toEqual({ data: [], total: 0 });
+      expect(mockRepository.findAndCount).not.toHaveBeenCalled();
+    });
+
+    it('should combine all filters together', async () => {
+      mockCategoryRepository.find.mockResolvedValue([
+        { id: 'cat-1', primary: 'FOOD_AND_DRINK', detailed: 'COFFEE' },
+      ]);
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        categoryPrimary: 'FOOD_AND_DRINK',
+        accountId: mockAccountId,
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            accountId: mockAccountId,
+            date: expect.objectContaining({
+              _type: 'between',
+              _value: ['2024-01-01', '2024-01-31'],
+            }),
+            categoryId: expect.objectContaining({
+              _type: 'in',
+              _value: ['cat-1'],
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('should filter by amountSign when provided', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        amountSign: 'positive',
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            amount: { sign: 'positive' },
+          }),
+        }),
+      );
+    });
+
+    it('should combine amountSign with other filters', async () => {
+      mockCategoryRepository.find.mockResolvedValue([
+        { id: 'cat-1', primary: 'INCOME', detailed: 'INCOME_WAGES' },
+      ]);
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        categoryPrimary: 'INCOME',
+        amountSign: 'negative',
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            amount: { sign: 'negative' },
+            date: expect.objectContaining({
+              _type: 'between',
+              _value: ['2024-01-01', '2024-01-31'],
+            }),
+            categoryId: expect.objectContaining({
+              _type: 'in',
+              _value: ['cat-1'],
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('should not include amountSign filter when not provided', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPaginated(mockUserId, {
+        pageIndex: 0,
+        pageSize: 10,
+      });
+
+      const calledWith = mockRepository.findAndCount.mock.calls[0][0];
+      expect(calledWith.where).not.toHaveProperty('amount');
+    });
   });
 
   describe('update', () => {
