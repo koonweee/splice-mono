@@ -202,6 +202,32 @@ export function formatRelativeTime(date: Date | string): string {
 }
 
 /**
+ * Format a Plaid category into a readable name.
+ * Strips the primary prefix from the detailed string and converts to Title Case.
+ *
+ * @example
+ * formatCategoryName({ primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_COFFEE' })
+ * // => "Coffee"
+ *
+ * formatCategoryName({ primary: 'LOAN_PAYMENTS', detailed: 'LOAN_PAYMENTS_CAR_PAYMENT' })
+ * // => "Car Payment"
+ */
+export function formatCategoryName(category: {
+  primary: string
+  detailed: string
+}): string {
+  const suffix = category.detailed.startsWith(`${category.primary}_`)
+    ? category.detailed.slice(category.primary.length + 1)
+    : category.detailed
+
+  return suffix
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/**
  * Union type of all possible account type and subType values
  */
 type AccountTypeValue = (typeof AccountType)[keyof typeof AccountType]

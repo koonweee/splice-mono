@@ -8,6 +8,22 @@
 
 export type TransactionControllerFindAllParams = {
   /**
+   * Page index (0-based)
+   */
+  pageIndex?: string
+  /**
+   * Page size
+   */
+  pageSize?: string
+  /**
+   * Sort column (date, merchantName, pending)
+   */
+  sortBy?: string
+  /**
+   * Sort order (ASC or DESC)
+   */
+  sortOrder?: string
+  /**
    * Filter by account ID
    */
   accountId?: string

@@ -13,7 +13,9 @@ import {
 
 import mantineChartsCss from '@mantine/charts/styles.css?url'
 import mantineCss from '@mantine/core/styles.css?url'
+import mantineDatesCss from '@mantine/dates/styles.css?url'
 import mantineNotificationsCss from '@mantine/notifications/styles.css?url'
+import mantineReactTableCss from 'mantine-react-table/styles.css?url'
 import appCss from '../styles.css?url'
 import type { RouterContext } from '../router'
 import { themes } from '@/lib/theme'
@@ -43,7 +45,15 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
       {
         rel: 'stylesheet',
+        href: mantineDatesCss,
+      },
+      {
+        rel: 'stylesheet',
         href: mantineNotificationsCss,
+      },
+      {
+        rel: 'stylesheet',
+        href: mantineReactTableCss,
       },
       {
         rel: 'stylesheet',

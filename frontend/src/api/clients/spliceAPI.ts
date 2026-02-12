@@ -37,6 +37,7 @@ import type {
   InitiateLinkResponse,
   LoginDto,
   LoginResponse,
+  PaginatedTransactionResponse,
   RefreshTokenDto,
   TokenResponse,
   Transaction,
@@ -2161,6 +2162,83 @@ export const useBankLinkControllerBackfillPlaidItemIds = <
 }
 
 /**
+ * Sync transactions for all bank links. Use this to backfill transactions for existing Plaid links.
+ */
+export const bankLinkControllerSyncAllTransactions = (signal?: AbortSignal) => {
+  return axios<void>({
+    url: `/bank-link/sync-all-transactions`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getBankLinkControllerSyncAllTransactionsMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bankLinkControllerSyncAllTransactions>>,
+    TError,
+    void,
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bankLinkControllerSyncAllTransactions>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ['bankLinkControllerSyncAllTransactions']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bankLinkControllerSyncAllTransactions>>,
+    void
+  > = () => {
+    return bankLinkControllerSyncAllTransactions()
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type BankLinkControllerSyncAllTransactionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bankLinkControllerSyncAllTransactions>>
+>
+
+export type BankLinkControllerSyncAllTransactionsMutationError = unknown
+
+export const useBankLinkControllerSyncAllTransactions = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof bankLinkControllerSyncAllTransactions>>,
+      TError,
+      void,
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof bankLinkControllerSyncAllTransactions>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions =
+    getBankLinkControllerSyncAllTransactionsMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
  * Update webhook URLs for all bank links to use current API_DOMAIN
  */
 export const bankLinkControllerUpdateWebhookUrls = (signal?: AbortSignal) => {
@@ -2237,151 +2315,14 @@ export const useBankLinkControllerUpdateWebhookUrls = <
   return useMutation(mutationOptions, queryClient)
 }
 
-export const healthControllerCheck = (signal?: AbortSignal) => {
-  return axios<void>({ url: `/health`, method: 'GET', signal })
-}
-
-export const getHealthControllerCheckQueryKey = () => {
-  return [`/health`] as const
-}
-
-export const getHealthControllerCheckQueryOptions = <
-  TData = Awaited<ReturnType<typeof healthControllerCheck>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof healthControllerCheck>>,
-      TError,
-      TData
-    >
-  >
-}) => {
-  const { query: queryOptions } = options ?? {}
-
-  const queryKey = queryOptions?.queryKey ?? getHealthControllerCheckQueryKey()
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof healthControllerCheck>>
-  > = ({ signal }) => healthControllerCheck(signal)
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof healthControllerCheck>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type HealthControllerCheckQueryResult = NonNullable<
-  Awaited<ReturnType<typeof healthControllerCheck>>
->
-export type HealthControllerCheckQueryError = unknown
-
-export function useHealthControllerCheck<
-  TData = Awaited<ReturnType<typeof healthControllerCheck>>,
-  TError = unknown,
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof healthControllerCheck>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof healthControllerCheck>>,
-          TError,
-          Awaited<ReturnType<typeof healthControllerCheck>>
-        >,
-        'initialData'
-      >
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-export function useHealthControllerCheck<
-  TData = Awaited<ReturnType<typeof healthControllerCheck>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof healthControllerCheck>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof healthControllerCheck>>,
-          TError,
-          Awaited<ReturnType<typeof healthControllerCheck>>
-        >,
-        'initialData'
-      >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-export function useHealthControllerCheck<
-  TData = Awaited<ReturnType<typeof healthControllerCheck>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof healthControllerCheck>>,
-        TError,
-        TData
-      >
-    >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-
-export function useHealthControllerCheck<
-  TData = Awaited<ReturnType<typeof healthControllerCheck>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof healthControllerCheck>>,
-        TError,
-        TData
-      >
-    >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-} {
-  const queryOptions = getHealthControllerCheckQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> }
-
-  query.queryKey = queryOptions.queryKey
-
-  return query
-}
-
 /**
- * Get all transactions
+ * Get all transactions (paginated)
  */
 export const transactionControllerFindAll = (
   params?: TransactionControllerFindAllParams,
   signal?: AbortSignal,
 ) => {
-  return axios<Array<Transaction>>({
+  return axios<PaginatedTransactionResponse>({
     url: `/transaction`,
     method: 'GET',
     params,
@@ -2932,4 +2873,141 @@ export const useTransactionControllerRemove = <
   const mutationOptions = getTransactionControllerRemoveMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
+}
+
+export const healthControllerCheck = (signal?: AbortSignal) => {
+  return axios<void>({ url: `/health`, method: 'GET', signal })
+}
+
+export const getHealthControllerCheckQueryKey = () => {
+  return [`/health`] as const
+}
+
+export const getHealthControllerCheckQueryOptions = <
+  TData = Awaited<ReturnType<typeof healthControllerCheck>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof healthControllerCheck>>,
+      TError,
+      TData
+    >
+  >
+}) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey = queryOptions?.queryKey ?? getHealthControllerCheckQueryKey()
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof healthControllerCheck>>
+  > = ({ signal }) => healthControllerCheck(signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof healthControllerCheck>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type HealthControllerCheckQueryResult = NonNullable<
+  Awaited<ReturnType<typeof healthControllerCheck>>
+>
+export type HealthControllerCheckQueryError = unknown
+
+export function useHealthControllerCheck<
+  TData = Awaited<ReturnType<typeof healthControllerCheck>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof healthControllerCheck>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof healthControllerCheck>>,
+          TError,
+          Awaited<ReturnType<typeof healthControllerCheck>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useHealthControllerCheck<
+  TData = Awaited<ReturnType<typeof healthControllerCheck>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof healthControllerCheck>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof healthControllerCheck>>,
+          TError,
+          Awaited<ReturnType<typeof healthControllerCheck>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useHealthControllerCheck<
+  TData = Awaited<ReturnType<typeof healthControllerCheck>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof healthControllerCheck>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useHealthControllerCheck<
+  TData = Awaited<ReturnType<typeof healthControllerCheck>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof healthControllerCheck>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getHealthControllerCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
 }

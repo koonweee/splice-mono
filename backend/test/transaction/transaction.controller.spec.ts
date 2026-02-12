@@ -40,33 +40,80 @@ describe('TransactionController', () => {
   describe('findAll', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
 
-    it('should return an array of transactions', async () => {
+    it('should return paginated transactions with default params', async () => {
       const result = await controller.findAll(mockUser);
 
-      expect(result).toEqual([mockTransaction, mockTransaction2]);
-      expect(mockTransactionService.findAll).toHaveBeenCalledWith(
+      expect(result).toEqual({
+        data: [mockTransaction, mockTransaction2],
+        total: 2,
+        pageIndex: 0,
+        pageSize: 20,
+      });
+      expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
         mockUser.userId,
+        {
+          pageIndex: 0,
+          pageSize: 20,
+          sortBy: undefined,
+          sortOrder: 'DESC',
+          accountId: undefined,
+        },
       );
     });
 
-    it('should call transactionService.findAll with userId', async () => {
-      await controller.findAll(mockUser);
+    it('should pass custom pagination params', async () => {
+      await controller.findAll(mockUser, '2', '10', 'merchantName', 'ASC');
 
-      expect(mockTransactionService.findAll).toHaveBeenCalledTimes(1);
-      expect(mockTransactionService.findAll).toHaveBeenCalledWith(
+      expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
         mockUser.userId,
+        {
+          pageIndex: 2,
+          pageSize: 10,
+          sortBy: 'merchantName',
+          sortOrder: 'ASC',
+          accountId: undefined,
+        },
       );
     });
 
     it('should filter by accountId when provided', async () => {
-      const result = await controller.findAll(mockUser, mockAccountId);
-
-      expect(result).toEqual([mockTransaction, mockTransaction2]);
-      expect(mockTransactionService.findByAccountId).toHaveBeenCalledWith(
+      await controller.findAll(
+        mockUser,
+        '0',
+        '20',
+        undefined,
+        undefined,
         mockAccountId,
-        mockUser.userId,
       );
-      expect(mockTransactionService.findAll).not.toHaveBeenCalled();
+
+      expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
+        mockUser.userId,
+        {
+          pageIndex: 0,
+          pageSize: 20,
+          sortBy: undefined,
+          sortOrder: 'DESC',
+          accountId: mockAccountId,
+        },
+      );
+    });
+
+    it('should clamp pageSize to max 100', async () => {
+      await controller.findAll(mockUser, '0', '500');
+
+      expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
+        mockUser.userId,
+        expect.objectContaining({ pageSize: 100 }),
+      );
+    });
+
+    it('should default invalid pageIndex to 0', async () => {
+      await controller.findAll(mockUser, 'abc');
+
+      expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
+        mockUser.userId,
+        expect.objectContaining({ pageIndex: 0 }),
+      );
     });
   });
 
