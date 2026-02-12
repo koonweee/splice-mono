@@ -388,5 +388,24 @@ describe('TransactionAnalysisService', () => {
 
       expect(result.currency).toBe('USD');
     });
+
+    it('should query with correct exclusion parameters for credit card payments', async () => {
+      const mockQueryBuilder = createMockQueryBuilder([]);
+      mockTransactionRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder,
+      );
+
+      await service.getAnalysis('2024-01-01', '2024-01-31', mockUserId);
+
+      // Verify the query builder was called with the correct parameters
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('c.detailed NOT IN'),
+        expect.objectContaining({
+          excludedDetailed: expect.arrayContaining([
+            'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT',
+          ]),
+        }),
+      );
+    });
   });
 });
