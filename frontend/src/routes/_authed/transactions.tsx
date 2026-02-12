@@ -1,15 +1,34 @@
-import { Flex, Group, Title } from '@mantine/core'
+import {
+  Button,
+  Flex,
+  Group,
+  SegmentedControl,
+  Select,
+  Title,
+} from '@mantine/core'
+import { DatePickerInput } from '@mantine/dates'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import dayjs from 'dayjs'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   getTransactionControllerFindAllQueryKey,
   transactionControllerFindAll,
+  useAccountControllerFindAll,
 } from '../../api/clients/spliceAPI'
+import { CATEGORY_COLORS } from '../../lib/constants'
+import { formatPrimaryCategory } from '../../lib/format'
+import type { TransactionControllerFindAllParams } from '../../api/models'
+import type { DatesRangeValue } from '@mantine/dates'
 import type { MRT_SortingState } from 'mantine-react-table'
 import { TransactionsTable } from '@/components/TransactionsTable'
 
 const PAGE_SIZE = 50
+
+const CATEGORY_OPTIONS = Object.keys(CATEGORY_COLORS).map((key) => ({
+  value: key,
+  label: formatPrimaryCategory(key),
+}))
 
 export const Route = createFileRoute('/_authed/transactions')({
   component: TransactionsPage,
@@ -21,17 +40,49 @@ function TransactionsPage() {
     { id: 'date', desc: true },
   ])
 
+  // Filter state
+  const [dateRange, setDateRange] = useState<DatesRangeValue>([null, null])
+  const [accountId, setAccountId] = useState<string | null>(null)
+  const [categoryPrimary, setCategoryPrimary] = useState<string | null>(null)
+  const [amountSign, setAmountSign] = useState('all')
+
+  // Account data for the select dropdown
+  const { data: accounts } = useAccountControllerFindAll()
+
+  const accountOptions = useMemo(
+    () =>
+      (accounts ?? []).map((account) => ({
+        value: account.id,
+        label: `${account.customName ?? account.name ?? 'Account'}${account.mask ? ` ••${account.mask}` : ''}`,
+      })),
+    [accounts],
+  )
+
   const queryParams = useMemo(() => {
-    const params: Record<string, string> = {
+    const params: TransactionControllerFindAllParams = {
       pageSize: String(PAGE_SIZE),
-      convert: 'true',
+      convert: true,
     }
     if (sorting.length > 0) {
       params.sortBy = sorting[0].id
       params.sortOrder = sorting[0].desc ? 'DESC' : 'ASC'
     }
+    const [start, end] = dateRange
+    if (start && end) {
+      params.startDate = dayjs(start).format('YYYY-MM-DD')
+      params.endDate = dayjs(end).format('YYYY-MM-DD')
+    }
+    if (accountId) {
+      params.accountId = accountId
+    }
+    if (categoryPrimary) {
+      params.categoryPrimary = categoryPrimary
+    }
+    if (amountSign === 'positive' || amountSign === 'negative') {
+      params.amountSign = amountSign
+    }
     return params
-  }, [sorting])
+  }, [sorting, dateRange, accountId, categoryPrimary, amountSign])
 
   const {
     data,
@@ -71,6 +122,23 @@ function TransactionsPage() {
     }
   }, [fetchNextPage, isFetching, hasNextPage])
 
+  const handleDateRangeChange = (range: DatesRangeValue) => {
+    setDateRange(range)
+  }
+
+  const hasActiveFilters =
+    dateRange[0] !== null ||
+    accountId !== null ||
+    categoryPrimary !== null ||
+    amountSign !== 'all'
+
+  const clearFilters = () => {
+    setDateRange([null, null])
+    setAccountId(null)
+    setCategoryPrimary(null)
+    setAmountSign('all')
+  }
+
   return (
     <Flex
       direction="column"
@@ -81,6 +149,79 @@ function TransactionsPage() {
       <Group justify="space-between" mb="md">
         <Title order={1}>Transactions</Title>
       </Group>
+
+      <Group mb="md" gap="xs" wrap="wrap">
+        <Button
+          variant="light"
+          size="xs"
+          onClick={() => {
+            const start = dayjs().startOf('month').toDate()
+            const end = dayjs().toDate()
+            setDateRange([start, end])
+          }}
+        >
+          This Month
+        </Button>
+        <Button
+          variant="light"
+          size="xs"
+          onClick={() => {
+            const start = dayjs()
+              .subtract(1, 'month')
+              .startOf('month')
+              .toDate()
+            const end = dayjs().subtract(1, 'month').endOf('month').toDate()
+            setDateRange([start, end])
+          }}
+        >
+          Last Month
+        </Button>
+        <DatePickerInput
+          type="range"
+          placeholder="Date range"
+          value={dateRange}
+          onChange={handleDateRangeChange}
+          maxDate={new Date()}
+          size="xs"
+          clearable
+        />
+        <Select
+          placeholder="Account"
+          data={accountOptions}
+          value={accountId}
+          onChange={setAccountId}
+          clearable
+          searchable
+          size="xs"
+          w={200}
+        />
+        <Select
+          placeholder="Category"
+          data={CATEGORY_OPTIONS}
+          value={categoryPrimary}
+          onChange={setCategoryPrimary}
+          clearable
+          searchable
+          size="xs"
+          w={180}
+        />
+        <SegmentedControl
+          value={amountSign}
+          onChange={setAmountSign}
+          size="xs"
+          data={[
+            { label: 'All', value: 'all' },
+            { label: 'Inflows', value: 'positive' },
+            { label: 'Outflows', value: 'negative' },
+          ]}
+        />
+        {hasActiveFilters && (
+          <Button variant="subtle" size="xs" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        )}
+      </Group>
+
       <TransactionsTable
         data={flatData}
         totalRows={totalRows}

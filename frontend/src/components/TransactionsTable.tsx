@@ -67,7 +67,6 @@ const allColumns: Array<MRT_ColumnDef<Transaction>> = [
   {
     accessorKey: 'amount',
     header: 'Amount',
-    enableSorting: false,
     Cell: AmountCell,
   },
   {
