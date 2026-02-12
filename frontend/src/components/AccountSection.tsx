@@ -1,9 +1,17 @@
-import { ActionIcon, Collapse, Group, Stack, Text, Title } from '@mantine/core'
+import {
+  ActionIcon,
+  Collapse,
+  Divider,
+  Group,
+  Paper,
+  Stack,
+  Text,
+} from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { AccountType } from '../api/models'
 import { getSignedAmount } from '../lib/balance-utils'
-import { AccountCard } from './AccountCard'
+import { CompactAccountRow } from './CompactAccountRow'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
 const ASSET_TYPE_LABELS: Record<string, string> = {
@@ -78,51 +86,67 @@ export function AccountSection({
     <>
       <Group
         justify="space-between"
-        mb="md"
+        mb="xs"
         style={{ cursor: 'pointer' }}
         onClick={toggle}
       >
-        <Title order={3}>{title}</Title>
+        <Text size="sm" fw={700} tt="uppercase">
+          {title}
+        </Text>
         <ActionIcon variant="subtle" size="sm">
-          {opened ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
+          {opened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
         </ActionIcon>
       </Group>
       <Collapse in={opened}>
-        <Stack gap="sm">
-          {accounts.length === 0 ? (
-            <Text c="dimmed">No {title.toLowerCase()}</Text>
-          ) : groups ? (
-            groups.map((group) => (
-              <Stack key={group.label} gap="xs">
-                <Group justify="space-between" px="xs">
-                  <Text size="sm" fw={600} c="dimmed" tt="uppercase">
-                    {group.label}
-                  </Text>
-                  <Text size="sm" fw={600} c="dimmed">
-                    {group.percent.toFixed(1)}%
-                  </Text>
-                </Group>
-                {group.accounts.map((account) => (
-                  <AccountCard
-                    key={account.id}
-                    account={account}
-                    isLiability={isLiability}
-                    onClick={() => onAccountClick(account)}
-                  />
-                ))}
-              </Stack>
-            ))
-          ) : (
-            accounts.map((account) => (
-              <AccountCard
-                key={account.id}
-                account={account}
-                isLiability={isLiability}
-                onClick={() => onAccountClick(account)}
-              />
-            ))
-          )}
-        </Stack>
+        {accounts.length === 0 ? (
+          <Text c="dimmed" size="sm">
+            No {title.toLowerCase()}
+          </Text>
+        ) : (
+          <Paper withBorder p={0} style={{ overflow: 'hidden' }}>
+            <Stack gap={0}>
+              {groups
+                ? groups.map((group, groupIndex) => (
+                    <div key={group.label}>
+                      {groupIndex > 0 && <Divider />}
+                      <Group
+                        justify="space-between"
+                        px="sm"
+                        py="xs"
+                        bg="var(--mantine-color-default-hover)"
+                      >
+                        <Text size="xs" fw={600} c="dimmed" tt="uppercase">
+                          {group.label}
+                        </Text>
+                        <Text size="xs" fw={600} c="dimmed">
+                          {group.percent.toFixed(1)}%
+                        </Text>
+                      </Group>
+                      {group.accounts.map((account, accountIndex) => (
+                        <div key={account.id}>
+                          {accountIndex > 0 && <Divider />}
+                          <CompactAccountRow
+                            account={account}
+                            isLiability={isLiability}
+                            onClick={() => onAccountClick(account)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ))
+                : accounts.map((account, index) => (
+                    <div key={account.id}>
+                      {index > 0 && <Divider />}
+                      <CompactAccountRow
+                        account={account}
+                        isLiability={isLiability}
+                        onClick={() => onAccountClick(account)}
+                      />
+                    </div>
+                  ))}
+            </Stack>
+          </Paper>
+        )}
       </Collapse>
     </>
   )
