@@ -7,6 +7,7 @@
  */
 import type { MoneyWithSign } from './moneyWithSign'
 import type { TransactionCategory } from './transactionCategory'
+import type { TransactionConvertedAmount } from './transactionConvertedAmount'
 
 export interface Transaction {
   id: string
@@ -31,6 +32,7 @@ export interface Transaction {
   category?: TransactionCategory
   /** @nullable */
   accountName?: string | null
+  convertedAmount?: TransactionConvertedAmount
   createdAt: string
   updatedAt: string
   userId: string

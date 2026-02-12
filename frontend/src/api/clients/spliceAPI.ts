@@ -41,6 +41,8 @@ import type {
   RefreshTokenDto,
   TokenResponse,
   Transaction,
+  TransactionAnalysisControllerGetAnalysisParams,
+  TransactionAnalysisResponse,
   TransactionControllerFindAllParams,
   UpdateAccountDto,
   UpdateTransactionDto,
@@ -3001,6 +3003,168 @@ export function useHealthControllerCheck<
   queryKey: DataTag<QueryKey, TData, TError>
 } {
   const queryOptions = getHealthControllerCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Get cash flow analysis grouped by category for a date range. Returns inflow/outflow breakdowns with amounts converted to user preferred currency. Transfer categories (TRANSFER_IN, TRANSFER_OUT) are excluded.
+ */
+export const transactionAnalysisControllerGetAnalysis = (
+  params: TransactionAnalysisControllerGetAnalysisParams,
+  signal?: AbortSignal,
+) => {
+  return axios<TransactionAnalysisResponse>({
+    url: `/transaction-analysis`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getTransactionAnalysisControllerGetAnalysisQueryKey = (
+  params?: TransactionAnalysisControllerGetAnalysisParams,
+) => {
+  return [`/transaction-analysis`, ...(params ? [params] : [])] as const
+}
+
+export const getTransactionAnalysisControllerGetAnalysisQueryOptions = <
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetAnalysisParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getTransactionAnalysisControllerGetAnalysisQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
+  > = ({ signal }) => transactionAnalysisControllerGetAnalysis(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TransactionAnalysisControllerGetAnalysisQueryResult = NonNullable<
+  Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
+>
+export type TransactionAnalysisControllerGetAnalysisQueryError = void
+
+export function useTransactionAnalysisControllerGetAnalysis<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetAnalysisParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+          TError,
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionAnalysisControllerGetAnalysis<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetAnalysisParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+          TError,
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionAnalysisControllerGetAnalysis<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetAnalysisParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useTransactionAnalysisControllerGetAnalysis<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetAnalysisParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getTransactionAnalysisControllerGetAnalysisQueryOptions(
+    params,
+    options,
+  )
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
