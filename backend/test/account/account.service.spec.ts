@@ -1,8 +1,8 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException } from '@nestjs/common';
-import { AccountType } from 'plaid';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { AccountSubtype, AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
 import { AccountService } from '../../src/account/account.service';
 import {
@@ -180,14 +180,18 @@ describe('AccountService', () => {
     });
 
     it('should not emit ManualAccountCreatedEvent for non-manual accounts', async () => {
+      const linkedCreateDto = {
+        ...mockCreateAccountDto,
+        bankLinkId: 'bank-link-123',
+      };
       const mockEntity = AccountEntity.fromDto(
-        mockCreateAccountDto,
+        linkedCreateDto,
         mockUserId,
       );
       mockEntity.id = 'generated-uuid';
       mockRepository.save.mockResolvedValue(mockEntity);
 
-      await service.create(mockCreateAccountDto, mockUserId);
+      await service.create(linkedCreateDto, mockUserId);
 
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
@@ -551,14 +555,14 @@ describe('AccountService', () => {
       sign: MoneySign.POSITIVE,
     };
 
-    it('should update balance and emit event', async () => {
+    it('should update depository balances to the same value and emit event', async () => {
       const mockEntity = AccountEntity.fromDto(
         mockCreateManualAccountDto,
         mockUserId,
       );
       mockEntity.id = 'manual-id';
       mockRepository.findOne.mockResolvedValue(mockEntity);
-      mockRepository.save.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation(async (entity) => entity);
 
       const result = await service.updateManualBalance(
         'manual-id',
@@ -567,7 +571,64 @@ describe('AccountService', () => {
       );
 
       expect(result).toBeDefined();
-      expect(mockRepository.save).toHaveBeenCalled();
+      expect(result.currentBalance).toEqual(newBalance);
+      expect(result.availableBalance).toEqual(newBalance);
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentBalance: expect.objectContaining({
+            amount: 75000,
+            currency: 'USD',
+            sign: MoneySign.POSITIVE,
+          }),
+          availableBalance: expect.objectContaining({
+            amount: 75000,
+            currency: 'USD',
+            sign: MoneySign.POSITIVE,
+          }),
+        }),
+      );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        ManualAccountEvents.BALANCE_UPDATED,
+        expect.any(ManualAccountBalanceUpdatedEvent),
+      );
+    });
+
+    it('should zero available balance for investment accounts', async () => {
+      const investmentAccountDto = {
+        ...mockCreateManualAccountDto,
+        type: AccountType.Investment,
+        subType: AccountSubtype._401k,
+      };
+      const mockEntity = AccountEntity.fromDto(investmentAccountDto, mockUserId);
+      mockEntity.id = 'investment-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation(async (entity) => entity);
+
+      const result = await service.updateManualBalance(
+        'investment-id',
+        mockUserId,
+        newBalance,
+      );
+
+      expect(result.currentBalance).toEqual(newBalance);
+      expect(result.availableBalance).toEqual({
+        money: { currency: 'USD', amount: 0 },
+        sign: MoneySign.POSITIVE,
+      });
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentBalance: expect.objectContaining({
+            amount: 75000,
+            currency: 'USD',
+            sign: MoneySign.POSITIVE,
+          }),
+          availableBalance: expect.objectContaining({
+            amount: 0,
+            currency: 'USD',
+            sign: MoneySign.POSITIVE,
+          }),
+        }),
+      );
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         ManualAccountEvents.BALANCE_UPDATED,
         expect.any(ManualAccountBalanceUpdatedEvent),
@@ -580,6 +641,25 @@ describe('AccountService', () => {
       await expect(
         service.updateManualBalance('non-existent', mockUserId, newBalance),
       ).rejects.toThrow(NotFoundException);
+
+      expect(mockRepository.save).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when account is linked', async () => {
+      const linkedEntity = AccountEntity.fromDto(
+        {
+          ...mockCreateManualAccountDto,
+          bankLinkId: 'bank-link-123',
+        },
+        mockUserId,
+      );
+      linkedEntity.id = 'linked-id';
+      mockRepository.findOne.mockResolvedValue(linkedEntity);
+
+      await expect(
+        service.updateManualBalance('linked-id', mockUserId, newBalance),
+      ).rejects.toThrow(BadRequestException);
 
       expect(mockRepository.save).not.toHaveBeenCalled();
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();

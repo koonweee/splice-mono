@@ -22,7 +22,7 @@ export function AccountRow({ account }: { account: Account }) {
 
   const displayName = account.customName ?? account.name ?? 'Unnamed Account'
   const isLinked = !!account.bankLinkId
-  const isManual = account.type === 'manual'
+  const isManual = !isLinked
 
   const startEditing = useCallback(() => {
     setEditedName(displayName)
