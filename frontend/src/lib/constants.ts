@@ -1,3 +1,4 @@
+// Shared frontend-only display constants.
 export const CATEGORY_COLORS: Record<string, string> = {
   INCOME: '#12b886',
   LOAN_PAYMENTS: '#e64980',
