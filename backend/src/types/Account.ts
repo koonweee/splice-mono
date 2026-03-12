@@ -1,7 +1,7 @@
 import { AccountSubtype, AccountType } from 'plaid';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
-import { CryptoAccountType, ManualAccountType } from './AccountType';
+import { CryptoAccountType } from './AccountType';
 import { APIAccountSchema, SanitizedBankLinkSchema } from './BankLink';
 import { CurrentAndAvailableBalanceSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
@@ -12,7 +12,6 @@ import { OwnedSchema } from './Timestamps';
 export const AccountTypeSchema = z.union([
   z.nativeEnum(AccountType),
   z.nativeEnum(CryptoAccountType),
-  z.nativeEnum(ManualAccountType),
 ]);
 
 export const AccountSubTypeSchema = z.nativeEnum(AccountSubtype);

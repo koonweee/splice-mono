@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AccountType } from 'plaid';
@@ -63,6 +68,11 @@ export class AccountService extends OwnedCrudService<
 
     if (!accountEntity) {
       throw new NotFoundException(`Account with id ${accountId} not found`);
+    }
+    if (accountEntity.bankLinkId) {
+      throw new BadRequestException(
+        `Account with id ${accountId} is linked and cannot be manually updated`,
+      );
     }
 
     accountEntity.currentBalance = BalanceColumns.fromMoneyWithSign(newBalance);

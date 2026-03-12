@@ -101,6 +101,30 @@ describe('ZodValidationPipe', () => {
       expect(() => pipe.transform(invalidDto)).toThrow(BadRequestException);
     });
 
+    it('should throw BadRequestException when type is manual', () => {
+      const invalidDto = {
+        name: 'Test Account',
+        availableBalance: {
+          money: {
+            currency: 'USD',
+            amount: 1000,
+          },
+          sign: 'positive',
+        },
+        currentBalance: {
+          money: {
+            currency: 'USD',
+            amount: 1000,
+          },
+          sign: 'positive',
+        },
+        type: 'manual',
+        subType: null,
+      };
+
+      expect(() => pipe.transform(invalidDto)).toThrow(BadRequestException);
+    });
+
     it('should throw BadRequestException when balance structure is invalid', () => {
       const invalidDto = {
         name: 'Test Account',

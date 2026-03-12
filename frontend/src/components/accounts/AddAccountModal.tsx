@@ -42,7 +42,7 @@ const MANUAL_ACCOUNT_TYPES = [
   {
     label: 'Cash',
     value: 'cash',
-    type: CreateAccountDtoType.manual,
+    type: CreateAccountDtoType.depository,
     subType: null,
   },
   {
