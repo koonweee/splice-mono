@@ -8,16 +8,6 @@ export enum CryptoAccountType {
 }
 
 /**
- * Manual account types
+ * Extended account type that includes Plaid and crypto types
  */
-export enum ManualAccountType {
-  MANUAL = 'manual',
-}
-
-/**
- * Extended account type that includes Plaid, Crypto, and Manual types
- */
-export type ExtendedAccountType =
-  | AccountType
-  | CryptoAccountType
-  | ManualAccountType;
+export type ExtendedAccountType = AccountType | CryptoAccountType;
