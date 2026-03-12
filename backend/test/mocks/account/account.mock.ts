@@ -1,6 +1,5 @@
 import { AccountType } from 'plaid';
 import { Account, CreateAccountDto } from '../../../src/types/Account';
-import { ManualAccountType } from '../../../src/types/AccountType';
 import { MoneySign } from '../../../src/types/MoneyWithSign';
 
 /** Standard mock timestamps for testing */
@@ -77,7 +76,7 @@ export const mockManualAccount: Account = {
     money: { currency: 'USD', amount: 20000 },
     sign: MoneySign.POSITIVE,
   },
-  type: ManualAccountType.MANUAL,
+  type: AccountType.Depository,
   subType: null,
   externalAccountId: null,
   bankLinkId: null,
@@ -97,7 +96,7 @@ export const mockCreateManualAccountDto: CreateAccountDto = {
     money: { currency: 'USD', amount: 20000 },
     sign: MoneySign.POSITIVE,
   },
-  type: ManualAccountType.MANUAL,
+  type: AccountType.Depository,
   subType: null,
 };
 

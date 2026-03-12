@@ -19,7 +19,6 @@ const ASSET_TYPE_LABELS: Record<string, string> = {
   [AccountType.brokerage]: 'Investment',
   [AccountType.depository]: 'Depository',
   [AccountType.crypto_wallet]: 'Investment',
-  [AccountType.manual]: 'Other',
   [AccountType.other]: 'Other',
 }
 

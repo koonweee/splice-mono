@@ -40,6 +40,7 @@ export function AccountModal({
 
   // Get account from balance history if available
   const fullAccount = balanceHistory.latestBalance?.account
+  const isManual = !!fullAccount && !fullAccount.bankLinkId
 
   // Get balance info from the latest balance result or fall back to account summary
   const latestBalance = balanceHistory.latestBalance
@@ -76,7 +77,7 @@ export function AccountModal({
                 <Group justify="space-between">
                   <Group gap="xs">
                     <Text c="dimmed">Current Balance</Text>
-                    {fullAccount.type === 'manual' && (
+                    {isManual && (
                       <Button
                         variant="light"
                         size="xs"
@@ -140,7 +141,7 @@ export function AccountModal({
         )}
       </Modal>
 
-      {fullAccount && fullAccount.type === 'manual' && (
+      {isManual && fullAccount && (
         <UpdateBalanceModal
           opened={updateModalOpened}
           onClose={closeUpdateModal}
