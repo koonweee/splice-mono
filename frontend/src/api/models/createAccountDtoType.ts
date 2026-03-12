@@ -14,5 +14,4 @@ export const CreateAccountDtoType = {
   brokerage: 'brokerage',
   other: 'other',
   crypto_wallet: 'crypto_wallet',
-  manual: 'manual',
 } as const
