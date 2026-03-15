@@ -216,7 +216,34 @@ yarn migration:show
 
 - TypeORM tracks executed migrations in a `migrations` table in your database
 - Running `migration:run` only executes migrations that haven't been run yet
-- In production, migrations run automatically on container startup via the Docker entrypoint
+- In production, run migrations explicitly before rolling out app replicas:
+
+```bash
+yarn migration:run:prod
+```
+
+## Production deployment notes
+
+- The backend container starts the API only; it does not run schema migrations on boot.
+- Use split origins in production:
+  - `FRONTEND_DOMAIN=https://splice.<base-domain>`
+  - `API_DOMAIN=https://splice-api.<base-domain>`
+- Run migrations once as a separate deploy task before restarting or scaling API containers.
+- Required production variables:
+  - `POSTGRES_HOST`
+  - `POSTGRES_PORT`
+  - `POSTGRES_DB`
+  - `POSTGRES_USER`
+  - `POSTGRES_PASSWORD`
+  - `JWT_SECRET`
+  - `FRONTEND_DOMAIN`
+  - `API_DOMAIN`
+- Common optional variables:
+  - `PLAID_CLIENT_ID`
+  - `PLAID_SECRET`
+  - `ALCHEMY_API_KEY`
+  - `SEQ_SERVER_URL`
+  - `SEQ_API_KEY`
 
 ### Adding a New Entity
 
