@@ -47,5 +47,5 @@ USER nestjs
 # Expose port
 EXPOSE 3000
 
-# Run migrations then start the application
+# Start the application. Run migrations explicitly as a separate deploy step.
 ENTRYPOINT ["./docker-entrypoint.sh"]

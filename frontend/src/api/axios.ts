@@ -3,8 +3,34 @@ import type { AxiosError, AxiosRequestConfig } from 'axios'
 
 const AUTH_FLAG_KEY = 'splice_authenticated'
 
+function resolveApiBaseUrl(): string | undefined {
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+  if (configuredBaseUrl) {
+    return configuredBaseUrl
+  }
+
+  if (typeof window === 'undefined') {
+    return undefined
+  }
+
+  const currentUrl = new URL(window.location.origin)
+
+  if (currentUrl.hostname === 'localhost') {
+    return `${currentUrl.protocol}//localhost:3000`
+  }
+
+  const hostParts = currentUrl.hostname.split('.')
+  if (hostParts.length >= 2 && !hostParts[0].endsWith('-api')) {
+    hostParts[0] = `${hostParts[0]}-api`
+    currentUrl.hostname = hostParts.join('.')
+    return currentUrl.origin
+  }
+
+  return currentUrl.origin
+}
+
 const axiosInstance = Axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: resolveApiBaseUrl(),
   // Include cookies in all requests for authentication
   withCredentials: true,
 })
