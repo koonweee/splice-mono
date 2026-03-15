@@ -17,6 +17,15 @@ To build this application for production:
 npm run build
 ```
 
+## Production deployment notes
+
+- The frontend supports an optional `VITE_API_BASE_URL` override for the browser-reachable API origin.
+- If `VITE_API_BASE_URL` is unset, the app derives the API hostname by adding `-api` to the first host label.
+- For the current deployment model, use split origins:
+  - frontend: `https://splice.<base-domain>`
+  - API: `https://splice-api.<base-domain>`
+- The frontend sends authenticated requests with cookies, so the backend must allow the configured frontend origin and set cookies for the shared parent domain.
+
 ## Testing
 
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
