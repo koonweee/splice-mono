@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 import { TimestampedEntity } from '../common/base.entity';
 import { Category } from '../types/Category';
 
@@ -7,6 +7,7 @@ import { Category } from '../types/Category';
  * This is a reference entity - categories are global/shared across all users.
  */
 @Entity()
+@Unique('UQ_category_primary_detailed', ['primary', 'detailed'])
 export class CategoryEntity extends TimestampedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
