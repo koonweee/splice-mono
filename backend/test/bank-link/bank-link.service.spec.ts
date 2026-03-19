@@ -12,6 +12,7 @@ import { mockProviderRegistry } from '../mocks/bank-link/provider-registry.mock'
 import {
   mockApiAccount,
   mockInstitution,
+  mockLinkCompletionResponse,
   mockLinkInitiationResponse,
   mockPlaidProvider,
 } from '../mocks/bank-link/provider.mock';
@@ -44,13 +45,29 @@ const mockCreateBankLinkDto = {
 
 const mockBankLinkEntity = {
   id: '123e4567-e89b-12d3-a456-426614174000',
+  userId: mockUserId,
   providerName: 'plaid',
   authentication: { accessToken: 'test-token' },
   accountIds: ['acc-1', 'acc-2'],
   toObject: jest.fn().mockReturnValue(mockBankLink),
 };
 
-const mockBankLinkRepository = {
+let mockBankLinkRepository: any;
+let mockAccountRepository: any;
+
+const mockEntityManager = {
+  getRepository: jest.fn((entity: unknown) => {
+    if (entity === BankLinkEntity) {
+      return mockBankLinkRepository;
+    }
+    if (entity === AccountEntity) {
+      return mockAccountRepository;
+    }
+    throw new Error('Unexpected repository request');
+  }),
+};
+
+mockBankLinkRepository = {
   save: jest.fn().mockImplementation((entities: unknown) => {
     // Handle both single entity and array saves
     if (Array.isArray(entities)) {
@@ -66,7 +83,24 @@ const mockBankLinkRepository = {
         })),
       );
     }
-    return Promise.resolve(mockBankLinkEntity);
+    const entity = entities as {
+      id?: string;
+      providerName?: string;
+      authentication?: Record<string, unknown>;
+      accountIds?: string[];
+    };
+    return Promise.resolve({
+      ...mockBankLinkEntity,
+      ...entity,
+      id: entity.id ?? mockBankLinkEntity.id,
+      toObject: () => ({
+        ...mockBankLink,
+        providerName: entity.providerName ?? mockBankLink.providerName,
+        authentication: entity.authentication ?? mockBankLink.authentication,
+        accountIds: entity.accountIds ?? mockBankLink.accountIds,
+        id: entity.id ?? mockBankLink.id,
+      }),
+    });
   }),
   findOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
   find: jest.fn().mockResolvedValue([mockBankLinkEntity]),
@@ -76,9 +110,14 @@ const mockBankLinkRepository = {
     andWhere: jest.fn().mockReturnThis(),
     getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
   }),
+  manager: {
+    transaction: jest.fn().mockImplementation(async (cb: any) =>
+      cb(mockEntityManager),
+    ),
+  },
 };
 
-const mockAccountRepository = {
+mockAccountRepository = {
   save: jest.fn().mockImplementation((entities: unknown) => {
     // Handle both single entity and array saves
     if (Array.isArray(entities)) {
@@ -92,11 +131,14 @@ const mockAccountRepository = {
     }
     return Promise.resolve({
       ...(entities as object),
-      id: 'account-id-0',
-      toObject: () => ({ ...(entities as object), id: 'account-id-0' }),
+      id: (entities as { id?: string }).id ?? 'account-id-0',
+      toObject: () => ({
+        ...(entities as object),
+        id: (entities as { id?: string }).id ?? 'account-id-0',
+      }),
     });
   }),
-  findOne: jest.fn(),
+  findOne: jest.fn().mockResolvedValue(null),
   find: jest.fn().mockResolvedValue([]),
 };
 
@@ -114,6 +156,12 @@ describe('BankLinkService', () => {
     mockBankLinkEntity.authentication = { accessToken: 'test-token' };
     mockBankLinkEntity.accountIds = ['acc-1', 'acc-2'];
     mockBankLinkEntity.toObject.mockReturnValue(mockBankLink);
+    mockAccountRepository.findOne.mockResolvedValue(null);
+    mockBankLinkRepository.createQueryBuilder = jest.fn().mockReturnValue({
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -163,7 +211,12 @@ describe('BankLinkService', () => {
     it('should create and return a bank link', async () => {
       const result = await service.create(mockCreateBankLinkDto, mockUserId);
 
-      expect(result).toEqual(mockBankLink);
+      expect(result).toMatchObject({
+        userId: mockUserId,
+        providerName: 'plaid',
+        authentication: { accessToken: 'test-token' },
+        accountIds: ['acc-1', 'acc-2'],
+      });
       expect(repository.save).toHaveBeenCalled();
     });
   });
@@ -230,7 +283,11 @@ describe('BankLinkService', () => {
         mockUserId,
       );
 
-      expect(result).toEqual(mockBankLink);
+      expect(result).toMatchObject({
+        id: mockBankLink.id,
+        userId: mockUserId,
+        providerName: 'simplefin',
+      });
       expect(repository.findOne).toHaveBeenCalledWith({
         where: { id: mockBankLink.id, userId: mockUserId },
         relations: [],
@@ -336,6 +393,8 @@ describe('BankLinkService', () => {
         userId: mockUserId,
         redirectUri: undefined,
         providerUserDetails: undefined,
+        accessToken: undefined,
+        singleAccountSelect: false,
       });
       // Should create pending webhook event
       expect(mockWebhookEventService.createPending).toHaveBeenCalledWith(
@@ -343,6 +402,7 @@ describe('BankLinkService', () => {
         providerName,
         mockUserId,
         expect.any(Date),
+        undefined,
       );
     });
 
@@ -357,6 +417,8 @@ describe('BankLinkService', () => {
         userId: mockUserId,
         redirectUri,
         providerUserDetails: undefined,
+        accessToken: undefined,
+        singleAccountSelect: false,
       });
     });
 
@@ -377,6 +439,8 @@ describe('BankLinkService', () => {
         userId: mockUserId,
         redirectUri: undefined,
         providerUserDetails: existingDetails,
+        accessToken: undefined,
+        singleAccountSelect: false,
       });
     });
 
@@ -429,6 +493,7 @@ describe('BankLinkService', () => {
         redirectUri: undefined,
         providerUserDetails: undefined,
         accessToken: 'test-token',
+        singleAccountSelect: false,
       });
     });
 
@@ -445,6 +510,43 @@ describe('BankLinkService', () => {
           'non-existent-id',
         ),
       ).rejects.toThrow('Bank link not found: non-existent-id');
+    });
+
+    it('should enable single-account selection for explicit manual account conversion', async () => {
+      const convertAccountId = 'manual-account-123';
+      mockAccountRepository.findOne.mockResolvedValueOnce({
+        id: convertAccountId,
+        userId: mockUserId,
+        bankLinkId: null,
+      });
+
+      await service.initiateLinking(
+        'plaid',
+        mockUserId,
+        'https://myapp.com/callback',
+        undefined,
+        undefined,
+        undefined,
+        convertAccountId,
+      );
+
+      expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
+        userId: mockUserId,
+        redirectUri: 'https://myapp.com/callback',
+        providerUserDetails: undefined,
+        accessToken: undefined,
+        singleAccountSelect: true,
+      });
+      expect(mockWebhookEventService.createPending).toHaveBeenCalledWith(
+        'webhook-mock-123',
+        'plaid',
+        mockUserId,
+        expect.any(Date),
+        {
+          mode: 'convert-manual-account',
+          convertAccountId,
+        },
+      );
     });
   });
 
@@ -659,6 +761,111 @@ describe('BankLinkService', () => {
       expect(mockWebhookEventService.markFailed).toHaveBeenCalledWith(
         'webhook-mock-123',
         errorMessage,
+        mockParsedPayload,
+      );
+    });
+
+    it('should convert an unlinked account in place when webhook has conversion context', async () => {
+      const providerName = 'plaid';
+      const convertAccountId = 'manual-account-123';
+      mockBankLinkEntity.accountIds = ['acc-1', 'acc-2'];
+
+      mockWebhookEventService.findPendingByWebhookId.mockResolvedValueOnce({
+        id: 'pending-webhook',
+        userId: mockUserId,
+        webhookId: 'webhook-mock-123',
+        webhookContent: null,
+        status: 'pending',
+        providerName,
+        expiresAt: null,
+        completedAt: null,
+        errorMessage: null,
+        context: {
+          mode: 'convert-manual-account',
+          convertAccountId,
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      mockAccountRepository.findOne
+        .mockResolvedValueOnce({
+          id: convertAccountId,
+          userId: mockUserId,
+          name: 'Emergency Fund',
+          customName: null,
+          bankLinkId: null,
+        })
+        .mockResolvedValueOnce(null);
+
+      await service.handleWebhook(
+        providerName,
+        mockRawBody,
+        mockHeaders,
+        mockParsedPayload,
+      );
+
+      expect(mockAccountRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: convertAccountId,
+          name: mockApiAccount.name,
+          customName: 'Emergency Fund',
+          externalAccountId: mockApiAccount.accountId,
+          bankLinkId: mockBankLinkEntity.id,
+        }),
+      );
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: mockBankLinkEntity.id,
+          accountIds: ['acc-1', 'acc-2', mockApiAccount.accountId],
+        }),
+      );
+    });
+
+    it('should fail conversion when provider returns multiple accounts', async () => {
+      const providerName = 'plaid';
+      const convertAccountId = 'manual-account-123';
+
+      mockWebhookEventService.findPendingByWebhookId.mockResolvedValueOnce({
+        id: 'pending-webhook',
+        userId: mockUserId,
+        webhookId: 'webhook-mock-123',
+        webhookContent: null,
+        status: 'pending',
+        providerName,
+        expiresAt: null,
+        completedAt: null,
+        errorMessage: null,
+        context: {
+          mode: 'convert-manual-account',
+          convertAccountId,
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+      (mockPlaidProvider.processLinkCompletion as jest.Mock).mockResolvedValueOnce(
+        [
+          {
+            ...mockLinkCompletionResponse,
+            accounts: [mockApiAccount, { ...mockApiAccount, accountId: 'acc-2' }],
+          },
+        ],
+      );
+
+      await expect(
+        service.handleWebhook(
+          providerName,
+          mockRawBody,
+          mockHeaders,
+          mockParsedPayload,
+        ),
+      ).rejects.toThrow(
+        'Conversion requires exactly one selected provider account',
+      );
+
+      expect(mockWebhookEventService.markFailed).toHaveBeenCalledWith(
+        'webhook-mock-123',
+        'Conversion requires exactly one selected provider account',
         mockParsedPayload,
       );
     });

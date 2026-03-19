@@ -41,6 +41,7 @@ export class CryptoProvider implements IBankLinkProvider {
     userId: string;
     redirectUri?: string;
     providerUserDetails?: Record<string, unknown>;
+    singleAccountSelect?: boolean;
   }): Promise<LinkInitiationResponse> {
     this.logger.log({ userId: input.userId }, 'Initiating crypto wallet link');
 

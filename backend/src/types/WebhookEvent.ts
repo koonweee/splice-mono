@@ -23,6 +23,7 @@ export const WebhookEventSchema = z
     expiresAt: z.date().nullable(), // When this pending webhook expires
     completedAt: z.date().nullable(), // When the webhook was processed
     errorMessage: z.string().nullable(), // Error message if failed
+    context: z.record(z.string(), z.any()).nullable(), // Request context for async link flows
   })
   .merge(OwnedSchema);
 
@@ -36,6 +37,7 @@ export const CreateWebhookEventDtoSchema = z.object({
   status: z.nativeEnum(WebhookEventStatus).optional(),
   providerName: z.string(),
   expiresAt: z.date().nullable().optional(),
+  context: z.record(z.string(), z.any()).nullable().optional(),
 });
 
 export type CreateWebhookEventDto = z.infer<typeof CreateWebhookEventDtoSchema>;
