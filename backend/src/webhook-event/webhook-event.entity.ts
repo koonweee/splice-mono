@@ -42,6 +42,10 @@ export class WebhookEventEntity extends OwnedEntity {
   @Column({ type: 'text', nullable: true })
   errorMessage: string | null;
 
+  /** Request context for async link flows */
+  @Column('jsonb', { nullable: true })
+  context: Record<string, any> | null;
+
   /**
    * Create entity from DTO
    */
@@ -58,6 +62,7 @@ export class WebhookEventEntity extends OwnedEntity {
     entity.expiresAt = dto.expiresAt ?? null;
     entity.completedAt = null;
     entity.errorMessage = null;
+    entity.context = dto.context ?? null;
     return entity;
   }
 
@@ -75,6 +80,7 @@ export class WebhookEventEntity extends OwnedEntity {
       expiresAt: this.expiresAt,
       completedAt: this.completedAt,
       errorMessage: this.errorMessage,
+      context: this.context,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

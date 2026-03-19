@@ -54,6 +54,7 @@ describe('BankLinkController', () => {
         undefined, // walletAddress
         undefined, // network
         undefined, // bankLinkId
+        undefined, // convertAccountId
       );
 
       expect(result).toEqual({
@@ -75,6 +76,7 @@ describe('BankLinkController', () => {
         undefined, // walletAddress
         undefined, // network
         undefined, // bankLinkId
+        undefined, // convertAccountId
       );
     });
   });

@@ -1,6 +1,7 @@
 import { ActionIcon, Group, Text, TextInput, Tooltip } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, Pencil, RotateCcw, X } from 'lucide-react'
+import { Check, Link2, Pencil, RotateCcw, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { SanitizedBankLinkStatus } from '../../api/models/sanitizedBankLinkStatus'
 import {
@@ -68,9 +69,14 @@ export function AccountRow({ account }: { account: Account }) {
   const needsFix =
     account.bankLink && account.bankLink.status !== SanitizedBankLinkStatus.OK
 
+  const getPlaidRedirectUri = useCallback(
+    () => window.location.href.replace(/^http:/, 'https:'),
+    [],
+  )
+
   const handleFixConnection = needsFix
     ? () => {
-        const redirectUri = window.location.href
+        const redirectUri = getPlaidRedirectUri()
         initiateLinking.mutate(
           {
             provider: account.bankLink!.providerName,
@@ -81,6 +87,34 @@ export function AccountRow({ account }: { account: Account }) {
               if (response.linkUrl) {
                 window.location.href = response.linkUrl
               }
+            },
+          },
+        )
+      }
+    : undefined
+
+  const handleConvertToLinked = isManual
+    ? () => {
+        initiateLinking.mutate(
+          {
+            provider: 'plaid',
+            data: {
+              redirectUri: getPlaidRedirectUri(),
+              convertAccountId: account.id,
+            },
+          },
+          {
+            onSuccess: (response) => {
+              if (response.linkUrl) {
+                window.location.href = response.linkUrl
+              }
+            },
+            onError: () => {
+              notifications.show({
+                title: 'Link Failed',
+                message: 'Unable to start Plaid linking for this account.',
+                color: 'red',
+              })
             },
           },
         )
@@ -138,6 +172,19 @@ export function AccountRow({ account }: { account: Account }) {
             >
               <Pencil size={14} />
             </ActionIcon>
+            {isManual && handleConvertToLinked && (
+              <Tooltip label="Link with Plaid" withArrow>
+                <ActionIcon
+                  variant="subtle"
+                  color="blue"
+                  onClick={handleConvertToLinked}
+                  size="sm"
+                  loading={initiateLinking.isPending}
+                >
+                  <Link2 size={14} />
+                </ActionIcon>
+              </Tooltip>
+            )}
             {isLinked && account.customName && (
               <Tooltip
                 label={`Reset to synced name: ${account.name}`}

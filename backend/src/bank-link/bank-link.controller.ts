@@ -52,6 +52,7 @@ export class BankLinkController {
       body.walletAddress,
       body.network,
       body.bankLinkId,
+      body.convertAccountId,
     );
   }
 
