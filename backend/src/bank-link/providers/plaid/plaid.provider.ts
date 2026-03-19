@@ -155,6 +155,8 @@ function isItemWebhook(
  */
 @Injectable()
 export class PlaidProvider implements IBankLinkProvider {
+  private static readonly SINGLE_ACCOUNT_CONVERSION_CUSTOMIZATION_NAME =
+    'splice_single_account_conversion';
   private readonly logger = new Logger(PlaidProvider.name);
   readonly providerName = 'plaid';
 
@@ -257,8 +259,15 @@ export class PlaidProvider implements IBankLinkProvider {
     redirectUri?: string;
     providerUserDetails?: Record<string, unknown>;
     accessToken?: string;
+    singleAccountSelect?: boolean;
   }): Promise<LinkInitiationResponse> {
-    const { userId, redirectUri, providerUserDetails, accessToken } = input;
+    const {
+      userId,
+      redirectUri,
+      providerUserDetails,
+      accessToken,
+      singleAccountSelect,
+    } = input;
     this.logger.log({ userId, redirectUri }, 'Plaid link initiated');
 
     // Parse and validate existing provider details
@@ -300,7 +309,13 @@ export class PlaidProvider implements IBankLinkProvider {
             user_token: userToken,
             products: [Products.Transactions],
             optional_products: [Products.Investments],
-            enable_multi_item_link: true,
+            enable_multi_item_link: !singleAccountSelect,
+            ...(singleAccountSelect
+              ? {
+                  link_customization_name:
+                    PlaidProvider.SINGLE_ACCOUNT_CONVERSION_CUSTOMIZATION_NAME,
+                }
+              : {}),
           }),
     };
 
