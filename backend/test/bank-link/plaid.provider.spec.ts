@@ -11,6 +11,37 @@ describe('PlaidProvider', () => {
     provider = new PlaidProvider();
   });
 
+  describe('initiateLinking', () => {
+    it('should request single-account Link customization for conversion flows', async () => {
+      provider['client'] = {
+        linkTokenCreate: jest.fn().mockResolvedValue({
+          data: {
+            link_token: 'link-token-123',
+            expiration: '2026-01-01T00:00:00Z',
+            hosted_link_url: 'https://plaid.com/link',
+          },
+        }),
+      } as any;
+      provider['createUserToken'] = jest
+        .fn()
+        .mockResolvedValue('user-token-123');
+
+      await provider.initiateLinking({
+        userId: 'user-123',
+        redirectUri: 'https://app.example.com/accounts',
+        singleAccountSelect: true,
+      });
+
+      expect(provider['client'].linkTokenCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_token: 'user-token-123',
+          enable_multi_item_link: false,
+          link_customization_name: 'splice_single_account_conversion',
+        }),
+      );
+    });
+  });
+
   describe('parseUpdateWebhook', () => {
     it('should parse SYNC_UPDATES_AVAILABLE webhook', () => {
       const payload = {

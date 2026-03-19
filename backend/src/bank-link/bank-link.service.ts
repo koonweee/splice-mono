@@ -1,4 +1,11 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -25,6 +32,11 @@ import { WebhookEventService } from '../webhook-event/webhook-event.service';
 import { BankLinkEntity } from './bank-link.entity';
 import type { IBankLinkProvider } from './providers/bank-link-provider.interface';
 import { ProviderRegistry } from './providers/provider.registry';
+
+type LinkConversionContext = {
+  mode: 'convert-manual-account';
+  convertAccountId: string;
+};
 
 /**
  * Orchestrates bank account linking across multiple providers
@@ -88,11 +100,23 @@ export class BankLinkService extends OwnedCrudService<
     walletAddress?: string,
     network?: string,
     bankLinkId?: string,
+    convertAccountId?: string,
   ): Promise<InitiateLinkResponse> {
     this.logger.log(
-      { providerName, userId, bankLinkId },
+      { providerName, userId, bankLinkId, convertAccountId },
       'Initiating link with provider',
     );
+
+    if (bankLinkId && convertAccountId) {
+      throw new BadRequestException(
+        'bankLinkId and convertAccountId cannot be used together',
+      );
+    }
+    if (convertAccountId && providerName !== 'plaid') {
+      throw new BadRequestException(
+        'Manual account conversion is currently only supported for Plaid',
+      );
+    }
 
     // Get provider
     const provider = this.providerRegistry.getProvider(providerName);
@@ -115,6 +139,28 @@ export class BankLinkService extends OwnedCrudService<
       );
     }
 
+    let conversionContext: LinkConversionContext | undefined;
+    if (convertAccountId) {
+      const accountToConvert = await this.accountRepository.findOne({
+        where: { id: convertAccountId, userId },
+      });
+      if (!accountToConvert) {
+        throw new NotFoundException(
+          `Account with id ${convertAccountId} not found`,
+        );
+      }
+      if (accountToConvert.bankLinkId) {
+        throw new BadRequestException(
+          `Account with id ${convertAccountId} is already linked`,
+        );
+      }
+
+      conversionContext = {
+        mode: 'convert-manual-account',
+        convertAccountId,
+      };
+    }
+
     // Build provider user details
     // For crypto: use wallet params directly
     // For others: fetch existing provider-specific user details
@@ -129,6 +175,7 @@ export class BankLinkService extends OwnedCrudService<
       redirectUri,
       providerUserDetails,
       accessToken,
+      singleAccountSelect: !!conversionContext,
     });
 
     // If provider returned updated user details, persist them
@@ -150,6 +197,7 @@ export class BankLinkService extends OwnedCrudService<
         providerName,
         userId,
         linkResponse.immediateAccounts,
+        conversionContext,
       );
       // Return empty response (accounts created, no redirect needed)
       return {};
@@ -163,6 +211,7 @@ export class BankLinkService extends OwnedCrudService<
         providerName,
         userId,
         linkResponse.expiresAt,
+        conversionContext,
       );
       this.logger.log(
         { webhookId: linkResponse.webhookId },
@@ -181,56 +230,34 @@ export class BankLinkService extends OwnedCrudService<
     providerName: string,
     userId: string,
     linkCompletionResponses: LinkCompletionResponse[],
+    conversionContext?: LinkConversionContext,
   ): Promise<void> {
     this.logger.log(
       { providerName, userId, responseCount: linkCompletionResponses.length },
       'Creating accounts from link completion',
     );
 
+    if (conversionContext) {
+      await this.convertManualAccountFromLinkCompletion(
+        providerName,
+        userId,
+        linkCompletionResponses,
+        conversionContext,
+      );
+      return;
+    }
+
     const savedBankLinks: BankLinkEntity[] = [];
 
     // For each response, check if a bank link already exists (by itemId) or create a new one
     for (const response of linkCompletionResponses) {
-      const itemId = response.authentication.itemId as string | undefined;
-      let bankLink: BankLinkEntity | null = null;
-
-      if (itemId) {
-        bankLink = await this.findByPlaidItemId(itemId);
-      }
-
-      if (bankLink) {
-        // Update existing bank link
-        this.logger.log(
-          { bankLinkId: bankLink.id, itemId },
-          'Found existing bank link, updating',
-        );
-        bankLink.authentication = response.authentication;
-        bankLink.status = 'OK';
-        bankLink.statusDate = new Date();
-        bankLink.statusBody = null;
-        bankLink.accountIds = response.accounts.map((a) => a.accountId);
-        if (response.institution?.id !== undefined) {
-          bankLink.institutionId = response.institution.id ?? null;
-        }
-        if (response.institution?.name !== undefined) {
-          bankLink.institutionName = response.institution.name ?? null;
-        }
-      } else {
-        // Create new bank link
-        bankLink = BankLinkEntity.fromDto(
-          {
-            providerName,
-            authentication: response.authentication,
-            accountIds: response.accounts.map((a) => a.accountId),
-            institutionId: response.institution?.id ?? null,
-            institutionName: response.institution?.name ?? null,
-          },
+      savedBankLinks.push(
+        await this.saveBankLinkFromLinkCompletionResponse(
+          providerName,
           userId,
-        );
-      }
-
-      const saved = await this.repository.save(bankLink);
-      savedBankLinks.push(saved);
+          response,
+        ),
+      );
     }
 
     this.logger.log({ count: savedBankLinks.length }, 'Saved bank links');
@@ -542,6 +569,7 @@ export class BankLinkService extends OwnedCrudService<
         providerName,
         userId,
         linkCompletionResponses,
+        this.parseConversionContext(pendingEvent.context),
       );
 
       // Mark webhook event as completed
@@ -948,6 +976,162 @@ export class BankLinkService extends OwnedCrudService<
       .where('bankLink.providerName = :provider', { provider: 'plaid' })
       .andWhere(`"bankLink"."authentication"->>'itemId' = :itemId`, { itemId })
       .getOne();
+  }
+
+  private parseConversionContext(
+    context?: Record<string, any> | null,
+  ): LinkConversionContext | undefined {
+    if (
+      context?.mode === 'convert-manual-account' &&
+      typeof context.convertAccountId === 'string'
+    ) {
+      return {
+        mode: 'convert-manual-account',
+        convertAccountId: context.convertAccountId,
+      };
+    }
+    return undefined;
+  }
+
+  private async saveBankLinkFromLinkCompletionResponse(
+    providerName: string,
+    userId: string,
+    response: LinkCompletionResponse,
+    repository: Pick<Repository<BankLinkEntity>, 'save'> = this.repository,
+  ): Promise<BankLinkEntity> {
+    const itemId = response.authentication.itemId as string | undefined;
+    let bankLink: BankLinkEntity | null = null;
+
+    if (itemId) {
+      bankLink = await this.findByPlaidItemId(itemId);
+    }
+
+    if (bankLink) {
+      this.logger.log(
+        { bankLinkId: bankLink.id, itemId },
+        'Found existing bank link, updating',
+      );
+      const mergedAccountIds = new Set([
+        ...bankLink.accountIds,
+        ...response.accounts.map((a) => a.accountId),
+      ]);
+      bankLink.authentication = response.authentication;
+      bankLink.status = 'OK';
+      bankLink.statusDate = new Date();
+      bankLink.statusBody = null;
+      bankLink.accountIds = Array.from(mergedAccountIds);
+      if (response.institution?.id !== undefined) {
+        bankLink.institutionId = response.institution.id ?? null;
+      }
+      if (response.institution?.name !== undefined) {
+        bankLink.institutionName = response.institution.name ?? null;
+      }
+    } else {
+      bankLink = BankLinkEntity.fromDto(
+        {
+          providerName,
+          authentication: response.authentication,
+          accountIds: response.accounts.map((a) => a.accountId),
+          institutionId: response.institution?.id ?? null,
+          institutionName: response.institution?.name ?? null,
+        },
+        userId,
+      );
+    }
+
+    return repository.save(bankLink);
+  }
+
+  private async convertManualAccountFromLinkCompletion(
+    providerName: string,
+    userId: string,
+    linkCompletionResponses: LinkCompletionResponse[],
+    conversionContext: LinkConversionContext,
+  ): Promise<void> {
+    if (linkCompletionResponses.length !== 1) {
+      throw new BadRequestException(
+        'Conversion requires exactly one linked institution',
+      );
+    }
+
+    const response = linkCompletionResponses[0];
+    if (response.accounts.length !== 1) {
+      throw new BadRequestException(
+        'Conversion requires exactly one selected provider account',
+      );
+    }
+
+    const apiAccount = response.accounts[0];
+
+    const { bankLink, convertedAccount } =
+      await this.repository.manager.transaction(async (manager) => {
+        const bankLinkRepository = manager.getRepository(BankLinkEntity);
+        const accountRepository = manager.getRepository(AccountEntity);
+        const bankLink = await this.saveBankLinkFromLinkCompletionResponse(
+          providerName,
+          userId,
+          response,
+          bankLinkRepository,
+        );
+        const targetAccount = await accountRepository.findOne({
+          where: {
+            id: conversionContext.convertAccountId,
+            userId,
+          },
+        });
+
+        if (!targetAccount) {
+          throw new NotFoundException(
+            `Account with id ${conversionContext.convertAccountId} not found`,
+          );
+        }
+        if (targetAccount.bankLinkId) {
+          throw new BadRequestException(
+            `Account with id ${conversionContext.convertAccountId} is already linked`,
+          );
+        }
+
+        const conflictingAccount = await accountRepository.findOne({
+          where: {
+            externalAccountId: apiAccount.accountId,
+            userId,
+          },
+        });
+        if (conflictingAccount && conflictingAccount.id !== targetAccount.id) {
+          throw new ConflictException(
+            `Provider account ${apiAccount.accountId} is already linked`,
+          );
+        }
+
+        const dto = this.createAccountDtoFromAPIAccount(
+          apiAccount,
+          bankLink.id,
+        );
+        const existingCustomName = targetAccount.customName;
+        const previousName = targetAccount.name;
+
+        this.applyAccountDtoToEntity(targetAccount, dto);
+        if (
+          !existingCustomName &&
+          previousName &&
+          previousName !== apiAccount.name
+        ) {
+          targetAccount.customName = previousName;
+        }
+
+        const convertedAccount = await accountRepository.save(targetAccount);
+        return { bankLink, convertedAccount };
+      });
+
+    this.eventEmitter.emit(
+      LinkedAccountEvents.UPDATED,
+      new LinkedAccountUpdatedEvent(convertedAccount.toObject()),
+    );
+
+    const provider = this.providerRegistry.getProvider(providerName);
+    if (provider.syncTransactions) {
+      await this.syncTransactions(bankLink.id, userId);
+    }
   }
 
   /**

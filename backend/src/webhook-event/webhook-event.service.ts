@@ -22,6 +22,7 @@ export class WebhookEventService {
     providerName: string,
     userId: string,
     expiresAt?: Date,
+    context?: Record<string, any> | null,
   ): Promise<WebhookEvent> {
     this.logger.log(
       { webhookId, providerName, userId },
@@ -33,6 +34,7 @@ export class WebhookEventService {
         providerName,
         status: WebhookEventStatus.PENDING,
         expiresAt: expiresAt ?? null,
+        context: context ?? null,
       },
       userId,
     );

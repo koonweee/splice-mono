@@ -28,6 +28,7 @@ export interface IBankLinkProvider {
     redirectUri?: string;
     providerUserDetails?: Record<string, unknown>;
     accessToken?: string;
+    singleAccountSelect?: boolean;
   }): Promise<LinkInitiationResponse>;
 
   /**
