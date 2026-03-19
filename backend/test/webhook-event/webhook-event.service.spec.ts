@@ -41,6 +41,7 @@ describe('WebhookEventService', () => {
       mockEntity.providerName = 'plaid';
       mockEntity.status = WebhookEventStatus.PENDING;
       mockEntity.userId = mockUserId;
+      mockEntity.context = null;
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -67,6 +68,7 @@ describe('WebhookEventService', () => {
       mockEntity.status = WebhookEventStatus.PENDING;
       mockEntity.userId = mockUserId;
       mockEntity.expiresAt = expiresAt;
+      mockEntity.context = null;
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -91,6 +93,7 @@ describe('WebhookEventService', () => {
       mockEntity.providerName = 'plaid';
       mockEntity.status = WebhookEventStatus.PENDING;
       mockEntity.userId = mockUserId;
+      mockEntity.context = null;
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -128,6 +131,7 @@ describe('WebhookEventService', () => {
       mockEntity.providerName = 'plaid';
       mockEntity.status = WebhookEventStatus.PENDING;
       mockEntity.userId = mockUserId;
+      mockEntity.context = null;
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -169,6 +173,7 @@ describe('WebhookEventService', () => {
       mockEntity.providerName = 'plaid';
       mockEntity.status = WebhookEventStatus.PENDING;
       mockEntity.userId = mockUserId;
+      mockEntity.context = null;
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -197,6 +202,7 @@ describe('WebhookEventService', () => {
       mockEntity.providerName = 'plaid';
       mockEntity.status = WebhookEventStatus.PENDING;
       mockEntity.userId = mockUserId;
+      mockEntity.context = null;
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
