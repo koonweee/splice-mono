@@ -36,7 +36,7 @@ describe('PlaidProvider', () => {
         expect.objectContaining({
           user_token: 'user-token-123',
           enable_multi_item_link: false,
-          link_customization_name: 'splice_single_account_conversion',
+          link_customization_name: 'single_account',
         }),
       );
     });

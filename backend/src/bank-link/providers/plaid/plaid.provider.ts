@@ -156,7 +156,7 @@ function isItemWebhook(
 @Injectable()
 export class PlaidProvider implements IBankLinkProvider {
   private static readonly SINGLE_ACCOUNT_CONVERSION_CUSTOMIZATION_NAME =
-    'splice_single_account_conversion';
+    'single_account';
   private readonly logger = new Logger(PlaidProvider.name);
   readonly providerName = 'plaid';
 
