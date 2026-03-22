@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { Reflector } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -10,6 +11,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AccountModule } from './account/account.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { PersonalAccessTokenService } from './auth/personal-access-token.service';
 import { BalanceQueryModule } from './balance-query/balance-query.module';
 import { BalanceSnapshotModule } from './balance-snapshot/balance-snapshot.module';
 import { BankLinkModule } from './bank-link/bank-link.module';
@@ -54,6 +56,8 @@ import { UserModule } from './user/user.module';
 
                 // Request body credentials
                 'req.body.password',
+                'req.body.token',
+                'req.body.personalAccessToken',
                 'req.body.refreshToken',
                 'req.body.accessToken',
 
@@ -62,6 +66,8 @@ import { UserModule } from './user/user.module';
 
                 // Defense-in-depth for service-level logs
                 '*.password',
+                '*.tokenHash',
+                '*.rawToken',
                 '*.accessToken',
                 '*.refreshToken',
                 '*.userToken',
@@ -97,7 +103,11 @@ import { UserModule } from './user/user.module';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
+      inject: [Reflector, PersonalAccessTokenService],
+      useFactory: (
+        reflector: Reflector,
+        personalAccessTokenService: PersonalAccessTokenService,
+      ) => new JwtAuthGuard(reflector, personalAccessTokenService),
     },
   ],
 })
