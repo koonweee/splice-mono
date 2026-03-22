@@ -1,5 +1,6 @@
-import { BadRequestException, NotFoundException, ParseUUIDPipe } from '@nestjs/common';
+import { NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { AuthService } from '../../src/auth/auth.service';
 import { PersonalAccessTokenService } from '../../src/auth/personal-access-token.service';
 import { UserController } from '../../src/user/user.controller';
@@ -285,16 +286,17 @@ describe('UserController', () => {
     });
 
     it('revokeToken rejects malformed UUIDs before calling the PAT service', async () => {
-      const uuidPipe = new ParseUUIDPipe();
+      const routeArgs = Reflect.getMetadata(
+        ROUTE_ARGS_METADATA,
+        UserController,
+        'revokeToken',
+      ) as Record<string, { data?: string; pipes?: unknown[] }>;
+      const binding = Object.values(routeArgs).find((value) => value.data === 'id');
 
-      await expect(
-        uuidPipe.transform('not-a-uuid', {
-          type: 'param',
-          metatype: String,
-          data: 'id',
-        } as any),
-      ).rejects.toBeInstanceOf(BadRequestException);
-      expect(mockPersonalAccessTokenService.revokeToken).not.toHaveBeenCalled();
+      expect(binding).toBeDefined();
+      expect(binding?.pipes).toEqual(
+        expect.arrayContaining([expect.any(ParseUUIDPipe)]),
+      );
     });
   });
 });
