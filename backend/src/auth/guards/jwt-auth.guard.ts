@@ -36,17 +36,20 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const rawBearer = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
     const hasSessionCookie = Boolean(
       request.cookies?.[JwtAuthGuard.SESSION_COOKIE_KEY],
     );
-
-    if (hasSessionCookie) {
-      return super.canActivate(context);
-    }
-
-    const rawBearer = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
+    const sessionJwtOnly = this.reflector.getAllAndOverride<boolean>(
+      SESSION_JWT_ONLY_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (rawBearer && this.patService.isPersonalAccessToken(rawBearer)) {
+      if (sessionJwtOnly && hasSessionCookie) {
+        return super.canActivate(context);
+      }
+
       return this.handlePersonalAccessToken(context, rawBearer);
     }
 

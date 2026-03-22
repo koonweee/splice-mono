@@ -145,6 +145,46 @@ describe('JwtAuthGuard', () => {
     expect(patService.validateToken).not.toHaveBeenCalled();
   });
 
+  it('prefers a PAT bearer token over the session cookie on ordinary routes', async () => {
+    reflector.getAllAndOverride.mockImplementation((key) => {
+      if (key === IS_PUBLIC_KEY) {
+        return false;
+      }
+
+      if (key === SESSION_JWT_ONLY_KEY) {
+        return false;
+      }
+
+      return undefined;
+    });
+
+    patService.isPersonalAccessToken.mockReturnValue(true);
+    patService.validateToken.mockResolvedValue({
+      userId: 'user-123',
+      email: 'user@example.com',
+    });
+
+    const request: MockRequest = {
+      headers: {
+        authorization: 'Bearer splice_pat_deadbeef',
+      },
+      cookies: {
+        splice_access_token: 'session-cookie-token',
+      },
+    };
+
+    await expect(
+      Promise.resolve(guard.canActivate(createContext(request))),
+    ).resolves.toBe(true);
+
+    expect(patService.validateToken).toHaveBeenCalledWith('splice_pat_deadbeef');
+    expect(parentProto.canActivate).not.toHaveBeenCalled();
+    expect(request.user).toEqual({
+      userId: 'user-123',
+      email: 'user@example.com',
+    });
+  });
+
   it('prefers the session cookie over a PAT bearer token on SessionJwtOnly routes', async () => {
     reflector.getAllAndOverride.mockImplementation((key) => {
       if (key === IS_PUBLIC_KEY) {
@@ -171,9 +211,43 @@ describe('JwtAuthGuard', () => {
       Promise.resolve(guard.canActivate(createContext(request))),
     ).resolves.toBe(true);
 
-    expect(patService.isPersonalAccessToken).not.toHaveBeenCalled();
+    expect(patService.isPersonalAccessToken).toHaveBeenCalledWith(
+      'splice_pat_deadbeef',
+    );
     expect(patService.validateToken).not.toHaveBeenCalled();
     expect(parentProto.canActivate).toHaveBeenCalledWith(expect.any(Object));
+  });
+
+  it('rejects invalid PATs on ordinary routes even when a session cookie is present', async () => {
+    reflector.getAllAndOverride.mockImplementation((key) => {
+      if (key === IS_PUBLIC_KEY) {
+        return false;
+      }
+
+      if (key === SESSION_JWT_ONLY_KEY) {
+        return false;
+      }
+
+      return undefined;
+    });
+
+    patService.isPersonalAccessToken.mockReturnValue(true);
+    patService.validateToken.mockResolvedValue(null);
+
+    const request: MockRequest = {
+      headers: {
+        authorization: 'Bearer splice_pat_deadbeef',
+      },
+      cookies: {
+        splice_access_token: 'session-cookie-token',
+      },
+    };
+
+    await expect(
+      Promise.resolve(guard.canActivate(createContext(request))),
+    ).rejects.toThrow(UnauthorizedException);
+
+    expect(parentProto.canActivate).not.toHaveBeenCalled();
   });
 
   it('falls back to the Passport JWT guard for non-PAT bearer tokens', async () => {
