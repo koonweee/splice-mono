@@ -8,6 +8,8 @@ import { PersonalAccessTokenService } from '../personal-access-token.service';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
+  private static readonly SESSION_COOKIE_KEY = 'splice_access_token';
+
   constructor(
     private reflector: Reflector,
     private readonly patService: PersonalAccessTokenService,
@@ -15,7 +17,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     super();
   }
 
-  async canActivate(context: ExecutionContext) {
+  canActivate(context: ExecutionContext) {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -26,28 +28,44 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     const request = context.switchToHttp().getRequest();
+    const hasSessionCookie = Boolean(
+      request.cookies?.[JwtAuthGuard.SESSION_COOKIE_KEY],
+    );
+
+    if (hasSessionCookie) {
+      return super.canActivate(context);
+    }
+
     const rawBearer = ExtractJwt.fromAuthHeaderAsBearerToken()(request);
 
     if (rawBearer && this.patService.isPersonalAccessToken(rawBearer)) {
-      const sessionJwtOnly = this.reflector.getAllAndOverride<boolean>(
-        SESSION_JWT_ONLY_KEY,
-        [context.getHandler(), context.getClass()],
-      );
-
-      if (sessionJwtOnly) {
-        throw new UnauthorizedException();
-      }
-
-      const user = await this.patService.validateToken(rawBearer);
-
-      if (!user) {
-        throw new UnauthorizedException();
-      }
-
-      request.user = user;
-      return true;
+      return this.handlePersonalAccessToken(context, rawBearer);
     }
 
     return super.canActivate(context);
+  }
+
+  private async handlePersonalAccessToken(
+    context: ExecutionContext,
+    rawBearer: string,
+  ): Promise<boolean> {
+    const sessionJwtOnly = this.reflector.getAllAndOverride<boolean>(
+      SESSION_JWT_ONLY_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (sessionJwtOnly) {
+      throw new UnauthorizedException();
+    }
+
+    const user = await this.patService.validateToken(rawBearer);
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    const request = context.switchToHttp().getRequest();
+    request.user = user;
+    return true;
   }
 }
