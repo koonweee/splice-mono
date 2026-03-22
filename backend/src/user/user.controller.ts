@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Patch,
   Param,
+  ParseUUIDPipe,
   Post,
   Req,
   Res,
@@ -346,7 +347,7 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'Token not found' })
   async revokeToken(
     @CurrentUser() currentUser: JwtUser,
-    @Param('id') tokenId: string,
+    @Param('id', new ParseUUIDPipe()) tokenId: string,
   ): Promise<void> {
     const result = await this.personalAccessTokenService.revokeToken(
       currentUser.userId,
