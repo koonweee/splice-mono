@@ -1,7 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { TimestampedEntity } from '../common/base.entity';
+import { UserEntity } from '../user/user.entity';
 
-export interface PersonalAccessTokenView {
+const TOKEN_PREFIX = 'splice_pat';
+
+export interface PersonalAccessTokenListItem {
   id: string;
   userId: string;
   name: string;
@@ -12,8 +15,10 @@ export interface PersonalAccessTokenView {
   revokedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  token?: string;
-  tokenHash?: string;
+}
+
+export interface PersonalAccessTokenCreated extends PersonalAccessTokenListItem {
+  token: string;
 }
 
 @Entity('personal_access_token')
@@ -23,6 +28,9 @@ export class PersonalAccessTokenEntity extends TimestampedEntity {
 
   @Column({ type: 'uuid' })
   userId: string;
+
+  @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
+  user: UserEntity;
 
   @Column({ type: 'varchar' })
   name: string;
@@ -42,13 +50,13 @@ export class PersonalAccessTokenEntity extends TimestampedEntity {
   @Column({ type: 'timestamp', nullable: true })
   revokedAt: Date | null;
 
-  toObject(): PersonalAccessTokenView {
+  toObject(): PersonalAccessTokenListItem {
     return {
       id: this.id,
       userId: this.userId,
       name: this.name,
       prefix: this.prefix,
-      tokenPreview: `${this.prefix}_${this.tokenHash.slice(-8)}`,
+      tokenPreview: `${TOKEN_PREFIX}_${this.prefix}`,
       lastUsedAt: this.lastUsedAt,
       expiresAt: this.expiresAt,
       revokedAt: this.revokedAt,
