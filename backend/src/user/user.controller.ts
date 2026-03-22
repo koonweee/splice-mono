@@ -343,6 +343,7 @@ export class UserController {
   @HttpCode(204)
   @ApiOperation({ description: 'Revoke a personal access token' })
   @ApiResponse({ status: 204, description: 'Token revoked successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid token ID' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Token not found' })
   async revokeToken(
