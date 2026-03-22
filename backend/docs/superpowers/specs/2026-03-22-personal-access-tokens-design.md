@@ -97,6 +97,9 @@ This preserves controller behavior because protected endpoints already rely on `
 
 Add a small PAT management API under `/user/tokens`.
 
+All `/user/tokens` endpoints require a normal logged-in user session or JWT.
+PATs are not valid credentials for PAT management in phase one.
+
 ### `POST /user/tokens`
 
 Create a token for the authenticated user.
@@ -117,7 +120,7 @@ Response body:
 
 Notes:
 
-- This endpoint should require a normal logged-in user session or JWT, not a PAT
+- This endpoint requires a normal logged-in user session or JWT, not a PAT
 - That avoids self-replicating machine credentials in phase one
 
 ### `GET /user/tokens`
@@ -149,8 +152,8 @@ Behavior:
 - PATs are user-scoped and inherit full access to the user's existing API permissions
 - No scopes are introduced in this phase
 - PATs may be used for ordinary protected API endpoints
-- PATs may not be used to create more PATs in this phase
-- PAT list and revoke endpoints should stay user-owned and scoped by authenticated user ID
+- PATs may not be used for PAT management endpoints in this phase
+- PAT create, list, and revoke endpoints stay user-owned and scoped by authenticated user ID
 
 ## Error Handling
 
