@@ -5,7 +5,8 @@ import { IsNull, Repository } from 'typeorm';
 import { JwtUser } from './decorators/current-user.decorator';
 import {
   PersonalAccessTokenEntity,
-  type PersonalAccessTokenView,
+  type PersonalAccessTokenCreated,
+  type PersonalAccessTokenListItem,
 } from './personal-access-token.entity';
 import { UserEntity } from '../user/user.entity';
 
@@ -14,11 +15,8 @@ export interface CreatePersonalAccessTokenDto {
   expiresAt?: Date | string | null;
 }
 
-export interface PersonalAccessTokenCreated extends PersonalAccessTokenView {
-  token: string;
-}
-
 const TOKEN_PREFIX = 'splice_pat';
+const TOKEN_PREVIEW_LENGTH = 8;
 
 @Injectable()
 export class PersonalAccessTokenService {
@@ -33,7 +31,7 @@ export class PersonalAccessTokenService {
     user: JwtUser,
     dto: CreatePersonalAccessTokenDto,
   ): Promise<PersonalAccessTokenCreated> {
-    const token = this.generateRawToken();
+    const { token, prefix } = this.generateRawToken();
     const tokenHash = this.hashToken(token);
     const expiresAt = this.normalizeExpiresAt(dto.expiresAt);
 
@@ -41,7 +39,7 @@ export class PersonalAccessTokenService {
     entity.userId = user.userId;
     entity.name = dto.name;
     entity.tokenHash = tokenHash;
-    entity.prefix = TOKEN_PREFIX;
+    entity.prefix = prefix;
     entity.lastUsedAt = null;
     entity.expiresAt = expiresAt;
     entity.revokedAt = null;
@@ -54,7 +52,7 @@ export class PersonalAccessTokenService {
     };
   }
 
-  async listTokens(userId: string): Promise<PersonalAccessTokenView[]> {
+  async listTokens(userId: string): Promise<PersonalAccessTokenListItem[]> {
     const entities = await this.personalAccessTokenRepository.find({
       where: { userId },
       order: { createdAt: 'DESC' },
@@ -116,8 +114,12 @@ export class PersonalAccessTokenService {
     };
   }
 
-  private generateRawToken(): string {
-    return `${TOKEN_PREFIX}_${crypto.randomBytes(32).toString('hex')}`;
+  private generateRawToken(): { token: string; prefix: string } {
+    const secret = crypto.randomBytes(32).toString('hex');
+    return {
+      token: `${TOKEN_PREFIX}_${secret}`,
+      prefix: secret.slice(0, TOKEN_PREVIEW_LENGTH),
+    };
   }
 
   private hashToken(token: string): string {
