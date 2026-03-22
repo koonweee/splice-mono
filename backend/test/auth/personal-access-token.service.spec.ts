@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PersonalAccessTokenService } from '../../src/auth/personal-access-token.service';
@@ -44,7 +45,7 @@ describe('PersonalAccessTokenService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   it('creates a token by storing only a hash and returning the raw token once', async () => {
@@ -100,6 +101,20 @@ describe('PersonalAccessTokenService', () => {
     expect(result[0].tokenPreview).toBe('splice_pat_deadbeef');
     expect(result[0]).not.toHaveProperty('tokenHash');
     expect(result[0]).not.toHaveProperty('token');
+  });
+
+  it.each([
+    [''],
+    ['not-a-date'],
+    [new Date('invalid')],
+  ])('rejects invalid expiresAt input %p', async (expiresAt) => {
+    await expect(
+      service.createToken(mockUser, {
+        name: 'codex-local',
+        expiresAt,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(mockPatRepository.save).not.toHaveBeenCalled();
   });
 
   it('revokes a token by marking it unusable', async () => {

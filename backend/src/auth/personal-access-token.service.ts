@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import { IsNull, Repository } from 'typeorm';
@@ -163,10 +163,27 @@ export class PersonalAccessTokenService {
   private normalizeExpiresAt(
     expiresAt?: Date | string | null,
   ): Date | null {
-    if (!expiresAt) {
+    if (expiresAt === null || expiresAt === undefined) {
       return null;
     }
 
-    return expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
+    const parsedDate =
+      expiresAt instanceof Date
+        ? expiresAt
+        : this.parseExpiresAtString(expiresAt);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      throw new BadRequestException('Invalid expiresAt');
+    }
+
+    return parsedDate;
+  }
+
+  private parseExpiresAtString(expiresAt: string): Date {
+    if (expiresAt.trim() === '') {
+      throw new BadRequestException('Invalid expiresAt');
+    }
+
+    return new Date(expiresAt);
   }
 }
