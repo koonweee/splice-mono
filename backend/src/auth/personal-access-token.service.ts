@@ -15,6 +15,8 @@ export interface CreatePersonalAccessTokenDto {
   expiresAt?: Date | string | null;
 }
 
+export type RevokeTokenResult = 'revoked' | 'not_found' | 'already_revoked';
+
 const TOKEN_PREFIX = 'splice_pat';
 const TOKEN_PREVIEW_LENGTH = 8;
 
@@ -61,11 +63,36 @@ export class PersonalAccessTokenService {
     return entities.map((entity) => entity.toObject());
   }
 
-  async revokeToken(userId: string, tokenId: string): Promise<void> {
-    await this.personalAccessTokenRepository.update(
-      { id: tokenId, userId },
+  async revokeToken(
+    userId: string,
+    tokenId: string,
+  ): Promise<RevokeTokenResult> {
+    const entity = await this.personalAccessTokenRepository.findOne({
+      where: { id: tokenId, userId },
+    });
+
+    if (!entity) {
+      return 'not_found';
+    }
+
+    if (entity.revokedAt) {
+      return 'already_revoked';
+    }
+
+    const result = await this.personalAccessTokenRepository.update(
+      {
+        id: tokenId,
+        userId,
+        revokedAt: IsNull(),
+      },
       { revokedAt: new Date() },
     );
+
+    if (!result.affected) {
+      return 'already_revoked';
+    }
+
+    return 'revoked';
   }
 
   isPersonalAccessToken(rawToken: string): boolean {
@@ -97,16 +124,23 @@ export class PersonalAccessTokenService {
       return null;
     }
 
-    const user = await this.userRepository.findOne({
-      where: { id: entity.userId },
-    });
+    const user = await this.userRepository.findOne({ where: { id: entity.userId } });
 
     if (!user) {
       return null;
     }
 
-    entity.lastUsedAt = new Date();
-    await this.personalAccessTokenRepository.save(entity);
+    const updateResult = await this.personalAccessTokenRepository.update(
+      {
+        id: entity.id,
+        revokedAt: IsNull(),
+      },
+      { lastUsedAt: new Date() },
+    );
+
+    if (!updateResult.affected) {
+      return null;
+    }
 
     return {
       userId: user.id,

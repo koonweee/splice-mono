@@ -103,14 +103,51 @@ describe('PersonalAccessTokenService', () => {
   });
 
   it('revokes a token by marking it unusable', async () => {
-    await service.revokeToken('user-123', 'pat-123');
+    mockPatRepository.findOne.mockResolvedValue({
+      id: 'pat-123',
+      userId: 'user-123',
+      revokedAt: null,
+    });
+    mockPatRepository.update.mockResolvedValue({ affected: 1 });
 
+    const result = await service.revokeToken('user-123', 'pat-123');
+
+    expect(result).toBe('revoked');
+    expect(mockPatRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 'pat-123', userId: 'user-123' },
+    });
     expect(mockPatRepository.update).toHaveBeenCalledWith(
-      { id: 'pat-123', userId: 'user-123' },
+      expect.objectContaining({
+        id: 'pat-123',
+        userId: 'user-123',
+        revokedAt: expect.any(Object),
+      }),
       expect.objectContaining({
         revokedAt: expect.any(Date),
       }),
     );
+  });
+
+  it('returns already_revoked when revoke is repeated', async () => {
+    mockPatRepository.findOne.mockResolvedValue({
+      id: 'pat-123',
+      userId: 'user-123',
+      revokedAt: new Date('2024-01-02T00:00:00Z'),
+    });
+
+    const result = await service.revokeToken('user-123', 'pat-123');
+
+    expect(result).toBe('already_revoked');
+    expect(mockPatRepository.update).not.toHaveBeenCalled();
+  });
+
+  it('returns not_found when the token does not exist or is not owned by the user', async () => {
+    mockPatRepository.findOne.mockResolvedValue(null);
+
+    const result = await service.revokeToken('user-123', 'pat-missing');
+
+    expect(result).toBe('not_found');
+    expect(mockPatRepository.update).not.toHaveBeenCalled();
   });
 
   it('validates a personal access token and returns user identity', async () => {
@@ -131,7 +168,7 @@ describe('PersonalAccessTokenService', () => {
       id: 'user-123',
       email: 'user@example.com',
     } as UserEntity);
-    mockPatRepository.save.mockImplementation(async (savedEntity) => savedEntity);
+    mockPatRepository.update.mockResolvedValue({ affected: 1 });
 
     const result = await service.validateToken('splice_pat_deadbeef');
     const expectedHash = crypto
@@ -153,15 +190,18 @@ describe('PersonalAccessTokenService', () => {
     expect(mockPatRepository.findOne.mock.calls[0][0].where.tokenHash).not.toBe(
       'splice_pat_deadbeef',
     );
-    expect(mockPatRepository.save).toHaveBeenCalledWith(
+    expect(mockPatRepository.update).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'pat-123',
+        revokedAt: expect.any(Object),
+      }),
+      expect.objectContaining({
         lastUsedAt: expect.any(Date),
       }),
     );
   });
 
-  it('returns null for expired or revoked personal access tokens', async () => {
+  it('returns null for expired personal access tokens', async () => {
     const expiredEntity = new PersonalAccessTokenEntity();
     expiredEntity.id = 'pat-expired';
     expiredEntity.userId = 'user-123';
@@ -174,27 +214,20 @@ describe('PersonalAccessTokenService', () => {
     expiredEntity.createdAt = new Date('2024-01-01T00:00:00Z');
     expiredEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
-    const revokedEntity = new PersonalAccessTokenEntity();
-    revokedEntity.id = 'pat-revoked';
-    revokedEntity.userId = 'user-123';
-    revokedEntity.name = 'revoked';
-    revokedEntity.prefix = 'cafebabe';
-    revokedEntity.tokenHash = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-    revokedEntity.lastUsedAt = null;
-    revokedEntity.expiresAt = null;
-    revokedEntity.revokedAt = new Date('2024-01-02T00:00:00Z');
-    revokedEntity.createdAt = new Date('2024-01-01T00:00:00Z');
-    revokedEntity.updatedAt = new Date('2024-01-02T00:00:00Z');
-
-    mockPatRepository.findOne
-      .mockResolvedValueOnce(expiredEntity)
-      .mockResolvedValueOnce(revokedEntity);
+    mockPatRepository.findOne.mockResolvedValue(expiredEntity);
     mockUserRepository.findOne.mockResolvedValue({
       id: 'user-123',
       email: 'user@example.com',
     } as UserEntity);
 
     await expect(service.validateToken('splice_pat_expired')).resolves.toBeNull();
+  });
+
+  it('returns null for revoked personal access tokens', async () => {
+    mockPatRepository.findOne.mockResolvedValue(null);
+
     await expect(service.validateToken('splice_pat_revoked')).resolves.toBeNull();
+    expect(mockPatRepository.update).not.toHaveBeenCalled();
+    expect(mockUserRepository.findOne).not.toHaveBeenCalled();
   });
 });
