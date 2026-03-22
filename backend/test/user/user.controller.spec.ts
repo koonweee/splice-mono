@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from '../../src/auth/auth.service';
 import { PersonalAccessTokenService } from '../../src/auth/personal-access-token.service';
@@ -158,7 +158,7 @@ describe('UserController', () => {
     it('createToken returns the one-time token payload from the PAT service', async () => {
       const expiresAt = '2026-01-01T00:00:00.000Z';
       const tokenPayload = {
-        id: 'pat-123',
+        id: '11111111-1111-4111-8111-111111111111',
         userId: currentUser.userId,
         name: 'codex-local',
         prefix: 'deadbeef',
@@ -171,7 +171,7 @@ describe('UserController', () => {
         token: 'splice_pat_abc123',
       };
       const expectedPayload = {
-        id: 'pat-123',
+        id: '11111111-1111-4111-8111-111111111111',
         name: 'codex-local',
         token: 'splice_pat_abc123',
         tokenPreview: 'splice_pat_deadbeef',
@@ -204,7 +204,7 @@ describe('UserController', () => {
     it('listTokens returns sanitized token metadata from the PAT service', async () => {
       const tokens = [
         {
-          id: 'pat-123',
+          id: '11111111-1111-4111-8111-111111111111',
           userId: currentUser.userId,
           name: 'codex-local',
           prefix: 'deadbeef',
@@ -218,7 +218,7 @@ describe('UserController', () => {
       ];
       const expectedTokens = [
         {
-          id: 'pat-123',
+          id: '11111111-1111-4111-8111-111111111111',
           name: 'codex-local',
           tokenPreview: 'splice_pat_deadbeef',
           lastUsedAt: null,
@@ -247,12 +247,15 @@ describe('UserController', () => {
     it('revokeToken delegates to the PAT service and resolves void', async () => {
       mockPersonalAccessTokenService.revokeToken.mockResolvedValue('revoked');
 
-      const result = await controller.revokeToken(currentUser, 'pat-123');
+      const result = await controller.revokeToken(
+        currentUser,
+        '11111111-1111-4111-8111-111111111111',
+      );
 
       expect(result).toBeUndefined();
       expect(mockPersonalAccessTokenService.revokeToken).toHaveBeenCalledWith(
         currentUser.userId,
-        'pat-123',
+        '11111111-1111-4111-8111-111111111111',
       );
       expect(mockAuthService.revokeToken).not.toHaveBeenCalled();
       expect(mockAuthService.revokeAllUserTokens).not.toHaveBeenCalled();
@@ -261,21 +264,37 @@ describe('UserController', () => {
     it('revokeToken returns 404 when the PAT service cannot find the token', async () => {
       mockPersonalAccessTokenService.revokeToken.mockResolvedValue('not_found');
 
-      await expect(controller.revokeToken(currentUser, 'pat-missing')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        controller.revokeToken(currentUser, '22222222-2222-4222-8222-222222222222'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('revokeToken treats already revoked tokens as a no-op success', async () => {
       mockPersonalAccessTokenService.revokeToken.mockResolvedValue('already_revoked');
 
-      const result = await controller.revokeToken(currentUser, 'pat-123');
+      const result = await controller.revokeToken(
+        currentUser,
+        '11111111-1111-4111-8111-111111111111',
+      );
 
       expect(result).toBeUndefined();
       expect(mockPersonalAccessTokenService.revokeToken).toHaveBeenCalledWith(
         currentUser.userId,
-        'pat-123',
+        '11111111-1111-4111-8111-111111111111',
       );
+    });
+
+    it('revokeToken rejects malformed UUIDs before calling the PAT service', async () => {
+      const uuidPipe = new ParseUUIDPipe();
+
+      await expect(
+        uuidPipe.transform('not-a-uuid', {
+          type: 'param',
+          metatype: String,
+          data: 'id',
+        } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(mockPersonalAccessTokenService.revokeToken).not.toHaveBeenCalled();
     });
   });
 });
