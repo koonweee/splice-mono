@@ -17,7 +17,8 @@ export interface PersonalAccessTokenListItem {
   updatedAt: Date;
 }
 
-export interface PersonalAccessTokenCreated extends PersonalAccessTokenListItem {
+export interface PersonalAccessTokenCreated
+  extends PersonalAccessTokenListItem {
   token: string;
 }
 

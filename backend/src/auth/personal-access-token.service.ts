@@ -124,7 +124,9 @@ export class PersonalAccessTokenService {
       return null;
     }
 
-    const user = await this.userRepository.findOne({ where: { id: entity.userId } });
+    const user = await this.userRepository.findOne({
+      where: { id: entity.userId },
+    });
 
     if (!user) {
       return null;
@@ -160,9 +162,7 @@ export class PersonalAccessTokenService {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  private normalizeExpiresAt(
-    expiresAt?: Date | string | null,
-  ): Date | null {
+  private normalizeExpiresAt(expiresAt?: Date | string | null): Date | null {
     if (expiresAt === null || expiresAt === undefined) {
       return null;
     }

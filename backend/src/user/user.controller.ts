@@ -326,7 +326,15 @@ export class UserController {
     );
 
     return tokens.map(
-      ({ id, name, tokenPreview, lastUsedAt, expiresAt, revokedAt, createdAt }) => ({
+      ({
+        id,
+        name,
+        tokenPreview,
+        lastUsedAt,
+        expiresAt,
+        revokedAt,
+        createdAt,
+      }) => ({
         id,
         name,
         tokenPreview,

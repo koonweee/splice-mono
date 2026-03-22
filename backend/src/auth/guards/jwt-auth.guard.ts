@@ -1,10 +1,18 @@
-import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
+import type { Request } from 'express';
 import { ExtractJwt } from 'passport-jwt';
+import type { JwtUser } from '../decorators/current-user.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { SESSION_JWT_ONLY_KEY } from '../decorators/session-jwt-only.decorator';
 import { PersonalAccessTokenService } from '../personal-access-token.service';
+
+type AuthenticatedRequest = Request & { user?: JwtUser };
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -27,7 +35,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const hasSessionCookie = Boolean(
       request.cookies?.[JwtAuthGuard.SESSION_COOKIE_KEY],
     );
@@ -64,7 +72,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       throw new UnauthorizedException();
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     request.user = user;
     return true;
   }
