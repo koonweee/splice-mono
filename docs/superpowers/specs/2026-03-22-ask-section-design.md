@@ -28,6 +28,7 @@ Add a dedicated `Ask` section to Splice that gives users a chat-like interface f
 - Any mutation from chat
 - Recategorization, rule creation, or transaction edits
 - Long-term assistant memory outside the current conversation
+- Persisted chat threads beyond the current page session
 - Vector search / RAG over external documents
 - Separate AI microservice
 - Autonomous follow-up jobs or background agents
@@ -71,6 +72,9 @@ The UI should support:
 - Loading state while tools are running
 - Error state with retry
 - Selection of a prior message to inspect its evidence
+- Click-through from evidence items into existing product surfaces where a stable destination exists
+  - transaction evidence should deep-link into Transactions when possible
+  - account evidence should deep-link into Accounts or account-focused views when possible
 
 ## Architecture
 
@@ -86,7 +90,8 @@ Frontend responsibilities:
 - Send conversation history and new user message
 - Render streaming assistant output
 - Render structured evidence and scope data
-- Preserve current chat thread state in the route/page
+- Preserve current chat thread state in the route/page only
+- Do not persist chat threads server-side in V1
 
 ### Backend
 
@@ -224,18 +229,7 @@ Primary backing logic:
 - deterministic aggregation over transaction data
 - reuse existing transaction-analysis patterns instead of prompting the model to infer deltas
 
-#### `find_balance_changes`
-
-Purpose:
-- Answer account movement questions where historical balances exist
-
-Returns:
-- accounts with biggest increases/decreases
-- balance deltas
-- coverage note when snapshot history is incomplete
-
-Primary backing logic:
-- existing balance snapshot and/or balance query services when available
+Balance-change tooling is intentionally out of V1. Those questions move to Phase 2 after snapshot coverage is verified and the query semantics are stable enough to support cited answers reliably.
 
 ## Structured Answer Contract
 
@@ -248,6 +242,30 @@ Final assistant responses should be shaped as structured output with at least:
 - `evidence.transactions`
 - `evidence.aggregates`
 - `followups`
+
+Suggested top-level shape:
+
+```json
+{
+  "answerText": "Your outflows are up 14% month to date.",
+  "confidence": "high",
+  "queryScope": {
+    "startDate": "2026-03-01",
+    "endDate": "2026-03-22",
+    "comparisonStartDate": "2026-02-01",
+    "comparisonEndDate": "2026-02-22",
+    "accountIds": ["..."],
+    "includePending": false,
+    "truncated": false
+  },
+  "evidence": {
+    "accounts": [],
+    "transactions": [],
+    "aggregates": []
+  },
+  "followups": []
+}
+```
 
 ### Query Scope
 
@@ -303,6 +321,12 @@ Suggested response:
 - streamed AI SDK-compatible chat/event stream
 - final structured answer payload attached to the assistant message
 
+Streaming contract:
+- Stream assistant text tokens for the conversational answer body
+- Attach the final structured answer object as assistant message metadata/data once all tool calls finish
+- Do not stream partial evidence objects that may change mid-tool-run
+- Frontend should treat the structured payload as the source of truth for scope and evidence rendering
+
 The chat endpoint will be custom rather than OpenAPI-generated CRUD because it streams and returns richer structured assistant data.
 
 ## Data Access Strategy
@@ -330,6 +354,7 @@ Support a small set of reliable questions:
 
 Add:
 - balance change questions
+- `find_balance_changes` tool backed by verified snapshot/balance-query coverage
 - richer account movement questions
 - better ambiguity handling based on observed usage
 
@@ -380,9 +405,7 @@ Assertions should verify:
 
 ## Open Questions for Implementation
 
-- Whether to persist chat threads in V1 or keep them page-local only
 - Whether balance-change questions should launch only after verifying snapshot coverage per user
-- Whether the evidence panel should support click-through into existing Accounts or Transactions surfaces in the first release
 
 ## Recommended Next Step
 
