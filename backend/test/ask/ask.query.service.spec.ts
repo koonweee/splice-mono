@@ -206,13 +206,34 @@ describe('AskQueryService', () => {
 
   it('compares two periods using deterministic aggregate deltas', async () => {
     mockTransactionService.compareForAsk.mockResolvedValue({
-      currentTotalOutflow: 40_000,
-      previousTotalOutflow: 32_000,
-      absoluteDelta: 8_000,
+      currentTotalOutflow: 400,
+      previousTotalOutflow: 320,
+      absoluteDelta: 80,
       percentDelta: 25,
-      categoryDrivers: [{ label: 'TRAVEL', amount: 6_000 }],
-      merchantDrivers: [{ label: 'United', amount: 6_000 }],
-      accountDrivers: [{ label: 'Amex Gold', amount: 8_000 }],
+      categoryDrivers: [
+        {
+          label: 'TRAVEL',
+          amount: 60,
+          currency: 'USD',
+          kind: 'category',
+        },
+      ],
+      merchantDrivers: [
+        {
+          label: 'United',
+          amount: 60,
+          currency: 'USD',
+          kind: 'merchant',
+        },
+      ],
+      accountDrivers: [
+        {
+          label: 'Amex Gold',
+          amount: 80,
+          currency: 'USD',
+          kind: 'account',
+        },
+      ],
       matchedCount: 12,
       truncated: false,
     });
@@ -225,13 +246,31 @@ describe('AskQueryService', () => {
     });
 
     expect(result).toMatchObject({
-      currentTotalOutflow: 40_000,
-      previousTotalOutflow: 32_000,
-      absoluteDelta: 8_000,
+      currentTotalOutflow: 400,
+      previousTotalOutflow: 320,
+      absoluteDelta: 80,
       percentDelta: 25,
-      categoryDrivers: expect.any(Array),
-      merchantDrivers: expect.any(Array),
-      accountDrivers: expect.any(Array),
+      categoryDrivers: [
+        expect.objectContaining({
+          label: 'TRAVEL',
+          amount: 60,
+          currency: 'USD',
+        }),
+      ],
+      merchantDrivers: [
+        expect.objectContaining({
+          label: 'United',
+          amount: 60,
+          currency: 'USD',
+        }),
+      ],
+      accountDrivers: [
+        expect.objectContaining({
+          label: 'Amex Gold',
+          amount: 80,
+          currency: 'USD',
+        }),
+      ],
     });
   });
 });
