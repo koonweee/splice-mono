@@ -153,8 +153,8 @@ export function formatMoneyNumber(input: {
     }
   }
 
-  // For non-crypto currencies, use the provided decimals or default to 2
-  const effectiveDecimals = decimals ?? 2
+  // For non-crypto currencies, default to the currency's native decimal places.
+  const effectiveDecimals = decimals ?? getDecimalPlaces(currency)
 
   const overrideCurrency =
     CURRENCY_FORMATTING_OVERRIDES.get(currency) ?? currency

@@ -121,7 +121,7 @@ Test Account,${validUuid},depository,USD,100.00,-50.50
               money: expect.objectContaining({ amount: 10000 }), // 100.00 * 100
               sign: MoneySign.POSITIVE,
             }),
-            snapshotType: BalanceSnapshotType.USER_UPDATE,
+            snapshotType: BalanceSnapshotType.CSV_IMPORT,
           }),
           expect.objectContaining({
             accountId: validUuid,
@@ -130,7 +130,7 @@ Test Account,${validUuid},depository,USD,100.00,-50.50
               money: expect.objectContaining({ amount: 5050 }), // 50.50 * 100
               sign: MoneySign.NEGATIVE,
             }),
-            snapshotType: BalanceSnapshotType.USER_UPDATE,
+            snapshotType: BalanceSnapshotType.CSV_IMPORT,
           }),
         ]),
         mockUserId,

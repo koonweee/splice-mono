@@ -25,24 +25,42 @@ import { TransactionsTable } from '@/components/TransactionsTable'
 
 const PAGE_SIZE = 50
 
+type TransactionsSearch = {
+  accountId?: string
+  startDate?: string
+  endDate?: string
+}
+
+const isValidDateString = (value: unknown): value is string =>
+  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+
 const CATEGORY_OPTIONS = Object.keys(CATEGORY_COLORS).map((key) => ({
   value: key,
   label: formatPrimaryCategory(key),
 }))
 
 export const Route = createFileRoute('/_authed/transactions')({
+  validateSearch: (search: Record<string, unknown>): TransactionsSearch => ({
+    accountId: typeof search.accountId === 'string' ? search.accountId : undefined,
+    startDate: isValidDateString(search.startDate) ? search.startDate : undefined,
+    endDate: isValidDateString(search.endDate) ? search.endDate : undefined,
+  }),
   component: TransactionsPage,
 })
 
 function TransactionsPage() {
+  const search = Route.useSearch()
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const [sorting, setSorting] = useState<MRT_SortingState>([
     { id: 'date', desc: true },
   ])
 
   // Filter state
-  const [dateRange, setDateRange] = useState<DatesRangeValue>([null, null])
-  const [accountId, setAccountId] = useState<string | null>(null)
+  const [dateRange, setDateRange] = useState<DatesRangeValue>(() => [
+    search.startDate ? dayjs(search.startDate).toDate() : null,
+    search.endDate ? dayjs(search.endDate).toDate() : null,
+  ])
+  const [accountId, setAccountId] = useState<string | null>(search.accountId ?? null)
   const [categoryPrimary, setCategoryPrimary] = useState<string | null>(null)
   const [amountSign, setAmountSign] = useState('all')
 
