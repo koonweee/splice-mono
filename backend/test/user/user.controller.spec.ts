@@ -1,5 +1,8 @@
+import { NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { AuthService } from '../../src/auth/auth.service';
+import { PersonalAccessTokenService } from '../../src/auth/personal-access-token.service';
 import { UserController } from '../../src/user/user.controller';
 import { UserService } from '../../src/user/user.service';
 import { mockUserService } from '../mocks/user/user-service.mock';
@@ -26,6 +29,12 @@ describe('UserController', () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let service: UserService;
 
+  const mockPersonalAccessTokenService = {
+    createToken: jest.fn(),
+    listTokens: jest.fn(),
+    revokeToken: jest.fn(),
+  };
+
   const mockAuthService = {
     revokeToken: jest.fn().mockResolvedValue(undefined),
     revokeAllUserTokens: jest.fn().mockResolvedValue(undefined),
@@ -42,6 +51,10 @@ describe('UserController', () => {
         {
           provide: AuthService,
           useValue: mockAuthService,
+        },
+        {
+          provide: PersonalAccessTokenService,
+          useValue: mockPersonalAccessTokenService,
         },
       ],
     }).compile();
@@ -133,6 +146,157 @@ describe('UserController', () => {
         currentUser.userId,
       );
       expect(res.clearCookie).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('token management', () => {
+    const currentUser = { userId: 'user-123', email: 'test@example.com' };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('createToken returns the one-time token payload from the PAT service', async () => {
+      const expiresAt = '2026-01-01T00:00:00.000Z';
+      const tokenPayload = {
+        id: '11111111-1111-4111-8111-111111111111',
+        userId: currentUser.userId,
+        name: 'codex-local',
+        prefix: 'deadbeef',
+        tokenPreview: 'splice_pat_deadbeef',
+        lastUsedAt: null,
+        expiresAt: new Date(expiresAt),
+        revokedAt: null,
+        createdAt: new Date('2024-01-01T00:00:00Z'),
+        updatedAt: new Date('2024-01-01T00:00:00Z'),
+        token: 'splice_pat_abc123',
+      };
+      const expectedPayload = {
+        id: '11111111-1111-4111-8111-111111111111',
+        name: 'codex-local',
+        token: 'splice_pat_abc123',
+        tokenPreview: 'splice_pat_deadbeef',
+        expiresAt: new Date(expiresAt),
+        createdAt: new Date('2024-01-01T00:00:00Z'),
+      };
+      mockPersonalAccessTokenService.createToken.mockResolvedValue(tokenPayload);
+
+      const result = await controller.createToken(currentUser, {
+        name: 'codex-local',
+        expiresAt,
+      });
+
+      expect(result).toEqual(expectedPayload);
+      expect(result).not.toHaveProperty('tokenHash');
+      expect(result).not.toHaveProperty('userId');
+      expect(result).not.toHaveProperty('prefix');
+      expect(result).not.toHaveProperty('updatedAt');
+      expect(mockPersonalAccessTokenService.createToken).toHaveBeenCalledWith(
+        currentUser,
+        {
+          name: 'codex-local',
+          expiresAt,
+        },
+      );
+      expect(mockAuthService.revokeToken).not.toHaveBeenCalled();
+      expect(mockAuthService.revokeAllUserTokens).not.toHaveBeenCalled();
+    });
+
+    it('listTokens returns sanitized token metadata from the PAT service', async () => {
+      const tokens = [
+        {
+          id: '11111111-1111-4111-8111-111111111111',
+          userId: currentUser.userId,
+          name: 'codex-local',
+          prefix: 'deadbeef',
+          tokenPreview: 'splice_pat_deadbeef',
+          lastUsedAt: null,
+          expiresAt: null,
+          revokedAt: null,
+          createdAt: new Date('2024-01-01T00:00:00Z'),
+          updatedAt: new Date('2024-01-01T00:00:00Z'),
+        },
+      ];
+      const expectedTokens = [
+        {
+          id: '11111111-1111-4111-8111-111111111111',
+          name: 'codex-local',
+          tokenPreview: 'splice_pat_deadbeef',
+          lastUsedAt: null,
+          expiresAt: null,
+          revokedAt: null,
+          createdAt: new Date('2024-01-01T00:00:00Z'),
+        },
+      ];
+      mockPersonalAccessTokenService.listTokens.mockResolvedValue(tokens);
+
+      const result = await controller.listTokens(currentUser);
+
+      expect(result).toEqual(expectedTokens);
+      expect(result[0]).not.toHaveProperty('tokenHash');
+      expect(result[0]).not.toHaveProperty('token');
+      expect(result[0]).not.toHaveProperty('userId');
+      expect(result[0]).not.toHaveProperty('prefix');
+      expect(result[0]).not.toHaveProperty('updatedAt');
+      expect(mockPersonalAccessTokenService.listTokens).toHaveBeenCalledWith(
+        currentUser.userId,
+      );
+      expect(mockAuthService.revokeToken).not.toHaveBeenCalled();
+      expect(mockAuthService.revokeAllUserTokens).not.toHaveBeenCalled();
+    });
+
+    it('revokeToken delegates to the PAT service and resolves void', async () => {
+      mockPersonalAccessTokenService.revokeToken.mockResolvedValue('revoked');
+
+      const result = await controller.revokeToken(
+        currentUser,
+        '11111111-1111-4111-8111-111111111111',
+      );
+
+      expect(result).toBeUndefined();
+      expect(mockPersonalAccessTokenService.revokeToken).toHaveBeenCalledWith(
+        currentUser.userId,
+        '11111111-1111-4111-8111-111111111111',
+      );
+      expect(mockAuthService.revokeToken).not.toHaveBeenCalled();
+      expect(mockAuthService.revokeAllUserTokens).not.toHaveBeenCalled();
+    });
+
+    it('revokeToken returns 404 when the PAT service cannot find the token', async () => {
+      mockPersonalAccessTokenService.revokeToken.mockResolvedValue('not_found');
+
+      await expect(
+        controller.revokeToken(currentUser, '22222222-2222-4222-8222-222222222222'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('revokeToken treats already revoked tokens as a no-op success', async () => {
+      mockPersonalAccessTokenService.revokeToken.mockResolvedValue('already_revoked');
+
+      const result = await controller.revokeToken(
+        currentUser,
+        '11111111-1111-4111-8111-111111111111',
+      );
+
+      expect(result).toBeUndefined();
+      expect(mockPersonalAccessTokenService.revokeToken).toHaveBeenCalledWith(
+        currentUser.userId,
+        '11111111-1111-4111-8111-111111111111',
+      );
+    });
+
+    it('revokeToken rejects malformed UUIDs before calling the PAT service', async () => {
+      const routeArgs = Reflect.getMetadata(
+        ROUTE_ARGS_METADATA,
+        UserController,
+        'revokeToken',
+      ) as Record<string, { data?: string; pipes?: unknown[] }>;
+      const binding = Object.values(routeArgs).find((value) => value.data === 'id');
+
+      expect(binding).toBeDefined();
+      expect(binding?.pipes).toEqual(
+        expect.arrayContaining([expect.any(ParseUUIDPipe)]),
+      );
     });
   });
 });

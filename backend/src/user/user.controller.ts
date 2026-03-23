@@ -2,9 +2,13 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
+  HttpCode,
   Get,
   NotFoundException,
   Patch,
+  Param,
+  ParseUUIDPipe,
   Post,
   Req,
   Res,
@@ -16,8 +20,10 @@ import {
   CurrentUser,
   type JwtUser,
 } from '../auth/decorators/current-user.decorator';
+import { SessionJwtOnly } from '../auth/decorators/session-jwt-only.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
+import { PersonalAccessTokenService } from '../auth/personal-access-token.service';
 import type {
   CreateUserDto,
   LoginDto,
@@ -34,6 +40,16 @@ import {
   TokenResponseSchema,
   UserSchema,
 } from '../types/User';
+import type {
+  CreatePersonalAccessTokenDto,
+  CreatePersonalAccessTokenResponse,
+  PersonalAccessToken,
+} from '../types/PersonalAccessToken';
+import {
+  CreatePersonalAccessTokenDtoSchema,
+  CreatePersonalAccessTokenResponseSchema,
+  PersonalAccessTokenSchema,
+} from '../types/PersonalAccessToken';
 import type {
   UpdateUserSettingsDto,
   UserSettings,
@@ -89,6 +105,7 @@ export class UserController {
   constructor(
     private userService: UserService,
     private authService: AuthService,
+    private personalAccessTokenService: PersonalAccessTokenService,
   ) {}
 
   @Public()
@@ -259,5 +276,95 @@ export class UserController {
     // Clear cookies for web clients
     res.clearCookie(ACCESS_TOKEN_COOKIE, COOKIE_OPTIONS);
     res.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_OPTIONS);
+  }
+
+  @Post('tokens')
+  @SessionJwtOnly()
+  @ApiOperation({ description: 'Create a personal access token' })
+  @ZodApiBody({ schema: CreatePersonalAccessTokenDtoSchema })
+  @ZodApiResponse({
+    status: 201,
+    description: 'Personal access token created successfully',
+    schema: CreatePersonalAccessTokenResponseSchema,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async createToken(
+    @CurrentUser() currentUser: JwtUser,
+    @Body(new ZodValidationPipe(CreatePersonalAccessTokenDtoSchema))
+    dto: CreatePersonalAccessTokenDto,
+  ): Promise<CreatePersonalAccessTokenResponse> {
+    const token = await this.personalAccessTokenService.createToken(
+      currentUser,
+      dto,
+    );
+
+    return {
+      id: token.id,
+      name: token.name,
+      token: token.token,
+      tokenPreview: token.tokenPreview,
+      expiresAt: token.expiresAt,
+      createdAt: token.createdAt,
+    };
+  }
+
+  @Get('tokens')
+  @SessionJwtOnly()
+  @ApiOperation({ description: 'List personal access tokens' })
+  @ZodApiResponse({
+    status: 200,
+    description: 'List personal access tokens',
+    schema: PersonalAccessTokenSchema,
+    isArray: true,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async listTokens(
+    @CurrentUser() currentUser: JwtUser,
+  ): Promise<PersonalAccessToken[]> {
+    const tokens = await this.personalAccessTokenService.listTokens(
+      currentUser.userId,
+    );
+
+    return tokens.map(
+      ({
+        id,
+        name,
+        tokenPreview,
+        lastUsedAt,
+        expiresAt,
+        revokedAt,
+        createdAt,
+      }) => ({
+        id,
+        name,
+        tokenPreview,
+        lastUsedAt,
+        expiresAt,
+        revokedAt,
+        createdAt,
+      }),
+    );
+  }
+
+  @Delete('tokens/:id')
+  @SessionJwtOnly()
+  @HttpCode(204)
+  @ApiOperation({ description: 'Revoke a personal access token' })
+  @ApiResponse({ status: 204, description: 'Token revoked successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid token ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Token not found' })
+  async revokeToken(
+    @CurrentUser() currentUser: JwtUser,
+    @Param('id', new ParseUUIDPipe()) tokenId: string,
+  ): Promise<void> {
+    const result = await this.personalAccessTokenService.revokeToken(
+      currentUser.userId,
+      tokenId,
+    );
+
+    if (result === 'not_found') {
+      throw new NotFoundException('Token not found');
+    }
   }
 }

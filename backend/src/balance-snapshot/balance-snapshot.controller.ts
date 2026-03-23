@@ -5,7 +5,6 @@ import {
   Post,
   Res,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -23,7 +22,6 @@ import type { Response } from 'express';
 import { z } from 'zod';
 import { AccountService } from '../account/account.service';
 import * as currentUserDecorator from '../auth/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ZodApiResponse } from '../common/zod-api-response';
 import {
   BalanceSnapshotType,
@@ -50,7 +48,6 @@ function isMulterFile(file: unknown): file is Express.Multer.File {
 
 @ApiTags('Balance Snapshots')
 @Controller('balance-snapshot')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class BalanceSnapshotController {
   constructor(
