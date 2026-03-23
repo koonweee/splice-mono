@@ -1,13 +1,13 @@
 import { Loader, Stack } from '@mantine/core'
-import type { ReactNode } from 'react'
-import type { AskAnswer, AskUIMessage } from '@/lib/ask-types'
-import { getAskMetadata } from '@/lib/ask-chat'
 import { AskEvidencePanel } from './AskEvidencePanel'
 import { AskErrorCard, AskMessageCard } from './AskMessageCard'
 import styles from './ask.module.css'
+import type { ReactNode } from 'react'
+import type { AskUIMessage } from '@/lib/ask-types'
+import { getAskMetadata, shouldRenderAskMessage } from '@/lib/ask-chat'
 
 type AskConversationProps = {
-  messages: AskUIMessage[]
+  messages: Array<AskUIMessage>
   selectedMessageId: string | null
   status: string
   error?: Error
@@ -25,16 +25,15 @@ export function AskConversation({
   onRetry,
   composer,
 }: AskConversationProps) {
+  const visibleMessages = messages.filter((message) => shouldRenderAskMessage(message))
   const selectedAnswer = messages.find((message) => message.id === selectedMessageId)
-  const selectedMetadata = selectedAnswer
-    ? (getAskMetadata(selectedAnswer) as AskAnswer | undefined)
-    : undefined
+  const selectedMetadata = selectedAnswer ? getAskMetadata(selectedAnswer) : undefined
 
   return (
     <div className={styles.page}>
       <div className={styles.conversationPane}>
         <Stack gap="md" className={styles.messages}>
-          {messages.map((message) => (
+          {visibleMessages.map((message) => (
             <button
               key={message.id}
               type="button"
