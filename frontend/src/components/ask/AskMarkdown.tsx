@@ -42,6 +42,10 @@ function isSafeHref(href?: string): href is string {
     return false
   }
 
+  if (trimmedHref.startsWith('//')) {
+    return false
+  }
+
   if (trimmedHref.startsWith('#') || trimmedHref.startsWith('/')) {
     return true
   }
