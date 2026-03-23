@@ -36,9 +36,9 @@ export function AskMessageCard({
   const isAssistant = message.role === 'assistant'
   const messageText = getMessageText(message)
   const askAnswerText = answer?.answerText
-  const hasAskMarkdown = Boolean(isAssistant && askAnswerText?.trim())
   const displayedText =
     askAnswerText && askAnswerText.trim().length > 0 ? askAnswerText : messageText
+  const hasAskMarkdown = Boolean(isAssistant && displayedText.trim().length > 0)
   const canSelectEvidence = isAssistant && answer !== undefined && onSelectEvidence !== undefined
 
   return (

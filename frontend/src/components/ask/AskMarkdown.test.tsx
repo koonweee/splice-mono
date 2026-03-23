@@ -1,8 +1,8 @@
 /* @vitest-environment jsdom */
 
 import { MantineProvider } from '@mantine/core'
-import { render, screen } from '@testing-library/react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen, within } from '@testing-library/react'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { AskUIMessage } from '@/lib/ask-types'
 import { AskMessageCard } from './AskMessageCard'
 
@@ -33,6 +33,10 @@ describe('Ask markdown rendering', () => {
         dispatchEvent: vi.fn(),
       })),
     })
+  })
+
+  afterEach(() => {
+    cleanup()
   })
 
   it('renders bold text, lists, and links from assistant markdown', () => {
@@ -211,19 +215,23 @@ describe('Ask markdown rendering', () => {
     expect(container.querySelector('a')).toBeNull()
   })
 
-  it('preserves plain-text rendering for assistant fallback text without Ask metadata', () => {
+  it('renders markdown from assistant text parts when Ask metadata is absent', () => {
     const { container } = renderMessageCard({
       id: 'assistant-fallback',
       role: 'assistant',
       parts: [{ type: 'text', text: '**Bold** and [Docs](https://example.com)' }],
     } satisfies AskUIMessage)
 
-    expect(container.textContent).toContain('**Bold** and [Docs](https://example.com)')
-    expect(container.querySelector('strong')).toBeNull()
-    expect(container.querySelector('a')).toBeNull()
+    const card = container.querySelector('[data-with-border="true"]') as HTMLElement
+
+    expect(within(card).getByText('Bold').tagName.toLowerCase()).toBe('strong')
+    expect(within(card).getByRole('link', { name: 'Docs' }).getAttribute('href')).toBe(
+      'https://example.com',
+    )
+    expect(container.textContent).toContain('Bold and Docs')
   })
 
-  it('falls back to plain message text when Ask answerText is blank', () => {
+  it('renders markdown from assistant text parts when Ask answerText is blank', () => {
     const { container } = renderMessageCard({
       id: 'assistant-blank-answer',
       role: 'assistant',
@@ -249,7 +257,9 @@ describe('Ask markdown rendering', () => {
       },
     } satisfies AskUIMessage)
 
-    expect(container.textContent).toContain('**Fallback** plain text')
-    expect(container.querySelector('strong')).toBeNull()
+    const card = container.querySelector('[data-with-border="true"]') as HTMLElement
+
+    expect(within(card).getByText('Fallback').tagName.toLowerCase()).toBe('strong')
+    expect(container.textContent).toContain('Fallback plain text')
   })
 })
