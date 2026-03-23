@@ -63,14 +63,6 @@ export function AskMessageCard({
               }`}
               aria-pressed={isSelected}
               onClick={onSelectEvidence}
-              onKeyDown={(event) => {
-                if (event.key !== 'Enter' && event.key !== ' ') {
-                  return
-                }
-
-                event.preventDefault()
-                onSelectEvidence()
-              }}
             >
               {isSelected ? 'Selected' : 'View evidence'}
             </button>

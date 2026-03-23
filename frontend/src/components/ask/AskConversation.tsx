@@ -16,25 +16,6 @@ type AskConversationProps = {
   composer: ReactNode
 }
 
-const interactiveSelector =
-  'a, button, input, select, textarea, summary, [role="button"], [role="link"]'
-
-function isNestedInteractiveTarget(
-  target: EventTarget | null,
-  currentTarget: EventTarget | null,
-): boolean {
-  if (!(target instanceof HTMLElement) || !(currentTarget instanceof HTMLElement)) {
-    return false
-  }
-
-  const closestInteractive = target.closest(interactiveSelector)
-  return Boolean(closestInteractive && closestInteractive !== currentTarget)
-}
-
-function selectMessage(messageId: string, onSelectMessage: (messageId: string) => void) {
-  onSelectMessage(messageId)
-}
-
 export function AskConversation({
   messages,
   selectedMessageId,
@@ -60,13 +41,6 @@ export function AskConversation({
                   : styles.messageRowUser
               }`}
               data-testid={`ask-message-row-${message.id}`}
-              onClick={(event) => {
-                if (isNestedInteractiveTarget(event.target, event.currentTarget)) {
-                  return
-                }
-
-                selectMessage(message.id, onSelectMessage)
-              }}
             >
               <AskMessageCard
                 message={message}

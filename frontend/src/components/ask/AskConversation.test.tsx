@@ -161,6 +161,8 @@ describe('AskConversation layout', () => {
 
     selectButton.focus()
     fireEvent.keyDown(selectButton, { key: 'Enter' })
+    fireEvent.click(selectButton)
+    expect(onSelectMessage).toHaveBeenCalledTimes(1)
     expect(onSelectMessage).toHaveBeenCalledWith('assistant-1')
   })
 
@@ -239,6 +241,6 @@ describe('AskConversation layout', () => {
     expect(onSelectMessage).not.toHaveBeenCalled()
 
     fireEvent.click(row)
-    expect(onSelectMessage).toHaveBeenCalledWith('assistant-1')
+    expect(onSelectMessage).not.toHaveBeenCalled()
   })
 })
