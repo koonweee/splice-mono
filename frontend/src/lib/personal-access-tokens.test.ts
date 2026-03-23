@@ -64,7 +64,10 @@ describe('personal access token helpers', () => {
     expect(() => normalizePersonalAccessTokenName('   ')).toThrow()
   })
 
-  it('rejects names longer than 100 characters', () => {
+  it('allows names up to 100 characters and rejects 101 characters', () => {
+    expect(normalizePersonalAccessTokenName('x'.repeat(100))).toBe(
+      'x'.repeat(100),
+    )
     expect(() => normalizePersonalAccessTokenName('x'.repeat(101))).toThrow()
   })
 
