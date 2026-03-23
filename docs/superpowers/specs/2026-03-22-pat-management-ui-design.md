@@ -88,7 +88,6 @@ Behavior:
 - Disable input and button while the create request is pending
 - On success:
   - show the one-time raw token reveal inline
-  - prepend the new token metadata to the visible list
   - clear the input
 
 ## One-Time Reveal Panel
@@ -206,6 +205,7 @@ Recommended behavior:
 - keep PAT query state independent from the main user settings query
 - on create success:
   - invalidate or refetch the PAT list query rather than synthesizing a partial list item client-side
+  - let the refreshed list query surface the new token in the list
   - show the returned raw token in local state
 - on revoke success:
   - remove the token from the visible list via cache update or invalidation
