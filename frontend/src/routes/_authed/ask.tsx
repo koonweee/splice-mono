@@ -14,7 +14,7 @@ export const Route = createFileRoute('/_authed/ask')({
   component: AskPage,
 })
 
-function AskPage() {
+export function AskPage() {
   const {
     messages,
     status,
@@ -50,7 +50,7 @@ function AskPage() {
   }
 
   return (
-    <div className={styles.routeViewport}>
+    <div className={styles.routeViewport} data-testid="ask-route-viewport">
       <Group justify="space-between" mb="xl">
         <Title order={1}>Ask</Title>
       </Group>
