@@ -38,6 +38,13 @@
 
 .messageRow {
   display: flex;
+  cursor: pointer;
+  border-radius: var(--mantine-radius-md);
+}
+
+.messageRow:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: 3px;
 }
 
 .messageRowUser {
@@ -79,9 +86,29 @@
 .markdown p,
 .markdown ul,
 .markdown ol,
+.markdown blockquote,
 .markdown pre,
 .markdown table {
   margin: 0 0 12px;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 0 0 8px;
+  font-size: 1em;
+  line-height: 1.4;
+}
+
+.markdown h1,
+.markdown h2 {
+  font-weight: 700;
+}
+
+.markdown h3,
+.markdown h4 {
+  font-weight: 600;
 }
 
 .markdown ul,
@@ -117,6 +144,12 @@
 .markdown pre code {
   background: transparent;
   padding: 0;
+}
+
+.markdown blockquote {
+  padding-left: 12px;
+  border-left: 3px solid var(--mantine-color-gray-4);
+  color: var(--mantine-color-dimmed);
 }
 
 .markdown table {
