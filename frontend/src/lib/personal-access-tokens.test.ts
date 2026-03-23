@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { PersonalAccessToken } from '../api/models'
 import {
   getActivePersonalAccessTokens,
   getPersonalAccessTokenUsageText,
   normalizePersonalAccessTokenName,
 } from './personal-access-tokens'
+import type { PersonalAccessToken } from '../api/models'
 
 function makeToken(
   overrides: Partial<PersonalAccessToken> & Pick<PersonalAccessToken, 'id' | 'name'>,

@@ -1,12 +1,12 @@
-import type { PersonalAccessToken } from '../api/models'
 import { formatRelativeTime } from './format'
+import type { PersonalAccessToken } from '../api/models'
 
 const MAX_PERSONAL_ACCESS_TOKEN_NAME_LENGTH = 100
 
 export function getActivePersonalAccessTokens(
-  tokens: PersonalAccessToken[],
+  tokens: Array<PersonalAccessToken>,
   now = new Date(),
-): PersonalAccessToken[] {
+): Array<PersonalAccessToken> {
   const nowTime = now.getTime()
 
   return tokens.filter((token) => {
