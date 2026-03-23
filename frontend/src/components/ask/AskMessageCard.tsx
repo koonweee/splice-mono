@@ -1,6 +1,7 @@
 import { Alert, Paper, Stack, Text } from '@mantine/core'
 import type { AskAnswer, AskUIMessage } from '@/lib/ask-types'
 import { getAskMetadata } from '@/lib/ask-chat'
+import { AskMarkdown } from './AskMarkdown'
 import { AskEvidencePanel } from './AskEvidencePanel'
 import styles from './ask.module.css'
 
@@ -31,6 +32,8 @@ export function AskMessageCard({
 }: AskMessageCardProps) {
   const answer = getAskMetadata(message) as AskAnswer | undefined
   const isAssistant = message.role === 'assistant'
+  const messageText = getMessageText(message)
+  const assistantText = answer?.answerText ?? messageText
 
   return (
     <Paper
@@ -45,9 +48,17 @@ export function AskMessageCard({
         <Text fw={600} size="sm">
           {isAssistant ? 'Ask' : 'You'}
         </Text>
-        <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-          {isAssistant ? answer?.answerText ?? getMessageText(message) : getMessageText(message)}
-        </Text>
+        {isAssistant ? (
+          <AskMarkdown markdown={assistantText} />
+        ) : (
+          <Text
+            size="sm"
+            className={styles.messageBody}
+            style={{ whiteSpace: 'pre-wrap' }}
+          >
+            {messageText}
+          </Text>
+        )}
         {showInlineEvidence && isAssistant && isSelected && (
           <div className={styles.mobileEvidence}>
             <AskEvidencePanel answer={answer} />
