@@ -136,7 +136,7 @@ git commit -m "chore: regenerate frontend pat api client"
 
 Cover:
 - filtering active tokens (`revokedAt == null` and not expired)
-- name normalization/validation (`trim`, reject blank, respect max length 100)
+- name normalization/validation (`trim`, reject blank, reject names over 100 characters)
 - usage text (`Never used` vs readable last-used text)
 
 Suggested test shape:
@@ -156,6 +156,10 @@ describe('personal access token helpers', () => {
   it('trims valid names and rejects blank names', () => {
     expect(normalizePersonalAccessTokenName('  codex-local  ')).toBe('codex-local')
     expect(() => normalizePersonalAccessTokenName('   ')).toThrow()
+  })
+
+  it('rejects names longer than 100 characters', () => {
+    expect(() => normalizePersonalAccessTokenName('x'.repeat(101))).toThrow()
   })
 })
 ```
@@ -219,7 +223,9 @@ Cover these states:
 - PAT-section error with retry button when token list fetch fails
 - empty state when active-token list is empty
 - create success shows one-time reveal panel with returned raw token
+- create failure shows a card-level alert and preserves the entered token name
 - revoke success removes a token from the visible list
+- revoke failure keeps the token visible and shows inline feedback
 - mobile-friendly structure is present (stackable action container / no assumption of fixed desktop row)
 
 Use Testing Library with mocked generated hooks. Keep tests on behavior, not Mantine internals. Do not assume `@testing-library/user-event`; this repo currently has `@testing-library/react` and `@testing-library/dom`, so use `fireEvent` or existing helpers unless you explicitly add a new dependency in a separate task.
@@ -255,10 +261,13 @@ Requirements:
 - use `useQueryClient()` so revoke can update the visible token list immediately
 - local state for `tokenName`, `revealedToken`, `revealedTokenId`, and lightweight clipboard feedback
 - trim and validate `name` before submit
+- enforce or clearly surface the backend 100-character limit, for example with `maxLength={100}` and helper text
 - section-specific loading/error/empty states
 - inline one-time reveal with copy action
 - active-token filtering via helper functions
+- create failure must show a card-level alert while preserving the entered `tokenName`
 - on revoke success, remove the revoked token immediately from the PAT list with `queryClient.setQueryData(...)`, then optionally invalidate/refetch for reconciliation
+- revoke failure must leave the token visible and show row-level or section-level inline feedback
 - revoke clears the reveal panel only when the revoked token matches `revealedTokenId`
 - responsive layout with wrapping/stacking action groups instead of hard-coded desktop-only widths
 
@@ -297,13 +306,14 @@ git commit -m "feat: add settings pat management section"
 Create a dedicated route test that verifies:
 - the existing settings heading still renders
 - the PAT section heading renders on the settings page
-- the PAT section is rendered after the existing settings form content in the route output
+- the PAT section is rendered after the existing settings form content in the route output by asserting DOM order between the existing settings card and the PAT section container
 
 Suggested assertion:
 
 ```tsx
 expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
 expect(screen.getByRole('heading', { name: /personal access tokens/i })).toBeInTheDocument()
+expect(settingsCard.compareDocumentPosition(patSection)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
 ```
 
 - [ ] **Step 2: Run the relevant test to verify the expectation fails before integration**
@@ -397,9 +407,12 @@ Manual checks:
 - PAT section renders below the settings form
 - desktop-width layout keeps token info and actions readable without overlap
 - create with blank/whitespace-only input is blocked client-side
+- create with a 101-character name is blocked or clearly rejected client-side
 - create success shows one-time reveal with copy button
+- create failure keeps the entered name visible and shows inline error feedback
 - newly created token appears after PAT list refetch
 - revoke removes the token from the list
+- revoke failure keeps the token visible and shows inline error feedback
 - mobile/narrow viewport stacks token actions without horizontal overflow
 
 - [ ] **Step 4: Commit any final verification-driven fixes**
