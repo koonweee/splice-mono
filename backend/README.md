@@ -121,6 +121,17 @@ If you prefer to run the application locally without Docker:
 
 > When updating or installing new dependencies, do `yarn docker:down` then `yarn docker:up:build`
 
+## Ask Configuration
+
+The Ask endpoint streams finance answers from the backend and requires an OpenAI-compatible model configuration:
+
+```bash
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+`OPENAI_MODEL` is optional. If omitted, Ask defaults to `gpt-4.1-mini`.
+
 ## API Documentation
 
 Swagger/OpenAPI documentation is available at `/api` when the server is running.

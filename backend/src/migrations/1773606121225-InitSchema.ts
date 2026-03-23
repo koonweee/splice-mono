@@ -103,8 +103,12 @@ export class InitSchema1773606121225 implements MigrationInterface {
     );
     await queryRunner.query(`DROP TABLE "refresh_token"`);
     await queryRunner.query(`DROP TABLE "balance_snapshot_entity"`);
-    await queryRunner.query(`DROP INDEX "public"."IDX_f5d928c18e89da66c21c2176a9"`);
-    await queryRunner.query(`DROP INDEX "public"."IDX_86d785a51e45fbfb0f41182bee"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_f5d928c18e89da66c21c2176a9"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_86d785a51e45fbfb0f41182bee"`,
+    );
     await queryRunner.query(`DROP TABLE "exchange_rate_entity"`);
     await queryRunner.query(`DROP TABLE "transaction_entity"`);
     await queryRunner.query(`DROP TABLE "category_entity"`);
