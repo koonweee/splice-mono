@@ -9,25 +9,33 @@ var mockConvertToModelMessages: jest.Mock;
 var mockPipeUIMessageStreamToResponse: jest.Mock;
 var mockStepCountIs: jest.Mock;
 
-jest.mock('@ai-sdk/openai', () => ({
-  openai: (mockOpenai = jest.fn((model: string) => ({ model }))),
-}), { virtual: true });
+jest.mock(
+  '@ai-sdk/openai',
+  () => ({
+    openai: (mockOpenai = jest.fn((model: string) => ({ model }))),
+  }),
+  { virtual: true },
+);
 
-jest.mock('ai', () => ({
-  convertToModelMessages: (mockConvertToModelMessages = jest.fn(
-    async (messages) => messages,
-  )),
-  pipeUIMessageStreamToResponse: (mockPipeUIMessageStreamToResponse =
-    jest.fn()),
-  stepCountIs: (mockStepCountIs = jest.fn((count: number) => ({
-    type: 'mock-stop-when',
-    count,
-  }))),
-  streamText: (mockStreamText = jest.fn(() => ({
-    toUIMessageStream: jest.fn(() => 'mock-stream'),
-  }))),
-  tool: ({ execute }: { execute: unknown }) => ({ execute }),
-}), { virtual: true });
+jest.mock(
+  'ai',
+  () => ({
+    convertToModelMessages: (mockConvertToModelMessages = jest.fn(
+      async (messages) => messages,
+    )),
+    pipeUIMessageStreamToResponse: (mockPipeUIMessageStreamToResponse =
+      jest.fn()),
+    stepCountIs: (mockStepCountIs = jest.fn((count: number) => ({
+      type: 'mock-stop-when',
+      count,
+    }))),
+    streamText: (mockStreamText = jest.fn(() => ({
+      toUIMessageStream: jest.fn(() => 'mock-stream'),
+    }))),
+    tool: ({ execute }: { execute: unknown }) => ({ execute }),
+  }),
+  { virtual: true },
+);
 
 describe('AskService', () => {
   let service: AskService;

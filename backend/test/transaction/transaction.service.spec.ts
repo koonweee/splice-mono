@@ -1234,7 +1234,9 @@ describe('TransactionService', () => {
     });
 
     it('converts mixed-currency transactions into the preferred currency before aggregating', async () => {
-      mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue('USD');
+      mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue(
+        'USD',
+      );
       mockCurrencyConversionService.getRateMap.mockResolvedValue(
         new Map([['EUR', 1.2]]),
       );
@@ -1352,9 +1354,9 @@ describe('TransactionService', () => {
         includePending: false,
       });
 
-      expect(mockCurrencyConversionService.getPreferredCurrency).toHaveBeenCalledWith(
-        mockUserId,
-      );
+      expect(
+        mockCurrencyConversionService.getPreferredCurrency,
+      ).toHaveBeenCalledWith(mockUserId);
       expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
         ['EUR'],
         'USD',
@@ -1512,7 +1514,9 @@ describe('TransactionService', () => {
     });
 
     it('compares mixed-currency periods after conversion into the preferred currency', async () => {
-      mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue('USD');
+      mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue(
+        'USD',
+      );
       mockCurrencyConversionService.getRateMap.mockResolvedValue(
         new Map([['EUR', 1.2]]),
       );

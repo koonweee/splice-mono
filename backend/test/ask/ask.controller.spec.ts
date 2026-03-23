@@ -33,12 +33,18 @@ describe('AskController', () => {
         {
           id: '1',
           role: 'user',
-          parts: [{ type: 'text', text: 'What changed in my spending this month?' }],
+          parts: [
+            { type: 'text', text: 'What changed in my spending this month?' },
+          ],
         },
       ],
     };
     const user = { userId: 'user-1', email: 'user@example.com' };
-    const response = { setHeader: jest.fn(), status: jest.fn(), end: jest.fn() };
+    const response = {
+      setHeader: jest.fn(),
+      status: jest.fn(),
+      end: jest.fn(),
+    };
 
     await controller.createMessage(user as never, body, response as never);
 
