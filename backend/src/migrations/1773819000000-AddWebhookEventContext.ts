@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddWebhookEventContext1773819000000
-  implements MigrationInterface
-{
+export class AddWebhookEventContext1773819000000 implements MigrationInterface {
   name = 'AddWebhookEventContext1773819000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
