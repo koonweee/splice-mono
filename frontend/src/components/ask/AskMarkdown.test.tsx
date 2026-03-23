@@ -69,6 +69,7 @@ describe('Ask markdown rendering', () => {
     expect(screen.getByRole('link', { name: 'Docs' }).getAttribute('href')).toBe(
       'https://example.com',
     )
+    expect(screen.getByRole('link', { name: 'Docs' }).getAttribute('node')).toBeNull()
     expect(container.querySelector('p')).toBeTruthy()
   })
 
