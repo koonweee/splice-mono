@@ -4,7 +4,7 @@ import { AskErrorCard, AskMessageCard } from './AskMessageCard'
 import styles from './ask.module.css'
 import type { ReactNode } from 'react'
 import type { AskUIMessage } from '@/lib/ask-types'
-import { getAskMetadata, shouldRenderAskMessage } from '@/lib/ask-chat'
+import { getAskMetadata } from '@/lib/ask-chat'
 
 type AskConversationProps = {
   messages: Array<AskUIMessage>
@@ -25,7 +25,6 @@ export function AskConversation({
   onRetry,
   composer,
 }: AskConversationProps) {
-  const visibleMessages = messages.filter((message) => shouldRenderAskMessage(message))
   const selectedAnswer = messages.find((message) => message.id === selectedMessageId)
   const selectedMetadata = selectedAnswer ? getAskMetadata(selectedAnswer) : undefined
 
@@ -33,7 +32,7 @@ export function AskConversation({
     <div className={styles.page}>
       <div className={styles.conversationPane}>
         <Stack gap="md" className={styles.messages}>
-          {visibleMessages.map((message) => (
+          {messages.map((message) => (
             <button
               key={message.id}
               type="button"
