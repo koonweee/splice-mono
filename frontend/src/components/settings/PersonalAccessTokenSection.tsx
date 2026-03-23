@@ -68,6 +68,9 @@ export function PersonalAccessTokenSection() {
   const [revokeErrors, setRevokeErrors] = useState<
     Record<string, string | undefined>
   >({})
+  const trimmedTokenName = tokenName.trim()
+  const canCreateToken =
+    trimmedTokenName.length > 0 && !createTokenMutation.isPending
 
   const handleCreateToken = () => {
     setCreateError(null)
@@ -230,7 +233,7 @@ export function PersonalAccessTokenSection() {
             <Button
               onClick={handleCreateToken}
               loading={createTokenMutation.isPending}
-              disabled={createTokenMutation.isPending}
+              disabled={!canCreateToken}
             >
               Create token
             </Button>

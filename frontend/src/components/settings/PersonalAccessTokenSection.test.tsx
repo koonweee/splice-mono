@@ -291,6 +291,24 @@ describe('PersonalAccessTokenSection', () => {
     )
   })
 
+  it('disables create for blank or whitespace-only token names', () => {
+    listTokensState.data = []
+
+    renderSection()
+
+    const createButton = screen.getByRole('button', { name: /create token/i })
+    expect(createButton).toHaveProperty('disabled', true)
+
+    fireEvent.change(screen.getByLabelText(/token name/i), {
+      target: { value: '   ' },
+    })
+
+    expect(screen.getByRole('button', { name: /create token/i })).toHaveProperty(
+      'disabled',
+      true,
+    )
+  })
+
   it('renders each token usage line with the shared last-used helper', () => {
     const recentToken = makeToken({
       id: 'pat-1',
