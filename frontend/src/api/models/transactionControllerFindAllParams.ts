@@ -17,7 +17,7 @@ export type TransactionControllerFindAllParams = {
    */
   pageSize?: string
   /**
-   * Sort column (date, merchantName, pending)
+   * Sort column (date, merchantName, pending, amount)
    */
   sortBy?: string
   /**
