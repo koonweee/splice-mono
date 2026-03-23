@@ -10,14 +10,14 @@ function makeToken(
   overrides: Partial<PersonalAccessToken> & Pick<PersonalAccessToken, 'id' | 'name'>,
 ): PersonalAccessToken {
   return {
-    id: overrides.id,
-    name: overrides.name,
     tokenPreview: 'splic...abcd',
     lastUsedAt: null,
     expiresAt: null,
     revokedAt: null,
     createdAt: '2026-03-22T00:00:00.000Z',
     ...overrides,
+    id: overrides.id,
+    name: overrides.name,
   }
 }
 
