@@ -34,8 +34,9 @@ export function AskMessageCard({
   const isAssistant = message.role === 'assistant'
   const messageText = getMessageText(message)
   const askAnswerText = answer?.answerText
-  const shouldRenderMarkdown = Boolean(isAssistant && askAnswerText?.trim())
-  const displayedText = askAnswerText ?? messageText
+  const hasAskMarkdown = Boolean(isAssistant && askAnswerText?.trim())
+  const displayedText =
+    askAnswerText && askAnswerText.trim().length > 0 ? askAnswerText : messageText
 
   return (
     <Paper
@@ -50,7 +51,7 @@ export function AskMessageCard({
         <Text fw={600} size="sm">
           {isAssistant ? 'Ask' : 'You'}
         </Text>
-        {shouldRenderMarkdown ? (
+        {hasAskMarkdown ? (
           <AskMarkdown markdown={displayedText} />
         ) : (
           <Text

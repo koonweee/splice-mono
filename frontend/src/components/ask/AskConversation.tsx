@@ -19,8 +19,20 @@ type AskConversationProps = {
 const interactiveSelector =
   'a, button, input, select, textarea, summary, [role="button"], [role="link"]'
 
-function isInteractiveTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && Boolean(target.closest(interactiveSelector))
+function isNestedInteractiveTarget(
+  target: EventTarget | null,
+  currentTarget: EventTarget | null,
+): boolean {
+  if (!(target instanceof HTMLElement) || !(currentTarget instanceof HTMLElement)) {
+    return false
+  }
+
+  const closestInteractive = target.closest(interactiveSelector)
+  return Boolean(closestInteractive && closestInteractive !== currentTarget)
+}
+
+function selectMessage(messageId: string, onSelectMessage: (messageId: string) => void) {
+  onSelectMessage(messageId)
 }
 
 export function AskConversation({
@@ -48,12 +60,27 @@ export function AskConversation({
                   : styles.messageRowUser
               }`}
               data-testid={`ask-message-row-${message.id}`}
+              role="button"
+              tabIndex={0}
+              aria-pressed={message.id === selectedMessageId}
               onClick={(event) => {
-                if (isInteractiveTarget(event.target)) {
+                if (isNestedInteractiveTarget(event.target, event.currentTarget)) {
                   return
                 }
 
-                onSelectMessage(message.id)
+                selectMessage(message.id, onSelectMessage)
+              }}
+              onKeyDown={(event) => {
+                if (isNestedInteractiveTarget(event.target, event.currentTarget)) {
+                  return
+                }
+
+                if (event.key !== 'Enter' && event.key !== ' ') {
+                  return
+                }
+
+                event.preventDefault()
+                selectMessage(message.id, onSelectMessage)
               }}
             >
               <AskMessageCard

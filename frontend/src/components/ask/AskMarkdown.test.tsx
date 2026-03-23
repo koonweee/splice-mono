@@ -132,4 +132,34 @@ describe('Ask markdown rendering', () => {
     expect(container.querySelector('strong')).toBeNull()
     expect(container.querySelector('a')).toBeNull()
   })
+
+  it('falls back to plain message text when Ask answerText is blank', () => {
+    const { container } = renderMessageCard({
+      id: 'assistant-blank-answer',
+      role: 'assistant',
+      parts: [{ type: 'text', text: '**Fallback** plain text' }],
+      metadata: {
+        ask: {
+          answerText: '   ',
+          queryScope: {
+            accountIds: [],
+            includePending: false,
+            truncated: false,
+          },
+          evidence: {
+            accounts: [],
+            transactions: [],
+            aggregates: [],
+            matchedCount: 0,
+            truncated: false,
+          },
+          followups: [],
+          confidence: 'high',
+        },
+      },
+    } satisfies AskUIMessage)
+
+    expect(container.textContent).toContain('**Fallback** plain text')
+    expect(container.querySelector('strong')).toBeNull()
+  })
 })
