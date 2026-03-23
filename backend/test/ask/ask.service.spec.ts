@@ -7,6 +7,7 @@ var mockOpenai: jest.Mock;
 var mockStreamText: jest.Mock;
 var mockConvertToModelMessages: jest.Mock;
 var mockPipeUIMessageStreamToResponse: jest.Mock;
+var mockStepCountIs: jest.Mock;
 
 jest.mock('@ai-sdk/openai', () => ({
   openai: (mockOpenai = jest.fn((model: string) => ({ model }))),
@@ -18,6 +19,10 @@ jest.mock('ai', () => ({
   )),
   pipeUIMessageStreamToResponse: (mockPipeUIMessageStreamToResponse =
     jest.fn()),
+  stepCountIs: (mockStepCountIs = jest.fn((count: number) => ({
+    type: 'mock-stop-when',
+    count,
+  }))),
   streamText: (mockStreamText = jest.fn(() => ({
     toUIMessageStream: jest.fn(() => 'mock-stream'),
   }))),
@@ -51,6 +56,7 @@ describe('AskService', () => {
   afterEach(() => {
     jest.clearAllMocks();
     delete process.env.OPENAI_MODEL;
+    jest.useRealTimers();
   });
 
   it('builds structured Ask answers with scope and evidence', async () => {
@@ -156,5 +162,71 @@ describe('AskService', () => {
         },
       }),
     );
+  });
+
+  it('includes date grounding and spending tool routing guidance in the system prompt', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-03-22T12:00:00Z'));
+
+    await service.streamChat(
+      'user-1',
+      {
+        messages: [],
+      },
+      {} as never,
+    );
+
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining('Today is 2026-03-22.'),
+      }),
+    );
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining(
+          'Use summarize_transactions for spending, expenditure, outflow, or total spend questions.',
+        ),
+      }),
+    );
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining(
+          'Use get_accounts_snapshot only for balance, cash position, or account inventory questions.',
+        ),
+      }),
+    );
+  });
+
+  it('requires an initial tool call and allows multi-step tool completion', async () => {
+    await service.streamChat(
+      'user-1',
+      {
+        messages: [],
+      },
+      {} as never,
+    );
+
+    expect(mockStepCountIs).toHaveBeenCalledWith(5);
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stopWhen: {
+          type: 'mock-stop-when',
+          count: 5,
+        },
+        prepareStep: expect.any(Function),
+      }),
+    );
+
+    const streamTextInput = mockStreamText.mock.calls[0][0] as {
+      prepareStep: (input: { stepNumber: number }) => Promise<unknown>;
+    };
+
+    await expect(
+      streamTextInput.prepareStep({ stepNumber: 0 }),
+    ).resolves.toMatchObject({
+      toolChoice: 'required',
+    });
+    await expect(
+      streamTextInput.prepareStep({ stepNumber: 1 }),
+    ).resolves.toEqual({});
   });
 });
