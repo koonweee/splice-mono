@@ -28,9 +28,17 @@ describe('Ask layout CSS contract', () => {
   })
 
   it('assigns scrolling to the transcript and desktop evidence panes', () => {
+    const page = getCssBlock('.page')
+    const conversationPane = getCssBlock('.conversationPane')
     const messages = getCssBlock('.messages')
     const desktopEvidence = getCssBlock('.desktopEvidence')
 
+    expect(page).toContain('flex: 1;')
+    expect(page).toContain('height: 100%;')
+    expect(page).toContain('min-height: 0;')
+    expect(conversationPane).toContain('display: flex;')
+    expect(conversationPane).toContain('flex-direction: column;')
+    expect(conversationPane).toContain('min-height: 0;')
     expect(messages).toContain('overflow-y: auto;')
     expect(messages).toContain('min-height: 0;')
     expect(messages).toContain('flex: 1;')

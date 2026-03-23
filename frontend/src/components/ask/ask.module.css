@@ -1,6 +1,7 @@
 .routeViewport {
   /* AppShell.Main already contributes the frozen header and shell padding.
-     This route owns the remaining viewport height so only the transcript and evidence panes scroll. */
+     This route owns the remaining viewport height so only the transcript and evidence panes scroll.
+     If the shell adds a footer later, this offset formula must be revisited. */
   --app-shell-offset: calc(var(--app-shell-header-offset, 0rem) + (2 * var(--app-shell-padding)));
 
   display: flex;
