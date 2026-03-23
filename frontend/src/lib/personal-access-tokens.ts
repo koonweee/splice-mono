@@ -1,8 +1,5 @@
-import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
 import type { PersonalAccessToken } from '../api/models'
-
-dayjs.extend(relativeTime)
+import { formatRelativeTime } from './format'
 
 const MAX_PERSONAL_ACCESS_TOKEN_NAME_LENGTH = 100
 
@@ -46,5 +43,5 @@ export function getPersonalAccessTokenUsageText(
     return 'Never used'
   }
 
-  return `Last used ${dayjs(lastUsedAt).fromNow()}`
+  return `Last used ${formatRelativeTime(lastUsedAt)}`
 }
