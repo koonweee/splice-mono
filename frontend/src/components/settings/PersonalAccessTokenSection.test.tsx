@@ -244,7 +244,7 @@ describe('PersonalAccessTokenSection', () => {
     })
 
     expect(screen.getByText(/unable to create token/i)).toBeTruthy()
-    expect(screen.getByTestId('pat-name-input').getAttribute('value')).toBe(
+    expect((screen.getByTestId('pat-name-input') as HTMLInputElement).value).toBe(
       '  Integration token  ',
     )
   })
@@ -253,7 +253,7 @@ describe('PersonalAccessTokenSection', () => {
     const token = makeToken({ id: 'pat-1', name: 'Build token' })
     listTokensState.data = [token]
 
-    renderSection()
+    const view = renderSection()
 
     fireEvent.click(screen.getByRole('button', { name: /revoke build token/i }))
 
@@ -262,7 +262,14 @@ describe('PersonalAccessTokenSection', () => {
 
     act(() => {
       revokeTokenState.mutate.mock.calls[0][1].onSuccess?.()
+      listTokensState.data = []
     })
+
+    view.rerender(
+      <MantineProvider>
+        <PersonalAccessTokenSection />
+      </MantineProvider>,
+    )
 
     expect(screen.queryByTestId('pat-token-row-pat-1')).toBeNull()
     expect(queryClientState.setQueryData).toHaveBeenCalled()

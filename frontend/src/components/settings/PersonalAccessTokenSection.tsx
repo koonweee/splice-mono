@@ -11,7 +11,7 @@ import {
   Title,
 } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   getUserControllerListTokensQueryKey,
   useUserControllerCreateToken,
@@ -57,9 +57,6 @@ export function PersonalAccessTokenSection() {
   const createTokenMutation = useUserControllerCreateToken()
   const revokeTokenMutation = useUserControllerRevokeToken()
 
-  const [visibleTokens, setVisibleTokens] = useState<Array<PersonalAccessToken>>(
-    [],
-  )
   const [tokenName, setTokenName] = useState('')
   const [createError, setCreateError] = useState<string | null>(null)
   const [revealedToken, setRevealedToken] = useState<string | null>(null)
@@ -70,12 +67,6 @@ export function PersonalAccessTokenSection() {
   const [revokeErrors, setRevokeErrors] = useState<
     Record<string, string | undefined>
   >({})
-
-  useEffect(() => {
-    setVisibleTokens(
-      getActivePersonalAccessTokens(tokensQuery.data ?? []).slice(),
-    )
-  }, [tokensQuery.data])
 
   const handleCreateToken = () => {
     setCreateError(null)
@@ -146,9 +137,6 @@ export function PersonalAccessTokenSection() {
       { id: token.id },
       {
         onSuccess: () => {
-          setVisibleTokens((current) =>
-            current.filter((candidate) => candidate.id !== token.id),
-          )
           queryClient.setQueryData(
             getUserControllerListTokensQueryKey(),
             (current: Array<PersonalAccessToken> | undefined) =>
@@ -192,8 +180,8 @@ export function PersonalAccessTokenSection() {
   }
 
   const activeTokens = useMemo(
-    () => getActivePersonalAccessTokens(visibleTokens),
-    [visibleTokens],
+    () => getActivePersonalAccessTokens(tokensQuery.data ?? []),
+    [tokensQuery.data],
   )
 
   if (tokensQuery.isPending) {
