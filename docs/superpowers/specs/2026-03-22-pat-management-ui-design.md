@@ -107,7 +107,8 @@ Behavior:
 - The panel is page-local state only
 - It disappears on refresh/navigation
 - Creating another token replaces the currently shown raw token
-- If the token is revoked immediately, clear the reveal panel if it belongs to that token
+- Store the revealed token's `id` alongside the raw token payload in local state
+- If the token is revoked immediately, clear the reveal panel only if the revoked token matches the currently revealed token `id`
 
 ## Token List
 
@@ -180,6 +181,7 @@ Local state should include at minimum:
 
 - `tokenName`
 - currently revealed raw token payload
+- currently revealed token `id`
 - optional local feedback message for clipboard errors
 
 ## Data Flow
@@ -203,7 +205,7 @@ Recommended behavior:
 - fetch the token list when `/settings` loads
 - keep PAT query state independent from the main user settings query
 - on create success:
-  - update or invalidate the list query
+  - invalidate or refetch the PAT list query rather than synthesizing a partial list item client-side
   - show the returned raw token in local state
 - on revoke success:
   - remove the token from the visible list via cache update or invalidation
