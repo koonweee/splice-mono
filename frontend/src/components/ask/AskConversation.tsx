@@ -16,6 +16,13 @@ type AskConversationProps = {
   composer: ReactNode
 }
 
+const interactiveSelector =
+  'a, button, input, select, textarea, summary, [role="button"], [role="link"]'
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(target.closest(interactiveSelector))
+}
+
 export function AskConversation({
   messages,
   selectedMessageId,
@@ -33,15 +40,20 @@ export function AskConversation({
       <div className={styles.conversationPane} data-testid="ask-conversation-pane">
         <Stack gap="md" className={styles.messages} data-testid="ask-transcript">
           {messages.map((message) => (
-            <button
+            <div
               key={message.id}
-              type="button"
-              onClick={() => onSelectMessage(message.id)}
-              style={{
-                background: 'transparent',
-                border: 0,
-                padding: 0,
-                textAlign: 'inherit',
+              className={`${styles.messageRow} ${
+                message.role === 'assistant'
+                  ? styles.messageRowAssistant
+                  : styles.messageRowUser
+              }`}
+              data-testid={`ask-message-row-${message.id}`}
+              onClick={(event) => {
+                if (isInteractiveTarget(event.target)) {
+                  return
+                }
+
+                onSelectMessage(message.id)
               }}
             >
               <AskMessageCard
@@ -49,7 +61,7 @@ export function AskConversation({
                 isSelected={message.id === selectedMessageId}
                 showInlineEvidence
               />
-            </button>
+            </div>
           ))}
           {(status === 'submitted' || status === 'streaming') && <Loader size="sm" />}
           {error && (

@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 
 import { MantineProvider } from '@mantine/core'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { AskUIMessage } from '@/lib/ask-types'
 import { AskConversation } from './AskConversation'
@@ -55,5 +55,62 @@ describe('AskConversation layout', () => {
     expect(pageGrid.lastElementChild).toBe(evidence)
     expect(conversationPane.firstElementChild).toBe(transcript)
     expect(conversationPane.lastElementChild).toBe(composer)
+  })
+
+  it('keeps assistant markdown links out of button-backed rows while preserving row selection', () => {
+    const onSelectMessage = vi.fn()
+    const messages = [
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [],
+        metadata: {
+          ask: {
+            answerText: '[Docs](https://example.com)',
+            queryScope: {
+              accountIds: [],
+              includePending: false,
+              truncated: false,
+            },
+            evidence: {
+              accounts: [],
+              transactions: [],
+              aggregates: [],
+              matchedCount: 1,
+              truncated: false,
+            },
+            followups: [],
+            confidence: 'high',
+          },
+        },
+      } satisfies AskUIMessage,
+    ]
+
+    render(
+      <MantineProvider>
+        <AskConversation
+          messages={messages}
+          selectedMessageId={null}
+          status="ready"
+          onSelectMessage={onSelectMessage}
+          onRetry={() => {}}
+          composer={<div data-testid="ask-composer">Composer</div>}
+        />
+      </MantineProvider>,
+    )
+
+    const link = screen.getByRole('link', { name: 'Docs' })
+    const row = screen.getByTestId('ask-message-row-assistant-1')
+
+    link.addEventListener('click', (event) => event.preventDefault())
+
+    expect(link.closest('button')).toBeNull()
+    expect(link.getAttribute('href')).toBe('https://example.com')
+
+    fireEvent.click(link)
+    expect(onSelectMessage).not.toHaveBeenCalled()
+
+    fireEvent.click(row)
+    expect(onSelectMessage).toHaveBeenCalledWith('assistant-1')
   })
 })
