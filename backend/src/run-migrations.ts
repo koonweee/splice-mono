@@ -1,16 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import pino from 'pino';
 import { AppDataSource } from './data-source';
+import { createSeqStream } from './logging/create-seq-stream';
 
 const LOCK_ID = 123456; // Arbitrary unique ID for migration lock
 
 async function createLogger() {
   if (process.env.SEQ_SERVER_URL) {
-    const pinoSeq = (await import('pino-seq')) as any;
-    const createStream = pinoSeq.default?.createStream ?? pinoSeq.createStream;
-    const stream = createStream({
+    const stream = await createSeqStream({
       serverUrl: process.env.SEQ_SERVER_URL,
       apiKey: process.env.SEQ_API_KEY,
     });
