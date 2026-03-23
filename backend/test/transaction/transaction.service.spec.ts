@@ -1084,6 +1084,33 @@ describe('TransactionService', () => {
 
   describe('summarizeForAsk', () => {
     it('should summarize totals and top drivers for Ask', async () => {
+      const paycheck = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          merchantName: 'Employer',
+          date: '2026-03-01',
+          amount: {
+            money: { currency: 'USD', amount: 125_000 },
+            sign: MoneySign.POSITIVE,
+          },
+        },
+        mockUserId,
+      );
+      paycheck.id = 'txn-1';
+      paycheck.account = {
+        name: 'Checking',
+        customName: 'House Checking',
+      } as TransactionEntity['account'];
+      paycheck.category = {
+        toObject: () => ({
+          id: 'cat-0',
+          primary: 'INCOME',
+          detailed: 'INCOME_WAGES',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+      } as TransactionEntity['category'];
+
       const grocery = TransactionEntity.fromDto(
         {
           ...mockCreateTransactionDto,
@@ -1152,6 +1179,7 @@ describe('TransactionService', () => {
       previousSubscription.category = subscription.category;
 
       mockRepository.find.mockResolvedValue([
+        paycheck,
         grocery,
         subscription,
         previousSubscription,
@@ -1163,15 +1191,32 @@ describe('TransactionService', () => {
         includePending: false,
       });
 
-      expect(result.totalOutflow).toBe(11_698);
-      expect(result.topCategories[0]).toMatchObject({
-        kind: 'category',
-      });
+      expect(result.totalInflow).toBe(1250);
+      expect(result.totalOutflow).toBe(116.98);
+      expect(result.net).toBe(1133.02);
+      expect(result.topCategories).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: 'FOOD_AND_DRINK',
+            amount: 85,
+            currency: 'USD',
+            kind: 'category',
+          }),
+          expect.objectContaining({
+            label: 'ENTERTAINMENT',
+            amount: 31.98,
+            currency: 'USD',
+            kind: 'category',
+          }),
+        ]),
+      );
       expect(result.recurringTransactions).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             merchantName: 'Netflix',
             cadence: 'monthly',
+            amount: 15.99,
+            currency: 'USD',
           }),
         ]),
       );
@@ -1180,44 +1225,76 @@ describe('TransactionService', () => {
 
   describe('compareForAsk', () => {
     it('should compare current and previous outflow periods', async () => {
-      const current = jest
-        .spyOn(service, 'summarizeForAsk')
-        .mockResolvedValueOnce({
-          totalInflow: 0,
-          totalOutflow: 40_000,
-          net: -40_000,
-          transactionCount: 4,
-          topCategories: [
-            { label: 'TRAVEL', amount: 6_000, currency: 'USD', kind: 'category' },
-          ],
-          topMerchants: [
-            { label: 'United', amount: 6_000, currency: 'USD', kind: 'merchant' },
-          ],
-          topAccounts: [
-            { label: 'Amex Gold', amount: 8_000, currency: 'USD', kind: 'account' },
-          ],
-          recurringTransactions: [],
-          matchedCount: 4,
-          truncated: false,
-        })
-        .mockResolvedValueOnce({
-          totalInflow: 0,
-          totalOutflow: 32_000,
-          net: -32_000,
-          transactionCount: 4,
-          topCategories: [
-            { label: 'TRAVEL', amount: 0, currency: 'USD', kind: 'category' },
-          ],
-          topMerchants: [
-            { label: 'United', amount: 0, currency: 'USD', kind: 'merchant' },
-          ],
-          topAccounts: [
-            { label: 'Amex Gold', amount: 0, currency: 'USD', kind: 'account' },
-          ],
-          recurringTransactions: [],
-          matchedCount: 4,
-          truncated: false,
-        });
+      const currentTravel = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          merchantName: 'United',
+          date: '2026-03-10',
+          amount: {
+            money: { currency: 'USD', amount: 6_000 },
+            sign: MoneySign.NEGATIVE,
+          },
+        },
+        mockUserId,
+      );
+      currentTravel.id = 'txn-current-1';
+      currentTravel.account = {
+        name: 'Amex Gold',
+        customName: null,
+      } as TransactionEntity['account'];
+      currentTravel.category = {
+        toObject: () => ({
+          id: 'cat-travel',
+          primary: 'TRAVEL',
+          detailed: 'TRAVEL_FLIGHTS',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+      } as TransactionEntity['category'];
+
+      const currentDining = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          merchantName: 'Cafe',
+          date: '2026-03-11',
+          amount: {
+            money: { currency: 'USD', amount: 34_000 },
+            sign: MoneySign.NEGATIVE,
+          },
+        },
+        mockUserId,
+      );
+      currentDining.id = 'txn-current-2';
+      currentDining.account = currentTravel.account;
+      currentDining.category = {
+        toObject: () => ({
+          id: 'cat-food',
+          primary: 'FOOD_AND_DRINK',
+          detailed: 'FOOD_AND_DRINK_RESTAURANTS',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+      } as TransactionEntity['category'];
+
+      const previousDining = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          merchantName: 'Cafe',
+          date: '2026-02-11',
+          amount: {
+            money: { currency: 'USD', amount: 32_000 },
+            sign: MoneySign.NEGATIVE,
+          },
+        },
+        mockUserId,
+      );
+      previousDining.id = 'txn-previous-1';
+      previousDining.account = currentTravel.account;
+      previousDining.category = currentDining.category;
+
+      mockRepository.find
+        .mockResolvedValueOnce([currentTravel, currentDining])
+        .mockResolvedValueOnce([previousDining]);
 
       const result = await service.compareForAsk(mockUserId, {
         currentStartDate: '2026-03-01',
@@ -1227,17 +1304,26 @@ describe('TransactionService', () => {
       });
 
       expect(result).toMatchObject({
-        currentTotalOutflow: 40_000,
-        previousTotalOutflow: 32_000,
-        absoluteDelta: 8_000,
+        currentTotalOutflow: 400,
+        previousTotalOutflow: 320,
+        absoluteDelta: 80,
         percentDelta: 25,
       });
       expect(result.categoryDrivers[0]).toMatchObject({
         label: 'TRAVEL',
-        amount: 6_000,
+        amount: 60,
+        currency: 'USD',
       });
-
-      current.mockRestore();
+      expect(result.merchantDrivers[0]).toMatchObject({
+        label: 'United',
+        amount: 60,
+        currency: 'USD',
+      });
+      expect(result.accountDrivers[0]).toMatchObject({
+        label: 'Amex Gold',
+        amount: 80,
+        currency: 'USD',
+      });
     });
   });
 });
