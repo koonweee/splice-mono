@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CategoryEntity } from '../../src/category/category.entity';
+import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import type { TransactionSyncResponse } from '../../src/types/BankLink';
@@ -44,6 +45,12 @@ describe('TransactionService', () => {
     find: jest.fn().mockResolvedValue([]),
   };
 
+  const mockCurrencyConversionService = {
+    getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
+    getRateMap: jest.fn().mockResolvedValue(new Map()),
+    convertAmount: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -55,6 +62,10 @@ describe('TransactionService', () => {
         {
           provide: getRepositoryToken(CategoryEntity),
           useValue: mockCategoryRepository,
+        },
+        {
+          provide: CurrencyConversionService,
+          useValue: mockCurrencyConversionService,
         },
       ],
     }).compile();
@@ -1221,6 +1232,180 @@ describe('TransactionService', () => {
         ]),
       );
     });
+
+    it('converts mixed-currency transactions into the preferred currency before aggregating', async () => {
+      mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue('USD');
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(
+        new Map([['EUR', 1.2]]),
+      );
+      mockCurrencyConversionService.convertAmount.mockImplementation(
+        (amount: number, source: string, target: string, rate: number) => {
+          if (source === target) {
+            return amount;
+          }
+
+          return Math.round(amount * rate);
+        },
+      );
+
+      const paycheck = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          merchantName: 'Employer',
+          date: '2026-03-01',
+          amount: {
+            money: { currency: 'USD', amount: 125_000 },
+            sign: MoneySign.POSITIVE,
+          },
+        },
+        mockUserId,
+      );
+      paycheck.id = 'txn-paycheck';
+      paycheck.account = {
+        name: 'Checking',
+        customName: 'House Checking',
+      } as TransactionEntity['account'];
+      paycheck.category = {
+        toObject: () => ({
+          id: 'cat-income',
+          primary: 'INCOME',
+          detailed: 'INCOME_WAGES',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+      } as TransactionEntity['category'];
+
+      const grocery = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          merchantName: "Trader Joe's",
+          date: '2026-03-02',
+          amount: {
+            money: { currency: 'USD', amount: 8_500 },
+            sign: MoneySign.NEGATIVE,
+          },
+        },
+        mockUserId,
+      );
+      grocery.id = 'txn-grocery';
+      grocery.account = paycheck.account;
+      grocery.category = {
+        toObject: () => ({
+          id: 'cat-food',
+          primary: 'FOOD_AND_DRINK',
+          detailed: 'GROCERIES',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+      } as TransactionEntity['category'];
+
+      const netflixFebruary = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          merchantName: 'Netflix',
+          date: '2026-02-10',
+          amount: {
+            money: { currency: 'EUR', amount: 1_000 },
+            sign: MoneySign.NEGATIVE,
+          },
+        },
+        mockUserId,
+      );
+      netflixFebruary.id = 'txn-netflix-february';
+      netflixFebruary.account = paycheck.account;
+      netflixFebruary.category = {
+        toObject: () => ({
+          id: 'cat-entertainment',
+          primary: 'ENTERTAINMENT',
+          detailed: 'TV_AND_MOVIES',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+      } as TransactionEntity['category'];
+
+      const netflixMarch = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          merchantName: 'Netflix',
+          date: '2026-03-10',
+          amount: {
+            money: { currency: 'EUR', amount: 1_000 },
+            sign: MoneySign.NEGATIVE,
+          },
+        },
+        mockUserId,
+      );
+      netflixMarch.id = 'txn-netflix-march';
+      netflixMarch.account = paycheck.account;
+      netflixMarch.category = netflixFebruary.category;
+
+      mockRepository.find.mockResolvedValue([
+        paycheck,
+        grocery,
+        netflixFebruary,
+        netflixMarch,
+      ]);
+
+      const result = await service.summarizeForAsk(mockUserId, {
+        startDate: '2026-02-01',
+        endDate: '2026-03-22',
+        includePending: false,
+      });
+
+      expect(mockCurrencyConversionService.getPreferredCurrency).toHaveBeenCalledWith(
+        mockUserId,
+      );
+      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
+        ['EUR'],
+        'USD',
+        '2026-03-22',
+      );
+      expect(result.totalInflow).toBe(1250);
+      expect(result.totalOutflow).toBe(109);
+      expect(result.net).toBe(1141);
+      expect(result.topCategories).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: 'FOOD_AND_DRINK',
+            amount: 85,
+            currency: 'USD',
+          }),
+          expect.objectContaining({
+            label: 'ENTERTAINMENT',
+            amount: 24,
+            currency: 'USD',
+          }),
+        ]),
+      );
+      expect(result.topMerchants).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: 'Netflix',
+            amount: 24,
+            currency: 'USD',
+          }),
+        ]),
+      );
+      expect(result.topAccounts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: 'House Checking',
+            amount: 1359,
+            currency: 'USD',
+          }),
+        ]),
+      );
+      expect(result.recurringTransactions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            merchantName: 'Netflix',
+            cadence: 'monthly',
+            amount: 12,
+            currency: 'USD',
+          }),
+        ]),
+      );
+    });
   });
 
   describe('compareForAsk', () => {
@@ -1322,6 +1507,98 @@ describe('TransactionService', () => {
       expect(result.accountDrivers[0]).toMatchObject({
         label: 'Amex Gold',
         amount: 80,
+        currency: 'USD',
+      });
+    });
+
+    it('compares mixed-currency periods after conversion into the preferred currency', async () => {
+      mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue('USD');
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(
+        new Map([['EUR', 1.2]]),
+      );
+      mockCurrencyConversionService.convertAmount.mockImplementation(
+        (amount: number, source: string, target: string, rate: number) => {
+          if (source === target) {
+            return amount;
+          }
+
+          return Math.round(amount * rate);
+        },
+      );
+
+      const currentTravel = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          merchantName: 'United',
+          date: '2026-03-10',
+          amount: {
+            money: { currency: 'EUR', amount: 1_000 },
+            sign: MoneySign.NEGATIVE,
+          },
+        },
+        mockUserId,
+      );
+      currentTravel.id = 'txn-current-eur';
+      currentTravel.account = {
+        name: 'Amex Gold',
+        customName: null,
+      } as TransactionEntity['account'];
+      currentTravel.category = {
+        toObject: () => ({
+          id: 'cat-travel',
+          primary: 'TRAVEL',
+          detailed: 'TRAVEL_FLIGHTS',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+      } as TransactionEntity['category'];
+
+      const previousTravel = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          merchantName: 'United',
+          date: '2026-02-11',
+          amount: {
+            money: { currency: 'USD', amount: 1_000 },
+            sign: MoneySign.NEGATIVE,
+          },
+        },
+        mockUserId,
+      );
+      previousTravel.id = 'txn-previous-usd';
+      previousTravel.account = currentTravel.account;
+      previousTravel.category = currentTravel.category;
+
+      mockRepository.find
+        .mockResolvedValueOnce([currentTravel])
+        .mockResolvedValueOnce([previousTravel]);
+
+      const result = await service.compareForAsk(mockUserId, {
+        currentStartDate: '2026-03-01',
+        currentEndDate: '2026-03-22',
+        previousStartDate: '2026-02-01',
+        previousEndDate: '2026-02-22',
+      });
+
+      expect(result).toMatchObject({
+        currentTotalOutflow: 12,
+        previousTotalOutflow: 10,
+        absoluteDelta: 2,
+        percentDelta: 20,
+      });
+      expect(result.categoryDrivers[0]).toMatchObject({
+        label: 'TRAVEL',
+        amount: 2,
+        currency: 'USD',
+      });
+      expect(result.merchantDrivers[0]).toMatchObject({
+        label: 'United',
+        amount: 2,
+        currency: 'USD',
+      });
+      expect(result.accountDrivers[0]).toMatchObject({
+        label: 'Amex Gold',
+        amount: 2,
         currency: 'USD',
       });
     });

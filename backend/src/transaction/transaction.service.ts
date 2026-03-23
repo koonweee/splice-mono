@@ -23,6 +23,7 @@ import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
+import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import {
   CreateTransactionDto,
   Transaction,
@@ -48,6 +49,7 @@ export class TransactionService extends OwnedCrudService<
     repository: Repository<TransactionEntity>,
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
+    private readonly currencyConversionService: CurrencyConversionService,
   ) {
     super(repository);
   }
@@ -334,6 +336,32 @@ export class TransactionService extends OwnedCrudService<
     return Number(amount.toFixed(getDecimalPlaces(currency)));
   }
 
+  private toRoundedMajorUnitAmount(
+    amountInMinorUnits: number,
+    currency: string,
+  ): number {
+    return this.roundMajorUnitAmount(
+      this.toMajorUnitAmount(amountInMinorUnits, currency),
+      currency,
+    );
+  }
+
+  private buildTopAggregatesFromMinorUnits(
+    entries: Iterable<[string, number]>,
+    currency: string,
+    kind: AskEvidenceAggregate['kind'],
+  ): AskEvidenceAggregate[] {
+    return Array.from(entries)
+      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+      .slice(0, TransactionService.AGGREGATE_LIMIT)
+      .map(([label, amount]) => ({
+        label,
+        amount: this.toRoundedMajorUnitAmount(amount, currency),
+        currency,
+        kind,
+      }));
+  }
+
   private buildTopAggregates(
     entries: Iterable<[string, number]>,
     currency: string,
@@ -350,12 +378,91 @@ export class TransactionService extends OwnedCrudService<
       }));
   }
 
-  private detectRecurringTransactions(
+  private async convertTransactionsToPreferredCurrency(
+    userId: string,
     transactions: Transaction[],
-  ): AskTransactionSummaryResult['recurringTransactions'] {
-    const merchants = new Map<string, Transaction[]>();
+    referenceDate?: string,
+  ): Promise<{
+    preferredCurrency: string;
+    convertedTransactions: Array<{
+      transaction: Transaction;
+      amount: number;
+    }>;
+  }> {
+    const preferredCurrency =
+      await this.currencyConversionService.getPreferredCurrency(userId);
+    const effectiveReferenceDate =
+      referenceDate ??
+      transactions.reduce<string | undefined>(
+        (latest, transaction) =>
+          latest && latest > transaction.date ? latest : transaction.date,
+        undefined,
+      ) ??
+      new Date().toISOString().slice(0, 10);
 
-    transactions.forEach((transaction) => {
+    const foreignCurrencies = [
+      ...new Set(
+        transactions
+          .map((transaction) => transaction.amount.money.currency)
+          .filter((currency) => currency !== preferredCurrency),
+      ),
+    ];
+
+    const rateMap = await this.currencyConversionService.getRateMap(
+      foreignCurrencies,
+      preferredCurrency,
+      effectiveReferenceDate,
+    );
+
+    return {
+      preferredCurrency,
+      convertedTransactions: transactions.map((transaction) => {
+        const sourceCurrency = transaction.amount.money.currency;
+
+        if (sourceCurrency === preferredCurrency) {
+          return {
+            transaction,
+            amount: transaction.amount.money.amount,
+          };
+        }
+
+        const rate = rateMap.get(sourceCurrency);
+        if (rate === undefined) {
+          throw new Error(
+            `Missing exchange rate for ${sourceCurrency} to ${preferredCurrency} on ${effectiveReferenceDate}`,
+          );
+        }
+
+        return {
+          transaction,
+          amount: this.currencyConversionService.convertAmount(
+            transaction.amount.money.amount,
+            sourceCurrency,
+            preferredCurrency,
+            rate,
+          ),
+        };
+      }),
+    };
+  }
+
+  private detectRecurringTransactions(
+    transactions: Array<{
+      transaction: Transaction;
+      amount: number;
+    }>,
+    currency: string,
+  ): AskTransactionSummaryResult['recurringTransactions'] {
+    const merchants = new Map<
+      string,
+      Array<{
+        transaction: Transaction;
+        amount: number;
+      }>
+    >();
+
+    transactions.forEach((entry) => {
+      const { transaction } = entry;
       if (
         !transaction.merchantName ||
         transaction.amount.sign !== MoneySign.NEGATIVE
@@ -364,20 +471,22 @@ export class TransactionService extends OwnedCrudService<
       }
       const key = transaction.merchantName.trim().toLowerCase();
       const existing = merchants.get(key) ?? [];
-      existing.push(transaction);
+      existing.push(entry);
       merchants.set(key, existing);
     });
 
     return Array.from(merchants.entries())
       .map(([merchantName, grouped]) => {
-        const sorted = grouped.sort((a, b) => a.date.localeCompare(b.date));
+        const sorted = grouped.sort((a, b) =>
+          a.transaction.date.localeCompare(b.transaction.date),
+        );
         if (sorted.length < 2) {
           return null;
         }
 
-        const dayDiffs = sorted.slice(1).map((transaction, index) => {
-          const previous = new Date(sorted[index].date).getTime();
-          const current = new Date(transaction.date).getTime();
+        const dayDiffs = sorted.slice(1).map((entry, index) => {
+          const previous = new Date(sorted[index].transaction.date).getTime();
+          const current = new Date(entry.transaction.date).getTime();
           return Math.round((current - previous) / (1000 * 60 * 60 * 24));
         });
 
@@ -388,16 +497,13 @@ export class TransactionService extends OwnedCrudService<
             : 'unknown';
 
         return {
-          merchantName: sorted[0].merchantName ?? merchantName,
+          merchantName: sorted[0].transaction.merchantName ?? merchantName,
           cadence,
-          amount: this.roundMajorUnitAmount(
-            this.toMajorUnitAmount(
-              sorted[sorted.length - 1].amount.money.amount,
-              sorted[sorted.length - 1].amount.money.currency,
-            ),
-            sorted[sorted.length - 1].amount.money.currency,
+          amount: this.toRoundedMajorUnitAmount(
+            sorted[sorted.length - 1].amount,
+            currency,
           ),
-          currency: sorted[sorted.length - 1].amount.money.currency,
+          currency,
         };
       })
       .filter(
@@ -414,6 +520,12 @@ export class TransactionService extends OwnedCrudService<
     options: AskTransactionSummaryOptions,
   ): Promise<AskTransactionSummaryResult> {
     const matches = await this.findMatchingTransactions(userId, options);
+    const { preferredCurrency, convertedTransactions } =
+      await this.convertTransactionsToPreferredCurrency(
+        userId,
+        matches,
+        options.endDate,
+      );
 
     const categoryTotals = new Map<string, number>();
     const merchantTotals = new Map<string, number>();
@@ -421,13 +533,9 @@ export class TransactionService extends OwnedCrudService<
     let totalInflow = 0;
     let totalOutflow = 0;
 
-    matches.forEach((transaction) => {
-      const magnitude = this.toMajorUnitAmount(
-        transaction.amount.money.amount,
-        transaction.amount.money.currency,
-      );
+    convertedTransactions.forEach(({ transaction, amount }) => {
       const signedAmount =
-        transaction.amount.sign === MoneySign.POSITIVE ? magnitude : -magnitude;
+        transaction.amount.sign === MoneySign.POSITIVE ? amount : -amount;
       const absoluteAmount = Math.abs(signedAmount);
 
       if (transaction.amount.sign === MoneySign.POSITIVE) {
@@ -455,27 +563,38 @@ export class TransactionService extends OwnedCrudService<
       );
     });
 
-    const currency = matches[0]?.amount.money.currency ?? 'USD';
-    const recurringTransactions = this.detectRecurringTransactions(matches);
+    const recurringTransactions = this.detectRecurringTransactions(
+      convertedTransactions,
+      preferredCurrency,
+    );
 
     return {
-      totalInflow: this.roundMajorUnitAmount(totalInflow, currency),
-      totalOutflow: this.roundMajorUnitAmount(totalOutflow, currency),
-      net: this.roundMajorUnitAmount(totalInflow - totalOutflow, currency),
+      totalInflow: this.toRoundedMajorUnitAmount(
+        totalInflow,
+        preferredCurrency,
+      ),
+      totalOutflow: this.toRoundedMajorUnitAmount(
+        totalOutflow,
+        preferredCurrency,
+      ),
+      net: this.toRoundedMajorUnitAmount(
+        totalInflow - totalOutflow,
+        preferredCurrency,
+      ),
       transactionCount: matches.length,
-      topCategories: this.buildTopAggregates(
+      topCategories: this.buildTopAggregatesFromMinorUnits(
         categoryTotals.entries(),
-        currency,
+        preferredCurrency,
         'category',
       ),
-      topMerchants: this.buildTopAggregates(
+      topMerchants: this.buildTopAggregatesFromMinorUnits(
         merchantTotals.entries(),
-        currency,
+        preferredCurrency,
         'merchant',
       ),
-      topAccounts: this.buildTopAggregates(
+      topAccounts: this.buildTopAggregatesFromMinorUnits(
         accountTotals.entries(),
-        currency,
+        preferredCurrency,
         'account',
       ),
       recurringTransactions: options.recurringOnly
