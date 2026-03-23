@@ -130,17 +130,38 @@ describe('AskQueryService', () => {
   it('summarizes transactions with category, merchant, and account drivers', async () => {
     mockTransactionService.summarizeForAsk.mockResolvedValue({
       totalInflow: 0,
-      totalOutflow: 25_000,
-      net: -25_000,
+      totalOutflow: 250,
+      net: -250,
       transactionCount: 6,
-      topCategories: [{ label: 'FOOD_AND_DRINK', amount: 10_000 }],
-      topMerchants: [{ label: 'Trader Joe\'s', amount: 8_500 }],
-      topAccounts: [{ label: 'House Checking', amount: 25_000 }],
+      topCategories: [
+        {
+          label: 'FOOD_AND_DRINK',
+          amount: 100,
+          currency: 'USD',
+          kind: 'category',
+        },
+      ],
+      topMerchants: [
+        {
+          label: "Trader Joe's",
+          amount: 85,
+          currency: 'USD',
+          kind: 'merchant',
+        },
+      ],
+      topAccounts: [
+        {
+          label: 'House Checking',
+          amount: 250,
+          currency: 'USD',
+          kind: 'account',
+        },
+      ],
       recurringTransactions: [
         {
           merchantName: 'Netflix',
           cadence: 'monthly',
-          amount: 1_599,
+          amount: 15.99,
         },
       ],
       matchedCount: 6,
@@ -154,11 +175,32 @@ describe('AskQueryService', () => {
     });
 
     expect(result).toMatchObject({
-      totalOutflow: 25_000,
-      topCategories: expect.any(Array),
-      topMerchants: expect.any(Array),
-      topAccounts: expect.any(Array),
-      recurringTransactions: expect.any(Array),
+      totalOutflow: 250,
+      topCategories: [
+        expect.objectContaining({
+          amount: 100,
+          currency: 'USD',
+        }),
+      ],
+      topMerchants: [
+        expect.objectContaining({
+          amount: 85,
+          currency: 'USD',
+        }),
+      ],
+      topAccounts: [
+        expect.objectContaining({
+          amount: 250,
+          currency: 'USD',
+        }),
+      ],
+      recurringTransactions: [
+        expect.objectContaining({
+          merchantName: 'Netflix',
+          amount: 15.99,
+          currency: 'USD',
+        }),
+      ],
     });
   });
 

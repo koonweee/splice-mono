@@ -28,7 +28,7 @@ import {
   Transaction,
   UpdateTransactionDto,
 } from '../types/Transaction';
-import { MoneySign } from '../types/MoneyWithSign';
+import { getDecimalPlaces, MoneySign } from '../types/MoneyWithSign';
 import { TransactionEntity } from './transaction.entity';
 
 @Injectable()
@@ -323,6 +323,17 @@ export class TransactionService extends OwnedCrudService<
 
   private static readonly AGGREGATE_LIMIT = 10;
 
+  private toMajorUnitAmount(
+    amountInMinorUnits: number,
+    currency: string,
+  ): number {
+    return amountInMinorUnits / Math.pow(10, getDecimalPlaces(currency));
+  }
+
+  private roundMajorUnitAmount(amount: number, currency: string): number {
+    return Number(amount.toFixed(getDecimalPlaces(currency)));
+  }
+
   private buildTopAggregates(
     entries: Iterable<[string, number]>,
     currency: string,
@@ -333,7 +344,7 @@ export class TransactionService extends OwnedCrudService<
       .slice(0, TransactionService.AGGREGATE_LIMIT)
       .map(([label, amount]) => ({
         label,
-        amount,
+        amount: this.roundMajorUnitAmount(amount, currency),
         currency,
         kind,
       }));
@@ -379,7 +390,14 @@ export class TransactionService extends OwnedCrudService<
         return {
           merchantName: sorted[0].merchantName ?? merchantName,
           cadence,
-          amount: sorted[sorted.length - 1].amount.money.amount,
+          amount: this.roundMajorUnitAmount(
+            this.toMajorUnitAmount(
+              sorted[sorted.length - 1].amount.money.amount,
+              sorted[sorted.length - 1].amount.money.currency,
+            ),
+            sorted[sorted.length - 1].amount.money.currency,
+          ),
+          currency: sorted[sorted.length - 1].amount.money.currency,
         };
       })
       .filter(
@@ -404,40 +422,46 @@ export class TransactionService extends OwnedCrudService<
     let totalOutflow = 0;
 
     matches.forEach((transaction) => {
-      const amount = transaction.amount.money.amount;
+      const magnitude = this.toMajorUnitAmount(
+        transaction.amount.money.amount,
+        transaction.amount.money.currency,
+      );
       const signedAmount =
-        transaction.amount.sign === MoneySign.POSITIVE ? amount : -amount;
-      const magnitude = Math.abs(signedAmount);
+        transaction.amount.sign === MoneySign.POSITIVE ? magnitude : -magnitude;
+      const absoluteAmount = Math.abs(signedAmount);
 
       if (transaction.amount.sign === MoneySign.POSITIVE) {
-        totalInflow += magnitude;
+        totalInflow += absoluteAmount;
       } else {
-        totalOutflow += magnitude;
+        totalOutflow += absoluteAmount;
       }
 
       const category = transaction.category?.primary ?? 'UNCATEGORIZED';
       categoryTotals.set(
         category,
-        (categoryTotals.get(category) ?? 0) + magnitude,
+        (categoryTotals.get(category) ?? 0) + absoluteAmount,
       );
 
       const merchant = transaction.merchantName ?? 'Unknown merchant';
       merchantTotals.set(
         merchant,
-        (merchantTotals.get(merchant) ?? 0) + magnitude,
+        (merchantTotals.get(merchant) ?? 0) + absoluteAmount,
       );
 
       const account = transaction.accountName ?? 'Account';
-      accountTotals.set(account, (accountTotals.get(account) ?? 0) + magnitude);
+      accountTotals.set(
+        account,
+        (accountTotals.get(account) ?? 0) + absoluteAmount,
+      );
     });
 
     const currency = matches[0]?.amount.money.currency ?? 'USD';
     const recurringTransactions = this.detectRecurringTransactions(matches);
 
     return {
-      totalInflow,
-      totalOutflow,
-      net: totalInflow - totalOutflow,
+      totalInflow: this.roundMajorUnitAmount(totalInflow, currency),
+      totalOutflow: this.roundMajorUnitAmount(totalOutflow, currency),
+      net: this.roundMajorUnitAmount(totalInflow - totalOutflow, currency),
       transactionCount: matches.length,
       topCategories: this.buildTopAggregates(
         categoryTotals.entries(),
@@ -505,6 +529,14 @@ export class TransactionService extends OwnedCrudService<
     };
 
     const absoluteDelta = current.totalOutflow - previous.totalOutflow;
+    const deltaCurrency =
+      current.topCategories[0]?.currency ??
+      previous.topCategories[0]?.currency ??
+      current.topMerchants[0]?.currency ??
+      previous.topMerchants[0]?.currency ??
+      current.topAccounts[0]?.currency ??
+      previous.topAccounts[0]?.currency ??
+      'USD';
     const percentDelta =
       previous.totalOutflow === 0
         ? current.totalOutflow === 0
@@ -515,7 +547,7 @@ export class TransactionService extends OwnedCrudService<
     return {
       currentTotalOutflow: current.totalOutflow,
       previousTotalOutflow: previous.totalOutflow,
-      absoluteDelta,
+      absoluteDelta: this.roundMajorUnitAmount(absoluteDelta, deltaCurrency),
       percentDelta,
       categoryDrivers: buildDeltaDrivers(
         current.topCategories,

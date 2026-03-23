@@ -35,7 +35,7 @@ export const AskEvidenceTransactionSchema = z.object({
 
 export const AskEvidenceAggregateSchema = z.object({
   label: z.string(),
-  amount: z.number(),
+  amount: z.number().describe('Amount in major currency units (e.g. dollars).'),
   currency: z.string(),
   kind: z.enum(['category', 'merchant', 'account', 'summary']),
 });
@@ -96,12 +96,17 @@ export interface AskTransactionSummaryOptions {
 export interface AskRecurringTransaction {
   merchantName: string;
   cadence: 'monthly' | 'weekly' | 'unknown';
+  /** Amount in major currency units (e.g. dollars). */
   amount: number;
+  currency: string;
 }
 
 export interface AskTransactionSummaryResult {
+  /** Amount in major currency units (e.g. dollars). */
   totalInflow: number;
+  /** Amount in major currency units (e.g. dollars). */
   totalOutflow: number;
+  /** Amount in major currency units (e.g. dollars). */
   net: number;
   transactionCount: number;
   topCategories: AskEvidenceAggregate[];
@@ -122,8 +127,11 @@ export interface AskComparePeriodsOptions {
 }
 
 export interface AskComparePeriodsResult {
+  /** Amount in major currency units (e.g. dollars). */
   currentTotalOutflow: number;
+  /** Amount in major currency units (e.g. dollars). */
   previousTotalOutflow: number;
+  /** Amount in major currency units (e.g. dollars). */
   absoluteDelta: number;
   percentDelta: number;
   categoryDrivers: AskEvidenceAggregate[];

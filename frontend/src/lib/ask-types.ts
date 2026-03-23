@@ -35,7 +35,7 @@ export type AskEvidenceTransaction = {
 
 export type AskEvidenceAggregate = {
   label: string
-  amount: number
+  amount: number // major units
   currency: string
   kind: 'category' | 'merchant' | 'account' | 'summary'
 }
