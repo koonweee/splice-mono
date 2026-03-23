@@ -38,7 +38,6 @@
 
 .messageRow {
   display: flex;
-  cursor: pointer;
 }
 
 .messageRowUser {

@@ -107,6 +107,65 @@ describe('Ask markdown rendering', () => {
     expect(container.textContent).toContain('<span data-testid="raw-html">ignored</span>')
   })
 
+  it('does not render markdown images as img elements', () => {
+    const { container } = renderMessageCard({
+      id: 'assistant-image',
+      role: 'assistant',
+      parts: [],
+      metadata: {
+        ask: {
+          answerText: '![receipt](https://example.com/receipt.png)',
+          queryScope: {
+            accountIds: [],
+            includePending: false,
+            truncated: false,
+          },
+          evidence: {
+            accounts: [],
+            transactions: [],
+            aggregates: [],
+            matchedCount: 0,
+            truncated: false,
+          },
+          followups: [],
+          confidence: 'high',
+        },
+      },
+    } satisfies AskUIMessage)
+
+    expect(container.querySelector('img')).toBeNull()
+  })
+
+  it('does not render unsafe links as active anchors', () => {
+    const { container } = renderMessageCard({
+      id: 'assistant-unsafe-link',
+      role: 'assistant',
+      parts: [],
+      metadata: {
+        ask: {
+          answerText: '[Click me](javascript:alert(1))',
+          queryScope: {
+            accountIds: [],
+            includePending: false,
+            truncated: false,
+          },
+          evidence: {
+            accounts: [],
+            transactions: [],
+            aggregates: [],
+            matchedCount: 0,
+            truncated: false,
+          },
+          followups: [],
+          confidence: 'high',
+        },
+      },
+    } satisfies AskUIMessage)
+
+    expect(container.textContent).toContain('Click me')
+    expect(screen.queryByRole('link', { name: 'Click me' })).toBeNull()
+  })
+
   it('preserves plain-text rendering for user messages', () => {
     const { container } = renderMessageCard({
       id: 'user-1',
