@@ -39,12 +39,6 @@
 .messageRow {
   display: flex;
   cursor: pointer;
-  border-radius: var(--mantine-radius-md);
-}
-
-.messageRow:focus-visible {
-  outline: 2px solid var(--mantine-color-blue-5);
-  outline-offset: 3px;
 }
 
 .messageRowUser {
@@ -65,6 +59,35 @@
 
 .messageCardAssistant {
   align-self: flex-start;
+}
+
+.messageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.messageSelectButton {
+  border: 1px solid var(--mantine-color-gray-3);
+  background: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font: inherit;
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.3;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.messageSelectButtonSelected {
+  background: var(--mantine-color-gray-1);
+}
+
+.messageSelectButton:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: 2px;
 }
 
 .messageBody,

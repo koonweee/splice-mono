@@ -1,9 +1,9 @@
 /* @vitest-environment jsdom */
 
 import { MantineProvider } from '@mantine/core'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { AnchorHTMLAttributes, ReactNode } from 'react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { AskUIMessage } from '@/lib/ask-types'
 import { AskConversation } from './AskConversation'
 
@@ -37,6 +37,10 @@ describe('AskConversation layout', () => {
         dispatchEvent: vi.fn(),
       })),
     })
+  })
+
+  afterEach(() => {
+    cleanup()
   })
 
   it('keeps the transcript and desktop evidence in dedicated containers', () => {
@@ -73,7 +77,7 @@ describe('AskConversation layout', () => {
     expect(conversationPane.lastElementChild).toBe(composer)
   })
 
-  it('keeps selected assistant links safe while preserving accessible row selection', () => {
+  it('uses a dedicated evidence button instead of making the row a widget', () => {
     const onSelectMessage = vi.fn()
     const messages = [
       {
@@ -131,7 +135,7 @@ describe('AskConversation layout', () => {
       <MantineProvider>
         <AskConversation
           messages={messages}
-          selectedMessageId="assistant-1"
+          selectedMessageId={null}
           status="ready"
           onSelectMessage={onSelectMessage}
           onRetry={() => {}}
@@ -142,31 +146,99 @@ describe('AskConversation layout', () => {
 
     const link = screen.getByRole('link', { name: 'Docs' })
     const row = screen.getByTestId('ask-message-row-assistant-1')
-    const accountEvidenceLink = within(row).getByRole('link', {
-      name: /Primary Checking/,
-    })
+    const selectButton = within(row).getByRole('button', { name: 'View evidence' })
 
     link.addEventListener('click', (event) => event.preventDefault())
-    accountEvidenceLink.addEventListener('click', (event) => event.preventDefault())
 
     expect(link.closest('button')).toBeNull()
     expect(link.getAttribute('href')).toBe('https://example.com')
-    expect(accountEvidenceLink.getAttribute('href')).toBe('/accounts?accountId=account-1')
-    expect(row.getAttribute('role')).toBe('button')
-    expect(row.getAttribute('tabindex')).toBe('0')
-    expect(row.getAttribute('aria-pressed')).toBe('true')
+    expect(row.getAttribute('role')).toBeNull()
+    expect(row.getAttribute('tabindex')).toBeNull()
+    expect(selectButton.getAttribute('aria-pressed')).toBe('false')
 
     fireEvent.click(link)
     expect(onSelectMessage).not.toHaveBeenCalled()
 
+    selectButton.focus()
+    fireEvent.keyDown(selectButton, { key: 'Enter' })
+    expect(onSelectMessage).toHaveBeenCalledWith('assistant-1')
+  })
+
+  it('keeps selected assistant markdown and inline evidence links clickable', () => {
+    const onSelectMessage = vi.fn()
+    const messages = [
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [],
+        metadata: {
+          ask: {
+            answerText: '[Docs](https://example.com)',
+            queryScope: {
+              accountIds: [],
+              includePending: false,
+              truncated: false,
+            },
+            evidence: {
+              accounts: [
+                {
+                  id: 'account-1',
+                  displayName: 'Primary Checking',
+                  institutionName: 'Splice Bank',
+                  grouping: 'cash',
+                  balance: {
+                    money: { amount: 12345, currency: 'USD' },
+                    sign: 'positive',
+                  },
+                },
+              ],
+              transactions: [],
+              aggregates: [],
+              matchedCount: 1,
+              truncated: false,
+            },
+            followups: [],
+            confidence: 'high',
+          },
+        },
+      } satisfies AskUIMessage,
+    ]
+
+    render(
+      <MantineProvider>
+        <AskConversation
+          messages={messages}
+          selectedMessageId="assistant-1"
+          status="ready"
+          onSelectMessage={onSelectMessage}
+          onRetry={() => {}}
+          composer={<div data-testid="ask-composer">Composer</div>}
+        />
+      </MantineProvider>,
+    )
+
+    const row = screen.getByTestId('ask-message-row-assistant-1')
+    const selectButton = within(row).getByRole('button', { name: 'Selected' })
+    const markdownLink = within(row).getByRole('link', { name: 'Docs' })
+    const accountEvidenceLink = within(row).getByRole('link', {
+      name: /Primary Checking/,
+    })
+
+    markdownLink.addEventListener('click', (event) => event.preventDefault())
+    accountEvidenceLink.addEventListener('click', (event) => event.preventDefault())
+
+    expect(markdownLink.closest('button')).toBeNull()
+    expect(accountEvidenceLink.closest('button')).toBeNull()
+    expect(row.getAttribute('role')).toBeNull()
+    expect(row.getAttribute('tabindex')).toBeNull()
+    expect(selectButton.getAttribute('aria-pressed')).toBe('true')
+
+    fireEvent.click(markdownLink)
     fireEvent.click(accountEvidenceLink)
+
     expect(onSelectMessage).not.toHaveBeenCalled()
 
-    row.focus()
-    fireEvent.keyDown(row, { key: 'Enter' })
-    expect(onSelectMessage).toHaveBeenCalledWith('assistant-1')
-
     fireEvent.click(row)
-    expect(onSelectMessage).toHaveBeenNthCalledWith(2, 'assistant-1')
+    expect(onSelectMessage).toHaveBeenCalledWith('assistant-1')
   })
 })
