@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { AccountType } from 'plaid';
 import { AccountService } from '../account/account.service';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import { TransactionService } from '../transaction/transaction.service';
@@ -21,22 +20,26 @@ export class AskQueryService {
     private readonly currencyConversionService: CurrencyConversionService,
   ) {}
 
-  private classifyAccount(type: string): 'cash' | 'credit' | 'investment' | 'liability' {
-    switch (type) {
-      case AccountType.Credit:
+  private classifyAccount(
+    type: string,
+  ): 'cash' | 'credit' | 'investment' | 'liability' {
+    switch (type.toLowerCase()) {
+      case 'credit':
         return 'credit';
-      case AccountType.Investment:
-      case AccountType.Brokerage:
+      case 'investment':
+      case 'brokerage':
         return 'investment';
-      case AccountType.Loan:
-      case AccountType.Other:
+      case 'loan':
+      case 'other':
         return 'liability';
       default:
         return 'cash';
     }
   }
 
-  async getAccountsSnapshot(userId: string): Promise<AskAccountsSnapshotResult> {
+  async getAccountsSnapshot(
+    userId: string,
+  ): Promise<AskAccountsSnapshotResult> {
     const accounts = await this.accountService.findAll(userId);
 
     return {
