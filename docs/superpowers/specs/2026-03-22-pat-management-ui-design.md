@@ -81,6 +81,9 @@ Controls:
 Behavior:
 
 - Submit only `name`
+- Trim whitespace before submit
+- Disable submission for blank or whitespace-only values
+- Enforce or clearly surface the backend `1..100` character limit in the form
 - Do not expose expiration controls in V1
 - Disable input and button while the create request is pending
 - On success:
@@ -110,6 +113,11 @@ Behavior:
 
 Show only active tokens in the default list.
 
+For this UI, `active` means:
+
+- `revokedAt == null`
+- and `expiresAt == null` or `expiresAt > now`
+
 Each item should display:
 
 - `name`
@@ -127,6 +135,7 @@ Notes:
 
 - `Copy Preview` copies only the visible preview string, not the secret
 - Revoked tokens should disappear immediately after successful revoke
+- Expired tokens should not appear in the default active list
 - Empty state should explain that no active tokens exist yet
 
 ## Responsive Layout
@@ -192,11 +201,24 @@ Use TanStack Query patterns consistent with the rest of the app.
 Recommended behavior:
 
 - fetch the token list when `/settings` loads
+- keep PAT query state independent from the main user settings query
 - on create success:
   - update or invalidate the list query
   - show the returned raw token in local state
 - on revoke success:
   - remove the token from the visible list via cache update or invalidation
+
+## Loading And Retry Behavior
+
+The PAT section should not rely on the page-level settings loading state alone.
+
+Behavior:
+
+- while the PAT list query is loading, show a PAT-section-specific loader or skeleton
+- do not render the empty state until the PAT query has resolved successfully
+- if the PAT list query fails, show a PAT-section-specific error with a retry action
+- the retry action should re-run only the PAT query
+- create form availability should remain independent where feasible; a failed list fetch should not force the entire settings page into an error state
 
 ## Error Handling
 
@@ -240,6 +262,8 @@ Avoid introducing a new route or a large component tree unless the settings file
 
 Add route/component coverage for:
 
+- PAT-section loading state
+- PAT-section fetch error and retry recovery
 - empty token state
 - populated token list
 - create success showing one-time reveal
