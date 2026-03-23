@@ -3,6 +3,27 @@ import { AskQueryService } from '../../src/ask/ask-query.service';
 import { AskService } from '../../src/ask/ask.service';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 
+var mockOpenai: jest.Mock;
+var mockStreamText: jest.Mock;
+var mockConvertToModelMessages: jest.Mock;
+var mockPipeUIMessageStreamToResponse: jest.Mock;
+
+jest.mock('@ai-sdk/openai', () => ({
+  openai: (mockOpenai = jest.fn((model: string) => ({ model }))),
+}), { virtual: true });
+
+jest.mock('ai', () => ({
+  convertToModelMessages: (mockConvertToModelMessages = jest.fn(
+    async (messages) => messages,
+  )),
+  pipeUIMessageStreamToResponse: (mockPipeUIMessageStreamToResponse =
+    jest.fn()),
+  streamText: (mockStreamText = jest.fn(() => ({
+    toUIMessageStream: jest.fn(() => 'mock-stream'),
+  }))),
+  tool: ({ execute }: { execute: unknown }) => ({ execute }),
+}), { virtual: true });
+
 describe('AskService', () => {
   let service: AskService;
 
@@ -29,6 +50,7 @@ describe('AskService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    delete process.env.OPENAI_MODEL;
   });
 
   it('builds structured Ask answers with scope and evidence', async () => {
@@ -113,5 +135,26 @@ describe('AskService', () => {
     expect(result.evidence.transactions).toHaveLength(20);
     expect(result.evidence.aggregates).toHaveLength(10);
     expect(result.followups).toHaveLength(3);
+  });
+
+  it('defaults Ask chat to gpt-5.4-mini when OPENAI_MODEL is unset', async () => {
+    await service.streamChat(
+      'user-1',
+      {
+        messages: [],
+      },
+      {} as never,
+    );
+
+    expect(mockOpenai).toHaveBeenCalledWith('gpt-5.4-mini');
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerOptions: {
+          openai: {
+            reasoningEffort: 'high',
+          },
+        },
+      }),
+    );
   });
 });

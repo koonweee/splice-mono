@@ -67,7 +67,12 @@ export class AskService {
     const originalMessages = body.messages as AskUIMessage[];
 
     const result = streamText({
-      model: openai(process.env.OPENAI_MODEL ?? 'gpt-4.1-mini'),
+      model: openai(process.env.OPENAI_MODEL ?? 'gpt-5.4-mini'),
+      providerOptions: {
+        openai: {
+          reasoningEffort: 'high',
+        },
+      },
       system: ASK_SYSTEM_PROMPT,
       messages: await convertToModelMessages(originalMessages),
       tools: {
