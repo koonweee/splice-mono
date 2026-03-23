@@ -51,12 +51,12 @@ function AskPage() {
 
   return (
     <div className={styles.routeViewport} data-testid="ask-route-viewport">
-      <Group justify="space-between" mb="xl" data-testid="ask-route-header">
+      <Group justify="space-between" mb="xl">
         <Title order={1}>Ask</Title>
       </Group>
 
       {messages.length === 0 && (
-        <Alert color="gray" variant="light" mb="md" data-testid="ask-empty-state">
+        <Alert color="gray" variant="light" mb="md">
           <Text size="sm">
             Ask about spending changes, merchants, categories, balances, or recurring charges.
           </Text>

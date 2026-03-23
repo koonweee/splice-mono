@@ -1,9 +1,10 @@
 /* @vitest-environment jsdom */
 
-import { MantineProvider } from '@mantine/core'
+import { AppShell, MantineProvider } from '@mantine/core'
 import { render, screen, within } from '@testing-library/react'
 import type { ComponentType } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import styles from '@/components/ask/ask.module.css'
 import * as AskRouteModule from './ask'
 
 vi.mock('@tanstack/react-router', () => ({
@@ -54,21 +55,30 @@ describe('Ask route layout', () => {
 
     render(
       <MantineProvider>
-        <AskPage />
+        <AppShell header={{ height: 60 }} padding="md">
+          <AppShell.Header>Header</AppShell.Header>
+          <AppShell.Main data-testid="app-shell-main">
+            <AskPage />
+          </AppShell.Main>
+        </AppShell>
       </MantineProvider>,
     )
 
+    const shellMain = screen.getByTestId('app-shell-main')
     const viewport = screen.getByTestId('ask-route-viewport')
-    const header = within(viewport).getByTestId('ask-route-header')
-    const alert = within(viewport).getByTestId('ask-empty-state')
+    const heading = within(viewport).getByRole('heading', { name: 'Ask' })
+    const alert = within(viewport).getByRole('alert')
     const pageGrid = within(viewport).getByTestId('ask-page-grid')
     const transcript = within(viewport).getByTestId('ask-transcript')
 
-    expect(viewport.contains(header)).toBe(true)
+    expect(shellMain.contains(viewport)).toBe(true)
+    expect(viewport.className).toContain(styles.routeViewport)
+    expect(pageGrid.className).toContain(styles.page)
+    expect(viewport.contains(heading)).toBe(true)
     expect(viewport.contains(alert)).toBe(true)
     expect(viewport.contains(transcript)).toBe(true)
     expect(viewport.contains(pageGrid)).toBe(true)
-    expect(header.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+    expect(heading.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
     expect(alert.compareDocumentPosition(pageGrid) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
   })
 })
