@@ -127,10 +127,10 @@ The Ask endpoint streams finance answers from the backend and requires an OpenAI
 
 ```bash
 OPENAI_API_KEY=...
-OPENAI_MODEL=gpt-4.1-mini
+OPENAI_MODEL=gpt-5.4-mini
 ```
 
-`OPENAI_MODEL` is optional. If omitted, Ask defaults to `gpt-4.1-mini`.
+`OPENAI_MODEL` is optional. If omitted, Ask defaults to `gpt-5.4-mini`.
 
 ## API Documentation
 
