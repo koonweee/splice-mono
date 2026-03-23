@@ -29,8 +29,8 @@ export function AskConversation({
   const selectedMetadata = selectedAnswer ? getAskMetadata(selectedAnswer) : undefined
 
   return (
-    <div className={styles.page}>
-      <div className={styles.conversationPane}>
+    <div className={styles.page} data-testid="ask-page-grid">
+      <div className={styles.conversationPane} data-testid="ask-conversation-pane">
         <Stack gap="md" className={styles.messages} data-testid="ask-transcript">
           {messages.map((message) => (
             <button

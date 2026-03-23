@@ -5,7 +5,6 @@ import { render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { AskUIMessage } from '@/lib/ask-types'
 import { AskConversation } from './AskConversation'
-import styles from './ask.module.css'
 
 describe('AskConversation layout', () => {
   beforeAll(() => {
@@ -46,13 +45,15 @@ describe('AskConversation layout', () => {
       </MantineProvider>,
     )
 
+    const pageGrid = screen.getByTestId('ask-page-grid')
+    const conversationPane = screen.getByTestId('ask-conversation-pane')
     const transcript = screen.getByTestId('ask-transcript')
     const evidence = screen.getByTestId('ask-desktop-evidence')
     const composer = screen.getByTestId('ask-composer')
 
-    expect(transcript.className).toContain(styles.messages)
-    expect(evidence.className).toContain(styles.desktopEvidence)
-    expect(transcript.parentElement).toBe(composer.parentElement)
-    expect(composer.parentElement?.className).toContain(styles.conversationPane)
+    expect(pageGrid.firstElementChild).toBe(conversationPane)
+    expect(pageGrid.lastElementChild).toBe(evidence)
+    expect(conversationPane.firstElementChild).toBe(transcript)
+    expect(conversationPane.lastElementChild).toBe(composer)
   })
 })

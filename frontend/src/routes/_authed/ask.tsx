@@ -14,7 +14,7 @@ export const Route = createFileRoute('/_authed/ask')({
   component: AskPage,
 })
 
-export function AskPage() {
+function AskPage() {
   const {
     messages,
     status,
@@ -51,12 +51,12 @@ export function AskPage() {
 
   return (
     <div className={styles.routeViewport} data-testid="ask-route-viewport">
-      <Group justify="space-between" mb="xl">
+      <Group justify="space-between" mb="xl" data-testid="ask-route-header">
         <Title order={1}>Ask</Title>
       </Group>
 
       {messages.length === 0 && (
-        <Alert color="gray" variant="light" mb="md">
+        <Alert color="gray" variant="light" mb="md" data-testid="ask-empty-state">
           <Text size="sm">
             Ask about spending changes, merchants, categories, balances, or recurring charges.
           </Text>
