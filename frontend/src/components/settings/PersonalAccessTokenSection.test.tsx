@@ -354,6 +354,7 @@ describe('PersonalAccessTokenSection', () => {
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /copy token/i }))
+      await Promise.resolve()
     })
 
     expect(screen.getByText(/unable to copy token/i)).toBeTruthy()
