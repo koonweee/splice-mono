@@ -244,7 +244,8 @@ describe('PersonalAccessTokenSection', () => {
     })
 
     expect(screen.getByText(/unable to create token/i)).toBeTruthy()
-    expect((screen.getByTestId('pat-name-input') as HTMLInputElement).value).toBe(
+    expect(screen.getByTestId('pat-name-input')).toHaveProperty(
+      'value',
       '  Integration token  ',
     )
   })
