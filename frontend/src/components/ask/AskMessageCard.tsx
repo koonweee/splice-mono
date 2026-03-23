@@ -9,6 +9,7 @@ type AskMessageCardProps = {
   message: AskUIMessage
   isSelected: boolean
   showInlineEvidence: boolean
+  onSelectEvidence?: () => void
 }
 
 function getMessageText(message: AskUIMessage): string {
@@ -29,6 +30,7 @@ export function AskMessageCard({
   message,
   isSelected,
   showInlineEvidence,
+  onSelectEvidence,
 }: AskMessageCardProps) {
   const answer = getAskMetadata(message) as AskAnswer | undefined
   const isAssistant = message.role === 'assistant'
@@ -37,6 +39,7 @@ export function AskMessageCard({
   const hasAskMarkdown = Boolean(isAssistant && askAnswerText?.trim())
   const displayedText =
     askAnswerText && askAnswerText.trim().length > 0 ? askAnswerText : messageText
+  const canSelectEvidence = isAssistant && answer !== undefined && onSelectEvidence !== undefined
 
   return (
     <Paper
@@ -48,9 +51,31 @@ export function AskMessageCard({
       }`}
     >
       <Stack gap="xs">
-        <Text fw={600} size="sm">
-          {isAssistant ? 'Ask' : 'You'}
-        </Text>
+        <div className={styles.messageHeader}>
+          <Text fw={600} size="sm">
+            {isAssistant ? 'Ask' : 'You'}
+          </Text>
+          {canSelectEvidence && (
+            <button
+              type="button"
+              className={`${styles.messageSelectButton} ${
+                isSelected ? styles.messageSelectButtonSelected : ''
+              }`}
+              aria-pressed={isSelected}
+              onClick={onSelectEvidence}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') {
+                  return
+                }
+
+                event.preventDefault()
+                onSelectEvidence()
+              }}
+            >
+              {isSelected ? 'Selected' : 'View evidence'}
+            </button>
+          )}
+        </div>
         {hasAskMarkdown ? (
           <AskMarkdown markdown={displayedText} />
         ) : (

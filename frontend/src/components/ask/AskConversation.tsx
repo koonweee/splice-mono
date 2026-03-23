@@ -60,9 +60,6 @@ export function AskConversation({
                   : styles.messageRowUser
               }`}
               data-testid={`ask-message-row-${message.id}`}
-              role="button"
-              tabIndex={0}
-              aria-pressed={message.id === selectedMessageId}
               onClick={(event) => {
                 if (isNestedInteractiveTarget(event.target, event.currentTarget)) {
                   return
@@ -70,23 +67,12 @@ export function AskConversation({
 
                 selectMessage(message.id, onSelectMessage)
               }}
-              onKeyDown={(event) => {
-                if (isNestedInteractiveTarget(event.target, event.currentTarget)) {
-                  return
-                }
-
-                if (event.key !== 'Enter' && event.key !== ' ') {
-                  return
-                }
-
-                event.preventDefault()
-                selectMessage(message.id, onSelectMessage)
-              }}
             >
               <AskMessageCard
                 message={message}
                 isSelected={message.id === selectedMessageId}
                 showInlineEvidence
+                onSelectEvidence={() => onSelectMessage(message.id)}
               />
             </div>
           ))}
