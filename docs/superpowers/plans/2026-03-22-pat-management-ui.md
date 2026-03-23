@@ -228,7 +228,7 @@ Cover these states:
 - revoke failure keeps the token visible and shows inline feedback
 - mobile-friendly structure is present (stackable action container / no assumption of fixed desktop row)
 
-Use Testing Library with mocked generated hooks. Keep tests on behavior, not Mantine internals. Do not assume `@testing-library/user-event`; this repo currently has `@testing-library/react` and `@testing-library/dom`, so use `fireEvent` or existing helpers unless you explicitly add a new dependency in a separate task.
+Use Testing Library with mocked generated hooks. Keep tests on behavior, not Mantine internals. Do not assume `@testing-library/user-event` or `@testing-library/jest-dom`; this repo currently has `@testing-library/react` and `@testing-library/dom`, so use `fireEvent` and plain DOM assertions unless you explicitly add new test dependencies in a separate task.
 
 Suggested test skeleton:
 
@@ -239,7 +239,7 @@ it('shows the one-time reveal after create success', async () => {
     target: { value: 'codex-local' },
   })
   fireEvent.click(screen.getByRole('button', { name: /create token/i }))
-  expect(await screen.findByText(/this token is shown once/i)).toBeInTheDocument()
+  expect(await screen.findByText(/this token is shown once/i)).not.toBeNull()
 })
 ```
 
@@ -311,8 +311,8 @@ Create a dedicated route test that verifies:
 Suggested assertion:
 
 ```tsx
-expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
-expect(screen.getByRole('heading', { name: /personal access tokens/i })).toBeInTheDocument()
+expect(screen.getByRole('heading', { name: /settings/i })).not.toBeNull()
+expect(screen.getByRole('heading', { name: /personal access tokens/i })).not.toBeNull()
 expect(settingsCard.compareDocumentPosition(patSection)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
 ```
 
