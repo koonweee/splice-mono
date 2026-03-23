@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MoneyWithSignSign } from '../api/models'
 import {
   formatAccountType,
+  formatMoneyNumber,
   formatMoneyWithSign,
   formatPercent,
   getDecimalPlaces,
@@ -53,16 +54,7 @@ describe('format utils', () => {
           sign: MoneyWithSignSign.positive,
         },
       })
-      // JPY has 0 decimals, so 12345 units is 12345
-      // However, formatMoneyNumber uses Intl.NumberFormat which handles JPY specifics.
-      // But our logic: amount / 10^0 = 12345.
-      // Intl.NumberFormat('en-US', { style: 'currency', currency: 'JPY' }).format(12345) -> "¥12,345"
-      // Wait, formatMoneyNumber forces decimals to be passed in or default 2.
-      // In formatMoneyWithSign: decimals = 2 (default).
-      // If we don't pass decimals, it tries to show 2 decimal places?
-      // formatMoneyNumber uses minimumFractionDigits: decimals.
-      // Let's verify behavior.
-      expect(result).toBe('¥12,345.00') // Because default decimals is 2
+      expect(result).toBe('¥12,345')
     })
 
     it('should format JPY correctly with 0 decimals override', () => {
@@ -111,6 +103,15 @@ describe('format utils', () => {
       })
       // BTC should format without $ symbol and with max 6 decimal places with currency appended (rounded)
       expect(result).toBe('1.234568 (BTC)')
+    })
+
+    it('should format zero-decimal fiat currencies without fake cents', () => {
+      const result = formatMoneyNumber({
+        value: 12345,
+        currency: 'JPY',
+      })
+
+      expect(result).toBe('¥12,345')
     })
   })
 
