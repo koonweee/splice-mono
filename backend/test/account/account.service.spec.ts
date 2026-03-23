@@ -184,10 +184,7 @@ describe('AccountService', () => {
         ...mockCreateAccountDto,
         bankLinkId: 'bank-link-123',
       };
-      const mockEntity = AccountEntity.fromDto(
-        linkedCreateDto,
-        mockUserId,
-      );
+      const mockEntity = AccountEntity.fromDto(linkedCreateDto, mockUserId);
       mockEntity.id = 'generated-uuid';
       mockRepository.save.mockResolvedValue(mockEntity);
 
@@ -599,7 +596,10 @@ describe('AccountService', () => {
         type: AccountType.Investment,
         subType: AccountSubtype._401k,
       };
-      const mockEntity = AccountEntity.fromDto(investmentAccountDto, mockUserId);
+      const mockEntity = AccountEntity.fromDto(
+        investmentAccountDto,
+        mockUserId,
+      );
       mockEntity.id = 'investment-id';
       mockRepository.findOne.mockResolvedValue(mockEntity);
       mockRepository.save.mockImplementation(async (entity) => entity);

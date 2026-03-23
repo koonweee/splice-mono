@@ -49,10 +49,12 @@ export class AskQueryService {
 
     return {
       ...summary,
-      recurringTransactions: summary.recurringTransactions.map((transaction) => ({
-        ...transaction,
-        currency: transaction.currency ?? aggregateCurrency,
-      })),
+      recurringTransactions: summary.recurringTransactions.map(
+        (transaction) => ({
+          ...transaction,
+          currency: transaction.currency ?? aggregateCurrency,
+        }),
+      ),
     };
   }
 
