@@ -31,7 +31,7 @@ export function AskConversation({
   return (
     <div className={styles.page}>
       <div className={styles.conversationPane}>
-        <Stack gap="md" className={styles.messages}>
+        <Stack gap="md" className={styles.messages} data-testid="ask-transcript">
           {messages.map((message) => (
             <button
               key={message.id}
@@ -59,7 +59,7 @@ export function AskConversation({
         {composer}
       </div>
 
-      <div className={styles.desktopEvidence}>
+      <div className={styles.desktopEvidence} data-testid="ask-desktop-evidence">
         <AskEvidencePanel answer={selectedMetadata} />
       </div>
     </div>
