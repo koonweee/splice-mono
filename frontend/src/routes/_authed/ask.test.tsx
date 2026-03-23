@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import * as AskRouteModule from './ask'
 
 vi.mock('@tanstack/react-router', () => ({
-  createFileRoute: () => () => ({}),
+  createFileRoute: () => (config: unknown) => config,
 }))
 
 vi.mock('@ai-sdk/react', () => ({
@@ -44,11 +44,12 @@ describe('Ask route layout', () => {
   })
 
   it('renders the bounded route wrapper with the header and empty-state prompt above the conversation', () => {
-    const AskPage = (AskRouteModule as { AskPage?: ComponentType }).AskPage
+    const route = AskRouteModule.Route as { component?: ComponentType }
+    const AskPage = route.component
 
     expect(AskPage).toBeTypeOf('function')
     if (!AskPage) {
-      throw new Error('AskPage export is required for route-level layout tests')
+      throw new Error('Ask route component is required for route-level layout tests')
     }
 
     render(
@@ -58,14 +59,16 @@ describe('Ask route layout', () => {
     )
 
     const viewport = screen.getByTestId('ask-route-viewport')
-    const heading = within(viewport).getByRole('heading', { name: 'Ask' })
-    const alert = within(viewport).getByText(
-      'Ask about spending changes, merchants, categories, balances, or recurring charges.',
-    )
+    const header = within(viewport).getByTestId('ask-route-header')
+    const alert = within(viewport).getByTestId('ask-empty-state')
+    const pageGrid = within(viewport).getByTestId('ask-page-grid')
     const transcript = within(viewport).getByTestId('ask-transcript')
 
-    expect(viewport.contains(heading)).toBe(true)
+    expect(viewport.contains(header)).toBe(true)
     expect(viewport.contains(alert)).toBe(true)
     expect(viewport.contains(transcript)).toBe(true)
+    expect(viewport.contains(pageGrid)).toBe(true)
+    expect(header.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+    expect(alert.compareDocumentPosition(pageGrid) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
   })
 })
