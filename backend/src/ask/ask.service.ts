@@ -79,7 +79,7 @@ export class AskService {
     const result = streamText({
       model: openai(process.env.OPENAI_MODEL ?? 'gpt-5.4-mini'),
       stopWhen: stepCountIs(5),
-      prepareStep: async ({ stepNumber }) => {
+      prepareStep: ({ stepNumber }) => {
         if (stepNumber === 0) {
           return {
             toolChoice: 'required' as const,
