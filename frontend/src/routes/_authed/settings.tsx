@@ -19,6 +19,7 @@ import {
   useUserControllerMe,
   useUserControllerUpdateSettings,
 } from '../../api/clients/spliceAPI'
+import { PersonalAccessTokenSection } from '../../components/settings/PersonalAccessTokenSection'
 
 export const Route = createFileRoute('/_authed/settings')({
   component: SettingsPage,
@@ -84,7 +85,7 @@ function getBrowserTimezone() {
   }
 }
 
-function SettingsPage() {
+export function SettingsPage() {
   const queryClient = useQueryClient()
   const { data: user, isLoading, error } = useUserControllerMe()
   const updateSettingsMutation = useUserControllerUpdateSettings()
@@ -156,100 +157,104 @@ function SettingsPage() {
         Settings
       </Title>
 
-      <Paper withBorder p="lg" radius="md" maw={500}>
-        <Stack gap="lg">
-          <div>
-            <Title order={4} mb="xs">
-              Appearance
-            </Title>
-            <Text size="sm" c="dimmed" mb="sm">
-              Choose your preferred color scheme.
-            </Text>
-            <SegmentedControl
-              value={colorScheme}
-              onChange={(value) =>
-                setColorScheme(value as 'light' | 'dark' | 'auto')
-              }
-              data={[
-                { label: 'Light', value: 'light' },
-                { label: 'Dark', value: 'dark' },
-                { label: 'Auto', value: 'auto' },
-              ]}
-            />
-          </div>
-
-          <div>
-            <Title order={4} mb="xs">
-              Display Currency
-            </Title>
-            <Text size="sm" c="dimmed" mb="sm">
-              All balances and amounts will be converted to this currency for
-              display.
-            </Text>
-            <Select
-              value={currency}
-              onChange={(value) => value && setCurrency(value)}
-              data={CURRENCY_OPTIONS}
-              searchable
-              placeholder="Select currency"
-            />
-          </div>
-
-          <div>
-            <Title order={4} mb="xs">
-              Timezone
-            </Title>
-            <Text size="sm" c="dimmed" mb="sm">
-              Used for displaying dates and times throughout the app.
-            </Text>
-            <Group gap="sm" align="flex-end">
-              <Select
-                value={timezone}
-                onChange={(value) => value && setTimezone(value)}
-                data={timezoneOptions}
-                searchable
-                placeholder="Select timezone"
-                style={{ flex: 1 }}
+      <Stack gap="xl">
+        <Paper withBorder p="lg" radius="md" maw={500} data-testid="settings-card">
+          <Stack gap="lg">
+            <div>
+              <Title order={4} mb="xs">
+                Appearance
+              </Title>
+              <Text size="sm" c="dimmed" mb="sm">
+                Choose your preferred color scheme.
+              </Text>
+              <SegmentedControl
+                value={colorScheme}
+                onChange={(value) =>
+                  setColorScheme(value as 'light' | 'dark' | 'auto')
+                }
+                data={[
+                  { label: 'Light', value: 'light' },
+                  { label: 'Dark', value: 'dark' },
+                  { label: 'Auto', value: 'auto' },
+                ]}
               />
+            </div>
+
+            <div>
+              <Title order={4} mb="xs">
+                Display Currency
+              </Title>
+              <Text size="sm" c="dimmed" mb="sm">
+                All balances and amounts will be converted to this currency for
+                display.
+              </Text>
+              <Select
+                value={currency}
+                onChange={(value) => value && setCurrency(value)}
+                data={CURRENCY_OPTIONS}
+                searchable
+                placeholder="Select currency"
+              />
+            </div>
+
+            <div>
+              <Title order={4} mb="xs">
+                Timezone
+              </Title>
+              <Text size="sm" c="dimmed" mb="sm">
+                Used for displaying dates and times throughout the app.
+              </Text>
+              <Group gap="sm" align="flex-end">
+                <Select
+                  value={timezone}
+                  onChange={(value) => value && setTimezone(value)}
+                  data={timezoneOptions}
+                  searchable
+                  placeholder="Select timezone"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={handleSetBrowserTimezone}
+                  disabled={timezone === browserTimezone}
+                >
+                  Use Browser
+                </Button>
+              </Group>
+              {browserTimezone && (
+                <Text size="xs" c="dimmed" mt="xs">
+                  Detected: {browserTimezone}
+                </Text>
+              )}
+            </div>
+
+            <Group justify="flex-end" mt="md">
               <Button
-                variant="light"
-                size="sm"
-                onClick={handleSetBrowserTimezone}
-                disabled={timezone === browserTimezone}
+                onClick={handleSave}
+                loading={updateSettingsMutation.isPending}
+                disabled={!hasChanges}
               >
-                Use Browser
+                Save Changes
               </Button>
             </Group>
-            {browserTimezone && (
-              <Text size="xs" c="dimmed" mt="xs">
-                Detected: {browserTimezone}
-              </Text>
+
+            {updateSettingsMutation.isError && (
+              <Alert color="red" title="Error">
+                Failed to save settings
+              </Alert>
             )}
-          </div>
 
-          <Group justify="flex-end" mt="md">
-            <Button
-              onClick={handleSave}
-              loading={updateSettingsMutation.isPending}
-              disabled={!hasChanges}
-            >
-              Save Changes
-            </Button>
-          </Group>
+            {updateSettingsMutation.isSuccess && !hasChanges && (
+              <Alert color="green" title="Success">
+                Settings saved successfully
+              </Alert>
+            )}
+          </Stack>
+        </Paper>
 
-          {updateSettingsMutation.isError && (
-            <Alert color="red" title="Error">
-              Failed to save settings
-            </Alert>
-          )}
-
-          {updateSettingsMutation.isSuccess && !hasChanges && (
-            <Alert color="green" title="Success">
-              Settings saved successfully
-            </Alert>
-          )}
-        </Stack>
-      </Paper>
+        <PersonalAccessTokenSection />
+      </Stack>
     </>
   )
 }
