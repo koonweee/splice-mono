@@ -167,6 +167,36 @@ describe('Ask markdown rendering', () => {
     expect(screen.queryByRole('link', { name: 'Click me' })).toBeNull()
   })
 
+  it('does not render protocol-relative links as active anchors', () => {
+    const { container } = renderMessageCard({
+      id: 'assistant-protocol-relative-link',
+      role: 'assistant',
+      parts: [],
+      metadata: {
+        ask: {
+          answerText: '[Offsite](//example.com)',
+          queryScope: {
+            accountIds: [],
+            includePending: false,
+            truncated: false,
+          },
+          evidence: {
+            accounts: [],
+            transactions: [],
+            aggregates: [],
+            matchedCount: 0,
+            truncated: false,
+          },
+          followups: [],
+          confidence: 'high',
+        },
+      },
+    } satisfies AskUIMessage)
+
+    expect(container.textContent).toContain('Offsite')
+    expect(screen.queryByRole('link', { name: 'Offsite' })).toBeNull()
+  })
+
   it('preserves plain-text rendering for user messages', () => {
     const { container } = renderMessageCard({
       id: 'user-1',
