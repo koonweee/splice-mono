@@ -36,6 +36,18 @@
   min-height: 0;
 }
 
+.messageRow {
+  display: flex;
+}
+
+.messageRowUser {
+  justify-content: flex-end;
+}
+
+.messageRowAssistant {
+  justify-content: flex-start;
+}
+
 .messageCard {
   max-width: 80%;
 }

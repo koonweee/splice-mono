@@ -120,4 +120,16 @@ describe('Ask markdown rendering', () => {
     expect(container.querySelector('strong')).toBeNull()
     expect(container.querySelector('a')).toBeNull()
   })
+
+  it('preserves plain-text rendering for assistant fallback text without Ask metadata', () => {
+    const { container } = renderMessageCard({
+      id: 'assistant-fallback',
+      role: 'assistant',
+      parts: [{ type: 'text', text: '**Bold** and [Docs](https://example.com)' }],
+    } satisfies AskUIMessage)
+
+    expect(container.textContent).toContain('**Bold** and [Docs](https://example.com)')
+    expect(container.querySelector('strong')).toBeNull()
+    expect(container.querySelector('a')).toBeNull()
+  })
 })

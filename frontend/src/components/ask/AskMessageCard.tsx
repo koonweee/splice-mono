@@ -33,7 +33,9 @@ export function AskMessageCard({
   const answer = getAskMetadata(message) as AskAnswer | undefined
   const isAssistant = message.role === 'assistant'
   const messageText = getMessageText(message)
-  const assistantText = answer?.answerText ?? messageText
+  const askAnswerText = answer?.answerText
+  const shouldRenderMarkdown = Boolean(isAssistant && askAnswerText?.trim())
+  const displayedText = askAnswerText ?? messageText
 
   return (
     <Paper
@@ -48,15 +50,15 @@ export function AskMessageCard({
         <Text fw={600} size="sm">
           {isAssistant ? 'Ask' : 'You'}
         </Text>
-        {isAssistant ? (
-          <AskMarkdown markdown={assistantText} />
+        {shouldRenderMarkdown ? (
+          <AskMarkdown markdown={displayedText} />
         ) : (
           <Text
             size="sm"
             className={styles.messageBody}
             style={{ whiteSpace: 'pre-wrap' }}
           >
-            {messageText}
+            {displayedText}
           </Text>
         )}
         {showInlineEvidence && isAssistant && isSelected && (
