@@ -20,6 +20,7 @@ import {
 } from '../../api/clients/spliceAPI'
 import {
   getActivePersonalAccessTokens,
+  getPersonalAccessTokenUsageText,
   normalizePersonalAccessTokenName,
 } from '../../lib/personal-access-tokens'
 import type {
@@ -175,7 +176,7 @@ export function PersonalAccessTokenSection() {
       await navigator.clipboard.writeText(revealedToken)
       setClipboardFeedback('Copied to clipboard.')
     } catch {
-      setClipboardFeedback('Copied token text.')
+      setClipboardFeedback('Unable to copy token.')
     }
   }
 
@@ -190,32 +191,6 @@ export function PersonalAccessTokenSection() {
         <Stack align="center" justify="center" py="xl" data-testid="pat-section-loader">
           <Loader />
         </Stack>
-      </Paper>
-    )
-  }
-
-  if (tokensQuery.isError) {
-    return (
-      <Paper withBorder p="lg" radius="md" data-testid="pat-section">
-        <Alert
-          color="red"
-          title="Failed to load personal access tokens"
-          data-testid="pat-section-error"
-        >
-          <Stack gap="sm">
-            <Text size="sm">
-              {getErrorMessage(
-                tokensQuery.error,
-                'Unable to load personal access tokens.',
-              )}
-            </Text>
-            <Group justify="flex-start">
-              <Button variant="light" onClick={() => tokensQuery.refetch()}>
-                Retry
-              </Button>
-            </Group>
-          </Stack>
-        </Alert>
       </Paper>
     )
   }
@@ -235,6 +210,7 @@ export function PersonalAccessTokenSection() {
             label="Token name"
             description="Leading and trailing spaces are trimmed. Up to 100 characters."
             value={tokenName}
+            disabled={createTokenMutation.isPending}
             onChange={(event) => {
               setTokenName(event.currentTarget.value)
               if (createError != null) {
@@ -254,6 +230,7 @@ export function PersonalAccessTokenSection() {
             <Button
               onClick={handleCreateToken}
               loading={createTokenMutation.isPending}
+              disabled={createTokenMutation.isPending}
             >
               Create token
             </Button>
@@ -279,13 +256,26 @@ export function PersonalAccessTokenSection() {
               <Text size="sm">
                 Copy this token now. You will not be able to see it again.
               </Text>
-              <Code data-testid="pat-revealed-token">{revealedToken}</Code>
+              <Code
+                data-testid="pat-revealed-token"
+                style={{
+                  display: 'block',
+                  overflowWrap: 'anywhere',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {revealedToken}
+              </Code>
               <Group gap="sm" wrap="wrap">
                 <Button variant="light" onClick={handleCopyToken}>
                   Copy token
                 </Button>
                 {clipboardFeedback != null && (
-                  <Text size="sm" c="dimmed">
+                  <Text
+                    size="sm"
+                    c={clipboardFeedback === 'Copied to clipboard.' ? 'dimmed' : 'red'}
+                  >
                     {clipboardFeedback}
                   </Text>
                 )}
@@ -297,7 +287,27 @@ export function PersonalAccessTokenSection() {
         <Stack gap="sm">
           <Title order={4}>Active tokens</Title>
 
-          {activeTokens.length === 0 ? (
+          {tokensQuery.isError ? (
+            <Alert
+              color="red"
+              title="Failed to load active tokens"
+              data-testid="pat-section-error"
+            >
+              <Stack gap="sm">
+                <Text size="sm">
+                  {getErrorMessage(
+                    tokensQuery.error,
+                    'Unable to load personal access tokens.',
+                  )}
+                </Text>
+                <Group justify="flex-start">
+                  <Button variant="light" onClick={() => tokensQuery.refetch()}>
+                    Retry
+                  </Button>
+                </Group>
+              </Stack>
+            </Alert>
+          ) : activeTokens.length === 0 ? (
             <Text size="sm" c="dimmed">
               No active personal access tokens.
             </Text>
@@ -323,6 +333,9 @@ export function PersonalAccessTokenSection() {
                         <Text size="sm" c="dimmed">
                           {token.tokenPreview}
                         </Text>
+                        <Text size="sm" c="dimmed">
+                          {getPersonalAccessTokenUsageText(token.lastUsedAt)}
+                        </Text>
                       </Stack>
                       <Button
                         variant="light"
@@ -335,7 +348,11 @@ export function PersonalAccessTokenSection() {
                     </Group>
 
                     {revokeErrors[token.id] != null && (
-                      <Text size="xs" c="red" data-testid={`pat-revoke-error-${token.id}`}>
+                      <Text
+                        size="xs"
+                        c="red"
+                        data-testid={`pat-revoke-error-${token.id}`}
+                      >
                         {revokeErrors[token.id]}
                       </Text>
                     )}
