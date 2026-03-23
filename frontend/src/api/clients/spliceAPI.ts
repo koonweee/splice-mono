@@ -31,6 +31,8 @@ import type {
   BalanceSnapshotControllerImportCsv201,
   BalanceSnapshotControllerImportCsvBody,
   CreateAccountDto,
+  CreatePersonalAccessTokenDto,
+  CreatePersonalAccessTokenResponse,
   CreateTransactionDto,
   CreateUserDto,
   InitiateLinkRequest,
@@ -38,6 +40,7 @@ import type {
   LoginDto,
   LoginResponse,
   PaginatedTransactionResponse,
+  PersonalAccessToken,
   RefreshTokenDto,
   TokenResponse,
   Transaction,
@@ -1594,6 +1597,302 @@ export const useUserControllerLogoutAll = <
   TContext
 > => {
   const mutationOptions = getUserControllerLogoutAllMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Create a personal access token
+ */
+export const userControllerCreateToken = (
+  createPersonalAccessTokenDto: CreatePersonalAccessTokenDto,
+  signal?: AbortSignal,
+) => {
+  return axios<CreatePersonalAccessTokenResponse>({
+    url: `/user/tokens`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createPersonalAccessTokenDto,
+    signal,
+  })
+}
+
+export const getUserControllerCreateTokenMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof userControllerCreateToken>>,
+    TError,
+    { data: CreatePersonalAccessTokenDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof userControllerCreateToken>>,
+  TError,
+  { data: CreatePersonalAccessTokenDto },
+  TContext
+> => {
+  const mutationKey = ['userControllerCreateToken']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof userControllerCreateToken>>,
+    { data: CreatePersonalAccessTokenDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return userControllerCreateToken(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type UserControllerCreateTokenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof userControllerCreateToken>>
+>
+export type UserControllerCreateTokenMutationBody = CreatePersonalAccessTokenDto
+export type UserControllerCreateTokenMutationError = void
+
+export const useUserControllerCreateToken = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof userControllerCreateToken>>,
+      TError,
+      { data: CreatePersonalAccessTokenDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof userControllerCreateToken>>,
+  TError,
+  { data: CreatePersonalAccessTokenDto },
+  TContext
+> => {
+  const mutationOptions = getUserControllerCreateTokenMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * List personal access tokens
+ */
+export const userControllerListTokens = (signal?: AbortSignal) => {
+  return axios<Array<PersonalAccessToken>>({
+    url: `/user/tokens`,
+    method: 'GET',
+    signal,
+  })
+}
+
+export const getUserControllerListTokensQueryKey = () => {
+  return [`/user/tokens`] as const
+}
+
+export const getUserControllerListTokensQueryOptions = <
+  TData = Awaited<ReturnType<typeof userControllerListTokens>>,
+  TError = void,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof userControllerListTokens>>,
+      TError,
+      TData
+    >
+  >
+}) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getUserControllerListTokensQueryKey()
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof userControllerListTokens>>
+  > = ({ signal }) => userControllerListTokens(signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof userControllerListTokens>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UserControllerListTokensQueryResult = NonNullable<
+  Awaited<ReturnType<typeof userControllerListTokens>>
+>
+export type UserControllerListTokensQueryError = void
+
+export function useUserControllerListTokens<
+  TData = Awaited<ReturnType<typeof userControllerListTokens>>,
+  TError = void,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof userControllerListTokens>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof userControllerListTokens>>,
+          TError,
+          Awaited<ReturnType<typeof userControllerListTokens>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useUserControllerListTokens<
+  TData = Awaited<ReturnType<typeof userControllerListTokens>>,
+  TError = void,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof userControllerListTokens>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof userControllerListTokens>>,
+          TError,
+          Awaited<ReturnType<typeof userControllerListTokens>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useUserControllerListTokens<
+  TData = Awaited<ReturnType<typeof userControllerListTokens>>,
+  TError = void,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof userControllerListTokens>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useUserControllerListTokens<
+  TData = Awaited<ReturnType<typeof userControllerListTokens>>,
+  TError = void,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof userControllerListTokens>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getUserControllerListTokensQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Revoke a personal access token
+ */
+export const userControllerRevokeToken = (id: string) => {
+  return axios<void>({ url: `/user/tokens/${id}`, method: 'DELETE' })
+}
+
+export const getUserControllerRevokeTokenMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof userControllerRevokeToken>>,
+    TError,
+    { id: string },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof userControllerRevokeToken>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['userControllerRevokeToken']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof userControllerRevokeToken>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {}
+
+    return userControllerRevokeToken(id)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type UserControllerRevokeTokenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof userControllerRevokeToken>>
+>
+
+export type UserControllerRevokeTokenMutationError = void
+
+export const useUserControllerRevokeToken = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof userControllerRevokeToken>>,
+      TError,
+      { id: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof userControllerRevokeToken>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getUserControllerRevokeTokenMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }
