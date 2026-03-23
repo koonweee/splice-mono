@@ -62,9 +62,7 @@ export type AskEvidenceAccount = z.infer<typeof AskEvidenceAccountSchema>;
 export type AskEvidenceTransaction = z.infer<
   typeof AskEvidenceTransactionSchema
 >;
-export type AskEvidenceAggregate = z.infer<
-  typeof AskEvidenceAggregateSchema
->;
+export type AskEvidenceAggregate = z.infer<typeof AskEvidenceAggregateSchema>;
 export type AskEvidence = z.infer<typeof AskEvidenceSchema>;
 export type AskAnswer = z.infer<typeof AskAnswerSchema>;
 

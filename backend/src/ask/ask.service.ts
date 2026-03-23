@@ -33,7 +33,11 @@ type AskUIMessage = UIMessage<AskMessageMetadata>;
 export class AskService {
   constructor(private readonly askQueryService: AskQueryService) {}
 
-  buildFinalAnswer(input: Omit<AskAnswer, 'confidence'> & { confidence?: AskAnswer['confidence'] }): AskAnswer {
+  buildFinalAnswer(
+    input: Omit<AskAnswer, 'confidence'> & {
+      confidence?: AskAnswer['confidence'];
+    },
+  ): AskAnswer {
     return AskAnswerSchema.parse({
       answerText: input.answerText,
       confidence: input.confidence ?? 'high',
@@ -68,7 +72,8 @@ export class AskService {
       messages: await convertToModelMessages(originalMessages),
       tools: {
         get_accounts_snapshot: tool({
-          description: 'Get a user-scoped snapshot of their accounts and balances.',
+          description:
+            'Get a user-scoped snapshot of their accounts and balances.',
           inputSchema: z.object({}),
           execute: async () => {
             latestQueryScope = {
@@ -80,7 +85,8 @@ export class AskService {
           },
         }),
         search_transactions: tool({
-          description: 'Search for transactions by merchant, dates, account, category, amount, and pending state.',
+          description:
+            'Search for transactions by merchant, dates, account, category, amount, and pending state.',
           inputSchema: z.object({
             startDate: z.string().optional(),
             endDate: z.string().optional(),
@@ -105,7 +111,8 @@ export class AskService {
           },
         }),
         summarize_transactions: tool({
-          description: 'Summarize transactions over a date range with category, merchant, account, and recurring drivers.',
+          description:
+            'Summarize transactions over a date range with category, merchant, account, and recurring drivers.',
           inputSchema: z.object({
             startDate: z.string().optional(),
             endDate: z.string().optional(),
@@ -125,7 +132,8 @@ export class AskService {
           },
         }),
         compare_periods: tool({
-          description: 'Compare current and previous periods and return the main category, merchant, and account deltas.',
+          description:
+            'Compare current and previous periods and return the main category, merchant, and account deltas.',
           inputSchema: z.object({
             currentStartDate: z.string(),
             currentEndDate: z.string(),
@@ -155,15 +163,17 @@ export class AskService {
           .find((result) => result.output);
 
         const evidenceSource =
-          (lastToolResult?.output as {
-            accounts?: AskAnswer['evidence']['accounts'];
-            transactions?: AskAnswer['evidence']['transactions'];
-            topCategories?: AskAnswer['evidence']['aggregates'];
-            topMerchants?: AskAnswer['evidence']['aggregates'];
-            topAccounts?: AskAnswer['evidence']['aggregates'];
-            matchedCount?: number;
-            truncated?: boolean;
-          } | undefined) ?? {};
+          (lastToolResult?.output as
+            | {
+                accounts?: AskAnswer['evidence']['accounts'];
+                transactions?: AskAnswer['evidence']['transactions'];
+                topCategories?: AskAnswer['evidence']['aggregates'];
+                topMerchants?: AskAnswer['evidence']['aggregates'];
+                topAccounts?: AskAnswer['evidence']['aggregates'];
+                matchedCount?: number;
+                truncated?: boolean;
+              }
+            | undefined) ?? {};
 
         finalAnswer = this.buildFinalAnswer({
           answerText: text,
@@ -192,7 +202,9 @@ export class AskService {
       stream: result.toUIMessageStream<AskUIMessage>({
         originalMessages,
         messageMetadata: ({ part }) =>
-          part.type === 'finish' && finalAnswer ? { ask: finalAnswer } : undefined,
+          part.type === 'finish' && finalAnswer
+            ? { ask: finalAnswer }
+            : undefined,
       }),
     });
   }
