@@ -4,12 +4,19 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { RefreshTokenEntity } from './refresh-token.entity';
+import { PersonalAccessTokenEntity } from './personal-access-token.entity';
+import { PersonalAccessTokenService } from './personal-access-token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { UserEntity } from '../user/user.entity';
 
 @Module({
   imports: [
     PassportModule,
-    TypeOrmModule.forFeature([RefreshTokenEntity]),
+    TypeOrmModule.forFeature([
+      RefreshTokenEntity,
+      PersonalAccessTokenEntity,
+      UserEntity,
+    ]),
     JwtModule.registerAsync({
       useFactory: () => {
         const secret = process.env.JWT_SECRET;
@@ -23,7 +30,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       },
     }),
   ],
-  providers: [JwtStrategy, AuthService],
-  exports: [JwtModule, AuthService],
+  providers: [JwtStrategy, AuthService, PersonalAccessTokenService],
+  exports: [JwtModule, AuthService, PersonalAccessTokenService],
 })
 export class AuthModule {}

@@ -16,10 +16,14 @@ import { AddAccountModal } from '@/components/accounts/AddAccountModal'
 import { BackfillModal } from '@/components/accounts/BackfillModal'
 
 export const Route = createFileRoute('/_authed/accounts')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    accountId: typeof search.accountId === 'string' ? search.accountId : undefined,
+  }),
   component: AccountsPage,
 })
 
 function AccountsPage() {
+  const { accountId: highlightedAccountId } = Route.useSearch()
   const { data: accounts, isLoading, error } = useAccountControllerFindAll()
   const [modalOpened, { open: openModal, close: closeModal }] =
     useDisclosure(false)
@@ -53,13 +57,15 @@ function AccountsPage() {
     if (!accounts) return new Map<string, Array<Account>>()
 
     const groups = new Map<string, Array<Account>>()
-    accounts.forEach((account) => {
+    accounts
+      .filter((account) => !highlightedAccountId || account.id === highlightedAccountId)
+      .forEach((account) => {
       const institution = account.bankLink?.institutionName ?? 'Manual Accounts'
       const existing = groups.get(institution) ?? []
       groups.set(institution, [...existing, account])
-    })
+      })
     return groups
-  }, [accounts])
+  }, [accounts, highlightedAccountId])
 
   if (isLoading) {
     return (

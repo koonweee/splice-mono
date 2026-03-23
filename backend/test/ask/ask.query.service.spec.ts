@@ -1,0 +1,276 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { AccountService } from '../../src/account/account.service';
+import { AskQueryService } from '../../src/ask/ask-query.service';
+import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
+import { TransactionService } from '../../src/transaction/transaction.service';
+import { MoneySign } from '../../src/types/MoneyWithSign';
+
+describe('AskQueryService', () => {
+  let service: AskQueryService;
+
+  const mockAccountService = {
+    findAll: jest.fn(),
+  };
+
+  const mockTransactionService = {
+    findForAsk: jest.fn(),
+    summarizeForAsk: jest.fn(),
+    compareForAsk: jest.fn(),
+  };
+
+  const mockCurrencyConversionService = {
+    getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AskQueryService,
+        {
+          provide: AccountService,
+          useValue: mockAccountService,
+        },
+        {
+          provide: TransactionService,
+          useValue: mockTransactionService,
+        },
+        {
+          provide: CurrencyConversionService,
+          useValue: mockCurrencyConversionService,
+        },
+      ],
+    }).compile();
+
+    service = module.get<AskQueryService>(AskQueryService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('returns an account snapshot grouped for Ask evidence', async () => {
+    mockAccountService.findAll.mockResolvedValue([
+      {
+        id: 'account-1',
+        userId: 'user-1',
+        name: 'Checking',
+        customName: 'House Checking',
+        mask: '1234',
+        availableBalance: {
+          money: { currency: 'USD', amount: 100_000 },
+          sign: MoneySign.POSITIVE,
+        },
+        currentBalance: {
+          money: { currency: 'USD', amount: 100_000 },
+          sign: MoneySign.POSITIVE,
+        },
+        type: 'depository',
+        subType: null,
+        externalAccountId: null,
+        bankLinkId: null,
+        bankLink: null,
+        createdAt: new Date('2026-03-01T00:00:00Z'),
+        updatedAt: new Date('2026-03-01T00:00:00Z'),
+      },
+    ]);
+
+    const result = await service.getAccountsSnapshot('user-1');
+
+    expect(result).toMatchObject({
+      matchedCount: 1,
+      truncated: false,
+      accounts: [
+        {
+          id: 'account-1',
+          displayName: 'House Checking',
+          grouping: 'cash',
+        },
+      ],
+    });
+  });
+
+  it('returns capped transaction evidence with matchedCount and truncated', async () => {
+    mockTransactionService.findForAsk.mockResolvedValue({
+      matchedCount: 24,
+      truncated: true,
+      transactions: [
+        {
+          id: 'transaction-1',
+          accountId: 'account-1',
+          accountName: 'House Checking',
+          merchantName: 'Netflix',
+          pending: false,
+          date: '2026-03-03',
+          categoryPrimary: 'ENTERTAINMENT',
+          amount: {
+            money: { currency: 'USD', amount: 1599 },
+            sign: MoneySign.NEGATIVE,
+          },
+        },
+      ],
+    });
+
+    const result = await service.searchTransactions('user-1', {
+      merchantQuery: 'netflix',
+      limit: 20,
+    });
+
+    expect(result).toMatchObject({
+      matchedCount: 24,
+      truncated: true,
+      transactions: [
+        {
+          id: 'transaction-1',
+          merchantName: 'Netflix',
+        },
+      ],
+    });
+  });
+
+  it('summarizes transactions with category, merchant, and account drivers', async () => {
+    mockTransactionService.summarizeForAsk.mockResolvedValue({
+      totalInflow: 0,
+      totalOutflow: 250,
+      net: -250,
+      transactionCount: 6,
+      topCategories: [
+        {
+          label: 'FOOD_AND_DRINK',
+          amount: 100,
+          currency: 'USD',
+          kind: 'category',
+        },
+      ],
+      topMerchants: [
+        {
+          label: "Trader Joe's",
+          amount: 85,
+          currency: 'USD',
+          kind: 'merchant',
+        },
+      ],
+      topAccounts: [
+        {
+          label: 'House Checking',
+          amount: 250,
+          currency: 'USD',
+          kind: 'account',
+        },
+      ],
+      recurringTransactions: [
+        {
+          merchantName: 'Netflix',
+          cadence: 'monthly',
+          amount: 15.99,
+        },
+      ],
+      matchedCount: 6,
+      truncated: false,
+    });
+
+    const result = await service.summarizeTransactions('user-1', {
+      startDate: '2026-03-01',
+      endDate: '2026-03-22',
+      includePending: false,
+    });
+
+    expect(result).toMatchObject({
+      totalOutflow: 250,
+      topCategories: [
+        expect.objectContaining({
+          amount: 100,
+          currency: 'USD',
+        }),
+      ],
+      topMerchants: [
+        expect.objectContaining({
+          amount: 85,
+          currency: 'USD',
+        }),
+      ],
+      topAccounts: [
+        expect.objectContaining({
+          amount: 250,
+          currency: 'USD',
+        }),
+      ],
+      recurringTransactions: [
+        expect.objectContaining({
+          merchantName: 'Netflix',
+          amount: 15.99,
+          currency: 'USD',
+        }),
+      ],
+    });
+  });
+
+  it('compares two periods using deterministic aggregate deltas', async () => {
+    mockTransactionService.compareForAsk.mockResolvedValue({
+      currentTotalOutflow: 400,
+      previousTotalOutflow: 320,
+      absoluteDelta: 80,
+      percentDelta: 25,
+      categoryDrivers: [
+        {
+          label: 'TRAVEL',
+          amount: 60,
+          currency: 'USD',
+          kind: 'category',
+        },
+      ],
+      merchantDrivers: [
+        {
+          label: 'United',
+          amount: 60,
+          currency: 'USD',
+          kind: 'merchant',
+        },
+      ],
+      accountDrivers: [
+        {
+          label: 'Amex Gold',
+          amount: 80,
+          currency: 'USD',
+          kind: 'account',
+        },
+      ],
+      matchedCount: 12,
+      truncated: false,
+    });
+
+    const result = await service.comparePeriods('user-1', {
+      currentStartDate: '2026-03-01',
+      currentEndDate: '2026-03-22',
+      previousStartDate: '2026-02-01',
+      previousEndDate: '2026-02-22',
+    });
+
+    expect(result).toMatchObject({
+      currentTotalOutflow: 400,
+      previousTotalOutflow: 320,
+      absoluteDelta: 80,
+      percentDelta: 25,
+      categoryDrivers: [
+        expect.objectContaining({
+          label: 'TRAVEL',
+          amount: 60,
+          currency: 'USD',
+        }),
+      ],
+      merchantDrivers: [
+        expect.objectContaining({
+          label: 'United',
+          amount: 60,
+          currency: 'USD',
+        }),
+      ],
+      accountDrivers: [
+        expect.objectContaining({
+          label: 'Amex Gold',
+          amount: 80,
+          currency: 'USD',
+        }),
+      ],
+    });
+  });
+});

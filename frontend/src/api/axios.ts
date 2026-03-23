@@ -3,7 +3,7 @@ import type { AxiosError, AxiosRequestConfig } from 'axios'
 
 const AUTH_FLAG_KEY = 'splice_authenticated'
 
-function resolveApiBaseUrl(): string | undefined {
+export function resolveApiBaseUrl(): string | undefined {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
   if (configuredBaseUrl) {
     return configuredBaseUrl
