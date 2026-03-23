@@ -10,6 +10,16 @@ import {
   MoreThanOrEqual,
   Repository,
 } from 'typeorm';
+import type {
+  AskComparePeriodsOptions,
+  AskComparePeriodsResult,
+  AskEvidenceAggregate,
+  AskEvidenceTransaction,
+  AskTransactionSearchOptions,
+  AskTransactionSearchResult,
+  AskTransactionSummaryOptions,
+  AskTransactionSummaryResult,
+} from '../ask/ask.types';
 import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
@@ -208,6 +218,312 @@ export class TransactionService extends OwnedCrudService<
       relations: this.relations,
     });
     return entities.map((entity) => entity.toObject());
+  }
+
+  private async findMatchingTransactions(
+    userId: string,
+    options: {
+      startDate?: string;
+      endDate?: string;
+      accountIds?: string[];
+      includePending?: boolean;
+      categoryPrimary?: string;
+      merchantQuery?: string;
+      sign?: 'positive' | 'negative';
+      minAmount?: number;
+      maxAmount?: number;
+    },
+  ): Promise<Transaction[]> {
+    const where: FindOptionsWhere<TransactionEntity> = { userId };
+
+    if (options.accountIds?.length === 1) {
+      where.accountId = options.accountIds[0];
+    } else if (options.accountIds && options.accountIds.length > 1) {
+      where.accountId = In(options.accountIds);
+    }
+
+    if (options.startDate && options.endDate) {
+      where.date = Between(options.startDate, options.endDate);
+    } else if (options.startDate) {
+      where.date = MoreThanOrEqual(options.startDate);
+    } else if (options.endDate) {
+      where.date = LessThanOrEqual(options.endDate);
+    }
+
+    if (!options.includePending) {
+      where.pending = false;
+    }
+
+    if (options.sign === 'positive' || options.sign === 'negative') {
+      where.amount = { sign: options.sign } as unknown as BalanceColumns;
+    }
+
+    const entities = await this.repository.find({
+      where,
+      relations: this.relations,
+      order: { date: 'DESC' },
+    });
+
+    return entities
+      .map((entity) => entity.toObject())
+      .filter((transaction) => {
+        const merchantQuery = options.merchantQuery?.trim().toLowerCase();
+        if (
+          merchantQuery &&
+          !transaction.merchantName?.toLowerCase().includes(merchantQuery)
+        ) {
+          return false;
+        }
+
+        if (options.categoryPrimary) {
+          const primaryCategory = transaction.category?.primary ?? null;
+          if (options.categoryPrimary === 'UNCATEGORIZED') {
+            if (primaryCategory !== null) {
+              return false;
+            }
+          } else if (primaryCategory !== options.categoryPrimary) {
+            return false;
+          }
+        }
+
+        const amount = transaction.amount.money.amount;
+        if (options.minAmount !== undefined && amount < options.minAmount) {
+          return false;
+        }
+        if (options.maxAmount !== undefined && amount > options.maxAmount) {
+          return false;
+        }
+
+        return true;
+      });
+  }
+
+  async findForAsk(
+    userId: string,
+    options: AskTransactionSearchOptions,
+  ): Promise<AskTransactionSearchResult> {
+    const matches = await this.findMatchingTransactions(userId, options);
+    const limit = options.limit ?? 20;
+
+    return {
+      matchedCount: matches.length,
+      truncated: matches.length > limit,
+      transactions: matches.slice(0, limit).map((transaction) => ({
+        id: transaction.id,
+        accountId: transaction.accountId,
+        accountName: transaction.accountName ?? 'Account',
+        merchantName: transaction.merchantName,
+        pending: transaction.pending,
+        date: transaction.date,
+        categoryPrimary: transaction.category?.primary ?? null,
+        amount: transaction.amount,
+      })),
+    };
+  }
+
+  private static readonly AGGREGATE_LIMIT = 10;
+
+  private buildTopAggregates(
+    entries: Iterable<[string, number]>,
+    currency: string,
+    kind: AskEvidenceAggregate['kind'],
+  ): AskEvidenceAggregate[] {
+    return Array.from(entries)
+      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+      .slice(0, TransactionService.AGGREGATE_LIMIT)
+      .map(([label, amount]) => ({
+        label,
+        amount,
+        currency,
+        kind,
+      }));
+  }
+
+  private detectRecurringTransactions(
+    transactions: Transaction[],
+  ): AskTransactionSummaryResult['recurringTransactions'] {
+    const merchants = new Map<string, Transaction[]>();
+
+    transactions.forEach((transaction) => {
+      if (!transaction.merchantName || transaction.amount.sign !== 'negative') {
+        return;
+      }
+      const key = transaction.merchantName.trim().toLowerCase();
+      const existing = merchants.get(key) ?? [];
+      existing.push(transaction);
+      merchants.set(key, existing);
+    });
+
+    return Array.from(merchants.entries())
+      .map(([merchantName, grouped]) => {
+        const sorted = grouped.sort((a, b) => a.date.localeCompare(b.date));
+        if (sorted.length < 2) {
+          return null;
+        }
+
+        const dayDiffs = sorted.slice(1).map((transaction, index) => {
+          const previous = new Date(sorted[index].date).getTime();
+          const current = new Date(transaction.date).getTime();
+          return Math.round((current - previous) / (1000 * 60 * 60 * 24));
+        });
+
+        const cadence = dayDiffs.some((diff) => diff >= 25 && diff <= 35)
+          ? 'monthly'
+          : dayDiffs.some((diff) => diff >= 6 && diff <= 8)
+            ? 'weekly'
+            : 'unknown';
+
+        return {
+          merchantName: sorted[0].merchantName ?? merchantName,
+          cadence,
+          amount: sorted[sorted.length - 1].amount.money.amount,
+        };
+      })
+      .filter(
+        (value): value is AskTransactionSummaryResult['recurringTransactions'][number] =>
+          value !== null,
+      )
+      .slice(0, TransactionService.AGGREGATE_LIMIT);
+  }
+
+  async summarizeForAsk(
+    userId: string,
+    options: AskTransactionSummaryOptions,
+  ): Promise<AskTransactionSummaryResult> {
+    const matches = await this.findMatchingTransactions(userId, options);
+
+    const categoryTotals = new Map<string, number>();
+    const merchantTotals = new Map<string, number>();
+    const accountTotals = new Map<string, number>();
+    let totalInflow = 0;
+    let totalOutflow = 0;
+
+    matches.forEach((transaction) => {
+      const amount = transaction.amount.money.amount;
+      const signedAmount =
+        transaction.amount.sign === 'positive' ? amount : -amount;
+      const magnitude = Math.abs(signedAmount);
+
+      if (transaction.amount.sign === 'positive') {
+        totalInflow += magnitude;
+      } else {
+        totalOutflow += magnitude;
+      }
+
+      const category = transaction.category?.primary ?? 'UNCATEGORIZED';
+      categoryTotals.set(category, (categoryTotals.get(category) ?? 0) + magnitude);
+
+      const merchant = transaction.merchantName ?? 'Unknown merchant';
+      merchantTotals.set(merchant, (merchantTotals.get(merchant) ?? 0) + magnitude);
+
+      const account = transaction.accountName ?? 'Account';
+      accountTotals.set(account, (accountTotals.get(account) ?? 0) + magnitude);
+    });
+
+    const currency =
+      matches[0]?.amount.money.currency ?? 'USD';
+    const recurringTransactions = this.detectRecurringTransactions(matches);
+
+    return {
+      totalInflow,
+      totalOutflow,
+      net: totalInflow - totalOutflow,
+      transactionCount: matches.length,
+      topCategories: this.buildTopAggregates(
+        categoryTotals.entries(),
+        currency,
+        'category',
+      ),
+      topMerchants: this.buildTopAggregates(
+        merchantTotals.entries(),
+        currency,
+        'merchant',
+      ),
+      topAccounts: this.buildTopAggregates(
+        accountTotals.entries(),
+        currency,
+        'account',
+      ),
+      recurringTransactions: options.recurringOnly
+        ? recurringTransactions
+        : recurringTransactions,
+      matchedCount: matches.length,
+      truncated: false,
+    };
+  }
+
+  async compareForAsk(
+    userId: string,
+    options: AskComparePeriodsOptions,
+  ): Promise<AskComparePeriodsResult> {
+    const current = await this.summarizeForAsk(userId, {
+      startDate: options.currentStartDate,
+      endDate: options.currentEndDate,
+      accountIds: options.accountIds,
+      includePending: options.includePending,
+    });
+    const previous = await this.summarizeForAsk(userId, {
+      startDate: options.previousStartDate,
+      endDate: options.previousEndDate,
+      accountIds: options.accountIds,
+      includePending: options.includePending,
+    });
+
+    const buildDeltaDrivers = (
+      currentEntries: AskEvidenceAggregate[],
+      previousEntries: AskEvidenceAggregate[],
+      kind: AskEvidenceAggregate['kind'],
+    ) => {
+      const currentMap = new Map(currentEntries.map((entry) => [entry.label, entry.amount]));
+      const previousMap = new Map(previousEntries.map((entry) => [entry.label, entry.amount]));
+      const labels = new Set([
+        ...currentMap.keys(),
+        ...previousMap.keys(),
+      ]);
+      const currency =
+        currentEntries[0]?.currency ?? previousEntries[0]?.currency ?? 'USD';
+
+      return this.buildTopAggregates(
+        Array.from(labels).map((label) => [
+          label,
+          (currentMap.get(label) ?? 0) - (previousMap.get(label) ?? 0),
+        ]),
+        currency,
+        kind,
+      );
+    };
+
+    const absoluteDelta = current.totalOutflow - previous.totalOutflow;
+    const percentDelta =
+      previous.totalOutflow === 0
+        ? current.totalOutflow === 0
+          ? 0
+          : 100
+        : (absoluteDelta / previous.totalOutflow) * 100;
+
+    return {
+      currentTotalOutflow: current.totalOutflow,
+      previousTotalOutflow: previous.totalOutflow,
+      absoluteDelta,
+      percentDelta,
+      categoryDrivers: buildDeltaDrivers(
+        current.topCategories,
+        previous.topCategories,
+        'category',
+      ),
+      merchantDrivers: buildDeltaDrivers(
+        current.topMerchants,
+        previous.topMerchants,
+        'merchant',
+      ),
+      accountDrivers: buildDeltaDrivers(
+        current.topAccounts,
+        previous.topAccounts,
+        'account',
+      ),
+      matchedCount: current.matchedCount + previous.matchedCount,
+      truncated: current.truncated || previous.truncated,
+    };
   }
 
   /**

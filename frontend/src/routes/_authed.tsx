@@ -20,6 +20,7 @@ import {
   CreditCard,
   Home,
   LogOut,
+  MessageSquare,
   PieChart,
   Settings,
   TrendingUp,
@@ -54,6 +55,7 @@ function AuthedLayout() {
     { to: '/accounts', label: 'Accounts', icon: CreditCard },
     { to: '/transactions', label: 'Transactions', icon: TrendingUp },
     { to: '/analysis', label: 'Analysis', icon: PieChart },
+    { to: '/ask', label: 'Ask', icon: MessageSquare },
     { to: '/settings', label: 'Settings', icon: Settings },
   ]
 

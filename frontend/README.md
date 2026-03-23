@@ -21,6 +21,7 @@ npm run build
 
 - The frontend supports an optional `VITE_API_BASE_URL` override for the browser-reachable API origin.
 - If `VITE_API_BASE_URL` is unset, the app derives the API hostname by adding `-api` to the first host label.
+- The `/ask` route uses the same API base resolution and sends chat requests with cookie credentials.
 - For the current deployment model, use split origins:
   - frontend: `https://splice.<base-domain>`
   - API: `https://splice-api.<base-domain>`
