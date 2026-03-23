@@ -70,7 +70,7 @@ export function AskMarkdown({ markdown }: AskMarkdownProps) {
         allowedElements={allowedElements}
         unwrapDisallowed
         components={{
-          a: ({ href, children, ...props }) => {
+          a: ({ href, children, node: _node, ...props }) => {
             if (!isSafeHref(href)) {
               return <>{children}</>
             }
