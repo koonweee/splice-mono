@@ -1,13 +1,13 @@
 import { Loader, Stack } from '@mantine/core'
-import type { ReactNode } from 'react'
-import type { AskAnswer, AskUIMessage } from '@/lib/ask-types'
-import { getAskMetadata } from '@/lib/ask-chat'
 import { AskEvidencePanel } from './AskEvidencePanel'
 import { AskErrorCard, AskMessageCard } from './AskMessageCard'
 import styles from './ask.module.css'
+import type { ReactNode } from 'react'
+import type { AskUIMessage } from '@/lib/ask-types'
+import { getAskMetadata } from '@/lib/ask-chat'
 
 type AskConversationProps = {
-  messages: AskUIMessage[]
+  messages: Array<AskUIMessage>
   selectedMessageId: string | null
   status: string
   error?: Error
@@ -26,32 +26,29 @@ export function AskConversation({
   composer,
 }: AskConversationProps) {
   const selectedAnswer = messages.find((message) => message.id === selectedMessageId)
-  const selectedMetadata = selectedAnswer
-    ? (getAskMetadata(selectedAnswer) as AskAnswer | undefined)
-    : undefined
+  const selectedMetadata = selectedAnswer ? getAskMetadata(selectedAnswer) : undefined
 
   return (
-    <div className={styles.page}>
-      <div className={styles.conversationPane}>
-        <Stack gap="md" className={styles.messages}>
+    <div className={styles.page} data-testid="ask-page-grid">
+      <div className={styles.conversationPane} data-testid="ask-conversation-pane">
+        <Stack gap="md" className={styles.messages} data-testid="ask-transcript">
           {messages.map((message) => (
-            <button
+            <div
               key={message.id}
-              type="button"
-              onClick={() => onSelectMessage(message.id)}
-              style={{
-                background: 'transparent',
-                border: 0,
-                padding: 0,
-                textAlign: 'inherit',
-              }}
+              className={`${styles.messageRow} ${
+                message.role === 'assistant'
+                  ? styles.messageRowAssistant
+                  : styles.messageRowUser
+              }`}
+              data-testid={`ask-message-row-${message.id}`}
             >
               <AskMessageCard
                 message={message}
                 isSelected={message.id === selectedMessageId}
                 showInlineEvidence
+                onSelectEvidence={() => onSelectMessage(message.id)}
               />
-            </button>
+            </div>
           ))}
           {(status === 'submitted' || status === 'streaming') && <Loader size="sm" />}
           {error && (
@@ -61,7 +58,7 @@ export function AskConversation({
         {composer}
       </div>
 
-      <div className={styles.desktopEvidence}>
+      <div className={styles.desktopEvidence} data-testid="ask-desktop-evidence">
         <AskEvidencePanel answer={selectedMetadata} />
       </div>
     </div>

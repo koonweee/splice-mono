@@ -366,9 +366,11 @@ describe('TransactionAnalysisService', () => {
 
       expect(result.currency).toBe('GBP');
       // No conversion needed since currency matches preference - getRateMap called with empty array
-      expect(
-        mockCurrencyConversionService.getRateMap,
-      ).toHaveBeenCalledWith([], 'GBP', '2024-01-31');
+      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
+        [],
+        'GBP',
+        '2024-01-31',
+      );
     });
 
     it('should default to USD when user has no currency preference', async () => {

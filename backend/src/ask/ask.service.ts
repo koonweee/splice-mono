@@ -1,6 +1,7 @@
 import {
   convertToModelMessages,
   pipeUIMessageStreamToResponse,
+  stepCountIs,
   streamText,
   tool,
   type UIMessage,
@@ -13,11 +14,20 @@ import { AskQueryService } from './ask-query.service';
 import type { AskAnswer } from './ask.types';
 import { AskAnswerSchema } from './ask.types';
 
-const ASK_SYSTEM_PROMPT = `
+function buildAskSystemPrompt(now = new Date()): string {
+  const today = now.toISOString().slice(0, 10);
+
+  return `
 You answer questions about the user's finances using the provided tools only.
+Today is ${today}. Resolve relative dates like "last month", "this month", and "yesterday" against that date.
 Be concise, state the scope you used, and never invent transactions or balances.
 If the question is ambiguous, pick a conservative interpretation and say what you assumed.
+Use summarize_transactions for spending, expenditure, outflow, or total spend questions.
+Use compare_periods for questions about increases, decreases, changes, or comparing time periods.
+Use search_transactions for merchant-level lookups, examples, or specific transaction searches.
+Use get_accounts_snapshot only for balance, cash position, or account inventory questions.
 `;
+}
 
 type AskRequest = {
   messages: UIMessage[];
@@ -68,12 +78,22 @@ export class AskService {
 
     const result = streamText({
       model: openai(process.env.OPENAI_MODEL ?? 'gpt-5.4-mini'),
+      stopWhen: stepCountIs(5),
+      prepareStep: ({ stepNumber }) => {
+        if (stepNumber === 0) {
+          return {
+            toolChoice: 'required' as const,
+          };
+        }
+
+        return {};
+      },
       providerOptions: {
         openai: {
           reasoningEffort: 'high',
         },
       },
-      system: ASK_SYSTEM_PROMPT,
+      system: buildAskSystemPrompt(),
       messages: await convertToModelMessages(originalMessages),
       tools: {
         get_accounts_snapshot: tool({

@@ -3,11 +3,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import { DefaultChatTransport } from 'ai'
 import { useChat } from '@ai-sdk/react'
 import { useEffect, useState } from 'react'
+import type { AskUIMessage } from '@/lib/ask-types'
 import { resolveApiBaseUrl } from '@/api/axios'
 import { AskComposer } from '@/components/ask/AskComposer'
 import { AskConversation } from '@/components/ask/AskConversation'
 import { getAskUiState, selectEvidenceMessageId } from '@/lib/ask-chat'
-import type { AskUIMessage } from '@/lib/ask-types'
+import styles from '@/components/ask/ask.module.css'
 
 export const Route = createFileRoute('/_authed/ask')({
   component: AskPage,
@@ -49,7 +50,7 @@ function AskPage() {
   }
 
   return (
-    <>
+    <div className={styles.routeViewport} data-testid="ask-route-viewport">
       <Group justify="space-between" mb="xl">
         <Title order={1}>Ask</Title>
       </Group>
@@ -80,6 +81,6 @@ function AskPage() {
           />
         }
       />
-    </>
+    </div>
   )
 }

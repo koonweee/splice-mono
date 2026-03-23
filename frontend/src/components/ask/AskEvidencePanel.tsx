@@ -1,7 +1,7 @@
 import { Anchor, Badge, Divider, Paper, Stack, Text } from '@mantine/core'
 import { Link } from '@tanstack/react-router'
 import { buildAccountEvidenceLink, buildTransactionEvidenceLink } from '@/lib/ask-chat'
-import { formatMoneyWithSign } from '@/lib/format'
+import { formatMoneyNumber, formatMoneyWithSign } from '@/lib/format'
 import type { AskAnswer } from '@/lib/ask-types'
 
 type AskEvidencePanelProps = {
@@ -114,7 +114,11 @@ export function AskEvidencePanel({ answer }: AskEvidencePanelProps) {
             )}
             {answer.evidence.aggregates.map((aggregate) => (
               <Badge key={`${aggregate.kind}-${aggregate.label}`} variant="light" color="gray">
-                {aggregate.kind}: {aggregate.label}
+                {aggregate.kind}: {aggregate.label} •{' '}
+                {formatMoneyNumber({
+                  value: aggregate.amount,
+                  currency: aggregate.currency,
+                })}
               </Badge>
             ))}
           </Stack>

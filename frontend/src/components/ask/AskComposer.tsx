@@ -1,6 +1,6 @@
 import { ActionIcon, Paper, Textarea } from '@mantine/core'
 import { IconArrowUp } from '@tabler/icons-react'
-import type { ChangeEvent, FormEvent } from 'react'
+import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react'
 
 type AskComposerProps = {
   input: string
@@ -17,6 +17,19 @@ export function AskComposer({
   onInputChange,
   onSubmit,
 }: AskComposerProps) {
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
+      return
+    }
+
+    if (disabled || input.trim().length === 0) {
+      return
+    }
+
+    event.preventDefault()
+    onSubmit()
+  }
+
   return (
     <Paper withBorder p="sm" radius="md">
       <form
@@ -28,6 +41,7 @@ export function AskComposer({
         <Textarea
           value={input}
           onChange={onInputChange}
+          onKeyDown={handleKeyDown}
           autosize
           minRows={2}
           maxRows={6}
