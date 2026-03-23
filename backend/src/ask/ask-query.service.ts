@@ -6,10 +6,10 @@ import type {
   AskAccountsSnapshotResult,
   AskComparePeriodsOptions,
   AskComparePeriodsResult,
+  AskTransactionSummaryResult,
   AskTransactionSearchOptions,
   AskTransactionSearchResult,
   AskTransactionSummaryOptions,
-  AskTransactionSummaryResult,
 } from './ask.types';
 
 @Injectable()
@@ -35,6 +35,27 @@ export class AskQueryService {
       default:
         return 'cash';
     }
+  }
+
+  private ensureRecurringTransactionCurrencies(
+    summary: AskTransactionSummaryResult,
+    preferredCurrency: string,
+  ): AskTransactionSummaryResult {
+    const aggregateCurrency =
+      summary.topCategories[0]?.currency ??
+      summary.topMerchants[0]?.currency ??
+      summary.topAccounts[0]?.currency ??
+      preferredCurrency;
+
+    return {
+      ...summary,
+      recurringTransactions: summary.recurringTransactions.map(
+        (transaction) => ({
+          ...transaction,
+          currency: transaction.currency ?? aggregateCurrency,
+        }),
+      ),
+    };
   }
 
   async getAccountsSnapshot(
@@ -67,8 +88,16 @@ export class AskQueryService {
     userId: string,
     options: AskTransactionSummaryOptions,
   ): Promise<AskTransactionSummaryResult> {
-    void this.currencyConversionService.getPreferredCurrency(userId);
-    return this.transactionService.summarizeForAsk(userId, options);
+    const preferredCurrency =
+      await this.currencyConversionService.getPreferredCurrency(userId);
+    const summary = await this.transactionService.summarizeForAsk(
+      userId,
+      options,
+    );
+    return this.ensureRecurringTransactionCurrencies(
+      summary,
+      preferredCurrency,
+    );
   }
 
   async comparePeriods(

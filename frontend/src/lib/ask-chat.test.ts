@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   buildAccountEvidenceLink,
   buildTransactionEvidenceLink,
+  getAskMessageText,
   getAskMetadata,
   getAskUiState,
   selectEvidenceMessageId,
+  shouldRenderAskMessage,
 } from './ask-chat'
 
 describe('ask chat helpers', () => {
@@ -56,6 +58,56 @@ describe('ask chat helpers', () => {
       status: 'error',
       canRetry: true,
     })
+  })
+
+  it('extracts visible text from Ask message parts', () => {
+    expect(
+      getAskMessageText({
+        role: 'assistant',
+        parts: [
+          { type: 'text', text: 'Hello' },
+          { type: 'text', text: ' world' },
+        ],
+      }),
+    ).toBe('Hello world')
+  })
+
+  it('does not render empty assistant shell messages', () => {
+    expect(
+      shouldRenderAskMessage({
+        id: 'assistant-empty',
+        role: 'assistant',
+        parts: [],
+      }),
+    ).toBe(false)
+  })
+
+  it('renders assistant messages when Ask metadata contains the answer', () => {
+    expect(
+      shouldRenderAskMessage({
+        id: 'assistant-answer',
+        role: 'assistant',
+        metadata: {
+          ask: {
+            answerText: 'Largest spend was rent.',
+            queryScope: {
+              accountIds: [],
+              includePending: false,
+              truncated: false,
+            },
+            evidence: {
+              accounts: [],
+              transactions: [],
+              aggregates: [],
+              matchedCount: 1,
+              truncated: false,
+            },
+            followups: [],
+            confidence: 'high',
+          },
+        },
+      }),
+    ).toBe(true)
   })
 
   it('builds transaction links into the existing Transactions page filters', () => {

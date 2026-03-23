@@ -7,6 +7,35 @@ export function getAskMetadata(
   return metadata?.ask
 }
 
+export function getAskMessageText(
+  message: Partial<AskUIMessage> | Record<string, unknown>,
+): string {
+  const parts = (message as { parts?: Array<{ type?: string; text?: string }> }).parts
+  if (!Array.isArray(parts)) {
+    return ''
+  }
+
+  return parts
+    .filter((part): part is { type: 'text'; text: string } => part.type === 'text' && typeof part.text === 'string')
+    .map((part) => part.text)
+    .join('')
+}
+
+export function shouldRenderAskMessage(
+  message: Partial<AskUIMessage> | Record<string, unknown>,
+): boolean {
+  if (message.role !== 'assistant') {
+    return getAskMessageText(message).trim().length > 0
+  }
+
+  const metadata = getAskMetadata(message)
+  if (metadata?.answerText.trim()) {
+    return true
+  }
+
+  return getAskMessageText(message).trim().length > 0
+}
+
 export function selectEvidenceMessageId(
   messages: Array<Partial<AskUIMessage> | Record<string, unknown>>,
 ): string | null {

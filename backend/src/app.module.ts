@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Reflector } from '@nestjs/core';
@@ -8,6 +5,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
+import type { DestinationStream } from 'pino';
 import { AccountModule } from './account/account.module';
 import { AskModule } from './ask/ask.module';
 import { AuthModule } from './auth/auth.module';
@@ -20,6 +18,7 @@ import { CategoryModule } from './category/category.module';
 import { CurrencyExchangeModule } from './currency-exchange/currency-exchange.module';
 import { dataSourceOptions } from './data-source';
 import { HealthModule } from './health/health.module';
+import { createSeqStream } from './logging/create-seq-stream';
 import { TransactionAnalysisModule } from './transaction-analysis/transaction-analysis.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { UserModule } from './user/user.module';
@@ -31,14 +30,11 @@ import { UserModule } from './user/user.module';
         const pino = await import('pino');
 
         // Build streams array - always include stdout for Docker/Coolify logs
-        const streams: NodeJS.WritableStream[] = [process.stdout];
+        const streams: DestinationStream[] = [process.stdout];
 
         // Add Seq stream if configured
         if (process.env.SEQ_SERVER_URL) {
-          const pinoSeq = (await import('pino-seq')) as any;
-          const createStream =
-            pinoSeq.default?.createStream ?? pinoSeq.createStream;
-          const seqStream = createStream({
+          const seqStream = await createSeqStream({
             serverUrl: process.env.SEQ_SERVER_URL,
             apiKey: process.env.SEQ_API_KEY,
           });

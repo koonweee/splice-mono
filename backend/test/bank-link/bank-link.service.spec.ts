@@ -111,9 +111,9 @@ mockBankLinkRepository = {
     getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
   }),
   manager: {
-    transaction: jest.fn().mockImplementation(async (cb: any) =>
-      cb(mockEntityManager),
-    ),
+    transaction: jest
+      .fn()
+      .mockImplementation(async (cb: any) => cb(mockEntityManager)),
   },
 };
 
@@ -843,14 +843,14 @@ describe('BankLinkService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       } as any);
-      (mockPlaidProvider.processLinkCompletion as jest.Mock).mockResolvedValueOnce(
-        [
-          {
-            ...mockLinkCompletionResponse,
-            accounts: [mockApiAccount, { ...mockApiAccount, accountId: 'acc-2' }],
-          },
-        ],
-      );
+      (
+        mockPlaidProvider.processLinkCompletion as jest.Mock
+      ).mockResolvedValueOnce([
+        {
+          ...mockLinkCompletionResponse,
+          accounts: [mockApiAccount, { ...mockApiAccount, accountId: 'acc-2' }],
+        },
+      ]);
 
       await expect(
         service.handleWebhook(
