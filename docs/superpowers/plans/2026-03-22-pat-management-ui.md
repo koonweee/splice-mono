@@ -18,6 +18,8 @@
   - Dedicated PAT UI: create form, one-time reveal, active-token list, revoke/copy actions, section-level loading/error states.
 - `frontend/src/components/settings/PersonalAccessTokenSection.test.tsx`
   - Component tests for PAT-section loading, error, empty, create-success, revoke-success, and responsive structure.
+- `frontend/src/routes/_authed/settings.test.tsx`
+  - Narrow route-level test that protects placement of the PAT section below the existing settings content.
 - `frontend/src/lib/personal-access-tokens.ts`
   - Small UI helper functions for filtering active tokens, trimming/validating token names, and formatting token usage text.
 - `frontend/src/lib/personal-access-tokens.test.ts`
@@ -27,6 +29,8 @@
 
 - `frontend/src/routes/_authed/settings.tsx`
   - Keep existing appearance/currency/timezone behavior intact and render the new PAT section below the current settings card.
+- `frontend/src/routes/_authed/settings.test.tsx`
+  - Add or update route-level placement coverage for the settings page.
 - `frontend/orval.config.ts`
   - Only if needed to keep generation stable; otherwise leave unchanged.
 - `frontend/src/api/clients/spliceAPI.ts`
@@ -52,7 +56,19 @@
 - Modify: `frontend/src/api/models/*`
 - Test/Verify: `frontend/orval.config.ts`
 
-- [ ] **Step 1: Start the feature backend on port 3000 so Orval can read the updated OpenAPI**
+- [ ] **Step 1: Verify local backend prerequisites before starting the feature API**
+
+Confirm the local Postgres used by the backend is running and the PAT migration is available in the feature worktree.
+
+Run:
+
+```bash
+PGPASSWORD=splice_password psql -h localhost -p 5432 -U splice_user -d splice_dev -c "select 1"
+```
+
+Expected: `select 1` succeeds. If it fails, start or restore the local Postgres instance before continuing.
+
+- [ ] **Step 2: Start the feature backend on port 3000 so Orval can read the updated OpenAPI**
 
 Run from the backend worktree:
 
@@ -66,7 +82,7 @@ PORT=3000 yarn start
 
 Expected: backend serves `http://localhost:3000/api-json` with `/user/tokens` in the schema.
 
-- [ ] **Step 2: Regenerate the frontend API client**
+- [ ] **Step 3: Regenerate the frontend API client**
 
 Run:
 
@@ -77,7 +93,7 @@ yarn orval
 
 Expected: regenerated hooks/models for the PAT endpoints appear under `src/api/clients` and `src/api/models`.
 
-- [ ] **Step 3: Verify the generated surface matches the backend feature**
+- [ ] **Step 4: Verify the generated surface matches the backend feature**
 
 Check for generated hooks and types similar to:
 
@@ -89,7 +105,7 @@ useUserControllerRevokeToken()
 
 Also confirm the create response type includes `id`, `name`, `token`, `tokenPreview`, `expiresAt`, and `createdAt`.
 
-- [ ] **Step 4: Run typecheck after generation**
+- [ ] **Step 5: Run typecheck after generation**
 
 Run:
 
@@ -100,7 +116,7 @@ yarn typecheck
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 cd /home/jtkw/splice-mono/.worktrees/personal-access-tokens
@@ -206,15 +222,17 @@ Cover these states:
 - revoke success removes a token from the visible list
 - mobile-friendly structure is present (stackable action container / no assumption of fixed desktop row)
 
-Use Testing Library with mocked generated hooks. Keep tests on behavior, not Mantine internals.
+Use Testing Library with mocked generated hooks. Keep tests on behavior, not Mantine internals. Do not assume `@testing-library/user-event`; this repo currently has `@testing-library/react` and `@testing-library/dom`, so use `fireEvent` or existing helpers unless you explicitly add a new dependency in a separate task.
 
 Suggested test skeleton:
 
 ```tsx
 it('shows the one-time reveal after create success', async () => {
   render(<PersonalAccessTokenSection />)
-  await user.type(screen.getByLabelText(/token name/i), 'codex-local')
-  await user.click(screen.getByRole('button', { name: /create token/i }))
+  fireEvent.change(screen.getByLabelText(/token name/i), {
+    target: { value: 'codex-local' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: /create token/i }))
   expect(await screen.findByText(/this token is shown once/i)).toBeInTheDocument()
 })
 ```
@@ -234,11 +252,13 @@ Expected: FAIL because the component does not exist yet.
 
 Requirements:
 - use generated query/mutation hooks
+- use `useQueryClient()` so revoke can update the visible token list immediately
 - local state for `tokenName`, `revealedToken`, `revealedTokenId`, and lightweight clipboard feedback
 - trim and validate `name` before submit
 - section-specific loading/error/empty states
 - inline one-time reveal with copy action
 - active-token filtering via helper functions
+- on revoke success, remove the revoked token immediately from the PAT list with `queryClient.setQueryData(...)`, then optionally invalidate/refetch for reconciliation
 - revoke clears the reveal panel only when the revoked token matches `revealedTokenId`
 - responsive layout with wrapping/stacking action groups instead of hard-coded desktop-only widths
 
@@ -269,11 +289,15 @@ git commit -m "feat: add settings pat management section"
 
 **Files:**
 - Modify: `frontend/src/routes/_authed/settings.tsx`
+- Create: `frontend/src/routes/_authed/settings.test.tsx`
 - Reference: `frontend/src/components/settings/PersonalAccessTokenSection.tsx`
 
-- [ ] **Step 1: Add a failing integration-level test or extend the PAT section test to protect the settings-page placement**
+- [ ] **Step 1: Add a failing route-level test that protects the settings-page placement**
 
-If a dedicated settings-route test is practical, create it; otherwise extend component coverage and verify the route render manually. The minimum automated check here is that the settings page still renders the original settings controls and now includes the PAT section heading.
+Create a dedicated route test that verifies:
+- the existing settings heading still renders
+- the PAT section heading renders on the settings page
+- the PAT section is rendered after the existing settings form content in the route output
 
 Suggested assertion:
 
@@ -284,11 +308,11 @@ expect(screen.getByRole('heading', { name: /personal access tokens/i })).toBeInT
 
 - [ ] **Step 2: Run the relevant test to verify the expectation fails before integration**
 
-Run whichever file you added or extended, for example:
+Run:
 
 ```bash
 cd /home/jtkw/splice-mono/frontend
-yarn test src/components/settings/PersonalAccessTokenSection.test.tsx
+yarn test src/routes/_authed/settings.test.tsx
 ```
 
 Expected: FAIL because the settings route has not rendered the new section yet.
@@ -308,6 +332,7 @@ Run:
 
 ```bash
 cd /home/jtkw/splice-mono/frontend
+yarn test src/routes/_authed/settings.test.tsx
 yarn test src/components/settings/PersonalAccessTokenSection.test.tsx
 yarn typecheck
 ```
@@ -318,7 +343,7 @@ Expected: PASS
 
 ```bash
 cd /home/jtkw/splice-mono/.worktrees/personal-access-tokens
-git add frontend/src/routes/_authed/settings.tsx
+git add frontend/src/routes/_authed/settings.tsx frontend/src/routes/_authed/settings.test.tsx
 git commit -m "feat: integrate pat ui into settings page"
 ```
 
@@ -337,6 +362,7 @@ Run:
 cd /home/jtkw/splice-mono/frontend
 yarn test src/lib/personal-access-tokens.test.ts
 yarn test src/components/settings/PersonalAccessTokenSection.test.tsx
+yarn test src/routes/_authed/settings.test.tsx
 ```
 
 Expected: PASS
@@ -369,11 +395,12 @@ yarn dev
 Manual checks:
 - settings page still loads existing settings controls
 - PAT section renders below the settings form
+- desktop-width layout keeps token info and actions readable without overlap
 - create with blank/whitespace-only input is blocked client-side
 - create success shows one-time reveal with copy button
 - newly created token appears after PAT list refetch
 - revoke removes the token from the list
-- narrow viewport stacks token actions without horizontal overflow
+- mobile/narrow viewport stacks token actions without horizontal overflow
 
 - [ ] **Step 4: Commit any final verification-driven fixes**
 
@@ -386,4 +413,3 @@ cd /home/jtkw/splice-mono/.worktrees/personal-access-tokens
 git add frontend
 git commit -m "test: verify responsive pat settings ui"
 ```
-
