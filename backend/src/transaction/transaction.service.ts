@@ -14,7 +14,6 @@ import type {
   AskComparePeriodsOptions,
   AskComparePeriodsResult,
   AskEvidenceAggregate,
-  AskEvidenceTransaction,
   AskTransactionSearchOptions,
   AskTransactionSearchResult,
   AskTransactionSummaryOptions,
@@ -29,6 +28,7 @@ import {
   Transaction,
   UpdateTransactionDto,
 } from '../types/Transaction';
+import { MoneySign } from '../types/MoneyWithSign';
 import { TransactionEntity } from './transaction.entity';
 
 @Injectable()
@@ -345,7 +345,10 @@ export class TransactionService extends OwnedCrudService<
     const merchants = new Map<string, Transaction[]>();
 
     transactions.forEach((transaction) => {
-      if (!transaction.merchantName || transaction.amount.sign !== 'negative') {
+      if (
+        !transaction.merchantName ||
+        transaction.amount.sign !== MoneySign.NEGATIVE
+      ) {
         return;
       }
       const key = transaction.merchantName.trim().toLowerCase();
@@ -380,7 +383,9 @@ export class TransactionService extends OwnedCrudService<
         };
       })
       .filter(
-        (value): value is AskTransactionSummaryResult['recurringTransactions'][number] =>
+        (
+          value,
+        ): value is AskTransactionSummaryResult['recurringTransactions'][number] =>
           value !== null,
       )
       .slice(0, TransactionService.AGGREGATE_LIMIT);
@@ -401,27 +406,32 @@ export class TransactionService extends OwnedCrudService<
     matches.forEach((transaction) => {
       const amount = transaction.amount.money.amount;
       const signedAmount =
-        transaction.amount.sign === 'positive' ? amount : -amount;
+        transaction.amount.sign === MoneySign.POSITIVE ? amount : -amount;
       const magnitude = Math.abs(signedAmount);
 
-      if (transaction.amount.sign === 'positive') {
+      if (transaction.amount.sign === MoneySign.POSITIVE) {
         totalInflow += magnitude;
       } else {
         totalOutflow += magnitude;
       }
 
       const category = transaction.category?.primary ?? 'UNCATEGORIZED';
-      categoryTotals.set(category, (categoryTotals.get(category) ?? 0) + magnitude);
+      categoryTotals.set(
+        category,
+        (categoryTotals.get(category) ?? 0) + magnitude,
+      );
 
       const merchant = transaction.merchantName ?? 'Unknown merchant';
-      merchantTotals.set(merchant, (merchantTotals.get(merchant) ?? 0) + magnitude);
+      merchantTotals.set(
+        merchant,
+        (merchantTotals.get(merchant) ?? 0) + magnitude,
+      );
 
       const account = transaction.accountName ?? 'Account';
       accountTotals.set(account, (accountTotals.get(account) ?? 0) + magnitude);
     });
 
-    const currency =
-      matches[0]?.amount.money.currency ?? 'USD';
+    const currency = matches[0]?.amount.money.currency ?? 'USD';
     const recurringTransactions = this.detectRecurringTransactions(matches);
 
     return {
@@ -474,12 +484,13 @@ export class TransactionService extends OwnedCrudService<
       previousEntries: AskEvidenceAggregate[],
       kind: AskEvidenceAggregate['kind'],
     ) => {
-      const currentMap = new Map(currentEntries.map((entry) => [entry.label, entry.amount]));
-      const previousMap = new Map(previousEntries.map((entry) => [entry.label, entry.amount]));
-      const labels = new Set([
-        ...currentMap.keys(),
-        ...previousMap.keys(),
-      ]);
+      const currentMap = new Map(
+        currentEntries.map((entry) => [entry.label, entry.amount]),
+      );
+      const previousMap = new Map(
+        previousEntries.map((entry) => [entry.label, entry.amount]),
+      );
+      const labels = new Set([...currentMap.keys(), ...previousMap.keys()]);
       const currency =
         currentEntries[0]?.currency ?? previousEntries[0]?.currency ?? 'USD';
 
