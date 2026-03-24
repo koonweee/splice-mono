@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { AccountEntity } from '../../src/account/account.entity';
 import { CategoryEntity } from '../../src/category/category.entity';
 import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
@@ -33,6 +34,8 @@ function buildTransaction(params: {
   pending?: boolean;
   primary?: string | null;
   detailed?: string | null;
+  accountName?: string | null;
+  accountCustomName?: string | null;
 }): TransactionEntity {
   const entity = TransactionEntity.fromDto(
     {
@@ -51,11 +54,57 @@ function buildTransaction(params: {
   );
 
   entity.id = params.id;
+  entity.account = {
+    id: entity.accountId,
+    name: params.accountName ?? 'Checking',
+    customName: params.accountCustomName ?? null,
+    toObject() {
+      return {
+        id: entity.accountId,
+        userId: mockUserId,
+        name: params.accountName ?? 'Checking',
+        customName: params.accountCustomName ?? null,
+        mask: null,
+        availableBalance: {
+          money: {
+            amount: 0,
+            currency: params.currency ?? 'USD',
+          },
+          sign: MoneySign.POSITIVE,
+        },
+        currentBalance: {
+          money: {
+            amount: 0,
+            currency: params.currency ?? 'USD',
+          },
+          sign: MoneySign.POSITIVE,
+        },
+        type: 'depository',
+        subType: null,
+        externalAccountId: null,
+        bankLinkId: null,
+        bankLink: null,
+        createdAt: entity.createdAt,
+        updatedAt: entity.updatedAt,
+      };
+    },
+  } as AccountEntity;
   entity.category = params.primary
     ? ({
         id: `cat-${params.primary}`,
         primary: params.primary,
         detailed: params.detailed ?? `${params.primary}_DETAIL`,
+        description: `${params.primary} category`,
+        toObject() {
+          return {
+            id: `cat-${params.primary}`,
+            primary: params.primary as string,
+            detailed: params.detailed ?? `${params.primary}_DETAIL`,
+            description: `${params.primary} category`,
+            createdAt: entity.createdAt,
+            updatedAt: entity.updatedAt,
+          };
+        },
       } as CategoryEntity)
     : null;
 
@@ -125,14 +174,16 @@ describe('TransactionAnalysisService', () => {
         outflows: [],
       });
 
-      expect(mockTransactionRepository.find).toHaveBeenCalledWith({
-        where: expect.objectContaining({
-          userId: mockUserId,
-          pending: false,
-          date: expect.anything(),
+      expect(mockTransactionRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            pending: false,
+            date: expect.anything(),
+          }),
+          relations: ['account', 'category'],
         }),
-        relations: ['category'],
-      });
+      );
     });
 
     it('cancels exact equal and opposite posted transactions in the same currency', async () => {
@@ -372,7 +423,7 @@ describe('TransactionAnalysisService', () => {
             userId: mockUserId,
             pending: false,
           }),
-          relations: ['category'],
+          relations: ['account', 'category'],
         }),
       );
       expect(mockTransactionRepository.find).toHaveBeenNthCalledWith(
@@ -382,7 +433,7 @@ describe('TransactionAnalysisService', () => {
             userId: mockUserId,
             pending: false,
           }),
-          relations: ['category'],
+          relations: ['account', 'category'],
         }),
       );
     });
@@ -520,6 +571,186 @@ describe('TransactionAnalysisService', () => {
           }),
         ],
       });
+    });
+  });
+
+  describe('getCategoryTransactions', () => {
+    it('returns only unmatched positive transactions for an inflow category', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'bilt-negative',
+          amount: 243360,
+          sign: MoneySign.NEGATIVE,
+          date: '2026-02-28',
+          primary: 'LOAN_PAYMENTS',
+        }),
+        buildTransaction({
+          id: 'bilt-positive',
+          amount: 243360,
+          sign: MoneySign.POSITIVE,
+          date: '2026-02-28',
+          primary: 'INCOME',
+        }),
+        buildTransaction({
+          id: 'interest',
+          amount: 4083,
+          sign: MoneySign.POSITIVE,
+          date: '2026-02-28',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      const result = await service.getCategoryTransactions(
+        '2026-02-01',
+        '2026-02-28',
+        'INCOME',
+        'inflow',
+        mockUserId,
+      );
+
+      expect(result.map((transaction) => transaction.id)).toEqual(['interest']);
+    });
+
+    it('removes matched Bilt mirror rows from the LOAN_PAYMENTS outflow drilldown', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'bilt-negative',
+          amount: 243360,
+          sign: MoneySign.NEGATIVE,
+          date: '2026-02-28',
+          primary: 'LOAN_PAYMENTS',
+          detailed: 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT',
+        }),
+        buildTransaction({
+          id: 'bilt-positive',
+          amount: 243360,
+          sign: MoneySign.POSITIVE,
+          date: '2026-02-28',
+          primary: 'INCOME',
+          detailed: 'INCOME_OTHER_INCOME',
+        }),
+        buildTransaction({
+          id: 'real-loan-payment',
+          amount: 1887,
+          sign: MoneySign.NEGATIVE,
+          date: '2026-02-19',
+          primary: 'LOAN_PAYMENTS',
+          detailed: 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT',
+        }),
+      ]);
+
+      const result = await service.getCategoryTransactions(
+        '2026-02-01',
+        '2026-02-28',
+        'LOAN_PAYMENTS',
+        'outflow',
+        mockUserId,
+      );
+
+      expect(result.map((transaction) => transaction.id)).toEqual([
+        'real-loan-payment',
+      ]);
+    });
+
+    it('converts drilldown rows with rates anchored to endDate', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'eur-income',
+          amount: 10000,
+          sign: MoneySign.POSITIVE,
+          currency: 'EUR',
+          date: '2024-01-10',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(
+        new Map([['EUR', 1.1]]),
+      );
+
+      const result = await service.getCategoryTransactions(
+        '2024-01-01',
+        '2024-01-31',
+        'INCOME',
+        'inflow',
+        mockUserId,
+      );
+
+      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
+        ['EUR'],
+        'USD',
+        '2024-01-31',
+      );
+      expect(result[0]?.convertedAmount?.money.amount).toBe(11000);
+    });
+
+    it('returns drilldown rows sorted by date descending then id descending', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'older-id',
+          amount: 1000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-10',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'newer-id',
+          amount: 2000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-12',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'same-day-b',
+          amount: 3000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-10',
+          primary: 'FOOD_AND_DRINK',
+        }),
+      ]);
+
+      const result = await service.getCategoryTransactions(
+        '2024-01-01',
+        '2024-01-31',
+        'FOOD_AND_DRINK',
+        'outflow',
+        mockUserId,
+      );
+
+      expect(result.map((transaction) => transaction.id)).toEqual([
+        'newer-id',
+        'same-day-b',
+        'older-id',
+      ]);
+    });
+
+    it('preserves accountName from the loaded account relation in drilldown rows', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'paycheck',
+          amount: 10000,
+          sign: MoneySign.POSITIVE,
+          date: '2024-01-10',
+          primary: 'INCOME',
+          accountName: 'Payroll Checking',
+          accountCustomName: 'Main Checking',
+        }),
+      ]);
+
+      const result = await service.getCategoryTransactions(
+        '2024-01-01',
+        '2024-01-31',
+        'INCOME',
+        'inflow',
+        mockUserId,
+      );
+
+      expect(mockTransactionRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          relations: ['account', 'category'],
+        }),
+      );
+      expect(result[0]?.accountName).toBe('Main Checking');
     });
   });
 });

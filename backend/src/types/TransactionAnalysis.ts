@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
+import { TransactionSchema } from './Transaction';
 
 /**
  * Query params for the transaction analysis endpoint
@@ -15,6 +16,19 @@ export const TransactionAnalysisQuerySchema = registerSchema(
 );
 export type TransactionAnalysisQuery = z.infer<
   typeof TransactionAnalysisQuerySchema
+>;
+
+export const TransactionAnalysisTransactionsQuerySchema = registerSchema(
+  'TransactionAnalysisTransactionsQuery',
+  z.object({
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    categoryPrimary: z.string(),
+    flowDirection: z.enum(['inflow', 'outflow']),
+  }),
+);
+export type TransactionAnalysisTransactionsQuery = z.infer<
+  typeof TransactionAnalysisTransactionsQuerySchema
 >;
 
 /**
@@ -66,3 +80,8 @@ export const TransactionAnalysisResponseSchema = registerSchema(
 export type TransactionAnalysisResponse = z.infer<
   typeof TransactionAnalysisResponseSchema
 >;
+
+export const TransactionAnalysisTransactionsResponseSchema = registerSchema(
+  'TransactionAnalysisTransactionsResponse',
+  z.array(TransactionSchema),
+);

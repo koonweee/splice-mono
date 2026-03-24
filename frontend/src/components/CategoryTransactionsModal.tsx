@@ -1,9 +1,8 @@
 import { Group, Loader, Modal, Text } from '@mantine/core'
-import { useTransactionControllerFindAll } from '../api/clients/spliceAPI'
+import { useTransactionAnalysisControllerGetTransactions } from '../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
 import { TransactionsTable } from './TransactionsTable'
-import type { TransactionControllerFindAllAmountSign } from '../api/models'
 
 interface CategoryTransactionsModalProps {
   opened: boolean
@@ -12,14 +11,6 @@ interface CategoryTransactionsModalProps {
   startDate: string
   endDate: string
   flowDirection: 'inflow' | 'outflow'
-}
-
-const FLOW_SIGN: Record<
-  'inflow' | 'outflow',
-  TransactionControllerFindAllAmountSign
-> = {
-  inflow: 'positive',
-  outflow: 'negative',
 }
 
 export function CategoryTransactionsModal({
@@ -32,19 +23,17 @@ export function CategoryTransactionsModal({
 }: CategoryTransactionsModalProps) {
   const isMobile = useIsMobile()
 
-  const { data, isPending } = useTransactionControllerFindAll(
+  const { data, isPending } = useTransactionAnalysisControllerGetTransactions(
     {
       startDate,
       endDate,
-      categoryPrimary: categoryPrimary ?? undefined,
-      amountSign: FLOW_SIGN[flowDirection],
-      pageSize: '100',
-      convert: true,
+      categoryPrimary: categoryPrimary ?? '',
+      flowDirection,
     },
     { query: { enabled: opened && !!categoryPrimary } },
   )
 
-  const transactions = data?.data ?? []
+  const transactions = data ?? []
   const categoryLabel = categoryPrimary
     ? formatPrimaryCategory(categoryPrimary)
     : 'Transactions'

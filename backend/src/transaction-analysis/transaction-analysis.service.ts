@@ -4,6 +4,7 @@ import { Between, Repository } from 'typeorm';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import { TransactionEntity } from '../transaction/transaction.entity';
 import { MoneySign } from '../types/MoneyWithSign';
+import type { Transaction } from '../types/Transaction';
 import type {
   CategoryAggregate,
   TransactionAnalysisResponse,
@@ -51,19 +52,14 @@ export class TransactionAnalysisService {
 
     // 2. Load posted transactions in the requested window and neutralize exact
     // equal-opposite pairs before any category aggregation.
-    const transactions = await this.transactionRepository.find({
-      where: {
-        userId,
-        pending: false,
-        date: Between(startDate, endDate),
-      },
-      relations: ['category'],
-    });
-    const unmatchedTransactions = this.neutralizeTransactions(transactions);
+    const unmatchedTransactions = await this.getUnmatchedTransactions(
+      startDate,
+      endDate,
+      userId,
+    );
 
     this.logger.log(
       {
-        transactionCount: transactions.length,
         unmatchedTransactionCount: unmatchedTransactions.length,
         preferredCurrency,
       },
@@ -172,6 +168,80 @@ export class TransactionAnalysisService {
       uncategorizedInflow,
       uncategorizedOutflow,
     };
+  }
+
+  async getCategoryTransactions(
+    startDate: string,
+    endDate: string,
+    categoryPrimary: string,
+    flowDirection: 'inflow' | 'outflow',
+    userId: string,
+  ): Promise<Transaction[]> {
+    const unmatchedTransactions = await this.getUnmatchedTransactions(
+      startDate,
+      endDate,
+      userId,
+    );
+    const preferredCurrency =
+      await this.currencyConversionService.getPreferredCurrency(userId);
+
+    const filteredTransactions = unmatchedTransactions.filter((transaction) => {
+      const transactionCategory = transaction.category?.primary ?? 'UNCATEGORIZED';
+      const matchesDirection =
+        flowDirection === 'inflow'
+          ? transaction.amount.sign === MoneySign.POSITIVE
+          : transaction.amount.sign === MoneySign.NEGATIVE;
+
+      return (
+        matchesDirection && transactionCategory === categoryPrimary
+      );
+    });
+    filteredTransactions.sort((left, right) => {
+      const dateComparison = right.date.localeCompare(left.date);
+      if (dateComparison !== 0) {
+        return dateComparison;
+      }
+
+      return right.id.localeCompare(left.id);
+    });
+
+    const foreignCurrencies = [
+      ...new Set(
+        filteredTransactions
+          .map((transaction) => transaction.amount.currency)
+          .filter((currency) => currency !== preferredCurrency),
+      ),
+    ];
+    const rateMap = await this.currencyConversionService.getRateMap(
+      foreignCurrencies,
+      preferredCurrency,
+      endDate,
+    );
+
+    return filteredTransactions.map((transaction) =>
+      this.toTransactionWithConvertedAmount(
+        transaction,
+        preferredCurrency,
+        rateMap,
+      ),
+    );
+  }
+
+  private async getUnmatchedTransactions(
+    startDate: string,
+    endDate: string,
+    userId: string,
+  ): Promise<TransactionEntity[]> {
+    const transactions = await this.transactionRepository.find({
+      where: {
+        userId,
+        pending: false,
+        date: Between(startDate, endDate),
+      },
+      relations: ['account', 'category'],
+    });
+
+    return this.neutralizeTransactions(transactions);
   }
 
   private neutralizeTransactions(
@@ -287,6 +357,40 @@ export class TransactionAnalysisService {
       preferredCurrency,
       rate,
     );
+  }
+
+  private toTransactionWithConvertedAmount(
+    transaction: TransactionEntity,
+    preferredCurrency: string,
+    rateMap: Map<string, number>,
+  ): Transaction {
+    const transactionObject = transaction.toObject();
+    const sourceCurrency = transaction.amount.currency;
+
+    if (sourceCurrency === preferredCurrency) {
+      return transactionObject;
+    }
+
+    const rate = rateMap.get(sourceCurrency);
+    if (!rate) {
+      return transactionObject;
+    }
+
+    return {
+      ...transactionObject,
+      convertedAmount: {
+        money: {
+          currency: preferredCurrency,
+          amount: this.currencyConversionService.convertAmount(
+            this.getAmountInSmallestUnit(transaction),
+            sourceCurrency,
+            preferredCurrency,
+            rate,
+          ),
+        },
+        sign: transaction.amount.sign,
+      },
+    };
   }
 
   private getBucketKey(currency: string, absoluteAmount: number): string {
