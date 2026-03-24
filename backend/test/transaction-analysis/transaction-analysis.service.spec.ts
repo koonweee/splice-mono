@@ -77,11 +77,16 @@ describe('TransactionAnalysisService', () => {
   beforeEach(async () => {
     mockTransactionRepository = {
       find: jest.fn(),
-      createQueryBuilder: jest.fn(() => {
-        throw new Error(
-          'TransactionAnalysisService should load raw posted transactions instead of aggregating through SQL',
-        );
-      }),
+      createQueryBuilder: jest.fn(() => ({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        addGroupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      })),
     };
     mockCategoryRepository = {};
     mockCurrencyConversionService = {
@@ -216,31 +221,53 @@ describe('TransactionAnalysisService', () => {
     });
 
     it('does not cancel across different currencies', async () => {
+      const usdExpense = buildTransaction({
+        id: 'usd-expense',
+        amount: 10000,
+        sign: MoneySign.NEGATIVE,
+        currency: 'USD',
+        date: '2024-01-10',
+        primary: 'GENERAL_SERVICES',
+      });
+      const eurIncome = buildTransaction({
+        id: 'eur-income',
+        amount: 10000,
+        sign: MoneySign.POSITIVE,
+        currency: 'EUR',
+        date: '2024-01-10',
+        primary: 'INCOME',
+      });
+
       mockTransactionRepository.find.mockResolvedValue([
-        buildTransaction({
-          id: 'usd-expense',
-          amount: 10000,
-          sign: MoneySign.NEGATIVE,
-          currency: 'USD',
-          date: '2024-01-10',
-          primary: 'GENERAL_SERVICES',
-        }),
-        buildTransaction({
-          id: 'eur-income',
-          amount: 10000,
-          sign: MoneySign.POSITIVE,
-          currency: 'EUR',
-          date: '2024-01-10',
-          primary: 'INCOME',
-        }),
+        usdExpense,
+        eurIncome,
       ]);
 
-      await expect(
-        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
-      ).resolves.toMatchObject({
-        totalInflow: expect.any(Number),
-        totalOutflow: expect.any(Number),
-      });
+      const result = await service.getAnalysis(
+        '2024-01-01',
+        '2024-01-31',
+        mockUserId,
+      );
+
+      expect(result.totalInflow).toBe(11000);
+      expect(result.totalOutflow).toBe(10000);
+      expect(result.netFlow).toBe(1000);
+      expect(result.inflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'INCOME',
+          totalAmount: 11000,
+          currency: 'USD',
+          transactionCount: 1,
+        }),
+      ]);
+      expect(result.outflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'GENERAL_SERVICES',
+          totalAmount: 10000,
+          currency: 'USD',
+          transactionCount: 1,
+        }),
+      ]);
 
       expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
         ['EUR'],
@@ -250,25 +277,35 @@ describe('TransactionAnalysisService', () => {
     });
 
     it('does not cancel transactions that fall in different analysis windows', async () => {
-      mockTransactionRepository.find
-        .mockResolvedValueOnce([
-          buildTransaction({
-            id: 'feb-expense',
-            amount: 9000,
-            sign: MoneySign.NEGATIVE,
-            date: '2024-02-29',
-            primary: 'GENERAL_SERVICES',
-          }),
-        ])
-        .mockResolvedValueOnce([
-          buildTransaction({
-            id: 'march-income',
-            amount: 9000,
-            sign: MoneySign.POSITIVE,
-            date: '2024-03-01',
-            primary: 'INCOME',
-          }),
-        ]);
+      const februaryExpense = buildTransaction({
+        id: 'feb-expense',
+        amount: 9000,
+        sign: MoneySign.NEGATIVE,
+        date: '2024-02-29',
+        primary: 'GENERAL_SERVICES',
+      });
+      const marchIncome = buildTransaction({
+        id: 'march-income',
+        amount: 9000,
+        sign: MoneySign.POSITIVE,
+        date: '2024-03-01',
+        primary: 'INCOME',
+      });
+
+      mockTransactionRepository.find.mockImplementation(
+        ({ where }: { where: { date?: { _type?: string; value?: [string, string] } } }) => {
+          const startDate = where.date?.value?.[0];
+          if (startDate === '2024-02-01') {
+            return Promise.resolve([februaryExpense]);
+          }
+
+          if (startDate === '2024-03-01') {
+            return Promise.resolve([marchIncome]);
+          }
+
+          return Promise.resolve([]);
+        },
+      );
 
       const februaryResult = await service.getAnalysis(
         '2024-02-01',
@@ -283,8 +320,27 @@ describe('TransactionAnalysisService', () => {
 
       expect(februaryResult.totalOutflow).toBe(9000);
       expect(februaryResult.totalInflow).toBe(0);
+      expect(februaryResult.outflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'GENERAL_SERVICES',
+          totalAmount: 9000,
+          currency: 'USD',
+          transactionCount: 1,
+        }),
+      ]);
+      expect(februaryResult.inflows).toEqual([]);
+
       expect(marchResult.totalInflow).toBe(9000);
       expect(marchResult.totalOutflow).toBe(0);
+      expect(marchResult.inflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'INCOME',
+          totalAmount: 9000,
+          currency: 'USD',
+          transactionCount: 1,
+        }),
+      ]);
+      expect(marchResult.outflows).toEqual([]);
     });
 
     it('neutralizes a production-shaped mirrored pair even when categories disagree', async () => {
