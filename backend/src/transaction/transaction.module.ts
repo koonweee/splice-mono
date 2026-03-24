@@ -4,6 +4,7 @@ import { CategoryEntity } from '../category/category.entity';
 import { CurrencyExchangeModule } from '../currency-exchange/currency-exchange.module';
 import { TransactionController } from './transaction.controller';
 import { TransactionEntity } from './transaction.entity';
+import { TransactionsSurfaceService } from './transactions-surface.service';
 import { TransactionService } from './transaction.service';
 
 @Module({
@@ -12,7 +13,7 @@ import { TransactionService } from './transaction.service';
     CurrencyExchangeModule,
   ],
   controllers: [TransactionController],
-  providers: [TransactionService],
-  exports: [TransactionService],
+  providers: [TransactionService, TransactionsSurfaceService],
+  exports: [TransactionService, TransactionsSurfaceService],
 })
 export class TransactionModule {}
