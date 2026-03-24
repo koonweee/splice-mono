@@ -77,16 +77,11 @@ describe('TransactionAnalysisService', () => {
   beforeEach(async () => {
     mockTransactionRepository = {
       find: jest.fn(),
-      createQueryBuilder: jest.fn(() => ({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        leftJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        addGroupBy: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn().mockResolvedValue([]),
-      })),
+      createQueryBuilder: jest.fn(() => {
+        throw new Error(
+          'TransactionAnalysisService must load raw posted transactions instead of using the SQL aggregate path',
+        );
+      }),
     };
     mockCategoryRepository = {};
     mockCurrencyConversionService = {
