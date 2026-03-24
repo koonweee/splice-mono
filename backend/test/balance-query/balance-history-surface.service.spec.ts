@@ -216,8 +216,8 @@ describe('BalanceHistorySurfaceService', () => {
       id: 'liability-1',
       displayName: 'Visa',
       type: 'credit',
-      grouping: 'liability',
-      groupingLabel: 'Liability',
+      grouping: 'credit',
+      groupingLabel: 'Credit',
       changePercent: 100,
     })
   })

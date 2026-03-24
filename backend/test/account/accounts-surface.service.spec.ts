@@ -141,8 +141,8 @@ describe('AccountsSurfaceService', () => {
       typeLabel: 'Credit',
       subType: 'credit card',
       subTypeLabel: 'Credit Card',
-      grouping: 'liability',
-      groupingLabel: 'Liability',
+      grouping: 'credit',
+      groupingLabel: 'Credit',
     })
     expect(result.accounts[3]).toMatchObject({
       id: 'account-4',
