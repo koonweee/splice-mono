@@ -11,8 +11,18 @@ import { Injectable } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { AskQueryService } from './ask-query.service';
-import type { AskAnswer } from './ask.types';
-import { AskAnswerSchema } from './ask.types';
+import type {
+  AskAnswer,
+  AskEvidenceAccount,
+  AskEvidenceAggregate,
+  AskEvidenceBalanceHistorySummary,
+  AskEvidenceTransaction,
+} from './ask.types';
+import { AskAnswerSchema, AskSemanticMetadataSchema } from './ask.types';
+import {
+  MoneyWithSignSchema,
+  type SerializedMoneyWithSign,
+} from '../types/MoneyWithSign';
 
 function buildAskSystemPrompt(now = new Date()): string {
   const today = now.toISOString().slice(0, 10);
@@ -22,10 +32,12 @@ You answer questions about the user's finances using the provided tools only.
 Today is ${today}. Resolve relative dates like "last month", "this month", and "yesterday" against that date.
 Be concise, state the scope you used, and never invent transactions or balances.
 If the question is ambiguous, pick a conservative interpretation and say what you assumed.
-Use summarize_transactions for spending, expenditure, outflow, or total spend questions.
-Use compare_periods for questions about increases, decreases, changes, or comparing time periods.
-Use search_transactions for merchant-level lookups, examples, or specific transaction searches.
+Prefer the smallest set of tools needed. Combine tools when a question spans multiple concepts.
 Use get_accounts_snapshot only for balance, cash position, or account inventory questions.
+Use get_balance_history for balance, net worth, or balance trend questions.
+Use search_transactions for merchant lookups, examples, or specific transaction searches.
+Use get_cashflow_analysis for why did this change, spending pattern, reconciliation, or change driver questions.
+Prefer user-friendly labels unless the user explicitly asks for raw identifiers.
 `;
 }
 
@@ -38,6 +50,195 @@ type AskMessageMetadata = {
 };
 
 type AskUIMessage = UIMessage<AskMessageMetadata>;
+
+interface AskEvidenceAccumulator {
+  accounts: Map<string, AskEvidenceAccount>;
+  transactions: Map<string, AskEvidenceTransaction>;
+  aggregates: Map<string, AskEvidenceAggregate>;
+  balanceHistory?: AskEvidenceBalanceHistorySummary;
+  matchedCount: number;
+  truncated: boolean;
+}
+
+function createAskEvidenceAccumulator(): AskEvidenceAccumulator {
+  return {
+    accounts: new Map(),
+    transactions: new Map(),
+    aggregates: new Map(),
+    matchedCount: 0,
+    truncated: false,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isSerializedMoneyWithSign(
+  value: unknown,
+): value is SerializedMoneyWithSign {
+  return MoneyWithSignSchema.safeParse(value).success;
+}
+
+function getArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function getMatchedCount(value: Record<string, unknown>): number {
+  return typeof value.matchedCount === 'number' ? value.matchedCount : 0;
+}
+
+function getTruncated(value: Record<string, unknown>): boolean {
+  return Boolean(value.truncated);
+}
+
+function getAggregateKey(aggregate: AskEvidenceAggregate): string {
+  return [
+    aggregate.kind,
+    aggregate.label,
+    aggregate.rawLabel ?? '',
+    aggregate.currency,
+    aggregate.amount,
+  ].join('|');
+}
+
+function mergeAccounts(
+  accumulator: AskEvidenceAccumulator,
+  value: Record<string, unknown>,
+): void {
+  getArray<Record<string, unknown>>(value.accounts).forEach((account) => {
+    const id = typeof account.id === 'string' ? account.id : undefined;
+    if (!id || accumulator.accounts.has(id)) {
+      return;
+    }
+
+    accumulator.accounts.set(id, account as AskEvidenceAccount);
+  });
+}
+
+function mergeTransactions(
+  accumulator: AskEvidenceAccumulator,
+  value: Record<string, unknown>,
+): void {
+  getArray<Record<string, unknown>>(value.transactions).forEach((transaction) => {
+    const id = typeof transaction.id === 'string' ? transaction.id : undefined;
+    if (!id || accumulator.transactions.has(id)) {
+      return;
+    }
+
+    accumulator.transactions.set(id, transaction as AskEvidenceTransaction);
+  });
+}
+
+function mergeAggregates(
+  accumulator: AskEvidenceAccumulator,
+  value: Record<string, unknown>,
+): void {
+  const aggregateSources = [
+    ...getArray<unknown>(value.aggregates),
+    ...getArray<unknown>(value.topCategories),
+    ...getArray<unknown>(value.topMerchants),
+    ...getArray<unknown>(value.topAccounts),
+  ];
+
+  aggregateSources.forEach((aggregate) => {
+    if (!isRecord(aggregate)) {
+      return;
+    }
+
+    const label = typeof aggregate.label === 'string' ? aggregate.label : undefined;
+    const currency = typeof aggregate.currency === 'string' ? aggregate.currency : undefined;
+    const kind = typeof aggregate.kind === 'string' ? aggregate.kind : undefined;
+    const amount = typeof aggregate.amount === 'number' ? aggregate.amount : undefined;
+
+    if (!label || !currency || !kind || amount === undefined) {
+      return;
+    }
+
+    const normalizedAggregate = aggregate as AskEvidenceAggregate;
+    const key = getAggregateKey(normalizedAggregate);
+    if (!accumulator.aggregates.has(key)) {
+      accumulator.aggregates.set(key, normalizedAggregate);
+    }
+  });
+}
+
+function normalizeBalanceHistoryEvidence(
+  value: Record<string, unknown>,
+): AskEvidenceBalanceHistorySummary | undefined {
+  const currentTotal = value.currentTotal ?? value.netWorth;
+  if (!isSerializedMoneyWithSign(currentTotal)) {
+    return undefined;
+  }
+
+  const previousTotal = isSerializedMoneyWithSign(value.previousTotal)
+    ? value.previousTotal
+    : undefined;
+  const deltaPercent =
+    typeof value.deltaPercent === 'number'
+      ? value.deltaPercent
+      : typeof value.changePercent === 'number'
+        ? value.changePercent
+        : undefined;
+  const pointCount =
+    typeof value.pointCount === 'number'
+      ? value.pointCount
+      : getArray<unknown>(value.series).length ||
+        getArray<unknown>(value.chartData).length ||
+        getArray<unknown>(value.assets).length +
+          getArray<unknown>(value.liabilities).length;
+
+  const semanticMetadata = AskSemanticMetadataSchema.parse(
+    isRecord(value.semanticMetadata)
+      ? value.semanticMetadata
+      : {
+          pendingIncluded: false,
+          reconciliationApplied: true,
+          comparisonIncluded: false,
+      },
+  );
+
+  const matchedCount =
+    getMatchedCount(value) ||
+    getArray<unknown>(value.series).length ||
+    getArray<unknown>(value.chartData).length ||
+    getArray<unknown>(value.assets).length +
+      getArray<unknown>(value.liabilities).length;
+
+  return {
+    matchedCount,
+    truncated: getTruncated(value),
+    currentTotal,
+    previousTotal,
+    deltaPercent,
+    pointCount,
+    semanticMetadata,
+  };
+}
+
+function mergeEvidence(
+  accumulator: AskEvidenceAccumulator,
+  output: unknown,
+): void {
+  if (!isRecord(output)) {
+    return;
+  }
+
+  accumulator.matchedCount = Math.max(
+    accumulator.matchedCount,
+    getMatchedCount(output),
+  );
+  accumulator.truncated = accumulator.truncated || getTruncated(output);
+
+  mergeAccounts(accumulator, output);
+  mergeTransactions(accumulator, output);
+  mergeAggregates(accumulator, output);
+
+  const balanceHistory = normalizeBalanceHistoryEvidence(output);
+  if (balanceHistory) {
+    accumulator.balanceHistory = balanceHistory;
+  }
+}
 
 @Injectable()
 export class AskService {
@@ -55,6 +256,7 @@ export class AskService {
       evidence: {
         accounts: input.evidence.accounts.slice(0, 10),
         transactions: input.evidence.transactions.slice(0, 20),
+        balanceHistory: input.evidence.balanceHistory,
         aggregates: input.evidence.aggregates.slice(0, 10),
         matchedCount: input.evidence.matchedCount,
         truncated: input.evidence.truncated,
@@ -98,7 +300,7 @@ export class AskService {
       tools: {
         get_accounts_snapshot: tool({
           description:
-            'Get a user-scoped snapshot of their accounts and balances.',
+            'Get a user-scoped snapshot of their current accounts and balances.',
           inputSchema: z.object({}),
           execute: async () => {
             latestQueryScope = {
@@ -107,6 +309,25 @@ export class AskService {
               truncated: false,
             };
             return this.askQueryService.getAccountsSnapshot(userId);
+          },
+        }),
+        get_balance_history: tool({
+          description:
+            'Get balance history, net worth, and over-time change for a date range.',
+          inputSchema: z.object({
+            startDate: z.string(),
+            endDate: z.string(),
+            accountIds: z.array(z.string()).optional(),
+          }),
+          execute: async (input) => {
+            latestQueryScope = {
+              startDate: input.startDate,
+              endDate: input.endDate,
+              accountIds: input.accountIds ?? [],
+              includePending: false,
+              truncated: false,
+            };
+            return this.askQueryService.getBalanceHistory(userId, input);
           },
         }),
         search_transactions: tool({
@@ -135,87 +356,49 @@ export class AskService {
             return this.askQueryService.searchTransactions(userId, input);
           },
         }),
-        summarize_transactions: tool({
+        get_cashflow_analysis: tool({
           description:
-            'Summarize transactions over a date range with category, merchant, account, and recurring drivers.',
+            'Get spending totals, category breakdowns, inflow/outflow summaries, and why-did-this-change analysis.',
           inputSchema: z.object({
-            startDate: z.string().optional(),
-            endDate: z.string().optional(),
-            accountIds: z.array(z.string()).optional(),
-            includePending: z.boolean().optional(),
-            recurringOnly: z.boolean().optional(),
+            startDate: z.string(),
+            endDate: z.string(),
           }),
           execute: async (input) => {
             latestQueryScope = {
               startDate: input.startDate,
               endDate: input.endDate,
-              accountIds: input.accountIds ?? [],
-              includePending: input.includePending ?? false,
+              accountIds: [],
+              includePending: false,
               truncated: false,
             };
-            return this.askQueryService.summarizeTransactions(userId, input);
-          },
-        }),
-        compare_periods: tool({
-          description:
-            'Compare current and previous periods and return the main category, merchant, and account deltas.',
-          inputSchema: z.object({
-            currentStartDate: z.string(),
-            currentEndDate: z.string(),
-            previousStartDate: z.string(),
-            previousEndDate: z.string(),
-            accountIds: z.array(z.string()).optional(),
-            includePending: z.boolean().optional(),
-          }),
-          execute: async (input) => {
-            latestQueryScope = {
-              startDate: input.currentStartDate,
-              endDate: input.currentEndDate,
-              comparisonStartDate: input.previousStartDate,
-              comparisonEndDate: input.previousEndDate,
-              accountIds: input.accountIds ?? [],
-              includePending: input.includePending ?? false,
-              truncated: false,
-            };
-            return this.askQueryService.comparePeriods(userId, input);
+            return this.askQueryService.getCashflowAnalysis(userId, input);
           },
         }),
       },
       onFinish: ({ text, steps }) => {
-        const lastToolResult = [...steps]
-          .reverse()
-          .flatMap((step) => step.toolResults)
-          .find((result) => result.output);
+        const evidence = createAskEvidenceAccumulator();
 
-        const evidenceSource =
-          (lastToolResult?.output as
-            | {
-                accounts?: AskAnswer['evidence']['accounts'];
-                transactions?: AskAnswer['evidence']['transactions'];
-                topCategories?: AskAnswer['evidence']['aggregates'];
-                topMerchants?: AskAnswer['evidence']['aggregates'];
-                topAccounts?: AskAnswer['evidence']['aggregates'];
-                matchedCount?: number;
-                truncated?: boolean;
-              }
-            | undefined) ?? {};
+        steps.forEach((step) => {
+          step.toolResults.forEach((toolResult) => {
+            if (toolResult.output) {
+              mergeEvidence(evidence, toolResult.output);
+            }
+          });
+        });
 
         finalAnswer = this.buildFinalAnswer({
           answerText: text,
           queryScope: {
             ...latestQueryScope,
-            truncated: Boolean(evidenceSource.truncated),
+            truncated: evidence.truncated,
           },
           evidence: {
-            accounts: evidenceSource.accounts ?? [],
-            transactions: evidenceSource.transactions ?? [],
-            aggregates: [
-              ...(evidenceSource.topCategories ?? []),
-              ...(evidenceSource.topMerchants ?? []),
-              ...(evidenceSource.topAccounts ?? []),
-            ],
-            matchedCount: evidenceSource.matchedCount ?? 0,
-            truncated: Boolean(evidenceSource.truncated),
+            accounts: Array.from(evidence.accounts.values()),
+            transactions: Array.from(evidence.transactions.values()),
+            balanceHistory: evidence.balanceHistory,
+            aggregates: Array.from(evidence.aggregates.values()),
+            matchedCount: evidence.matchedCount,
+            truncated: evidence.truncated,
           },
           followups: [],
         });

@@ -1,31 +1,32 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AccountService } from '../../src/account/account.service';
+import { AccountsSurfaceService } from '../../src/account/accounts-surface.service';
 import { AskQueryService } from '../../src/ask/ask-query.service';
 import type {
   AskBalanceHistoryOptions,
-  AskBalanceHistoryResult,
   AskCashflowAnalysisOptions,
-  AskCashflowAnalysisResult,
 } from '../../src/ask/ask.types';
-import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
-import { TransactionService } from '../../src/transaction/transaction.service';
+import { BalanceHistorySurfaceService } from '../../src/balance-query/balance-history-surface.service';
+import { CashflowAnalysisSurfaceService } from '../../src/transaction-analysis/cashflow-analysis-surface.service';
+import { TransactionsSurfaceService } from '../../src/transaction/transactions-surface.service';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 
 describe('AskQueryService', () => {
   let service: AskQueryService;
 
-  const mockAccountService = {
-    findAll: jest.fn(),
+  const mockAccountsSurfaceService = {
+    getAccountsSnapshot: jest.fn(),
   };
 
-  const mockTransactionService = {
+  const mockBalanceHistorySurfaceService = {
+    getBalanceHistorySummary: jest.fn(),
+  };
+
+  const mockTransactionsSurfaceService = {
     findForAsk: jest.fn(),
-    summarizeForAsk: jest.fn(),
-    compareForAsk: jest.fn(),
   };
 
-  const mockCurrencyConversionService = {
-    getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
+  const mockCashflowAnalysisSurfaceService = {
+    getCashflowAnalysis: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -33,16 +34,20 @@ describe('AskQueryService', () => {
       providers: [
         AskQueryService,
         {
-          provide: AccountService,
-          useValue: mockAccountService,
+          provide: AccountsSurfaceService,
+          useValue: mockAccountsSurfaceService,
         },
         {
-          provide: TransactionService,
-          useValue: mockTransactionService,
+          provide: BalanceHistorySurfaceService,
+          useValue: mockBalanceHistorySurfaceService,
         },
         {
-          provide: CurrencyConversionService,
-          useValue: mockCurrencyConversionService,
+          provide: TransactionsSurfaceService,
+          useValue: mockTransactionsSurfaceService,
+        },
+        {
+          provide: CashflowAnalysisSurfaceService,
+          useValue: mockCashflowAnalysisSurfaceService,
         },
       ],
     }).compile();
@@ -54,49 +59,41 @@ describe('AskQueryService', () => {
     jest.clearAllMocks();
   });
 
-  it('returns an account snapshot grouped for Ask evidence', async () => {
-    mockAccountService.findAll.mockResolvedValue([
-      {
-        id: 'account-1',
-        userId: 'user-1',
-        name: 'Checking',
-        customName: 'House Checking',
-        mask: '1234',
-        availableBalance: {
-          money: { currency: 'USD', amount: 100_000 },
-          sign: MoneySign.POSITIVE,
-        },
-        currentBalance: {
-          money: { currency: 'USD', amount: 100_000 },
-          sign: MoneySign.POSITIVE,
-        },
-        type: 'depository',
-        subType: null,
-        externalAccountId: null,
-        bankLinkId: null,
-        bankLink: null,
-        createdAt: new Date('2026-03-01T00:00:00Z'),
-        updatedAt: new Date('2026-03-01T00:00:00Z'),
-      },
-    ]);
-
-    const result = await service.getAccountsSnapshot('user-1');
-
-    expect(result).toMatchObject({
+  it('delegates getAccountsSnapshot to the accounts surface', async () => {
+    const expected = {
       matchedCount: 1,
       truncated: false,
       accounts: [
         {
           id: 'account-1',
+          name: 'Checking',
           displayName: 'House Checking',
+          type: 'depository',
+          typeLabel: 'Depository',
+          subType: null,
+          subTypeLabel: null,
           grouping: 'cash',
+          groupingLabel: 'Cash',
+          institutionName: 'Bank',
+          balance: {
+            money: { currency: 'USD', amount: 100_000 },
+            sign: MoneySign.POSITIVE,
+          },
         },
       ],
-    });
+    };
+    mockAccountsSurfaceService.getAccountsSnapshot.mockResolvedValue(expected);
+
+    await expect(service.getAccountsSnapshot('user-1')).resolves.toEqual(
+      expected,
+    );
+    expect(mockAccountsSurfaceService.getAccountsSnapshot).toHaveBeenCalledWith(
+      'user-1',
+    );
   });
 
-  it('returns capped transaction evidence with matchedCount and truncated', async () => {
-    mockTransactionService.findForAsk.mockResolvedValue({
+  it('delegates searchTransactions to the transactions surface', async () => {
+    const expected = {
       matchedCount: 24,
       truncated: true,
       transactions: [
@@ -108,199 +105,32 @@ describe('AskQueryService', () => {
           pending: false,
           date: '2026-03-03',
           categoryPrimary: 'ENTERTAINMENT',
+          categoryPrimaryLabel: 'Entertainment',
           amount: {
             money: { currency: 'USD', amount: 1599 },
             sign: MoneySign.NEGATIVE,
           },
         },
       ],
-    });
-
-    const result = await service.searchTransactions('user-1', {
-      merchantQuery: 'netflix',
-      limit: 20,
-    });
-
-    expect(result).toMatchObject({
-      matchedCount: 24,
-      truncated: true,
-      transactions: [
-        {
-          id: 'transaction-1',
-          merchantName: 'Netflix',
-        },
-      ],
-    });
-  });
-
-  it('summarizes transactions with category, merchant, and account drivers', async () => {
-    mockTransactionService.summarizeForAsk.mockResolvedValue({
-      totalInflow: 0,
-      totalOutflow: 250,
-      net: -250,
-      transactionCount: 6,
-      topCategories: [
-        {
-          label: 'FOOD_AND_DRINK',
-          amount: 100,
-          currency: 'USD',
-          kind: 'category',
-        },
-      ],
-      topMerchants: [
-        {
-          label: "Trader Joe's",
-          amount: 85,
-          currency: 'USD',
-          kind: 'merchant',
-        },
-      ],
-      topAccounts: [
-        {
-          label: 'House Checking',
-          amount: 250,
-          currency: 'USD',
-          kind: 'account',
-        },
-      ],
-      recurringTransactions: [
-        {
-          merchantName: 'Netflix',
-          cadence: 'monthly',
-          amount: 15.99,
-        },
-      ],
-      matchedCount: 6,
-      truncated: false,
-    });
-
-    const result = await service.summarizeTransactions('user-1', {
-      startDate: '2026-03-01',
-      endDate: '2026-03-22',
-      includePending: false,
-    });
-
-    expect(result).toMatchObject({
-      totalOutflow: 250,
-      topCategories: [
-        expect.objectContaining({
-          amount: 100,
-          currency: 'USD',
-        }),
-      ],
-      topMerchants: [
-        expect.objectContaining({
-          amount: 85,
-          currency: 'USD',
-        }),
-      ],
-      topAccounts: [
-        expect.objectContaining({
-          amount: 250,
-          currency: 'USD',
-        }),
-      ],
-      recurringTransactions: [
-        expect.objectContaining({
-          merchantName: 'Netflix',
-          amount: 15.99,
-          currency: 'USD',
-        }),
-      ],
-    });
-  });
-
-  it('compares two periods using deterministic aggregate deltas', async () => {
-    mockTransactionService.compareForAsk.mockResolvedValue({
-      currentTotalOutflow: 400,
-      previousTotalOutflow: 320,
-      absoluteDelta: 80,
-      percentDelta: 25,
-      categoryDrivers: [
-        {
-          label: 'TRAVEL',
-          amount: 60,
-          currency: 'USD',
-          kind: 'category',
-        },
-      ],
-      merchantDrivers: [
-        {
-          label: 'United',
-          amount: 60,
-          currency: 'USD',
-          kind: 'merchant',
-        },
-      ],
-      accountDrivers: [
-        {
-          label: 'Amex Gold',
-          amount: 80,
-          currency: 'USD',
-          kind: 'account',
-        },
-      ],
-      matchedCount: 12,
-      truncated: false,
-    });
-
-    const result = await service.comparePeriods('user-1', {
-      currentStartDate: '2026-03-01',
-      currentEndDate: '2026-03-22',
-      previousStartDate: '2026-02-01',
-      previousEndDate: '2026-02-22',
-    });
-
-    expect(result).toMatchObject({
-      currentTotalOutflow: 400,
-      previousTotalOutflow: 320,
-      absoluteDelta: 80,
-      percentDelta: 25,
-      categoryDrivers: [
-        expect.objectContaining({
-          label: 'TRAVEL',
-          amount: 60,
-          currency: 'USD',
-        }),
-      ],
-      merchantDrivers: [
-        expect.objectContaining({
-          label: 'United',
-          amount: 60,
-          currency: 'USD',
-        }),
-      ],
-      accountDrivers: [
-        expect.objectContaining({
-          label: 'Amex Gold',
-          amount: 80,
-          currency: 'USD',
-        }),
-      ],
-    });
-  });
-
-  it('delegates getBalanceHistory through the future balance-history surface', async () => {
-    const futureBalanceHistorySurfaceService = {
-      getBalanceHistorySummary: jest.fn(),
     };
-    Object.assign(service as Record<string, unknown>, {
-      balanceHistorySurfaceService: futureBalanceHistorySurfaceService,
-    });
+    mockTransactionsSurfaceService.findForAsk.mockResolvedValue(expected);
 
-    const candidate = service as AskQueryService &
-      Partial<{
-        getBalanceHistory: (
-          userId: string,
-          options: AskBalanceHistoryOptions,
-        ) => Promise<AskBalanceHistoryResult>;
-      }>;
+    await expect(
+      service.searchTransactions('user-1', {
+        merchantQuery: 'netflix',
+        limit: 20,
+      }),
+    ).resolves.toEqual(expected);
+    expect(mockTransactionsSurfaceService.findForAsk).toHaveBeenCalledWith(
+      'user-1',
+      {
+        merchantQuery: 'netflix',
+        limit: 20,
+      },
+    );
+  });
 
-    expect(candidate.getBalanceHistory).toEqual(expect.any(Function));
-    if (!candidate.getBalanceHistory) {
-      return;
-    }
-
+  it('delegates getBalanceHistory through the balance-history surface', async () => {
     const options: AskBalanceHistoryOptions = {
       startDate: '2026-03-01',
       endDate: '2026-03-22',
@@ -309,77 +139,58 @@ describe('AskQueryService', () => {
       comparisonStartDate: '2026-02-01',
       comparisonEndDate: '2026-02-22',
     };
-    const expectedResult: AskBalanceHistoryResult = {
-      matchedCount: 18,
-      truncated: false,
-      currentTotal: {
+    const expected = {
+      netWorth: {
         money: { currency: 'USD', amount: 125_000 },
         sign: MoneySign.POSITIVE,
       },
-      previousTotal: {
-        money: { currency: 'USD', amount: 110_000 },
-        sign: MoneySign.POSITIVE,
-      },
-      deltaPercent: 13.64,
-      pointCount: 30,
-      semanticMetadata: {
-        pendingIncluded: true,
-        reconciliationApplied: true,
-        comparisonIncluded: true,
-      },
-      series: [
+      changePercent: 13.64,
+      chartData: [
         {
           date: '2026-03-01',
-          accountId: 'account-1',
-          accountName: 'House Checking',
-          balance: {
+          label: 'Mar 1',
+          value: 110_000,
+        },
+      ],
+      assets: [
+        {
+          id: 'account-1',
+          name: 'Checking',
+          displayName: 'House Checking',
+          customName: 'House Checking',
+          type: 'depository',
+          typeLabel: 'Depository',
+          subType: null,
+          subTypeLabel: null,
+          grouping: 'cash',
+          groupingLabel: 'Cash',
+          effectiveBalance: {
             money: { currency: 'USD', amount: 125_000 },
             sign: MoneySign.POSITIVE,
           },
+          institutionName: 'Bank',
         },
       ],
+      liabilities: [],
     };
-    futureBalanceHistorySurfaceService.getBalanceHistorySummary.mockResolvedValue(
-      expectedResult,
+    mockBalanceHistorySurfaceService.getBalanceHistorySummary.mockResolvedValue(
+      expected,
     );
-    const result = await candidate.getBalanceHistory('user-1', options);
 
+    await expect(service.getBalanceHistory('user-1', options)).resolves.toEqual(
+      expected,
+    );
     expect(
-      futureBalanceHistorySurfaceService.getBalanceHistorySummary,
+      mockBalanceHistorySurfaceService.getBalanceHistorySummary,
     ).toHaveBeenCalledWith('user-1', options);
-    expect(result).toEqual(expectedResult);
   });
 
-  it('delegates getCashflowAnalysis through the future cashflow surface', async () => {
-    const futureCashflowAnalysisSurfaceService = {
-      getCashflowAnalysis: jest.fn(),
-    };
-    Object.assign(service as Record<string, unknown>, {
-      cashflowAnalysisSurfaceService: futureCashflowAnalysisSurfaceService,
-    });
-
-    const candidate = service as AskQueryService &
-      Partial<{
-        getCashflowAnalysis: (
-          userId: string,
-          options: AskCashflowAnalysisOptions,
-        ) => Promise<AskCashflowAnalysisResult>;
-      }>;
-
-    expect(candidate.getCashflowAnalysis).toEqual(expect.any(Function));
-    if (!candidate.getCashflowAnalysis) {
-      return;
-    }
-
+  it('delegates getCashflowAnalysis through the cashflow surface', async () => {
     const options: AskCashflowAnalysisOptions = {
       startDate: '2026-03-01',
       endDate: '2026-03-22',
-      accountIds: ['account-1'],
-      comparisonStartDate: '2026-02-01',
-      comparisonEndDate: '2026-02-22',
-      includePending: true,
     };
-    const expectedResult: AskCashflowAnalysisResult = {
+    const expected = {
       totalInflow: 400,
       totalOutflow: 250,
       netFlow: 150,
@@ -393,21 +204,22 @@ describe('AskQueryService', () => {
         },
       ],
       semanticMetadata: {
-        pendingIncluded: true,
+        pendingIncluded: false,
         reconciliationApplied: true,
-        comparisonIncluded: true,
+        comparisonIncluded: false,
       },
       matchedCount: 12,
       truncated: false,
     };
-    futureCashflowAnalysisSurfaceService.getCashflowAnalysis.mockResolvedValue(
-      expectedResult,
+    mockCashflowAnalysisSurfaceService.getCashflowAnalysis.mockResolvedValue(
+      expected,
     );
-    const result = await candidate.getCashflowAnalysis('user-1', options);
 
+    await expect(
+      service.getCashflowAnalysis('user-1', options),
+    ).resolves.toEqual(expected);
     expect(
-      futureCashflowAnalysisSurfaceService.getCashflowAnalysis,
+      mockCashflowAnalysisSurfaceService.getCashflowAnalysis,
     ).toHaveBeenCalledWith('user-1', options);
-    expect(result).toEqual(expectedResult);
   });
 });

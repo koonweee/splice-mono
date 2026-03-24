@@ -42,10 +42,8 @@ describe('AskService', () => {
 
   const mockAskQueryService = {
     getAccountsSnapshot: jest.fn(),
-    searchTransactions: jest.fn(),
-    summarizeTransactions: jest.fn(),
-    comparePeriods: jest.fn(),
     getBalanceHistory: jest.fn(),
+    searchTransactions: jest.fn(),
     getCashflowAnalysis: jest.fn(),
   };
 
@@ -69,7 +67,7 @@ describe('AskService', () => {
     jest.useRealTimers();
   });
 
-  it('builds structured Ask answers with scope and evidence', async () => {
+  it('builds structured Ask answers with scope, evidence, and balance history', async () => {
     const result = service.buildFinalAnswer({
       answerText: 'Your outflows are up 14% month to date.',
       queryScope: {
@@ -82,6 +80,25 @@ describe('AskService', () => {
       evidence: {
         accounts: [],
         transactions: [],
+        balanceHistory: {
+          matchedCount: 4,
+          truncated: false,
+          currentTotal: {
+            money: { currency: 'USD', amount: 95_000 },
+            sign: MoneySign.POSITIVE,
+          },
+          previousTotal: {
+            money: { currency: 'USD', amount: 90_000 },
+            sign: MoneySign.POSITIVE,
+          },
+          deltaPercent: 5.56,
+          pointCount: 2,
+          semanticMetadata: {
+            pendingIncluded: true,
+            reconciliationApplied: true,
+            comparisonIncluded: true,
+          },
+        },
         aggregates: [],
         matchedCount: 12,
         truncated: false,
@@ -98,6 +115,15 @@ describe('AskService', () => {
       evidence: {
         matchedCount: 12,
         truncated: false,
+        balanceHistory: expect.objectContaining({
+          matchedCount: 4,
+          currentTotal: expect.objectContaining({
+            money: expect.objectContaining({
+              currency: 'USD',
+              amount: 95_000,
+            }),
+          }),
+        }),
       },
       followups: ['Show the top categories'],
     });
@@ -135,6 +161,20 @@ describe('AskService', () => {
             sign: MoneySign.NEGATIVE,
           },
         })),
+        balanceHistory: {
+          matchedCount: 2,
+          truncated: false,
+          currentTotal: {
+            money: { currency: 'USD', amount: 100_000 },
+            sign: MoneySign.POSITIVE,
+          },
+          pointCount: 1,
+          semanticMetadata: {
+            pendingIncluded: false,
+            reconciliationApplied: true,
+            comparisonIncluded: false,
+          },
+        },
         aggregates: new Array(12).fill(null).map((_, index) => ({
           label: `Driver ${index}`,
           amount: index,
@@ -150,6 +190,10 @@ describe('AskService', () => {
     expect(result.evidence.accounts).toHaveLength(10);
     expect(result.evidence.transactions).toHaveLength(20);
     expect(result.evidence.aggregates).toHaveLength(10);
+    expect(result.evidence.balanceHistory).toMatchObject({
+      matchedCount: 2,
+      pointCount: 1,
+    });
     expect(result.followups).toHaveLength(3);
   });
 
@@ -174,7 +218,7 @@ describe('AskService', () => {
     );
   });
 
-  it('includes date grounding and spending tool routing guidance in the system prompt', async () => {
+  it('includes date grounding and tool routing guidance in the system prompt', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-03-22T12:00:00Z'));
 
     await service.streamChat(
@@ -193,20 +237,41 @@ describe('AskService', () => {
     expect(mockStreamText).toHaveBeenCalledWith(
       expect.objectContaining({
         system: expect.stringContaining(
-          'Use summarize_transactions for spending, expenditure, outflow, or total spend questions.',
+          'Use get_accounts_snapshot only for balance, cash position, or account inventory questions.',
         ),
       }),
     );
     expect(mockStreamText).toHaveBeenCalledWith(
       expect.objectContaining({
         system: expect.stringContaining(
-          'Use get_accounts_snapshot only for balance, cash position, or account inventory questions.',
+          'Use get_balance_history for balance, net worth, or balance trend questions.',
+        ),
+      }),
+    );
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining(
+          'Use search_transactions for merchant lookups, examples, or specific transaction searches.',
+        ),
+      }),
+    );
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining(
+          'Use get_cashflow_analysis for why did this change, spending pattern, reconciliation, or change driver questions.',
+        ),
+      }),
+    );
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining(
+          'Prefer user-friendly labels unless the user explicitly asks for raw identifiers.',
         ),
       }),
     );
   });
 
-  it('includes net worth and why-did-this-change guidance with the new tool registry', async () => {
+  it('uses the new concept-oriented tool registry', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-03-22T12:00:00Z'));
 
     await service.streamChat(
@@ -223,24 +288,10 @@ describe('AskService', () => {
 
     expect(Object.keys(streamTextInput.tools)).toEqual([
       'get_accounts_snapshot',
-      'search_transactions',
       'get_balance_history',
+      'search_transactions',
       'get_cashflow_analysis',
     ]);
-    expect(mockStreamText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        system: expect.stringContaining(
-          'Use get_balance_history for balance, net worth, or balance trend questions.',
-        ),
-      }),
-    );
-    expect(mockStreamText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        system: expect.stringContaining(
-          'Use get_cashflow_analysis for why did this change, spending pattern, reconciliation, or change driver questions.',
-        ),
-      }),
-    );
   });
 
   it('merges evidence from multiple tool calls and preserves balance-history summary metadata', async () => {
@@ -276,43 +327,85 @@ describe('AskService', () => {
           toolResults: [
             {
               output: {
-                matchedCount: 1,
+                matchedCount: 2,
                 truncated: false,
-                currentTotal: {
-                  money: { currency: 'USD', amount: 95_000 },
-                  sign: 'positive',
-                },
-                previousTotal: {
-                  money: { currency: 'USD', amount: 90_000 },
-                  sign: 'positive',
-                },
-                deltaPercent: 5.56,
-                pointCount: 2,
-                semanticMetadata: {
-                  pendingIncluded: true,
-                  reconciliationApplied: true,
-                  comparisonIncluded: true,
-                },
-                series: [
+                accounts: [
                   {
-                    date: '2026-03-01',
-                    accountId: 'account-1',
-                    accountName: 'House Checking',
+                    id: 'account-1',
+                    displayName: 'House Checking',
+                    institutionName: 'Bank',
+                    grouping: 'cash',
                     balance: {
                       money: { currency: 'USD', amount: 90_000 },
                       sign: 'positive',
                     },
                   },
                   {
-                    date: '2026-03-08',
-                    accountId: 'account-1',
-                    accountName: 'House Checking',
+                    id: 'account-1',
+                    displayName: 'House Checking',
+                    institutionName: 'Bank',
+                    grouping: 'cash',
                     balance: {
-                      money: { currency: 'USD', amount: 95_000 },
+                      money: { currency: 'USD', amount: 90_000 },
                       sign: 'positive',
                     },
                   },
+                  {
+                    id: 'account-2',
+                    displayName: 'Amex Gold',
+                    institutionName: 'Bank',
+                    grouping: 'credit',
+                    balance: {
+                      money: { currency: 'USD', amount: 15_000 },
+                      sign: 'negative',
+                    },
+                  },
                 ],
+              },
+            },
+          ],
+        },
+        {
+          toolResults: [
+            {
+              output: {
+                netWorth: {
+                  money: { currency: 'USD', amount: 95_000 },
+                  sign: 'positive',
+                },
+                changePercent: 5.56,
+                chartData: [
+                  {
+                    date: '2026-03-01',
+                    label: 'Mar 1',
+                    value: 90_000,
+                  },
+                  {
+                    date: '2026-03-08',
+                    label: 'Mar 8',
+                    value: 95_000,
+                  },
+                ],
+                assets: [
+                  {
+                    id: 'account-1',
+                    name: 'Checking',
+                    displayName: 'House Checking',
+                    type: 'depository',
+                    typeLabel: 'Depository',
+                    subType: null,
+                    subTypeLabel: null,
+                    grouping: 'cash',
+                    groupingLabel: 'Cash',
+                    effectiveBalance: {
+                      money: { currency: 'USD', amount: 95_000 },
+                      sign: 'positive',
+                    },
+                    institutionName: 'Bank',
+                  },
+                ],
+                liabilities: [],
+                truncated: false,
               },
             },
           ],
@@ -335,9 +428,73 @@ describe('AskService', () => {
                       sign: 'negative',
                     },
                   },
+                  {
+                    id: 'transaction-1',
+                    accountId: 'account-1',
+                    accountName: 'House Checking',
+                    merchantName: 'Netflix',
+                    pending: false,
+                    date: '2026-03-03',
+                    categoryPrimary: 'ENTERTAINMENT',
+                    amount: {
+                      money: { currency: 'USD', amount: 1599 },
+                      sign: 'negative',
+                    },
+                  },
+                  {
+                    id: 'transaction-2',
+                    accountId: 'account-2',
+                    accountName: 'Amex Gold',
+                    merchantName: 'Uber',
+                    pending: false,
+                    date: '2026-03-04',
+                    categoryPrimary: 'TRANSPORTATION',
+                    amount: {
+                      money: { currency: 'USD', amount: 4599 },
+                      sign: 'negative',
+                    },
+                  },
                 ],
-                matchedCount: 1,
+                matchedCount: 2,
                 truncated: true,
+              },
+            },
+          ],
+        },
+        {
+          toolResults: [
+            {
+              output: {
+                topCategories: [
+                  {
+                    label: 'Travel',
+                    rawLabel: 'TRAVEL',
+                    amount: 60,
+                    currency: 'USD',
+                    kind: 'category',
+                  },
+                  {
+                    label: 'Travel',
+                    rawLabel: 'TRAVEL',
+                    amount: 60,
+                    currency: 'USD',
+                    kind: 'category',
+                  },
+                  {
+                    label: 'Food & Drink',
+                    rawLabel: 'FOOD_AND_DRINK',
+                    amount: 45,
+                    currency: 'USD',
+                    kind: 'category',
+                  },
+                ],
+                semanticMetadata: {
+                  pendingIncluded: false,
+                  reconciliationApplied: true,
+                  comparisonIncluded: false,
+                },
+                matchedCount: 1,
+                truncated: false,
               },
             },
           ],
@@ -347,34 +504,51 @@ describe('AskService', () => {
 
     const metadata = capturedMessageMetadata?.({ part: { type: 'finish' } });
 
-    expect(metadata).toEqual({
-      ask: expect.objectContaining({
-        evidence: expect.objectContaining({
-          matchedCount: 1,
+    expect(metadata).toMatchObject({
+      ask: {
+        queryScope: {
           truncated: true,
-          balanceHistory: expect.objectContaining({
-            matchedCount: 1,
-            truncated: false,
-            currentTotal: expect.objectContaining({
-              money: expect.objectContaining({
-                currency: 'USD',
-                amount: 95_000,
-              }),
-            }),
-            pointCount: 2,
-            semanticMetadata: expect.objectContaining({
-              pendingIncluded: true,
-              reconciliationApplied: true,
-            }),
-          }),
+        },
+        evidence: {
+          matchedCount: 2,
+          truncated: true,
+          accounts: [{ id: 'account-1' }, { id: 'account-2' }],
           transactions: [
-            expect.objectContaining({
+            {
               id: 'transaction-1',
               merchantName: 'Netflix',
-            }),
+            },
+            {
+              id: 'transaction-2',
+              merchantName: 'Uber',
+            },
           ],
-        }),
-      }),
+          aggregates: [
+            {
+              label: 'Travel',
+            },
+            {
+              label: 'Food & Drink',
+            },
+          ],
+          balanceHistory: {
+            matchedCount: 2,
+            truncated: false,
+            currentTotal: {
+              money: {
+                currency: 'USD',
+                amount: 95_000,
+              },
+            },
+            pointCount: 2,
+            semanticMetadata: {
+              pendingIncluded: false,
+              reconciliationApplied: true,
+              comparisonIncluded: false,
+            },
+          },
+        },
+      },
     });
   });
 
