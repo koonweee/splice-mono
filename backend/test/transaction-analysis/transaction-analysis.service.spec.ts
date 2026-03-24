@@ -32,6 +32,7 @@ function buildTransaction(params: {
   date: string;
   pending?: boolean;
   primary?: string | null;
+  detailed?: string | null;
 }): TransactionEntity {
   const entity = TransactionEntity.fromDto(
     {
@@ -54,7 +55,7 @@ function buildTransaction(params: {
     ? ({
         id: `cat-${params.primary}`,
         primary: params.primary,
-        detailed: `${params.primary}_DETAIL`,
+        detailed: params.detailed ?? `${params.primary}_DETAIL`,
       } as CategoryEntity)
     : null;
 
@@ -67,7 +68,6 @@ describe('TransactionAnalysisService', () => {
     find: jest.Mock;
     createQueryBuilder: jest.Mock;
   };
-  let mockCategoryRepository: Record<string, jest.Mock>;
   let mockCurrencyConversionService: {
     getPreferredCurrency: jest.Mock;
     getRateMap: jest.Mock;
@@ -83,7 +83,6 @@ describe('TransactionAnalysisService', () => {
         );
       }),
     };
-    mockCategoryRepository = {};
     mockCurrencyConversionService = {
       getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
       getRateMap: jest.fn().mockResolvedValue(new Map([['EUR', 1.1]])),
@@ -96,10 +95,6 @@ describe('TransactionAnalysisService', () => {
         {
           provide: getRepositoryToken(TransactionEntity),
           useValue: mockTransactionRepository,
-        },
-        {
-          provide: getRepositoryToken(CategoryEntity),
-          useValue: mockCategoryRepository,
         },
         {
           provide: CurrencyConversionService,
@@ -417,6 +412,61 @@ describe('TransactionAnalysisService', () => {
         totalOutflow: 0,
         inflows: [],
         outflows: [],
+      });
+    });
+
+    it('keeps unmatched posted transactions in formerly excluded categories', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'unmatched-transfer-in',
+          amount: 25000,
+          sign: MoneySign.POSITIVE,
+          date: '2024-01-06',
+          primary: 'TRANSFER_IN',
+          detailed: 'TRANSFER_IN_ACCOUNT_TRANSFER',
+        }),
+        buildTransaction({
+          id: 'unmatched-transfer-out',
+          amount: 150000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-07',
+          primary: 'TRANSFER_OUT',
+          detailed: 'TRANSFER_OUT_ACCOUNT_TRANSFER',
+        }),
+        buildTransaction({
+          id: 'unmatched-loan-payment',
+          amount: 45000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-08',
+          primary: 'LOAN_PAYMENTS',
+          detailed: 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 25000,
+        totalOutflow: 195000,
+        inflows: [
+          expect.objectContaining({
+            primaryCategory: 'TRANSFER_IN',
+            totalAmount: 25000,
+            transactionCount: 1,
+          }),
+        ],
+        outflows: expect.arrayContaining([
+          expect.objectContaining({
+            primaryCategory: 'TRANSFER_OUT',
+            totalAmount: 150000,
+            transactionCount: 1,
+          }),
+          expect.objectContaining({
+            primaryCategory: 'LOAN_PAYMENTS',
+            totalAmount: 45000,
+            transactionCount: 1,
+          }),
+        ]),
       });
     });
 
