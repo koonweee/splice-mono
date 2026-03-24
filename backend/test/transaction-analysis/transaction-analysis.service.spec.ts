@@ -8,18 +8,6 @@ import { MoneySign, getDecimalPlaces } from '../../src/types/MoneyWithSign';
 
 const mockUserId = 'user-uuid-123';
 
-// Helper to create mock query builder
-const createMockQueryBuilder = (results: unknown[] = []) => ({
-  select: jest.fn().mockReturnThis(),
-  addSelect: jest.fn().mockReturnThis(),
-  leftJoin: jest.fn().mockReturnThis(),
-  where: jest.fn().mockReturnThis(),
-  andWhere: jest.fn().mockReturnThis(),
-  groupBy: jest.fn().mockReturnThis(),
-  addGroupBy: jest.fn().mockReturnThis(),
-  getRawMany: jest.fn().mockResolvedValue(results),
-});
-
 /**
  * Real conversion logic (mirrors CurrencyConversionService.convertAmount)
  * so mock behaves identically to production code.
@@ -36,12 +24,50 @@ function realConvertAmount(
   return Math.round(majorUnits * rate * Math.pow(10, targetDecimals));
 }
 
+function buildTransaction(params: {
+  id: string;
+  amount: number;
+  sign: MoneySign;
+  currency?: string;
+  date: string;
+  pending?: boolean;
+  primary?: string | null;
+  detailed?: string | null;
+}): TransactionEntity {
+  const entity = TransactionEntity.fromDto(
+    {
+      amount: {
+        money: {
+          amount: params.amount,
+          currency: params.currency ?? 'USD',
+        },
+        sign: params.sign,
+      },
+      accountId: 'account-1',
+      pending: params.pending ?? false,
+      date: params.date,
+    },
+    mockUserId,
+  );
+
+  entity.id = params.id;
+  entity.category = params.primary
+    ? ({
+        id: `cat-${params.primary}`,
+        primary: params.primary,
+        detailed: params.detailed ?? `${params.primary}_DETAIL`,
+      } as CategoryEntity)
+    : null;
+
+  return entity;
+}
+
 describe('TransactionAnalysisService', () => {
   let service: TransactionAnalysisService;
   let mockTransactionRepository: {
+    find: jest.Mock;
     createQueryBuilder: jest.Mock;
   };
-  let mockCategoryRepository: Record<string, jest.Mock>;
   let mockCurrencyConversionService: {
     getPreferredCurrency: jest.Mock;
     getRateMap: jest.Mock;
@@ -50,12 +76,16 @@ describe('TransactionAnalysisService', () => {
 
   beforeEach(async () => {
     mockTransactionRepository = {
-      createQueryBuilder: jest.fn(),
+      find: jest.fn(),
+      createQueryBuilder: jest.fn(() => {
+        throw new Error(
+          'TransactionAnalysisService must load raw posted transactions instead of using the SQL aggregate path',
+        );
+      }),
     };
-    mockCategoryRepository = {};
     mockCurrencyConversionService = {
       getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
-      getRateMap: jest.fn().mockResolvedValue(new Map()),
+      getRateMap: jest.fn().mockResolvedValue(new Map([['EUR', 1.1]])),
       convertAmount: jest.fn().mockImplementation(realConvertAmount),
     };
 
@@ -65,10 +95,6 @@ describe('TransactionAnalysisService', () => {
         {
           provide: getRepositoryToken(TransactionEntity),
           useValue: mockTransactionRepository,
-        },
-        {
-          provide: getRepositoryToken(CategoryEntity),
-          useValue: mockCategoryRepository,
         },
         {
           provide: CurrencyConversionService,
@@ -87,48 +113,168 @@ describe('TransactionAnalysisService', () => {
   });
 
   describe('getAnalysis', () => {
-    it('should return empty analysis when no transactions exist', async () => {
-      mockTransactionRepository.createQueryBuilder.mockReturnValue(
-        createMockQueryBuilder([]),
-      );
+    it('excludes pending transactions from analysis entirely', async () => {
+      mockTransactionRepository.find.mockResolvedValue([]);
 
-      const result = await service.getAnalysis(
-        '2024-01-01',
-        '2024-01-31',
-        mockUserId,
-      );
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 0,
+        inflows: [],
+        outflows: [],
+      });
 
-      expect(result.startDate).toBe('2024-01-01');
-      expect(result.endDate).toBe('2024-01-31');
-      expect(result.currency).toBe('USD');
-      expect(result.inflows).toEqual([]);
-      expect(result.outflows).toEqual([]);
-      expect(result.totalInflow).toBe(0);
-      expect(result.totalOutflow).toBe(0);
-      expect(result.netFlow).toBe(0);
-      expect(result.uncategorizedInflow).toBe(0);
-      expect(result.uncategorizedOutflow).toBe(0);
+      expect(mockTransactionRepository.find).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          userId: mockUserId,
+          pending: false,
+          date: expect.anything(),
+        }),
+        relations: ['category'],
+      });
     });
 
-    it('should classify positive sign as inflow and negative as outflow', async () => {
-      mockTransactionRepository.createQueryBuilder.mockReturnValue(
-        createMockQueryBuilder([
-          {
-            primary: 'INCOME',
-            amountSign: MoneySign.POSITIVE,
-            amountCurrency: 'USD',
-            totalAmount: '500000',
-            count: '5',
-          },
-          {
-            primary: 'FOOD_AND_DRINK',
-            amountSign: MoneySign.NEGATIVE,
-            amountCurrency: 'USD',
-            totalAmount: '15000',
-            count: '10',
-          },
+    it('cancels exact equal and opposite posted transactions in the same currency', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'expense',
+          amount: 243360,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-28',
+          primary: 'LOAN_PAYMENTS',
+        }),
+        buildTransaction({
+          id: 'mirror-income',
+          amount: 243360,
+          sign: MoneySign.POSITIVE,
+          date: '2024-01-28',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 0,
+        inflows: [],
+        outflows: [],
+      });
+    });
+
+    it('matches each negative to the nearest positive after deterministic negative ordering', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'neg-near',
+          amount: 6000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-15',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'neg-far',
+          amount: 6000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-01',
+          primary: 'RENT_AND_UTILITIES',
+        }),
+        buildTransaction({
+          id: 'pos',
+          amount: 6000,
+          sign: MoneySign.POSITIVE,
+          date: '2024-01-14',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalOutflow: 6000,
+        outflows: [
+          expect.objectContaining({
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 6000,
+            transactionCount: 1,
+          }),
+        ],
+      });
+    });
+
+    it('sorts negative candidates by date then id before matching', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'neg-late',
+          amount: 6000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-15',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'neg-early-b',
+          amount: 6000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-10',
+          primary: 'GENERAL_SERVICES',
+        }),
+        buildTransaction({
+          id: 'neg-early-a',
+          amount: 6000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-10',
+          primary: 'RENT_AND_UTILITIES',
+        }),
+        buildTransaction({
+          id: 'pos-early',
+          amount: 6000,
+          sign: MoneySign.POSITIVE,
+          date: '2024-01-10',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalOutflow: 12000,
+        outflows: expect.arrayContaining([
+          expect.objectContaining({
+            primaryCategory: 'GENERAL_SERVICES',
+            totalAmount: 6000,
+            transactionCount: 1,
+          }),
+          expect.objectContaining({
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 6000,
+            transactionCount: 1,
+          }),
         ]),
-      );
+      });
+    });
+
+    it('does not cancel across different currencies', async () => {
+      const usdExpense = buildTransaction({
+        id: 'usd-expense',
+        amount: 10000,
+        sign: MoneySign.NEGATIVE,
+        currency: 'USD',
+        date: '2024-01-10',
+        primary: 'GENERAL_SERVICES',
+      });
+      const eurIncome = buildTransaction({
+        id: 'eur-income',
+        amount: 10000,
+        sign: MoneySign.POSITIVE,
+        currency: 'EUR',
+        date: '2024-01-10',
+        primary: 'INCOME',
+      });
+
+      mockTransactionRepository.find.mockResolvedValue([
+        usdExpense,
+        eurIncome,
+      ]);
 
       const result = await service.getAnalysis(
         '2024-01-01',
@@ -136,278 +282,244 @@ describe('TransactionAnalysisService', () => {
         mockUserId,
       );
 
-      expect(result.inflows).toHaveLength(1);
-      expect(result.inflows[0].primaryCategory).toBe('INCOME');
-      expect(result.inflows[0].totalAmount).toBe(500000);
-      expect(result.inflows[0].transactionCount).toBe(5);
-
-      expect(result.outflows).toHaveLength(1);
-      expect(result.outflows[0].primaryCategory).toBe('FOOD_AND_DRINK');
-      expect(result.outflows[0].totalAmount).toBe(15000);
-      expect(result.outflows[0].transactionCount).toBe(10);
-    });
-
-    it('should handle uncategorized transactions', async () => {
-      mockTransactionRepository.createQueryBuilder.mockReturnValue(
-        createMockQueryBuilder([
-          {
-            primary: null,
-            amountSign: MoneySign.POSITIVE,
-            amountCurrency: 'USD',
-            totalAmount: '100000',
-            count: '2',
-          },
-          {
-            primary: null,
-            amountSign: MoneySign.NEGATIVE,
-            amountCurrency: 'USD',
-            totalAmount: '50000',
-            count: '3',
-          },
-        ]),
-      );
-
-      const result = await service.getAnalysis(
-        '2024-01-01',
-        '2024-01-31',
-        mockUserId,
-      );
-
-      expect(result.uncategorizedInflow).toBe(100000);
-      expect(result.uncategorizedOutflow).toBe(50000);
-
-      // Uncategorized should appear in the category lists too
-      const uncatInflow = result.inflows.find(
-        (i) => i.primaryCategory === 'UNCATEGORIZED',
-      );
-      expect(uncatInflow).toBeDefined();
-      expect(uncatInflow!.totalAmount).toBe(100000);
-
-      const uncatOutflow = result.outflows.find(
-        (o) => o.primaryCategory === 'UNCATEGORIZED',
-      );
-      expect(uncatOutflow).toBeDefined();
-      expect(uncatOutflow!.totalAmount).toBe(50000);
-    });
-
-    it('should compute correct net flow', async () => {
-      mockTransactionRepository.createQueryBuilder.mockReturnValue(
-        createMockQueryBuilder([
-          {
-            primary: 'INCOME',
-            amountSign: MoneySign.POSITIVE,
-            amountCurrency: 'USD',
-            totalAmount: '300000',
-            count: '3',
-          },
-          {
-            primary: 'RENT_AND_UTILITIES',
-            amountSign: MoneySign.NEGATIVE,
-            amountCurrency: 'USD',
-            totalAmount: '150000',
-            count: '1',
-          },
-          {
-            primary: 'FOOD_AND_DRINK',
-            amountSign: MoneySign.NEGATIVE,
-            amountCurrency: 'USD',
-            totalAmount: '50000',
-            count: '5',
-          },
-        ]),
-      );
-
-      const result = await service.getAnalysis(
-        '2024-01-01',
-        '2024-01-31',
-        mockUserId,
-      );
-
-      expect(result.totalInflow).toBe(300000);
-      expect(result.totalOutflow).toBe(200000);
-      expect(result.netFlow).toBe(100000);
-    });
-
-    it('should sort categories by totalAmount descending', async () => {
-      mockTransactionRepository.createQueryBuilder.mockReturnValue(
-        createMockQueryBuilder([
-          {
-            primary: 'FOOD_AND_DRINK',
-            amountSign: MoneySign.NEGATIVE,
-            amountCurrency: 'USD',
-            totalAmount: '10000',
-            count: '5',
-          },
-          {
-            primary: 'RENT_AND_UTILITIES',
-            amountSign: MoneySign.NEGATIVE,
-            amountCurrency: 'USD',
-            totalAmount: '200000',
-            count: '1',
-          },
-          {
-            primary: 'TRANSPORTATION',
-            amountSign: MoneySign.NEGATIVE,
-            amountCurrency: 'USD',
-            totalAmount: '50000',
-            count: '3',
-          },
-        ]),
-      );
-
-      const result = await service.getAnalysis(
-        '2024-01-01',
-        '2024-01-31',
-        mockUserId,
-      );
-
-      expect(result.outflows[0].primaryCategory).toBe('RENT_AND_UTILITIES');
-      expect(result.outflows[1].primaryCategory).toBe('TRANSPORTATION');
-      expect(result.outflows[2].primaryCategory).toBe('FOOD_AND_DRINK');
-    });
-
-    it('should convert foreign currency amounts to preferred currency', async () => {
-      mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue(
-        'USD',
-      );
-
-      mockTransactionRepository.createQueryBuilder.mockReturnValue(
-        createMockQueryBuilder([
-          {
-            primary: 'INCOME',
-            amountSign: MoneySign.POSITIVE,
-            amountCurrency: 'EUR',
-            totalAmount: '100000', // 1000.00 EUR in cents
-            count: '1',
-          },
-        ]),
-      );
-
-      // EUR -> USD rate: 1.10
-      mockCurrencyConversionService.getRateMap.mockResolvedValue(
-        new Map([['EUR', 1.1]]),
-      );
-
-      const result = await service.getAnalysis(
-        '2024-01-01',
-        '2024-01-31',
-        mockUserId,
-      );
-
-      expect(result.currency).toBe('USD');
-      // 1000.00 EUR * 1.10 = 1100.00 USD = 110000 cents
-      expect(result.inflows[0].totalAmount).toBe(110000);
-      expect(result.inflows[0].currency).toBe('USD');
-    });
-
-    it('should aggregate same category from multiple currencies', async () => {
-      mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue(
-        'USD',
-      );
-
-      mockTransactionRepository.createQueryBuilder.mockReturnValue(
-        createMockQueryBuilder([
-          {
-            primary: 'INCOME',
-            amountSign: MoneySign.POSITIVE,
-            amountCurrency: 'USD',
-            totalAmount: '200000', // $2000.00
-            count: '2',
-          },
-          {
-            primary: 'INCOME',
-            amountSign: MoneySign.POSITIVE,
-            amountCurrency: 'EUR',
-            totalAmount: '100000', // 1000.00 EUR
-            count: '1',
-          },
-        ]),
-      );
-
-      mockCurrencyConversionService.getRateMap.mockResolvedValue(
-        new Map([['EUR', 1.1]]),
-      );
-
-      const result = await service.getAnalysis(
-        '2024-01-01',
-        '2024-01-31',
-        mockUserId,
-      );
-
-      expect(result.inflows).toHaveLength(1);
-      expect(result.inflows[0].primaryCategory).toBe('INCOME');
-      // $2000 + (1000 EUR * 1.1) = $2000 + $1100 = $3100 = 310000 cents
-      expect(result.inflows[0].totalAmount).toBe(310000);
-      expect(result.inflows[0].transactionCount).toBe(3);
-    });
-
-    it('should use user preferred currency from settings', async () => {
-      mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue(
-        'GBP',
-      );
-
-      mockTransactionRepository.createQueryBuilder.mockReturnValue(
-        createMockQueryBuilder([
-          {
-            primary: 'INCOME',
-            amountSign: MoneySign.POSITIVE,
-            amountCurrency: 'GBP',
-            totalAmount: '100000',
-            count: '1',
-          },
-        ]),
-      );
-
-      const result = await service.getAnalysis(
-        '2024-01-01',
-        '2024-01-31',
-        mockUserId,
-      );
-
-      expect(result.currency).toBe('GBP');
-      // No conversion needed since currency matches preference - getRateMap called with empty array
-      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
-        [],
-        'GBP',
-        '2024-01-31',
-      );
-    });
-
-    it('should default to USD when user has no currency preference', async () => {
-      mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue(
-        'USD',
-      );
-
-      mockTransactionRepository.createQueryBuilder.mockReturnValue(
-        createMockQueryBuilder([]),
-      );
-
-      const result = await service.getAnalysis(
-        '2024-01-01',
-        '2024-01-31',
-        mockUserId,
-      );
-
-      expect(result.currency).toBe('USD');
-    });
-
-    it('should query with correct exclusion parameters for credit card payments', async () => {
-      const mockQueryBuilder = createMockQueryBuilder([]);
-      mockTransactionRepository.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder,
-      );
-
-      await service.getAnalysis('2024-01-01', '2024-01-31', mockUserId);
-
-      // Verify the query builder was called with the correct parameters
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        expect.stringContaining('c.detailed NOT IN'),
+      expect(result.totalInflow).toBe(11000);
+      expect(result.totalOutflow).toBe(10000);
+      expect(result.netFlow).toBe(1000);
+      expect(result.inflows).toEqual([
         expect.objectContaining({
-          excludedDetailed: expect.arrayContaining([
-            'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT',
-          ]),
+          primaryCategory: 'INCOME',
+          totalAmount: 11000,
+          currency: 'USD',
+          transactionCount: 1,
+        }),
+      ]);
+      expect(result.outflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'GENERAL_SERVICES',
+          totalAmount: 10000,
+          currency: 'USD',
+          transactionCount: 1,
+        }),
+      ]);
+
+      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
+        ['EUR'],
+        'USD',
+        '2024-01-31',
+      );
+    });
+
+    it('does not cancel transactions that fall in different analysis windows', async () => {
+      const februaryExpense = buildTransaction({
+        id: 'feb-expense',
+        amount: 9000,
+        sign: MoneySign.NEGATIVE,
+        date: '2024-02-29',
+        primary: 'GENERAL_SERVICES',
+      });
+      const marchIncome = buildTransaction({
+        id: 'march-income',
+        amount: 9000,
+        sign: MoneySign.POSITIVE,
+        date: '2024-03-01',
+        primary: 'INCOME',
+      });
+
+      mockTransactionRepository.find
+        .mockResolvedValueOnce([februaryExpense])
+        .mockResolvedValueOnce([marchIncome]);
+
+      const februaryResult = await service.getAnalysis(
+        '2024-02-01',
+        '2024-02-29',
+        mockUserId,
+      );
+      const marchResult = await service.getAnalysis(
+        '2024-03-01',
+        '2024-03-31',
+        mockUserId,
+      );
+
+      expect(februaryResult.totalOutflow).toBe(9000);
+      expect(februaryResult.totalInflow).toBe(0);
+      expect(februaryResult.outflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'GENERAL_SERVICES',
+          totalAmount: 9000,
+          currency: 'USD',
+          transactionCount: 1,
+        }),
+      ]);
+      expect(februaryResult.inflows).toEqual([]);
+
+      expect(marchResult.totalInflow).toBe(9000);
+      expect(marchResult.totalOutflow).toBe(0);
+      expect(marchResult.inflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'INCOME',
+          totalAmount: 9000,
+          currency: 'USD',
+          transactionCount: 1,
+        }),
+      ]);
+      expect(marchResult.outflows).toEqual([]);
+
+      expect(mockTransactionRepository.find).toHaveBeenCalledTimes(2);
+      expect(mockTransactionRepository.find).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            pending: false,
+          }),
+          relations: ['category'],
         }),
       );
+      expect(mockTransactionRepository.find).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            pending: false,
+          }),
+          relations: ['category'],
+        }),
+      );
+    });
+
+    it('neutralizes a production-shaped mirrored pair even when categories disagree', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'bilt-negative',
+          amount: 243360,
+          sign: MoneySign.NEGATIVE,
+          date: '2026-02-28',
+          primary: 'LOAN_PAYMENTS',
+        }),
+        buildTransaction({
+          id: 'bilt-positive',
+          amount: 243360,
+          sign: MoneySign.POSITIVE,
+          date: '2026-02-28',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2026-02-01', '2026-02-28', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 0,
+        inflows: [],
+        outflows: [],
+      });
+    });
+
+    it('keeps unmatched posted transactions in formerly excluded categories', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'unmatched-transfer-in',
+          amount: 25000,
+          sign: MoneySign.POSITIVE,
+          date: '2024-01-06',
+          primary: 'TRANSFER_IN',
+          detailed: 'TRANSFER_IN_ACCOUNT_TRANSFER',
+        }),
+        buildTransaction({
+          id: 'unmatched-transfer-out',
+          amount: 150000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-07',
+          primary: 'TRANSFER_OUT',
+          detailed: 'TRANSFER_OUT_ACCOUNT_TRANSFER',
+        }),
+        buildTransaction({
+          id: 'unmatched-loan-payment',
+          amount: 45000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-08',
+          primary: 'LOAN_PAYMENTS',
+          detailed: 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 25000,
+        totalOutflow: 195000,
+        inflows: [
+          expect.objectContaining({
+            primaryCategory: 'TRANSFER_IN',
+            totalAmount: 25000,
+            transactionCount: 1,
+          }),
+        ],
+        outflows: expect.arrayContaining([
+          expect.objectContaining({
+            primaryCategory: 'TRANSFER_OUT',
+            totalAmount: 150000,
+            transactionCount: 1,
+          }),
+          expect.objectContaining({
+            primaryCategory: 'LOAN_PAYMENTS',
+            totalAmount: 45000,
+            transactionCount: 1,
+          }),
+        ]),
+      });
+    });
+
+    it('still aggregates unmatched posted transactions into their categories', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'paycheck',
+          amount: 300000,
+          sign: MoneySign.POSITIVE,
+          date: '2024-01-05',
+          primary: 'INCOME',
+        }),
+        buildTransaction({
+          id: 'rent',
+          amount: 150000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-07',
+          primary: 'RENT_AND_UTILITIES',
+        }),
+        buildTransaction({
+          id: 'groceries',
+          amount: 50000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-08',
+          primary: 'FOOD_AND_DRINK',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 300000,
+        totalOutflow: 200000,
+        inflows: [
+          expect.objectContaining({
+            primaryCategory: 'INCOME',
+            totalAmount: 300000,
+            transactionCount: 1,
+          }),
+        ],
+        outflows: [
+          expect.objectContaining({
+            primaryCategory: 'RENT_AND_UTILITIES',
+            totalAmount: 150000,
+            transactionCount: 1,
+          }),
+          expect.objectContaining({
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 50000,
+            transactionCount: 1,
+          }),
+        ],
+      });
     });
   });
 });
