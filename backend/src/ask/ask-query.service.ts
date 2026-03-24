@@ -5,12 +5,43 @@ import { TransactionService } from '../transaction/transaction.service';
 import type {
   AskAccountsSnapshotResult,
   AskComparePeriodsOptions,
-  AskComparePeriodsResult,
-  AskTransactionSummaryResult,
   AskTransactionSearchOptions,
   AskTransactionSearchResult,
   AskTransactionSummaryOptions,
+  AskEvidenceAggregate,
 } from './ask.types';
+
+interface LegacyAskRecurringTransaction {
+  merchantName: string;
+  cadence: 'monthly' | 'weekly' | 'unknown';
+  amount: number;
+  currency: string;
+}
+
+interface LegacyAskTransactionSummaryResult {
+  totalInflow: number;
+  totalOutflow: number;
+  net: number;
+  transactionCount: number;
+  topCategories: AskEvidenceAggregate[];
+  topMerchants: AskEvidenceAggregate[];
+  topAccounts: AskEvidenceAggregate[];
+  recurringTransactions: LegacyAskRecurringTransaction[];
+  matchedCount: number;
+  truncated: boolean;
+}
+
+interface LegacyAskComparePeriodsResult {
+  currentTotalOutflow: number;
+  previousTotalOutflow: number;
+  absoluteDelta: number;
+  percentDelta: number;
+  categoryDrivers: AskEvidenceAggregate[];
+  merchantDrivers: AskEvidenceAggregate[];
+  accountDrivers: AskEvidenceAggregate[];
+  matchedCount: number;
+  truncated: boolean;
+}
 
 @Injectable()
 export class AskQueryService {
@@ -38,9 +69,9 @@ export class AskQueryService {
   }
 
   private ensureRecurringTransactionCurrencies(
-    summary: AskTransactionSummaryResult,
+    summary: LegacyAskTransactionSummaryResult,
     preferredCurrency: string,
-  ): AskTransactionSummaryResult {
+  ): LegacyAskTransactionSummaryResult {
     const aggregateCurrency =
       summary.topCategories[0]?.currency ??
       summary.topMerchants[0]?.currency ??
@@ -87,7 +118,7 @@ export class AskQueryService {
   async summarizeTransactions(
     userId: string,
     options: AskTransactionSummaryOptions,
-  ): Promise<AskTransactionSummaryResult> {
+  ): Promise<LegacyAskTransactionSummaryResult> {
     const preferredCurrency =
       await this.currencyConversionService.getPreferredCurrency(userId);
     const summary = await this.transactionService.summarizeForAsk(
@@ -103,7 +134,7 @@ export class AskQueryService {
   async comparePeriods(
     userId: string,
     options: AskComparePeriodsOptions,
-  ): Promise<AskComparePeriodsResult> {
+  ): Promise<LegacyAskComparePeriodsResult> {
     void this.currencyConversionService.getPreferredCurrency(userId);
     return this.transactionService.compareForAsk(userId, options);
   }
