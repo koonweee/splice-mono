@@ -12,7 +12,7 @@ The endpoint should stop counting mirrored internal movements, card payment pair
 
 ### Provider Categories Leak Into Product Semantics
 
-The current analysis service excludes:
+The current analysis service currently excludes:
 - `TRANSFER_IN`
 - `TRANSFER_OUT`
 - `LOAN_PAYMENTS_CREDIT_CARD_PAYMENT`
@@ -113,16 +113,13 @@ Why:
 - provider categories are unreliable for determining whether a transaction should count toward analysis
 - matched pairs should disappear before they can affect category totals or uncategorized totals
 
-After cancellation, category-based exclusions should still apply for transactions that remain structurally identifiable as non-analysis movement:
-- `TRANSFER_IN`
-- `TRANSFER_OUT`
-- `LOAN_PAYMENTS_CREDIT_CARD_PAYMENT`
+After cancellation, no category-based exclusions should apply.
 
 This means:
-- cancellation removes equal-and-opposite noise first
-- any unmatched transaction still categorized as a transfer or credit-card payment is excluded from both inflows and outflows
+- cancellation is the only neutralization rule
+- if a posted in-range transaction does not find an exact opposite-side match, it remains in analysis regardless of category
 
-The exclusion list is therefore not removed in this design. Cancellation complements it; it does not replace it.
+The existing exclusion list is removed in this design. Structural pairing replaces provider-category exclusion for `/transaction-analysis`.
 
 ## Data Flow
 
@@ -131,7 +128,7 @@ The exclusion list is therefore not removed in this design. Cancellation complem
 3. Partition transactions by `currency` and `absoluteAmount`.
 4. Inside each partition, pair positive and negative transactions one-to-one by nearest date first.
 5. Mark matched transactions as neutralized for the current request.
-6. Aggregate only unmatched transactions into category inflow/outflow totals.
+6. Aggregate only unmatched transactions into category inflow/outflow totals, without additional category-based filtering.
 7. Convert unmatched aggregate totals into the user's preferred currency using existing conversion behavior.
 8. Return the normal `TransactionAnalysisResponse`.
 
@@ -191,12 +188,12 @@ Pairing requires loading and processing in-range posted transactions before aggr
 
 ### Category Exclusion Interaction
 
-This design intentionally keeps the current transfer and credit-card-payment exclusions after the cancellation pass. That avoids leaking unmatched internal-movement rows into inflows or outflows when no in-range opposite-side pair exists.
+This design intentionally removes the current transfer and credit-card-payment exclusions. If a row does not match an equal and opposite posted in-range counterpart, it remains part of analysis even if the provider labeled it as a transfer or credit-card payment.
 
 ## Recommended Implementation Order
 
 1. Update `TransactionAnalysisService` to exclude pending transactions from analysis.
 2. Introduce an internal cancellation helper that neutralizes posted same-currency equal-and-opposite pairs by nearest date first.
-3. Refactor aggregation to operate on unmatched transactions after cancellation.
+3. Refactor aggregation to operate on unmatched transactions after cancellation, with no category-based exclusions.
 4. Add focused service tests for pairing, one-to-one consumption, and pending exclusion.
 5. Verify against the February 2026 production-shaped scenario.
