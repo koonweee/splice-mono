@@ -61,10 +61,10 @@ describe('AccountsSurfaceService', () => {
       createMockAccount(),
       createMockAccount({
         id: 'account-2',
-        name: 'Rewards Card',
+        name: 'Retirement',
         customName: null,
-        type: 'credit',
-        subType: 'credit card',
+        type: 'investment',
+        subType: '401k',
         bankLink: null,
         currentBalance: {
           money: { amount: 54321, currency: 'USD' },
@@ -73,10 +73,10 @@ describe('AccountsSurfaceService', () => {
       }),
       createMockAccount({
         id: 'account-3',
-        name: 'Brokerage',
+        name: 'Rewards Card',
         customName: null,
-        type: 'brokerage',
-        subType: null,
+        type: 'credit',
+        subType: 'credit card',
         bankLink: null,
         currentBalance: {
           money: { amount: 76543, currency: 'USD' },
@@ -95,12 +95,24 @@ describe('AccountsSurfaceService', () => {
           sign: MoneySign.POSITIVE,
         },
       }),
+      createMockAccount({
+        id: 'account-5',
+        name: 'Mystery Account',
+        customName: null,
+        type: 'another_cool_type',
+        subType: 'paypal',
+        bankLink: null,
+        currentBalance: {
+          money: { amount: 1000, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        },
+      }),
     ])
 
     const result = await service.getAccountsSnapshot(mockUserId)
 
     expect(mockAccountService.findAll).toHaveBeenCalledWith(mockUserId)
-    expect(result.matchedCount).toBe(4)
+    expect(result.matchedCount).toBe(5)
     expect(result.truncated).toBe(false)
     expect(result.accounts[0]).toMatchObject({
       id: 'account-1',
@@ -116,21 +128,36 @@ describe('AccountsSurfaceService', () => {
     })
     expect(result.accounts[1]).toMatchObject({
       id: 'account-2',
-      displayName: 'Rewards Card',
-      grouping: 'credit',
-      groupingLabel: 'Credit',
+      type: 'investment',
+      typeLabel: 'Investment',
+      subType: '401k',
+      subTypeLabel: '401(k)',
+      grouping: 'investment',
+      groupingLabel: 'Investment',
     })
     expect(result.accounts[2]).toMatchObject({
       id: 'account-3',
-      displayName: 'Brokerage',
-      grouping: 'investment',
-      groupingLabel: 'Investment',
+      type: 'credit',
+      typeLabel: 'Credit',
+      subType: 'credit card',
+      subTypeLabel: 'Credit Card',
+      grouping: 'liability',
+      groupingLabel: 'Liability',
     })
     expect(result.accounts[3]).toMatchObject({
       id: 'account-4',
       displayName: 'Mortgage',
       grouping: 'liability',
       groupingLabel: 'Liability',
+    })
+    expect(result.accounts[4]).toMatchObject({
+      id: 'account-5',
+      type: 'another_cool_type',
+      typeLabel: 'Another cool type',
+      subType: 'paypal',
+      subTypeLabel: 'PayPal',
+      grouping: 'cash',
+      groupingLabel: 'Cash',
     })
   })
 })
