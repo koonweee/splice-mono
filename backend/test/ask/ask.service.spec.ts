@@ -45,6 +45,8 @@ describe('AskService', () => {
     searchTransactions: jest.fn(),
     summarizeTransactions: jest.fn(),
     comparePeriods: jest.fn(),
+    getBalanceHistory: jest.fn(),
+    getCashflowAnalysis: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -204,6 +206,176 @@ describe('AskService', () => {
     );
   });
 
+  it('includes net worth and why-did-this-change guidance with the new tool registry', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-03-22T12:00:00Z'));
+
+    await service.streamChat(
+      'user-1',
+      {
+        messages: [],
+      },
+      {} as never,
+    );
+
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: expect.objectContaining({
+          get_balance_history: expect.any(Object),
+          get_cashflow_analysis: expect.any(Object),
+        }),
+      }),
+    );
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining(
+          'Use get_balance_history for balance, net worth, or balance trend questions.',
+        ),
+      }),
+    );
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining(
+          'Use get_cashflow_analysis for why did this change, spending pattern, reconciliation, or change driver questions.',
+        ),
+      }),
+    );
+  });
+
+  it('merges evidence from multiple tool calls and preserves balance-history summary metadata', async () => {
+    let capturedOnFinish:
+      | ((input: { text: string; steps: Array<{ toolResults: Array<{ output: unknown }> }> }) => void)
+      | undefined;
+    let capturedMessageMetadata:
+      | ((input: { part: { type: string } }) => unknown)
+      | undefined;
+
+    mockStreamText.mockImplementationOnce((options) => {
+      capturedOnFinish = options.onFinish;
+      return {
+        toUIMessageStream: jest.fn(({ messageMetadata }) => {
+          capturedMessageMetadata = messageMetadata;
+          return 'mock-stream';
+        }),
+      };
+    });
+
+    await service.streamChat(
+      'user-1',
+      {
+        messages: [],
+      },
+      {} as never,
+    );
+
+    capturedOnFinish?.({
+      text: 'Cash flow is flat, but balances moved up last week.',
+      steps: [
+        {
+          toolResults: [
+            {
+              output: {
+                matchedCount: 1,
+                truncated: false,
+                currentTotal: {
+                  money: { currency: 'USD', amount: 95_000 },
+                  sign: 'positive',
+                },
+                previousTotal: {
+                  money: { currency: 'USD', amount: 90_000 },
+                  sign: 'positive',
+                },
+                deltaPercent: 5.56,
+                pointCount: 2,
+                semanticMetadata: {
+                  pendingIncluded: true,
+                  reconciliationApplied: true,
+                  comparisonIncluded: true,
+                },
+                series: [
+                  {
+                    date: '2026-03-01',
+                    accountId: 'account-1',
+                    accountName: 'House Checking',
+                    balance: {
+                      money: { currency: 'USD', amount: 90_000 },
+                      sign: 'positive',
+                    },
+                  },
+                  {
+                    date: '2026-03-08',
+                    accountId: 'account-1',
+                    accountName: 'House Checking',
+                    balance: {
+                      money: { currency: 'USD', amount: 95_000 },
+                      sign: 'positive',
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        {
+          toolResults: [
+            {
+              output: {
+                transactions: [
+                  {
+                    id: 'transaction-1',
+                    accountId: 'account-1',
+                    accountName: 'House Checking',
+                    merchantName: 'Netflix',
+                    pending: false,
+                    date: '2026-03-03',
+                    categoryPrimary: 'ENTERTAINMENT',
+                    amount: {
+                      money: { currency: 'USD', amount: 1599 },
+                      sign: 'negative',
+                    },
+                  },
+                ],
+                matchedCount: 1,
+                truncated: true,
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const metadata = capturedMessageMetadata?.({ part: { type: 'finish' } });
+
+    expect(metadata).toEqual({
+      ask: expect.objectContaining({
+        evidence: expect.objectContaining({
+          matchedCount: 2,
+          truncated: true,
+          balanceHistory: expect.objectContaining({
+            matchedCount: 1,
+            truncated: false,
+            currentTotal: expect.objectContaining({
+              money: expect.objectContaining({
+                currency: 'USD',
+                amount: 95_000,
+              }),
+            }),
+            pointCount: 2,
+            semanticMetadata: expect.objectContaining({
+              pendingIncluded: true,
+              reconciliationApplied: true,
+            }),
+          }),
+          transactions: [
+            expect.objectContaining({
+              id: 'transaction-1',
+              merchantName: 'Netflix',
+            }),
+          ],
+        }),
+      }),
+    });
+  });
+
   it('requires an initial tool call and allows multi-step tool completion', async () => {
     await service.streamChat(
       'user-1',
@@ -228,13 +400,9 @@ describe('AskService', () => {
       prepareStep: (input: { stepNumber: number }) => Promise<unknown>;
     };
 
-    await expect(
-      streamTextInput.prepareStep({ stepNumber: 0 }),
-    ).resolves.toMatchObject({
+    expect(streamTextInput.prepareStep({ stepNumber: 0 })).toMatchObject({
       toolChoice: 'required',
     });
-    await expect(
-      streamTextInput.prepareStep({ stepNumber: 1 }),
-    ).resolves.toEqual({});
+    expect(streamTextInput.prepareStep({ stepNumber: 1 })).toEqual({});
   });
 });

@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { MoneyWithSignSchema } from '../types/MoneyWithSign';
+import {
+  MoneyWithSignSchema,
+  type SerializedMoneyWithSign,
+} from '../types/MoneyWithSign';
 
 export const AskConfidenceSchema = z.enum(['high', 'medium', 'low']);
 
@@ -33,6 +36,29 @@ export const AskEvidenceTransactionSchema = z.object({
   convertedAmount: MoneyWithSignSchema.optional(),
 });
 
+export const AskEvidenceBalanceHistoryPointSchema = z.object({
+  date: z.string(),
+  accountId: z.string(),
+  accountName: z.string(),
+  balance: MoneyWithSignSchema,
+});
+
+export const AskSemanticMetadataSchema = z.object({
+  pendingIncluded: z.boolean().default(false),
+  reconciliationApplied: z.boolean().default(false),
+  comparisonIncluded: z.boolean().default(false),
+});
+
+export const AskEvidenceBalanceHistorySummarySchema = z.object({
+  matchedCount: z.number().int().nonnegative(),
+  truncated: z.boolean(),
+  currentTotal: MoneyWithSignSchema,
+  previousTotal: MoneyWithSignSchema.optional(),
+  deltaPercent: z.number().optional(),
+  pointCount: z.number().int().nonnegative(),
+  semanticMetadata: AskSemanticMetadataSchema,
+});
+
 export const AskEvidenceAggregateSchema = z.object({
   label: z.string(),
   amount: z.number().describe('Amount in major currency units (e.g. dollars).'),
@@ -43,6 +69,7 @@ export const AskEvidenceAggregateSchema = z.object({
 export const AskEvidenceSchema = z.object({
   accounts: z.array(AskEvidenceAccountSchema).default([]),
   transactions: z.array(AskEvidenceTransactionSchema).default([]),
+  balanceHistory: AskEvidenceBalanceHistorySummarySchema.optional(),
   aggregates: z.array(AskEvidenceAggregateSchema).default([]),
   matchedCount: z.number().int().nonnegative(),
   truncated: z.boolean(),
@@ -61,6 +88,13 @@ export type AskQueryScope = z.infer<typeof AskQueryScopeSchema>;
 export type AskEvidenceAccount = z.infer<typeof AskEvidenceAccountSchema>;
 export type AskEvidenceTransaction = z.infer<
   typeof AskEvidenceTransactionSchema
+>;
+export type AskEvidenceBalanceHistoryPoint = z.infer<
+  typeof AskEvidenceBalanceHistoryPointSchema
+>;
+export type AskSemanticMetadata = z.infer<typeof AskSemanticMetadataSchema>;
+export type AskEvidenceBalanceHistorySummary = z.infer<
+  typeof AskEvidenceBalanceHistorySummarySchema
 >;
 export type AskEvidenceAggregate = z.infer<typeof AskEvidenceAggregateSchema>;
 export type AskEvidence = z.infer<typeof AskEvidenceSchema>;
@@ -83,6 +117,36 @@ export interface AskTransactionSearchResult {
   matchedCount: number;
   truncated: boolean;
   transactions: AskEvidenceTransaction[];
+}
+
+export interface AskBalanceHistoryOptions {
+  startDate: string;
+  endDate: string;
+  accountIds?: string[];
+  interval?: 'day' | 'week' | 'month';
+  comparisonStartDate?: string;
+  comparisonEndDate?: string;
+}
+
+export interface AskBalanceHistoryResult {
+  matchedCount: number;
+  truncated: boolean;
+  currentTotal: SerializedMoneyWithSign;
+  previousTotal?: SerializedMoneyWithSign;
+  deltaPercent?: number;
+  pointCount: number;
+  semanticMetadata: AskSemanticMetadata;
+  series: AskEvidenceBalanceHistoryPoint[];
+}
+
+export interface AskCashflowAnalysisOptions {
+  startDate: string;
+  endDate: string;
+  accountIds?: string[];
+  comparisonStartDate?: string;
+  comparisonEndDate?: string;
+  includePending?: boolean;
+  recurringOnly?: boolean;
 }
 
 export interface AskTransactionSummaryOptions {
@@ -113,6 +177,16 @@ export interface AskTransactionSummaryResult {
   topMerchants: AskEvidenceAggregate[];
   topAccounts: AskEvidenceAggregate[];
   recurringTransactions: AskRecurringTransaction[];
+  matchedCount: number;
+  truncated: boolean;
+}
+
+export interface AskCashflowAnalysisResult {
+  totalInflow: number;
+  totalOutflow: number;
+  netFlow: number;
+  topCategories: AskEvidenceAggregate[];
+  semanticMetadata: AskSemanticMetadata;
   matchedCount: number;
   truncated: boolean;
 }

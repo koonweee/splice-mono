@@ -1,6 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountService } from '../../src/account/account.service';
 import { AskQueryService } from '../../src/ask/ask-query.service';
+import type {
+  AskBalanceHistoryOptions,
+  AskBalanceHistoryResult,
+  AskCashflowAnalysisOptions,
+  AskCashflowAnalysisResult,
+} from '../../src/ask/ask.types';
 import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import { MoneySign } from '../../src/types/MoneyWithSign';
@@ -271,6 +277,106 @@ describe('AskQueryService', () => {
           currency: 'USD',
         }),
       ],
+    });
+  });
+
+  it('delegates getBalanceHistory through the future balance-history surface', async () => {
+    const candidate = service as Partial<{
+      getBalanceHistory: (
+        userId: string,
+        options: AskBalanceHistoryOptions,
+      ) => Promise<AskBalanceHistoryResult>;
+    }>;
+
+    expect(candidate.getBalanceHistory).toEqual(expect.any(Function));
+    if (!candidate.getBalanceHistory) {
+      return;
+    }
+
+    const options: AskBalanceHistoryOptions = {
+      startDate: '2026-03-01',
+      endDate: '2026-03-22',
+      accountIds: ['account-1'],
+      interval: 'week',
+      comparisonStartDate: '2026-02-01',
+      comparisonEndDate: '2026-02-22',
+    };
+    const result = await candidate.getBalanceHistory('user-1', options);
+
+    expect(result).toEqual({
+      matchedCount: 18,
+      truncated: false,
+      currentTotal: {
+        money: { currency: 'USD', amount: 125_000 },
+        sign: MoneySign.POSITIVE,
+      },
+      previousTotal: {
+        money: { currency: 'USD', amount: 110_000 },
+        sign: MoneySign.POSITIVE,
+      },
+      deltaPercent: 13.64,
+      pointCount: 30,
+      semanticMetadata: {
+        pendingIncluded: true,
+        reconciliationApplied: true,
+        comparisonIncluded: true,
+      },
+      series: [
+        {
+          date: '2026-03-01',
+          accountId: 'account-1',
+          accountName: 'House Checking',
+          balance: {
+            money: { currency: 'USD', amount: 125_000 },
+            sign: MoneySign.POSITIVE,
+          },
+        },
+      ],
+    });
+  });
+
+  it('delegates getCashflowAnalysis through the future cashflow surface', async () => {
+    const candidate = service as Partial<{
+      getCashflowAnalysis: (
+        userId: string,
+        options: AskCashflowAnalysisOptions,
+      ) => Promise<AskCashflowAnalysisResult>;
+    }>;
+
+    expect(candidate.getCashflowAnalysis).toEqual(expect.any(Function));
+    if (!candidate.getCashflowAnalysis) {
+      return;
+    }
+
+    const options: AskCashflowAnalysisOptions = {
+      startDate: '2026-03-01',
+      endDate: '2026-03-22',
+      accountIds: ['account-1'],
+      comparisonStartDate: '2026-02-01',
+      comparisonEndDate: '2026-02-22',
+      includePending: true,
+    };
+    const result = await candidate.getCashflowAnalysis('user-1', options);
+
+    expect(result).toEqual({
+      totalInflow: 400,
+      totalOutflow: 250,
+      netFlow: 150,
+      topCategories: [
+        {
+          label: 'TRAVEL',
+          amount: 60,
+          currency: 'USD',
+          kind: 'category',
+        },
+      ],
+      semanticMetadata: {
+        pendingIncluded: true,
+        reconciliationApplied: true,
+        comparisonIncluded: true,
+      },
+      matchedCount: 12,
+      truncated: false,
     });
   });
 });
