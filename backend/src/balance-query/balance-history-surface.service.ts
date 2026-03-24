@@ -5,6 +5,7 @@ import {
   formatAccountLabel,
   getAccountGrouping,
   getAccountGroupingLabel,
+  type AccountGrouping,
 } from '../account/account-labels';
 import type {
   BalanceQueryPerDateResult,
@@ -33,7 +34,7 @@ export interface BalanceHistorySurfaceAccountSummary {
   typeLabel: string;
   subType: string | null;
   subTypeLabel: string | null;
-  grouping: 'cash' | 'investment' | 'liability';
+  grouping: AccountGrouping;
   groupingLabel: string;
   effectiveBalance: SerializedMoneyWithSign;
   convertedEffectiveBalance?: SerializedMoneyWithSign;

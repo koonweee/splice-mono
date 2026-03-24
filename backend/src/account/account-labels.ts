@@ -1,4 +1,4 @@
-export type AccountGrouping = 'cash' | 'investment' | 'liability'
+export type AccountGrouping = 'cash' | 'credit' | 'investment' | 'liability'
 
 type AccountLabel = string
 
@@ -99,6 +99,7 @@ export function formatAccountLabel(
 export function getAccountGrouping(type: string): AccountGrouping {
   switch (type.toLowerCase()) {
     case 'credit':
+      return 'credit'
     case 'loan':
       return 'liability'
     case 'investment':
@@ -114,6 +115,8 @@ export function getAccountGroupingLabel(grouping: AccountGrouping): string {
   switch (grouping) {
     case 'cash':
       return 'Cash'
+    case 'credit':
+      return 'Credit'
     case 'investment':
       return 'Investment'
     case 'liability':
