@@ -281,11 +281,11 @@ describe('AskQueryService', () => {
   });
 
   it('delegates getBalanceHistory through the future balance-history surface', async () => {
-    const futureBalanceHistoryService = {
-      getBalanceHistory: jest.fn(),
+    const futureBalanceHistorySurfaceService = {
+      getBalanceHistorySummary: jest.fn(),
     };
     Object.assign(service as Record<string, unknown>, {
-      balanceHistoryService: futureBalanceHistoryService,
+      balanceHistorySurfaceService: futureBalanceHistorySurfaceService,
     });
 
     const candidate = service as AskQueryService &
@@ -339,24 +339,23 @@ describe('AskQueryService', () => {
         },
       ],
     };
-    futureBalanceHistoryService.getBalanceHistory.mockResolvedValue(
+    futureBalanceHistorySurfaceService.getBalanceHistorySummary.mockResolvedValue(
       expectedResult,
     );
     const result = await candidate.getBalanceHistory('user-1', options);
 
-    expect(futureBalanceHistoryService.getBalanceHistory).toHaveBeenCalledWith(
-      'user-1',
-      options,
-    );
+    expect(
+      futureBalanceHistorySurfaceService.getBalanceHistorySummary,
+    ).toHaveBeenCalledWith('user-1', options);
     expect(result).toEqual(expectedResult);
   });
 
   it('delegates getCashflowAnalysis through the future cashflow surface', async () => {
-    const futureCashflowAnalysisService = {
+    const futureCashflowAnalysisSurfaceService = {
       getCashflowAnalysis: jest.fn(),
     };
     Object.assign(service as Record<string, unknown>, {
-      cashflowAnalysisService: futureCashflowAnalysisService,
+      cashflowAnalysisSurfaceService: futureCashflowAnalysisSurfaceService,
     });
 
     const candidate = service as AskQueryService &
@@ -387,6 +386,7 @@ describe('AskQueryService', () => {
       topCategories: [
         {
           label: 'TRAVEL',
+          rawLabel: 'TRAVEL',
           amount: 60,
           currency: 'USD',
           kind: 'category',
@@ -400,15 +400,14 @@ describe('AskQueryService', () => {
       matchedCount: 12,
       truncated: false,
     };
-    futureCashflowAnalysisService.getCashflowAnalysis.mockResolvedValue(
+    futureCashflowAnalysisSurfaceService.getCashflowAnalysis.mockResolvedValue(
       expectedResult,
     );
     const result = await candidate.getCashflowAnalysis('user-1', options);
 
-    expect(futureCashflowAnalysisService.getCashflowAnalysis).toHaveBeenCalledWith(
-      'user-1',
-      options,
-    );
+    expect(
+      futureCashflowAnalysisSurfaceService.getCashflowAnalysis,
+    ).toHaveBeenCalledWith('user-1', options);
     expect(result).toEqual(expectedResult);
   });
 });

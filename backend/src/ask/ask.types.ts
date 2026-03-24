@@ -61,6 +61,7 @@ export const AskEvidenceBalanceHistorySummarySchema = z.object({
 
 export const AskEvidenceAggregateSchema = z.object({
   label: z.string(),
+  rawLabel: z.string().optional(),
   amount: z.number().describe('Amount in major currency units (e.g. dollars).'),
   currency: z.string(),
   kind: z.enum(['category', 'merchant', 'account', 'summary']),
