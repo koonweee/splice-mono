@@ -7,7 +7,7 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AccountType } from 'plaid';
-import { Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
 import {
@@ -17,7 +17,9 @@ import {
 } from '../events/account.events';
 import { Account, CreateAccountDto, UpdateAccountDto } from '../types/Account';
 import { MoneySign, SerializedMoneyWithSign } from '../types/MoneyWithSign';
+import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import { AccountEntity } from './account.entity';
+import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 
 @Injectable()
 export class AccountService extends OwnedCrudService<
@@ -34,6 +36,8 @@ export class AccountService extends OwnedCrudService<
   constructor(
     @InjectRepository(AccountEntity)
     repository: Repository<AccountEntity>,
+    @InjectRepository(BalanceSnapshotEntity)
+    private readonly balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
     private readonly eventEmitter: EventEmitter2,
   ) {
     super(repository);
@@ -122,5 +126,58 @@ export class AccountService extends OwnedCrudService<
     if (dto.bankLinkId !== undefined) {
       entity.bankLinkId = dto.bankLinkId;
     }
+  }
+
+  async findOne(id: string, userId: string): Promise<Account | null> {
+    const account = await super.findOne(id, userId);
+    if (!account) return null;
+
+    const lastSyncTimes = await this.getLastSyncTimes([id], userId);
+    const syncedAt = lastSyncTimes.get(id);
+    return {
+      ...account,
+      ...(syncedAt ? { syncedAt } : {}),
+    };
+  }
+
+  async findAll(userId: string): Promise<Account[]> {
+    const accounts = await super.findAll(userId);
+    const lastSyncTimes = await this.getLastSyncTimes(
+      accounts.map((account) => account.id),
+      userId,
+    );
+
+    return accounts.map((account) => {
+      const syncedAt = lastSyncTimes.get(account.id);
+      return {
+        ...account,
+        ...(syncedAt ? { syncedAt } : {}),
+      };
+    });
+  }
+
+  private async getLastSyncTimes(
+    accountIds: string[],
+    userId: string,
+  ): Promise<Map<string, Date>> {
+    if (accountIds.length === 0) return new Map();
+
+    const snapshots = await this.balanceSnapshotRepository.find({
+      where: {
+        userId,
+        accountId: In(accountIds),
+        snapshotType: Not(BalanceSnapshotType.FORWARD_FILL),
+      },
+      order: { updatedAt: 'DESC' },
+    });
+
+    const lastSyncTimes = new Map<string, Date>();
+    snapshots.forEach((snapshot) => {
+      if (!lastSyncTimes.has(snapshot.accountId)) {
+        lastSyncTimes.set(snapshot.accountId, snapshot.updatedAt);
+      }
+    });
+
+    return lastSyncTimes;
   }
 }

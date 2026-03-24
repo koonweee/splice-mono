@@ -60,9 +60,9 @@ function AccountsPage() {
     accounts
       .filter((account) => !highlightedAccountId || account.id === highlightedAccountId)
       .forEach((account) => {
-      const institution = account.bankLink?.institutionName ?? 'Manual Accounts'
-      const existing = groups.get(institution) ?? []
-      groups.set(institution, [...existing, account])
+        const institution = account.bankLink?.institutionName ?? 'Manual Accounts'
+        const existing = groups.get(institution) ?? []
+        groups.set(institution, [...existing, account])
       })
     return groups
   }, [accounts, highlightedAccountId])

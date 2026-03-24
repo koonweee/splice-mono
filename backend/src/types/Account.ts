@@ -33,6 +33,8 @@ export const AccountSchema = registerSchema(
       bankLinkId: z.string().nullable().optional(),
       /** Embedded bank link data (sanitized - no authentication) */
       bankLink: SanitizedBankLinkSchema.nullable().optional(),
+      /** Latest non-forward-filled snapshot sync time */
+      syncedAt: z.date().optional(),
     })
     .merge(CurrentAndAvailableBalanceSchema)
     .merge(OwnedSchema),
