@@ -119,16 +119,7 @@ describe('TransactionAnalysisService', () => {
 
   describe('getAnalysis', () => {
     it('excludes pending transactions from analysis entirely', async () => {
-      mockTransactionRepository.find.mockResolvedValue([
-        buildTransaction({
-          id: 'pending-expense',
-          amount: 5000,
-          sign: MoneySign.NEGATIVE,
-          date: '2024-01-10',
-          pending: true,
-          primary: 'FOOD_AND_DRINK',
-        }),
-      ]);
+      mockTransactionRepository.find.mockResolvedValue([]);
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
@@ -287,20 +278,9 @@ describe('TransactionAnalysisService', () => {
         primary: 'INCOME',
       });
 
-      mockTransactionRepository.find.mockImplementation(
-        ({ where }: { where: { date?: { _type?: string; value?: [string, string] } } }) => {
-          const startDate = where.date?.value?.[0];
-          if (startDate === '2024-02-01') {
-            return Promise.resolve([februaryExpense]);
-          }
-
-          if (startDate === '2024-03-01') {
-            return Promise.resolve([marchIncome]);
-          }
-
-          return Promise.resolve([]);
-        },
-      );
+      mockTransactionRepository.find
+        .mockResolvedValueOnce([februaryExpense])
+        .mockResolvedValueOnce([marchIncome]);
 
       const februaryResult = await service.getAnalysis(
         '2024-02-01',
@@ -336,6 +316,28 @@ describe('TransactionAnalysisService', () => {
         }),
       ]);
       expect(marchResult.outflows).toEqual([]);
+
+      expect(mockTransactionRepository.find).toHaveBeenCalledTimes(2);
+      expect(mockTransactionRepository.find).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            pending: false,
+          }),
+          relations: ['category'],
+        }),
+      );
+      expect(mockTransactionRepository.find).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            pending: false,
+          }),
+          relations: ['category'],
+        }),
+      );
     });
 
     it('neutralizes a production-shaped mirrored pair even when categories disagree', async () => {
