@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { CategoryEntity } from '../category/category.entity';
+import { Between, Repository } from 'typeorm';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import { TransactionEntity } from '../transaction/transaction.entity';
 import { MoneySign } from '../types/MoneyWithSign';
@@ -10,12 +9,16 @@ import type {
   TransactionAnalysisResponse,
 } from '../types/TransactionAnalysis';
 
-interface RawAggregateRow {
-  primary: string | null;
-  amountSign: MoneySign;
-  amountCurrency: string;
-  totalAmount: string;
-  count: string;
+interface CategoryCurrencyAggregate {
+  amount: number;
+  count: number;
+}
+
+interface NeutralizationBucket {
+  currency: string;
+  absoluteAmount: number;
+  positives: TransactionEntity[];
+  negatives: TransactionEntity[];
 }
 
 @Injectable()
@@ -25,15 +28,12 @@ export class TransactionAnalysisService {
   constructor(
     @InjectRepository(TransactionEntity)
     private transactionRepository: Repository<TransactionEntity>,
-    @InjectRepository(CategoryEntity)
-    private categoryRepository: Repository<CategoryEntity>,
     private currencyConversionService: CurrencyConversionService,
   ) {}
 
   /**
-   * Aggregate transactions by primary category and sign over a date range.
-   * Excludes TRANSFER_IN and TRANSFER_OUT categories.
-   * Converts all amounts to the user's preferred currency.
+   * Aggregate unmatched posted transactions by primary category and sign over
+   * a date range, converting totals into the user's preferred currency.
    */
   async getAnalysis(
     startDate: string,
@@ -49,43 +49,32 @@ export class TransactionAnalysisService {
     const preferredCurrency =
       await this.currencyConversionService.getPreferredCurrency(userId);
 
-    const EXCLUDED_PRIMARY_CATEGORIES = ['TRANSFER_IN', 'TRANSFER_OUT'];
-    const EXCLUDED_DETAILED_CATEGORIES = ['LOAN_PAYMENTS_CREDIT_CARD_PAYMENT'];
-
-    // 2. Run aggregation query
-    const rows: RawAggregateRow[] = await this.transactionRepository
-      .createQueryBuilder('t')
-      .select('c.primary', 'primary')
-      .addSelect('t."amountSign"', 'amountSign')
-      .addSelect('t."amountCurrency"', 'amountCurrency')
-      .addSelect('SUM(t."amountAmount")', 'totalAmount')
-      .addSelect('COUNT(*)::int', 'count')
-      .leftJoin(CategoryEntity, 'c', 't."categoryId" = c.id')
-      .where('t."userId" = :userId', { userId })
-      .andWhere('t.date >= :startDate', { startDate })
-      .andWhere('t.date <= :endDate', { endDate })
-      .andWhere(
-        '(c.primary IS NULL OR (c.primary NOT IN (:...excludedPrimary) AND c.detailed NOT IN (:...excludedDetailed)))',
-        {
-          excludedPrimary: EXCLUDED_PRIMARY_CATEGORIES,
-          excludedDetailed: EXCLUDED_DETAILED_CATEGORIES,
-        },
-      )
-      .groupBy('c.primary')
-      .addGroupBy('t."amountSign"')
-      .addGroupBy('t."amountCurrency"')
-      .getRawMany();
+    // 2. Load posted transactions in the requested window and neutralize exact
+    // equal-opposite pairs before any category aggregation.
+    const transactions = await this.transactionRepository.find({
+      where: {
+        userId,
+        pending: false,
+        date: Between(startDate, endDate),
+      },
+      relations: ['category'],
+    });
+    const unmatchedTransactions = this.neutralizeTransactions(transactions);
 
     this.logger.log(
-      { rowCount: rows.length, preferredCurrency },
-      'Aggregation query complete',
+      {
+        transactionCount: transactions.length,
+        unmatchedTransactionCount: unmatchedTransactions.length,
+        preferredCurrency,
+      },
+      'Posted transaction analysis rows loaded',
     );
 
     // 3. Identify currencies that need conversion and fetch rates
     const foreignCurrencies = [
       ...new Set(
-        rows
-          .map((r) => r.amountCurrency)
+        unmatchedTransactions
+          .map((transaction) => transaction.amount.currency)
           .filter((c) => c !== preferredCurrency),
       ),
     ];
@@ -96,42 +85,56 @@ export class TransactionAnalysisService {
       endDate,
     );
 
-    // 4. Process rows: convert amounts and group by category+sign
+    // 4. Aggregate unmatched transactions by category, sign, and currency.
+    const aggregates = new Map<
+      string,
+      { inflow: Map<string, CategoryCurrencyAggregate>; outflow: Map<string, CategoryCurrencyAggregate> }
+    >();
+
+    unmatchedTransactions.forEach((transaction) => {
+      const category = transaction.category?.primary ?? 'UNCATEGORIZED';
+      const currency = transaction.amount.currency;
+      const amount = this.getAmountInSmallestUnit(transaction);
+      const isInflow = transaction.amount.sign === MoneySign.POSITIVE;
+      const entry = aggregates.get(category) ?? {
+        inflow: new Map<string, CategoryCurrencyAggregate>(),
+        outflow: new Map<string, CategoryCurrencyAggregate>(),
+      };
+      const currencyMap = isInflow ? entry.inflow : entry.outflow;
+      const aggregate = currencyMap.get(currency);
+
+      if (aggregate) {
+        aggregate.amount += amount;
+        aggregate.count += 1;
+      } else {
+        currencyMap.set(currency, { amount, count: 1 });
+      }
+
+      aggregates.set(category, entry);
+    });
+
+    // 5. Convert aggregated totals to the preferred currency and group by category.
     const inflowMap = new Map<string, { amount: number; count: number }>();
     const outflowMap = new Map<string, { amount: number; count: number }>();
 
-    rows.forEach((row) => {
-      const totalAmountSmallestUnit = parseInt(row.totalAmount, 10);
-      const count = parseInt(row.count, 10);
-      const category = row.primary ?? 'UNCATEGORIZED';
-
-      // Convert to preferred currency if needed
-      let convertedAmount = totalAmountSmallestUnit;
-      if (row.amountCurrency !== preferredCurrency) {
-        const rate = rateMap.get(row.amountCurrency);
-        if (rate) {
-          convertedAmount = this.currencyConversionService.convertAmount(
-            totalAmountSmallestUnit,
-            row.amountCurrency,
-            preferredCurrency,
-            rate,
-          );
-        }
-      }
-
-      const isInflow = row.amountSign === MoneySign.POSITIVE;
-      const targetMap = isInflow ? inflowMap : outflowMap;
-
-      const existing = targetMap.get(category);
-      if (existing) {
-        existing.amount += convertedAmount;
-        existing.count += count;
-      } else {
-        targetMap.set(category, { amount: convertedAmount, count });
-      }
+    aggregates.forEach(({ inflow, outflow }, category) => {
+      this.appendConvertedCategoryTotals(
+        category,
+        inflow,
+        inflowMap,
+        preferredCurrency,
+        rateMap,
+      );
+      this.appendConvertedCategoryTotals(
+        category,
+        outflow,
+        outflowMap,
+        preferredCurrency,
+        rateMap,
+      );
     });
 
-    // 5. Build response arrays, sorted by totalAmount descending
+    // 6. Build response arrays, sorted by totalAmount descending
     const inflows: CategoryAggregate[] = Array.from(inflowMap.entries())
       .map(([primaryCategory, { amount, count }]) => ({
         primaryCategory,
@@ -150,7 +153,7 @@ export class TransactionAnalysisService {
       }))
       .sort((a, b) => b.totalAmount - a.totalAmount);
 
-    // 6. Compute totals
+    // 7. Compute totals
     const totalInflow = inflows.reduce((sum, c) => sum + c.totalAmount, 0);
     const totalOutflow = outflows.reduce((sum, c) => sum + c.totalAmount, 0);
 
@@ -169,5 +172,178 @@ export class TransactionAnalysisService {
       uncategorizedInflow,
       uncategorizedOutflow,
     };
+  }
+
+  private neutralizeTransactions(
+    transactions: TransactionEntity[],
+  ): TransactionEntity[] {
+    const buckets = new Map<string, NeutralizationBucket>();
+
+    transactions.forEach((transaction) => {
+      const currency = transaction.amount.currency;
+      const absoluteAmount = this.getAmountInSmallestUnit(transaction);
+      const key = this.getBucketKey(currency, absoluteAmount);
+      const bucket = buckets.get(key) ?? {
+        currency,
+        absoluteAmount,
+        positives: [],
+        negatives: [],
+      };
+      if (transaction.amount.sign === MoneySign.POSITIVE) {
+        bucket.positives.push(transaction);
+      } else {
+        bucket.negatives.push(transaction);
+      }
+      buckets.set(key, bucket);
+    });
+
+    const unmatchedTransactions: TransactionEntity[] = [];
+
+    Array.from(buckets.values())
+      .sort((left, right) => this.compareBuckets(left, right))
+      .forEach((bucket) => {
+        const positives = bucket.positives;
+        const negatives = [...bucket.negatives].sort((left, right) =>
+          this.compareTransactions(left, right),
+        );
+        const matchedPositiveIds = new Set<string>();
+        const matchedNegativeIds = new Set<string>();
+
+        negatives.forEach((negative) => {
+          const match = positives
+            .filter((positive) => !matchedPositiveIds.has(positive.id))
+            .sort((left, right) =>
+              this.comparePositiveMatchCandidates(negative, left, right),
+            )[0];
+
+          if (!match) {
+            return;
+          }
+
+          matchedPositiveIds.add(match.id);
+          matchedNegativeIds.add(negative.id);
+        });
+
+        positives.forEach((positive) => {
+          if (!matchedPositiveIds.has(positive.id)) {
+            unmatchedTransactions.push(positive);
+          }
+        });
+        negatives.forEach((negative) => {
+          if (!matchedNegativeIds.has(negative.id)) {
+            unmatchedTransactions.push(negative);
+          }
+        });
+      });
+
+    return unmatchedTransactions;
+  }
+
+  private appendConvertedCategoryTotals(
+    category: string,
+    totalsByCurrency: Map<string, CategoryCurrencyAggregate>,
+    targetMap: Map<string, { amount: number; count: number }>,
+    preferredCurrency: string,
+    rateMap: Map<string, number>,
+  ): void {
+    let totalAmount = 0;
+    let totalCount = 0;
+
+    totalsByCurrency.forEach(({ amount, count }, currency) => {
+      totalAmount += this.convertAmountToPreferredCurrency(
+        amount,
+        currency,
+        preferredCurrency,
+        rateMap,
+      );
+      totalCount += count;
+    });
+
+    if (totalCount === 0) {
+      return;
+    }
+
+    targetMap.set(category, { amount: totalAmount, count: totalCount });
+  }
+
+  private convertAmountToPreferredCurrency(
+    amount: number,
+    sourceCurrency: string,
+    preferredCurrency: string,
+    rateMap: Map<string, number>,
+  ): number {
+    if (sourceCurrency === preferredCurrency) {
+      return amount;
+    }
+
+    const rate = rateMap.get(sourceCurrency);
+    if (!rate) {
+      return amount;
+    }
+
+    return this.currencyConversionService.convertAmount(
+      amount,
+      sourceCurrency,
+      preferredCurrency,
+      rate,
+    );
+  }
+
+  private getBucketKey(currency: string, absoluteAmount: number): string {
+    return `${currency}:${absoluteAmount}`;
+  }
+
+  private getAmountInSmallestUnit(transaction: TransactionEntity): number {
+    return typeof transaction.amount.amount === 'string'
+      ? parseInt(transaction.amount.amount, 10)
+      : transaction.amount.amount;
+  }
+
+  private compareBuckets(
+    left: NeutralizationBucket,
+    right: NeutralizationBucket,
+  ): number {
+    const currencyComparison = left.currency.localeCompare(right.currency);
+    if (currencyComparison !== 0) {
+      return currencyComparison;
+    }
+
+    return left.absoluteAmount - right.absoluteAmount;
+  }
+
+  private compareTransactions(
+    left: TransactionEntity,
+    right: TransactionEntity,
+  ): number {
+    const dateComparison = left.date.localeCompare(right.date);
+    if (dateComparison !== 0) {
+      return dateComparison;
+    }
+
+    return left.id.localeCompare(right.id);
+  }
+
+  private comparePositiveMatchCandidates(
+    negative: TransactionEntity,
+    left: TransactionEntity,
+    right: TransactionEntity,
+  ): number {
+    const differenceComparison =
+      this.getAbsoluteDateDifferenceInDays(negative.date, left.date) -
+      this.getAbsoluteDateDifferenceInDays(negative.date, right.date);
+    if (differenceComparison !== 0) {
+      return differenceComparison;
+    }
+
+    return this.compareTransactions(left, right);
+  }
+
+  private getAbsoluteDateDifferenceInDays(
+    leftDate: string,
+    rightDate: string,
+  ): number {
+    const leftTimestamp = Date.parse(`${leftDate}T00:00:00Z`);
+    const rightTimestamp = Date.parse(`${rightDate}T00:00:00Z`);
+    return Math.abs(leftTimestamp - rightTimestamp);
   }
 }
