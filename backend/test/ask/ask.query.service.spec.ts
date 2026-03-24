@@ -281,12 +281,20 @@ describe('AskQueryService', () => {
   });
 
   it('delegates getBalanceHistory through the future balance-history surface', async () => {
-    const candidate = service as Partial<{
-      getBalanceHistory: (
-        userId: string,
-        options: AskBalanceHistoryOptions,
-      ) => Promise<AskBalanceHistoryResult>;
-    }>;
+    const futureBalanceHistoryService = {
+      getBalanceHistory: jest.fn(),
+    };
+    Object.assign(service as Record<string, unknown>, {
+      balanceHistoryService: futureBalanceHistoryService,
+    });
+
+    const candidate = service as AskQueryService &
+      Partial<{
+        getBalanceHistory: (
+          userId: string,
+          options: AskBalanceHistoryOptions,
+        ) => Promise<AskBalanceHistoryResult>;
+      }>;
 
     expect(candidate.getBalanceHistory).toEqual(expect.any(Function));
     if (!candidate.getBalanceHistory) {
@@ -301,9 +309,7 @@ describe('AskQueryService', () => {
       comparisonStartDate: '2026-02-01',
       comparisonEndDate: '2026-02-22',
     };
-    const result = await candidate.getBalanceHistory('user-1', options);
-
-    expect(result).toEqual({
+    const expectedResult: AskBalanceHistoryResult = {
       matchedCount: 18,
       truncated: false,
       currentTotal: {
@@ -332,16 +338,34 @@ describe('AskQueryService', () => {
           },
         },
       ],
-    });
+    };
+    futureBalanceHistoryService.getBalanceHistory.mockResolvedValue(
+      expectedResult,
+    );
+    const result = await candidate.getBalanceHistory('user-1', options);
+
+    expect(futureBalanceHistoryService.getBalanceHistory).toHaveBeenCalledWith(
+      'user-1',
+      options,
+    );
+    expect(result).toEqual(expectedResult);
   });
 
   it('delegates getCashflowAnalysis through the future cashflow surface', async () => {
-    const candidate = service as Partial<{
-      getCashflowAnalysis: (
-        userId: string,
-        options: AskCashflowAnalysisOptions,
-      ) => Promise<AskCashflowAnalysisResult>;
-    }>;
+    const futureCashflowAnalysisService = {
+      getCashflowAnalysis: jest.fn(),
+    };
+    Object.assign(service as Record<string, unknown>, {
+      cashflowAnalysisService: futureCashflowAnalysisService,
+    });
+
+    const candidate = service as AskQueryService &
+      Partial<{
+        getCashflowAnalysis: (
+          userId: string,
+          options: AskCashflowAnalysisOptions,
+        ) => Promise<AskCashflowAnalysisResult>;
+      }>;
 
     expect(candidate.getCashflowAnalysis).toEqual(expect.any(Function));
     if (!candidate.getCashflowAnalysis) {
@@ -356,9 +380,7 @@ describe('AskQueryService', () => {
       comparisonEndDate: '2026-02-22',
       includePending: true,
     };
-    const result = await candidate.getCashflowAnalysis('user-1', options);
-
-    expect(result).toEqual({
+    const expectedResult: AskCashflowAnalysisResult = {
       totalInflow: 400,
       totalOutflow: 250,
       netFlow: 150,
@@ -377,6 +399,16 @@ describe('AskQueryService', () => {
       },
       matchedCount: 12,
       truncated: false,
-    });
+    };
+    futureCashflowAnalysisService.getCashflowAnalysis.mockResolvedValue(
+      expectedResult,
+    );
+    const result = await candidate.getCashflowAnalysis('user-1', options);
+
+    expect(futureCashflowAnalysisService.getCashflowAnalysis).toHaveBeenCalledWith(
+      'user-1',
+      options,
+    );
+    expect(result).toEqual(expectedResult);
   });
 });
