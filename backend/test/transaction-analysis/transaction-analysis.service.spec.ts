@@ -757,7 +757,7 @@ describe('TransactionAnalysisService', () => {
 });
 
 describe('CashflowAnalysisSurfaceService', () => {
-  it('accepts ask-style options and keeps semantic metadata conservative for unsupported inputs', async () => {
+  it('wraps supported ask-style options in model-friendly major-unit totals and semantic metadata', async () => {
     const mockTransactionAnalysisService = {
       getAnalysis: jest.fn().mockResolvedValue({
         currency: 'USD',
@@ -807,11 +807,6 @@ describe('CashflowAnalysisSurfaceService', () => {
       service.getCashflowAnalysis(mockUserId, {
         startDate: '2024-01-01',
         endDate: '2024-01-31',
-        accountIds: ['account-1'],
-        comparisonStartDate: '2023-12-01',
-        comparisonEndDate: '2023-12-31',
-        includePending: true,
-        recurringOnly: true,
       }),
     ).resolves.toMatchObject({
       matchedCount: 4,
@@ -847,5 +842,41 @@ describe('CashflowAnalysisSurfaceService', () => {
       '2024-01-31',
       mockUserId,
     );
+  });
+
+  it('rejects unsupported account, comparison, pending, and recurring filters explicitly', async () => {
+    const mockTransactionAnalysisService = {
+      getAnalysis: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CashflowAnalysisSurfaceService,
+        {
+          provide: TransactionAnalysisService,
+          useValue: mockTransactionAnalysisService,
+        },
+      ],
+    }).compile();
+
+    const service = module.get<CashflowAnalysisSurfaceService>(
+      CashflowAnalysisSurfaceService,
+    );
+
+    await expect(
+      service.getCashflowAnalysis(mockUserId, {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        accountIds: ['account-1'],
+        comparisonStartDate: '2023-12-01',
+        comparisonEndDate: '2023-12-31',
+        includePending: true,
+        recurringOnly: true,
+      }),
+    ).rejects.toThrow(
+      'Cashflow analysis surface does not yet support account, comparison, pending, or recurring-only filters.',
+    );
+
+    expect(mockTransactionAnalysisService.getAnalysis).not.toHaveBeenCalled();
   });
 });
