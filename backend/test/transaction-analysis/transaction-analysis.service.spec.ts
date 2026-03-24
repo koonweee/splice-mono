@@ -4,6 +4,7 @@ import { AccountEntity } from '../../src/account/account.entity';
 import { CategoryEntity } from '../../src/category/category.entity';
 import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
+import { CashflowAnalysisSurfaceService } from '../../src/transaction-analysis/cashflow-analysis-surface.service';
 import { TransactionAnalysisService } from '../../src/transaction-analysis/transaction-analysis.service';
 import { MoneySign, getDecimalPlaces } from '../../src/types/MoneyWithSign';
 
@@ -751,6 +752,86 @@ describe('TransactionAnalysisService', () => {
         }),
       );
       expect(result[0]?.accountName).toBe('Main Checking');
+    });
+  });
+});
+
+describe('CashflowAnalysisSurfaceService', () => {
+  it('wraps analysis output in model-friendly major-unit totals and semantic flags', async () => {
+    const mockTransactionAnalysisService = {
+      getAnalysis: jest.fn().mockResolvedValue({
+        currency: 'USD',
+        totalInflow: 15000,
+        totalOutflow: 4000,
+        netFlow: 11000,
+        inflows: [
+          {
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 12500,
+            currency: 'USD',
+            transactionCount: 2,
+          },
+          {
+            primaryCategory: 'INCOME',
+            totalAmount: 2500,
+            currency: 'USD',
+            transactionCount: 1,
+          },
+        ],
+        outflows: [
+          {
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 4000,
+            currency: 'USD',
+            transactionCount: 1,
+          },
+        ],
+      }),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CashflowAnalysisSurfaceService,
+        {
+          provide: TransactionAnalysisService,
+          useValue: mockTransactionAnalysisService,
+        },
+      ],
+    }).compile();
+
+    const service = module.get<CashflowAnalysisSurfaceService>(
+      CashflowAnalysisSurfaceService,
+    );
+
+    await expect(
+      service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+    ).resolves.toMatchObject({
+      matchedCount: 4,
+      truncated: false,
+      totalInflow: 150,
+      totalOutflow: 40,
+      netFlow: 110,
+      semanticMetadata: {
+        pendingIncluded: false,
+        reconciliationApplied: true,
+        comparisonIncluded: false,
+      },
+      topCategories: [
+        {
+          rawLabel: 'FOOD_AND_DRINK',
+          label: 'Food And Drink',
+          amount: 165,
+          currency: 'USD',
+          kind: 'category',
+        },
+        {
+          rawLabel: 'INCOME',
+          label: 'Income',
+          amount: 25,
+          currency: 'USD',
+          kind: 'category',
+        },
+      ],
     });
   });
 });
