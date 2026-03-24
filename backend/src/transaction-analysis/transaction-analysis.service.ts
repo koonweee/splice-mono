@@ -14,6 +14,13 @@ interface CategoryCurrencyAggregate {
   count: number;
 }
 
+interface NeutralizationBucket {
+  currency: string;
+  absoluteAmount: number;
+  positives: TransactionEntity[];
+  negatives: TransactionEntity[];
+}
+
 @Injectable()
 export class TransactionAnalysisService {
   private readonly logger = new Logger(TransactionAnalysisService.name);
@@ -170,14 +177,18 @@ export class TransactionAnalysisService {
   private neutralizeTransactions(
     transactions: TransactionEntity[],
   ): TransactionEntity[] {
-    const buckets = new Map<
-      string,
-      { positives: TransactionEntity[]; negatives: TransactionEntity[] }
-    >();
+    const buckets = new Map<string, NeutralizationBucket>();
 
     transactions.forEach((transaction) => {
-      const key = this.getBucketKey(transaction);
-      const bucket = buckets.get(key) ?? { positives: [], negatives: [] };
+      const currency = transaction.amount.currency;
+      const absoluteAmount = this.getAmountInSmallestUnit(transaction);
+      const key = this.getBucketKey(currency, absoluteAmount);
+      const bucket = buckets.get(key) ?? {
+        currency,
+        absoluteAmount,
+        positives: [],
+        negatives: [],
+      };
       if (transaction.amount.sign === MoneySign.POSITIVE) {
         bucket.positives.push(transaction);
       } else {
@@ -188,11 +199,13 @@ export class TransactionAnalysisService {
 
     const unmatchedTransactions: TransactionEntity[] = [];
 
-    Array.from(buckets.entries())
-      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-      .forEach(([, bucket]) => {
+    Array.from(buckets.values())
+      .sort((left, right) => this.compareBuckets(left, right))
+      .forEach((bucket) => {
         const positives = bucket.positives;
-        const negatives = bucket.negatives;
+        const negatives = [...bucket.negatives].sort((left, right) =>
+          this.compareTransactions(left, right),
+        );
         const matchedPositiveIds = new Set<string>();
         const matchedNegativeIds = new Set<string>();
 
@@ -276,14 +289,26 @@ export class TransactionAnalysisService {
     );
   }
 
-  private getBucketKey(transaction: TransactionEntity): string {
-    return `${transaction.amount.currency}:${this.getAmountInSmallestUnit(transaction)}`;
+  private getBucketKey(currency: string, absoluteAmount: number): string {
+    return `${currency}:${absoluteAmount}`;
   }
 
   private getAmountInSmallestUnit(transaction: TransactionEntity): number {
     return typeof transaction.amount.amount === 'string'
       ? parseInt(transaction.amount.amount, 10)
       : transaction.amount.amount;
+  }
+
+  private compareBuckets(
+    left: NeutralizationBucket,
+    right: NeutralizationBucket,
+  ): number {
+    const currencyComparison = left.currency.localeCompare(right.currency);
+    if (currencyComparison !== 0) {
+      return currencyComparison;
+    }
+
+    return left.absoluteAmount - right.absoluteAmount;
   }
 
   private compareTransactions(

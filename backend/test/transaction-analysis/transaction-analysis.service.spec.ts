@@ -168,7 +168,7 @@ describe('TransactionAnalysisService', () => {
       });
     });
 
-    it('matches one-to-one by nearest date first', async () => {
+    it('matches each negative to the nearest positive after deterministic negative ordering', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'neg-near',
@@ -199,11 +199,62 @@ describe('TransactionAnalysisService', () => {
         totalOutflow: 6000,
         outflows: [
           expect.objectContaining({
-            primaryCategory: 'RENT_AND_UTILITIES',
+            primaryCategory: 'FOOD_AND_DRINK',
             totalAmount: 6000,
             transactionCount: 1,
           }),
         ],
+      });
+    });
+
+    it('sorts negative candidates by date then id before matching', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'neg-late',
+          amount: 6000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-15',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'neg-early-b',
+          amount: 6000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-10',
+          primary: 'GENERAL_SERVICES',
+        }),
+        buildTransaction({
+          id: 'neg-early-a',
+          amount: 6000,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-10',
+          primary: 'RENT_AND_UTILITIES',
+        }),
+        buildTransaction({
+          id: 'pos-early',
+          amount: 6000,
+          sign: MoneySign.POSITIVE,
+          date: '2024-01-10',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalOutflow: 12000,
+        outflows: expect.arrayContaining([
+          expect.objectContaining({
+            primaryCategory: 'GENERAL_SERVICES',
+            totalAmount: 6000,
+            transactionCount: 1,
+          }),
+          expect.objectContaining({
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 6000,
+            transactionCount: 1,
+          }),
+        ]),
       });
     });
 
