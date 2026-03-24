@@ -10,9 +10,9 @@ export type TransactionAnalysisControllerGetAnalysisParams = {
   /**
    * End date (YYYY-MM-DD, inclusive)
    */
-  endDate: unknown
+  endDate: string
   /**
    * Start date (YYYY-MM-DD, inclusive)
    */
-  startDate: unknown
+  startDate: string
 }

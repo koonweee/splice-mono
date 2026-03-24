@@ -5,10 +5,15 @@ import {
   type JwtUser,
 } from '../auth/decorators/current-user.decorator';
 import { ZodApiResponse } from '../common/zod-api-response';
-import type { TransactionAnalysisQuery } from '../types/TransactionAnalysis';
 import {
   TransactionAnalysisQuerySchema,
   TransactionAnalysisResponseSchema,
+  TransactionAnalysisTransactionsQuerySchema,
+  TransactionAnalysisTransactionsResponseSchema,
+} from '../types/TransactionAnalysis';
+import type {
+  TransactionAnalysisQuery,
+  TransactionAnalysisTransactionsQuery,
 } from '../types/TransactionAnalysis';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { TransactionAnalysisService } from './transaction-analysis.service';
@@ -30,11 +35,13 @@ export class TransactionAnalysisController {
   @ApiQuery({
     name: 'startDate',
     required: true,
+    type: String,
     description: 'Start date (YYYY-MM-DD, inclusive)',
   })
   @ApiQuery({
     name: 'endDate',
     required: true,
+    type: String,
     description: 'End date (YYYY-MM-DD, inclusive)',
   })
   @ZodApiResponse({
@@ -57,6 +64,64 @@ export class TransactionAnalysisController {
     return this.transactionAnalysisService.getAnalysis(
       query.startDate,
       query.endDate,
+      user.userId,
+    );
+  }
+
+  @Get('transactions')
+  @ApiOperation({
+    description:
+      'Get unmatched posted transactions for a category drilldown within a date range. ' +
+      'Transactions are neutralized using the same exact equal-and-opposite matching pipeline as the summary analysis before category and flow filtering. ' +
+      'Returned rows include converted amounts using exchange rates anchored to the requested endDate.',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: true,
+    type: String,
+    description: 'Start date (YYYY-MM-DD, inclusive)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: true,
+    type: String,
+    description: 'End date (YYYY-MM-DD, inclusive)',
+  })
+  @ApiQuery({
+    name: 'categoryPrimary',
+    required: true,
+    type: String,
+    description:
+      'Primary category to drill into (for example FOOD_AND_DRINK or UNCATEGORIZED)',
+  })
+  @ApiQuery({
+    name: 'flowDirection',
+    required: true,
+    enum: ['inflow', 'outflow'],
+    description: 'Whether to return positive or negative unmatched transactions',
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Returns unmatched transaction rows for the requested category',
+    schema: TransactionAnalysisTransactionsResponseSchema,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request parameters' })
+  async getTransactions(
+    @CurrentUser() user: JwtUser,
+    @Query(new ZodValidationPipe(TransactionAnalysisTransactionsQuerySchema))
+    query: TransactionAnalysisTransactionsQuery,
+  ): Promise<unknown> {
+    if (query.startDate > query.endDate) {
+      throw new BadRequestException(
+        'startDate must be before or equal to endDate',
+      );
+    }
+
+    return this.transactionAnalysisService.getCategoryTransactions(
+      query.startDate,
+      query.endDate,
+      query.categoryPrimary,
+      query.flowDirection,
       user.userId,
     );
   }
