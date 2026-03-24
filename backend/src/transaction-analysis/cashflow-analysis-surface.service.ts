@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import type {
   AskCashflowAnalysisResult,
   AskCashflowAnalysisOptions,
@@ -18,6 +18,18 @@ export class CashflowAnalysisSurfaceService {
     userId: string,
     options: AskCashflowAnalysisOptions,
   ): Promise<AskCashflowAnalysisResult> {
+    if (
+      (options.accountIds && options.accountIds.length > 0) ||
+      options.comparisonStartDate ||
+      options.comparisonEndDate ||
+      options.includePending ||
+      options.recurringOnly
+    ) {
+      throw new BadRequestException(
+        'Cashflow analysis surface does not yet support account, comparison, pending, or recurring-only filters.',
+      );
+    }
+
     const analysis = await this.transactionAnalysisService.getAnalysis(
       options.startDate,
       options.endDate,
