@@ -131,10 +131,11 @@ describe('TransactionAnalysisService', () => {
       });
 
       expect(mockTransactionRepository.find).toHaveBeenCalledWith({
-        where: {
+        where: expect.objectContaining({
           userId: mockUserId,
           pending: false,
-        },
+          date: expect.anything(),
+        }),
         relations: ['category'],
       });
     });
