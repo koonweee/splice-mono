@@ -217,14 +217,16 @@ describe('AskService', () => {
       {} as never,
     );
 
-    expect(mockStreamText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tools: expect.objectContaining({
-          get_balance_history: expect.any(Object),
-          get_cashflow_analysis: expect.any(Object),
-        }),
-      }),
-    );
+    const streamTextInput = mockStreamText.mock.calls[0][0] as {
+      tools: Record<string, unknown>;
+    };
+
+    expect(Object.keys(streamTextInput.tools)).toEqual([
+      'get_accounts_snapshot',
+      'search_transactions',
+      'get_balance_history',
+      'get_cashflow_analysis',
+    ]);
     expect(mockStreamText).toHaveBeenCalledWith(
       expect.objectContaining({
         system: expect.stringContaining(
@@ -348,7 +350,7 @@ describe('AskService', () => {
     expect(metadata).toEqual({
       ask: expect.objectContaining({
         evidence: expect.objectContaining({
-          matchedCount: 2,
+          matchedCount: 1,
           truncated: true,
           balanceHistory: expect.objectContaining({
             matchedCount: 1,
