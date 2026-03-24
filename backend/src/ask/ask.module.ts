@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AccountModule } from '../account/account.module';
-import { CurrencyExchangeModule } from '../currency-exchange/currency-exchange.module';
 import { BalanceQueryModule } from '../balance-query/balance-query.module';
+import { TransactionAnalysisModule } from '../transaction-analysis/transaction-analysis.module';
 import { TransactionModule } from '../transaction/transaction.module';
 import { AskController } from './ask.controller';
 import { AskQueryService } from './ask-query.service';
@@ -12,7 +12,7 @@ import { AskService } from './ask.service';
     AccountModule,
     BalanceQueryModule,
     TransactionModule,
-    CurrencyExchangeModule,
+    TransactionAnalysisModule,
   ],
   controllers: [AskController],
   providers: [AskService, AskQueryService],
