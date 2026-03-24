@@ -757,7 +757,7 @@ describe('TransactionAnalysisService', () => {
 });
 
 describe('CashflowAnalysisSurfaceService', () => {
-  it('wraps analysis output in model-friendly major-unit totals and semantic flags', async () => {
+  it('accepts ask-style options and keeps semantic metadata conservative for unsupported inputs', async () => {
     const mockTransactionAnalysisService = {
       getAnalysis: jest.fn().mockResolvedValue({
         currency: 'USD',
@@ -804,7 +804,15 @@ describe('CashflowAnalysisSurfaceService', () => {
     );
 
     await expect(
-      service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      service.getCashflowAnalysis(mockUserId, {
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        accountIds: ['account-1'],
+        comparisonStartDate: '2023-12-01',
+        comparisonEndDate: '2023-12-31',
+        includePending: true,
+        recurringOnly: true,
+      }),
     ).resolves.toMatchObject({
       matchedCount: 4,
       truncated: false,
@@ -833,5 +841,11 @@ describe('CashflowAnalysisSurfaceService', () => {
         },
       ],
     });
+
+    expect(mockTransactionAnalysisService.getAnalysis).toHaveBeenCalledWith(
+      '2024-01-01',
+      '2024-01-31',
+      mockUserId,
+    );
   });
 });

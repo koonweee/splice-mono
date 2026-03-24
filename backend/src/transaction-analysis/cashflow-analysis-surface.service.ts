@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type {
   AskCashflowAnalysisResult,
+  AskCashflowAnalysisOptions,
   AskEvidenceAggregate,
 } from '../ask/ask.types';
 import { getDecimalPlaces } from '../types/MoneyWithSign';
@@ -13,14 +14,13 @@ export class CashflowAnalysisSurfaceService {
     private readonly transactionAnalysisService: TransactionAnalysisService,
   ) {}
 
-  async getAnalysis(
-    startDate: string,
-    endDate: string,
+  async getCashflowAnalysis(
     userId: string,
+    options: AskCashflowAnalysisOptions,
   ): Promise<AskCashflowAnalysisResult> {
     const analysis = await this.transactionAnalysisService.getAnalysis(
-      startDate,
-      endDate,
+      options.startDate,
+      options.endDate,
       userId,
     );
 
