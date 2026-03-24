@@ -5,6 +5,8 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { AccountSubtype, AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
 import { AccountService } from '../../src/account/account.service';
+import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
+import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import {
   ManualAccountEvents,
   ManualAccountCreatedEvent,
@@ -31,14 +33,13 @@ describe('AccountService', () => {
     delete: jest.fn(),
   };
 
-  // Mock balance snapshot service
-  const mockBalanceSnapshotService = {
-    getLastSyncTimes: jest.fn(),
+  // Mock balance snapshot repository
+  const mockSnapshotRepository = {
+    find: jest.fn(),
   };
 
   beforeEach(async () => {
-    // Default: return empty map for last sync times
-    mockBalanceSnapshotService.getLastSyncTimes.mockResolvedValue(new Map());
+    mockSnapshotRepository.find.mockResolvedValue([]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -57,6 +58,10 @@ describe('AccountService', () => {
             mockEventEmitter = { emit: jest.fn() };
             return mockEventEmitter;
           },
+        },
+        {
+          provide: getRepositoryToken(BalanceSnapshotEntity),
+          useValue: mockSnapshotRepository,
         },
       ],
     }).compile();
@@ -237,6 +242,71 @@ describe('AccountService', () => {
       });
     });
 
+    it('should include syncedAt when latest snapshot exists', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockSnapshotRepository.find.mockResolvedValue([
+        {
+          accountId: 'test-id',
+          snapshotType: BalanceSnapshotType.SYNC,
+          updatedAt: new Date('2026-03-20T12:00:00Z'),
+        } as unknown as BalanceSnapshotEntity,
+      ]);
+
+      const result = await service.findOne('test-id', mockUserId);
+
+      expect(result?.syncedAt?.toISOString()).toEqual(
+        new Date('2026-03-20T12:00:00Z').toISOString(),
+      );
+    });
+
+    it('should not include forward-filled snapshots when determining syncedAt', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      const rows = [
+        {
+          accountId: 'test-id',
+          snapshotType: BalanceSnapshotType.FORWARD_FILL,
+          updatedAt: new Date('2026-03-21T12:00:00Z'),
+        },
+        {
+          accountId: 'test-id',
+          snapshotType: BalanceSnapshotType.SYNC,
+          updatedAt: new Date('2026-03-20T12:00:00Z'),
+        },
+      ];
+      mockSnapshotRepository.find.mockImplementation(async ({ where }) => {
+        const blockedType = (where.snapshotType as { _value: string })._value;
+        return rows.filter((row) => row.snapshotType !== blockedType);
+      });
+
+      const result = await service.findOne('test-id', mockUserId);
+      expect(mockSnapshotRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            accountId: expect.any(Object),
+            snapshotType: expect.objectContaining({
+              _type: 'not',
+            }),
+          }),
+          order: { updatedAt: 'DESC' },
+        }),
+      );
+
+      expect(result?.syncedAt?.toISOString()).toEqual(
+        new Date('2026-03-20T12:00:00Z').toISOString(),
+      );
+    });
+
     it('should return null when account does not exist', async () => {
       mockRepository.findOne.mockResolvedValue(null);
 
@@ -315,6 +385,47 @@ describe('AccountService', () => {
         where: { userId: mockUserId },
         relations: ['bankLink'],
       });
+    });
+
+    it('should include syncedAt for matching accounts and ignore forward-filled rows', async () => {
+      const mockEntity1 = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity1.id = 'id-1';
+      const mockEntity2 = AccountEntity.fromDto(
+        {
+          ...mockCreateAccountDto,
+          name: 'Second Account',
+        },
+        mockUserId,
+      );
+      mockEntity2.id = 'id-2';
+
+      mockRepository.find.mockResolvedValue([mockEntity1, mockEntity2]);
+      const rows = [
+        {
+          accountId: 'id-1',
+          snapshotType: BalanceSnapshotType.SYNC,
+          updatedAt: new Date('2026-03-20T12:00:00Z'),
+        },
+        {
+          accountId: 'id-2',
+          snapshotType: BalanceSnapshotType.FORWARD_FILL,
+          updatedAt: new Date('2026-03-22T12:00:00Z'),
+        },
+      ];
+      mockSnapshotRepository.find.mockImplementation(async ({ where }) => {
+        const blockedType = (where.snapshotType as { _value: string })._value;
+        return rows.filter((row) => row.snapshotType !== blockedType);
+      });
+
+      const result = await service.findAll(mockUserId);
+
+      expect(result[0].syncedAt?.toISOString()).toEqual(
+        new Date('2026-03-20T12:00:00Z').toISOString(),
+      );
+      expect(result[1].syncedAt).toBeUndefined();
     });
 
     it('should return accounts in the order they were created', async () => {

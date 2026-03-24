@@ -9,7 +9,10 @@ import {
   useAccountControllerUpdate,
   useBankLinkControllerInitiateLinking,
 } from '../../api/clients/spliceAPI'
-import { formatAccountType } from '../../lib/format'
+import {
+  formatAccountType,
+  formatRelativeTime,
+} from '../../lib/format'
 import { StatusBadge } from './StatusBadge'
 import type { Account } from '../../api/models'
 
@@ -205,6 +208,11 @@ export function AccountRow({ account }: { account: Account }) {
         <Text size="sm" c="dimmed" tt="capitalize">
           {formatAccountType(account.subType || account.type)}
         </Text>
+        {account.syncedAt && (
+          <Text size="xs" c="dimmed">
+            Last synced {formatRelativeTime(new Date(account.syncedAt))}
+          </Text>
+        )}
       </div>
       <StatusBadge
         status={account.bankLink?.status}
