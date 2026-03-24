@@ -28,19 +28,39 @@ const createBalance = (
 const createAccountResult = (
   id: string,
   type: string,
-  snapshotDate: string,
   effectiveBalance: ReturnType<typeof createBalance>,
   syncedAt?: string,
 ) => ({
   account: {
     id,
     userId: mockUserId,
-    name: id === 'asset-1' ? 'House Checking' : 'Visa',
+    name:
+      id === 'asset-1'
+        ? 'House Checking'
+        : id === 'asset-2'
+          ? 'Retirement'
+          : id === 'liability-1'
+            ? 'Visa'
+            : 'Mortgage',
     customName: id === 'asset-1' ? 'House Checking' : null,
     type,
-    subType: id === 'asset-1' ? 'checking' : 'credit card',
+    subType:
+      id === 'asset-1'
+        ? 'checking'
+        : id === 'asset-2'
+          ? '401k'
+          : id === 'liability-1'
+            ? 'credit card'
+            : 'home equity',
     bankLink: {
-      institutionName: id === 'asset-1' ? 'Splice Bank' : 'Splice Card',
+      institutionName:
+        id === 'asset-1'
+          ? 'Splice Bank'
+          : id === 'asset-2'
+            ? 'Splice Retirement'
+            : id === 'liability-1'
+              ? 'Splice Card'
+              : 'Splice Mortgage',
     },
   },
   availableBalance: effectiveBalance,
@@ -82,15 +102,25 @@ describe('BalanceHistorySurfaceService', () => {
           'asset-1': createAccountResult(
             'asset-1',
             'depository',
-            '2026-03-01',
-            createBalance(10000, 'USD', 12000, 'EUR'),
+            createBalance(5000, 'USD', 25000, 'EUR'),
+            '2026-03-01T12:00:00Z',
+          ),
+          'asset-2': createAccountResult(
+            'asset-2',
+            'investment',
+            createBalance(10000, 'USD', 5000, 'EUR'),
             '2026-03-01T12:00:00Z',
           ),
           'liability-1': createAccountResult(
             'liability-1',
             'credit',
-            '2026-03-01',
-            createBalance(2000, 'USD', 2400, 'EUR'),
+            createBalance(1000, 'USD', 1200, 'EUR'),
+            '2026-03-01T12:00:00Z',
+          ),
+          'liability-2': createAccountResult(
+            'liability-2',
+            'loan',
+            createBalance(1500, 'USD', 1800, 'EUR'),
             '2026-03-01T12:00:00Z',
           ),
         },
@@ -101,14 +131,24 @@ describe('BalanceHistorySurfaceService', () => {
           'asset-1': createAccountResult(
             'asset-1',
             'depository',
-            '2026-03-02',
-            createBalance(15000, 'USD', 18000, 'EUR'),
+            createBalance(10000, 'USD', 50000, 'EUR'),
+            '2026-03-02T12:00:00Z',
+          ),
+          'asset-2': createAccountResult(
+            'asset-2',
+            'investment',
+            createBalance(20000, 'USD', 10000, 'EUR'),
             '2026-03-02T12:00:00Z',
           ),
           'liability-1': createAccountResult(
             'liability-1',
             'credit',
-            '2026-03-02',
+            createBalance(2000, 'USD', 2400, 'EUR'),
+            '2026-03-02T12:00:00Z',
+          ),
+          'liability-2': createAccountResult(
+            'liability-2',
+            'loan',
             createBalance(3000, 'USD', 3600, 'EUR'),
             '2026-03-02T12:00:00Z',
           ),
@@ -127,34 +167,58 @@ describe('BalanceHistorySurfaceService', () => {
       mockUserId,
     )
     expect(result.netWorth).toEqual({
-      money: { amount: 14400, currency: 'EUR' },
+      money: { amount: 54000, currency: 'EUR' },
       sign: MoneySign.POSITIVE,
     })
-    expect(result.changePercent).toBe(50)
+    expect(result.changePercent).toBe(100)
     expect(result.chartData).toEqual([
-      expect.objectContaining({ date: '2026-03-01', value: 96 }),
-      expect.objectContaining({ date: '2026-03-02', value: 144 }),
+      expect.objectContaining({ date: '2026-03-01', value: 270 }),
+      expect.objectContaining({ date: '2026-03-02', value: 540 }),
     ])
-    expect(result.assets).toHaveLength(1)
+    expect(result.assets).toHaveLength(2)
+    expect(result.assets.map((account) => account.id)).toEqual([
+      'asset-2',
+      'asset-1',
+    ])
     expect(result.assets[0]).toMatchObject({
+      id: 'asset-2',
+      displayName: 'Retirement',
+      type: 'investment',
+      groupingLabel: 'Investment',
+      changePercent: 100,
+    })
+    expect(result.assets[1]).toMatchObject({
       id: 'asset-1',
       displayName: 'House Checking',
       type: 'depository',
       groupingLabel: 'Cash',
-      changePercent: 50,
+      changePercent: 100,
       syncedAt: '2026-03-02T12:00:00.000Z',
     })
     expect(result.assets[0].convertedEffectiveBalance).toEqual({
-      money: { amount: 18000, currency: 'EUR' },
+      money: { amount: 10000, currency: 'EUR' },
       sign: MoneySign.POSITIVE,
     })
-    expect(result.liabilities).toHaveLength(1)
+    expect(result.liabilities).toHaveLength(2)
+    expect(result.liabilities.map((account) => account.id)).toEqual([
+      'liability-2',
+      'liability-1',
+    ])
     expect(result.liabilities[0]).toMatchObject({
+      id: 'liability-2',
+      displayName: 'Mortgage',
+      type: 'loan',
+      grouping: 'liability',
+      groupingLabel: 'Liability',
+      changePercent: 100,
+    })
+    expect(result.liabilities[1]).toMatchObject({
       id: 'liability-1',
       displayName: 'Visa',
       type: 'credit',
-      groupingLabel: 'Credit',
-      changePercent: 50,
+      grouping: 'liability',
+      groupingLabel: 'Liability',
+      changePercent: 100,
     })
   })
 })

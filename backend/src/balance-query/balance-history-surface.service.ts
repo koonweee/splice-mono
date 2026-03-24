@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { AccountType } from 'plaid';
+import {
+  formatAccountLabel,
+  getAccountGrouping,
+  getAccountGroupingLabel,
+} from '../account/account-labels';
 import type {
   BalanceQueryPerDateResult,
   AccountBalanceResult,
@@ -28,7 +33,7 @@ export interface BalanceHistorySurfaceAccountSummary {
   typeLabel: string;
   subType: string | null;
   subTypeLabel: string | null;
-  grouping: 'cash' | 'credit' | 'investment' | 'liability';
+  grouping: 'cash' | 'investment' | 'liability';
   groupingLabel: string;
   effectiveBalance: SerializedMoneyWithSign;
   convertedEffectiveBalance?: SerializedMoneyWithSign;
@@ -51,34 +56,8 @@ export interface BalanceHistorySurfaceOptions {
   accountIds?: string[];
 }
 
-function formatLabel(value: string | null | undefined): string {
-  if (!value) return '';
-
-  return value
-    .split(/[\s_]+/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(' ');
-}
-
 function isLiabilityType(type: string): boolean {
   return type === String(AccountType.Credit) || type === String(AccountType.Loan);
-}
-
-function getGrouping(type: string): 'cash' | 'credit' | 'investment' | 'liability' {
-  switch (type.toLowerCase()) {
-    case 'credit':
-      return 'credit';
-    case 'investment':
-    case 'brokerage':
-    case 'crypto_wallet':
-      return 'investment';
-    case 'loan':
-    case 'other':
-      return 'liability';
-    default:
-      return 'cash';
-  }
 }
 
 function resolveEffectiveBalance(
@@ -105,11 +84,11 @@ function calculateNetWorthForDate(
 ): number {
   let netWorth = 0;
 
-  Object.values(balances).forEach((result) => {
-    const effectiveBalance = result.effectiveBalance.convertedBalance
-      ? result.effectiveBalance.convertedBalance
-      : result.effectiveBalance.balance;
-    const amount = getSignedAmount(effectiveBalance);
+    Object.values(balances).forEach((result) => {
+      const effectiveBalance = result.effectiveBalance.convertedBalance
+        ? result.effectiveBalance.convertedBalance
+        : result.effectiveBalance.balance;
+      const amount = getSignedAmount(effectiveBalance);
 
     if (isLiabilityType(String(result.account.type))) {
       netWorth -= Math.abs(amount);
@@ -281,14 +260,14 @@ export class BalanceHistorySurfaceService {
             accountResult.account.customName ?? accountResult.account.name ?? 'Account',
           customName: accountResult.account.customName,
           type: String(accountResult.account.type),
-          typeLabel: formatLabel(String(accountResult.account.type)),
+          typeLabel: formatAccountLabel(String(accountResult.account.type)),
           subType: accountResult.account.subType ?? null,
           subTypeLabel: accountResult.account.subType
-            ? formatLabel(String(accountResult.account.subType))
+            ? formatAccountLabel(String(accountResult.account.subType))
             : null,
-          grouping: getGrouping(String(accountResult.account.type)),
-          groupingLabel: formatLabel(
-            getGrouping(String(accountResult.account.type)),
+          grouping: getAccountGrouping(String(accountResult.account.type)),
+          groupingLabel: getAccountGroupingLabel(
+            getAccountGrouping(String(accountResult.account.type)),
           ),
           effectiveBalance: accountResult.effectiveBalance.balance,
           convertedEffectiveBalance:
@@ -310,9 +289,8 @@ export class BalanceHistorySurfaceService {
       left: BalanceHistorySurfaceAccountSummary,
       right: BalanceHistorySurfaceAccountSummary,
     ) =>
-      getSignedAmount(
-        right.convertedEffectiveBalance ?? right.effectiveBalance,
-      ) - getSignedAmount(left.convertedEffectiveBalance ?? left.effectiveBalance);
+      getSignedAmount(right.effectiveBalance) -
+      getSignedAmount(left.effectiveBalance);
 
     return {
       netWorth: createMoneyWithSign(lastNetWorth, currency),
