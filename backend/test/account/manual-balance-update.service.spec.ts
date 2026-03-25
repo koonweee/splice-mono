@@ -47,6 +47,19 @@ const buildSnapshot = (snapshotDate: string, amount: number) =>
     snapshotType: BalanceSnapshotType.USER_UPDATE,
   }) as unknown as BalanceSnapshotEntity;
 
+const buildSyntheticTransaction = (date: string, amount: number) =>
+  ({
+    id: 'existing-synthetic-transaction-id',
+    userId: mockUserId,
+    accountId: 'manual-id',
+    date,
+    merchantName: 'Balance update',
+    pending: false,
+    externalTransactionId: null,
+    amount: money(amount),
+    source: TransactionSource.MANUAL_BALANCE_UPDATE,
+  }) as unknown as TransactionEntity;
+
 describe('ManualBalanceUpdateService', () => {
   let service: ManualBalanceUpdateService;
 
@@ -130,6 +143,9 @@ describe('ManualBalanceUpdateService', () => {
       buildSnapshot('2026-03-20', 100000),
     );
     snapshotRepo.find.mockResolvedValue([buildSnapshot('2026-03-20', 100000)]);
+    transactionRepo.findOne.mockResolvedValue(
+      buildSyntheticTransaction('2026-03-24', 25000),
+    );
     accountRepo.findOne.mockResolvedValue(buildAccount('2026-03-20', 100000));
 
     await service.updateManualBalance('manual-id', mockUserId, {
@@ -146,9 +162,11 @@ describe('ManualBalanceUpdateService', () => {
 
     expect(transactionRepo.save).toHaveBeenLastCalledWith(
       expect.objectContaining({
+        id: 'existing-synthetic-transaction-id',
         merchantName: 'Balance update',
         date: '2026-03-24',
         amount: expect.objectContaining({ amount: 40000 }),
+        source: TransactionSource.MANUAL_BALANCE_UPDATE,
       }),
     );
   });
@@ -172,15 +190,27 @@ describe('ManualBalanceUpdateService', () => {
 
     expect(snapshotRepo.delete).toHaveBeenCalledWith(
       expect.objectContaining({
-        accountId: 'manual-id',
-        userId: mockUserId,
+        where: expect.objectContaining({
+          accountId: 'manual-id',
+          userId: mockUserId,
+          snapshotDate: expect.objectContaining({
+            _type: 'moreThan',
+            _value: '2026-03-18',
+          }),
+        }),
       }),
     );
     expect(transactionRepo.delete).toHaveBeenCalledWith(
       expect.objectContaining({
-        accountId: 'manual-id',
-        userId: mockUserId,
-        source: TransactionSource.MANUAL_BALANCE_UPDATE,
+        where: expect.objectContaining({
+          accountId: 'manual-id',
+          userId: mockUserId,
+          source: TransactionSource.MANUAL_BALANCE_UPDATE,
+          date: expect.objectContaining({
+            _type: 'moreThan',
+            _value: '2026-03-18',
+          }),
+        }),
       }),
     );
   });
