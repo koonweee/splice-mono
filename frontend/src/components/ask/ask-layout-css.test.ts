@@ -37,6 +37,9 @@ describe('Ask layout CSS contract', () => {
     expect(messages).toContain('overflow-y: auto;')
     expect(messages).toContain('min-height: 0;')
     expect(messages).toContain('flex: 1;')
+    expect(messages).toContain('padding-right: 8px;')
+    expect(messages).toContain('padding-bottom: 8px;')
+    expect(messages).toContain('scrollbar-gutter: stable;')
   })
 
   it('keeps the page in a single-column layout', () => {
