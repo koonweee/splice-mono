@@ -17,15 +17,16 @@ function getCssBlock(selector: string): string {
 }
 
 describe('Ask layout CSS contract', () => {
-  it('fills the parent shell layout without recomputing viewport height', () => {
+  it('fills the visible app shell content area and cancels the shell bottom padding for Ask only', () => {
     const routeViewport = getCssBlock('.routeViewport')
 
-    expect(routeViewport).toContain('flex: 1;')
+    expect(routeViewport).toContain(
+      '--app-shell-offset: calc(var(--app-shell-header-offset, 0rem) + (2 * var(--app-shell-padding)));',
+    )
+    expect(routeViewport).toContain('height: calc(100dvh - var(--app-shell-offset));')
     expect(routeViewport).toContain('min-height: 0;')
     expect(routeViewport).toContain('margin-bottom: calc(-1 * var(--app-shell-padding));')
     expect(routeViewport).toContain('padding-bottom: var(--app-shell-padding);')
-    expect(routeViewport).not.toContain('100dvh')
-    expect(routeViewport).not.toContain('--app-shell-offset')
   })
 
   it('assigns scrolling to the transcript within the single Ask layout pane', () => {
