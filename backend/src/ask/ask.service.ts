@@ -11,18 +11,8 @@ import { Injectable } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { AskQueryService } from './ask-query.service';
-import type {
-  AskAnswer,
-  AskEvidenceAccount,
-  AskEvidenceAggregate,
-  AskEvidenceBalanceHistorySummary,
-  AskEvidenceTransaction,
-} from './ask.types';
-import { AskAnswerSchema, AskSemanticMetadataSchema } from './ask.types';
-import {
-  MoneyWithSignSchema,
-  type SerializedMoneyWithSign,
-} from '../types/MoneyWithSign';
+import type { AskAnswer } from './ask.types';
+import { AskAnswerSchema } from './ask.types';
 
 function buildAskSystemPrompt(now = new Date()): string {
   const today = now.toISOString().slice(0, 10);
@@ -51,28 +41,9 @@ type AskMessageMetadata = {
 
 type AskUIMessage = UIMessage<AskMessageMetadata>;
 
-interface AskEvidenceAccumulator {
-  accounts: Map<string, AskEvidenceAccount>;
-  transactions: Map<string, AskEvidenceTransaction>;
-  aggregates: Map<string, AskEvidenceAggregate>;
-  balanceHistory?: AskEvidenceBalanceHistorySummary;
-  matchedCount: number;
-  truncated: boolean;
-}
-
 interface AskQueryScopeAccumulator {
   scope: AskAnswer['queryScope'];
   usesAllAccounts: boolean;
-}
-
-function createAskEvidenceAccumulator(): AskEvidenceAccumulator {
-  return {
-    accounts: new Map(),
-    transactions: new Map(),
-    aggregates: new Map(),
-    matchedCount: 0,
-    truncated: false,
-  };
 }
 
 function createInitialQueryScope(): AskQueryScopeAccumulator {
@@ -90,32 +61,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function isSerializedMoneyWithSign(
-  value: unknown,
-): value is SerializedMoneyWithSign {
-  return MoneyWithSignSchema.safeParse(value).success;
-}
-
-function getArray<T>(value: unknown): T[] {
-  return Array.isArray(value) ? (value as T[]) : [];
-}
-
-function getMatchedCount(value: Record<string, unknown>): number {
-  return typeof value.matchedCount === 'number' ? value.matchedCount : 0;
-}
-
 function getTruncated(value: Record<string, unknown>): boolean {
   return Boolean(value.truncated);
-}
-
-function getAggregateKey(aggregate: AskEvidenceAggregate): string {
-  return [
-    aggregate.kind,
-    aggregate.label,
-    aggregate.rawLabel ?? '',
-    aggregate.currency,
-    aggregate.amount,
-  ].join('|');
 }
 
 function getEarlierDate(left?: string, right?: string): string | undefined {
@@ -174,152 +121,15 @@ function mergeQueryScope(
   };
 }
 
-function mergeAccounts(
-  accumulator: AskEvidenceAccumulator,
-  value: Record<string, unknown>,
-): void {
-  getArray<Record<string, unknown>>(value.accounts).forEach((account) => {
-    const id = typeof account.id === 'string' ? account.id : undefined;
-    if (!id || accumulator.accounts.has(id)) {
-      return;
-    }
-
-    accumulator.accounts.set(id, account as AskEvidenceAccount);
-  });
-}
-
-function mergeTransactions(
-  accumulator: AskEvidenceAccumulator,
-  value: Record<string, unknown>,
-): void {
-  getArray<Record<string, unknown>>(value.transactions).forEach(
-    (transaction) => {
-      const id =
-        typeof transaction.id === 'string' ? transaction.id : undefined;
-      if (!id || accumulator.transactions.has(id)) {
-        return;
-      }
-
-      accumulator.transactions.set(id, transaction as AskEvidenceTransaction);
-    },
+function hasTruncatedToolOutput(
+  steps: Array<{ toolResults: Array<{ output: unknown }> }>,
+): boolean {
+  return steps.some((step) =>
+    step.toolResults.some(
+      (toolResult) =>
+        isRecord(toolResult.output) && getTruncated(toolResult.output),
+    ),
   );
-}
-
-function mergeAggregates(
-  accumulator: AskEvidenceAccumulator,
-  value: Record<string, unknown>,
-): void {
-  const aggregateSources = [
-    ...getArray<unknown>(value.aggregates),
-    ...getArray<unknown>(value.topCategories),
-    ...getArray<unknown>(value.topMerchants),
-    ...getArray<unknown>(value.topAccounts),
-  ];
-
-  aggregateSources.forEach((aggregate) => {
-    if (!isRecord(aggregate)) {
-      return;
-    }
-
-    const label =
-      typeof aggregate.label === 'string' ? aggregate.label : undefined;
-    const currency =
-      typeof aggregate.currency === 'string' ? aggregate.currency : undefined;
-    const kind =
-      typeof aggregate.kind === 'string' ? aggregate.kind : undefined;
-    const amount =
-      typeof aggregate.amount === 'number' ? aggregate.amount : undefined;
-
-    if (!label || !currency || !kind || amount === undefined) {
-      return;
-    }
-
-    const normalizedAggregate = aggregate as AskEvidenceAggregate;
-    const key = getAggregateKey(normalizedAggregate);
-    if (!accumulator.aggregates.has(key)) {
-      accumulator.aggregates.set(key, normalizedAggregate);
-    }
-  });
-}
-
-function normalizeBalanceHistoryEvidence(
-  value: Record<string, unknown>,
-): AskEvidenceBalanceHistorySummary | undefined {
-  const currentTotal = value.currentTotal ?? value.netWorth;
-  if (!isSerializedMoneyWithSign(currentTotal)) {
-    return undefined;
-  }
-
-  const previousTotal = isSerializedMoneyWithSign(value.previousTotal)
-    ? value.previousTotal
-    : undefined;
-  const deltaPercent =
-    typeof value.deltaPercent === 'number'
-      ? value.deltaPercent
-      : typeof value.changePercent === 'number'
-        ? value.changePercent
-        : undefined;
-  const pointCount =
-    typeof value.pointCount === 'number'
-      ? value.pointCount
-      : getArray<unknown>(value.series).length ||
-        getArray<unknown>(value.chartData).length ||
-        getArray<unknown>(value.assets).length +
-          getArray<unknown>(value.liabilities).length;
-
-  const semanticMetadata = AskSemanticMetadataSchema.parse(
-    isRecord(value.semanticMetadata)
-      ? value.semanticMetadata
-      : {
-          pendingIncluded: false,
-          reconciliationApplied: true,
-          comparisonIncluded: false,
-        },
-  );
-
-  const matchedCount =
-    getMatchedCount(value) ||
-    getArray<unknown>(value.series).length ||
-    getArray<unknown>(value.chartData).length ||
-    getArray<unknown>(value.assets).length +
-      getArray<unknown>(value.liabilities).length;
-
-  return {
-    matchedCount,
-    truncated: getTruncated(value),
-    currentTotal,
-    previousTotal,
-    deltaPercent,
-    pointCount,
-    semanticMetadata,
-  };
-}
-
-function mergeEvidence(
-  accumulator: AskEvidenceAccumulator,
-  output: unknown,
-): void {
-  if (!isRecord(output)) {
-    return;
-  }
-
-  const balanceHistory = normalizeBalanceHistoryEvidence(output);
-  const matchedCount =
-    getMatchedCount(output) || balanceHistory?.matchedCount || 0;
-
-  accumulator.matchedCount += matchedCount;
-  accumulator.truncated =
-    accumulator.truncated ||
-    getTruncated(output) ||
-    Boolean(balanceHistory?.truncated);
-
-  mergeAccounts(accumulator, output);
-  mergeTransactions(accumulator, output);
-  mergeAggregates(accumulator, output);
-
-  if (balanceHistory) {
-    accumulator.balanceHistory = balanceHistory;
-  }
 }
 
 @Injectable()
@@ -331,35 +141,15 @@ export class AskService {
       confidence?: AskAnswer['confidence'];
     },
   ): AskAnswer {
-    const accounts = input.evidence.accounts.slice(0, 10);
-    const transactions = input.evidence.transactions.slice(0, 20);
-    const aggregates = input.evidence.aggregates.slice(0, 10);
     const followups = input.followups.slice(0, 3);
-    const askSideTruncated =
-      accounts.length < input.evidence.accounts.length ||
-      transactions.length < input.evidence.transactions.length ||
-      aggregates.length < input.evidence.aggregates.length ||
-      followups.length < input.followups.length;
     const finalTruncated =
-      input.queryScope.truncated ||
-      input.evidence.truncated ||
-      input.evidence.balanceHistory?.truncated ||
-      askSideTruncated ||
-      false;
+      input.queryScope.truncated || followups.length < input.followups.length;
 
     return AskAnswerSchema.parse({
       answerText: input.answerText,
       confidence: input.confidence ?? 'high',
       queryScope: {
         ...input.queryScope,
-        truncated: Boolean(finalTruncated),
-      },
-      evidence: {
-        accounts,
-        transactions,
-        balanceHistory: input.evidence.balanceHistory,
-        aggregates,
-        matchedCount: input.evidence.matchedCount,
         truncated: Boolean(finalTruncated),
       },
       followups,
@@ -494,29 +284,11 @@ export class AskService {
         }),
       },
       onFinish: ({ text, steps }) => {
-        const evidence = createAskEvidenceAccumulator();
-
-        steps.forEach((step) => {
-          step.toolResults.forEach((toolResult) => {
-            if (toolResult.output) {
-              mergeEvidence(evidence, toolResult.output);
-            }
-          });
-        });
-
         finalAnswer = this.buildFinalAnswer({
           answerText: text,
           queryScope: {
             ...queryScope.scope,
-            truncated: evidence.truncated,
-          },
-          evidence: {
-            accounts: Array.from(evidence.accounts.values()),
-            transactions: Array.from(evidence.transactions.values()),
-            balanceHistory: evidence.balanceHistory,
-            aggregates: Array.from(evidence.aggregates.values()),
-            matchedCount: evidence.matchedCount,
-            truncated: evidence.truncated,
+            truncated: hasTruncatedToolOutput(steps),
           },
           followups: [],
         });

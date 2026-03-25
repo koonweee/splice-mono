@@ -11,19 +11,12 @@
 }
 
 .page {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   gap: 16px;
   flex: 1;
   height: 100%;
-  min-height: 0;
-}
-
-.conversationPane {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   min-height: 0;
 }
 
@@ -58,35 +51,6 @@
 
 .messageCardAssistant {
   align-self: flex-start;
-}
-
-.messageHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.messageSelectButton {
-  border: 1px solid var(--mantine-color-gray-3);
-  background: var(--mantine-color-body);
-  color: var(--mantine-color-text);
-  border-radius: 999px;
-  padding: 0.2rem 0.65rem;
-  font: inherit;
-  font-size: var(--mantine-font-size-xs);
-  line-height: 1.3;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.messageSelectButtonSelected {
-  background: var(--mantine-color-gray-1);
-}
-
-.messageSelectButton:focus-visible {
-  outline: 2px solid var(--mantine-color-blue-5);
-  outline-offset: 2px;
 }
 
 .messageBody,
@@ -188,29 +152,7 @@
   text-align: left;
 }
 
-.mobileEvidence {
-  display: none;
-}
-
-.desktopEvidence {
-  min-height: 0;
-  overflow-y: auto;
-}
-
 @media (max-width: 768px) {
-  .page {
-    grid-template-columns: 1fr;
-  }
-
-  .desktopEvidence {
-    display: none;
-  }
-
-  .mobileEvidence {
-    display: block;
-    margin-top: 12px;
-  }
-
   .messageCard {
     max-width: 100%;
   }
