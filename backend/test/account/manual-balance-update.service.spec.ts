@@ -1,7 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
+import { ManualBalanceUpdateService } from '../../src/account/manual-balance-update.service';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
+import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { MoneySign, SerializedMoneyWithSign } from '../../src/types/MoneyWithSign';
 import { mockUserId } from '../mocks/account/account.mock';
@@ -9,41 +13,6 @@ import { mockUserId } from '../mocks/account/account.mock';
 const TransactionSource = {
   MANUAL_BALANCE_UPDATE: 'MANUAL_BALANCE_UPDATE',
 } as const;
-
-type UpdateManualBalanceDto = {
-  balance: SerializedMoneyWithSign;
-  effectiveDate: string;
-  confirmHistoryReset: boolean;
-};
-
-class ManualBalanceUpdateService {
-  constructor(
-    private readonly accountRepo: {
-      findOne: jest.Mock;
-      save: jest.Mock;
-    },
-    private readonly snapshotRepo: {
-      findOne: jest.Mock;
-      find: jest.Mock;
-      save: jest.Mock;
-      delete: jest.Mock;
-    },
-    private readonly transactionRepo: {
-      save: jest.Mock;
-      delete: jest.Mock;
-    },
-  ) {}
-
-  async updateManualBalance(
-    accountId: string,
-    userId: string,
-    dto: UpdateManualBalanceDto,
-  ): Promise<void> {
-    void accountId;
-    void userId;
-    void dto;
-  }
-}
 
 const money = (amount: number): SerializedMoneyWithSign => ({
   money: { amount, currency: 'USD' },
@@ -98,12 +67,26 @@ describe('ManualBalanceUpdateService', () => {
     delete: jest.fn(),
   };
 
-  beforeEach(() => {
-    service = new ManualBalanceUpdateService(
-      accountRepo,
-      snapshotRepo,
-      transactionRepo,
-    );
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ManualBalanceUpdateService,
+        {
+          provide: getRepositoryToken(AccountEntity),
+          useValue: accountRepo,
+        },
+        {
+          provide: getRepositoryToken(BalanceSnapshotEntity),
+          useValue: snapshotRepo,
+        },
+        {
+          provide: getRepositoryToken(TransactionEntity),
+          useValue: transactionRepo,
+        },
+      ],
+    }).compile();
+
+    service = module.get(ManualBalanceUpdateService);
 
     jest.clearAllMocks();
   });
