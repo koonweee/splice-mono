@@ -1,51 +1,67 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AskQueryService } from '../../src/ask/ask-query.service';
-import { AskService } from '../../src/ask/ask.service';
+
+type AskServiceType = typeof import('../../src/ask/ask.service').AskService;
+type AskQueryServiceType =
+  typeof import('../../src/ask/ask-query.service').AskQueryService;
+
 var mockOpenai: jest.Mock;
 var mockStreamText: jest.Mock;
 var mockConvertToModelMessages: jest.Mock;
 var mockPipeUIMessageStreamToResponse: jest.Mock;
 var mockStepCountIs: jest.Mock;
 
-jest.mock(
-  '@ai-sdk/openai',
-  () => ({
-    openai: (mockOpenai = jest.fn((model: string) => ({ model }))),
-  }),
-  { virtual: true },
-);
-
-jest.mock(
-  'ai',
-  () => ({
-    convertToModelMessages: (mockConvertToModelMessages = jest.fn(
-      async (messages) => messages,
-    )),
-    pipeUIMessageStreamToResponse: (mockPipeUIMessageStreamToResponse =
-      jest.fn()),
-    stepCountIs: (mockStepCountIs = jest.fn((count: number) => ({
-      type: 'mock-stop-when',
-      count,
-    }))),
-    streamText: (mockStreamText = jest.fn(() => ({
-      toUIMessageStream: jest.fn(() => 'mock-stream'),
-    }))),
-    tool: ({ execute }: { execute: unknown }) => ({ execute }),
-  }),
-  { virtual: true },
-);
-
 describe('AskService', () => {
-  let service: AskService;
-
-  const mockAskQueryService = {
-    getAccountsSnapshot: jest.fn(),
-    getBalanceHistory: jest.fn(),
-    searchTransactions: jest.fn(),
-    getCashflowAnalysis: jest.fn(),
+  let service: InstanceType<AskServiceType>;
+  let AskService: AskServiceType;
+  let AskQueryService: AskQueryServiceType;
+  let mockAskQueryService: {
+    getAccountsSnapshot: jest.Mock;
+    getBalanceHistory: jest.Mock;
+    searchTransactions: jest.Mock;
+    getCashflowAnalysis: jest.Mock;
   };
 
   beforeEach(async () => {
+    jest.resetModules();
+
+    mockOpenai = jest.fn((model: string) => ({ model }));
+    mockConvertToModelMessages = jest.fn(async (messages) => messages);
+    mockPipeUIMessageStreamToResponse = jest.fn();
+    mockStepCountIs = jest.fn((count: number) => ({
+      type: 'mock-stop-when',
+      count,
+    }));
+    mockStreamText = jest.fn(() => ({
+      toUIMessageStream: jest.fn(() => 'mock-stream'),
+    }));
+
+    jest.doMock('@ai-sdk/openai', () => ({
+      openai: mockOpenai,
+    }));
+    jest.doMock('ai', () => ({
+      convertToModelMessages: mockConvertToModelMessages,
+      pipeUIMessageStreamToResponse: mockPipeUIMessageStreamToResponse,
+      stepCountIs: mockStepCountIs,
+      streamText: mockStreamText,
+      tool: ({ execute }: { execute: unknown }) => ({ execute }),
+    }));
+
+    ({ AskQueryService } = jest.requireActual(
+      '../../src/ask/ask-query.service',
+    ) as {
+      AskQueryService: AskQueryServiceType;
+    });
+    ({ AskService } = jest.requireActual('../../src/ask/ask.service') as {
+      AskService: AskServiceType;
+    });
+
+    mockAskQueryService = {
+      getAccountsSnapshot: jest.fn(),
+      getBalanceHistory: jest.fn(),
+      searchTransactions: jest.fn(),
+      getCashflowAnalysis: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AskService,
@@ -56,11 +72,14 @@ describe('AskService', () => {
       ],
     }).compile();
 
-    service = module.get<AskService>(AskService);
+    service = module.get(AskService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.resetModules();
+    jest.unmock('ai');
+    jest.unmock('@ai-sdk/openai');
     delete process.env.OPENAI_MODEL;
     jest.useRealTimers();
   });
