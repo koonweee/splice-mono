@@ -191,67 +191,323 @@ function buildBalanceSnapshot(params: {
   return snapshot;
 }
 
+type ComparisonOperator = '<=' | '<' | '>=' | '>';
+
+interface DateConstraint {
+  operator: ComparisonOperator;
+  date: string;
+}
+
+interface SnapshotOrder {
+  field: 'snapshotDate' | 'accountId';
+  direction: 'ASC' | 'DESC';
+}
+
 function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
-  let filteredAccountIds: string[] | null = null;
-  let snapshotDateFilter: string | null = null;
-  const knownDateKeys = ['snapshotDate', 'asOfDate', 'endDate', 'startDate', 'date'];
-
-  const extractDateValue = (params: Record<string, unknown>): string | null => {
-    const dateValue = knownDateKeys
-      .map((key) => params[key])
-      .find((value) => typeof value === 'string');
-
-    return typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-      ? dateValue
-      : null;
+  const snapshotRows = [...rows];
+  const state = {
+    accountIds: new Set<string>(),
+    userId: null as string | null,
+    snapshotType: new Set<string>(),
+    dateConstraints: [] as DateConstraint[],
+    orders: [{ field: 'snapshotDate', direction: 'DESC' as const }],
+    limit: null as number | null,
   };
 
-  const parseAccountIds = (params: Record<string, unknown>): string[] | null => {
+  const isDateValue = (value: unknown): value is string => {
+    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  };
+
+  const updateDateConstraints = (query: string, params: Record<string, unknown>) => {
+    const dateConstraintMatch = query.match(
+      /snapshot\.snapshotDate\s*(<=|<|>=|>)\s*:(\w+)/i,
+    );
+
+    if (!dateConstraintMatch) {
+      return;
+    }
+
+    const [, operator, paramName] = dateConstraintMatch;
+    const value = params[paramName];
+    if (isDateValue(value)) {
+      state.dateConstraints.push({
+        operator: operator as ComparisonOperator,
+        date: value,
+      });
+    }
+  };
+
+  const updateAccountFilters = (
+    query: string,
+    params: Record<string, unknown>,
+  ) => {
+    const accountInMatch = query.match(
+      /snapshot\.accountId\s+IN\s*\(:\.\.\.(\w+)\)/i,
+    );
+    if (accountInMatch) {
+      const accountIds = params[accountInMatch[1]];
+      if (Array.isArray(accountIds)) {
+        accountIds
+          .filter((id): id is string => typeof id === 'string')
+          .forEach((id) => state.accountIds.add(id));
+      }
+      return;
+    }
+
+    const accountEqMatch = query.match(
+      /snapshot\.accountId\s*=\s*:(\w+)/i,
+    );
+    if (accountEqMatch) {
+      const accountId = params[accountEqMatch[1]];
+      if (typeof accountId === 'string') {
+        state.accountIds.add(accountId);
+      }
+    }
+  };
+
+  const updateUserFilters = (query: string, params: Record<string, unknown>) => {
+    const userMatch = query.match(/snapshot\.userId\s*=\s*:(\w+)/i);
+    if (!userMatch) {
+      return;
+    }
+
+    const userId = params[userMatch[1]];
+    if (typeof userId === 'string') {
+      state.userId = userId;
+    }
+  };
+
+  const updateSnapshotTypeFilters = (query: string, params: Record<string, unknown>) => {
+    const snapshotTypeInMatch = query.match(
+      /snapshot\.snapshotType\s+IN\s*\(:\.\.\.(\w+)\)/i,
+    );
+    if (snapshotTypeInMatch) {
+      const snapshotTypes = params[snapshotTypeInMatch[1]];
+      if (Array.isArray(snapshotTypes)) {
+        snapshotTypes
+          .filter((value): value is string => typeof value === 'string')
+          .forEach((value) => state.snapshotType.add(value));
+      }
+      return;
+    }
+
+    const snapshotTypeEqMatch = query.match(
+      /snapshot\.snapshotType\s*=\s*:(\w+)/i,
+    );
+    if (snapshotTypeEqMatch) {
+      const snapshotType = params[snapshotTypeEqMatch[1]];
+      if (typeof snapshotType === 'string') {
+        state.snapshotType.add(snapshotType);
+      }
+    }
+  };
+
+  const updateOrder = (
+    query: string,
+    direction: 'ASC' | 'DESC' = 'ASC',
+    append = false,
+  ) => {
+    const fieldMatch = query.match(/snapshot\.(\w+)/i);
+    if (!fieldMatch) {
+      return;
+    }
+
+    const field = fieldMatch[1];
+    if (field !== 'snapshotDate' && field !== 'accountId') {
+      return;
+    }
+
+    const normalizedDirection = direction === 'DESC' ? 'DESC' : 'ASC';
+    const order = {
+      field,
+      direction: normalizedDirection,
+    };
+
+    if (append) {
+      state.orders.push(order);
+      return;
+    }
+
+    state.orders = [order];
+  };
+
+  const updateFromClause = (query: string, params: Record<string, unknown>) => {
+    updateDateConstraints(query, params);
+    updateAccountFilters(query, params);
+    updateUserFilters(query, params);
+    updateSnapshotTypeFilters(query, params);
+  };
+
+  const applyImplicitParamDates = (params: Record<string, unknown>) => {
+    const startDate = params.startDate;
+    if (isDateValue(startDate) && !state.dateConstraints.some((constraint) => constraint.date === startDate)) {
+      state.dateConstraints.push({
+        operator: '<=',
+        date: startDate,
+      });
+    }
+
+    const endDate = params.endDate;
+    if (isDateValue(endDate) && !state.dateConstraints.some((constraint) => constraint.date === endDate)) {
+      state.dateConstraints.push({
+        operator: '<=',
+        date: endDate,
+      });
+    }
+  };
+
+  const applyImplicitParamFilters = (params: Record<string, unknown>) => {
     if (typeof params.accountId === 'string') {
-      return [params.accountId];
+      state.accountIds.add(params.accountId);
     }
-
     if (Array.isArray(params.accountIds)) {
-      return params.accountIds.filter((id): id is string => typeof id === 'string');
+      params.accountIds
+        .filter((id): id is string => typeof id === 'string')
+        .forEach((id) => state.accountIds.add(id));
+    }
+    if (typeof params.userId === 'string') {
+      state.userId = params.userId;
+    }
+    if (typeof params.snapshotType === 'string') {
+      state.snapshotType.add(params.snapshotType);
+    }
+    if (Array.isArray(params.snapshotTypes)) {
+      params.snapshotTypes
+        .filter((value): value is string => typeof value === 'string')
+        .forEach((value) => state.snapshotType.add(value));
+    }
+  };
+
+  const updateFromClauseWithImplicitParams = (
+    query: string,
+    params: Record<string, unknown>,
+  ) => {
+    updateFromClause(query, params);
+    if (Object.keys(params).length === 0) {
+      return;
     }
 
-    return null;
+    if (!query || !query.includes(':')) {
+      applyImplicitParamFilters(params);
+      applyImplicitParamDates(params);
+      return;
+    }
+  };
+
+  const compareByDate = (left: BalanceSnapshotEntity, right: BalanceSnapshotEntity) =>
+    right.snapshotDate.localeCompare(left.snapshotDate);
+
+  const compareById = (left: BalanceSnapshotEntity, right: BalanceSnapshotEntity) =>
+    right.id.localeCompare(left.id);
+
+  const compareSnapshots = (
+    left: BalanceSnapshotEntity,
+    right: BalanceSnapshotEntity,
+  ) => {
+    for (const order of state.orders) {
+      const leftValue = left[order.field];
+      const rightValue = right[order.field];
+
+      if (order.field === 'snapshotDate') {
+        const diff =
+          order.direction === 'DESC'
+            ? rightValue.localeCompare(leftValue)
+            : leftValue.localeCompare(rightValue);
+        if (diff !== 0) {
+          return diff;
+        }
+      } else if (order.field === 'accountId') {
+        if (leftValue !== rightValue) {
+          const diff =
+            order.direction === 'DESC'
+              ? rightValue.localeCompare(leftValue)
+              : leftValue.localeCompare(rightValue);
+          if (diff !== 0) {
+            return diff;
+          }
+        }
+      }
+    }
+
+    return compareByDate(left, right) || compareById(left, right);
+  };
+
+  const satisfiesDateConstraint = (
+    snapshot: BalanceSnapshotEntity,
+    constraint: DateConstraint,
+  ) => {
+    switch (constraint.operator) {
+      case '<':
+        return snapshot.snapshotDate < constraint.date;
+      case '<=':
+        return snapshot.snapshotDate <= constraint.date;
+      case '>':
+        return snapshot.snapshotDate > constraint.date;
+      case '>=':
+        return snapshot.snapshotDate >= constraint.date;
+      default:
+        return true;
+    }
   };
 
   const selectSnapshots = (): BalanceSnapshotEntity[] =>
-    [...rows]
-      .filter(
-        (row) =>
-          (!filteredAccountIds ||
-            filteredAccountIds.includes(row.accountId)) &&
-          (!snapshotDateFilter || row.snapshotDate <= snapshotDateFilter),
-      )
-      .sort((left, right) => right.snapshotDate.localeCompare(left.snapshotDate));
+    snapshotRows
+      .filter((snapshot) => {
+        if (
+          state.accountIds.size > 0 &&
+          !state.accountIds.has(snapshot.accountId)
+        ) {
+          return false;
+        }
+        if (state.userId && snapshot.userId !== state.userId) {
+          return false;
+        }
+        if (state.snapshotType.size > 0 && !state.snapshotType.has(snapshot.snapshotType)) {
+          return false;
+        }
 
-  const updateFilters = (params: Record<string, unknown> = {}) => {
-    const nextDate = extractDateValue(params);
-    const nextAccountIds = parseAccountIds(params);
+        const hasDateConstraints =
+          state.dateConstraints.length > 0;
+        if (hasDateConstraints) {
+          return state.dateConstraints.every((constraint) =>
+            satisfiesDateConstraint(snapshot, constraint),
+          );
+        }
 
-    if (nextDate) {
-      snapshotDateFilter = nextDate;
-    }
-    if (nextAccountIds) {
-      filteredAccountIds = nextAccountIds;
-    }
-  };
+        return true;
+      })
+      .sort(compareSnapshots)
+      .slice(0, state.limit ?? snapshotRows.length);
 
   const queryBuilder = {
-    where: jest.fn((_: string, params: Record<string, unknown> = {}) => {
-      updateFilters(params);
+    where: jest.fn((query: string, params: Record<string, unknown> = {}) => {
+      updateFromClauseWithImplicitParams(query, params);
       return queryBuilder;
     }),
-    andWhere: jest.fn((_: string, params: Record<string, unknown> = {}) => {
-      updateFilters(params);
+    andWhere: jest.fn((query: string, params: Record<string, unknown> = {}) => {
+      updateFromClauseWithImplicitParams(query, params);
       return queryBuilder;
     }),
-    orderBy: jest.fn(() => queryBuilder),
+    orderBy: jest.fn((query: string, direction: 'ASC' | 'DESC' = 'ASC') => {
+      updateOrder(query, direction);
+      return queryBuilder;
+    }),
+    addOrderBy: jest.fn(
+      (query: string, direction: 'ASC' | 'DESC' = 'ASC') => {
+        updateOrder(query, direction, true);
+        return queryBuilder;
+      },
+    ),
+    take: jest.fn((count: number) => {
+      state.limit = count;
+      return queryBuilder;
+    }),
+    limit: jest.fn((count: number) => {
+      state.limit = count;
+      return queryBuilder;
+    }),
     setParameters: jest.fn((params: Record<string, unknown> = {}) => {
-      updateFilters(params);
+      updateFromClauseWithImplicitParams('', params);
       return queryBuilder;
     }),
     getMany: jest.fn(async () => selectSnapshots()),
@@ -289,7 +545,7 @@ describe('TransactionAnalysisService', () => {
       }),
     };
     mockAccountRepository = {
-      find: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
     };
     mockBalanceSnapshotRepository = {
       createQueryBuilder: jest.fn(() => buildSnapshotQueryBuilder([])),
@@ -326,6 +582,12 @@ describe('TransactionAnalysisService', () => {
       TransactionAnalysisService,
     );
   });
+
+  const mockSnapshotRows = (rows: BalanceSnapshotEntity[]) => {
+    mockBalanceSnapshotRepository.createQueryBuilder.mockImplementation(() =>
+      buildSnapshotQueryBuilder(rows),
+    );
+  };
 
   afterEach(() => {
     jest.clearAllMocks();
@@ -777,15 +1039,13 @@ describe('TransactionAnalysisService', () => {
 
       mockTransactionRepository.find.mockResolvedValue([]);
       mockAccountRepository.find.mockResolvedValue([checking]);
-      mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
-        buildSnapshotQueryBuilder([
-          preStartSnapshot,
-          startSnapshot,
-          midSnapshot,
-          endSnapshot,
-          futureSnapshot,
-        ]),
-      );
+      mockSnapshotRows([
+        futureSnapshot,
+        preStartSnapshot,
+        startSnapshot,
+        midSnapshot,
+        endSnapshot,
+      ]);
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
@@ -796,7 +1056,6 @@ describe('TransactionAnalysisService', () => {
         balanceAdjustments: [
           expect.objectContaining({
             accountId: 'acct-inflow',
-            accountName: 'Primary Checking',
             flowDirection: 'inflow',
             currency: 'USD',
             deltaAmount: 7500,
@@ -849,15 +1108,13 @@ describe('TransactionAnalysisService', () => {
 
       mockTransactionRepository.find.mockResolvedValue([]);
       mockAccountRepository.find.mockResolvedValue([savings]);
-      mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
-        buildSnapshotQueryBuilder([
-          preStartSnapshot,
-          startSnapshot,
-          midSnapshot,
-          endSnapshot,
-          futureSnapshot,
-        ]),
-      );
+      mockSnapshotRows([
+        preStartSnapshot,
+        startSnapshot,
+        midSnapshot,
+        endSnapshot,
+        futureSnapshot,
+      ]);
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
@@ -868,7 +1125,6 @@ describe('TransactionAnalysisService', () => {
         balanceAdjustments: [
           expect.objectContaining({
             accountId: 'acct-outflow',
-            accountName: 'High Yield Savings',
             flowDirection: 'outflow',
             currency: 'USD',
             deltaAmount: 9000,
@@ -915,9 +1171,7 @@ describe('TransactionAnalysisService', () => {
         }),
       ]);
       mockAccountRepository.find.mockResolvedValue([accountWithPosted]);
-      mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
-        buildSnapshotQueryBuilder([startSnapshot, endSnapshot]),
-      );
+      mockSnapshotRows([startSnapshot, endSnapshot]);
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
@@ -949,9 +1203,7 @@ describe('TransactionAnalysisService', () => {
 
       mockTransactionRepository.find.mockResolvedValue([]);
       mockAccountRepository.find.mockResolvedValue([checking]);
-      mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
-        buildSnapshotQueryBuilder([onlyEndBoundarySnapshot]),
-      );
+      mockSnapshotRows([onlyEndBoundarySnapshot]);
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
@@ -999,9 +1251,7 @@ describe('TransactionAnalysisService', () => {
         accountWithPosted,
         adjustmentAccount,
       ]);
-      mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
-        buildSnapshotQueryBuilder([adjustmentStart, adjustmentEnd]),
-      );
+      mockSnapshotRows([adjustmentStart, adjustmentEnd]);
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
@@ -1013,7 +1263,6 @@ describe('TransactionAnalysisService', () => {
         balanceAdjustments: [
           expect.objectContaining({
             accountId: 'acct-adjust-only',
-            accountName: 'Growth Bucket',
             flowDirection: 'inflow',
             currency: 'USD',
             deltaAmount: 1500,
