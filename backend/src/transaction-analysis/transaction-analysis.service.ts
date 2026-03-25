@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
@@ -84,19 +84,15 @@ export class TransactionAnalysisService {
     );
     const unmatchedTransactions =
       this.neutralizeTransactions(postedTransactions);
-    const accountIdsWithPostedTransactions = new Set(
-      postedTransactions.map((transaction) => transaction.accountId),
-    );
-    const balanceAdjustmentRows = await this.getBalanceAdjustmentRows(
+    const {
+      balanceAdjustmentRows,
+      balanceAdjustments,
+    } = await this.getBalanceAdjustmentData(
       startDate,
       endDate,
       userId,
-      accountIdsWithPostedTransactions,
-    );
-    const balanceAdjustments = await this.buildBalanceAdjustments(
-      balanceAdjustmentRows,
       preferredCurrency,
-      endDate,
+      new Set(postedTransactions.map((transaction) => transaction.accountId)),
     );
 
     this.logger.log(
@@ -275,6 +271,67 @@ export class TransactionAnalysisService {
         rateMap,
       ),
     );
+  }
+
+  async getBalanceAdjustments(
+    startDate: string,
+    endDate: string,
+    categoryPrimary: string,
+    flowDirection: 'inflow' | 'outflow',
+    userId: string,
+  ): Promise<BalanceAdjustment[]> {
+    if (categoryPrimary !== BALANCE_ADJUSTMENT_CATEGORY) {
+      throw new BadRequestException(
+        `Unsupported categoryPrimary: ${categoryPrimary}`,
+      );
+    }
+
+    const preferredCurrency =
+      await this.currencyConversionService.getPreferredCurrency(userId);
+    const postedTransactions = await this.getPostedTransactionsInRange(
+      startDate,
+      endDate,
+      userId,
+    );
+    const { balanceAdjustments } = await this.getBalanceAdjustmentData(
+      startDate,
+      endDate,
+      userId,
+      preferredCurrency,
+      new Set(postedTransactions.map((transaction) => transaction.accountId)),
+    );
+
+    return balanceAdjustments.filter(
+      (adjustment) => adjustment.flowDirection === flowDirection,
+    );
+  }
+
+  private async getBalanceAdjustmentData(
+    startDate: string,
+    endDate: string,
+    userId: string,
+    preferredCurrency: string,
+    excludedAccountIds: Set<string>,
+  ): Promise<{
+    balanceAdjustmentRows: BalanceAdjustmentRow[];
+    balanceAdjustments: BalanceAdjustment[];
+  }> {
+    const balanceAdjustmentRows = await this.getBalanceAdjustmentRows(
+      startDate,
+      endDate,
+      userId,
+      excludedAccountIds,
+    );
+    const balanceAdjustments = await this.buildBalanceAdjustments(
+      balanceAdjustmentRows,
+      preferredCurrency,
+      endDate,
+    );
+
+    return {
+      balanceAdjustmentRows,
+      balanceAdjustments,
+    };
   }
 
   private async getPostedTransactionsInRange(

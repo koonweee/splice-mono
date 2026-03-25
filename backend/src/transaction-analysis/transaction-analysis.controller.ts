@@ -7,11 +7,14 @@ import {
 import { ZodApiResponse } from '../common/zod-api-response';
 import {
   TransactionAnalysisQuerySchema,
+  TransactionAnalysisBalanceAdjustmentsQuerySchema,
+  TransactionAnalysisBalanceAdjustmentsResponseSchema,
   TransactionAnalysisResponseSchema,
   TransactionAnalysisTransactionsQuerySchema,
   TransactionAnalysisTransactionsResponseSchema,
 } from '../types/TransactionAnalysis';
 import type {
+  TransactionAnalysisBalanceAdjustmentsQuery,
   TransactionAnalysisQuery,
   TransactionAnalysisTransactionsQuery,
 } from '../types/TransactionAnalysis';
@@ -120,6 +123,62 @@ export class TransactionAnalysisController {
     }
 
     return this.transactionAnalysisService.getCategoryTransactions(
+      query.startDate,
+      query.endDate,
+      query.categoryPrimary,
+      query.flowDirection,
+      user.userId,
+    );
+  }
+
+  @Get('balance-adjustments')
+  @ApiOperation({
+    description:
+      'Get synthetic balance adjustment drilldown rows for a date range. ' +
+      'The route only accepts BALANCE_ADJUSTMENT as the category filter and reuses the same snapshot-based adjustment pipeline as the summary endpoint.',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: true,
+    type: String,
+    description: 'Start date (YYYY-MM-DD, inclusive)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: true,
+    type: String,
+    description: 'End date (YYYY-MM-DD, inclusive)',
+  })
+  @ApiQuery({
+    name: 'categoryPrimary',
+    required: true,
+    type: String,
+    description: 'Primary category filter. Must be BALANCE_ADJUSTMENT.',
+  })
+  @ApiQuery({
+    name: 'flowDirection',
+    required: true,
+    enum: ['inflow', 'outflow'],
+    description: 'Whether to return inflow or outflow balance adjustments',
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Returns balance adjustment drilldown rows',
+    schema: TransactionAnalysisBalanceAdjustmentsResponseSchema,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request parameters' })
+  async getBalanceAdjustments(
+    @CurrentUser() user: JwtUser,
+    @Query(new ZodValidationPipe(TransactionAnalysisBalanceAdjustmentsQuerySchema))
+    query: TransactionAnalysisBalanceAdjustmentsQuery,
+  ): Promise<unknown> {
+    if (query.startDate > query.endDate) {
+      throw new BadRequestException(
+        'startDate must be before or equal to endDate',
+      );
+    }
+
+    return this.transactionAnalysisService.getBalanceAdjustments(
       query.startDate,
       query.endDate,
       query.categoryPrimary,
