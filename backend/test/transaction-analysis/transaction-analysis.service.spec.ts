@@ -3,6 +3,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountEntity } from '../../src/account/account.entity';
 import { CategoryEntity } from '../../src/category/category.entity';
 import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
+import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
+import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { CashflowAnalysisSurfaceService } from '../../src/transaction-analysis/cashflow-analysis-surface.service';
 import { TransactionAnalysisService } from '../../src/transaction-analysis/transaction-analysis.service';
@@ -30,6 +32,7 @@ function buildTransaction(params: {
   id: string;
   amount: number;
   sign: MoneySign;
+  accountId?: string;
   currency?: string;
   date: string;
   pending?: boolean;
@@ -47,7 +50,7 @@ function buildTransaction(params: {
         },
         sign: params.sign,
       },
-      accountId: 'account-1',
+      accountId: params.accountId ?? 'account-1',
       pending: params.pending ?? false,
       date: params.date,
     },
@@ -112,10 +115,171 @@ function buildTransaction(params: {
   return entity;
 }
 
+function buildAccount(params: {
+  id: string;
+  accountName?: string;
+  accountCustomName?: string | null;
+  type?: string;
+}): AccountEntity {
+  const entity = AccountEntity.fromDto(
+    {
+      name: params.accountName ?? 'Checking',
+      customName: params.accountCustomName ?? null,
+      mask: null,
+      type: (params.type ?? 'depository') as string,
+      subType: null,
+      externalAccountId: null,
+      bankLinkId: null,
+      availableBalance: {
+        money: {
+          amount: 0,
+          currency: 'USD',
+        },
+        sign: MoneySign.POSITIVE,
+      },
+      currentBalance: {
+        money: {
+          amount: 0,
+          currency: 'USD',
+        },
+        sign: MoneySign.POSITIVE,
+      },
+    },
+    mockUserId,
+  );
+
+  entity.id = params.id;
+
+  return entity;
+}
+
+function buildBalanceSnapshot(params: {
+  accountId: string;
+  snapshotDate: string;
+  amount: number;
+  sign?: MoneySign;
+  currency?: string;
+}): BalanceSnapshotEntity {
+  const currency = params.currency ?? 'USD';
+  const sign = params.sign ?? MoneySign.POSITIVE;
+
+  const snapshot = BalanceSnapshotEntity.fromDto(
+    {
+      accountId: params.accountId,
+      snapshotDate: params.snapshotDate,
+      snapshotType: BalanceSnapshotType.SYNC,
+      currentBalance: {
+        money: {
+          amount: params.amount,
+          currency,
+        },
+        sign,
+      },
+      availableBalance: {
+        money: {
+          amount: params.amount,
+          currency,
+        },
+        sign,
+      },
+    },
+    mockUserId,
+  );
+
+  snapshot.id = `${params.accountId}-${params.snapshotDate}`;
+
+  return snapshot;
+}
+
+function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
+  let snapshotDateFilter: string | null = null;
+
+  const snapshotRows = (asOfDate: string | null): BalanceSnapshotEntity[] => {
+    if (!asOfDate) {
+      return [...rows];
+    }
+
+    return [...rows].filter((row) => row.snapshotDate <= asOfDate);
+  };
+
+  const queryBuilder = {
+    where: jest.fn(
+      (_clause: string, params: { snapshotDate?: string; asOfDate?: string } = {}) => {
+        if (params.snapshotDate) {
+          snapshotDateFilter = params.snapshotDate;
+        }
+        if (params.asOfDate) {
+          snapshotDateFilter = params.asOfDate;
+        }
+        return queryBuilder;
+      },
+    ),
+    andWhere: jest.fn(
+      (_clause: string, params: { snapshotDate?: string; asOfDate?: string; date?: string } = {}) => {
+        if (params.snapshotDate) {
+          snapshotDateFilter = params.snapshotDate;
+        }
+        if (params.asOfDate) {
+          snapshotDateFilter = params.asOfDate;
+        }
+        if (params.date) {
+          snapshotDateFilter = params.date;
+        }
+        return queryBuilder;
+      },
+    ),
+    orWhere: jest.fn(
+      (_clause: string, params: { snapshotDate?: string; asOfDate?: string; date?: string } = {}) => {
+        if (params.snapshotDate) {
+          snapshotDateFilter = params.snapshotDate;
+        }
+        if (params.asOfDate) {
+          snapshotDateFilter = params.asOfDate;
+        }
+        if (params.date) {
+          snapshotDateFilter = params.date;
+        }
+        return queryBuilder;
+      },
+    ),
+    orderBy: jest.fn(() => queryBuilder),
+    addOrderBy: jest.fn(() => queryBuilder),
+    select: jest.fn(() => queryBuilder),
+    addSelect: jest.fn(() => queryBuilder),
+    leftJoinAndSelect: jest.fn(() => queryBuilder),
+    innerJoinAndSelect: jest.fn(() => queryBuilder),
+    groupBy: jest.fn(() => queryBuilder),
+    addGroupBy: jest.fn(() => queryBuilder),
+    having: jest.fn(() => queryBuilder),
+    getMany: jest.fn(() => Promise.resolve(snapshotRows(snapshotDateFilter))),
+    getRawMany: jest.fn(() => Promise.resolve(snapshotRows(snapshotDateFilter))),
+    getOne: jest.fn(() => {
+      const filtered = snapshotRows(snapshotDateFilter);
+      return Promise.resolve(filtered[filtered.length - 1]);
+    }),
+    setParameters: jest.fn(() => queryBuilder),
+    andWhereExists: jest.fn(() => queryBuilder),
+    leftJoin: jest.fn(() => queryBuilder),
+    innerJoin: jest.fn(() => queryBuilder),
+    distinctOn: jest.fn(() => queryBuilder),
+    addOrderByDirection: jest.fn(() => queryBuilder),
+    limit: jest.fn(() => queryBuilder),
+    take: jest.fn(() => queryBuilder),
+  };
+
+  return queryBuilder;
+}
+
 describe('TransactionAnalysisService', () => {
   let service: TransactionAnalysisService;
   let mockTransactionRepository: {
     find: jest.Mock;
+    createQueryBuilder: jest.Mock;
+  };
+  let mockAccountRepository: {
+    find: jest.Mock;
+  };
+  let mockBalanceSnapshotRepository: {
     createQueryBuilder: jest.Mock;
   };
   let mockCurrencyConversionService: {
@@ -133,6 +297,12 @@ describe('TransactionAnalysisService', () => {
         );
       }),
     };
+    mockAccountRepository = {
+      find: jest.fn(),
+    };
+    mockBalanceSnapshotRepository = {
+      createQueryBuilder: jest.fn(() => buildSnapshotQueryBuilder([])),
+    };
     mockCurrencyConversionService = {
       getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
       getRateMap: jest.fn().mockResolvedValue(new Map([['EUR', 1.1]])),
@@ -145,6 +315,14 @@ describe('TransactionAnalysisService', () => {
         {
           provide: getRepositoryToken(TransactionEntity),
           useValue: mockTransactionRepository,
+        },
+        {
+          provide: getRepositoryToken(AccountEntity),
+          useValue: mockAccountRepository,
+        },
+        {
+          provide: getRepositoryToken(BalanceSnapshotEntity),
+          useValue: mockBalanceSnapshotRepository,
         },
         {
           provide: CurrencyConversionService,
@@ -575,23 +753,47 @@ describe('TransactionAnalysisService', () => {
     });
 
     it('adds an inflow BALANCE_ADJUSTMENT when no posted transactions exist and snapshots indicate growth', async () => {
+      const checking = buildAccount({
+        id: 'acct-inflow',
+        accountName: 'Checking',
+        accountCustomName: 'Primary Checking',
+      });
+      const startSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-inflow',
+        snapshotDate: '2024-01-01',
+        amount: 10000,
+      });
+      const endSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-inflow',
+        snapshotDate: '2024-01-31',
+        amount: 17500,
+      });
+
       mockTransactionRepository.find.mockResolvedValue([]);
+      mockAccountRepository.find.mockResolvedValue([checking]);
+      mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
+        buildSnapshotQueryBuilder([startSnapshot, endSnapshot]),
+      );
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 1000,
+        totalInflow: 7500,
         totalOutflow: 0,
-        netFlow: 1000,
-        balanceAdjustments: expect.arrayContaining([
+        netFlow: 7500,
+        balanceAdjustments: [
           expect.objectContaining({
-            primaryCategory: 'BALANCE_ADJUSTMENT',
+            accountId: 'acct-inflow',
+            accountName: 'Primary Checking',
+            flowDirection: 'inflow',
+            currency: 'USD',
+            deltaAmount: 7500,
           }),
-        ]),
+        ],
         inflows: [
           expect.objectContaining({
             primaryCategory: 'BALANCE_ADJUSTMENT',
-            totalAmount: 1000,
+            totalAmount: 7500,
             currency: 'USD',
             transactionCount: 1,
           }),
@@ -602,23 +804,47 @@ describe('TransactionAnalysisService', () => {
     });
 
     it('adds an outflow BALANCE_ADJUSTMENT when no posted transactions exist and snapshots indicate decline', async () => {
+      const savings = buildAccount({
+        id: 'acct-outflow',
+        accountName: 'Savings',
+        accountCustomName: 'High Yield Savings',
+      });
+      const startSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-outflow',
+        snapshotDate: '2024-01-01',
+        amount: 12000,
+      });
+      const endSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-outflow',
+        snapshotDate: '2024-01-31',
+        amount: 3000,
+      });
+
       mockTransactionRepository.find.mockResolvedValue([]);
+      mockAccountRepository.find.mockResolvedValue([savings]);
+      mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
+        buildSnapshotQueryBuilder([startSnapshot, endSnapshot]),
+      );
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
         totalInflow: 0,
-        totalOutflow: 2000,
-        netFlow: -2000,
-        balanceAdjustments: expect.arrayContaining([
+        totalOutflow: 9000,
+        netFlow: -9000,
+        balanceAdjustments: [
           expect.objectContaining({
-            primaryCategory: 'BALANCE_ADJUSTMENT',
+            accountId: 'acct-outflow',
+            accountName: 'High Yield Savings',
+            flowDirection: 'outflow',
+            currency: 'USD',
+            deltaAmount: 9000,
           }),
-        ]),
+        ],
         outflows: [
           expect.objectContaining({
             primaryCategory: 'BALANCE_ADJUSTMENT',
-            totalAmount: 2000,
+            totalAmount: 9000,
             currency: 'USD',
             transactionCount: 1,
           }),
@@ -629,15 +855,36 @@ describe('TransactionAnalysisService', () => {
     });
 
     it('does not create synthetic adjustments for accounts with in-range posted transactions', async () => {
+      const accountWithPosted = buildAccount({
+        id: 'acct-posted-excluded',
+        accountName: 'Checking',
+        accountCustomName: 'Checking with activity',
+      });
+      const startSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-posted-excluded',
+        snapshotDate: '2024-01-01',
+        amount: 3000,
+      });
+      const endSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-posted-excluded',
+        snapshotDate: '2024-01-31',
+        amount: 4500,
+      });
+
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'posted-adjustment-offset',
           amount: 1000,
           sign: MoneySign.POSITIVE,
           date: '2024-01-15',
+          accountId: 'acct-posted-excluded',
           primary: 'INCOME',
         }),
       ]);
+      mockAccountRepository.find.mockResolvedValue([accountWithPosted]);
+      mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
+        buildSnapshotQueryBuilder([startSnapshot, endSnapshot]),
+      );
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
@@ -657,7 +904,21 @@ describe('TransactionAnalysisService', () => {
     });
 
     it('skips accounts that do not have both boundary snapshots for synthetic adjustment generation', async () => {
+      const checking = buildAccount({
+        id: 'acct-missing-boundary',
+        accountName: 'Checking',
+      });
+      const startSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-missing-boundary',
+        snapshotDate: '2024-01-01',
+        amount: 2000,
+      });
+
       mockTransactionRepository.find.mockResolvedValue([]);
+      mockAccountRepository.find.mockResolvedValue([checking]);
+      mockBalanceSnapshotRepository.createQueryBuilder
+        .mockReturnValueOnce(buildSnapshotQueryBuilder([startSnapshot]))
+        .mockReturnValueOnce(buildSnapshotQueryBuilder([]));
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
@@ -672,31 +933,73 @@ describe('TransactionAnalysisService', () => {
     });
 
     it('keeps synthetic adjustments out of uncategorized totals', async () => {
+      const accountWithPosted = buildAccount({
+        id: 'acct-with-posted',
+        accountName: 'Everyday',
+      });
+      const adjustmentAccount = buildAccount({
+        id: 'acct-adjust-only',
+        accountName: 'Investment',
+        accountCustomName: 'Growth Bucket',
+      });
+      const adjustmentStart = buildBalanceSnapshot({
+        accountId: 'acct-adjust-only',
+        snapshotDate: '2024-01-01',
+        amount: 1000,
+      });
+      const adjustmentEnd = buildBalanceSnapshot({
+        accountId: 'acct-adjust-only',
+        snapshotDate: '2024-01-31',
+        amount: 2500,
+      });
+
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'uncategorized-receipt',
           amount: 700,
           sign: MoneySign.POSITIVE,
           date: '2024-01-10',
+          accountId: 'acct-with-posted',
         }),
       ]);
+      mockAccountRepository.find.mockResolvedValue([
+        accountWithPosted,
+        adjustmentAccount,
+      ]);
+      mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
+        buildSnapshotQueryBuilder([adjustmentStart, adjustmentEnd]),
+      );
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 700,
+        totalInflow: 2200,
         totalOutflow: 0,
         uncategorizedInflow: 700,
         uncategorizedOutflow: 0,
-        inflows: [
+        balanceAdjustments: [
+          expect.objectContaining({
+            accountId: 'acct-adjust-only',
+            accountName: 'Growth Bucket',
+            flowDirection: 'inflow',
+            currency: 'USD',
+            deltaAmount: 1500,
+          }),
+        ],
+        inflows: expect.arrayContaining([
           expect.objectContaining({
             primaryCategory: 'UNCATEGORIZED',
             totalAmount: 700,
             currency: 'USD',
             transactionCount: 1,
           }),
-        ],
-        balanceAdjustments: expect.any(Array),
+          expect.objectContaining({
+            primaryCategory: 'BALANCE_ADJUSTMENT',
+            totalAmount: 1500,
+            currency: 'USD',
+            transactionCount: 1,
+          }),
+        ]),
       });
     });
   });
