@@ -1780,15 +1780,17 @@ describe('TransactionAnalysisService', () => {
       const analysis = await seedBalanceAdjustmentAnalysis();
 
       await expect(
-        (service as unknown as {
-          getBalanceAdjustments: (
-            startDate: string,
-            endDate: string,
-            categoryPrimary: 'BALANCE_ADJUSTMENT',
-            flowDirection: 'inflow' | 'outflow',
-            userId: string,
-          ) => Promise<unknown[]>;
-        }).getBalanceAdjustments(
+        (
+          service as unknown as {
+            getBalanceAdjustments: (
+              startDate: string,
+              endDate: string,
+              categoryPrimary: 'BALANCE_ADJUSTMENT',
+              flowDirection: 'inflow' | 'outflow',
+              userId: string,
+            ) => Promise<unknown[]>;
+          }
+        ).getBalanceAdjustments(
           '2024-01-01',
           '2024-01-31',
           'BALANCE_ADJUSTMENT',
@@ -1806,15 +1808,17 @@ describe('TransactionAnalysisService', () => {
       const analysis = await seedBalanceAdjustmentAnalysis();
 
       await expect(
-        (service as unknown as {
-          getBalanceAdjustments: (
-            startDate: string,
-            endDate: string,
-            categoryPrimary: 'BALANCE_ADJUSTMENT',
-            flowDirection: 'inflow' | 'outflow',
-            userId: string,
-          ) => Promise<unknown[]>;
-        }).getBalanceAdjustments(
+        (
+          service as unknown as {
+            getBalanceAdjustments: (
+              startDate: string,
+              endDate: string,
+              categoryPrimary: 'BALANCE_ADJUSTMENT',
+              flowDirection: 'inflow' | 'outflow',
+              userId: string,
+            ) => Promise<unknown[]>;
+          }
+        ).getBalanceAdjustments(
           '2024-01-01',
           '2024-01-31',
           'BALANCE_ADJUSTMENT',
@@ -1828,6 +1832,36 @@ describe('TransactionAnalysisService', () => {
       );
     });
 
+    it('rejects unsupported categoryPrimary values before reading balance adjustment data', async () => {
+      await expect(
+        (
+          service as unknown as {
+            getBalanceAdjustments: (
+              startDate: string,
+              endDate: string,
+              categoryPrimary: string,
+              flowDirection: 'inflow' | 'outflow',
+              userId: string,
+            ) => Promise<unknown[]>;
+          }
+        ).getBalanceAdjustments(
+          '2024-01-01',
+          '2024-01-31',
+          'INCOME',
+          'inflow',
+          mockUserId,
+        ),
+      ).rejects.toThrow('Unsupported categoryPrimary: INCOME');
+
+      expect(
+        mockCurrencyConversionService.getPreferredCurrency,
+      ).not.toHaveBeenCalled();
+      expect(mockTransactionRepository.find).not.toHaveBeenCalled();
+      expect(mockAccountRepository.find).not.toHaveBeenCalled();
+      expect(
+        mockBalanceSnapshotRepository.createQueryBuilder,
+      ).not.toHaveBeenCalled();
+    });
   });
 });
 

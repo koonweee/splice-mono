@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import request from 'supertest';
 import { TransactionAnalysisController } from '../../src/transaction-analysis/transaction-analysis.controller';
 import { TransactionAnalysisService } from '../../src/transaction-analysis/transaction-analysis.service';
@@ -60,6 +61,23 @@ describe('TransactionAnalysisController', () => {
     expect(service.getCategoryTransactions).not.toHaveBeenCalled();
   });
 
+  it('rejects startDate after endDate on the balance adjustment route', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/transaction-analysis/balance-adjustments')
+      .query({
+        startDate: '2024-02-01',
+        endDate: '2024-01-31',
+        categoryPrimary: 'BALANCE_ADJUSTMENT',
+        flowDirection: 'inflow',
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      'startDate must be before or equal to endDate',
+    );
+    expect(service.getBalanceAdjustments).not.toHaveBeenCalled();
+  });
+
   it('delegates a valid balance adjustment drilldown request to the balance adjustment service method', async () => {
     service.getBalanceAdjustments.mockResolvedValue([
       {
@@ -98,5 +116,31 @@ describe('TransactionAnalysisController', () => {
     );
     expect(service.getAnalysis).not.toHaveBeenCalled();
     expect(service.getCategoryTransactions).not.toHaveBeenCalled();
+  });
+
+  it('documents categoryPrimary as the BALANCE_ADJUSTMENT literal on the balance adjustment route', async () => {
+    const document = SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder().setTitle('Test API').setVersion('1.0').build(),
+    );
+
+    const balanceAdjustmentsPath =
+      document.paths['/transaction-analysis/balance-adjustments'];
+    const parameters = balanceAdjustmentsPath?.get?.parameters ?? [];
+    const categoryPrimaryParameter = parameters.find(
+      (parameter) =>
+        '$ref' in parameter === false && parameter.name === 'categoryPrimary',
+    );
+
+    expect(categoryPrimaryParameter).toEqual(
+      expect.objectContaining({
+        name: 'categoryPrimary',
+        in: 'query',
+        required: true,
+        schema: expect.objectContaining({
+          enum: ['BALANCE_ADJUSTMENT'],
+        }),
+      }),
+    );
   });
 });

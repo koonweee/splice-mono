@@ -152,7 +152,7 @@ export class TransactionAnalysisController {
   @ApiQuery({
     name: 'categoryPrimary',
     required: true,
-    type: String,
+    enum: ['BALANCE_ADJUSTMENT'],
     description: 'Primary category filter. Must be BALANCE_ADJUSTMENT.',
   })
   @ApiQuery({
@@ -169,7 +169,9 @@ export class TransactionAnalysisController {
   @ApiResponse({ status: 400, description: 'Invalid request parameters' })
   async getBalanceAdjustments(
     @CurrentUser() user: JwtUser,
-    @Query(new ZodValidationPipe(TransactionAnalysisBalanceAdjustmentsQuerySchema))
+    @Query(
+      new ZodValidationPipe(TransactionAnalysisBalanceAdjustmentsQuerySchema),
+    )
     query: TransactionAnalysisBalanceAdjustmentsQuery,
   ): Promise<unknown> {
     if (query.startDate > query.endDate) {
