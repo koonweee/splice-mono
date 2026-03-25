@@ -115,6 +115,11 @@ This is intentionally destructive. The product behavior is:
 - the earlier balance correction invalidates all later recorded balance history for that account
 - users can rebuild that later history with new imports or manual edits if needed
 
+The same reset rule must also apply to later synthetic balance-update transactions for that manual account:
+- delete synthetic balance-update transactions where `date > effectiveDate`
+
+Without that cleanup, analysis would continue to count stale future manual deltas even after the underlying balance history was reset.
+
 ### 6. Warn Before Destructive Backdated Saves
 
 If the selected `effectiveDate` is earlier than the latest known snapshot date for the account, the frontend should show a warning and require confirmation before saving.
@@ -130,8 +135,9 @@ The manual balance update operation should run atomically for manual accounts:
 1. load the latest prior snapshot before `effectiveDate`
 2. upsert the snapshot for `effectiveDate`
 3. delete all later snapshots for that account
-4. create, replace, or remove the synthetic `Balance update` transaction for that date
-5. update the account entity so its current balance remains aligned with the newest surviving snapshot state
+4. delete all later synthetic `Balance update` transactions for that account
+5. create, replace, or remove the synthetic `Balance update` transaction for that date
+6. update the account entity so its current balance remains aligned with the newest surviving snapshot state
 
 All of those writes should succeed or fail together.
 
@@ -156,10 +162,11 @@ For the current manual-account model, deleting all later snapshots means the edi
 7. Backend loads the latest snapshot before `effectiveDate`.
 8. Backend upserts the snapshot for `effectiveDate`.
 9. Backend deletes all later snapshots for that account.
-10. Backend computes the delta from the prior snapshot.
-11. Backend creates, replaces, or removes the synthetic `Balance update` transaction for that account and date.
-12. Backend saves the account's current balance to the newest surviving balance state.
-13. Frontend invalidates account, balance, transaction, and analysis queries.
+10. Backend deletes all later synthetic `Balance update` transactions for that account.
+11. Backend computes the delta from the prior snapshot.
+12. Backend creates, replaces, or removes the synthetic `Balance update` transaction for that account and date.
+13. Backend saves the account's current balance to the newest surviving balance state.
+14. Frontend invalidates account, balance, transaction, and analysis queries.
 
 ## API Notes
 
@@ -190,6 +197,7 @@ Add tests covering:
 - no prior snapshot means no synthetic transaction is created
 - saving the same account and date twice replaces the synthetic transaction and recomputes from the same prior snapshot baseline
 - backdated save deletes all later snapshots for that manual account, regardless of snapshot type
+- backdated save deletes all later synthetic balance-update transactions for that manual account
 - linked accounts still reject manual balance updates
 - the whole operation is atomic when transaction or snapshot writes fail
 
