@@ -196,6 +196,7 @@ type ComparisonOperator = '<=' | '<' | '>=' | '>';
 interface DateConstraint {
   operator: ComparisonOperator;
   date: string;
+  column: 'snapshotDate' | 'date';
 }
 
 interface SnapshotOrder {
@@ -211,6 +212,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     snapshotType: new Set<string>(),
     dateConstraints: [] as DateConstraint[],
     orders: [{ field: 'snapshotDate', direction: 'DESC' as const }],
+    distinctOn: [] as string[],
     limit: null as number | null,
   };
 
@@ -218,21 +220,29 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
   };
 
+  const normalizeColumn = (value: string) =>
+    value.includes('.') ? value.split('.').pop() ?? value : value;
+
+  const isTrackedDateColumn = (
+    value: string,
+  ): value is 'snapshotDate' | 'date' => value === 'snapshotDate' || value === 'date';
+
   const updateDateConstraints = (query: string, params: Record<string, unknown>) => {
     const dateConstraintMatch = query.match(
-      /snapshot\.snapshotDate\s*(<=|<|>=|>)\s*:(\w+)/i,
+      /(?:\w+\.)?(snapshotDate|date)\s*(<=|<|>=|>)\s*:(\w+)/i,
     );
 
     if (!dateConstraintMatch) {
       return;
     }
 
-    const [, operator, paramName] = dateConstraintMatch;
+    const [, rawColumn, operator, paramName] = dateConstraintMatch;
     const value = params[paramName];
-    if (isDateValue(value)) {
+    if (isDateValue(value) && isTrackedDateColumn(rawColumn)) {
       state.dateConstraints.push({
         operator: operator as ComparisonOperator,
         date: value,
+        column: rawColumn,
       });
     }
   };
@@ -242,7 +252,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     params: Record<string, unknown>,
   ) => {
     const accountInMatch = query.match(
-      /snapshot\.accountId\s+IN\s*\(:\.\.\.(\w+)\)/i,
+      /(?:\w+\.)?accountId\s+IN\s*\(:\.\.\.(\w+)\)/i,
     );
     if (accountInMatch) {
       const accountIds = params[accountInMatch[1]];
@@ -254,9 +264,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
       return;
     }
 
-    const accountEqMatch = query.match(
-      /snapshot\.accountId\s*=\s*:(\w+)/i,
-    );
+    const accountEqMatch = query.match(/(?:\w+\.)?accountId\s*=\s*:(\w+)/i);
     if (accountEqMatch) {
       const accountId = params[accountEqMatch[1]];
       if (typeof accountId === 'string') {
@@ -266,7 +274,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
   };
 
   const updateUserFilters = (query: string, params: Record<string, unknown>) => {
-    const userMatch = query.match(/snapshot\.userId\s*=\s*:(\w+)/i);
+    const userMatch = query.match(/(?:\w+\.)?userId\s*=\s*:(\w+)/i);
     if (!userMatch) {
       return;
     }
@@ -279,7 +287,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
 
   const updateSnapshotTypeFilters = (query: string, params: Record<string, unknown>) => {
     const snapshotTypeInMatch = query.match(
-      /snapshot\.snapshotType\s+IN\s*\(:\.\.\.(\w+)\)/i,
+      /(?:\w+\.)?snapshotType\s+IN\s*\(:\.\.\.(\w+)\)/i,
     );
     if (snapshotTypeInMatch) {
       const snapshotTypes = params[snapshotTypeInMatch[1]];
@@ -292,7 +300,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     }
 
     const snapshotTypeEqMatch = query.match(
-      /snapshot\.snapshotType\s*=\s*:(\w+)/i,
+      /(?:\w+\.)?snapshotType\s*=\s*:(\w+)/i,
     );
     if (snapshotTypeEqMatch) {
       const snapshotType = params[snapshotTypeEqMatch[1]];
@@ -307,12 +315,12 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     direction: 'ASC' | 'DESC' = 'ASC',
     append = false,
   ) => {
-    const fieldMatch = query.match(/snapshot\.(\w+)/i);
+    const fieldMatch = query.match(/^\s*(?:\w+\.)?(\w+)/i);
     if (!fieldMatch) {
       return;
     }
 
-    const field = fieldMatch[1];
+    const field = normalizeColumn(fieldMatch[1]);
     if (field !== 'snapshotDate' && field !== 'accountId') {
       return;
     }
@@ -331,32 +339,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     state.orders = [order];
   };
 
-  const updateFromClause = (query: string, params: Record<string, unknown>) => {
-    updateDateConstraints(query, params);
-    updateAccountFilters(query, params);
-    updateUserFilters(query, params);
-    updateSnapshotTypeFilters(query, params);
-  };
-
-  const applyImplicitParamDates = (params: Record<string, unknown>) => {
-    const startDate = params.startDate;
-    if (isDateValue(startDate) && !state.dateConstraints.some((constraint) => constraint.date === startDate)) {
-      state.dateConstraints.push({
-        operator: '<=',
-        date: startDate,
-      });
-    }
-
-    const endDate = params.endDate;
-    if (isDateValue(endDate) && !state.dateConstraints.some((constraint) => constraint.date === endDate)) {
-      state.dateConstraints.push({
-        operator: '<=',
-        date: endDate,
-      });
-    }
-  };
-
-  const applyImplicitParamFilters = (params: Record<string, unknown>) => {
+  const applyExplicitParameters = (params: Record<string, unknown>) => {
     if (typeof params.accountId === 'string') {
       state.accountIds.add(params.accountId);
     }
@@ -378,20 +361,19 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     }
   };
 
-  const updateFromClauseWithImplicitParams = (
+  const updateFromClause = (query: string, params: Record<string, unknown>) => {
+    updateDateConstraints(query, params);
+    updateAccountFilters(query, params);
+    updateUserFilters(query, params);
+    updateSnapshotTypeFilters(query, params);
+    applyExplicitParameters(params);
+  };
+
+  const applyFromClause = (
     query: string,
     params: Record<string, unknown>,
   ) => {
     updateFromClause(query, params);
-    if (Object.keys(params).length === 0) {
-      return;
-    }
-
-    if (!query || !query.includes(':')) {
-      applyImplicitParamFilters(params);
-      applyImplicitParamDates(params);
-      return;
-    }
   };
 
   const compareByDate = (left: BalanceSnapshotEntity, right: BalanceSnapshotEntity) =>
@@ -400,13 +382,24 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
   const compareById = (left: BalanceSnapshotEntity, right: BalanceSnapshotEntity) =>
     right.id.localeCompare(left.id);
 
+  const getOrderValue = (
+    snapshot: BalanceSnapshotEntity,
+    field: SnapshotOrder['field'],
+  ) => {
+    if (field === 'snapshotDate') {
+      return snapshot.snapshotDate;
+    }
+
+    return snapshot[field];
+  };
+
   const compareSnapshots = (
     left: BalanceSnapshotEntity,
     right: BalanceSnapshotEntity,
   ) => {
     for (const order of state.orders) {
-      const leftValue = left[order.field];
-      const rightValue = right[order.field];
+      const leftValue = getOrderValue(left, order.field);
+      const rightValue = getOrderValue(right, order.field);
 
       if (order.field === 'snapshotDate') {
         const diff =
@@ -436,22 +429,52 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     snapshot: BalanceSnapshotEntity,
     constraint: DateConstraint,
   ) => {
+    const candidateValue =
+      constraint.column === 'date' ? snapshot.snapshotDate : snapshot.snapshotDate;
+
     switch (constraint.operator) {
       case '<':
-        return snapshot.snapshotDate < constraint.date;
+        return candidateValue < constraint.date;
       case '<=':
-        return snapshot.snapshotDate <= constraint.date;
+        return candidateValue <= constraint.date;
       case '>':
-        return snapshot.snapshotDate > constraint.date;
+        return candidateValue > constraint.date;
       case '>=':
-        return snapshot.snapshotDate >= constraint.date;
+        return candidateValue >= constraint.date;
       default:
         return true;
     }
   };
 
-  const selectSnapshots = (): BalanceSnapshotEntity[] =>
-    snapshotRows
+  const applyDistinctOn = (rows: BalanceSnapshotEntity[]) => {
+    if (state.distinctOn.length === 0) {
+      return rows;
+    }
+
+    const seen = new Set<string>();
+    const distinctRows: BalanceSnapshotEntity[] = [];
+
+    rows.forEach((snapshot) => {
+      const key = state.distinctOn
+        .map((field) => {
+          const value = snapshot[field as keyof BalanceSnapshotEntity];
+          return typeof value === 'string' ? value : '';
+        })
+        .join('|');
+
+      if (seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+      distinctRows.push(snapshot);
+    });
+
+    return distinctRows;
+  };
+
+  const selectSnapshots = (): BalanceSnapshotEntity[] => {
+    const baseRows = snapshotRows
       .filter((snapshot) => {
         if (
           state.accountIds.size > 0 &&
@@ -466,9 +489,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
           return false;
         }
 
-        const hasDateConstraints =
-          state.dateConstraints.length > 0;
-        if (hasDateConstraints) {
+        if (state.dateConstraints.length > 0) {
           return state.dateConstraints.every((constraint) =>
             satisfiesDateConstraint(snapshot, constraint),
           );
@@ -476,16 +497,18 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
 
         return true;
       })
-      .sort(compareSnapshots)
-      .slice(0, state.limit ?? snapshotRows.length);
+      .sort(compareSnapshots);
+
+    return applyDistinctOn(baseRows).slice(0, state.limit ?? baseRows.length);
+  };
 
   const queryBuilder = {
     where: jest.fn((query: string, params: Record<string, unknown> = {}) => {
-      updateFromClauseWithImplicitParams(query, params);
+      applyFromClause(query, params);
       return queryBuilder;
     }),
     andWhere: jest.fn((query: string, params: Record<string, unknown> = {}) => {
-      updateFromClauseWithImplicitParams(query, params);
+      applyFromClause(query, params);
       return queryBuilder;
     }),
     orderBy: jest.fn((query: string, direction: 'ASC' | 'DESC' = 'ASC') => {
@@ -498,6 +521,10 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
         return queryBuilder;
       },
     ),
+    distinctOn: jest.fn((fields: string[]) => {
+      state.distinctOn = fields.map(normalizeColumn);
+      return queryBuilder;
+    }),
     take: jest.fn((count: number) => {
       state.limit = count;
       return queryBuilder;
@@ -507,7 +534,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
       return queryBuilder;
     }),
     setParameters: jest.fn((params: Record<string, unknown> = {}) => {
-      updateFromClauseWithImplicitParams('', params);
+      applyFromClause('', params);
       return queryBuilder;
     }),
     getMany: jest.fn(async () => selectSnapshots()),
@@ -1190,32 +1217,51 @@ describe('TransactionAnalysisService', () => {
       });
     });
 
-    it('skips accounts that do not have both boundary snapshots for synthetic adjustment generation', async () => {
-      const checking = buildAccount({
-        id: 'acct-missing-boundary',
-        accountName: 'Checking',
-      });
-      const onlyEndBoundarySnapshot = buildBalanceSnapshot({
-        accountId: 'acct-missing-boundary',
-        snapshotDate: '2024-01-31',
-        amount: 2000,
-      });
+    it.each([
+      {
+        title: 'skips accounts with only an end boundary snapshot',
+        snapshots: [
+          buildBalanceSnapshot({
+            accountId: 'acct-missing-boundary',
+            snapshotDate: '2024-01-31',
+            amount: 2000,
+          }),
+        ],
+      },
+      {
+        title: 'skips accounts with only a start boundary snapshot',
+        snapshots: [
+          buildBalanceSnapshot({
+            accountId: 'acct-missing-boundary',
+            snapshotDate: '2024-01-01',
+            amount: 1500,
+          }),
+        ],
+      },
+    ])(
+      '$title',
+      async ({ snapshots }) => {
+        const checking = buildAccount({
+          id: 'acct-missing-boundary',
+          accountName: 'Checking',
+        });
 
-      mockTransactionRepository.find.mockResolvedValue([]);
-      mockAccountRepository.find.mockResolvedValue([checking]);
-      mockSnapshotRows([onlyEndBoundarySnapshot]);
+        mockTransactionRepository.find.mockResolvedValue([]);
+        mockAccountRepository.find.mockResolvedValue([checking]);
+        mockSnapshotRows(snapshots);
 
-      await expect(
-        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
-      ).resolves.toMatchObject({
-        totalInflow: 0,
-        totalOutflow: 0,
-        netFlow: 0,
-        balanceAdjustments: [],
-        inflows: [],
-        outflows: [],
-      });
-    });
+        await expect(
+          service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+        ).resolves.toMatchObject({
+          totalInflow: 0,
+          totalOutflow: 0,
+          netFlow: 0,
+          balanceAdjustments: [],
+          inflows: [],
+          outflows: [],
+        });
+      },
+    );
 
     it('keeps synthetic adjustments out of uncategorized totals', async () => {
       const accountWithPosted = buildAccount({
