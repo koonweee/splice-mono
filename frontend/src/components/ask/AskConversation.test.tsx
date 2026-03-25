@@ -185,4 +185,52 @@ describe('AskConversation layout', () => {
       block: 'end',
     })
   })
+
+  it('scrolls the latest user message into view as soon as it is submitted', () => {
+    const initialMessages = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{ type: 'text', text: 'Old question' }],
+      } satisfies AskUIMessage,
+    ]
+    const submittedMessages = [
+      ...initialMessages,
+      {
+        id: 'user-2',
+        role: 'user',
+        parts: [{ type: 'text', text: 'New question' }],
+      } satisfies AskUIMessage,
+    ]
+
+    const { rerender } = render(
+      <MantineProvider>
+        <AskConversation
+          messages={initialMessages}
+          status="ready"
+          onRetry={() => {}}
+          composer={<div data-testid="ask-composer">Composer</div>}
+        />
+      </MantineProvider>,
+    )
+
+    scrollIntoViewMock.mockReset()
+
+    rerender(
+      <MantineProvider>
+        <AskConversation
+          messages={submittedMessages}
+          status="submitted"
+          onRetry={() => {}}
+          composer={<div data-testid="ask-composer">Composer</div>}
+        />
+      </MantineProvider>,
+    )
+
+    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'end',
+    })
+  })
 })
