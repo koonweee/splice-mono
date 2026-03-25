@@ -23,6 +23,7 @@ export function AskConversation({
 }: AskConversationProps) {
   const previousStatusRef = useRef(status)
   const lastMessageRef = useRef<HTMLDivElement | null>(null)
+  const loadingRowRef = useRef<HTMLDivElement | null>(null)
   const previousLastMessageIdRef = useRef<string | undefined>(messages.at(-1)?.id)
 
   const visibleMessages = messages.filter((message, index) => {
@@ -61,7 +62,7 @@ export function AskConversation({
       currentLastMessageId &&
       currentLastMessageId !== previousLastMessageId
     ) {
-      lastMessageRef.current?.scrollIntoView({
+      loadingRowRef.current?.scrollIntoView({
         behavior: 'smooth',
         block: 'end',
       })
@@ -94,8 +95,12 @@ export function AskConversation({
           >
             <AskMessageCard message={message} />
           </div>
-        ))}
-        {(status === 'submitted' || status === 'streaming') && <Loader size="sm" />}
+      ))}
+        {(status === 'submitted' || status === 'streaming') && (
+          <div ref={loadingRowRef} data-testid="ask-loading-row">
+            <Loader size="sm" />
+          </div>
+        )}
         {error && (
           <AskErrorCard message={error.message || 'An unexpected error occurred.'} onRetry={onRetry} />
         )}
