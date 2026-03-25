@@ -166,7 +166,7 @@ export class AskService {
     const originalMessages = body.messages as AskUIMessage[];
 
     const result = streamText({
-      model: openai(process.env.OPENAI_MODEL ?? 'gpt-5.4-mini'),
+      model: openai(process.env.OPENAI_MODEL ?? 'gpt-5.4'),
       stopWhen: stepCountIs(5),
       prepareStep: ({ stepNumber }) => {
         if (stepNumber === 0) {
@@ -179,7 +179,7 @@ export class AskService {
       },
       providerOptions: {
         openai: {
-          reasoningEffort: 'high',
+          reasoningEffort: 'medium',
         },
       },
       system: buildAskSystemPrompt(),
