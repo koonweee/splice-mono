@@ -43,7 +43,12 @@ export function AskConversation({
       : ''
     const isLatestMessage = index === messages.length - 1
 
-    return !(isLatestMessage && status === 'submitted' && !askAnswerText && !messageText)
+    return !(
+      isLatestMessage &&
+      (status === 'submitted' || status === 'streaming') &&
+      !askAnswerText &&
+      !messageText
+    )
   })
 
   useEffect(() => {
