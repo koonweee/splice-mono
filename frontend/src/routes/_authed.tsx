@@ -26,6 +26,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useLogout } from '../lib/auth'
+import styles from './_authed.module.css'
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: ({ location, context }) => {
@@ -114,7 +115,7 @@ function AuthedLayout() {
         </Stack>
       </AppShell.Navbar>
 
-      <AppShell.Main>
+      <AppShell.Main className={styles.main}>
         <Outlet />
       </AppShell.Main>
     </AppShell>
