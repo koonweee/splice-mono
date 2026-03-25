@@ -1,15 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AccountType } from 'plaid';
 import { Between, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
+import { calculateEffectiveBalance } from '../common/effective-balance';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import { TransactionEntity } from '../transaction/transaction.entity';
-import {
-  MoneySign,
-  type SerializedMoneyWithSign,
-} from '../types/MoneyWithSign';
+import { MoneySign } from '../types/MoneyWithSign';
 import type { Transaction } from '../types/Transaction';
 import type {
   BalanceAdjustment,
@@ -34,7 +31,7 @@ interface SignedBalanceAmount {
   currency: string;
 }
 
-interface RawBalanceAdjustment {
+interface BalanceAdjustmentRow {
   accountId: string;
   accountName: string;
   flowDirection: 'inflow' | 'outflow';
@@ -85,22 +82,28 @@ export class TransactionAnalysisService {
       endDate,
       userId,
     );
-    const unmatchedTransactions = this.neutralizeTransactions(postedTransactions);
+    const unmatchedTransactions =
+      this.neutralizeTransactions(postedTransactions);
     const accountIdsWithPostedTransactions = new Set(
       postedTransactions.map((transaction) => transaction.accountId),
     );
-    const balanceAdjustments = await this.getBalanceAdjustments(
+    const balanceAdjustmentRows = await this.getBalanceAdjustmentRows(
       startDate,
       endDate,
       userId,
-      preferredCurrency,
       accountIdsWithPostedTransactions,
+    );
+    const balanceAdjustments = await this.buildBalanceAdjustments(
+      balanceAdjustmentRows,
+      preferredCurrency,
+      endDate,
     );
 
     this.logger.log(
       {
         postedTransactionCount: postedTransactions.length,
         unmatchedTransactionCount: unmatchedTransactions.length,
+        rawBalanceAdjustmentCount: balanceAdjustmentRows.length,
         balanceAdjustmentCount: balanceAdjustments.length,
         preferredCurrency,
       },
@@ -228,7 +231,8 @@ export class TransactionAnalysisService {
       endDate,
       userId,
     );
-    const unmatchedTransactions = this.neutralizeTransactions(postedTransactions);
+    const unmatchedTransactions =
+      this.neutralizeTransactions(postedTransactions);
     const preferredCurrency =
       await this.currencyConversionService.getPreferredCurrency(userId);
 
@@ -288,13 +292,12 @@ export class TransactionAnalysisService {
     });
   }
 
-  private async getBalanceAdjustments(
+  private async getBalanceAdjustmentRows(
     startDate: string,
     endDate: string,
     userId: string,
-    preferredCurrency: string,
     excludedAccountIds: Set<string>,
-  ): Promise<BalanceAdjustment[]> {
+  ): Promise<BalanceAdjustmentRow[]> {
     const accounts = await this.accountRepository.find({
       where: { userId },
     });
@@ -318,7 +321,7 @@ export class TransactionAnalysisService {
       userId,
     );
 
-    const rawAdjustments: RawBalanceAdjustment[] = [];
+    const rawAdjustments: BalanceAdjustmentRow[] = [];
     eligibleAccounts.forEach((account) => {
       const startSnapshot = startSnapshots.get(account.id);
       const endSnapshot = endSnapshots.get(account.id);
@@ -327,7 +330,10 @@ export class TransactionAnalysisService {
         return;
       }
 
-      const startBalance = this.getEffectiveBalanceAmount(account, startSnapshot);
+      const startBalance = this.getEffectiveBalanceAmount(
+        account,
+        startSnapshot,
+      );
       const endBalance = this.getEffectiveBalanceAmount(account, endSnapshot);
       if (startBalance.currency !== endBalance.currency) {
         return;
@@ -349,9 +355,31 @@ export class TransactionAnalysisService {
       });
     });
 
+    return rawAdjustments
+      .sort((left, right) => this.compareBalanceAdjustmentRows(left, right))
+      .map((adjustment) => ({
+        accountId: adjustment.accountId,
+        accountName: adjustment.accountName,
+        flowDirection: adjustment.flowDirection,
+        sourceCurrency: adjustment.sourceCurrency,
+        rawDeltaAmount: adjustment.rawDeltaAmount,
+        startBalance: adjustment.startBalance,
+        endBalance: adjustment.endBalance,
+      }));
+  }
+
+  private async buildBalanceAdjustments(
+    balanceAdjustmentRows: BalanceAdjustmentRow[],
+    preferredCurrency: string,
+    endDate: string,
+  ): Promise<BalanceAdjustment[]> {
+    if (balanceAdjustmentRows.length === 0) {
+      return [];
+    }
+
     const foreignCurrencies = [
       ...new Set(
-        rawAdjustments
+        balanceAdjustmentRows
           .map((adjustment) => adjustment.sourceCurrency)
           .filter((currency) => currency !== preferredCurrency),
       ),
@@ -362,20 +390,31 @@ export class TransactionAnalysisService {
       endDate,
     );
 
-    return rawAdjustments.map((adjustment) => ({
-      accountId: adjustment.accountId,
-      accountName: adjustment.accountName,
-      flowDirection: adjustment.flowDirection,
-      currency: preferredCurrency,
-      deltaAmount: this.convertAmountToPreferredCurrency(
-        adjustment.rawDeltaAmount,
-        adjustment.sourceCurrency,
-        preferredCurrency,
-        rateMap,
-      ),
-      startBalance: adjustment.startBalance,
-      endBalance: adjustment.endBalance,
-    }));
+    return balanceAdjustmentRows.flatMap((adjustment) => {
+      if (
+        adjustment.sourceCurrency !== preferredCurrency &&
+        !rateMap.has(adjustment.sourceCurrency)
+      ) {
+        return [];
+      }
+
+      return [
+        {
+          accountId: adjustment.accountId,
+          accountName: adjustment.accountName,
+          flowDirection: adjustment.flowDirection,
+          currency: preferredCurrency,
+          deltaAmount: this.convertAmountToPreferredCurrency(
+            adjustment.rawDeltaAmount,
+            adjustment.sourceCurrency,
+            preferredCurrency,
+            rateMap,
+          ),
+          startBalance: adjustment.startBalance,
+          endBalance: adjustment.endBalance,
+        },
+      ];
+    });
   }
 
   private async findLatestSnapshotsAtOrBefore(
@@ -408,22 +447,18 @@ export class TransactionAnalysisService {
   ): SignedBalanceAmount {
     const availableBalance = snapshot.availableBalance.toMoneyWithSign();
     const currentBalance = snapshot.currentBalance.toMoneyWithSign();
-
-    if (
-      account.type === AccountType.Investment ||
-      account.type === AccountType.Brokerage
-    ) {
-      return {
-        amount:
-          this.getSignedBalanceAmount(availableBalance) +
-          this.getSignedBalanceAmount(currentBalance),
-        currency: availableBalance.money.currency,
-      };
-    }
+    const effectiveBalance = calculateEffectiveBalance(
+      account.type,
+      availableBalance,
+      currentBalance,
+    );
 
     return {
-      amount: this.getSignedBalanceAmount(currentBalance),
-      currency: currentBalance.money.currency,
+      amount:
+        effectiveBalance.sign === MoneySign.POSITIVE
+          ? effectiveBalance.money.amount
+          : -effectiveBalance.money.amount,
+      currency: effectiveBalance.money.currency,
     };
   }
 
@@ -603,14 +638,22 @@ export class TransactionAnalysisService {
     return `${currency}:${absoluteAmount}`;
   }
 
-  private getSignedBalanceAmount(balance: SerializedMoneyWithSign): number {
-    return balance.sign === MoneySign.POSITIVE
-      ? balance.money.amount
-      : -balance.money.amount;
+  private getAccountName(account: AccountEntity): string {
+    return (
+      account.customName?.trim() || account.name?.trim() || 'Unnamed account'
+    );
   }
 
-  private getAccountName(account: AccountEntity): string {
-    return account.customName?.trim() || account.name?.trim() || account.id;
+  private compareBalanceAdjustmentRows(
+    left: BalanceAdjustmentRow,
+    right: BalanceAdjustmentRow,
+  ): number {
+    const nameComparison = left.accountName.localeCompare(right.accountName);
+    if (nameComparison !== 0) {
+      return nameComparison;
+    }
+
+    return left.accountId.localeCompare(right.accountId);
   }
 
   private getAmountInSmallestUnit(transaction: TransactionEntity): number {

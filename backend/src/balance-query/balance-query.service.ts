@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
-import { AccountType } from 'plaid';
 import { Between, In, Repository } from 'typeorm';
 import type { ExtendedAccountType } from '../types/AccountType';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
+import { calculateEffectiveBalance as calculateSharedEffectiveBalance } from '../common/effective-balance';
 import { CurrencyExchangeService } from '../currency-exchange/currency-exchange.service';
 import type { Account } from '../types/Account';
 import type {
@@ -387,36 +387,11 @@ export class BalanceQueryService {
     availableBalance: SerializedMoneyWithSign,
     currentBalance: SerializedMoneyWithSign,
   ): SerializedMoneyWithSign {
-    // For Investment/Brokerage accounts, combine available + current balance
-    // For all other types (including crypto), use available balance
-    if (
-      accountType === AccountType.Investment ||
-      accountType === AccountType.Brokerage
-    ) {
-      const availableAmount = this.getSignedAmount(availableBalance);
-      const currentAmount = this.getSignedAmount(currentBalance);
-      const totalAmount = availableAmount + currentAmount;
-
-      return {
-        money: {
-          amount: Math.abs(totalAmount),
-          currency: availableBalance.money.currency,
-        },
-        sign: totalAmount >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE,
-      };
-    }
-
-    // For all other types: just current balance
-    return currentBalance;
-  }
-
-  /**
-   * Get the signed amount (positive or negative) from a SerializedMoneyWithSign.
-   */
-  private getSignedAmount(balance: SerializedMoneyWithSign): number {
-    return balance.sign === MoneySign.POSITIVE
-      ? balance.money.amount
-      : -balance.money.amount;
+    return calculateSharedEffectiveBalance(
+      accountType,
+      availableBalance,
+      currentBalance,
+    );
   }
 
   /**

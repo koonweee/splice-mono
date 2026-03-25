@@ -117,16 +117,20 @@ function buildTransaction(params: {
 
 function buildAccount(params: {
   id: string;
-  accountName?: string;
+  accountName?: string | null;
   accountCustomName?: string | null;
   type?: string;
 }): AccountEntity {
+  const accountName =
+    params.accountName === undefined ? 'Checking' : params.accountName;
+  const accountCustomName =
+    params.accountCustomName === undefined ? null : params.accountCustomName;
   const entity = AccountEntity.fromDto(
     {
-      name: params.accountName ?? 'Checking',
-      customName: params.accountCustomName ?? null,
+      name: accountName,
+      customName: accountCustomName,
       mask: null,
-      type: (params.type ?? 'depository') as string,
+      type: params.type ?? 'depository',
       subType: null,
       externalAccountId: null,
       bankLinkId: null,
@@ -240,11 +244,12 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
   };
 
   const normalizeColumn = (value: string) =>
-    value.includes('.') ? value.split('.').pop() ?? value : value;
+    value.includes('.') ? (value.split('.').pop() ?? value) : value;
 
   const isTrackedDateColumn = (
     value: string,
-  ): value is 'snapshotDate' | 'date' => value === 'snapshotDate' || value === 'date';
+  ): value is 'snapshotDate' | 'date' =>
+    value === 'snapshotDate' || value === 'date';
 
   const addDateConstraint = (constraint: {
     column: 'snapshotDate' | 'date';
@@ -265,7 +270,10 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     state.dateConstraints.push(constraint);
   };
 
-  const updateDateConstraints = (query: string, params: Record<string, unknown>) => {
+  const updateDateConstraints = (
+    query: string,
+    params: Record<string, unknown>,
+  ) => {
     const dateConstraintMatch = query.match(
       /(?:\w+\.)?(snapshotDate|date)\s*(<=|<|>=|>)\s*:(\w+)/i,
     );
@@ -326,7 +334,10 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     }
   };
 
-  const updateUserFilters = (query: string, params: Record<string, unknown>) => {
+  const updateUserFilters = (
+    query: string,
+    params: Record<string, unknown>,
+  ) => {
     const userMatch = query.match(/(?:\w+\.)?userId\s*=\s*:(\w+)/i);
     if (!userMatch) {
       return;
@@ -340,7 +351,10 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     }
   };
 
-  const updateSnapshotTypeFilters = (query: string, params: Record<string, unknown>) => {
+  const updateSnapshotTypeFilters = (
+    query: string,
+    params: Record<string, unknown>,
+  ) => {
     const snapshotTypeInMatch = query.match(
       /(?:\w+\.)?snapshotType\s+IN\s*\(:\.\.\.(\w+)\)/i,
     );
@@ -466,18 +480,19 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     applyPendingParameters(params);
   };
 
-  const applyFromClause = (
-    query: string,
-    params: Record<string, unknown>,
-  ) => {
+  const applyFromClause = (query: string, params: Record<string, unknown>) => {
     updateFromClause(query, params);
   };
 
-  const compareByDate = (left: BalanceSnapshotEntity, right: BalanceSnapshotEntity) =>
-    right.snapshotDate.localeCompare(left.snapshotDate);
+  const compareByDate = (
+    left: BalanceSnapshotEntity,
+    right: BalanceSnapshotEntity,
+  ) => right.snapshotDate.localeCompare(left.snapshotDate);
 
-  const compareById = (left: BalanceSnapshotEntity, right: BalanceSnapshotEntity) =>
-    right.id.localeCompare(left.id);
+  const compareById = (
+    left: BalanceSnapshotEntity,
+    right: BalanceSnapshotEntity,
+  ) => right.id.localeCompare(left.id);
 
   const getOrderValue = (
     snapshot: BalanceSnapshotEntity,
@@ -527,7 +542,9 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     constraint: DateConstraint,
   ) => {
     const candidateValue =
-      constraint.column === 'date' ? snapshot.snapshotDate : snapshot.snapshotDate;
+      constraint.column === 'date'
+        ? snapshot.snapshotDate
+        : snapshot.snapshotDate;
 
     switch (constraint.operator) {
       case '<':
@@ -582,7 +599,10 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
         if (state.userId && snapshot.userId !== state.userId) {
           return false;
         }
-        if (state.snapshotType.size > 0 && !state.snapshotType.has(snapshot.snapshotType)) {
+        if (
+          state.snapshotType.size > 0 &&
+          !state.snapshotType.has(snapshot.snapshotType)
+        ) {
           return false;
         }
 
@@ -613,12 +633,10 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
       updateOrder(query, direction);
       return queryBuilder;
     }),
-    addOrderBy: jest.fn(
-      (query: string, direction: 'ASC' | 'DESC' = 'ASC') => {
-        updateOrder(query, direction, true);
-        return queryBuilder;
-      },
-    ),
+    addOrderBy: jest.fn((query: string, direction: 'ASC' | 'DESC' = 'ASC') => {
+      updateOrder(query, direction, true);
+      return queryBuilder;
+    }),
     distinctOn: jest.fn((fields: string[]) => {
       state.distinctOn = fields.map(normalizeColumn);
       return queryBuilder;
@@ -879,10 +897,7 @@ describe('TransactionAnalysisService', () => {
         primary: 'INCOME',
       });
 
-      mockTransactionRepository.find.mockResolvedValue([
-        usdExpense,
-        eurIncome,
-      ]);
+      mockTransactionRepository.find.mockResolvedValue([usdExpense, eurIncome]);
 
       const result = await service.getAnalysis(
         '2024-01-01',
@@ -1336,30 +1351,27 @@ describe('TransactionAnalysisService', () => {
           }),
         ],
       },
-    ])(
-      '$title',
-      async ({ snapshots }) => {
-        const checking = buildAccount({
-          id: 'acct-missing-boundary',
-          accountName: 'Checking',
-        });
+    ])('$title', async ({ snapshots }) => {
+      const checking = buildAccount({
+        id: 'acct-missing-boundary',
+        accountName: 'Checking',
+      });
 
-        mockTransactionRepository.find.mockResolvedValue([]);
-        mockAccountRepository.find.mockResolvedValue([checking]);
-        mockSnapshotRows(snapshots);
+      mockTransactionRepository.find.mockResolvedValue([]);
+      mockAccountRepository.find.mockResolvedValue([checking]);
+      mockSnapshotRows(snapshots);
 
-        await expect(
-          service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
-        ).resolves.toMatchObject({
-          totalInflow: 0,
-          totalOutflow: 0,
-          netFlow: 0,
-          balanceAdjustments: [],
-          inflows: [],
-          outflows: [],
-        });
-      },
-    );
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 0,
+        netFlow: 0,
+        balanceAdjustments: [],
+        inflows: [],
+        outflows: [],
+      });
+    });
 
     it('keeps synthetic adjustments out of uncategorized totals', async () => {
       const accountWithPosted = buildAccount({
@@ -1426,6 +1438,116 @@ describe('TransactionAnalysisService', () => {
             transactionCount: 1,
           }),
         ]),
+      });
+    });
+
+    it('skips foreign-currency balance adjustments when no FX rate is available', async () => {
+      const euroAccount = buildAccount({
+        id: 'acct-eur',
+        accountName: 'Euro Savings',
+      });
+      const startSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-eur',
+        snapshotDate: '2024-01-01',
+        amount: 1000,
+        currency: 'EUR',
+      });
+      const endSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-eur',
+        snapshotDate: '2024-01-31',
+        amount: 2000,
+        currency: 'EUR',
+      });
+
+      mockTransactionRepository.find.mockResolvedValue([]);
+      mockAccountRepository.find.mockResolvedValue([euroAccount]);
+      mockSnapshotRows([startSnapshot, endSnapshot]);
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(new Map());
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 0,
+        netFlow: 0,
+        balanceAdjustments: [],
+        inflows: [],
+        outflows: [],
+      });
+    });
+
+    it('sorts balance adjustment rows deterministically and uses a neutral unnamed-account fallback', async () => {
+      const unnamedAccount = buildAccount({
+        id: 'acct-c',
+        accountName: null,
+        accountCustomName: null,
+      });
+      const sharedNameFromName = buildAccount({
+        id: 'acct-b',
+        accountName: 'Shared',
+      });
+      const sharedNameFromCustom = buildAccount({
+        id: 'acct-a',
+        accountName: 'Checking',
+        accountCustomName: 'Shared',
+      });
+
+      mockTransactionRepository.find.mockResolvedValue([]);
+      mockAccountRepository.find.mockResolvedValue([
+        unnamedAccount,
+        sharedNameFromName,
+        sharedNameFromCustom,
+      ]);
+      mockSnapshotRows([
+        buildBalanceSnapshot({
+          accountId: 'acct-c',
+          snapshotDate: '2024-01-01',
+          amount: 1000,
+        }),
+        buildBalanceSnapshot({
+          accountId: 'acct-c',
+          snapshotDate: '2024-01-31',
+          amount: 1200,
+        }),
+        buildBalanceSnapshot({
+          accountId: 'acct-b',
+          snapshotDate: '2024-01-01',
+          amount: 2000,
+        }),
+        buildBalanceSnapshot({
+          accountId: 'acct-b',
+          snapshotDate: '2024-01-31',
+          amount: 2200,
+        }),
+        buildBalanceSnapshot({
+          accountId: 'acct-a',
+          snapshotDate: '2024-01-01',
+          amount: 3000,
+        }),
+        buildBalanceSnapshot({
+          accountId: 'acct-a',
+          snapshotDate: '2024-01-31',
+          amount: 3300,
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        balanceAdjustments: [
+          expect.objectContaining({
+            accountId: 'acct-a',
+            accountName: 'Shared',
+          }),
+          expect.objectContaining({
+            accountId: 'acct-b',
+            accountName: 'Shared',
+          }),
+          expect.objectContaining({
+            accountId: 'acct-c',
+            accountName: 'Unnamed account',
+          }),
+        ],
       });
     });
   });
