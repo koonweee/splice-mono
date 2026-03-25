@@ -192,79 +192,70 @@ function buildBalanceSnapshot(params: {
 }
 
 function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
+  let filteredAccountIds: string[] | null = null;
   let snapshotDateFilter: string | null = null;
+  const knownDateKeys = ['snapshotDate', 'asOfDate', 'endDate', 'startDate', 'date'];
 
-  const snapshotRows = (asOfDate: string | null): BalanceSnapshotEntity[] => {
-    if (!asOfDate) {
-      return [...rows];
+  const extractDateValue = (params: Record<string, unknown>): string | null => {
+    const dateValue = knownDateKeys
+      .map((key) => params[key])
+      .find((value) => typeof value === 'string');
+
+    return typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+      ? dateValue
+      : null;
+  };
+
+  const parseAccountIds = (params: Record<string, unknown>): string[] | null => {
+    if (typeof params.accountId === 'string') {
+      return [params.accountId];
     }
 
-    return [...rows].filter((row) => row.snapshotDate <= asOfDate);
+    if (Array.isArray(params.accountIds)) {
+      return params.accountIds.filter((id): id is string => typeof id === 'string');
+    }
+
+    return null;
+  };
+
+  const selectSnapshots = (): BalanceSnapshotEntity[] =>
+    [...rows]
+      .filter(
+        (row) =>
+          (!filteredAccountIds ||
+            filteredAccountIds.includes(row.accountId)) &&
+          (!snapshotDateFilter || row.snapshotDate <= snapshotDateFilter),
+      )
+      .sort((left, right) => right.snapshotDate.localeCompare(left.snapshotDate));
+
+  const updateFilters = (params: Record<string, unknown> = {}) => {
+    const nextDate = extractDateValue(params);
+    const nextAccountIds = parseAccountIds(params);
+
+    if (nextDate) {
+      snapshotDateFilter = nextDate;
+    }
+    if (nextAccountIds) {
+      filteredAccountIds = nextAccountIds;
+    }
   };
 
   const queryBuilder = {
-    where: jest.fn(
-      (_clause: string, params: { snapshotDate?: string; asOfDate?: string } = {}) => {
-        if (params.snapshotDate) {
-          snapshotDateFilter = params.snapshotDate;
-        }
-        if (params.asOfDate) {
-          snapshotDateFilter = params.asOfDate;
-        }
-        return queryBuilder;
-      },
-    ),
-    andWhere: jest.fn(
-      (_clause: string, params: { snapshotDate?: string; asOfDate?: string; date?: string } = {}) => {
-        if (params.snapshotDate) {
-          snapshotDateFilter = params.snapshotDate;
-        }
-        if (params.asOfDate) {
-          snapshotDateFilter = params.asOfDate;
-        }
-        if (params.date) {
-          snapshotDateFilter = params.date;
-        }
-        return queryBuilder;
-      },
-    ),
-    orWhere: jest.fn(
-      (_clause: string, params: { snapshotDate?: string; asOfDate?: string; date?: string } = {}) => {
-        if (params.snapshotDate) {
-          snapshotDateFilter = params.snapshotDate;
-        }
-        if (params.asOfDate) {
-          snapshotDateFilter = params.asOfDate;
-        }
-        if (params.date) {
-          snapshotDateFilter = params.date;
-        }
-        return queryBuilder;
-      },
-    ),
-    orderBy: jest.fn(() => queryBuilder),
-    addOrderBy: jest.fn(() => queryBuilder),
-    select: jest.fn(() => queryBuilder),
-    addSelect: jest.fn(() => queryBuilder),
-    leftJoinAndSelect: jest.fn(() => queryBuilder),
-    innerJoinAndSelect: jest.fn(() => queryBuilder),
-    groupBy: jest.fn(() => queryBuilder),
-    addGroupBy: jest.fn(() => queryBuilder),
-    having: jest.fn(() => queryBuilder),
-    getMany: jest.fn(() => Promise.resolve(snapshotRows(snapshotDateFilter))),
-    getRawMany: jest.fn(() => Promise.resolve(snapshotRows(snapshotDateFilter))),
-    getOne: jest.fn(() => {
-      const filtered = snapshotRows(snapshotDateFilter);
-      return Promise.resolve(filtered[filtered.length - 1]);
+    where: jest.fn((_: string, params: Record<string, unknown> = {}) => {
+      updateFilters(params);
+      return queryBuilder;
     }),
-    setParameters: jest.fn(() => queryBuilder),
-    andWhereExists: jest.fn(() => queryBuilder),
-    leftJoin: jest.fn(() => queryBuilder),
-    innerJoin: jest.fn(() => queryBuilder),
-    distinctOn: jest.fn(() => queryBuilder),
-    addOrderByDirection: jest.fn(() => queryBuilder),
-    limit: jest.fn(() => queryBuilder),
-    take: jest.fn(() => queryBuilder),
+    andWhere: jest.fn((_: string, params: Record<string, unknown> = {}) => {
+      updateFilters(params);
+      return queryBuilder;
+    }),
+    orderBy: jest.fn(() => queryBuilder),
+    setParameters: jest.fn((params: Record<string, unknown> = {}) => {
+      updateFilters(params);
+      return queryBuilder;
+    }),
+    getMany: jest.fn(async () => selectSnapshots()),
+    getOne: jest.fn(async () => selectSnapshots()[0] ?? null),
   };
 
   return queryBuilder;
@@ -758,21 +749,42 @@ describe('TransactionAnalysisService', () => {
         accountName: 'Checking',
         accountCustomName: 'Primary Checking',
       });
+      const preStartSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-inflow',
+        snapshotDate: '2023-12-20',
+        amount: 5000,
+      });
       const startSnapshot = buildBalanceSnapshot({
         accountId: 'acct-inflow',
         snapshotDate: '2024-01-01',
         amount: 10000,
+      });
+      const midSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-inflow',
+        snapshotDate: '2024-01-15',
+        amount: 15000,
       });
       const endSnapshot = buildBalanceSnapshot({
         accountId: 'acct-inflow',
         snapshotDate: '2024-01-31',
         amount: 17500,
       });
+      const futureSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-inflow',
+        snapshotDate: '2024-02-15',
+        amount: 99999,
+      });
 
       mockTransactionRepository.find.mockResolvedValue([]);
       mockAccountRepository.find.mockResolvedValue([checking]);
       mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
-        buildSnapshotQueryBuilder([startSnapshot, endSnapshot]),
+        buildSnapshotQueryBuilder([
+          preStartSnapshot,
+          startSnapshot,
+          midSnapshot,
+          endSnapshot,
+          futureSnapshot,
+        ]),
       );
 
       await expect(
@@ -809,21 +821,42 @@ describe('TransactionAnalysisService', () => {
         accountName: 'Savings',
         accountCustomName: 'High Yield Savings',
       });
+      const preStartSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-outflow',
+        snapshotDate: '2023-12-20',
+        amount: 14000,
+      });
       const startSnapshot = buildBalanceSnapshot({
         accountId: 'acct-outflow',
         snapshotDate: '2024-01-01',
         amount: 12000,
+      });
+      const midSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-outflow',
+        snapshotDate: '2024-01-12',
+        amount: 5000,
       });
       const endSnapshot = buildBalanceSnapshot({
         accountId: 'acct-outflow',
         snapshotDate: '2024-01-31',
         amount: 3000,
       });
+      const futureSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-outflow',
+        snapshotDate: '2024-02-15',
+        amount: 1,
+      });
 
       mockTransactionRepository.find.mockResolvedValue([]);
       mockAccountRepository.find.mockResolvedValue([savings]);
       mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
-        buildSnapshotQueryBuilder([startSnapshot, endSnapshot]),
+        buildSnapshotQueryBuilder([
+          preStartSnapshot,
+          startSnapshot,
+          midSnapshot,
+          endSnapshot,
+          futureSnapshot,
+        ]),
       );
 
       await expect(
@@ -908,17 +941,17 @@ describe('TransactionAnalysisService', () => {
         id: 'acct-missing-boundary',
         accountName: 'Checking',
       });
-      const startSnapshot = buildBalanceSnapshot({
+      const onlyEndBoundarySnapshot = buildBalanceSnapshot({
         accountId: 'acct-missing-boundary',
-        snapshotDate: '2024-01-01',
+        snapshotDate: '2024-01-31',
         amount: 2000,
       });
 
       mockTransactionRepository.find.mockResolvedValue([]);
       mockAccountRepository.find.mockResolvedValue([checking]);
-      mockBalanceSnapshotRepository.createQueryBuilder
-        .mockReturnValueOnce(buildSnapshotQueryBuilder([startSnapshot]))
-        .mockReturnValueOnce(buildSnapshotQueryBuilder([]));
+      mockBalanceSnapshotRepository.createQueryBuilder.mockReturnValue(
+        buildSnapshotQueryBuilder([onlyEndBoundarySnapshot]),
+      );
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
