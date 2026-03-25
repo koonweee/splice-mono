@@ -24,8 +24,6 @@ describe('Authed layout CSS contract', () => {
     expect(main).toContain('flex-direction: column;')
     expect(main).toContain('min-height: 0;')
     expect(main).toContain('overflow: hidden;')
-    expect(main).toContain(
-      'height: calc(100dvh - var(--app-shell-header-offset, 0rem) - (2 * var(--app-shell-padding)));',
-    )
+    expect(main).toContain('height: 100dvh;')
   })
 })
