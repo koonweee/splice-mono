@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { AccountsSurfaceService } from '../account/accounts-surface.service';
-import type { BalanceHistorySurfaceOptions } from '../balance-query/balance-history-surface.service';
 import { BalanceHistorySurfaceService } from '../balance-query/balance-history-surface.service';
 import { CashflowAnalysisSurfaceService } from '../transaction-analysis/cashflow-analysis-surface.service';
 import { TransactionsSurfaceService } from '../transaction/transactions-surface.service';
@@ -30,7 +29,7 @@ export class AskQueryService {
   ) {
     return this.balanceHistorySurfaceService.getBalanceHistorySummary(
       userId,
-      options as BalanceHistorySurfaceOptions,
+      options,
     );
   }
 

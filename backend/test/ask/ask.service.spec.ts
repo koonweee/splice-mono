@@ -134,7 +134,7 @@ describe('AskService', () => {
       answerText: 'Large result set',
       queryScope: {
         includePending: false,
-        truncated: true,
+        truncated: false,
         accountIds: [],
       },
       evidence: {
@@ -182,7 +182,7 @@ describe('AskService', () => {
           kind: 'category' as const,
         })),
         matchedCount: 30,
-        truncated: true,
+        truncated: false,
       },
       followups: ['A', 'B', 'C', 'D'],
     });
@@ -190,6 +190,8 @@ describe('AskService', () => {
     expect(result.evidence.accounts).toHaveLength(10);
     expect(result.evidence.transactions).toHaveLength(20);
     expect(result.evidence.aggregates).toHaveLength(10);
+    expect(result.evidence.truncated).toBe(true);
+    expect(result.queryScope.truncated).toBe(true);
     expect(result.evidence.balanceHistory).toMatchObject({
       matchedCount: 2,
       pointCount: 1,
@@ -510,7 +512,7 @@ describe('AskService', () => {
           truncated: true,
         },
         evidence: {
-          matchedCount: 2,
+          matchedCount: 7,
           truncated: true,
           accounts: [{ id: 'account-1' }, { id: 'account-2' }],
           transactions: [
@@ -547,6 +549,231 @@ describe('AskService', () => {
               comparisonIncluded: false,
             },
           },
+        },
+      },
+    });
+  });
+
+  it('accumulates query scope across contributing tool calls', async () => {
+    let capturedOnFinish:
+      | ((input: { text: string; steps: Array<{ toolResults: Array<{ output: unknown }> }> }) => void)
+      | undefined;
+    let capturedMessageMetadata:
+      | ((input: { part: { type: string } }) => unknown)
+      | undefined;
+
+    mockStreamText.mockImplementationOnce((options) => {
+      capturedOnFinish = options.onFinish;
+      return {
+        toUIMessageStream: jest.fn(({ messageMetadata }) => {
+          capturedMessageMetadata = messageMetadata;
+          return 'mock-stream';
+        }),
+      };
+    });
+
+    mockAskQueryService.getBalanceHistory.mockResolvedValueOnce({
+      netWorth: {
+        money: { currency: 'USD', amount: 95_000 },
+        sign: 'positive',
+      },
+      chartData: [
+        {
+          date: '2026-03-01',
+          label: 'Mar 1',
+          value: 90_000,
+        },
+        {
+          date: '2026-03-08',
+          label: 'Mar 8',
+          value: 95_000,
+        },
+      ],
+      assets: [],
+      liabilities: [],
+      truncated: false,
+    });
+    mockAskQueryService.searchTransactions.mockResolvedValueOnce({
+      matchedCount: 1,
+      truncated: false,
+      transactions: [
+        {
+          id: 'transaction-1',
+          accountId: 'account-2',
+          accountName: 'Travel Card',
+          merchantName: 'Airline',
+          pending: true,
+          date: '2026-03-10',
+          categoryPrimary: 'TRAVEL',
+          amount: {
+            money: { currency: 'USD', amount: 5000 },
+            sign: 'negative',
+          },
+        },
+      ],
+    });
+
+    await service.streamChat(
+      'user-1',
+      {
+        messages: [],
+      },
+      {} as never,
+    );
+
+    const streamTextInput = mockStreamText.mock.calls[0][0] as {
+      tools: Record<
+        string,
+        { execute: (input?: Record<string, unknown>) => Promise<unknown> }
+      >;
+    };
+
+    const balanceHistoryOutput = await streamTextInput.tools.get_balance_history.execute(
+      {
+        startDate: '2026-03-01',
+        endDate: '2026-03-08',
+        accountIds: ['account-1'],
+      },
+    );
+    const transactionOutput = await streamTextInput.tools.search_transactions.execute(
+      {
+        startDate: '2026-03-03',
+        endDate: '2026-03-10',
+        accountIds: ['account-2'],
+        includePending: true,
+        merchantQuery: 'airline',
+      },
+    );
+
+    capturedOnFinish?.({
+      text: 'Balances rose while a pending travel charge also posted.',
+      steps: [
+        {
+          toolResults: [{ output: balanceHistoryOutput }],
+        },
+        {
+          toolResults: [{ output: transactionOutput }],
+        },
+      ],
+    });
+
+    const metadata = capturedMessageMetadata?.({ part: { type: 'finish' } });
+
+    expect(metadata).toMatchObject({
+      ask: {
+        queryScope: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-10',
+          accountIds: ['account-1', 'account-2'],
+          includePending: true,
+          truncated: false,
+        },
+      },
+    });
+  });
+
+  it('reports all-accounts scope when unfiltered and filtered tools are combined', async () => {
+    let capturedOnFinish:
+      | ((input: { text: string; steps: Array<{ toolResults: Array<{ output: unknown }> }> }) => void)
+      | undefined;
+    let capturedMessageMetadata:
+      | ((input: { part: { type: string } }) => unknown)
+      | undefined;
+
+    mockStreamText.mockImplementationOnce((options) => {
+      capturedOnFinish = options.onFinish;
+      return {
+        toUIMessageStream: jest.fn(({ messageMetadata }) => {
+          capturedMessageMetadata = messageMetadata;
+          return 'mock-stream';
+        }),
+      };
+    });
+
+    mockAskQueryService.getCashflowAnalysis.mockResolvedValueOnce({
+      totalInflow: 1000,
+      totalOutflow: 500,
+      netFlow: 500,
+      topCategories: [],
+      semanticMetadata: {
+        pendingIncluded: false,
+        reconciliationApplied: true,
+        comparisonIncluded: false,
+      },
+      matchedCount: 2,
+      truncated: false,
+    });
+    mockAskQueryService.searchTransactions.mockResolvedValueOnce({
+      matchedCount: 1,
+      truncated: false,
+      transactions: [
+        {
+          id: 'transaction-1',
+          accountId: 'account-2',
+          accountName: 'Travel Card',
+          merchantName: 'Airline',
+          pending: false,
+          date: '2026-03-10',
+          categoryPrimary: 'TRAVEL',
+          amount: {
+            money: { currency: 'USD', amount: 5000 },
+            sign: 'negative',
+          },
+        },
+      ],
+    });
+
+    await service.streamChat(
+      'user-1',
+      {
+        messages: [],
+      },
+      {} as never,
+    );
+
+    const streamTextInput = mockStreamText.mock.calls[0][0] as {
+      tools: Record<
+        string,
+        { execute: (input?: Record<string, unknown>) => Promise<unknown> }
+      >;
+    };
+
+    const cashflowOutput = await streamTextInput.tools.get_cashflow_analysis.execute(
+      {
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+      },
+    );
+    const transactionOutput = await streamTextInput.tools.search_transactions.execute(
+      {
+        startDate: '2026-03-05',
+        endDate: '2026-03-10',
+        accountIds: ['account-2'],
+      },
+    );
+
+    capturedOnFinish?.({
+      text: 'Cash flow across all accounts stayed positive, with a travel charge on one card.',
+      steps: [
+        {
+          toolResults: [{ output: cashflowOutput }],
+        },
+        {
+          toolResults: [{ output: transactionOutput }],
+        },
+      ],
+    });
+
+    const metadata = capturedMessageMetadata?.({ part: { type: 'finish' } });
+
+    expect(metadata).toMatchObject({
+      ask: {
+        queryScope: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          accountIds: [],
+          includePending: false,
+          truncated: false,
         },
       },
     });

@@ -60,6 +60,11 @@ interface AskEvidenceAccumulator {
   truncated: boolean;
 }
 
+interface AskQueryScopeAccumulator {
+  scope: AskAnswer['queryScope'];
+  usesAllAccounts: boolean;
+}
+
 function createAskEvidenceAccumulator(): AskEvidenceAccumulator {
   return {
     accounts: new Map(),
@@ -67,6 +72,17 @@ function createAskEvidenceAccumulator(): AskEvidenceAccumulator {
     aggregates: new Map(),
     matchedCount: 0,
     truncated: false,
+  };
+}
+
+function createInitialQueryScope(): AskQueryScopeAccumulator {
+  return {
+    scope: {
+      accountIds: [],
+      includePending: false,
+      truncated: false,
+    },
+    usesAllAccounts: false,
   };
 }
 
@@ -100,6 +116,71 @@ function getAggregateKey(aggregate: AskEvidenceAggregate): string {
     aggregate.currency,
     aggregate.amount,
   ].join('|');
+}
+
+function getEarlierDate(
+  left?: string,
+  right?: string,
+): string | undefined {
+  if (!left) {
+    return right;
+  }
+
+  if (!right) {
+    return left;
+  }
+
+  return left <= right ? left : right;
+}
+
+function getLaterDate(
+  left?: string,
+  right?: string,
+): string | undefined {
+  if (!left) {
+    return right;
+  }
+
+  if (!right) {
+    return left;
+  }
+
+  return left >= right ? left : right;
+}
+
+function mergeQueryScope(
+  current: AskQueryScopeAccumulator,
+  next: Partial<AskAnswer['queryScope']>,
+  nextUsesAllAccounts = false,
+): AskQueryScopeAccumulator {
+  const usesAllAccounts = current.usesAllAccounts || nextUsesAllAccounts;
+
+  return {
+    usesAllAccounts,
+    scope: {
+      startDate: getEarlierDate(current.scope.startDate, next.startDate),
+      endDate: getLaterDate(current.scope.endDate, next.endDate),
+      comparisonStartDate: getEarlierDate(
+        current.scope.comparisonStartDate,
+        next.comparisonStartDate,
+      ),
+      comparisonEndDate: getLaterDate(
+        current.scope.comparisonEndDate,
+        next.comparisonEndDate,
+      ),
+      accountIds: usesAllAccounts
+        ? []
+        : Array.from(
+            new Set([
+              ...current.scope.accountIds,
+              ...(next.accountIds ?? []),
+            ]),
+          ),
+      includePending:
+        current.scope.includePending || Boolean(next.includePending),
+      truncated: current.scope.truncated || Boolean(next.truncated),
+    },
+  };
 }
 
 function mergeAccounts(
@@ -224,17 +305,19 @@ function mergeEvidence(
     return;
   }
 
-  accumulator.matchedCount = Math.max(
-    accumulator.matchedCount,
-    getMatchedCount(output),
-  );
-  accumulator.truncated = accumulator.truncated || getTruncated(output);
+  const balanceHistory = normalizeBalanceHistoryEvidence(output);
+  const matchedCount = getMatchedCount(output) || balanceHistory?.matchedCount || 0;
+
+  accumulator.matchedCount += matchedCount;
+  accumulator.truncated =
+    accumulator.truncated ||
+    getTruncated(output) ||
+    Boolean(balanceHistory?.truncated);
 
   mergeAccounts(accumulator, output);
   mergeTransactions(accumulator, output);
   mergeAggregates(accumulator, output);
 
-  const balanceHistory = normalizeBalanceHistoryEvidence(output);
   if (balanceHistory) {
     accumulator.balanceHistory = balanceHistory;
   }
@@ -249,19 +332,38 @@ export class AskService {
       confidence?: AskAnswer['confidence'];
     },
   ): AskAnswer {
+    const accounts = input.evidence.accounts.slice(0, 10);
+    const transactions = input.evidence.transactions.slice(0, 20);
+    const aggregates = input.evidence.aggregates.slice(0, 10);
+    const followups = input.followups.slice(0, 3);
+    const askSideTruncated =
+      accounts.length < input.evidence.accounts.length ||
+      transactions.length < input.evidence.transactions.length ||
+      aggregates.length < input.evidence.aggregates.length ||
+      followups.length < input.followups.length;
+    const finalTruncated =
+      input.queryScope.truncated ||
+      input.evidence.truncated ||
+      input.evidence.balanceHistory?.truncated ||
+      askSideTruncated ||
+      false;
+
     return AskAnswerSchema.parse({
       answerText: input.answerText,
       confidence: input.confidence ?? 'high',
-      queryScope: input.queryScope,
-      evidence: {
-        accounts: input.evidence.accounts.slice(0, 10),
-        transactions: input.evidence.transactions.slice(0, 20),
-        balanceHistory: input.evidence.balanceHistory,
-        aggregates: input.evidence.aggregates.slice(0, 10),
-        matchedCount: input.evidence.matchedCount,
-        truncated: input.evidence.truncated,
+      queryScope: {
+        ...input.queryScope,
+        truncated: Boolean(finalTruncated),
       },
-      followups: input.followups.slice(0, 3),
+      evidence: {
+        accounts,
+        transactions,
+        balanceHistory: input.evidence.balanceHistory,
+        aggregates,
+        matchedCount: input.evidence.matchedCount,
+        truncated: Boolean(finalTruncated),
+      },
+      followups,
     });
   }
 
@@ -271,11 +373,7 @@ export class AskService {
     response: Response,
   ): Promise<void> {
     let finalAnswer: AskAnswer | undefined;
-    let latestQueryScope: AskAnswer['queryScope'] = {
-      accountIds: [],
-      includePending: false,
-      truncated: false,
-    };
+    let queryScope = createInitialQueryScope();
     const originalMessages = body.messages as AskUIMessage[];
 
     const result = streamText({
@@ -303,12 +401,9 @@ export class AskService {
             'Get a user-scoped snapshot of their current accounts and balances.',
           inputSchema: z.object({}),
           execute: async () => {
-            latestQueryScope = {
-              accountIds: [],
-              includePending: false,
-              truncated: false,
-            };
-            return this.askQueryService.getAccountsSnapshot(userId);
+            const output = await this.askQueryService.getAccountsSnapshot(userId);
+            queryScope = mergeQueryScope(queryScope, {}, true);
+            return output;
           },
         }),
         get_balance_history: tool({
@@ -320,14 +415,22 @@ export class AskService {
             accountIds: z.array(z.string()).optional(),
           }),
           execute: async (input) => {
-            latestQueryScope = {
-              startDate: input.startDate,
-              endDate: input.endDate,
-              accountIds: input.accountIds ?? [],
-              includePending: false,
-              truncated: false,
-            };
-            return this.askQueryService.getBalanceHistory(userId, input);
+            const output = await this.askQueryService.getBalanceHistory(
+              userId,
+              input,
+            );
+            queryScope = mergeQueryScope(
+              queryScope,
+              {
+                startDate: input.startDate,
+                endDate: input.endDate,
+                accountIds: input.accountIds,
+                includePending: false,
+                truncated: false,
+              },
+              !input.accountIds?.length,
+            );
+            return output;
           },
         }),
         search_transactions: tool({
@@ -346,14 +449,22 @@ export class AskService {
             limit: z.number().int().positive().max(20).optional(),
           }),
           execute: async (input) => {
-            latestQueryScope = {
-              startDate: input.startDate,
-              endDate: input.endDate,
-              accountIds: input.accountIds ?? [],
-              includePending: input.includePending ?? false,
-              truncated: false,
-            };
-            return this.askQueryService.searchTransactions(userId, input);
+            const output = await this.askQueryService.searchTransactions(
+              userId,
+              input,
+            );
+            queryScope = mergeQueryScope(
+              queryScope,
+              {
+                startDate: input.startDate,
+                endDate: input.endDate,
+                accountIds: input.accountIds,
+                includePending: input.includePending ?? false,
+                truncated: false,
+              },
+              !input.accountIds?.length,
+            );
+            return output;
           },
         }),
         get_cashflow_analysis: tool({
@@ -364,14 +475,21 @@ export class AskService {
             endDate: z.string(),
           }),
           execute: async (input) => {
-            latestQueryScope = {
-              startDate: input.startDate,
-              endDate: input.endDate,
-              accountIds: [],
-              includePending: false,
-              truncated: false,
-            };
-            return this.askQueryService.getCashflowAnalysis(userId, input);
+            const output = await this.askQueryService.getCashflowAnalysis(
+              userId,
+              input,
+            );
+            queryScope = mergeQueryScope(
+              queryScope,
+              {
+                startDate: input.startDate,
+                endDate: input.endDate,
+                includePending: false,
+                truncated: false,
+              },
+              true,
+            );
+            return output;
           },
         }),
       },
@@ -389,7 +507,7 @@ export class AskService {
         finalAnswer = this.buildFinalAnswer({
           answerText: text,
           queryScope: {
-            ...latestQueryScope,
+            ...queryScope.scope,
             truncated: evidence.truncated,
           },
           evidence: {
