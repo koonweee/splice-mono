@@ -227,7 +227,7 @@ describe('AskConversation layout', () => {
     })
   })
 
-  it('scrolls the latest user message into view as soon as it is submitted', () => {
+  it('scrolls the loading row into view as soon as a request is submitted', () => {
     const initialMessages = [
       {
         id: 'user-1',
@@ -273,5 +273,6 @@ describe('AskConversation layout', () => {
       behavior: 'smooth',
       block: 'end',
     })
+    expect(screen.getByTestId('ask-loading-row')).toBeTruthy()
   })
 })
