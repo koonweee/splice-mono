@@ -663,6 +663,23 @@ describe('AccountService', () => {
       sign: MoneySign.POSITIVE,
     };
 
+    it('delegates manual balance updates instead of emitting ManualAccountBalanceUpdatedEvent', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateManualAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'manual-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation(async (entity) => entity);
+
+      await service.updateManualBalance('manual-id', mockUserId, newBalance);
+
+      expect(mockEventEmitter.emit).not.toHaveBeenCalledWith(
+        ManualAccountEvents.BALANCE_UPDATED,
+        expect.anything(),
+      );
+    });
+
     it('should update depository balances to the same value and emit event', async () => {
       const mockEntity = AccountEntity.fromDto(
         mockCreateManualAccountDto,

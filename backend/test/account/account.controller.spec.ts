@@ -8,6 +8,7 @@ import {
   mockAccount2,
   mockCreateAccountDto,
 } from '../mocks/account/account.mock';
+import { MoneySign } from '../../src/types/MoneyWithSign';
 
 describe('AccountController', () => {
   let controller: AccountController;
@@ -133,6 +134,29 @@ describe('AccountController', () => {
 
       expect(removeSpy).toHaveBeenCalledTimes(1);
       expect(removeSpy).toHaveBeenCalledWith('test-id-123', mockUser.userId);
+    });
+  });
+
+  describe('updateBalance', () => {
+    const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
+
+    it('forwards the typed manual balance update payload to AccountService', async () => {
+      const body = {
+        balance: {
+          money: { amount: 125000, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        },
+        effectiveDate: '2026-03-24',
+        confirmHistoryReset: false,
+      };
+
+      await controller.updateBalance('manual-id', mockUser, body);
+
+      expect(mockAccountService.updateManualBalance).toHaveBeenCalledWith(
+        'manual-id',
+        mockUser.userId,
+        body,
+      );
     });
   });
 });

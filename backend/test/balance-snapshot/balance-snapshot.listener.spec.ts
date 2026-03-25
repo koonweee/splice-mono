@@ -146,4 +146,8 @@ describe('BalanceSnapshotListener', () => {
       ).resolves.not.toThrow();
     });
   });
+
+  it('only handles ManualAccountEvents.CREATED for manual account snapshots', () => {
+    expect((listener as any).handleManualAccountUpdate).toBeUndefined();
+  });
 });
