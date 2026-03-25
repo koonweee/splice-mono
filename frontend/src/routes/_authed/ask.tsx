@@ -58,7 +58,7 @@ function AskPage() {
       {messages.length === 0 && (
         <Alert color="gray" variant="light" mb="md">
           <Text size="sm">
-            Ask about spending changes, merchants, categories, balances, or recurring charges.
+            Ask about net worth trends, spending changes, merchants, categories, balances, or recurring charges.
           </Text>
         </Alert>
       )}

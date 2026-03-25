@@ -1,7 +1,7 @@
-import { Anchor, Badge, Divider, Paper, Stack, Text } from '@mantine/core'
+import { Anchor, Badge, Divider, Group, Paper, Stack, Text } from '@mantine/core'
 import { Link } from '@tanstack/react-router'
 import { buildAccountEvidenceLink, buildTransactionEvidenceLink } from '@/lib/ask-chat'
-import { formatMoneyNumber, formatMoneyWithSign } from '@/lib/format'
+import { formatMoneyNumber, formatMoneyWithSign, formatPercent } from '@/lib/format'
 import type { AskAnswer } from '@/lib/ask-types'
 
 type AskEvidencePanelProps = {
@@ -19,6 +19,12 @@ export function AskEvidencePanel({ answer }: AskEvidencePanelProps) {
       </Paper>
     )
   }
+
+  const balanceHistory = answer.evidence.balanceHistory
+  const balanceHistoryDelta =
+    balanceHistory?.deltaPercent !== undefined
+      ? formatPercent(balanceHistory.deltaPercent)
+      : undefined
 
   return (
     <Paper withBorder p="md" radius="md">
@@ -45,6 +51,48 @@ export function AskEvidencePanel({ answer }: AskEvidencePanelProps) {
             </Text>
           </Stack>
         </div>
+
+        {balanceHistory && (
+          <>
+            <Divider />
+
+            <div>
+              <Text fw={500} size="sm" mb="xs">
+                Balance history
+              </Text>
+              <Stack gap={4}>
+                <Text size="sm">
+                  Current total: {formatMoneyWithSign({ value: balanceHistory.currentTotal })}
+                </Text>
+                {balanceHistory.previousTotal && (
+                  <Text size="sm">
+                    Previous total:{' '}
+                    {formatMoneyWithSign({ value: balanceHistory.previousTotal })}
+                  </Text>
+                )}
+                {balanceHistoryDelta && (
+                  <Text size="sm">Change: {balanceHistoryDelta}</Text>
+                )}
+                <Text size="sm">Points: {balanceHistory.pointCount}</Text>
+              </Stack>
+              <Group gap="xs" mt="xs">
+                <Badge variant="light" color="gray">
+                  {balanceHistory.semanticMetadata.pendingIncluded ? 'Pending included' : 'Posted only'}
+                </Badge>
+                {balanceHistory.semanticMetadata.comparisonIncluded && (
+                  <Badge variant="light" color="gray">
+                    Comparison included
+                  </Badge>
+                )}
+                {balanceHistory.semanticMetadata.reconciliationApplied && (
+                  <Badge variant="light" color="gray">
+                    Reconciliation applied
+                  </Badge>
+                )}
+              </Group>
+            </div>
+          </>
+        )}
 
         <Divider />
 

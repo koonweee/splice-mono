@@ -135,9 +135,6 @@ describe('AskQueryService', () => {
       startDate: '2026-03-01',
       endDate: '2026-03-22',
       accountIds: ['account-1'],
-      interval: 'week',
-      comparisonStartDate: '2026-02-01',
-      comparisonEndDate: '2026-02-22',
     };
     const expected = {
       netWorth: {

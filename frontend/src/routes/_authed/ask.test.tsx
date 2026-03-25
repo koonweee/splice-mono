@@ -68,6 +68,9 @@ describe('Ask route layout', () => {
     const viewport = screen.getByTestId('ask-route-viewport')
     const heading = within(viewport).getByRole('heading', { name: 'Ask' })
     const alert = within(viewport).getByRole('alert')
+    const alertText = within(alert).getByText(
+      /net worth trends, spending changes, merchants, categories, balances, or recurring charges/i,
+    )
     const pageGrid = within(viewport).getByTestId('ask-page-grid')
     const transcript = within(viewport).getByTestId('ask-transcript')
 
@@ -76,6 +79,7 @@ describe('Ask route layout', () => {
     expect(pageGrid.className).toContain(styles.page)
     expect(viewport.contains(heading)).toBe(true)
     expect(viewport.contains(alert)).toBe(true)
+    expect(viewport.contains(alertText)).toBe(true)
     expect(viewport.contains(transcript)).toBe(true)
     expect(viewport.contains(pageGrid)).toBe(true)
     expect(heading.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)

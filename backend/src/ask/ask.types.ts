@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { BalanceHistorySurfaceSummary } from '../balance-query/balance-history-surface.service';
 import {
   MoneyWithSignSchema,
   type SerializedMoneyWithSign,
@@ -124,30 +125,13 @@ export interface AskBalanceHistoryOptions {
   startDate: string;
   endDate: string;
   accountIds?: string[];
-  interval?: 'day' | 'week' | 'month';
-  comparisonStartDate?: string;
-  comparisonEndDate?: string;
 }
 
-export interface AskBalanceHistoryResult {
-  matchedCount: number;
-  truncated: boolean;
-  currentTotal: SerializedMoneyWithSign;
-  previousTotal?: SerializedMoneyWithSign;
-  deltaPercent?: number;
-  pointCount: number;
-  semanticMetadata: AskSemanticMetadata;
-  series: AskEvidenceBalanceHistoryPoint[];
-}
+export type AskBalanceHistoryResult = BalanceHistorySurfaceSummary;
 
 export interface AskCashflowAnalysisOptions {
   startDate: string;
   endDate: string;
-  accountIds?: string[];
-  comparisonStartDate?: string;
-  comparisonEndDate?: string;
-  includePending?: boolean;
-  recurringOnly?: boolean;
 }
 
 export interface AskTransactionSummaryOptions {
