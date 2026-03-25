@@ -22,6 +22,8 @@ describe('Ask layout CSS contract', () => {
 
     expect(routeViewport).toContain('flex: 1;')
     expect(routeViewport).toContain('min-height: 0;')
+    expect(routeViewport).toContain('margin-bottom: calc(-1 * var(--app-shell-padding));')
+    expect(routeViewport).toContain('padding-bottom: var(--app-shell-padding);')
     expect(routeViewport).not.toContain('100dvh')
     expect(routeViewport).not.toContain('--app-shell-offset')
   })

@@ -3,6 +3,8 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  margin-bottom: calc(-1 * var(--app-shell-padding));
+  padding-bottom: var(--app-shell-padding);
 }
 
 .page {
