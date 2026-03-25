@@ -215,6 +215,14 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     distinctOn: [] as string[],
     limit: null as number | null,
   };
+  let pendingDateConstraintParams: Array<{
+    column: 'snapshotDate' | 'date';
+    operator: ComparisonOperator;
+    paramName: string;
+  }> = [];
+  let pendingAccountIdParams = new Set<string>();
+  let pendingUserIdParams = new Set<string>();
+  let pendingSnapshotTypeParams = new Set<string>();
 
   const isDateValue = (value: unknown): value is string => {
     return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -226,6 +234,25 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
   const isTrackedDateColumn = (
     value: string,
   ): value is 'snapshotDate' | 'date' => value === 'snapshotDate' || value === 'date';
+
+  const addDateConstraint = (constraint: {
+    column: 'snapshotDate' | 'date';
+    operator: ComparisonOperator;
+    date: string;
+  }) => {
+    if (
+      state.dateConstraints.some(
+        (existing) =>
+          existing.column === constraint.column &&
+          existing.operator === constraint.operator &&
+          existing.date === constraint.date,
+      )
+    ) {
+      return;
+    }
+
+    state.dateConstraints.push(constraint);
+  };
 
   const updateDateConstraints = (query: string, params: Record<string, unknown>) => {
     const dateConstraintMatch = query.match(
@@ -239,10 +266,19 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     const [, rawColumn, operator, paramName] = dateConstraintMatch;
     const value = params[paramName];
     if (isDateValue(value) && isTrackedDateColumn(rawColumn)) {
-      state.dateConstraints.push({
+      addDateConstraint({
         operator: operator as ComparisonOperator,
         date: value,
         column: rawColumn,
+      });
+      return;
+    }
+
+    if (isTrackedDateColumn(rawColumn)) {
+      pendingDateConstraintParams.push({
+        column: rawColumn,
+        operator: operator as ComparisonOperator,
+        paramName,
       });
     }
   };
@@ -260,6 +296,10 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
         accountIds
           .filter((id): id is string => typeof id === 'string')
           .forEach((id) => state.accountIds.add(id));
+        return;
+      }
+      if (typeof accountInMatch[1] === 'string') {
+        pendingAccountIdParams.add(accountInMatch[1]);
       }
       return;
     }
@@ -269,6 +309,8 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
       const accountId = params[accountEqMatch[1]];
       if (typeof accountId === 'string') {
         state.accountIds.add(accountId);
+      } else {
+        pendingAccountIdParams.add(accountEqMatch[1]);
       }
     }
   };
@@ -282,6 +324,8 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     const userId = params[userMatch[1]];
     if (typeof userId === 'string') {
       state.userId = userId;
+    } else {
+      pendingUserIdParams.add(userMatch[1]);
     }
   };
 
@@ -295,6 +339,10 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
         snapshotTypes
           .filter((value): value is string => typeof value === 'string')
           .forEach((value) => state.snapshotType.add(value));
+        return;
+      }
+      if (typeof snapshotTypeInMatch[1] === 'string') {
+        pendingSnapshotTypeParams.add(snapshotTypeInMatch[1]);
       }
       return;
     }
@@ -306,6 +354,8 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
       const snapshotType = params[snapshotTypeEqMatch[1]];
       if (typeof snapshotType === 'string') {
         state.snapshotType.add(snapshotType);
+      } else {
+        pendingSnapshotTypeParams.add(snapshotTypeEqMatch[1]);
       }
     }
   };
@@ -339,26 +389,62 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     state.orders = [order];
   };
 
-  const applyExplicitParameters = (params: Record<string, unknown>) => {
-    if (typeof params.accountId === 'string') {
-      state.accountIds.add(params.accountId);
-    }
-    if (Array.isArray(params.accountIds)) {
-      params.accountIds
-        .filter((id): id is string => typeof id === 'string')
-        .forEach((id) => state.accountIds.add(id));
-    }
-    if (typeof params.userId === 'string') {
-      state.userId = params.userId;
-    }
-    if (typeof params.snapshotType === 'string') {
-      state.snapshotType.add(params.snapshotType);
-    }
-    if (Array.isArray(params.snapshotTypes)) {
-      params.snapshotTypes
-        .filter((value): value is string => typeof value === 'string')
-        .forEach((value) => state.snapshotType.add(value));
-    }
+  const applyPendingParameters = (params: Record<string, unknown>) => {
+    [...pendingAccountIdParams].forEach((paramName) => {
+      const value = params[paramName];
+      if (typeof value === 'string') {
+        state.accountIds.add(value);
+        pendingAccountIdParams.delete(paramName);
+      }
+      if (Array.isArray(value)) {
+        value
+          .filter((id): id is string => typeof id === 'string')
+          .forEach((id) => state.accountIds.add(id));
+        pendingAccountIdParams.delete(paramName);
+      }
+    });
+
+    [...pendingUserIdParams].forEach((paramName) => {
+      const value = params[paramName];
+      if (typeof value === 'string') {
+        state.userId = value;
+        pendingUserIdParams.delete(paramName);
+      }
+    });
+
+    [...pendingSnapshotTypeParams].forEach((paramName) => {
+      const value = params[paramName];
+      if (typeof value === 'string') {
+        state.snapshotType.add(value);
+        pendingSnapshotTypeParams.delete(paramName);
+      }
+      if (Array.isArray(value)) {
+        value
+          .filter((val): val is string => typeof val === 'string')
+          .forEach((val) => state.snapshotType.add(val));
+        pendingSnapshotTypeParams.delete(paramName);
+      }
+    });
+
+    const nextPendingDateConstraintParams: Array<{
+      column: 'snapshotDate' | 'date';
+      operator: ComparisonOperator;
+      paramName: string;
+    }> = [];
+    pendingDateConstraintParams.forEach((constraint) => {
+      const value = params[constraint.paramName];
+      if (isDateValue(value)) {
+        addDateConstraint({
+          operator: constraint.operator,
+          date: value,
+          column: constraint.column,
+        });
+        return;
+      }
+
+      nextPendingDateConstraintParams.push(constraint);
+    });
+    pendingDateConstraintParams = nextPendingDateConstraintParams;
   };
 
   const updateFromClause = (query: string, params: Record<string, unknown>) => {
@@ -366,7 +452,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     updateAccountFilters(query, params);
     updateUserFilters(query, params);
     updateSnapshotTypeFilters(query, params);
-    applyExplicitParameters(params);
+    applyPendingParameters(params);
   };
 
   const applyFromClause = (
@@ -1045,7 +1131,7 @@ describe('TransactionAnalysisService', () => {
       });
       const startSnapshot = buildBalanceSnapshot({
         accountId: 'acct-inflow',
-        snapshotDate: '2024-01-01',
+        snapshotDate: '2023-12-31',
         amount: 10000,
       });
       const midSnapshot = buildBalanceSnapshot({
@@ -1055,7 +1141,7 @@ describe('TransactionAnalysisService', () => {
       });
       const endSnapshot = buildBalanceSnapshot({
         accountId: 'acct-inflow',
-        snapshotDate: '2024-01-31',
+        snapshotDate: '2024-01-29',
         amount: 17500,
       });
       const futureSnapshot = buildBalanceSnapshot({
