@@ -118,10 +118,7 @@ function getAggregateKey(aggregate: AskEvidenceAggregate): string {
   ].join('|');
 }
 
-function getEarlierDate(
-  left?: string,
-  right?: string,
-): string | undefined {
+function getEarlierDate(left?: string, right?: string): string | undefined {
   if (!left) {
     return right;
   }
@@ -133,10 +130,7 @@ function getEarlierDate(
   return left <= right ? left : right;
 }
 
-function getLaterDate(
-  left?: string,
-  right?: string,
-): string | undefined {
+function getLaterDate(left?: string, right?: string): string | undefined {
   if (!left) {
     return right;
   }
@@ -171,10 +165,7 @@ function mergeQueryScope(
       accountIds: usesAllAccounts
         ? []
         : Array.from(
-            new Set([
-              ...current.scope.accountIds,
-              ...(next.accountIds ?? []),
-            ]),
+            new Set([...current.scope.accountIds, ...(next.accountIds ?? [])]),
           ),
       includePending:
         current.scope.includePending || Boolean(next.includePending),
@@ -201,14 +192,17 @@ function mergeTransactions(
   accumulator: AskEvidenceAccumulator,
   value: Record<string, unknown>,
 ): void {
-  getArray<Record<string, unknown>>(value.transactions).forEach((transaction) => {
-    const id = typeof transaction.id === 'string' ? transaction.id : undefined;
-    if (!id || accumulator.transactions.has(id)) {
-      return;
-    }
+  getArray<Record<string, unknown>>(value.transactions).forEach(
+    (transaction) => {
+      const id =
+        typeof transaction.id === 'string' ? transaction.id : undefined;
+      if (!id || accumulator.transactions.has(id)) {
+        return;
+      }
 
-    accumulator.transactions.set(id, transaction as AskEvidenceTransaction);
-  });
+      accumulator.transactions.set(id, transaction as AskEvidenceTransaction);
+    },
+  );
 }
 
 function mergeAggregates(
@@ -227,10 +221,14 @@ function mergeAggregates(
       return;
     }
 
-    const label = typeof aggregate.label === 'string' ? aggregate.label : undefined;
-    const currency = typeof aggregate.currency === 'string' ? aggregate.currency : undefined;
-    const kind = typeof aggregate.kind === 'string' ? aggregate.kind : undefined;
-    const amount = typeof aggregate.amount === 'number' ? aggregate.amount : undefined;
+    const label =
+      typeof aggregate.label === 'string' ? aggregate.label : undefined;
+    const currency =
+      typeof aggregate.currency === 'string' ? aggregate.currency : undefined;
+    const kind =
+      typeof aggregate.kind === 'string' ? aggregate.kind : undefined;
+    const amount =
+      typeof aggregate.amount === 'number' ? aggregate.amount : undefined;
 
     if (!label || !currency || !kind || amount === undefined) {
       return;
@@ -276,7 +274,7 @@ function normalizeBalanceHistoryEvidence(
           pendingIncluded: false,
           reconciliationApplied: true,
           comparisonIncluded: false,
-      },
+        },
   );
 
   const matchedCount =
@@ -306,7 +304,8 @@ function mergeEvidence(
   }
 
   const balanceHistory = normalizeBalanceHistoryEvidence(output);
-  const matchedCount = getMatchedCount(output) || balanceHistory?.matchedCount || 0;
+  const matchedCount =
+    getMatchedCount(output) || balanceHistory?.matchedCount || 0;
 
   accumulator.matchedCount += matchedCount;
   accumulator.truncated =
@@ -401,7 +400,8 @@ export class AskService {
             'Get a user-scoped snapshot of their current accounts and balances.',
           inputSchema: z.object({}),
           execute: async () => {
-            const output = await this.askQueryService.getAccountsSnapshot(userId);
+            const output =
+              await this.askQueryService.getAccountsSnapshot(userId);
             queryScope = mergeQueryScope(queryScope, {}, true);
             return output;
           },

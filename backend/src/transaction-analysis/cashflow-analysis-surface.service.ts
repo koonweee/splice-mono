@@ -32,10 +32,7 @@ export class CashflowAnalysisSurfaceService {
 
     return {
       totalInflow: this.toMajorUnits(analysis.totalInflow, analysis.currency),
-      totalOutflow: this.toMajorUnits(
-        analysis.totalOutflow,
-        analysis.currency,
-      ),
+      totalOutflow: this.toMajorUnits(analysis.totalOutflow, analysis.currency),
       netFlow: this.toMajorUnits(analysis.netFlow, analysis.currency),
       topCategories,
       semanticMetadata: {

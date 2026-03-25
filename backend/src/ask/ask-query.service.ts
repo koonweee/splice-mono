@@ -19,14 +19,11 @@ export class AskQueryService {
     private readonly cashflowAnalysisSurfaceService: CashflowAnalysisSurfaceService,
   ) {}
 
-  async getAccountsSnapshot(userId: string, _options?: unknown) {
+  async getAccountsSnapshot(userId: string) {
     return this.accountsSurfaceService.getAccountsSnapshot(userId);
   }
 
-  async getBalanceHistory(
-    userId: string,
-    options: AskBalanceHistoryOptions,
-  ) {
+  async getBalanceHistory(userId: string, options: AskBalanceHistoryOptions) {
     return this.balanceHistorySurfaceService.getBalanceHistorySummary(
       userId,
       options,
