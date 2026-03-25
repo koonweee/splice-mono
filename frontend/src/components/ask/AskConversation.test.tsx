@@ -141,6 +141,47 @@ describe('AskConversation layout', () => {
     expect(screen.queryByTestId('ask-message-row-assistant-1')).toBeNull()
   })
 
+  it('hides the empty assistant bubble while the request is streaming without text yet', () => {
+    const messages = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{ type: 'text', text: 'What changed?' }],
+      } satisfies AskUIMessage,
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [],
+        metadata: {
+          ask: {
+            answerText: '',
+            queryScope: {
+              accountIds: [],
+              includePending: false,
+              truncated: false,
+            },
+            followups: [],
+            confidence: 'high',
+          },
+        },
+      } satisfies AskUIMessage,
+    ]
+
+    render(
+      <MantineProvider>
+        <AskConversation
+          messages={messages}
+          status="streaming"
+          onRetry={() => {}}
+          composer={<div data-testid="ask-composer">Composer</div>}
+        />
+      </MantineProvider>,
+    )
+
+    expect(screen.getByTestId('ask-message-row-user-1')).toBeTruthy()
+    expect(screen.queryByTestId('ask-message-row-assistant-1')).toBeNull()
+  })
+
   it('scrolls the latest message into view when streaming finishes', () => {
     const messages = [
       {
