@@ -124,7 +124,7 @@ describe('AskService', () => {
     expect(result).not.toHaveProperty('evidence');
   });
 
-  it('defaults Ask chat to gpt-5.4-mini when OPENAI_MODEL is unset', async () => {
+  it('defaults Ask chat to gpt-5.4 with medium reasoning when OPENAI_MODEL is unset', async () => {
     await service.streamChat(
       'user-1',
       {
@@ -133,12 +133,12 @@ describe('AskService', () => {
       {} as never,
     );
 
-    expect(mockOpenai).toHaveBeenCalledWith('gpt-5.4-mini');
+    expect(mockOpenai).toHaveBeenCalledWith('gpt-5.4');
     expect(mockStreamText).toHaveBeenCalledWith(
       expect.objectContaining({
         providerOptions: {
           openai: {
-            reasoningEffort: 'high',
+            reasoningEffort: 'medium',
           },
         },
       }),
