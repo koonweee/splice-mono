@@ -573,6 +573,132 @@ describe('TransactionAnalysisService', () => {
         ],
       });
     });
+
+    it('adds an inflow BALANCE_ADJUSTMENT when no posted transactions exist and snapshots indicate growth', async () => {
+      mockTransactionRepository.find.mockResolvedValue([]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 1000,
+        totalOutflow: 0,
+        netFlow: 1000,
+        balanceAdjustments: expect.arrayContaining([
+          expect.objectContaining({
+            primaryCategory: 'BALANCE_ADJUSTMENT',
+          }),
+        ]),
+        inflows: [
+          expect.objectContaining({
+            primaryCategory: 'BALANCE_ADJUSTMENT',
+            totalAmount: 1000,
+            currency: 'USD',
+            transactionCount: 1,
+          }),
+        ],
+        uncategorizedInflow: 0,
+        uncategorizedOutflow: 0,
+      });
+    });
+
+    it('adds an outflow BALANCE_ADJUSTMENT when no posted transactions exist and snapshots indicate decline', async () => {
+      mockTransactionRepository.find.mockResolvedValue([]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 2000,
+        netFlow: -2000,
+        balanceAdjustments: expect.arrayContaining([
+          expect.objectContaining({
+            primaryCategory: 'BALANCE_ADJUSTMENT',
+          }),
+        ]),
+        outflows: [
+          expect.objectContaining({
+            primaryCategory: 'BALANCE_ADJUSTMENT',
+            totalAmount: 2000,
+            currency: 'USD',
+            transactionCount: 1,
+          }),
+        ],
+        uncategorizedInflow: 0,
+        uncategorizedOutflow: 0,
+      });
+    });
+
+    it('does not create synthetic adjustments for accounts with in-range posted transactions', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'posted-adjustment-offset',
+          amount: 1000,
+          sign: MoneySign.POSITIVE,
+          date: '2024-01-15',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 1000,
+        totalOutflow: 0,
+        balanceAdjustments: [],
+        inflows: [
+          expect.objectContaining({
+            primaryCategory: 'INCOME',
+            totalAmount: 1000,
+            currency: 'USD',
+            transactionCount: 1,
+          }),
+        ],
+      });
+    });
+
+    it('skips accounts that do not have both boundary snapshots for synthetic adjustment generation', async () => {
+      mockTransactionRepository.find.mockResolvedValue([]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 0,
+        netFlow: 0,
+        balanceAdjustments: [],
+        inflows: [],
+        outflows: [],
+      });
+    });
+
+    it('keeps synthetic adjustments out of uncategorized totals', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'uncategorized-receipt',
+          amount: 700,
+          sign: MoneySign.POSITIVE,
+          date: '2024-01-10',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 700,
+        totalOutflow: 0,
+        uncategorizedInflow: 700,
+        uncategorizedOutflow: 0,
+        inflows: [
+          expect.objectContaining({
+            primaryCategory: 'UNCATEGORIZED',
+            totalAmount: 700,
+            currency: 'USD',
+            transactionCount: 1,
+          }),
+        ],
+        balanceAdjustments: expect.any(Array),
+      });
+    });
   });
 
   describe('getCategoryTransactions', () => {
