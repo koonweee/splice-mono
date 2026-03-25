@@ -84,7 +84,10 @@ export class TransactionAnalysisService {
     // 4. Aggregate unmatched transactions by category, sign, and currency.
     const aggregates = new Map<
       string,
-      { inflow: Map<string, CategoryCurrencyAggregate>; outflow: Map<string, CategoryCurrencyAggregate> }
+      {
+        inflow: Map<string, CategoryCurrencyAggregate>;
+        outflow: Map<string, CategoryCurrencyAggregate>;
+      }
     >();
 
     unmatchedTransactions.forEach((transaction) => {
@@ -186,15 +189,14 @@ export class TransactionAnalysisService {
       await this.currencyConversionService.getPreferredCurrency(userId);
 
     const filteredTransactions = unmatchedTransactions.filter((transaction) => {
-      const transactionCategory = transaction.category?.primary ?? 'UNCATEGORIZED';
+      const transactionCategory =
+        transaction.category?.primary ?? 'UNCATEGORIZED';
       const matchesDirection =
         flowDirection === 'inflow'
           ? transaction.amount.sign === MoneySign.POSITIVE
           : transaction.amount.sign === MoneySign.NEGATIVE;
 
-      return (
-        matchesDirection && transactionCategory === categoryPrimary
-      );
+      return matchesDirection && transactionCategory === categoryPrimary;
     });
     filteredTransactions.sort((left, right) => {
       const dateComparison = right.date.localeCompare(left.date);

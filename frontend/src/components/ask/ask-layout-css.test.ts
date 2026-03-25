@@ -17,7 +17,7 @@ function getCssBlock(selector: string): string {
 }
 
 describe('Ask layout CSS contract', () => {
-  it('keeps the route viewport bounded under the AppShell offset', () => {
+  it('fills the visible app shell content area and cancels the shell bottom padding for Ask only', () => {
     const routeViewport = getCssBlock('.routeViewport')
 
     expect(routeViewport).toContain(
@@ -25,33 +25,29 @@ describe('Ask layout CSS contract', () => {
     )
     expect(routeViewport).toContain('height: calc(100dvh - var(--app-shell-offset));')
     expect(routeViewport).toContain('min-height: 0;')
+    expect(routeViewport).toContain('margin-bottom: calc(-1 * var(--app-shell-padding));')
+    expect(routeViewport).toContain('padding-bottom: var(--app-shell-padding);')
   })
 
-  it('assigns scrolling to the transcript and desktop evidence panes', () => {
+  it('assigns scrolling to the transcript within the single Ask layout pane', () => {
     const page = getCssBlock('.page')
-    const conversationPane = getCssBlock('.conversationPane')
     const messages = getCssBlock('.messages')
-    const desktopEvidence = getCssBlock('.desktopEvidence')
 
     expect(page).toContain('flex: 1;')
     expect(page).toContain('height: 100%;')
     expect(page).toContain('min-height: 0;')
-    expect(conversationPane).toContain('display: flex;')
-    expect(conversationPane).toContain('flex-direction: column;')
-    expect(conversationPane).toContain('min-height: 0;')
     expect(messages).toContain('overflow-y: auto;')
     expect(messages).toContain('min-height: 0;')
     expect(messages).toContain('flex: 1;')
-    expect(desktopEvidence).toContain('overflow-y: auto;')
-    expect(desktopEvidence).toContain('min-height: 0;')
+    expect(messages).toContain('padding-right: 8px;')
+    expect(messages).toContain('padding-bottom: 8px;')
+    expect(messages).toContain('scrollbar-gutter: stable;')
   })
 
-  it('preserves the one-column mobile collapse', () => {
+  it('keeps the page in a single-column layout', () => {
     const mobileMedia = askCss.match(/@media \(max-width: 768px\) \{([\s\S]*?)\n\}/m)
 
-    expect(mobileMedia?.[1]).toContain('.page')
-    expect(mobileMedia?.[1]).toContain('grid-template-columns: 1fr;')
-    expect(mobileMedia?.[1]).toContain('.desktopEvidence')
-    expect(mobileMedia?.[1]).toContain('display: none;')
+    expect(getCssBlock('.page')).not.toContain('grid-template-columns')
+    expect(mobileMedia?.[1] ?? '').not.toContain('.desktopEvidence')
   })
 })

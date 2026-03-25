@@ -98,11 +98,13 @@ export class TransactionAnalysisController {
     name: 'flowDirection',
     required: true,
     enum: ['inflow', 'outflow'],
-    description: 'Whether to return positive or negative unmatched transactions',
+    description:
+      'Whether to return positive or negative unmatched transactions',
   })
   @ZodApiResponse({
     status: 200,
-    description: 'Returns unmatched transaction rows for the requested category',
+    description:
+      'Returns unmatched transaction rows for the requested category',
     schema: TransactionAnalysisTransactionsResponseSchema,
   })
   @ApiResponse({ status: 400, description: 'Invalid request parameters' })

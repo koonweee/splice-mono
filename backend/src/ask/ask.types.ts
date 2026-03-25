@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { BalanceHistorySurfaceSummary } from '../balance-query/balance-history-surface.service';
 import { MoneyWithSignSchema } from '../types/MoneyWithSign';
 
 export const AskConfidenceSchema = z.enum(['high', 'medium', 'low']);
@@ -33,26 +34,41 @@ export const AskEvidenceTransactionSchema = z.object({
   convertedAmount: MoneyWithSignSchema.optional(),
 });
 
+export const AskEvidenceBalanceHistoryPointSchema = z.object({
+  date: z.string(),
+  accountId: z.string(),
+  accountName: z.string(),
+  balance: MoneyWithSignSchema,
+});
+
+export const AskSemanticMetadataSchema = z.object({
+  pendingIncluded: z.boolean().default(false),
+  reconciliationApplied: z.boolean().default(false),
+  comparisonIncluded: z.boolean().default(false),
+});
+
+export const AskEvidenceBalanceHistorySummarySchema = z.object({
+  matchedCount: z.number().int().nonnegative(),
+  truncated: z.boolean(),
+  currentTotal: MoneyWithSignSchema,
+  previousTotal: MoneyWithSignSchema.optional(),
+  deltaPercent: z.number().optional(),
+  pointCount: z.number().int().nonnegative(),
+  semanticMetadata: AskSemanticMetadataSchema,
+});
+
 export const AskEvidenceAggregateSchema = z.object({
   label: z.string(),
+  rawLabel: z.string().optional(),
   amount: z.number().describe('Amount in major currency units (e.g. dollars).'),
   currency: z.string(),
   kind: z.enum(['category', 'merchant', 'account', 'summary']),
-});
-
-export const AskEvidenceSchema = z.object({
-  accounts: z.array(AskEvidenceAccountSchema).default([]),
-  transactions: z.array(AskEvidenceTransactionSchema).default([]),
-  aggregates: z.array(AskEvidenceAggregateSchema).default([]),
-  matchedCount: z.number().int().nonnegative(),
-  truncated: z.boolean(),
 });
 
 export const AskAnswerSchema = z.object({
   answerText: z.string(),
   confidence: AskConfidenceSchema,
   queryScope: AskQueryScopeSchema,
-  evidence: AskEvidenceSchema,
   followups: z.array(z.string()).default([]),
 });
 
@@ -62,8 +78,14 @@ export type AskEvidenceAccount = z.infer<typeof AskEvidenceAccountSchema>;
 export type AskEvidenceTransaction = z.infer<
   typeof AskEvidenceTransactionSchema
 >;
+export type AskEvidenceBalanceHistoryPoint = z.infer<
+  typeof AskEvidenceBalanceHistoryPointSchema
+>;
+export type AskSemanticMetadata = z.infer<typeof AskSemanticMetadataSchema>;
+export type AskEvidenceBalanceHistorySummary = z.infer<
+  typeof AskEvidenceBalanceHistorySummarySchema
+>;
 export type AskEvidenceAggregate = z.infer<typeof AskEvidenceAggregateSchema>;
-export type AskEvidence = z.infer<typeof AskEvidenceSchema>;
 export type AskAnswer = z.infer<typeof AskAnswerSchema>;
 
 export interface AskTransactionSearchOptions {
@@ -85,6 +107,19 @@ export interface AskTransactionSearchResult {
   transactions: AskEvidenceTransaction[];
 }
 
+export interface AskBalanceHistoryOptions {
+  startDate: string;
+  endDate: string;
+  accountIds?: string[];
+}
+
+export type AskBalanceHistoryResult = BalanceHistorySurfaceSummary;
+
+export interface AskCashflowAnalysisOptions {
+  startDate: string;
+  endDate: string;
+}
+
 export interface AskTransactionSummaryOptions {
   startDate?: string;
   endDate?: string;
@@ -93,26 +128,12 @@ export interface AskTransactionSummaryOptions {
   recurringOnly?: boolean;
 }
 
-export interface AskRecurringTransaction {
-  merchantName: string;
-  cadence: 'monthly' | 'weekly' | 'unknown';
-  /** Amount in major currency units (e.g. dollars). */
-  amount: number;
-  currency: string;
-}
-
-export interface AskTransactionSummaryResult {
-  /** Amount in major currency units (e.g. dollars). */
+export interface AskCashflowAnalysisResult {
   totalInflow: number;
-  /** Amount in major currency units (e.g. dollars). */
   totalOutflow: number;
-  /** Amount in major currency units (e.g. dollars). */
-  net: number;
-  transactionCount: number;
+  netFlow: number;
   topCategories: AskEvidenceAggregate[];
-  topMerchants: AskEvidenceAggregate[];
-  topAccounts: AskEvidenceAggregate[];
-  recurringTransactions: AskRecurringTransaction[];
+  semanticMetadata: AskSemanticMetadata;
   matchedCount: number;
   truncated: boolean;
 }
@@ -124,21 +145,6 @@ export interface AskComparePeriodsOptions {
   previousEndDate: string;
   accountIds?: string[];
   includePending?: boolean;
-}
-
-export interface AskComparePeriodsResult {
-  /** Amount in major currency units (e.g. dollars). */
-  currentTotalOutflow: number;
-  /** Amount in major currency units (e.g. dollars). */
-  previousTotalOutflow: number;
-  /** Amount in major currency units (e.g. dollars). */
-  absoluteDelta: number;
-  percentDelta: number;
-  categoryDrivers: AskEvidenceAggregate[];
-  merchantDrivers: AskEvidenceAggregate[];
-  accountDrivers: AskEvidenceAggregate[];
-  matchedCount: number;
-  truncated: boolean;
 }
 
 export interface AskAccountsSnapshotResult {

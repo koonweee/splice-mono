@@ -5,6 +5,7 @@ import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.enti
 import { CurrencyExchangeModule } from '../currency-exchange/currency-exchange.module';
 import { UserModule } from '../user/user.module';
 import { BalanceQueryController } from './balance-query.controller';
+import { BalanceHistorySurfaceService } from './balance-history-surface.service';
 import { BalanceQueryService } from './balance-query.service';
 
 @Module({
@@ -14,7 +15,7 @@ import { BalanceQueryService } from './balance-query.service';
     UserModule,
   ],
   controllers: [BalanceQueryController],
-  providers: [BalanceQueryService],
-  exports: [BalanceQueryService],
+  providers: [BalanceQueryService, BalanceHistorySurfaceService],
+  exports: [BalanceQueryService, BalanceHistorySurfaceService],
 })
 export class BalanceQueryModule {}
