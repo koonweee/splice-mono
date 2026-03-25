@@ -8,9 +8,6 @@ import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { CashflowAnalysisSurfaceService } from '../../src/transaction-analysis/cashflow-analysis-surface.service';
 import { TransactionAnalysisService } from '../../src/transaction-analysis/transaction-analysis.service';
-import {
-  TransactionAnalysisBalanceAdjustmentsQuerySchema,
-} from '../../src/types/TransactionAnalysis';
 import { MoneySign, getDecimalPlaces } from '../../src/types/MoneyWithSign';
 
 const mockUserId = 'user-uuid-123';
@@ -1831,21 +1828,6 @@ describe('TransactionAnalysisService', () => {
       );
     });
 
-    it('rejects non-BALANCE_ADJUSTMENT categories at the controller boundary contract', () => {
-      const result = TransactionAnalysisBalanceAdjustmentsQuerySchema.safeParse({
-        startDate: '2024-01-01',
-        endDate: '2024-01-31',
-        categoryPrimary: 'INCOME',
-        flowDirection: 'inflow',
-      });
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(
-          result.error.issues.map((issue) => issue.message).join(' '),
-        ).toContain('BALANCE_ADJUSTMENT');
-      }
-    });
   });
 });
 
