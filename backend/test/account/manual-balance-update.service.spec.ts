@@ -76,6 +76,7 @@ describe('ManualBalanceUpdateService', () => {
   };
 
   const transactionRepo = {
+    findOne: jest.fn(),
     save: jest.fn(),
     delete: jest.fn(),
   };
