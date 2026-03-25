@@ -24,12 +24,14 @@ const columns: Array<MRT_ColumnDef<BalanceAdjustment>> = [
   {
     id: 'startBalance',
     header: 'Start Balance',
+    enableSorting: false,
     accessorFn: (row) => row.startBalance,
     Cell: ({ cell }) => formatMoney(cell.getValue<Money>()),
   },
   {
     id: 'endBalance',
     header: 'End Balance',
+    enableSorting: false,
     accessorFn: (row) => row.endBalance,
     Cell: ({ cell }) => formatMoney(cell.getValue<Money>()),
   },

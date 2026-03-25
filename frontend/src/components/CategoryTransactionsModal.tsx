@@ -96,7 +96,7 @@ export function CategoryTransactionsModal({
     if (balanceAdjustments.length === 0) {
       return (
         <Text c="dimmed" ta="center" py="xl">
-          No balance adjustments found.
+          No transactions found.
         </Text>
       )
     }
@@ -113,7 +113,11 @@ export function CategoryTransactionsModal({
       fullScreen={isMobile}
       transitionProps={{ transition: 'fade', duration: 200 }}
     >
-      {isBalanceAdjustment ? <BalanceAdjustmentsDrilldown /> : <TransactionsDrilldown />}
+      {isBalanceAdjustment ? (
+        <BalanceAdjustmentsDrilldown />
+      ) : (
+        <TransactionsDrilldown />
+      )}
     </Modal>
   )
 }

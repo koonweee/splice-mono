@@ -261,4 +261,32 @@ describe('CategoryTransactionsModal', () => {
       data: [balanceAdjustment],
     })
   })
+
+  it('shows the existing loading state while the balance-adjustment drilldown is pending', () => {
+    balanceAdjustmentsHookState.isPending = true
+
+    renderModal({
+      categoryPrimary: 'BALANCE_ADJUSTMENT',
+      flowDirection: 'inflow',
+    })
+
+    expect(
+      mockFns.useTransactionAnalysisControllerGetBalanceAdjustmentsMock,
+    ).toHaveBeenCalled()
+    expect(screen.getByTestId('category-transactions-loader')).toBeTruthy()
+    expect(screen.queryByText('No transactions found.')).toBeNull()
+  })
+
+  it('keeps the existing empty-state copy for BALANCE_ADJUSTMENT when no rows are returned', () => {
+    renderModal({
+      categoryPrimary: 'BALANCE_ADJUSTMENT',
+      flowDirection: 'inflow',
+    })
+
+    expect(
+      mockFns.useTransactionAnalysisControllerGetBalanceAdjustmentsMock,
+    ).toHaveBeenCalled()
+    expect(screen.getByText('Balance Adjustments (Inflows)')).toBeTruthy()
+    expect(screen.getByText('No transactions found.')).toBeTruthy()
+  })
 })

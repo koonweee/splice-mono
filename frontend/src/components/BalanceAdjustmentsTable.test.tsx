@@ -82,4 +82,13 @@ describe('BalanceAdjustmentsTable', () => {
     expect(screen.getAllByText('Account').length).toBeGreaterThan(0)
     expect(screen.queryByText('Checking')).toBeNull()
   })
+
+  it('renders the balance headers as non-sortable labels', () => {
+    renderTable([makeBalanceAdjustment()])
+
+    expect(
+      screen.queryByRole('button', { name: 'Start Balance' }),
+    ).toBeNull()
+    expect(screen.queryByRole('button', { name: 'End Balance' })).toBeNull()
+  })
 })
