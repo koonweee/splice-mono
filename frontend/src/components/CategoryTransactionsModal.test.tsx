@@ -1,20 +1,27 @@
 import { MantineProvider } from '@mantine/core'
 import { cleanup, render, screen } from '@testing-library/react'
-import type React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CategoryTransactionsModal } from './CategoryTransactionsModal'
+import type React from 'react'
 import type * as Mantine from '@mantine/core'
 import type * as SpliceAPI from '../api/clients/spliceAPI'
-import type { Transaction } from '../api/models'
+import type { BalanceAdjustment, Transaction } from '../api/models'
 
 type AnalysisHookState = {
-  data?: Transaction[]
+  data?: Array<Transaction>
+  isPending: boolean
+}
+
+type BalanceAdjustmentsHookState = {
+  data?: Array<BalanceAdjustment>
   isPending: boolean
 }
 
 const mockFns = vi.hoisted(() => ({
   useTransactionAnalysisControllerGetTransactionsMock: vi.fn(),
+  useTransactionAnalysisControllerGetBalanceAdjustmentsMock: vi.fn(),
   transactionsTableMock: vi.fn(),
+  balanceAdjustmentsTableMock: vi.fn(),
 }))
 
 vi.mock('@mantine/core', async () => {
@@ -35,6 +42,8 @@ vi.mock('../api/clients/spliceAPI', async () => {
     ...actual,
     useTransactionAnalysisControllerGetTransactions:
       mockFns.useTransactionAnalysisControllerGetTransactionsMock,
+    useTransactionAnalysisControllerGetBalanceAdjustments:
+      mockFns.useTransactionAnalysisControllerGetBalanceAdjustmentsMock,
   }
 })
 
@@ -50,7 +59,16 @@ vi.mock('./TransactionsTable', () => ({
   },
 }))
 
+vi.mock('./BalanceAdjustmentsTable', () => ({
+  BalanceAdjustmentsTable: (props: unknown) => {
+    mockFns.balanceAdjustmentsTableMock(props)
+
+    return <div data-testid="balance-adjustments-table" />
+  },
+}))
+
 let analysisHookState: AnalysisHookState
+let balanceAdjustmentsHookState: BalanceAdjustmentsHookState
 
 function makeTransaction(
   overrides: Partial<Transaction> & Pick<Transaction, 'id'>,
@@ -106,9 +124,16 @@ beforeEach(() => {
     data: [],
     isPending: false,
   }
+  balanceAdjustmentsHookState = {
+    data: [],
+    isPending: false,
+  }
 
   mockFns.useTransactionAnalysisControllerGetTransactionsMock.mockImplementation(
     () => analysisHookState,
+  )
+  mockFns.useTransactionAnalysisControllerGetBalanceAdjustmentsMock.mockImplementation(
+    () => balanceAdjustmentsHookState,
   )
 
   Object.defineProperty(window, 'matchMedia', {
@@ -188,5 +213,52 @@ describe('CategoryTransactionsModal', () => {
       isError: false,
     })
     expect(screen.queryByText('No transactions found.')).toBeNull()
+  })
+
+  it('switches to the balance-adjustment drilldown path and modal copy for BALANCE_ADJUSTMENT', () => {
+    const transaction = makeTransaction({ id: 'txn-1' })
+    const balanceAdjustment: BalanceAdjustment = {
+      accountId: 'acct-1',
+      accountName: 'Checking',
+      flowDirection: 'inflow',
+      currency: 'USD',
+      deltaAmount: 7500,
+      startBalance: {
+        amount: 10000,
+        currency: 'USD',
+      },
+      endBalance: {
+        amount: 17500,
+        currency: 'USD',
+      },
+    }
+
+    analysisHookState.data = [transaction]
+    balanceAdjustmentsHookState.data = [balanceAdjustment]
+
+    renderModal({
+      categoryPrimary: 'BALANCE_ADJUSTMENT',
+      flowDirection: 'inflow',
+    })
+
+    expect(
+      mockFns.useTransactionAnalysisControllerGetBalanceAdjustmentsMock,
+    ).toHaveBeenCalledWith(
+      {
+        startDate: '2026-02-01',
+        endDate: '2026-02-28',
+        categoryPrimary: 'BALANCE_ADJUSTMENT',
+        flowDirection: 'inflow',
+      },
+      { query: { enabled: true } },
+    )
+    expect(
+      mockFns.useTransactionAnalysisControllerGetTransactionsMock,
+    ).not.toHaveBeenCalled()
+    expect(screen.getByText('Balance Adjustments (Inflows)')).toBeTruthy()
+    expect(screen.queryByText('No transactions found.')).toBeNull()
+    expect(mockFns.balanceAdjustmentsTableMock).toHaveBeenCalledWith({
+      data: [balanceAdjustment],
+    })
   })
 })
