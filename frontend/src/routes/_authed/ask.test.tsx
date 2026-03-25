@@ -4,6 +4,7 @@ import { AppShell, MantineProvider } from '@mantine/core'
 import { render, screen, within } from '@testing-library/react'
 import type { ComponentType } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import authedStyles from '../_authed.module.css'
 import styles from '@/components/ask/ask.module.css'
 import * as AskRouteModule from './ask'
 
@@ -57,7 +58,7 @@ describe('Ask route layout', () => {
       <MantineProvider>
         <AppShell header={{ height: 60 }} padding="md">
           <AppShell.Header>Header</AppShell.Header>
-          <AppShell.Main data-testid="app-shell-main">
+          <AppShell.Main data-testid="app-shell-main" className={authedStyles.main}>
             <AskPage />
           </AppShell.Main>
         </AppShell>
@@ -68,14 +69,20 @@ describe('Ask route layout', () => {
     const viewport = screen.getByTestId('ask-route-viewport')
     const heading = within(viewport).getByRole('heading', { name: 'Ask' })
     const alert = within(viewport).getByRole('alert')
+    const alertText = within(alert).getByText(
+      /net worth trends, spending changes, merchants, categories, balances, or recurring charges/i,
+    )
     const pageGrid = within(viewport).getByTestId('ask-page-grid')
     const transcript = within(viewport).getByTestId('ask-transcript')
 
     expect(shellMain.contains(viewport)).toBe(true)
+    expect(shellMain.className).toContain(authedStyles.main)
     expect(viewport.className).toContain(styles.routeViewport)
     expect(pageGrid.className).toContain(styles.page)
+    expect(transcript.className).toContain(styles.messages)
     expect(viewport.contains(heading)).toBe(true)
     expect(viewport.contains(alert)).toBe(true)
+    expect(viewport.contains(alertText)).toBe(true)
     expect(viewport.contains(transcript)).toBe(true)
     expect(viewport.contains(pageGrid)).toBe(true)
     expect(heading.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
