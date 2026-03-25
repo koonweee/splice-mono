@@ -224,6 +224,17 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
   let pendingUserIdParams = new Set<string>();
   let pendingSnapshotTypeParams = new Set<string>();
 
+  const resetPredicateState = () => {
+    state.accountIds.clear();
+    state.userId = null;
+    state.snapshotType.clear();
+    state.dateConstraints = [];
+    pendingDateConstraintParams = [];
+    pendingAccountIdParams = new Set<string>();
+    pendingUserIdParams = new Set<string>();
+    pendingSnapshotTypeParams = new Set<string>();
+  };
+
   const isDateValue = (value: unknown): value is string => {
     return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
   };
@@ -590,6 +601,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
 
   const queryBuilder = {
     where: jest.fn((query: string, params: Record<string, unknown> = {}) => {
+      resetPredicateState();
       applyFromClause(query, params);
       return queryBuilder;
     }),
