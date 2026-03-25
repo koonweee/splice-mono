@@ -104,8 +104,8 @@ describe('BalanceSnapshotListener', () => {
     });
   });
 
-  describe('handleManualAccountUpdate', () => {
-    it('should upsert a USER_UPDATE snapshot when manual account is created', async () => {
+  describe('manual account snapshot handling', () => {
+    it('keeps the created-event path wired to balance snapshot upserts', async () => {
       const event = new ManualAccountCreatedEvent(mockManualAccount);
 
       await listener.handleManualAccountUpdate(event);
@@ -122,7 +122,7 @@ describe('BalanceSnapshotListener', () => {
       );
     });
 
-    it('does not route manual balance updates through the old balance-updated path', async () => {
+    it('leaves the retired balance-updated event path failing red in Task 1', async () => {
       const event = new ManualAccountBalanceUpdatedEvent(mockManualAccount);
 
       await listener.handleManualAccountUpdate(event);
@@ -130,7 +130,7 @@ describe('BalanceSnapshotListener', () => {
       expect(balanceSnapshotService.upsert).not.toHaveBeenCalled();
     });
 
-    it('should handle errors gracefully', async () => {
+    it('still handles created-event errors gracefully', async () => {
       const event = new ManualAccountCreatedEvent(mockManualAccount);
       balanceSnapshotService.upsert.mockRejectedValueOnce(
         new Error('Database error'),
@@ -141,5 +141,4 @@ describe('BalanceSnapshotListener', () => {
       ).resolves.not.toThrow();
     });
   });
-
 });

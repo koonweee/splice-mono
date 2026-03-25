@@ -144,10 +144,14 @@ describe('ManualBalanceUpdateService', () => {
       buildSnapshot('2026-03-20', 100000),
     );
     snapshotRepo.find.mockResolvedValue([buildSnapshot('2026-03-20', 100000)]);
-    transactionRepo.findOne.mockResolvedValue(
-      buildSyntheticTransaction('2026-03-24', 25000),
-    );
     accountRepo.findOne.mockResolvedValue(buildAccount('2026-03-20', 100000));
+
+    transactionRepo.findOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(buildSyntheticTransaction('2026-03-24', 25000));
+    transactionRepo.save
+      .mockResolvedValueOnce(buildSyntheticTransaction('2026-03-24', 25000))
+      .mockResolvedValueOnce(buildSyntheticTransaction('2026-03-24', 40000));
 
     await service.updateManualBalance('manual-id', mockUserId, {
       balance: money(125000),
@@ -161,6 +165,16 @@ describe('ManualBalanceUpdateService', () => {
       confirmHistoryReset: false,
     });
 
+    expect(transactionRepo.findOne).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          accountId: 'manual-id',
+          date: '2026-03-24',
+          source: TransactionSource.MANUAL_BALANCE_UPDATE,
+        }),
+      }),
+    );
     expect(transactionRepo.save).toHaveBeenLastCalledWith(
       expect.objectContaining({
         id: 'existing-synthetic-transaction-id',
@@ -195,8 +209,8 @@ describe('ManualBalanceUpdateService', () => {
           accountId: 'manual-id',
           userId: mockUserId,
           snapshotDate: expect.objectContaining({
-            _type: 'moreThan',
-            _value: '2026-03-18',
+            type: 'moreThan',
+            value: '2026-03-18',
           }),
         }),
       }),
@@ -208,8 +222,8 @@ describe('ManualBalanceUpdateService', () => {
           userId: mockUserId,
           source: TransactionSource.MANUAL_BALANCE_UPDATE,
           date: expect.objectContaining({
-            _type: 'moreThan',
-            _value: '2026-03-18',
+            type: 'moreThan',
+            value: '2026-03-18',
           }),
         }),
       }),

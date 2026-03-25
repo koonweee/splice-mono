@@ -663,7 +663,7 @@ describe('AccountService', () => {
       sign: MoneySign.POSITIVE,
     };
 
-    it('delegates manual balance updates instead of emitting ManualAccountBalanceUpdatedEvent', async () => {
+    it('delegates manual balance updates without emitting ManualAccountBalanceUpdatedEvent', async () => {
       const mockEntity = AccountEntity.fromDto(
         mockCreateManualAccountDto,
         mockUserId,
@@ -680,7 +680,7 @@ describe('AccountService', () => {
       );
     });
 
-    it('should update depository balances to the same value and emit event', async () => {
+    it('should update depository balances to the same value without emitting ManualAccountBalanceUpdatedEvent', async () => {
       const mockEntity = AccountEntity.fromDto(
         mockCreateManualAccountDto,
         mockUserId,
@@ -718,7 +718,7 @@ describe('AccountService', () => {
       );
     });
 
-    it('should zero available balance for investment accounts', async () => {
+    it('should zero available balance for investment accounts without emitting ManualAccountBalanceUpdatedEvent', async () => {
       const investmentAccountDto = {
         ...mockCreateManualAccountDto,
         type: AccountType.Investment,
