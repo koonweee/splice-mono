@@ -7,7 +7,6 @@ import {
   LinkedAccountCreatedEvent,
   LinkedAccountEvents,
   LinkedAccountUpdatedEvent,
-  ManualAccountBalanceUpdatedEvent,
   ManualAccountCreatedEvent,
   ManualAccountEvents,
 } from '../events/account.events';
@@ -73,21 +72,15 @@ export class BalanceSnapshotListener {
   }
 
   /**
-   * Handle manual account created/updated events - upsert balance snapshot
+   * Handle manual account created events - upsert balance snapshot
    */
   @OnEvent(ManualAccountEvents.CREATED)
-  @OnEvent(ManualAccountEvents.BALANCE_UPDATED)
   async handleManualAccountUpdate(
-    event: ManualAccountCreatedEvent | ManualAccountBalanceUpdatedEvent,
+    event: ManualAccountCreatedEvent,
   ): Promise<void> {
-    const eventType =
-      event instanceof ManualAccountCreatedEvent
-        ? 'manual_created'
-        : 'manual_updated';
-
     this.logger.log(
-      { eventType, accountId: event.account.id },
-      'Handling manual account event',
+      { accountId: event.account.id },
+      'Handling manual account created event',
     );
 
     try {
@@ -105,12 +98,12 @@ export class BalanceSnapshotListener {
       );
 
       this.logger.log(
-        { eventType, accountId: event.account.id },
+        { accountId: event.account.id },
         'Balance snapshot upserted for manual account',
       );
     } catch (error) {
       this.logger.error(
-        { eventType, accountId: event.account.id, error: String(error) },
+        { accountId: event.account.id, error: String(error) },
         'Failed to upsert balance snapshot for manual account',
       );
     }

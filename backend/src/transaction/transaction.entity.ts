@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -12,8 +13,17 @@ import { BalanceColumns } from '../common/balance.columns';
 import { OwnedEntity } from '../common/owned.entity';
 import { CreateTransactionDto, Transaction } from '../types/Transaction';
 
+export enum TransactionSource {
+  STANDARD = 'STANDARD',
+  MANUAL_BALANCE_UPDATE = 'MANUAL_BALANCE_UPDATE',
+}
+
 @Entity()
 @Unique(['accountId', 'externalTransactionId']) // Prevent duplicate imports from providers
+@Index('UQ_manual_balance_update_per_account_date', ['accountId', 'date'], {
+  unique: true,
+  where: `"source" = 'MANUAL_BALANCE_UPDATE'`,
+})
 export class TransactionEntity extends OwnedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -51,6 +61,12 @@ export class TransactionEntity extends OwnedEntity {
   @Column({ type: 'date' })
   date: string;
 
+  @Column({
+    type: 'varchar',
+    default: TransactionSource.STANDARD,
+  })
+  source: TransactionSource;
+
   /** Transaction datetime with time info */
   @Column({ type: 'timestamptz', nullable: true })
   datetime: string | null;
@@ -85,6 +101,7 @@ export class TransactionEntity extends OwnedEntity {
     entity.externalTransactionId = dto.externalTransactionId ?? null;
     entity.logoUrl = dto.logoUrl ?? null;
     entity.date = dto.date;
+    entity.source = TransactionSource.STANDARD;
     entity.datetime = dto.datetime ?? null;
     entity.authorizedDate = dto.authorizedDate ?? null;
     entity.authorizedDatetime = dto.authorizedDatetime ?? null;

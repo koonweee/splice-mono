@@ -26,8 +26,9 @@ export interface Account {
   /** @nullable */
   bankLinkId?: string | null
   bankLink?: AccountBankLink
-  /** @nullable */
   syncedAt?: string
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  latestSnapshotDate?: string
   availableBalance: MoneyWithSign
   currentBalance: MoneyWithSign
   createdAt: string

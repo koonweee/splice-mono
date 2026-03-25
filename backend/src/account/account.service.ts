@@ -1,25 +1,23 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AccountType } from 'plaid';
 import { In, Not, Repository } from 'typeorm';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
 import {
-  ManualAccountBalanceUpdatedEvent,
   ManualAccountCreatedEvent,
   ManualAccountEvents,
 } from '../events/account.events';
-import { Account, CreateAccountDto, UpdateAccountDto } from '../types/Account';
-import { MoneySign, SerializedMoneyWithSign } from '../types/MoneyWithSign';
+import {
+  Account,
+  CreateAccountDto,
+  UpdateAccountDto,
+  UpdateManualBalanceDto,
+} from '../types/Account';
 import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import { AccountEntity } from './account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
+import { ManualBalanceUpdateService } from './manual-balance-update.service';
 
 @Injectable()
 export class AccountService extends OwnedCrudService<
@@ -39,6 +37,7 @@ export class AccountService extends OwnedCrudService<
     @InjectRepository(BalanceSnapshotEntity)
     private readonly balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
     private readonly eventEmitter: EventEmitter2,
+    private readonly manualBalanceUpdateService: ManualBalanceUpdateService,
   ) {
     super(repository);
   }
@@ -64,46 +63,13 @@ export class AccountService extends OwnedCrudService<
   async updateManualBalance(
     accountId: string,
     userId: string,
-    newBalance: SerializedMoneyWithSign,
+    dto: UpdateManualBalanceDto,
   ): Promise<Account> {
-    const accountEntity = await this.repository.findOne({
-      where: { id: accountId, userId },
-    });
-
-    if (!accountEntity) {
-      throw new NotFoundException(`Account with id ${accountId} not found`);
-    }
-    if (accountEntity.bankLinkId) {
-      throw new BadRequestException(
-        `Account with id ${accountId} is linked and cannot be manually updated`,
-      );
-    }
-
-    accountEntity.currentBalance = BalanceColumns.fromMoneyWithSign(newBalance);
-
-    // For investment/brokerage accounts, effective balance = available + current,
-    // so set available to zero to avoid doubling the balance.
-    const isInvestmentType =
-      accountEntity.type === String(AccountType.Investment) ||
-      accountEntity.type === String(AccountType.Brokerage);
-    const availableBalance: SerializedMoneyWithSign = isInvestmentType
-      ? {
-          money: { amount: 0, currency: newBalance.money.currency },
-          sign: MoneySign.POSITIVE,
-        }
-      : newBalance;
-    accountEntity.availableBalance =
-      BalanceColumns.fromMoneyWithSign(availableBalance);
-
-    const savedEntity = await this.repository.save(accountEntity);
-    const account = savedEntity.toObject();
-
-    this.eventEmitter.emit(
-      ManualAccountEvents.BALANCE_UPDATED,
-      new ManualAccountBalanceUpdatedEvent(account),
+    return this.manualBalanceUpdateService.updateManualBalance(
+      accountId,
+      userId,
+      dto,
     );
-
-    return account;
   }
 
   protected applyUpdate(entity: AccountEntity, dto: UpdateAccountDto): void {
@@ -133,10 +99,14 @@ export class AccountService extends OwnedCrudService<
     if (!account) return null;
 
     const lastSyncTimes = await this.getLastSyncTimes([id], userId);
+    const latestSnapshotDates = await this.getLatestSnapshotDates([id], userId);
     const syncedAt = lastSyncTimes.get(id);
     return {
       ...account,
       ...(syncedAt ? { syncedAt } : {}),
+      ...(latestSnapshotDates.get(id)
+        ? { latestSnapshotDate: latestSnapshotDates.get(id) }
+        : {}),
     };
   }
 
@@ -146,12 +116,19 @@ export class AccountService extends OwnedCrudService<
       accounts.map((account) => account.id),
       userId,
     );
+    const latestSnapshotDates = await this.getLatestSnapshotDates(
+      accounts.map((account) => account.id),
+      userId,
+    );
 
     return accounts.map((account) => {
       const syncedAt = lastSyncTimes.get(account.id);
       return {
         ...account,
         ...(syncedAt ? { syncedAt } : {}),
+        ...(latestSnapshotDates.get(account.id)
+          ? { latestSnapshotDate: latestSnapshotDates.get(account.id) }
+          : {}),
       };
     });
   }
@@ -179,5 +156,30 @@ export class AccountService extends OwnedCrudService<
     });
 
     return lastSyncTimes;
+  }
+
+  private async getLatestSnapshotDates(
+    accountIds: string[],
+    userId: string,
+  ): Promise<Map<string, string>> {
+    if (accountIds.length === 0) return new Map();
+
+    const snapshots = await this.balanceSnapshotRepository.find({
+      where: {
+        userId,
+        accountId: In(accountIds),
+        snapshotType: Not(BalanceSnapshotType.FORWARD_FILL),
+      },
+      order: { snapshotDate: 'DESC', updatedAt: 'DESC' },
+    });
+
+    const latestSnapshotDates = new Map<string, string>();
+    snapshots.forEach((snapshot) => {
+      if (!latestSnapshotDates.has(snapshot.accountId)) {
+        latestSnapshotDates.set(snapshot.accountId, snapshot.snapshotDate);
+      }
+    });
+
+    return latestSnapshotDates;
   }
 }

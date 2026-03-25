@@ -14,24 +14,20 @@ import {
   type JwtUser,
 } from '../auth/decorators/current-user.decorator';
 import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
-import { z } from 'zod';
 import type {
   Account,
   CreateAccountDto,
+  UpdateManualBalanceDto,
   UpdateAccountDto,
 } from '../types/Account';
 import {
   AccountSchema,
   CreateAccountDtoSchema,
+  UpdateManualBalanceDtoSchema,
   UpdateAccountDtoSchema,
 } from '../types/Account';
-import { CurrentAndAvailableBalanceSchema } from '../types/MoneyWithSign';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { AccountService } from './account.service';
-
-const UpdateBalanceBodySchema = z.object({
-  balance: CurrentAndAvailableBalanceSchema.shape.currentBalance,
-});
 
 @ApiTags('account')
 @Controller('account')
@@ -118,7 +114,7 @@ export class AccountController {
 
   @Post(':id/balance')
   @ApiOperation({ description: 'Manually update account balance' })
-  @ZodApiBody({ schema: UpdateBalanceBodySchema })
+  @ZodApiBody({ schema: UpdateManualBalanceDtoSchema })
   @ZodApiResponse({
     status: 200,
     description: 'Returns the updated account',
@@ -127,14 +123,10 @@ export class AccountController {
   async updateBalance(
     @Param('id') id: string,
     @CurrentUser() user: JwtUser,
-    @Body(new ZodValidationPipe(UpdateBalanceBodySchema))
-    body: z.infer<typeof UpdateBalanceBodySchema>,
+    @Body(new ZodValidationPipe(UpdateManualBalanceDtoSchema))
+    body: UpdateManualBalanceDto,
   ): Promise<Account> {
-    return this.accountService.updateManualBalance(
-      id,
-      user.userId,
-      body.balance,
-    );
+    return this.accountService.updateManualBalance(id, user.userId, body);
   }
 
   @Delete(':id')

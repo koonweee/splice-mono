@@ -6,6 +6,8 @@ import { APIAccountSchema, SanitizedBankLinkSchema } from './BankLink';
 import { CurrentAndAvailableBalanceSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
 
+const DateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 /**
  * Account type schema that accepts both Plaid banking types and crypto types
  */
@@ -35,6 +37,8 @@ export const AccountSchema = registerSchema(
       bankLink: SanitizedBankLinkSchema.nullable().optional(),
       /** Latest non-forward-filled snapshot sync time */
       syncedAt: z.date().optional(),
+      /** Latest non-forward-filled snapshot date */
+      latestSnapshotDate: DateOnlySchema.optional(),
     })
     .merge(CurrentAndAvailableBalanceSchema)
     .merge(OwnedSchema),
@@ -75,3 +79,16 @@ export const UpdateAccountDtoSchema = registerSchema(
 );
 
 export type UpdateAccountDto = z.infer<typeof UpdateAccountDtoSchema>;
+
+export const UpdateManualBalanceDtoSchema = registerSchema(
+  'UpdateManualBalanceDto',
+  z.object({
+    balance: CurrentAndAvailableBalanceSchema.shape.currentBalance,
+    effectiveDate: DateOnlySchema,
+    confirmHistoryReset: z.boolean().default(false),
+  }),
+);
+
+export type UpdateManualBalanceDto = z.infer<
+  typeof UpdateManualBalanceDtoSchema
+>;
