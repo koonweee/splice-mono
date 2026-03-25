@@ -79,6 +79,7 @@ describe('Ask route layout', () => {
     expect(shellMain.className).toContain(authedStyles.main)
     expect(viewport.className).toContain(styles.routeViewport)
     expect(pageGrid.className).toContain(styles.page)
+    expect(transcript.className).toContain(styles.messages)
     expect(viewport.contains(heading)).toBe(true)
     expect(viewport.contains(alert)).toBe(true)
     expect(viewport.contains(alertText)).toBe(true)
