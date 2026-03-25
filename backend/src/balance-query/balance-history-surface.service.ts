@@ -58,7 +58,9 @@ export interface BalanceHistorySurfaceOptions {
 }
 
 function isLiabilityType(type: string): boolean {
-  return type === String(AccountType.Credit) || type === String(AccountType.Loan);
+  return (
+    type === String(AccountType.Credit) || type === String(AccountType.Loan)
+  );
 }
 
 function resolveEffectiveBalance(
@@ -85,11 +87,11 @@ function calculateNetWorthForDate(
 ): number {
   let netWorth = 0;
 
-    Object.values(balances).forEach((result) => {
-      const effectiveBalance = result.effectiveBalance.convertedBalance
-        ? result.effectiveBalance.convertedBalance
-        : result.effectiveBalance.balance;
-      const amount = getSignedAmount(effectiveBalance);
+  Object.values(balances).forEach((result) => {
+    const effectiveBalance = result.effectiveBalance.convertedBalance
+      ? result.effectiveBalance.convertedBalance
+      : result.effectiveBalance.balance;
+    const amount = getSignedAmount(effectiveBalance);
 
     if (isLiabilityType(String(result.account.type))) {
       netWorth -= Math.abs(amount);
@@ -220,7 +222,9 @@ export class BalanceHistorySurfaceService {
     const lastNetWorth = calculateNetWorthForDate(lastResult.balances);
     const changePercent = calculateChangePercent(lastNetWorth, firstNetWorth);
 
-    const firstAccount = lastResult ? Object.values(lastResult.balances)[0] : null;
+    const firstAccount = lastResult
+      ? Object.values(lastResult.balances)[0]
+      : null;
     const currency = firstAccount
       ? resolveEffectiveBalance(firstAccount.effectiveBalance).money.currency
       : 'USD';
@@ -235,55 +239,63 @@ export class BalanceHistorySurfaceService {
     const liabilities: BalanceHistorySurfaceAccountSummary[] = [];
 
     if (lastResult) {
-      Object.entries(lastResult.balances).forEach(([accountId, accountResult]) => {
-        const firstAccountResult = firstResult.balances[accountId];
-        const currentEffective = resolveEffectiveBalance(
-          accountResult.effectiveBalance,
-        );
-        const currentAmount = getSignedAmount(currentEffective);
-
-        let accountChangePercent: number | undefined;
-        if (firstAccountResult) {
-          const previousEffective = resolveEffectiveBalance(
-            firstAccountResult.effectiveBalance,
+      Object.entries(lastResult.balances).forEach(
+        ([accountId, accountResult]) => {
+          const firstAccountResult = firstResult.balances[accountId];
+          const currentEffective = resolveEffectiveBalance(
+            accountResult.effectiveBalance,
           );
-          const previousAmount = getSignedAmount(previousEffective);
-          accountChangePercent = calculateChangePercent(
-            currentAmount,
-            previousAmount,
-          );
-        }
+          const currentAmount = getSignedAmount(currentEffective);
 
-        const summary: BalanceHistorySurfaceAccountSummary = {
-          id: accountId,
-          name: accountResult.account.name,
-          displayName:
-            accountResult.account.customName ?? accountResult.account.name ?? 'Account',
-          customName: accountResult.account.customName,
-          type: String(accountResult.account.type),
-          typeLabel: formatAccountLabel(String(accountResult.account.type)),
-          subType: accountResult.account.subType ?? null,
-          subTypeLabel: accountResult.account.subType
-            ? formatAccountLabel(String(accountResult.account.subType))
-            : null,
-          grouping: getAccountGrouping(String(accountResult.account.type)),
-          groupingLabel: getAccountGroupingLabel(
-            getAccountGrouping(String(accountResult.account.type)),
-          ),
-          effectiveBalance: accountResult.effectiveBalance.balance,
-          convertedEffectiveBalance:
-            accountResult.effectiveBalance.convertedBalance,
-          changePercent: accountChangePercent,
-          institutionName: accountResult.account.bankLink?.institutionName ?? null,
-          syncedAt: getLatestSyncedAt(sortedResults, accountId)?.toISOString(),
-        };
+          let accountChangePercent: number | undefined;
+          if (firstAccountResult) {
+            const previousEffective = resolveEffectiveBalance(
+              firstAccountResult.effectiveBalance,
+            );
+            const previousAmount = getSignedAmount(previousEffective);
+            accountChangePercent = calculateChangePercent(
+              currentAmount,
+              previousAmount,
+            );
+          }
 
-        if (isLiabilityType(String(accountResult.account.type))) {
-          liabilities.push(summary);
-        } else {
-          assets.push(summary);
-        }
-      });
+          const summary: BalanceHistorySurfaceAccountSummary = {
+            id: accountId,
+            name: accountResult.account.name,
+            displayName:
+              accountResult.account.customName ??
+              accountResult.account.name ??
+              'Account',
+            customName: accountResult.account.customName,
+            type: String(accountResult.account.type),
+            typeLabel: formatAccountLabel(String(accountResult.account.type)),
+            subType: accountResult.account.subType ?? null,
+            subTypeLabel: accountResult.account.subType
+              ? formatAccountLabel(String(accountResult.account.subType))
+              : null,
+            grouping: getAccountGrouping(String(accountResult.account.type)),
+            groupingLabel: getAccountGroupingLabel(
+              getAccountGrouping(String(accountResult.account.type)),
+            ),
+            effectiveBalance: accountResult.effectiveBalance.balance,
+            convertedEffectiveBalance:
+              accountResult.effectiveBalance.convertedBalance,
+            changePercent: accountChangePercent,
+            institutionName:
+              accountResult.account.bankLink?.institutionName ?? null,
+            syncedAt: getLatestSyncedAt(
+              sortedResults,
+              accountId,
+            )?.toISOString(),
+          };
+
+          if (isLiabilityType(String(accountResult.account.type))) {
+            liabilities.push(summary);
+          } else {
+            assets.push(summary);
+          }
+        },
+      );
     }
 
     const sortByBalance = (

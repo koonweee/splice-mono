@@ -538,7 +538,7 @@ export class TransactionService extends OwnedCrudService<
       })
       .filter(
         (
-        value,
+          value,
         ): value is LegacyAskTransactionSummaryResult['recurringTransactions'][number] =>
           value !== null,
       )

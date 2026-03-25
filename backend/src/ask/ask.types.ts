@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import type { BalanceHistorySurfaceSummary } from '../balance-query/balance-history-surface.service';
-import {
-  MoneyWithSignSchema,
-  type SerializedMoneyWithSign,
-} from '../types/MoneyWithSign';
+import { MoneyWithSignSchema } from '../types/MoneyWithSign';
 
 export const AskConfidenceSchema = z.enum(['high', 'medium', 'low']);
 

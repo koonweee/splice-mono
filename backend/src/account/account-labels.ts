@@ -1,6 +1,6 @@
-export type AccountGrouping = 'cash' | 'credit' | 'investment' | 'liability'
+export type AccountGrouping = 'cash' | 'credit' | 'investment' | 'liability';
 
-type AccountLabel = string
+type AccountLabel = string;
 
 const ACCOUNT_LABEL_MAP: Record<string, AccountLabel> = {
   investment: 'Investment',
@@ -77,49 +77,47 @@ const ACCOUNT_LABEL_MAP: Record<string, AccountLabel> = {
   ugma: 'UGMA',
   utma: 'UTMA',
   'variable annuity': 'Variable Annuity',
-}
+};
 
-export function formatAccountLabel(
-  value: string | null | undefined,
-): string {
-  if (!value) return ''
+export function formatAccountLabel(value: string | null | undefined): string {
+  if (!value) return '';
 
   if (value in ACCOUNT_LABEL_MAP) {
-    return ACCOUNT_LABEL_MAP[value]
+    return ACCOUNT_LABEL_MAP[value];
   }
 
-  const normalized = value.toLowerCase()
+  const normalized = value.toLowerCase();
   if (normalized in ACCOUNT_LABEL_MAP) {
-    return ACCOUNT_LABEL_MAP[normalized]
+    return ACCOUNT_LABEL_MAP[normalized];
   }
 
-  return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ')
+  return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
 }
 
 export function getAccountGrouping(type: string): AccountGrouping {
   switch (type.toLowerCase()) {
     case 'credit':
-      return 'credit'
+      return 'credit';
     case 'loan':
-      return 'liability'
+      return 'liability';
     case 'investment':
     case 'brokerage':
     case 'crypto_wallet':
-      return 'investment'
+      return 'investment';
     default:
-      return 'cash'
+      return 'cash';
   }
 }
 
 export function getAccountGroupingLabel(grouping: AccountGrouping): string {
   switch (grouping) {
     case 'cash':
-      return 'Cash'
+      return 'Cash';
     case 'credit':
-      return 'Credit'
+      return 'Credit';
     case 'investment':
-      return 'Investment'
+      return 'Investment';
     case 'liability':
-      return 'Liability'
+      return 'Liability';
   }
 }
