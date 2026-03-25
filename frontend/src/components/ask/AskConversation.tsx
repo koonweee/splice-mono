@@ -23,6 +23,7 @@ export function AskConversation({
 }: AskConversationProps) {
   const previousStatusRef = useRef(status)
   const lastMessageRef = useRef<HTMLDivElement | null>(null)
+  const previousLastMessageIdRef = useRef<string | undefined>(messages.at(-1)?.id)
 
   const visibleMessages = messages.filter((message, index) => {
     if (message.role !== 'assistant') {
@@ -47,6 +48,19 @@ export function AskConversation({
 
   useEffect(() => {
     const previousStatus = previousStatusRef.current
+    const currentLastMessageId = visibleMessages.at(-1)?.id
+    const previousLastMessageId = previousLastMessageIdRef.current
+
+    if (
+      (status === 'submitted' || status === 'streaming') &&
+      currentLastMessageId &&
+      currentLastMessageId !== previousLastMessageId
+    ) {
+      lastMessageRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end',
+      })
+    }
 
     if ((previousStatus === 'submitted' || previousStatus === 'streaming') && status === 'ready') {
       lastMessageRef.current?.scrollIntoView({
@@ -56,7 +70,8 @@ export function AskConversation({
     }
 
     previousStatusRef.current = status
-  }, [status, visibleMessages.length])
+    previousLastMessageIdRef.current = currentLastMessageId
+  }, [status, visibleMessages])
 
   return (
     <div className={styles.page} data-testid="ask-page-grid">
