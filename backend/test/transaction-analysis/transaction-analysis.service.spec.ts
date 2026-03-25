@@ -8,6 +8,9 @@ import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { CashflowAnalysisSurfaceService } from '../../src/transaction-analysis/cashflow-analysis-surface.service';
 import { TransactionAnalysisService } from '../../src/transaction-analysis/transaction-analysis.service';
+import {
+  TransactionAnalysisBalanceAdjustmentsQuerySchema,
+} from '../../src/types/TransactionAnalysis';
 import { MoneySign, getDecimalPlaces } from '../../src/types/MoneyWithSign';
 
 const mockUserId = 'user-uuid-123';
@@ -1729,6 +1732,119 @@ describe('TransactionAnalysisService', () => {
         }),
       );
       expect(result[0]?.accountName).toBe('Main Checking');
+    });
+  });
+
+  describe('getBalanceAdjustments', () => {
+    const seedBalanceAdjustmentAnalysis = async () => {
+      const inflowAccount = buildAccount({
+        id: 'acct-inflow',
+        accountName: 'Checking',
+        accountCustomName: 'Primary Checking',
+      });
+      const outflowAccount = buildAccount({
+        id: 'acct-outflow',
+        accountName: 'Savings',
+        accountCustomName: 'High Yield Savings',
+      });
+
+      mockTransactionRepository.find.mockResolvedValue([]);
+      mockAccountRepository.find.mockResolvedValue([
+        inflowAccount,
+        outflowAccount,
+      ]);
+      mockSnapshotRows([
+        buildBalanceSnapshot({
+          accountId: 'acct-inflow',
+          snapshotDate: '2023-12-31',
+          amount: 5000,
+        }),
+        buildBalanceSnapshot({
+          accountId: 'acct-inflow',
+          snapshotDate: '2024-01-31',
+          amount: 6500,
+        }),
+        buildBalanceSnapshot({
+          accountId: 'acct-outflow',
+          snapshotDate: '2023-12-31',
+          amount: 9000,
+        }),
+        buildBalanceSnapshot({
+          accountId: 'acct-outflow',
+          snapshotDate: '2024-01-31',
+          amount: 7000,
+        }),
+      ]);
+
+      return service.getAnalysis('2024-01-01', '2024-01-31', mockUserId);
+    };
+
+    it('returns only inflow balance adjustments when requested', async () => {
+      const analysis = await seedBalanceAdjustmentAnalysis();
+
+      await expect(
+        (service as unknown as {
+          getBalanceAdjustments: (
+            startDate: string,
+            endDate: string,
+            categoryPrimary: 'BALANCE_ADJUSTMENT',
+            flowDirection: 'inflow' | 'outflow',
+            userId: string,
+          ) => Promise<unknown[]>;
+        }).getBalanceAdjustments(
+          '2024-01-01',
+          '2024-01-31',
+          'BALANCE_ADJUSTMENT',
+          'inflow',
+          mockUserId,
+        ),
+      ).resolves.toEqual(
+        analysis.balanceAdjustments.filter(
+          (adjustment) => adjustment.flowDirection === 'inflow',
+        ),
+      );
+    });
+
+    it('returns only outflow balance adjustments when requested', async () => {
+      const analysis = await seedBalanceAdjustmentAnalysis();
+
+      await expect(
+        (service as unknown as {
+          getBalanceAdjustments: (
+            startDate: string,
+            endDate: string,
+            categoryPrimary: 'BALANCE_ADJUSTMENT',
+            flowDirection: 'inflow' | 'outflow',
+            userId: string,
+          ) => Promise<unknown[]>;
+        }).getBalanceAdjustments(
+          '2024-01-01',
+          '2024-01-31',
+          'BALANCE_ADJUSTMENT',
+          'outflow',
+          mockUserId,
+        ),
+      ).resolves.toEqual(
+        analysis.balanceAdjustments.filter(
+          (adjustment) => adjustment.flowDirection === 'outflow',
+        ),
+      );
+    });
+
+    it('rejects non-BALANCE_ADJUSTMENT categories at the controller boundary contract', () => {
+      const result = TransactionAnalysisBalanceAdjustmentsQuerySchema.safeParse({
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+        categoryPrimary: 'INCOME',
+        flowDirection: 'inflow',
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(
+          result.error.issues.map((issue) => issue.message).join(' '),
+        ).toContain('BALANCE_ADJUSTMENT');
+      }
     });
   });
 });
