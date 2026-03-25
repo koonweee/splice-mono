@@ -2,12 +2,12 @@ import { Alert, Group, Text, Title } from '@mantine/core'
 import { createFileRoute } from '@tanstack/react-router'
 import { DefaultChatTransport } from 'ai'
 import { useChat } from '@ai-sdk/react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { AskUIMessage } from '@/lib/ask-types'
 import { resolveApiBaseUrl } from '@/api/axios'
 import { AskComposer } from '@/components/ask/AskComposer'
 import { AskConversation } from '@/components/ask/AskConversation'
-import { getAskUiState, selectEvidenceMessageId } from '@/lib/ask-chat'
+import { getAskUiState } from '@/lib/ask-chat'
 import styles from '@/components/ask/ask.module.css'
 
 export const Route = createFileRoute('/_authed/ask')({
@@ -28,14 +28,6 @@ function AskPage() {
     }),
   })
   const [input, setInput] = useState('')
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
-
-  useEffect(() => {
-    const nextSelectedId = selectEvidenceMessageId(messages)
-    if (nextSelectedId) {
-      setSelectedMessageId(nextSelectedId)
-    }
-  }, [messages])
 
   const uiState = getAskUiState({ error })
 
@@ -65,10 +57,8 @@ function AskPage() {
 
       <AskConversation
         messages={messages}
-        selectedMessageId={selectedMessageId}
         status={status}
         error={uiState.status === 'error' ? error : undefined}
-        onSelectMessage={setSelectedMessageId}
         onRetry={() => {
           void regenerate()
         }}

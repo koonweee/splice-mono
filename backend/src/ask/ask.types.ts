@@ -65,20 +65,10 @@ export const AskEvidenceAggregateSchema = z.object({
   kind: z.enum(['category', 'merchant', 'account', 'summary']),
 });
 
-export const AskEvidenceSchema = z.object({
-  accounts: z.array(AskEvidenceAccountSchema).default([]),
-  transactions: z.array(AskEvidenceTransactionSchema).default([]),
-  balanceHistory: AskEvidenceBalanceHistorySummarySchema.optional(),
-  aggregates: z.array(AskEvidenceAggregateSchema).default([]),
-  matchedCount: z.number().int().nonnegative(),
-  truncated: z.boolean(),
-});
-
 export const AskAnswerSchema = z.object({
   answerText: z.string(),
   confidence: AskConfidenceSchema,
   queryScope: AskQueryScopeSchema,
-  evidence: AskEvidenceSchema,
   followups: z.array(z.string()).default([]),
 });
 
@@ -96,7 +86,6 @@ export type AskEvidenceBalanceHistorySummary = z.infer<
   typeof AskEvidenceBalanceHistorySummarySchema
 >;
 export type AskEvidenceAggregate = z.infer<typeof AskEvidenceAggregateSchema>;
-export type AskEvidence = z.infer<typeof AskEvidenceSchema>;
 export type AskAnswer = z.infer<typeof AskAnswerSchema>;
 
 export interface AskTransactionSearchOptions {

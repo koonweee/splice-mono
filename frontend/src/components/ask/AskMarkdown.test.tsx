@@ -9,11 +9,7 @@ import { AskMessageCard } from './AskMessageCard'
 function renderMessageCard(message: AskUIMessage) {
   return render(
     <MantineProvider>
-      <AskMessageCard
-        message={message}
-        isSelected={false}
-        showInlineEvidence={false}
-      />
+      <AskMessageCard message={message} />
     </MantineProvider>,
   )
 }
@@ -53,13 +49,6 @@ describe('Ask markdown rendering', () => {
             includePending: false,
             truncated: false,
           },
-          evidence: {
-            accounts: [],
-            transactions: [],
-            aggregates: [],
-            matchedCount: 0,
-            truncated: false,
-          },
           followups: [],
           confidence: 'high',
         },
@@ -91,13 +80,6 @@ describe('Ask markdown rendering', () => {
             includePending: false,
             truncated: false,
           },
-          evidence: {
-            accounts: [],
-            transactions: [],
-            aggregates: [],
-            matchedCount: 0,
-            truncated: false,
-          },
           followups: [],
           confidence: 'high',
         },
@@ -125,13 +107,6 @@ describe('Ask markdown rendering', () => {
             includePending: false,
             truncated: false,
           },
-          evidence: {
-            accounts: [],
-            transactions: [],
-            aggregates: [],
-            matchedCount: 0,
-            truncated: false,
-          },
           followups: [],
           confidence: 'high',
         },
@@ -152,13 +127,6 @@ describe('Ask markdown rendering', () => {
           queryScope: {
             accountIds: [],
             includePending: false,
-            truncated: false,
-          },
-          evidence: {
-            accounts: [],
-            transactions: [],
-            aggregates: [],
-            matchedCount: 0,
             truncated: false,
           },
           followups: [],
@@ -182,13 +150,6 @@ describe('Ask markdown rendering', () => {
           queryScope: {
             accountIds: [],
             includePending: false,
-            truncated: false,
-          },
-          evidence: {
-            accounts: [],
-            transactions: [],
-            aggregates: [],
-            matchedCount: 0,
             truncated: false,
           },
           followups: [],
@@ -242,13 +203,6 @@ describe('Ask markdown rendering', () => {
           queryScope: {
             accountIds: [],
             includePending: false,
-            truncated: false,
-          },
-          evidence: {
-            accounts: [],
-            transactions: [],
-            aggregates: [],
-            matchedCount: 0,
             truncated: false,
           },
           followups: [],

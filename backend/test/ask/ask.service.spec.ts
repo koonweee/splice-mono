@@ -1,8 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AskQueryService } from '../../src/ask/ask-query.service';
 import { AskService } from '../../src/ask/ask.service';
-import { MoneySign } from '../../src/types/MoneyWithSign';
-
 var mockOpenai: jest.Mock;
 var mockStreamText: jest.Mock;
 var mockConvertToModelMessages: jest.Mock;
@@ -67,7 +65,7 @@ describe('AskService', () => {
     jest.useRealTimers();
   });
 
-  it('builds structured Ask answers with scope, evidence, and balance history', async () => {
+  it('builds lean Ask answers with scope and followups only', async () => {
     const result = service.buildFinalAnswer({
       answerText: 'Your outflows are up 14% month to date.',
       queryScope: {
@@ -76,32 +74,6 @@ describe('AskService', () => {
         includePending: false,
         truncated: false,
         accountIds: ['account-1'],
-      },
-      evidence: {
-        accounts: [],
-        transactions: [],
-        balanceHistory: {
-          matchedCount: 4,
-          truncated: false,
-          currentTotal: {
-            money: { currency: 'USD', amount: 95_000 },
-            sign: MoneySign.POSITIVE,
-          },
-          previousTotal: {
-            money: { currency: 'USD', amount: 90_000 },
-            sign: MoneySign.POSITIVE,
-          },
-          deltaPercent: 5.56,
-          pointCount: 2,
-          semanticMetadata: {
-            pendingIncluded: true,
-            reconciliationApplied: true,
-            comparisonIncluded: true,
-          },
-        },
-        aggregates: [],
-        matchedCount: 12,
-        truncated: false,
       },
       followups: ['Show the top categories'],
     });
@@ -112,24 +84,12 @@ describe('AskService', () => {
       queryScope: {
         startDate: '2026-03-01',
       },
-      evidence: {
-        matchedCount: 12,
-        truncated: false,
-        balanceHistory: expect.objectContaining({
-          matchedCount: 4,
-          currentTotal: expect.objectContaining({
-            money: expect.objectContaining({
-              currency: 'USD',
-              amount: 95_000,
-            }),
-          }),
-        }),
-      },
       followups: ['Show the top categories'],
     });
+    expect(result).not.toHaveProperty('evidence');
   });
 
-  it('caps oversized evidence arrays to the Ask limits', () => {
+  it('caps followups to the Ask limits', () => {
     const result = service.buildFinalAnswer({
       answerText: 'Large result set',
       queryScope: {
@@ -137,66 +97,12 @@ describe('AskService', () => {
         truncated: false,
         accountIds: [],
       },
-      evidence: {
-        accounts: new Array(15).fill(null).map((_, index) => ({
-          id: `account-${index}`,
-          displayName: `Account ${index}`,
-          institutionName: null,
-          grouping: 'cash' as const,
-          balance: {
-            money: { currency: 'USD', amount: 100 },
-            sign: MoneySign.POSITIVE,
-          },
-        })),
-        transactions: new Array(25).fill(null).map((_, index) => ({
-          id: `transaction-${index}`,
-          accountId: 'account-1',
-          accountName: 'Checking',
-          merchantName: `Merchant ${index}`,
-          pending: false,
-          date: '2026-03-01',
-          categoryPrimary: null,
-          amount: {
-            money: { currency: 'USD', amount: 100 },
-            sign: MoneySign.NEGATIVE,
-          },
-        })),
-        balanceHistory: {
-          matchedCount: 2,
-          truncated: false,
-          currentTotal: {
-            money: { currency: 'USD', amount: 100_000 },
-            sign: MoneySign.POSITIVE,
-          },
-          pointCount: 1,
-          semanticMetadata: {
-            pendingIncluded: false,
-            reconciliationApplied: true,
-            comparisonIncluded: false,
-          },
-        },
-        aggregates: new Array(12).fill(null).map((_, index) => ({
-          label: `Driver ${index}`,
-          amount: index,
-          currency: 'USD',
-          kind: 'category' as const,
-        })),
-        matchedCount: 30,
-        truncated: false,
-      },
       followups: ['A', 'B', 'C', 'D'],
     });
 
-    expect(result.evidence.accounts).toHaveLength(10);
-    expect(result.evidence.transactions).toHaveLength(20);
-    expect(result.evidence.aggregates).toHaveLength(10);
-    expect(result.evidence.truncated).toBe(true);
-    expect(result.queryScope.truncated).toBe(true);
-    expect(result.evidence.balanceHistory).toMatchObject({
-      matchedCount: 2,
-      pointCount: 1,
-    });
     expect(result.followups).toHaveLength(3);
+    expect(result.queryScope.truncated).toBe(true);
+    expect(result).not.toHaveProperty('evidence');
   });
 
   it('defaults Ask chat to gpt-5.4-mini when OPENAI_MODEL is unset', async () => {
@@ -296,7 +202,7 @@ describe('AskService', () => {
     ]);
   });
 
-  it('merges evidence from multiple tool calls and preserves balance-history summary metadata', async () => {
+  it('attaches only lean Ask metadata after multi-tool completion', async () => {
     let capturedOnFinish:
       | ((input: { text: string; steps: Array<{ toolResults: Array<{ output: unknown }> }> }) => void)
       | undefined;
@@ -324,184 +230,7 @@ describe('AskService', () => {
 
     capturedOnFinish?.({
       text: 'Cash flow is flat, but balances moved up last week.',
-      steps: [
-        {
-          toolResults: [
-            {
-              output: {
-                matchedCount: 2,
-                truncated: false,
-                accounts: [
-                  {
-                    id: 'account-1',
-                    displayName: 'House Checking',
-                    institutionName: 'Bank',
-                    grouping: 'cash',
-                    balance: {
-                      money: { currency: 'USD', amount: 90_000 },
-                      sign: 'positive',
-                    },
-                  },
-                  {
-                    id: 'account-1',
-                    displayName: 'House Checking',
-                    institutionName: 'Bank',
-                    grouping: 'cash',
-                    balance: {
-                      money: { currency: 'USD', amount: 90_000 },
-                      sign: 'positive',
-                    },
-                  },
-                  {
-                    id: 'account-2',
-                    displayName: 'Amex Gold',
-                    institutionName: 'Bank',
-                    grouping: 'credit',
-                    balance: {
-                      money: { currency: 'USD', amount: 15_000 },
-                      sign: 'negative',
-                    },
-                  },
-                ],
-              },
-            },
-          ],
-        },
-        {
-          toolResults: [
-            {
-              output: {
-                netWorth: {
-                  money: { currency: 'USD', amount: 95_000 },
-                  sign: 'positive',
-                },
-                changePercent: 5.56,
-                chartData: [
-                  {
-                    date: '2026-03-01',
-                    label: 'Mar 1',
-                    value: 90_000,
-                  },
-                  {
-                    date: '2026-03-08',
-                    label: 'Mar 8',
-                    value: 95_000,
-                  },
-                ],
-                assets: [
-                  {
-                    id: 'account-1',
-                    name: 'Checking',
-                    displayName: 'House Checking',
-                    type: 'depository',
-                    typeLabel: 'Depository',
-                    subType: null,
-                    subTypeLabel: null,
-                    grouping: 'cash',
-                    groupingLabel: 'Cash',
-                    effectiveBalance: {
-                      money: { currency: 'USD', amount: 95_000 },
-                      sign: 'positive',
-                    },
-                    institutionName: 'Bank',
-                  },
-                ],
-                liabilities: [],
-                truncated: false,
-              },
-            },
-          ],
-        },
-        {
-          toolResults: [
-            {
-              output: {
-                transactions: [
-                  {
-                    id: 'transaction-1',
-                    accountId: 'account-1',
-                    accountName: 'House Checking',
-                    merchantName: 'Netflix',
-                    pending: false,
-                    date: '2026-03-03',
-                    categoryPrimary: 'ENTERTAINMENT',
-                    amount: {
-                      money: { currency: 'USD', amount: 1599 },
-                      sign: 'negative',
-                    },
-                  },
-                  {
-                    id: 'transaction-1',
-                    accountId: 'account-1',
-                    accountName: 'House Checking',
-                    merchantName: 'Netflix',
-                    pending: false,
-                    date: '2026-03-03',
-                    categoryPrimary: 'ENTERTAINMENT',
-                    amount: {
-                      money: { currency: 'USD', amount: 1599 },
-                      sign: 'negative',
-                    },
-                  },
-                  {
-                    id: 'transaction-2',
-                    accountId: 'account-2',
-                    accountName: 'Amex Gold',
-                    merchantName: 'Uber',
-                    pending: false,
-                    date: '2026-03-04',
-                    categoryPrimary: 'TRANSPORTATION',
-                    amount: {
-                      money: { currency: 'USD', amount: 4599 },
-                      sign: 'negative',
-                    },
-                  },
-                ],
-                matchedCount: 2,
-                truncated: true,
-              },
-            },
-          ],
-        },
-        {
-          toolResults: [
-            {
-              output: {
-                topCategories: [
-                  {
-                    label: 'Travel',
-                    rawLabel: 'TRAVEL',
-                    amount: 60,
-                    currency: 'USD',
-                    kind: 'category',
-                  },
-                  {
-                    label: 'Travel',
-                    rawLabel: 'TRAVEL',
-                    amount: 60,
-                    currency: 'USD',
-                    kind: 'category',
-                  },
-                  {
-                    label: 'Food & Drink',
-                    rawLabel: 'FOOD_AND_DRINK',
-                    amount: 45,
-                    currency: 'USD',
-                    kind: 'category',
-                  },
-                ],
-                semanticMetadata: {
-                  pendingIncluded: false,
-                  reconciliationApplied: true,
-                  comparisonIncluded: false,
-                },
-                matchedCount: 1,
-                truncated: false,
-              },
-            },
-          ],
-        },
-      ],
+      steps: [{ toolResults: [{ output: { matchedCount: 2, truncated: true } }] }],
     });
 
     const metadata = capturedMessageMetadata?.({ part: { type: 'finish' } });
@@ -511,47 +240,10 @@ describe('AskService', () => {
         queryScope: {
           truncated: true,
         },
-        evidence: {
-          matchedCount: 7,
-          truncated: true,
-          accounts: [{ id: 'account-1' }, { id: 'account-2' }],
-          transactions: [
-            {
-              id: 'transaction-1',
-              merchantName: 'Netflix',
-            },
-            {
-              id: 'transaction-2',
-              merchantName: 'Uber',
-            },
-          ],
-          aggregates: [
-            {
-              label: 'Travel',
-            },
-            {
-              label: 'Food & Drink',
-            },
-          ],
-          balanceHistory: {
-            matchedCount: 2,
-            truncated: false,
-            currentTotal: {
-              money: {
-                currency: 'USD',
-                amount: 95_000,
-              },
-            },
-            pointCount: 2,
-            semanticMetadata: {
-              pendingIncluded: false,
-              reconciliationApplied: true,
-              comparisonIncluded: false,
-            },
-          },
-        },
+        answerText: 'Cash flow is flat, but balances moved up last week.',
       },
     });
+    expect(metadata).not.toHaveProperty('ask.evidence');
   });
 
   it('accumulates query scope across contributing tool calls', async () => {
