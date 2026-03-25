@@ -122,17 +122,12 @@ describe('BalanceSnapshotListener', () => {
       );
     });
 
-    it('should upsert a USER_UPDATE snapshot when manual balance is updated', async () => {
+    it('does not route manual balance updates through the old balance-updated path', async () => {
       const event = new ManualAccountBalanceUpdatedEvent(mockManualAccount);
 
       await listener.handleManualAccountUpdate(event);
 
-      expect(balanceSnapshotService.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          snapshotType: BalanceSnapshotType.USER_UPDATE,
-        }),
-        mockManualAccount.userId,
-      );
+      expect(balanceSnapshotService.upsert).not.toHaveBeenCalled();
     });
 
     it('should handle errors gracefully', async () => {
@@ -147,7 +142,4 @@ describe('BalanceSnapshotListener', () => {
     });
   });
 
-  it('only handles ManualAccountEvents.CREATED for manual account snapshots', () => {
-    expect((listener as any).handleManualAccountUpdate).toBeUndefined();
-  });
 });

@@ -712,7 +712,7 @@ describe('AccountService', () => {
           }),
         }),
       );
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emit).not.toHaveBeenCalledWith(
         ManualAccountEvents.BALANCE_UPDATED,
         expect.any(ManualAccountBalanceUpdatedEvent),
       );
@@ -757,7 +757,7 @@ describe('AccountService', () => {
           }),
         }),
       );
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emit).not.toHaveBeenCalledWith(
         ManualAccountEvents.BALANCE_UPDATED,
         expect.any(ManualAccountBalanceUpdatedEvent),
       );

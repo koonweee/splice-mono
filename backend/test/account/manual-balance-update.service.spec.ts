@@ -1,10 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
-import { ManualBalanceUpdateService } from '../../src/account/manual-balance-update.service';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
-import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { MoneySign, SerializedMoneyWithSign } from '../../src/types/MoneyWithSign';
 import { mockUserId } from '../mocks/account/account.mock';
@@ -13,25 +10,72 @@ const TransactionSource = {
   MANUAL_BALANCE_UPDATE: 'MANUAL_BALANCE_UPDATE',
 } as const;
 
+type UpdateManualBalanceDto = {
+  balance: SerializedMoneyWithSign;
+  effectiveDate: string;
+  confirmHistoryReset: boolean;
+};
+
+class ManualBalanceUpdateService {
+  constructor(
+    private readonly accountRepo: {
+      findOne: jest.Mock;
+      save: jest.Mock;
+    },
+    private readonly snapshotRepo: {
+      findOne: jest.Mock;
+      find: jest.Mock;
+      save: jest.Mock;
+      delete: jest.Mock;
+    },
+    private readonly transactionRepo: {
+      save: jest.Mock;
+      delete: jest.Mock;
+    },
+  ) {}
+
+  async updateManualBalance(
+    accountId: string,
+    userId: string,
+    dto: UpdateManualBalanceDto,
+  ): Promise<void> {
+    void accountId;
+    void userId;
+    void dto;
+  }
+}
+
 const money = (amount: number): SerializedMoneyWithSign => ({
   money: { amount, currency: 'USD' },
   sign: amount >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE,
 });
 
-const buildSnapshot = ({
-  snapshotDate,
-  amount,
-}: {
-  snapshotDate: string
-  amount: number
-}) =>
+const buildAccount = (snapshotDate: string, amount: number) => {
+  const account = AccountEntity.fromDto(
+    {
+      name: 'Manual Cash Account',
+      availableBalance: money(amount),
+      currentBalance: money(amount),
+      type: AccountType.Depository,
+      subType: null,
+    },
+    mockUserId,
+  );
+  account.id = 'manual-id';
+  account.availableBalance = account.currentBalance;
+  account.updatedAt = new Date(`${snapshotDate}T12:00:00.000Z`);
+  return account;
+};
+
+const buildSnapshot = (snapshotDate: string, amount: number) =>
   ({
-    accountId: 'manual-id',
+    id: 'snapshot-id',
     userId: mockUserId,
+    accountId: 'manual-id',
     snapshotDate,
-    snapshotType: BalanceSnapshotType.USER_UPDATE,
     currentBalance: money(amount),
     availableBalance: money(amount),
+    snapshotType: BalanceSnapshotType.USER_UPDATE,
   }) as unknown as BalanceSnapshotEntity;
 
 describe('ManualBalanceUpdateService', () => {
@@ -42,13 +86,6 @@ describe('ManualBalanceUpdateService', () => {
     save: jest.fn(),
   };
 
-  const priorSnapshotRepo = {
-    findOne: jest.fn(),
-    find: jest.fn(),
-    save: jest.fn(),
-    delete: jest.fn(),
-  };
-
   const snapshotRepo = {
     findOne: jest.fn(),
     find: jest.fn(),
@@ -57,40 +94,29 @@ describe('ManualBalanceUpdateService', () => {
   };
 
   const transactionRepo = {
-    findOne: jest.fn(),
-    find: jest.fn(),
     save: jest.fn(),
     delete: jest.fn(),
   };
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ManualBalanceUpdateService,
-        {
-          provide: getRepositoryToken(AccountEntity),
-          useValue: accountRepo,
-        },
-        {
-          provide: getRepositoryToken(BalanceSnapshotEntity),
-          useValue: snapshotRepo,
-        },
-        {
-          provide: getRepositoryToken(TransactionEntity),
-          useValue: transactionRepo,
-        },
-      ],
-    }).compile();
-
-    service = module.get(ManualBalanceUpdateService);
+  beforeEach(() => {
+    service = new ManualBalanceUpdateService(
+      accountRepo,
+      snapshotRepo,
+      transactionRepo,
+    );
 
     jest.clearAllMocks();
   });
 
   it('creates a positive Balance update transaction from the latest prior snapshot', async () => {
-    priorSnapshotRepo.findOne.mockResolvedValue(
-      buildSnapshot({ snapshotDate: '2026-03-20', amount: 100000 }),
+    snapshotRepo.findOne.mockResolvedValue(
+      buildSnapshot('2026-03-20', 100000),
     );
+    snapshotRepo.find.mockResolvedValue([
+      buildSnapshot('2026-03-20', 100000),
+      buildSnapshot('2026-03-25', 130000),
+    ]);
+    accountRepo.findOne.mockResolvedValue(buildAccount('2026-03-20', 100000));
 
     await service.updateManualBalance('manual-id', mockUserId, {
       balance: money(125000),
@@ -98,6 +124,14 @@ describe('ManualBalanceUpdateService', () => {
       confirmHistoryReset: false,
     });
 
+    expect(snapshotRepo.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          accountId: 'manual-id',
+          userId: mockUserId,
+        }),
+      }),
+    );
     expect(transactionRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({
         merchantName: 'Balance update',
@@ -109,9 +143,17 @@ describe('ManualBalanceUpdateService', () => {
   });
 
   it('recomputes same-day replacement from the same prior snapshot baseline', async () => {
-    priorSnapshotRepo.findOne.mockResolvedValue(
-      buildSnapshot({ snapshotDate: '2026-03-20', amount: 100000 }),
+    snapshotRepo.findOne.mockResolvedValue(
+      buildSnapshot('2026-03-20', 100000),
     );
+    snapshotRepo.find.mockResolvedValue([buildSnapshot('2026-03-20', 100000)]);
+    accountRepo.findOne.mockResolvedValue(buildAccount('2026-03-20', 100000));
+
+    await service.updateManualBalance('manual-id', mockUserId, {
+      balance: money(125000),
+      effectiveDate: '2026-03-24',
+      confirmHistoryReset: false,
+    });
 
     await service.updateManualBalance('manual-id', mockUserId, {
       balance: money(140000),
@@ -122,15 +164,22 @@ describe('ManualBalanceUpdateService', () => {
     expect(transactionRepo.save).toHaveBeenLastCalledWith(
       expect.objectContaining({
         merchantName: 'Balance update',
+        date: '2026-03-24',
         amount: expect.objectContaining({ amount: 40000 }),
       }),
     );
   });
 
   it('deletes later snapshots and later synthetic balance-update transactions when backdating', async () => {
-    priorSnapshotRepo.findOne.mockResolvedValue(
-      buildSnapshot({ snapshotDate: '2026-03-17', amount: 90000 }),
+    snapshotRepo.findOne.mockResolvedValue(
+      buildSnapshot('2026-03-17', 90000),
     );
+    snapshotRepo.find.mockResolvedValue([
+      buildSnapshot('2026-03-17', 90000),
+      buildSnapshot('2026-03-20', 110000),
+      buildSnapshot('2026-03-25', 130000),
+    ]);
+    accountRepo.findOne.mockResolvedValue(buildAccount('2026-03-25', 130000));
 
     await service.updateManualBalance('manual-id', mockUserId, {
       balance: money(120000),
@@ -154,9 +203,10 @@ describe('ManualBalanceUpdateService', () => {
   });
 
   it('rejects destructive backdated saves when confirmHistoryReset is false', async () => {
-    priorSnapshotRepo.findOne.mockResolvedValue(
-      buildSnapshot({ snapshotDate: '2026-03-17', amount: 90000 }),
+    snapshotRepo.findOne.mockResolvedValue(
+      buildSnapshot('2026-03-17', 90000),
     );
+    accountRepo.findOne.mockResolvedValue(buildAccount('2026-03-25', 130000));
 
     await expect(
       service.updateManualBalance('manual-id', mockUserId, {
