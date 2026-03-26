@@ -44,7 +44,9 @@ import type {
   RefreshTokenDto,
   TokenResponse,
   Transaction,
+  TransactionAnalysisBalanceAdjustmentsResponse,
   TransactionAnalysisControllerGetAnalysisParams,
+  TransactionAnalysisControllerGetBalanceAdjustmentsParams,
   TransactionAnalysisControllerGetTransactionsParams,
   TransactionAnalysisResponse,
   TransactionAnalysisTransactionsResponse,
@@ -739,35 +741,35 @@ export const useAccountControllerUpdateBalance = <
 }
 
 /**
- * Get all transactions (paginated)
+ * Get balances for specific accounts over a date range. Balances are converted to the user's preferred currency.
  */
-export const transactionControllerFindAll = (
-  params?: TransactionControllerFindAllParams,
+export const balanceQueryControllerGetBalances = (
+  params: BalanceQueryControllerGetBalancesParams,
   signal?: AbortSignal,
 ) => {
-  return axios<PaginatedTransactionResponse>({
-    url: `/transaction`,
+  return axios<Array<BalanceQueryPerDateResult>>({
+    url: `/balance-query/balances`,
     method: 'GET',
     params,
     signal,
   })
 }
 
-export const getTransactionControllerFindAllQueryKey = (
-  params?: TransactionControllerFindAllParams,
+export const getBalanceQueryControllerGetBalancesQueryKey = (
+  params?: BalanceQueryControllerGetBalancesParams,
 ) => {
-  return [`/transaction`, ...(params ? [params] : [])] as const
+  return [`/balance-query/balances`, ...(params ? [params] : [])] as const
 }
 
-export const getTransactionControllerFindAllQueryOptions = <
-  TData = Awaited<ReturnType<typeof transactionControllerFindAll>>,
-  TError = unknown,
+export const getBalanceQueryControllerGetBalancesQueryOptions = <
+  TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+  TError = void,
 >(
-  params?: TransactionControllerFindAllParams,
+  params: BalanceQueryControllerGetBalancesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof transactionControllerFindAll>>,
+        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
         TError,
         TData
       >
@@ -777,42 +779,43 @@ export const getTransactionControllerFindAllQueryOptions = <
   const { query: queryOptions } = options ?? {}
 
   const queryKey =
-    queryOptions?.queryKey ?? getTransactionControllerFindAllQueryKey(params)
+    queryOptions?.queryKey ??
+    getBalanceQueryControllerGetBalancesQueryKey(params)
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof transactionControllerFindAll>>
-  > = ({ signal }) => transactionControllerFindAll(params, signal)
+    Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>
+  > = ({ signal }) => balanceQueryControllerGetBalances(params, signal)
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof transactionControllerFindAll>>,
+    Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type TransactionControllerFindAllQueryResult = NonNullable<
-  Awaited<ReturnType<typeof transactionControllerFindAll>>
+export type BalanceQueryControllerGetBalancesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>
 >
-export type TransactionControllerFindAllQueryError = unknown
+export type BalanceQueryControllerGetBalancesQueryError = void
 
-export function useTransactionControllerFindAll<
-  TData = Awaited<ReturnType<typeof transactionControllerFindAll>>,
-  TError = unknown,
+export function useBalanceQueryControllerGetBalances<
+  TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+  TError = void,
 >(
-  params: undefined | TransactionControllerFindAllParams,
+  params: BalanceQueryControllerGetBalancesParams,
   options: {
     query: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof transactionControllerFindAll>>,
+        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
         TError,
         TData
       >
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof transactionControllerFindAll>>,
+          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
           TError,
-          Awaited<ReturnType<typeof transactionControllerFindAll>>
+          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>
         >,
         'initialData'
       >
@@ -821,24 +824,24 @@ export function useTransactionControllerFindAll<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 }
-export function useTransactionControllerFindAll<
-  TData = Awaited<ReturnType<typeof transactionControllerFindAll>>,
-  TError = unknown,
+export function useBalanceQueryControllerGetBalances<
+  TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+  TError = void,
 >(
-  params?: TransactionControllerFindAllParams,
+  params: BalanceQueryControllerGetBalancesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof transactionControllerFindAll>>,
+        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
         TError,
         TData
       >
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof transactionControllerFindAll>>,
+          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
           TError,
-          Awaited<ReturnType<typeof transactionControllerFindAll>>
+          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>
         >,
         'initialData'
       >
@@ -847,15 +850,15 @@ export function useTransactionControllerFindAll<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 }
-export function useTransactionControllerFindAll<
-  TData = Awaited<ReturnType<typeof transactionControllerFindAll>>,
-  TError = unknown,
+export function useBalanceQueryControllerGetBalances<
+  TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+  TError = void,
 >(
-  params?: TransactionControllerFindAllParams,
+  params: BalanceQueryControllerGetBalancesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof transactionControllerFindAll>>,
+        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
         TError,
         TData
       >
@@ -866,15 +869,15 @@ export function useTransactionControllerFindAll<
   queryKey: DataTag<QueryKey, TData, TError>
 }
 
-export function useTransactionControllerFindAll<
-  TData = Awaited<ReturnType<typeof transactionControllerFindAll>>,
-  TError = unknown,
+export function useBalanceQueryControllerGetBalances<
+  TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+  TError = void,
 >(
-  params?: TransactionControllerFindAllParams,
+  params: BalanceQueryControllerGetBalancesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof transactionControllerFindAll>>,
+        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
         TError,
         TData
       >
@@ -884,7 +887,7 @@ export function useTransactionControllerFindAll<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 } {
-  const queryOptions = getTransactionControllerFindAllQueryOptions(
+  const queryOptions = getBalanceQueryControllerGetBalancesQueryOptions(
     params,
     options,
   )
@@ -900,115 +903,35 @@ export function useTransactionControllerFindAll<
 }
 
 /**
- * Create a new transaction
+ * Get balances for all linked accounts over a date range. Balances are converted to the user's preferred currency.
  */
-export const transactionControllerCreate = (
-  createTransactionDto: CreateTransactionDto,
+export const balanceQueryControllerGetAllBalances = (
+  params: BalanceQueryControllerGetAllBalancesParams,
   signal?: AbortSignal,
 ) => {
-  return axios<Transaction>({
-    url: `/transaction`,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    data: createTransactionDto,
-    signal,
-  })
-}
-
-export const getTransactionControllerCreateMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof transactionControllerCreate>>,
-    TError,
-    { data: CreateTransactionDto },
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof transactionControllerCreate>>,
-  TError,
-  { data: CreateTransactionDto },
-  TContext
-> => {
-  const mutationKey = ['transactionControllerCreate']
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof transactionControllerCreate>>,
-    { data: CreateTransactionDto }
-  > = (props) => {
-    const { data } = props ?? {}
-
-    return transactionControllerCreate(data)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type TransactionControllerCreateMutationResult = NonNullable<
-  Awaited<ReturnType<typeof transactionControllerCreate>>
->
-export type TransactionControllerCreateMutationBody = CreateTransactionDto
-export type TransactionControllerCreateMutationError = unknown
-
-export const useTransactionControllerCreate = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof transactionControllerCreate>>,
-      TError,
-      { data: CreateTransactionDto },
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof transactionControllerCreate>>,
-  TError,
-  { data: CreateTransactionDto },
-  TContext
-> => {
-  const mutationOptions = getTransactionControllerCreateMutationOptions(options)
-
-  return useMutation(mutationOptions, queryClient)
-}
-
-/**
- * Get a transaction by ID
- */
-export const transactionControllerFindOne = (
-  id: string,
-  signal?: AbortSignal,
-) => {
-  return axios<Transaction>({
-    url: `/transaction/${id}`,
+  return axios<Array<BalanceQueryPerDateResult>>({
+    url: `/balance-query/all-balances`,
     method: 'GET',
+    params,
     signal,
   })
 }
 
-export const getTransactionControllerFindOneQueryKey = (id?: string) => {
-  return [`/transaction/${id}`] as const
+export const getBalanceQueryControllerGetAllBalancesQueryKey = (
+  params?: BalanceQueryControllerGetAllBalancesParams,
+) => {
+  return [`/balance-query/all-balances`, ...(params ? [params] : [])] as const
 }
 
-export const getTransactionControllerFindOneQueryOptions = <
-  TData = Awaited<ReturnType<typeof transactionControllerFindOne>>,
+export const getBalanceQueryControllerGetAllBalancesQueryOptions = <
+  TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
   TError = void,
 >(
-  id: string,
+  params: BalanceQueryControllerGetAllBalancesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof transactionControllerFindOne>>,
+        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
         TError,
         TData
       >
@@ -1018,47 +941,43 @@ export const getTransactionControllerFindOneQueryOptions = <
   const { query: queryOptions } = options ?? {}
 
   const queryKey =
-    queryOptions?.queryKey ?? getTransactionControllerFindOneQueryKey(id)
+    queryOptions?.queryKey ??
+    getBalanceQueryControllerGetAllBalancesQueryKey(params)
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof transactionControllerFindOne>>
-  > = ({ signal }) => transactionControllerFindOne(id, signal)
+    Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>
+  > = ({ signal }) => balanceQueryControllerGetAllBalances(params, signal)
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: !!id,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof transactionControllerFindOne>>,
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type TransactionControllerFindOneQueryResult = NonNullable<
-  Awaited<ReturnType<typeof transactionControllerFindOne>>
+export type BalanceQueryControllerGetAllBalancesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>
 >
-export type TransactionControllerFindOneQueryError = void
+export type BalanceQueryControllerGetAllBalancesQueryError = void
 
-export function useTransactionControllerFindOne<
-  TData = Awaited<ReturnType<typeof transactionControllerFindOne>>,
+export function useBalanceQueryControllerGetAllBalances<
+  TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
   TError = void,
 >(
-  id: string,
+  params: BalanceQueryControllerGetAllBalancesParams,
   options: {
     query: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof transactionControllerFindOne>>,
+        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
         TError,
         TData
       >
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof transactionControllerFindOne>>,
+          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
           TError,
-          Awaited<ReturnType<typeof transactionControllerFindOne>>
+          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>
         >,
         'initialData'
       >
@@ -1067,24 +986,24 @@ export function useTransactionControllerFindOne<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 }
-export function useTransactionControllerFindOne<
-  TData = Awaited<ReturnType<typeof transactionControllerFindOne>>,
+export function useBalanceQueryControllerGetAllBalances<
+  TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
   TError = void,
 >(
-  id: string,
+  params: BalanceQueryControllerGetAllBalancesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof transactionControllerFindOne>>,
+        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
         TError,
         TData
       >
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof transactionControllerFindOne>>,
+          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
           TError,
-          Awaited<ReturnType<typeof transactionControllerFindOne>>
+          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>
         >,
         'initialData'
       >
@@ -1093,15 +1012,15 @@ export function useTransactionControllerFindOne<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 }
-export function useTransactionControllerFindOne<
-  TData = Awaited<ReturnType<typeof transactionControllerFindOne>>,
+export function useBalanceQueryControllerGetAllBalances<
+  TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
   TError = void,
 >(
-  id: string,
+  params: BalanceQueryControllerGetAllBalancesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof transactionControllerFindOne>>,
+        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
         TError,
         TData
       >
@@ -1112,15 +1031,15 @@ export function useTransactionControllerFindOne<
   queryKey: DataTag<QueryKey, TData, TError>
 }
 
-export function useTransactionControllerFindOne<
-  TData = Awaited<ReturnType<typeof transactionControllerFindOne>>,
+export function useBalanceQueryControllerGetAllBalances<
+  TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
   TError = void,
 >(
-  id: string,
+  params: BalanceQueryControllerGetAllBalancesParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof transactionControllerFindOne>>,
+        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
         TError,
         TData
       >
@@ -1130,7 +1049,10 @@ export function useTransactionControllerFindOne<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 } {
-  const queryOptions = getTransactionControllerFindOneQueryOptions(id, options)
+  const queryOptions = getBalanceQueryControllerGetAllBalancesQueryOptions(
+    params,
+    options,
+  )
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -1140,162 +1062,6 @@ export function useTransactionControllerFindOne<
   query.queryKey = queryOptions.queryKey
 
   return query
-}
-
-/**
- * Update a transaction
- */
-export const transactionControllerUpdate = (
-  id: string,
-  updateTransactionDto: UpdateTransactionDto,
-) => {
-  return axios<Transaction>({
-    url: `/transaction/${id}`,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    data: updateTransactionDto,
-  })
-}
-
-export const getTransactionControllerUpdateMutationOptions = <
-  TError = void,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof transactionControllerUpdate>>,
-    TError,
-    { id: string; data: UpdateTransactionDto },
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof transactionControllerUpdate>>,
-  TError,
-  { id: string; data: UpdateTransactionDto },
-  TContext
-> => {
-  const mutationKey = ['transactionControllerUpdate']
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof transactionControllerUpdate>>,
-    { id: string; data: UpdateTransactionDto }
-  > = (props) => {
-    const { id, data } = props ?? {}
-
-    return transactionControllerUpdate(id, data)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type TransactionControllerUpdateMutationResult = NonNullable<
-  Awaited<ReturnType<typeof transactionControllerUpdate>>
->
-export type TransactionControllerUpdateMutationBody = UpdateTransactionDto
-export type TransactionControllerUpdateMutationError = void
-
-export const useTransactionControllerUpdate = <
-  TError = void,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof transactionControllerUpdate>>,
-      TError,
-      { id: string; data: UpdateTransactionDto },
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof transactionControllerUpdate>>,
-  TError,
-  { id: string; data: UpdateTransactionDto },
-  TContext
-> => {
-  const mutationOptions = getTransactionControllerUpdateMutationOptions(options)
-
-  return useMutation(mutationOptions, queryClient)
-}
-
-/**
- * Delete a transaction
- */
-export const transactionControllerRemove = (id: string) => {
-  return axios<void>({ url: `/transaction/${id}`, method: 'DELETE' })
-}
-
-export const getTransactionControllerRemoveMutationOptions = <
-  TError = void,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof transactionControllerRemove>>,
-    TError,
-    { id: string },
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof transactionControllerRemove>>,
-  TError,
-  { id: string },
-  TContext
-> => {
-  const mutationKey = ['transactionControllerRemove']
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof transactionControllerRemove>>,
-    { id: string }
-  > = (props) => {
-    const { id } = props ?? {}
-
-    return transactionControllerRemove(id)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type TransactionControllerRemoveMutationResult = NonNullable<
-  Awaited<ReturnType<typeof transactionControllerRemove>>
->
-
-export type TransactionControllerRemoveMutationError = void
-
-export const useTransactionControllerRemove = <
-  TError = void,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof transactionControllerRemove>>,
-      TError,
-      { id: string },
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof transactionControllerRemove>>,
-  TError,
-  { id: string },
-  TContext
-> => {
-  const mutationOptions = getTransactionControllerRemoveMutationOptions(options)
-
-  return useMutation(mutationOptions, queryClient)
 }
 
 /**
@@ -2205,35 +1971,35 @@ export const useUserControllerRevokeToken = <TError = void, TContext = unknown>(
 }
 
 /**
- * Get balances for specific accounts over a date range. Balances are converted to the user's preferred currency.
+ * Get all transactions (paginated)
  */
-export const balanceQueryControllerGetBalances = (
-  params: BalanceQueryControllerGetBalancesParams,
+export const transactionControllerFindAll = (
+  params?: TransactionControllerFindAllParams,
   signal?: AbortSignal,
 ) => {
-  return axios<Array<BalanceQueryPerDateResult>>({
-    url: `/balance-query/balances`,
+  return axios<PaginatedTransactionResponse>({
+    url: `/transaction`,
     method: 'GET',
     params,
     signal,
   })
 }
 
-export const getBalanceQueryControllerGetBalancesQueryKey = (
-  params?: BalanceQueryControllerGetBalancesParams,
+export const getTransactionControllerFindAllQueryKey = (
+  params?: TransactionControllerFindAllParams,
 ) => {
-  return [`/balance-query/balances`, ...(params ? [params] : [])] as const
+  return [`/transaction`, ...(params ? [params] : [])] as const
 }
 
-export const getBalanceQueryControllerGetBalancesQueryOptions = <
-  TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
-  TError = void,
+export const getTransactionControllerFindAllQueryOptions = <
+  TData = Awaited<ReturnType<typeof transactionControllerFindAll>>,
+  TError = unknown,
 >(
-  params: BalanceQueryControllerGetBalancesParams,
+  params?: TransactionControllerFindAllParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+        Awaited<ReturnType<typeof transactionControllerFindAll>>,
         TError,
         TData
       >
@@ -2243,43 +2009,42 @@ export const getBalanceQueryControllerGetBalancesQueryOptions = <
   const { query: queryOptions } = options ?? {}
 
   const queryKey =
-    queryOptions?.queryKey ??
-    getBalanceQueryControllerGetBalancesQueryKey(params)
+    queryOptions?.queryKey ?? getTransactionControllerFindAllQueryKey(params)
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>
-  > = ({ signal }) => balanceQueryControllerGetBalances(params, signal)
+    Awaited<ReturnType<typeof transactionControllerFindAll>>
+  > = ({ signal }) => transactionControllerFindAll(params, signal)
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+    Awaited<ReturnType<typeof transactionControllerFindAll>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type BalanceQueryControllerGetBalancesQueryResult = NonNullable<
-  Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>
+export type TransactionControllerFindAllQueryResult = NonNullable<
+  Awaited<ReturnType<typeof transactionControllerFindAll>>
 >
-export type BalanceQueryControllerGetBalancesQueryError = void
+export type TransactionControllerFindAllQueryError = unknown
 
-export function useBalanceQueryControllerGetBalances<
-  TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
-  TError = void,
+export function useTransactionControllerFindAll<
+  TData = Awaited<ReturnType<typeof transactionControllerFindAll>>,
+  TError = unknown,
 >(
-  params: BalanceQueryControllerGetBalancesParams,
+  params: undefined | TransactionControllerFindAllParams,
   options: {
     query: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+        Awaited<ReturnType<typeof transactionControllerFindAll>>,
         TError,
         TData
       >
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+          Awaited<ReturnType<typeof transactionControllerFindAll>>,
           TError,
-          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>
+          Awaited<ReturnType<typeof transactionControllerFindAll>>
         >,
         'initialData'
       >
@@ -2288,24 +2053,24 @@ export function useBalanceQueryControllerGetBalances<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 }
-export function useBalanceQueryControllerGetBalances<
-  TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
-  TError = void,
+export function useTransactionControllerFindAll<
+  TData = Awaited<ReturnType<typeof transactionControllerFindAll>>,
+  TError = unknown,
 >(
-  params: BalanceQueryControllerGetBalancesParams,
+  params?: TransactionControllerFindAllParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+        Awaited<ReturnType<typeof transactionControllerFindAll>>,
         TError,
         TData
       >
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+          Awaited<ReturnType<typeof transactionControllerFindAll>>,
           TError,
-          Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>
+          Awaited<ReturnType<typeof transactionControllerFindAll>>
         >,
         'initialData'
       >
@@ -2314,15 +2079,15 @@ export function useBalanceQueryControllerGetBalances<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 }
-export function useBalanceQueryControllerGetBalances<
-  TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
-  TError = void,
+export function useTransactionControllerFindAll<
+  TData = Awaited<ReturnType<typeof transactionControllerFindAll>>,
+  TError = unknown,
 >(
-  params: BalanceQueryControllerGetBalancesParams,
+  params?: TransactionControllerFindAllParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+        Awaited<ReturnType<typeof transactionControllerFindAll>>,
         TError,
         TData
       >
@@ -2333,15 +2098,15 @@ export function useBalanceQueryControllerGetBalances<
   queryKey: DataTag<QueryKey, TData, TError>
 }
 
-export function useBalanceQueryControllerGetBalances<
-  TData = Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
-  TError = void,
+export function useTransactionControllerFindAll<
+  TData = Awaited<ReturnType<typeof transactionControllerFindAll>>,
+  TError = unknown,
 >(
-  params: BalanceQueryControllerGetBalancesParams,
+  params?: TransactionControllerFindAllParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof balanceQueryControllerGetBalances>>,
+        Awaited<ReturnType<typeof transactionControllerFindAll>>,
         TError,
         TData
       >
@@ -2351,7 +2116,7 @@ export function useBalanceQueryControllerGetBalances<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 } {
-  const queryOptions = getBalanceQueryControllerGetBalancesQueryOptions(
+  const queryOptions = getTransactionControllerFindAllQueryOptions(
     params,
     options,
   )
@@ -2367,35 +2132,434 @@ export function useBalanceQueryControllerGetBalances<
 }
 
 /**
- * Get balances for all linked accounts over a date range. Balances are converted to the user's preferred currency.
+ * Create a new transaction
  */
-export const balanceQueryControllerGetAllBalances = (
-  params: BalanceQueryControllerGetAllBalancesParams,
+export const transactionControllerCreate = (
+  createTransactionDto: CreateTransactionDto,
   signal?: AbortSignal,
 ) => {
-  return axios<Array<BalanceQueryPerDateResult>>({
-    url: `/balance-query/all-balances`,
+  return axios<Transaction>({
+    url: `/transaction`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createTransactionDto,
+    signal,
+  })
+}
+
+export const getTransactionControllerCreateMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerCreate>>,
+    TError,
+    { data: CreateTransactionDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerCreate>>,
+  TError,
+  { data: CreateTransactionDto },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerCreate']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerCreate>>,
+    { data: CreateTransactionDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return transactionControllerCreate(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerCreateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof transactionControllerCreate>>
+>
+export type TransactionControllerCreateMutationBody = CreateTransactionDto
+export type TransactionControllerCreateMutationError = unknown
+
+export const useTransactionControllerCreate = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerCreate>>,
+      TError,
+      { data: CreateTransactionDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerCreate>>,
+  TError,
+  { data: CreateTransactionDto },
+  TContext
+> => {
+  const mutationOptions = getTransactionControllerCreateMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Get a transaction by ID
+ */
+export const transactionControllerFindOne = (
+  id: string,
+  signal?: AbortSignal,
+) => {
+  return axios<Transaction>({
+    url: `/transaction/${id}`,
+    method: 'GET',
+    signal,
+  })
+}
+
+export const getTransactionControllerFindOneQueryKey = (id?: string) => {
+  return [`/transaction/${id}`] as const
+}
+
+export const getTransactionControllerFindOneQueryOptions = <
+  TData = Awaited<ReturnType<typeof transactionControllerFindOne>>,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionControllerFindOne>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getTransactionControllerFindOneQueryKey(id)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof transactionControllerFindOne>>
+  > = ({ signal }) => transactionControllerFindOne(id, signal)
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof transactionControllerFindOne>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TransactionControllerFindOneQueryResult = NonNullable<
+  Awaited<ReturnType<typeof transactionControllerFindOne>>
+>
+export type TransactionControllerFindOneQueryError = void
+
+export function useTransactionControllerFindOne<
+  TData = Awaited<ReturnType<typeof transactionControllerFindOne>>,
+  TError = void,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionControllerFindOne>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof transactionControllerFindOne>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionControllerFindOne<
+  TData = Awaited<ReturnType<typeof transactionControllerFindOne>>,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionControllerFindOne>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionControllerFindOne>>,
+          TError,
+          Awaited<ReturnType<typeof transactionControllerFindOne>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionControllerFindOne<
+  TData = Awaited<ReturnType<typeof transactionControllerFindOne>>,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionControllerFindOne>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useTransactionControllerFindOne<
+  TData = Awaited<ReturnType<typeof transactionControllerFindOne>>,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionControllerFindOne>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getTransactionControllerFindOneQueryOptions(id, options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Update a transaction
+ */
+export const transactionControllerUpdate = (
+  id: string,
+  updateTransactionDto: UpdateTransactionDto,
+) => {
+  return axios<Transaction>({
+    url: `/transaction/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateTransactionDto,
+  })
+}
+
+export const getTransactionControllerUpdateMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerUpdate>>,
+    TError,
+    { id: string; data: UpdateTransactionDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerUpdate>>,
+  TError,
+  { id: string; data: UpdateTransactionDto },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerUpdate']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerUpdate>>,
+    { id: string; data: UpdateTransactionDto }
+  > = (props) => {
+    const { id, data } = props ?? {}
+
+    return transactionControllerUpdate(id, data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerUpdateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof transactionControllerUpdate>>
+>
+export type TransactionControllerUpdateMutationBody = UpdateTransactionDto
+export type TransactionControllerUpdateMutationError = void
+
+export const useTransactionControllerUpdate = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerUpdate>>,
+      TError,
+      { id: string; data: UpdateTransactionDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerUpdate>>,
+  TError,
+  { id: string; data: UpdateTransactionDto },
+  TContext
+> => {
+  const mutationOptions = getTransactionControllerUpdateMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Delete a transaction
+ */
+export const transactionControllerRemove = (id: string) => {
+  return axios<void>({ url: `/transaction/${id}`, method: 'DELETE' })
+}
+
+export const getTransactionControllerRemoveMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerRemove>>,
+    TError,
+    { id: string },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerRemove>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerRemove']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerRemove>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {}
+
+    return transactionControllerRemove(id)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerRemoveMutationResult = NonNullable<
+  Awaited<ReturnType<typeof transactionControllerRemove>>
+>
+
+export type TransactionControllerRemoveMutationError = void
+
+export const useTransactionControllerRemove = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerRemove>>,
+      TError,
+      { id: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerRemove>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getTransactionControllerRemoveMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Get cash flow analysis grouped by category for a date range. Pending transactions are excluded. Exact equal-and-opposite posted transactions within the requested range are neutralized before aggregation. Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.
+ */
+export const transactionAnalysisControllerGetAnalysis = (
+  params: TransactionAnalysisControllerGetAnalysisParams,
+  signal?: AbortSignal,
+) => {
+  return axios<TransactionAnalysisResponse>({
+    url: `/transaction-analysis`,
     method: 'GET',
     params,
     signal,
   })
 }
 
-export const getBalanceQueryControllerGetAllBalancesQueryKey = (
-  params?: BalanceQueryControllerGetAllBalancesParams,
+export const getTransactionAnalysisControllerGetAnalysisQueryKey = (
+  params?: TransactionAnalysisControllerGetAnalysisParams,
 ) => {
-  return [`/balance-query/all-balances`, ...(params ? [params] : [])] as const
+  return [`/transaction-analysis`, ...(params ? [params] : [])] as const
 }
 
-export const getBalanceQueryControllerGetAllBalancesQueryOptions = <
-  TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+export const getTransactionAnalysisControllerGetAnalysisQueryOptions = <
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
   TError = void,
 >(
-  params: BalanceQueryControllerGetAllBalancesParams,
+  params: TransactionAnalysisControllerGetAnalysisParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
         TError,
         TData
       >
@@ -2406,42 +2570,42 @@ export const getBalanceQueryControllerGetAllBalancesQueryOptions = <
 
   const queryKey =
     queryOptions?.queryKey ??
-    getBalanceQueryControllerGetAllBalancesQueryKey(params)
+    getTransactionAnalysisControllerGetAnalysisQueryKey(params)
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>
-  > = ({ signal }) => balanceQueryControllerGetAllBalances(params, signal)
+    Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
+  > = ({ signal }) => transactionAnalysisControllerGetAnalysis(params, signal)
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+    Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type BalanceQueryControllerGetAllBalancesQueryResult = NonNullable<
-  Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>
+export type TransactionAnalysisControllerGetAnalysisQueryResult = NonNullable<
+  Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
 >
-export type BalanceQueryControllerGetAllBalancesQueryError = void
+export type TransactionAnalysisControllerGetAnalysisQueryError = void
 
-export function useBalanceQueryControllerGetAllBalances<
-  TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+export function useTransactionAnalysisControllerGetAnalysis<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
   TError = void,
 >(
-  params: BalanceQueryControllerGetAllBalancesParams,
+  params: TransactionAnalysisControllerGetAnalysisParams,
   options: {
     query: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
         TError,
         TData
       >
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
           TError,
-          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
         >,
         'initialData'
       >
@@ -2450,24 +2614,24 @@ export function useBalanceQueryControllerGetAllBalances<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 }
-export function useBalanceQueryControllerGetAllBalances<
-  TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+export function useTransactionAnalysisControllerGetAnalysis<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
   TError = void,
 >(
-  params: BalanceQueryControllerGetAllBalancesParams,
+  params: TransactionAnalysisControllerGetAnalysisParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
         TError,
         TData
       >
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
           TError,
-          Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
         >,
         'initialData'
       >
@@ -2476,15 +2640,15 @@ export function useBalanceQueryControllerGetAllBalances<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 }
-export function useBalanceQueryControllerGetAllBalances<
-  TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+export function useTransactionAnalysisControllerGetAnalysis<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
   TError = void,
 >(
-  params: BalanceQueryControllerGetAllBalancesParams,
+  params: TransactionAnalysisControllerGetAnalysisParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
         TError,
         TData
       >
@@ -2495,15 +2659,15 @@ export function useBalanceQueryControllerGetAllBalances<
   queryKey: DataTag<QueryKey, TData, TError>
 }
 
-export function useBalanceQueryControllerGetAllBalances<
-  TData = Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+export function useTransactionAnalysisControllerGetAnalysis<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
   TError = void,
 >(
-  params: BalanceQueryControllerGetAllBalancesParams,
+  params: TransactionAnalysisControllerGetAnalysisParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof balanceQueryControllerGetAllBalances>>,
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
         TError,
         TData
       >
@@ -2513,10 +2677,416 @@ export function useBalanceQueryControllerGetAllBalances<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 } {
-  const queryOptions = getBalanceQueryControllerGetAllBalancesQueryOptions(
+  const queryOptions = getTransactionAnalysisControllerGetAnalysisQueryOptions(
     params,
     options,
   )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Get unmatched posted transactions for a category drilldown within a date range. Transactions are neutralized using the same exact equal-and-opposite matching pipeline as the summary analysis before category and flow filtering. Returned rows include converted amounts using exchange rates anchored to the requested endDate.
+ */
+export const transactionAnalysisControllerGetTransactions = (
+  params: TransactionAnalysisControllerGetTransactionsParams,
+  signal?: AbortSignal,
+) => {
+  return axios<TransactionAnalysisTransactionsResponse>({
+    url: `/transaction-analysis/transactions`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getTransactionAnalysisControllerGetTransactionsQueryKey = (
+  params?: TransactionAnalysisControllerGetTransactionsParams,
+) => {
+  return [
+    `/transaction-analysis/transactions`,
+    ...(params ? [params] : []),
+  ] as const
+}
+
+export const getTransactionAnalysisControllerGetTransactionsQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof transactionAnalysisControllerGetTransactions>
+  >,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetTransactionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof transactionAnalysisControllerGetTransactions>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getTransactionAnalysisControllerGetTransactionsQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof transactionAnalysisControllerGetTransactions>>
+  > = ({ signal }) =>
+    transactionAnalysisControllerGetTransactions(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof transactionAnalysisControllerGetTransactions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TransactionAnalysisControllerGetTransactionsQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof transactionAnalysisControllerGetTransactions>>
+  >
+export type TransactionAnalysisControllerGetTransactionsQueryError = void
+
+export function useTransactionAnalysisControllerGetTransactions<
+  TData = Awaited<
+    ReturnType<typeof transactionAnalysisControllerGetTransactions>
+  >,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetTransactionsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof transactionAnalysisControllerGetTransactions>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof transactionAnalysisControllerGetTransactions>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof transactionAnalysisControllerGetTransactions>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionAnalysisControllerGetTransactions<
+  TData = Awaited<
+    ReturnType<typeof transactionAnalysisControllerGetTransactions>
+  >,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetTransactionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof transactionAnalysisControllerGetTransactions>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof transactionAnalysisControllerGetTransactions>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof transactionAnalysisControllerGetTransactions>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionAnalysisControllerGetTransactions<
+  TData = Awaited<
+    ReturnType<typeof transactionAnalysisControllerGetTransactions>
+  >,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetTransactionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof transactionAnalysisControllerGetTransactions>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useTransactionAnalysisControllerGetTransactions<
+  TData = Awaited<
+    ReturnType<typeof transactionAnalysisControllerGetTransactions>
+  >,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetTransactionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof transactionAnalysisControllerGetTransactions>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getTransactionAnalysisControllerGetTransactionsQueryOptions(params, options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Get synthetic balance adjustment drilldown rows for a date range. The route only accepts BALANCE_ADJUSTMENT as the category filter and reuses the same snapshot-based adjustment pipeline as the summary endpoint.
+ */
+export const transactionAnalysisControllerGetBalanceAdjustments = (
+  params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
+  signal?: AbortSignal,
+) => {
+  return axios<TransactionAnalysisBalanceAdjustmentsResponse>({
+    url: `/transaction-analysis/balance-adjustments`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getTransactionAnalysisControllerGetBalanceAdjustmentsQueryKey = (
+  params?: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
+) => {
+  return [
+    `/transaction-analysis/balance-adjustments`,
+    ...(params ? [params] : []),
+  ] as const
+}
+
+export const getTransactionAnalysisControllerGetBalanceAdjustmentsQueryOptions =
+  <
+    TData = Awaited<
+      ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+    >,
+    TError = void,
+  >(
+    params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
+    options?: {
+      query?: Partial<
+        UseQueryOptions<
+          Awaited<
+            ReturnType<
+              typeof transactionAnalysisControllerGetBalanceAdjustments
+            >
+          >,
+          TError,
+          TData
+        >
+      >
+    },
+  ) => {
+    const { query: queryOptions } = options ?? {}
+
+    const queryKey =
+      queryOptions?.queryKey ??
+      getTransactionAnalysisControllerGetBalanceAdjustmentsQueryKey(params)
+
+    const queryFn: QueryFunction<
+      Awaited<
+        ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+      >
+    > = ({ signal }) =>
+      transactionAnalysisControllerGetBalanceAdjustments(params, signal)
+
+    return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+      Awaited<
+        ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+      >,
+      TError,
+      TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> }
+  }
+
+export type TransactionAnalysisControllerGetBalanceAdjustmentsQueryResult =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+    >
+  >
+export type TransactionAnalysisControllerGetBalanceAdjustmentsQueryError = void
+
+export function useTransactionAnalysisControllerGetBalanceAdjustments<
+  TData = Awaited<
+    ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+  >,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<
+            ReturnType<
+              typeof transactionAnalysisControllerGetBalanceAdjustments
+            >
+          >,
+          TError,
+          Awaited<
+            ReturnType<
+              typeof transactionAnalysisControllerGetBalanceAdjustments
+            >
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionAnalysisControllerGetBalanceAdjustments<
+  TData = Awaited<
+    ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+  >,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<
+            ReturnType<
+              typeof transactionAnalysisControllerGetBalanceAdjustments
+            >
+          >,
+          TError,
+          Awaited<
+            ReturnType<
+              typeof transactionAnalysisControllerGetBalanceAdjustments
+            >
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionAnalysisControllerGetBalanceAdjustments<
+  TData = Awaited<
+    ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+  >,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useTransactionAnalysisControllerGetBalanceAdjustments<
+  TData = Awaited<
+    ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+  >,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getTransactionAnalysisControllerGetBalanceAdjustmentsQueryOptions(
+      params,
+      options,
+    )
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
@@ -3373,361 +3943,6 @@ export function useHealthControllerCheck<
   queryKey: DataTag<QueryKey, TData, TError>
 } {
   const queryOptions = getHealthControllerCheckQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> }
-
-  query.queryKey = queryOptions.queryKey
-
-  return query
-}
-
-/**
- * Get cash flow analysis grouped by category for a date range. Pending transactions are excluded. Exact equal-and-opposite posted transactions within the requested range are neutralized before aggregation. Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.
- */
-export const transactionAnalysisControllerGetAnalysis = (
-  params: TransactionAnalysisControllerGetAnalysisParams,
-  signal?: AbortSignal,
-) => {
-  return axios<TransactionAnalysisResponse>({
-    url: `/transaction-analysis`,
-    method: 'GET',
-    params,
-    signal,
-  })
-}
-
-export const getTransactionAnalysisControllerGetAnalysisQueryKey = (
-  params?: TransactionAnalysisControllerGetAnalysisParams,
-) => {
-  return [`/transaction-analysis`, ...(params ? [params] : [])] as const
-}
-
-export const getTransactionAnalysisControllerGetAnalysisQueryOptions = <
-  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetAnalysisParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-        TError,
-        TData
-      >
-    >
-  },
-) => {
-  const { query: queryOptions } = options ?? {}
-
-  const queryKey =
-    queryOptions?.queryKey ??
-    getTransactionAnalysisControllerGetAnalysisQueryKey(params)
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
-  > = ({ signal }) => transactionAnalysisControllerGetAnalysis(params, signal)
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type TransactionAnalysisControllerGetAnalysisQueryResult = NonNullable<
-  Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
->
-export type TransactionAnalysisControllerGetAnalysisQueryError = void
-
-export function useTransactionAnalysisControllerGetAnalysis<
-  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetAnalysisParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-          TError,
-          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
-        >,
-        'initialData'
-      >
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-export function useTransactionAnalysisControllerGetAnalysis<
-  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetAnalysisParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-          TError,
-          Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>
-        >,
-        'initialData'
-      >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-export function useTransactionAnalysisControllerGetAnalysis<
-  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetAnalysisParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-        TError,
-        TData
-      >
-    >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-
-export function useTransactionAnalysisControllerGetAnalysis<
-  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetAnalysisParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof transactionAnalysisControllerGetAnalysis>>,
-        TError,
-        TData
-      >
-    >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-} {
-  const queryOptions = getTransactionAnalysisControllerGetAnalysisQueryOptions(
-    params,
-    options,
-  )
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> }
-
-  query.queryKey = queryOptions.queryKey
-
-  return query
-}
-
-/**
- * Get unmatched posted transactions for a category drilldown within a date range. Transactions are neutralized using the same exact equal-and-opposite matching pipeline as the summary analysis before category and flow filtering. Returned rows include converted amounts using exchange rates anchored to the requested endDate.
- */
-export const transactionAnalysisControllerGetTransactions = (
-  params: TransactionAnalysisControllerGetTransactionsParams,
-  signal?: AbortSignal,
-) => {
-  return axios<TransactionAnalysisTransactionsResponse>({
-    url: `/transaction-analysis/transactions`,
-    method: 'GET',
-    params,
-    signal,
-  })
-}
-
-export const getTransactionAnalysisControllerGetTransactionsQueryKey = (
-  params?: TransactionAnalysisControllerGetTransactionsParams,
-) => {
-  return [
-    `/transaction-analysis/transactions`,
-    ...(params ? [params] : []),
-  ] as const
-}
-
-export const getTransactionAnalysisControllerGetTransactionsQueryOptions = <
-  TData = Awaited<
-    ReturnType<typeof transactionAnalysisControllerGetTransactions>
-  >,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetTransactionsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof transactionAnalysisControllerGetTransactions>
-        >,
-        TError,
-        TData
-      >
-    >
-  },
-) => {
-  const { query: queryOptions } = options ?? {}
-
-  const queryKey =
-    queryOptions?.queryKey ??
-    getTransactionAnalysisControllerGetTransactionsQueryKey(params)
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof transactionAnalysisControllerGetTransactions>>
-  > = ({ signal }) =>
-    transactionAnalysisControllerGetTransactions(params, signal)
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof transactionAnalysisControllerGetTransactions>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type TransactionAnalysisControllerGetTransactionsQueryResult =
-  NonNullable<
-    Awaited<ReturnType<typeof transactionAnalysisControllerGetTransactions>>
-  >
-export type TransactionAnalysisControllerGetTransactionsQueryError = void
-
-export function useTransactionAnalysisControllerGetTransactions<
-  TData = Awaited<
-    ReturnType<typeof transactionAnalysisControllerGetTransactions>
-  >,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetTransactionsParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof transactionAnalysisControllerGetTransactions>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof transactionAnalysisControllerGetTransactions>
-          >,
-          TError,
-          Awaited<
-            ReturnType<typeof transactionAnalysisControllerGetTransactions>
-          >
-        >,
-        'initialData'
-      >
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-export function useTransactionAnalysisControllerGetTransactions<
-  TData = Awaited<
-    ReturnType<typeof transactionAnalysisControllerGetTransactions>
-  >,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetTransactionsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof transactionAnalysisControllerGetTransactions>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof transactionAnalysisControllerGetTransactions>
-          >,
-          TError,
-          Awaited<
-            ReturnType<typeof transactionAnalysisControllerGetTransactions>
-          >
-        >,
-        'initialData'
-      >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-export function useTransactionAnalysisControllerGetTransactions<
-  TData = Awaited<
-    ReturnType<typeof transactionAnalysisControllerGetTransactions>
-  >,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetTransactionsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof transactionAnalysisControllerGetTransactions>
-        >,
-        TError,
-        TData
-      >
-    >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-
-export function useTransactionAnalysisControllerGetTransactions<
-  TData = Awaited<
-    ReturnType<typeof transactionAnalysisControllerGetTransactions>
-  >,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetTransactionsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof transactionAnalysisControllerGetTransactions>
-        >,
-        TError,
-        TData
-      >
-    >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-} {
-  const queryOptions =
-    getTransactionAnalysisControllerGetTransactionsQueryOptions(params, options)
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,

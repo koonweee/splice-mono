@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { CategoryAggregate } from './categoryAggregate'
+import type { BalanceAdjustment } from './balanceAdjustment'
 
 export interface TransactionAnalysisResponse {
   startDate: string
@@ -18,4 +19,5 @@ export interface TransactionAnalysisResponse {
   netFlow: number
   uncategorizedInflow: number
   uncategorizedOutflow: number
+  balanceAdjustments: Array<BalanceAdjustment>
 }
