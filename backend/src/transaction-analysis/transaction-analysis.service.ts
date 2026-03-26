@@ -84,16 +84,14 @@ export class TransactionAnalysisService {
     );
     const unmatchedTransactions =
       this.neutralizeTransactions(postedTransactions);
-    const {
-      balanceAdjustmentRows,
-      balanceAdjustments,
-    } = await this.getBalanceAdjustmentData(
-      startDate,
-      endDate,
-      userId,
-      preferredCurrency,
-      new Set(postedTransactions.map((transaction) => transaction.accountId)),
-    );
+    const { balanceAdjustmentRows, balanceAdjustments } =
+      await this.getBalanceAdjustmentData(
+        startDate,
+        endDate,
+        userId,
+        preferredCurrency,
+        new Set(postedTransactions.map((transaction) => transaction.accountId)),
+      );
 
     this.logger.log(
       {
@@ -467,8 +465,16 @@ export class TransactionAnalysisService {
             preferredCurrency,
             rateMap,
           ),
-          startBalance: adjustment.startBalance,
-          endBalance: adjustment.endBalance,
+          startBalance: this.convertBalanceToPreferredCurrency(
+            adjustment.startBalance,
+            preferredCurrency,
+            rateMap,
+          ),
+          endBalance: this.convertBalanceToPreferredCurrency(
+            adjustment.endBalance,
+            preferredCurrency,
+            rateMap,
+          ),
         },
       ];
     });
@@ -655,6 +661,22 @@ export class TransactionAnalysisService {
       preferredCurrency,
       rate,
     );
+  }
+
+  private convertBalanceToPreferredCurrency(
+    balance: SignedBalanceAmount,
+    preferredCurrency: string,
+    rateMap: Map<string, number>,
+  ): SignedBalanceAmount {
+    return {
+      amount: this.convertAmountToPreferredCurrency(
+        balance.amount,
+        balance.currency,
+        preferredCurrency,
+        rateMap,
+      ),
+      currency: preferredCurrency,
+    };
   }
 
   private toTransactionWithConvertedAmount(

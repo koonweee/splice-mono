@@ -1480,6 +1480,55 @@ describe('TransactionAnalysisService', () => {
       });
     });
 
+    it('converts foreign-currency balance adjustment start and end balances into the preferred currency', async () => {
+      const euroAccount = buildAccount({
+        id: 'acct-eur-converted',
+        accountName: 'Euro Savings',
+      });
+      const startSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-eur-converted',
+        snapshotDate: '2024-01-01',
+        amount: 1000,
+        currency: 'EUR',
+      });
+      const endSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-eur-converted',
+        snapshotDate: '2024-01-31',
+        amount: 2000,
+        currency: 'EUR',
+      });
+
+      mockTransactionRepository.find.mockResolvedValue([]);
+      mockAccountRepository.find.mockResolvedValue([euroAccount]);
+      mockSnapshotRows([startSnapshot, endSnapshot]);
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(
+        new Map([['EUR', 1.1]]),
+      );
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 1100,
+        totalOutflow: 0,
+        netFlow: 1100,
+        balanceAdjustments: [
+          expect.objectContaining({
+            accountId: 'acct-eur-converted',
+            currency: 'USD',
+            deltaAmount: 1100,
+            startBalance: {
+              amount: 1100,
+              currency: 'USD',
+            },
+            endBalance: {
+              amount: 2200,
+              currency: 'USD',
+            },
+          }),
+        ],
+      });
+    });
+
     it('sorts balance adjustment rows deterministically and uses a neutral unnamed-account fallback', async () => {
       const unnamedAccount = buildAccount({
         id: 'acct-c',
