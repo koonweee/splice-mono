@@ -5,6 +5,7 @@ import { AccountEntity } from '../../src/account/account.entity';
 import { CategoryEntity } from '../../src/category/category.entity';
 import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
+import { CryptoAccountType } from '../../src/types/AccountType';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import type { CreateAccountDto } from '../../src/types/Account';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
@@ -1331,6 +1332,48 @@ describe('TransactionAnalysisService', () => {
             transactionCount: 1,
           }),
         ],
+      });
+    });
+
+    it.each([
+      {
+        title: 'skips investment accounts even when snapshots imply a delta',
+        type: AccountType.Investment,
+      },
+      {
+        title: 'skips crypto wallet accounts even when snapshots imply a delta',
+        type: CryptoAccountType.CRYPTO_WALLET,
+      },
+    ])('$title', async ({ type }) => {
+      const nonCashAccount = buildAccount({
+        id: `acct-${type}-excluded`,
+        accountName: 'Non-cash account',
+        type,
+      });
+      const startSnapshot = buildBalanceSnapshot({
+        accountId: nonCashAccount.id,
+        snapshotDate: '2024-01-01',
+        amount: 3000,
+      });
+      const endSnapshot = buildBalanceSnapshot({
+        accountId: nonCashAccount.id,
+        snapshotDate: '2024-01-31',
+        amount: 4500,
+      });
+
+      mockTransactionRepository.find.mockResolvedValue([]);
+      mockAccountRepository.find.mockResolvedValue([nonCashAccount]);
+      mockSnapshotRows([startSnapshot, endSnapshot]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 0,
+        netFlow: 0,
+        balanceAdjustments: [],
+        inflows: [],
+        outflows: [],
       });
     });
 

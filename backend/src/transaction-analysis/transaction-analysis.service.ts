@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AccountType } from 'plaid';
 import { Between, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
@@ -357,7 +358,9 @@ export class TransactionAnalysisService {
       where: { userId },
     });
     const eligibleAccounts = accounts.filter(
-      (account) => !excludedAccountIds.has(account.id),
+      (account) =>
+        !excludedAccountIds.has(account.id) &&
+        account.type === AccountType.Depository,
     );
 
     if (eligibleAccounts.length === 0) {
