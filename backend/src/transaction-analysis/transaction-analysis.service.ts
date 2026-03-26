@@ -360,7 +360,7 @@ export class TransactionAnalysisService {
     const eligibleAccounts = accounts.filter(
       (account) =>
         !excludedAccountIds.has(account.id) &&
-        account.type === AccountType.Depository,
+        account.type === String(AccountType.Depository),
     );
 
     if (eligibleAccounts.length === 0) {
