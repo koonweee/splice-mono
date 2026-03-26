@@ -1,3 +1,4 @@
+import { AccountType } from 'plaid';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountEntity } from '../../src/account/account.entity';
@@ -5,6 +6,7 @@ import { CategoryEntity } from '../../src/category/category.entity';
 import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
+import type { CreateAccountDto } from '../../src/types/Account';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { CashflowAnalysisSurfaceService } from '../../src/transaction-analysis/cashflow-analysis-surface.service';
 import { TransactionAnalysisService } from '../../src/transaction-analysis/transaction-analysis.service';
@@ -119,7 +121,7 @@ function buildAccount(params: {
   id: string;
   accountName?: string | null;
   accountCustomName?: string | null;
-  type?: string;
+  type?: CreateAccountDto['type'];
 }): AccountEntity {
   const accountName =
     params.accountName === undefined ? 'Checking' : params.accountName;
@@ -130,7 +132,7 @@ function buildAccount(params: {
       name: accountName,
       customName: accountCustomName,
       mask: null,
-      type: params.type ?? 'depository',
+      type: params.type ?? AccountType.Depository,
       subType: null,
       externalAccountId: null,
       bankLinkId: null,
@@ -215,7 +217,9 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     userId: null as string | null,
     snapshotType: new Set<string>(),
     dateConstraints: [] as DateConstraint[],
-    orders: [{ field: 'snapshotDate', direction: 'DESC' as const }],
+    orders: [
+      { field: 'snapshotDate', direction: 'DESC' as const },
+    ] as Array<SnapshotOrder>,
     distinctOn: [] as string[],
     limit: null as number | null,
   };
@@ -401,7 +405,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     }
 
     const normalizedDirection = direction === 'DESC' ? 'DESC' : 'ASC';
-    const order = {
+    const order: SnapshotOrder = {
       field,
       direction: normalizedDirection,
     };
