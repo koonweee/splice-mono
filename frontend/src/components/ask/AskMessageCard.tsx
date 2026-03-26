@@ -1,15 +1,11 @@
 import { Alert, Paper, Stack, Text } from '@mantine/core'
-import type { AskAnswer, AskUIMessage } from '@/lib/ask-types'
+import type { AskUIMessage } from '@/lib/ask-types'
 import { getAskMetadata } from '@/lib/ask-chat'
 import { AskMarkdown } from './AskMarkdown'
-import { AskEvidencePanel } from './AskEvidencePanel'
 import styles from './ask.module.css'
 
 type AskMessageCardProps = {
   message: AskUIMessage
-  isSelected: boolean
-  showInlineEvidence: boolean
-  onSelectEvidence?: () => void
 }
 
 function getMessageText(message: AskUIMessage): string {
@@ -26,20 +22,14 @@ function getMessageText(message: AskUIMessage): string {
     .join('')
 }
 
-export function AskMessageCard({
-  message,
-  isSelected,
-  showInlineEvidence,
-  onSelectEvidence,
-}: AskMessageCardProps) {
-  const answer = getAskMetadata(message) as AskAnswer | undefined
+export function AskMessageCard({ message }: AskMessageCardProps) {
+  const answer = getAskMetadata(message)
   const isAssistant = message.role === 'assistant'
   const messageText = getMessageText(message)
   const askAnswerText = answer?.answerText
   const displayedText =
     askAnswerText && askAnswerText.trim().length > 0 ? askAnswerText : messageText
   const hasAskMarkdown = Boolean(isAssistant && displayedText.trim().length > 0)
-  const canSelectEvidence = isAssistant && answer !== undefined && onSelectEvidence !== undefined
 
   return (
     <Paper
@@ -51,23 +41,9 @@ export function AskMessageCard({
       }`}
     >
       <Stack gap="xs">
-        <div className={styles.messageHeader}>
-          <Text fw={600} size="sm">
-            {isAssistant ? 'Ask' : 'You'}
-          </Text>
-          {canSelectEvidence && (
-            <button
-              type="button"
-              className={`${styles.messageSelectButton} ${
-                isSelected ? styles.messageSelectButtonSelected : ''
-              }`}
-              aria-pressed={isSelected}
-              onClick={onSelectEvidence}
-            >
-              {isSelected ? 'Selected' : 'View evidence'}
-            </button>
-          )}
-        </div>
+        <Text fw={600} size="sm">
+          {isAssistant ? 'Ask' : 'You'}
+        </Text>
         {hasAskMarkdown ? (
           <AskMarkdown markdown={displayedText} />
         ) : (
@@ -78,11 +54,6 @@ export function AskMessageCard({
           >
             {displayedText}
           </Text>
-        )}
-        {showInlineEvidence && isAssistant && isSelected && (
-          <div className={styles.mobileEvidence}>
-            <AskEvidencePanel answer={answer} />
-          </div>
         )}
       </Stack>
     </Paper>

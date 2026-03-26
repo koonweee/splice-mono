@@ -12,12 +12,10 @@ import {
 } from 'typeorm';
 import type {
   AskComparePeriodsOptions,
-  AskComparePeriodsResult,
   AskEvidenceAggregate,
   AskTransactionSearchOptions,
   AskTransactionSearchResult,
   AskTransactionSummaryOptions,
-  AskTransactionSummaryResult,
 } from '../ask/ask.types';
 import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
@@ -31,6 +29,38 @@ import {
 } from '../types/Transaction';
 import { getDecimalPlaces, MoneySign } from '../types/MoneyWithSign';
 import { TransactionEntity } from './transaction.entity';
+
+interface LegacyAskRecurringTransaction {
+  merchantName: string;
+  cadence: 'monthly' | 'weekly' | 'unknown';
+  amount: number;
+  currency: string;
+}
+
+interface LegacyAskTransactionSummaryResult {
+  totalInflow: number;
+  totalOutflow: number;
+  net: number;
+  transactionCount: number;
+  topCategories: AskEvidenceAggregate[];
+  topMerchants: AskEvidenceAggregate[];
+  topAccounts: AskEvidenceAggregate[];
+  recurringTransactions: LegacyAskRecurringTransaction[];
+  matchedCount: number;
+  truncated: boolean;
+}
+
+interface LegacyAskComparePeriodsResult {
+  currentTotalOutflow: number;
+  previousTotalOutflow: number;
+  absoluteDelta: number;
+  percentDelta: number;
+  categoryDrivers: AskEvidenceAggregate[];
+  merchantDrivers: AskEvidenceAggregate[];
+  accountDrivers: AskEvidenceAggregate[];
+  matchedCount: number;
+  truncated: boolean;
+}
 
 @Injectable()
 export class TransactionService extends OwnedCrudService<
@@ -452,7 +482,7 @@ export class TransactionService extends OwnedCrudService<
       amount: number;
     }>,
     currency: string,
-  ): AskTransactionSummaryResult['recurringTransactions'] {
+  ): LegacyAskTransactionSummaryResult['recurringTransactions'] {
     const merchants = new Map<
       string,
       Array<{
@@ -509,7 +539,7 @@ export class TransactionService extends OwnedCrudService<
       .filter(
         (
           value,
-        ): value is AskTransactionSummaryResult['recurringTransactions'][number] =>
+        ): value is LegacyAskTransactionSummaryResult['recurringTransactions'][number] =>
           value !== null,
       )
       .slice(0, TransactionService.AGGREGATE_LIMIT);
@@ -518,7 +548,7 @@ export class TransactionService extends OwnedCrudService<
   async summarizeForAsk(
     userId: string,
     options: AskTransactionSummaryOptions,
-  ): Promise<AskTransactionSummaryResult> {
+  ): Promise<LegacyAskTransactionSummaryResult> {
     const matches = await this.findMatchingTransactions(userId, options);
     const { preferredCurrency, convertedTransactions } =
       await this.convertTransactionsToPreferredCurrency(
@@ -608,7 +638,7 @@ export class TransactionService extends OwnedCrudService<
   async compareForAsk(
     userId: string,
     options: AskComparePeriodsOptions,
-  ): Promise<AskComparePeriodsResult> {
+  ): Promise<LegacyAskComparePeriodsResult> {
     const current = await this.summarizeForAsk(userId, {
       startDate: options.currentStartDate,
       endDate: options.currentEndDate,
