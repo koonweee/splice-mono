@@ -21,6 +21,7 @@ import type {
   UpdateUserSettingsDto,
   UserSettings,
 } from '../types/UserSettings';
+import { normalizeUserSettings } from '../types/UserSettings';
 import { UserEntity } from './user.entity';
 
 @Injectable()
@@ -176,10 +177,13 @@ export class UserService {
     }
 
     // Merge existing settings with updates
-    const oldSettings = { ...entity.settings };
+    const oldSettings = normalizeUserSettings(entity.settings);
     const newSettings: UserSettings = {
       currency: settingsUpdate.currency ?? oldSettings.currency,
       timezone: settingsUpdate.timezone ?? oldSettings.timezone,
+      hideZeroBalanceAccounts:
+        settingsUpdate.hideZeroBalanceAccounts ??
+        oldSettings.hideZeroBalanceAccounts,
     };
     entity.settings = newSettings;
 

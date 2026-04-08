@@ -7,6 +7,7 @@ import {
   SegmentedControl,
   Select,
   Stack,
+  Switch,
   Text,
   Title,
   useMantineColorScheme,
@@ -96,6 +97,8 @@ export function SettingsPage() {
 
   const [currency, setCurrency] = useState<string>('')
   const [timezone, setTimezone] = useState<string>('')
+  const [hideZeroBalanceAccounts, setHideZeroBalanceAccounts] =
+    useState(false)
   const [hasChanges, setHasChanges] = useState(false)
 
   // Initialize form values when user data loads
@@ -103,6 +106,7 @@ export function SettingsPage() {
     if (user?.settings) {
       setCurrency(user.settings.currency ?? 'USD')
       setTimezone(user.settings.timezone ?? 'UTC')
+      setHideZeroBalanceAccounts(user.settings.hideZeroBalanceAccounts ?? false)
     }
   }, [user?.settings])
 
@@ -111,13 +115,18 @@ export function SettingsPage() {
     if (user?.settings) {
       const currencyChanged = currency !== (user.settings.currency ?? 'USD')
       const timezoneChanged = timezone !== (user.settings.timezone ?? 'UTC')
-      setHasChanges(currencyChanged || timezoneChanged)
+      const hideZeroBalanceAccountsChanged =
+        hideZeroBalanceAccounts !==
+        (user.settings.hideZeroBalanceAccounts ?? false)
+      setHasChanges(
+        currencyChanged || timezoneChanged || hideZeroBalanceAccountsChanged,
+      )
     }
-  }, [currency, timezone, user?.settings])
+  }, [currency, timezone, hideZeroBalanceAccounts, user?.settings])
 
   const handleSave = () => {
     updateSettingsMutation.mutate(
-      { data: { currency, timezone } },
+      { data: { currency, timezone, hideZeroBalanceAccounts } },
       {
         onSuccess: () => {
           // Invalidate user query to refresh the data
@@ -227,6 +236,23 @@ export function SettingsPage() {
                   Detected: {browserTimezone}
                 </Text>
               )}
+            </div>
+
+            <div>
+              <Title order={4} mb="xs">
+                Home Dashboard
+              </Title>
+              <Text size="sm" c="dimmed" mb="sm">
+                Hide zero-balance accounts from the Assets and Liabilities
+                sections on Home.
+              </Text>
+              <Switch
+                label="Hide 0 balance accounts"
+                checked={hideZeroBalanceAccounts}
+                onChange={(event) =>
+                  setHideZeroBalanceAccounts(event.currentTarget.checked)
+                }
+              />
             </div>
 
             <Group justify="flex-end" mt="md">

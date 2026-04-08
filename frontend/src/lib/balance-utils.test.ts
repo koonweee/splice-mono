@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { MoneyWithSignSign } from '../api/models'
-import { createMoneyWithSign, getSignedAmount } from './balance-utils'
+import {
+  createMoneyWithSign,
+  getSignedAmount,
+  isZeroBalanceAccount,
+} from './balance-utils'
 
 describe('balance-utils', () => {
   describe('getSignedAmount', () => {
@@ -70,6 +74,45 @@ describe('balance-utils', () => {
         money: { amount: 2500000, currency: 'BTC' },
         sign: MoneyWithSignSign.positive,
       })
+    })
+  })
+
+  describe('isZeroBalanceAccount', () => {
+    it('should return true for a zero effective balance', () => {
+      expect(
+        isZeroBalanceAccount({
+          effectiveBalance: {
+            money: { amount: 0, currency: 'USD' },
+            sign: MoneyWithSignSign.positive,
+          },
+        }),
+      ).toBe(true)
+    })
+
+    it('should return true for a zero converted balance', () => {
+      expect(
+        isZeroBalanceAccount({
+          effectiveBalance: {
+            money: { amount: 12345, currency: 'USD' },
+            sign: MoneyWithSignSign.positive,
+          },
+          convertedEffectiveBalance: {
+            money: { amount: 0, currency: 'EUR' },
+            sign: MoneyWithSignSign.negative,
+          },
+        }),
+      ).toBe(true)
+    })
+
+    it('should return false for a non-zero balance', () => {
+      expect(
+        isZeroBalanceAccount({
+          effectiveBalance: {
+            money: { amount: 1, currency: 'USD' },
+            sign: MoneyWithSignSign.positive,
+          },
+        }),
+      ).toBe(false)
     })
   })
 })
