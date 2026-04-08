@@ -4,6 +4,7 @@ import type { ProviderUserDetails } from '../types/ProviderUserDetails';
 import type { CreateUserDto, User, UserWithPassword } from '../types/User';
 import {
   DEFAULT_USER_SETTINGS,
+  normalizeUserSettings,
   type UserSettings,
 } from '../types/UserSettings';
 
@@ -35,10 +36,7 @@ export class UserEntity extends TimestampedEntity {
     const entity = new UserEntity();
     entity.email = dto.email;
     entity.hashedPassword = hashedPassword;
-    entity.settings = {
-      ...DEFAULT_USER_SETTINGS,
-      ...dto.settings,
-    };
+    entity.settings = normalizeUserSettings(dto.settings);
     entity.providerDetails = null;
     return entity;
   }
@@ -50,7 +48,7 @@ export class UserEntity extends TimestampedEntity {
     return {
       id: this.id,
       email: this.email,
-      settings: this.settings,
+      settings: normalizeUserSettings(this.settings),
       providerDetails: this.providerDetails ?? undefined,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
@@ -64,7 +62,7 @@ export class UserEntity extends TimestampedEntity {
     return {
       id: this.id,
       email: this.email,
-      settings: this.settings,
+      settings: normalizeUserSettings(this.settings),
       hashedPassword: this.hashedPassword,
       providerDetails: this.providerDetails ?? undefined,
       createdAt: this.createdAt,

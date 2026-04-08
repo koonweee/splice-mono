@@ -12,6 +12,8 @@ export const UserSettingsSchema = registerSchema(
     currency: z.string().default('USD'),
     /** User's timezone (IANA timezone string, e.g., 'America/New_York') */
     timezone: z.string().default('UTC'),
+    /** Hide zero-balance accounts from the home dashboard account lists */
+    hideZeroBalanceAccounts: z.boolean().default(false),
     // Future settings can be added here:
     // theme: z.enum(['light', 'dark', 'system']).default('system'),
     // locale: z.string().default('en-US'),
@@ -37,4 +39,14 @@ export type UpdateUserSettingsDto = z.infer<typeof UpdateUserSettingsDtoSchema>;
 export const DEFAULT_USER_SETTINGS: UserSettings = {
   currency: 'USD',
   timezone: 'UTC',
+  hideZeroBalanceAccounts: false,
 };
+
+export function normalizeUserSettings(
+  settings?: Partial<UserSettings> | null,
+): UserSettings {
+  return {
+    ...DEFAULT_USER_SETTINGS,
+    ...settings,
+  };
+}

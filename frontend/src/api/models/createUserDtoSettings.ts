@@ -9,4 +9,5 @@
 export type CreateUserDtoSettings = {
   currency?: string
   timezone?: string
+  hideZeroBalanceAccounts?: boolean
 }

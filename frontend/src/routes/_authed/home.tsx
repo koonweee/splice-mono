@@ -1,10 +1,15 @@
 import { Alert, Grid, Group, Loader, Select, Title } from '@mantine/core'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useMemo } from 'react'
+import { useUserControllerMe } from '../../api/clients/spliceAPI'
 import { AccountModal } from '../../components/AccountModal'
 import { AccountSection } from '../../components/AccountSection'
 import { NetWorthCard } from '../../components/NetWorthCard'
 import { useBalanceData } from '../../hooks/useBalanceData'
-import type { AccountSummaryData } from '../../lib/balance-utils'
+import {
+  isZeroBalanceAccount,
+  type AccountSummaryData,
+} from '../../lib/balance-utils'
 import { TIME_PERIOD_LABELS, TimePeriod } from '@/lib/types'
 
 type HomeSearch = {
@@ -48,6 +53,27 @@ function HomePage() {
   const { accountId, period = TimePeriod.month } = Route.useSearch()
   const navigate = useNavigate()
   const { data: dashboard, isLoading, error } = useBalanceData(period)
+  const { data: user } = useUserControllerMe()
+  const hideZeroBalanceAccounts =
+    user?.settings.hideZeroBalanceAccounts ?? false
+
+  const visibleAssets = useMemo(
+    () =>
+      dashboard?.assets.filter(
+        (account) =>
+          !hideZeroBalanceAccounts || !isZeroBalanceAccount(account),
+      ) ?? [],
+    [dashboard?.assets, hideZeroBalanceAccounts],
+  )
+
+  const visibleLiabilities = useMemo(
+    () =>
+      dashboard?.liabilities.filter(
+        (account) =>
+          !hideZeroBalanceAccounts || !isZeroBalanceAccount(account),
+      ) ?? [],
+    [dashboard?.liabilities, hideZeroBalanceAccounts],
+  )
 
   // Find the selected account from the dashboard data
   const selectedAccount: AccountSummaryData | undefined =
@@ -114,7 +140,7 @@ function HomePage() {
             <Grid.Col span={{ base: 12, md: 6 }}>
               <AccountSection
                 title="Assets"
-                accounts={dashboard.assets}
+                accounts={visibleAssets}
                 isLiability={false}
                 onAccountClick={handleAccountClick}
               />
@@ -123,7 +149,7 @@ function HomePage() {
             <Grid.Col span={{ base: 12, md: 6 }}>
               <AccountSection
                 title="Liabilities"
-                accounts={dashboard.liabilities}
+                accounts={visibleLiabilities}
                 isLiability={true}
                 onAccountClick={handleAccountClick}
               />
