@@ -120,7 +120,7 @@ const createMockQueryBuilder = (results: unknown[] = []) => ({
 const createMockUser = (currency = 'USD') => ({
   id: mockUserId,
   email: 'test@example.com',
-  settings: { currency, timezone: 'UTC' },
+  settings: { currency, timezone: 'UTC', hideZeroBalanceAccounts: false },
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 });

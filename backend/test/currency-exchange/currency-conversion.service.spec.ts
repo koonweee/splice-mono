@@ -47,7 +47,11 @@ describe('CurrencyConversionService', () => {
     it('should return user currency setting', async () => {
       mockUserService.findOne.mockResolvedValue({
         id: mockUserId,
-        settings: { currency: 'GBP', timezone: 'UTC' },
+        settings: {
+          currency: 'GBP',
+          timezone: 'UTC',
+          hideZeroBalanceAccounts: false,
+        },
       });
 
       const result = await service.getPreferredCurrency(mockUserId);

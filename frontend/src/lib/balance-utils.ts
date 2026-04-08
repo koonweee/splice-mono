@@ -72,6 +72,17 @@ export function resolveEffectiveBalance(
   return balance.convertedBalance ?? balance.balance
 }
 
+export function isZeroBalanceAccount(
+  account: Pick<
+    AccountSummaryData,
+    'effectiveBalance' | 'convertedEffectiveBalance'
+  >,
+): boolean {
+  const effectiveBalance =
+    account.convertedEffectiveBalance ?? account.effectiveBalance
+  return effectiveBalance.money.amount === 0
+}
+
 /**
  * Calculate net worth for a single date's balances
  * Net worth = sum of asset balances - sum of liability balances
