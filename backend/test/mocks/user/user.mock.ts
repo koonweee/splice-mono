@@ -17,7 +17,11 @@ export const mockTimestamps = {
 export const mockUser: User = {
   id: 'user-uuid-123',
   email: 'test@example.com',
-  settings: { currency: 'USD', timezone: 'UTC' },
+  settings: {
+    currency: 'USD',
+    timezone: 'UTC',
+    hideZeroBalanceAccounts: false,
+  },
   ...mockTimestamps,
 };
 
@@ -27,7 +31,11 @@ export const mockUser: User = {
 export const mockUser2: User = {
   id: 'user-uuid-456',
   email: 'test2@example.com',
-  settings: { currency: 'USD', timezone: 'UTC' },
+  settings: {
+    currency: 'USD',
+    timezone: 'UTC',
+    hideZeroBalanceAccounts: false,
+  },
   ...mockTimestamps,
 };
 
