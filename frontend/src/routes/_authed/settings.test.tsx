@@ -1,5 +1,5 @@
 import { MantineProvider, Title } from '@mantine/core'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SettingsPage } from './settings'
 import type * as ReactQuery from '@tanstack/react-query'
@@ -57,6 +57,7 @@ let meState: {
     settings: {
       currency: string | null
       timezone: string | null
+      hideZeroBalanceAccounts?: boolean | null
     }
   } | null
   isLoading: boolean
@@ -88,6 +89,7 @@ beforeEach(() => {
       settings: {
         currency: 'USD',
         timezone: 'UTC',
+        hideZeroBalanceAccounts: false,
       },
     },
     isLoading: false,
@@ -140,7 +142,9 @@ describe('SettingsPage', () => {
   it('keeps the PAT section after the existing settings card', () => {
     renderSettingsPage()
 
-    expect(screen.getByRole('heading', { name: /^settings$/i, level: 1 })).toBeTruthy()
+    expect(
+      screen.getByRole('heading', { name: /^settings$/i, level: 1 }),
+    ).toBeTruthy()
     expect(
       screen.getByRole('heading', { name: /personal access tokens/i, level: 3 }),
     ).toBeTruthy()
@@ -152,5 +156,23 @@ describe('SettingsPage', () => {
       settingsCard.compareDocumentPosition(patSection) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
+  })
+
+  it('saves the hide zero balance accounts setting', () => {
+    renderSettingsPage()
+
+    fireEvent.click(
+      screen.getByRole('switch', { name: /hide 0 balance accounts/i }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect(updateSettingsState.mutate).toHaveBeenCalledTimes(1)
+    expect(updateSettingsState.mutate.mock.calls[0][0]).toEqual({
+      data: {
+        currency: 'USD',
+        timezone: 'UTC',
+        hideZeroBalanceAccounts: true,
+      },
+    })
   })
 })

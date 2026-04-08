@@ -7,6 +7,12 @@ import { UserEntity } from '../../src/user/user.entity';
 import { UserService } from '../../src/user/user.service';
 import { mockCreateUserDto, mockLoginDto } from '../mocks/user/user.mock';
 
+const defaultSettings = {
+  currency: 'USD',
+  timezone: 'UTC',
+  hideZeroBalanceAccounts: false,
+};
+
 describe('UserService', () => {
   let service: UserService;
   let authService: AuthService;
@@ -70,7 +76,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockCreateUserDto.email;
       mockEntity.hashedPassword = 'hashed-password';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -107,7 +113,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockCreateUserDto.email;
       mockEntity.hashedPassword = 'hashed-password';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -139,7 +145,7 @@ describe('UserService', () => {
       const mockEntity = new UserEntity();
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockLoginDto.email;
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -191,7 +197,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = mockLoginDto.email;
       mockEntity.hashedPassword = 'invalid-hash-format';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.createdAt = new Date();
       mockEntity.updatedAt = new Date();
 
@@ -209,7 +215,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' } as any;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -220,6 +226,7 @@ describe('UserService', () => {
       expect(result).toBeDefined();
       expect(result?.id).toBe('user-uuid-123');
       expect(result?.email).toBe('test@example.com');
+      expect(result?.settings.hideZeroBalanceAccounts).toBe(false);
       expect(result).not.toHaveProperty('hashedPassword');
     });
 
@@ -238,7 +245,10 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'America/New_York' };
+      mockEntity.settings = {
+        ...defaultSettings,
+        timezone: 'America/New_York',
+      };
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
@@ -280,7 +290,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.providerDetails = {
         plaid: { userToken: 'plaid-user-token-123' },
       };
@@ -302,7 +312,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.providerDetails = null;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
@@ -319,7 +329,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.providerDetails = {
         other: { someField: 'value' },
       };
@@ -351,7 +361,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.providerDetails = null;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
@@ -383,7 +393,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.providerDetails = {
         simplefin: { existingField: 'value' },
       };
@@ -412,7 +422,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.providerDetails = {
         plaid: { userToken: 'old-token', otherField: 'will-be-removed' },
       };
@@ -455,7 +465,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.providerDetails = null;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
@@ -469,13 +479,19 @@ describe('UserService', () => {
         currency: 'EUR',
       });
 
-      expect(result).toEqual({ currency: 'EUR', timezone: 'UTC' });
+      expect(result).toEqual({
+        ...defaultSettings,
+        currency: 'EUR',
+      });
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         'user.settings-updated',
         expect.objectContaining({
           userId: 'user-uuid-123',
-          oldSettings: { currency: 'USD', timezone: 'UTC' },
-          newSettings: { currency: 'EUR', timezone: 'UTC' },
+          oldSettings: defaultSettings,
+          newSettings: {
+            ...defaultSettings,
+            currency: 'EUR',
+          },
         }),
       );
     });
@@ -485,7 +501,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.providerDetails = null;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
@@ -499,13 +515,19 @@ describe('UserService', () => {
         timezone: 'America/New_York',
       });
 
-      expect(result).toEqual({ currency: 'USD', timezone: 'America/New_York' });
+      expect(result).toEqual({
+        ...defaultSettings,
+        timezone: 'America/New_York',
+      });
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         'user.settings-updated',
         expect.objectContaining({
           userId: 'user-uuid-123',
-          oldSettings: { currency: 'USD', timezone: 'UTC' },
-          newSettings: { currency: 'USD', timezone: 'America/New_York' },
+          oldSettings: defaultSettings,
+          newSettings: {
+            ...defaultSettings,
+            timezone: 'America/New_York',
+          },
         }),
       );
     });
@@ -515,7 +537,7 @@ describe('UserService', () => {
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
       mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = { currency: 'USD', timezone: 'UTC' };
+      mockEntity.settings = defaultSettings;
       mockEntity.providerDetails = null;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
       mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
@@ -531,7 +553,33 @@ describe('UserService', () => {
         timezone: 'UTC',
       });
 
-      expect(result).toEqual({ currency: 'USD', timezone: 'UTC' });
+      expect(result).toEqual(defaultSettings);
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should update hideZeroBalanceAccounts without affecting currency or timezone events', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = defaultSettings;
+      mockEntity.providerDetails = null;
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
+
+      const result = await service.updateSettings('user-uuid-123', {
+        hideZeroBalanceAccounts: true,
+      });
+
+      expect(result).toEqual({
+        ...defaultSettings,
+        hideZeroBalanceAccounts: true,
+      });
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
