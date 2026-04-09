@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
 import { Between, In, Repository } from 'typeorm';
-import type { ExtendedAccountType } from '../types/AccountType';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { calculateEffectiveBalance as calculateSharedEffectiveBalance } from '../common/effective-balance';
@@ -344,11 +343,7 @@ export class BalanceQueryService {
       : this.createZeroBalance(account.currentBalance.money.currency);
 
     // Calculate effective balance based on account type
-    const effectiveBalance = this.calculateEffectiveBalance(
-      account.type,
-      availableBalance,
-      currentBalance,
-    );
+    const effectiveBalance = this.calculateEffectiveBalance(currentBalance);
 
     // Determine syncedAt (undefined if forward-filled or no snapshot)
     const isForwardFilled = snapshot && snapshot.snapshotDate !== targetDate;
@@ -383,15 +378,9 @@ export class BalanceQueryService {
    * - All other types: currentBalance
    */
   private calculateEffectiveBalance(
-    accountType: ExtendedAccountType,
-    availableBalance: SerializedMoneyWithSign,
     currentBalance: SerializedMoneyWithSign,
   ): SerializedMoneyWithSign {
-    return calculateSharedEffectiveBalance(
-      accountType,
-      availableBalance,
-      currentBalance,
-    );
+    return calculateSharedEffectiveBalance(currentBalance);
   }
 
   /**
