@@ -81,8 +81,8 @@ export class AccountService extends OwnedCrudService<
 
     accountEntity.currentBalance = BalanceColumns.fromMoneyWithSign(newBalance);
 
-    // For investment/brokerage accounts, effective balance = available + current,
-    // so set available to zero to avoid doubling the balance.
+    // Manual investment accounts only track a single balance value.
+    // Keep available at zero and treat current as the display/effective balance.
     const isInvestmentType =
       accountEntity.type === String(AccountType.Investment) ||
       accountEntity.type === String(AccountType.Brokerage);

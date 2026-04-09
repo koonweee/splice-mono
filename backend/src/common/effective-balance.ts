@@ -19,17 +19,7 @@ export function calculateEffectiveBalance(
     accountType === AccountType.Investment ||
     accountType === AccountType.Brokerage
   ) {
-    const totalAmount =
-      getSignedMoneyAmount(availableBalance) +
-      getSignedMoneyAmount(currentBalance);
-
-    return {
-      money: {
-        amount: Math.abs(totalAmount),
-        currency: availableBalance.money.currency,
-      },
-      sign: totalAmount >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE,
-    };
+    return currentBalance;
   }
 
   return currentBalance;

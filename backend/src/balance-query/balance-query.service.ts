@@ -379,7 +379,7 @@ export class BalanceQueryService {
 
   /**
    * Calculate effective balance based on account type.
-   * - Investment/brokerage accounts: availableBalance + currentBalance
+   * - Investment/brokerage accounts: currentBalance
    * - All other types: currentBalance
    */
   private calculateEffectiveBalance(
