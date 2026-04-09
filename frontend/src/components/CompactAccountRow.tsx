@@ -2,6 +2,7 @@ import dayjs from 'dayjs'
 import { Group, Text, Tooltip } from '@mantine/core'
 import { AlertTriangle } from 'lucide-react'
 import {
+  HIDDEN_BALANCE_PLACEHOLDER,
   formatAccountType,
   formatMoneyWithSign,
   formatPercent,
@@ -21,10 +22,12 @@ function isSyncStale(syncedAt?: string): boolean {
 
 export function CompactAccountRow({
   account,
+  balancesHidden,
   isLiability,
   onClick,
 }: {
   account: AccountSummaryData
+  balancesHidden: boolean
   isLiability: boolean
   onClick?: () => void
 }) {
@@ -71,24 +74,34 @@ export function CompactAccountRow({
         </Text>
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <Text size="sm" fw={600}>
-          {formatMoneyWithSign({ value: primaryBalance })}
+        <Text size="sm" fw={600} data-testid="account-primary-balance">
+          {balancesHidden
+            ? HIDDEN_BALANCE_PLACEHOLDER
+            : formatMoneyWithSign({ value: primaryBalance })}
         </Text>
         {originalBalance && (
-          <Text size="xs" c="dimmed">
-            {formatMoneyWithSign({ value: originalBalance, appendCurrency: true })}
+          <Text size="xs" c="dimmed" data-testid="account-original-balance">
+            {balancesHidden
+              ? HIDDEN_BALANCE_PLACEHOLDER
+              : formatMoneyWithSign({
+                  value: originalBalance,
+                  appendCurrency: true,
+                })}
           </Text>
         )}
         {changePercent && (
           <Text
             size="xs"
             c={getChangeColorMantine(isLiability, account.changePercent)}
+            data-testid="account-change-percent"
           >
             {changePercent}
           </Text>
         )}
         {!originalBalance && (
-          <Text size="xs" style={{ visibility: 'hidden' }}>{'\u00A0'}</Text>
+          <Text size="xs" style={{ visibility: 'hidden' }}>
+            {'\u00A0'}
+          </Text>
         )}
       </div>
     </Group>
