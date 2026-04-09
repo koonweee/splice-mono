@@ -5,6 +5,8 @@ import type { AccountSubType, AccountType, MoneyWithSign } from '../api/models'
 
 dayjs.extend(relativeTime)
 
+export const HIDDEN_BALANCE_PLACEHOLDER = '****'
+
 /**
  * Decimal places for currencies (smallest unit conversion)
  * Copied from backend/src/types/MoneyWithSign.ts
