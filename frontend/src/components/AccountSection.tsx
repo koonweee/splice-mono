@@ -70,11 +70,13 @@ function groupAccountsByType(accounts: Array<AccountSummaryData>): Array<{
 export function AccountSection({
   title,
   accounts,
+  balancesHidden,
   isLiability,
   onAccountClick,
 }: {
   title: string
   accounts: Array<AccountSummaryData>
+  balancesHidden: boolean
   isLiability: boolean
   onAccountClick: (account: AccountSummaryData) => void
 }) {
@@ -126,6 +128,7 @@ export function AccountSection({
                           {accountIndex > 0 && <Divider />}
                           <CompactAccountRow
                             account={account}
+                            balancesHidden={balancesHidden}
                             isLiability={isLiability}
                             onClick={() => onAccountClick(account)}
                           />
@@ -138,6 +141,7 @@ export function AccountSection({
                       {index > 0 && <Divider />}
                       <CompactAccountRow
                         account={account}
+                        balancesHidden={balancesHidden}
                         isLiability={isLiability}
                         onClick={() => onAccountClick(account)}
                       />

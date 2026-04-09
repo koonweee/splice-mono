@@ -1,4 +1,5 @@
 import { Alert, Grid, Group, Loader, Select, Title } from '@mantine/core'
+import { useLocalStorage } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { useUserControllerMe } from '../../api/clients/spliceAPI'
@@ -49,19 +50,25 @@ const PERIOD_OPTIONS = [
   },
 ]
 
-function HomePage() {
+export const HOME_BALANCES_HIDDEN_STORAGE_KEY = 'splice:home-balances-hidden'
+
+export function HomePage() {
   const { accountId, period = TimePeriod.month } = Route.useSearch()
   const navigate = useNavigate()
   const { data: dashboard, isLoading, error } = useBalanceData(period)
   const { data: user } = useUserControllerMe()
+  const [balancesHidden, setBalancesHidden] = useLocalStorage<boolean>({
+    key: HOME_BALANCES_HIDDEN_STORAGE_KEY,
+    defaultValue: false,
+    getInitialValueInEffect: false,
+  })
   const hideZeroBalanceAccounts =
     user?.settings.hideZeroBalanceAccounts ?? false
 
   const visibleAssets = useMemo(
     () =>
       dashboard?.assets.filter(
-        (account) =>
-          !hideZeroBalanceAccounts || !isZeroBalanceAccount(account),
+        (account) => !hideZeroBalanceAccounts || !isZeroBalanceAccount(account),
       ) ?? [],
     [dashboard?.assets, hideZeroBalanceAccounts],
   )
@@ -69,8 +76,7 @@ function HomePage() {
   const visibleLiabilities = useMemo(
     () =>
       dashboard?.liabilities.filter(
-        (account) =>
-          !hideZeroBalanceAccounts || !isZeroBalanceAccount(account),
+        (account) => !hideZeroBalanceAccounts || !isZeroBalanceAccount(account),
       ) ?? [],
     [dashboard?.liabilities, hideZeroBalanceAccounts],
   )
@@ -99,6 +105,10 @@ function HomePage() {
     if (value && isValidTimePeriod(value)) {
       navigate({ to: '/home', search: { accountId, period: value } })
     }
+  }
+
+  const handleToggleBalancesHidden = () => {
+    setBalancesHidden((current) => !current)
   }
 
   return (
@@ -130,7 +140,9 @@ function HomePage() {
       {dashboard && (
         <>
           <NetWorthCard
+            balancesHidden={balancesHidden}
             netWorth={dashboard.netWorth}
+            onToggleBalancesHidden={handleToggleBalancesHidden}
             changePercent={dashboard.changePercent}
             comparisonPeriod={dashboard.comparisonPeriod}
             chartData={dashboard.chartData}
@@ -141,6 +153,7 @@ function HomePage() {
               <AccountSection
                 title="Assets"
                 accounts={visibleAssets}
+                balancesHidden={balancesHidden}
                 isLiability={false}
                 onAccountClick={handleAccountClick}
               />
@@ -150,6 +163,7 @@ function HomePage() {
               <AccountSection
                 title="Liabilities"
                 accounts={visibleLiabilities}
+                balancesHidden={balancesHidden}
                 isLiability={true}
                 onAccountClick={handleAccountClick}
               />
