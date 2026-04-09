@@ -395,7 +395,7 @@ describe('BalanceQueryService', () => {
         ).toBe(100000);
       });
 
-      it('should sum available + current for investment accounts', async () => {
+      it('should use currentBalance for investment accounts', async () => {
         const accountEntity = createMockAccountEntity(
           'acc-1',
           AccountType.Investment,
@@ -417,13 +417,13 @@ describe('BalanceQueryService', () => {
           mockUserId,
         );
 
-        // effectiveBalance should be available + current for investment
+        // effectiveBalance should equal currentBalance for investment
         expect(
           result[0].balances['acc-1'].effectiveBalance.balance.money.amount,
-        ).toBe(150000);
+        ).toBe(100000);
       });
 
-      it('should sum available + current for brokerage accounts', async () => {
+      it('should use currentBalance for brokerage accounts', async () => {
         const accountEntity = createMockAccountEntity(
           'acc-1',
           AccountType.Brokerage,
@@ -445,10 +445,10 @@ describe('BalanceQueryService', () => {
           mockUserId,
         );
 
-        // effectiveBalance should be available + current for brokerage
+        // effectiveBalance should equal currentBalance for brokerage
         expect(
           result[0].balances['acc-1'].effectiveBalance.balance.money.amount,
-        ).toBe(100000);
+        ).toBe(70000);
       });
     });
 

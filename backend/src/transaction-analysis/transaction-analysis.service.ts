@@ -511,13 +511,8 @@ export class TransactionAnalysisService {
     account: AccountEntity,
     snapshot: BalanceSnapshotEntity,
   ): SignedBalanceAmount {
-    const availableBalance = snapshot.availableBalance.toMoneyWithSign();
     const currentBalance = snapshot.currentBalance.toMoneyWithSign();
-    const effectiveBalance = calculateEffectiveBalance(
-      account.type,
-      availableBalance,
-      currentBalance,
-    );
+    const effectiveBalance = calculateEffectiveBalance(currentBalance);
 
     return {
       amount:
