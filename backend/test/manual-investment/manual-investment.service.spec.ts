@@ -5,7 +5,6 @@ import dayjs from 'dayjs';
 import { AccountSubtype, AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
-import { BalanceSnapshotService } from '../../src/balance-snapshot/balance-snapshot.service';
 import { ManualInvestmentHoldingEntity } from '../../src/manual-investment/manual-investment-holding.entity';
 import { ManualInvestmentSnapshotEntity } from '../../src/manual-investment/manual-investment-snapshot.entity';
 import { ManualInvestmentService } from '../../src/manual-investment/manual-investment.service';
@@ -46,9 +45,11 @@ describe('ManualInvestmentService', () => {
   };
   const mockBalanceSnapshotRepository = {
     delete: jest.fn(),
-  };
-  const mockBalanceSnapshotService = {
-    upsert: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+    manager: {
+      transaction: jest.fn(),
+    },
   };
   const mockCurrencyExchangeService = {
     getRate: jest.fn(),
@@ -66,6 +67,22 @@ describe('ManualInvestmentService', () => {
     mockUserService.getTimezone.mockResolvedValue('UTC');
     mockCurrencyExchangeService.getRate.mockResolvedValue(1);
     mockPriceProvider.getHistoricalPrices.mockResolvedValue([]);
+    mockBalanceSnapshotRepository.manager.transaction.mockImplementation(
+      async (callback: (manager: {
+        getRepository: (entity: unknown) => unknown;
+      }) => Promise<unknown>) =>
+        callback({
+          getRepository: (entity: unknown) => {
+            if (entity === BalanceSnapshotEntity) {
+              return mockBalanceSnapshotRepository;
+            }
+            if (entity === AccountEntity) {
+              return mockAccountRepository;
+            }
+            throw new Error('Unexpected repository request');
+          },
+        }),
+    );
     mockPriceRepository.createQueryBuilder.mockReturnValue({
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
@@ -99,10 +116,6 @@ describe('ManualInvestmentService', () => {
         {
           provide: getRepositoryToken(BalanceSnapshotEntity),
           useValue: mockBalanceSnapshotRepository,
-        },
-        {
-          provide: BalanceSnapshotService,
-          useValue: mockBalanceSnapshotService,
         },
         {
           provide: CurrencyExchangeService,
@@ -157,6 +170,20 @@ describe('ManualInvestmentService', () => {
           { symbol: 'VOO', quantity: 10 },
           { symbol: ' voo ', quantity: 5 },
         ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('rejects unsupported non-US style symbols explicitly', async () => {
+    mockAccountRepository.findOne.mockResolvedValue(makeHoldingsAccount());
+
+    await expect(
+      service.replaceSnapshot('account-1', 'user-1', '2026-04-15', {
+        cashBalance: {
+          money: { amount: 10000, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        },
+        holdings: [{ symbol: 'BMW.DE', quantity: 1 }],
       }),
     ).rejects.toThrow(BadRequestException);
   });
@@ -273,38 +300,137 @@ describe('ManualInvestmentService', () => {
       holdings: [{ symbol: 'VOO', quantity: 2 }],
     });
 
+    expect(mockBalanceSnapshotRepository.manager.transaction).toHaveBeenCalled();
     expect(mockBalanceSnapshotRepository.delete).toHaveBeenCalledWith({
       accountId: 'account-1',
       userId: 'user-1',
       snapshotDate: expect.anything(),
       snapshotType: 'HOLDINGS_DERIVED',
     });
-    expect(mockBalanceSnapshotService.upsert).toHaveBeenCalledTimes(2);
-    expect(mockBalanceSnapshotService.upsert).toHaveBeenNthCalledWith(
+    expect(mockBalanceSnapshotRepository.save).toHaveBeenCalledTimes(2);
+    expect(mockBalanceSnapshotRepository.save).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
         accountId: 'account-1',
+        userId: 'user-1',
         snapshotDate,
         snapshotType: 'HOLDINGS_DERIVED',
         currentBalance: {
-          money: { amount: 30000, currency: 'USD' },
+          amount: 30000,
+          currency: 'USD',
+          sign: 'positive',
+        },
+        availableBalance: {
+          amount: 0,
+          currency: 'USD',
           sign: 'positive',
         },
       }),
-      'user-1',
     );
-    expect(mockBalanceSnapshotService.upsert).toHaveBeenNthCalledWith(
+    expect(mockBalanceSnapshotRepository.save).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         accountId: 'account-1',
+        userId: 'user-1',
         snapshotDate: today,
         snapshotType: 'HOLDINGS_DERIVED',
         currentBalance: {
-          money: { amount: 30200, currency: 'USD' },
+          amount: 30200,
+          currency: 'USD',
+          sign: 'positive',
+        },
+        availableBalance: {
+          amount: 0,
+          currency: 'USD',
           sign: 'positive',
         },
       }),
-      'user-1',
     );
+  });
+
+  it('does not delete existing derived snapshots when valuation fails before rebuild completes', async () => {
+    const account = makeHoldingsAccount();
+    const snapshotDate = '2026-04-15';
+    mockAccountRepository.findOne.mockResolvedValue(account);
+    mockSnapshotRepository.findOne.mockResolvedValueOnce({
+      id: 'snapshot-1',
+      accountId: account.id,
+      userId: account.userId,
+      snapshotDate,
+      cashBalance: {
+        toMoneyWithSign: () => ({
+          money: { amount: 10000, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        }),
+      },
+      holdings: [],
+    });
+    mockSnapshotRepository.save.mockResolvedValue({
+      id: 'snapshot-1',
+      accountId: account.id,
+      userId: account.userId,
+      snapshotDate,
+      cashBalance: {
+        toMoneyWithSign: () => ({
+          money: { amount: 10000, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        }),
+      },
+      holdings: [],
+    });
+    mockSnapshotRepository.find.mockResolvedValue([
+      {
+        id: 'snapshot-1',
+        accountId: account.id,
+        userId: account.userId,
+        snapshotDate,
+        cashBalance: {
+          toMoneyWithSign: () => ({
+            money: { amount: 10000, currency: 'USD' },
+            sign: MoneySign.POSITIVE,
+          }),
+        },
+        holdings: [
+          {
+            instrumentId: 'instrument-1',
+            symbol: 'VOO',
+            quantity: 2,
+          },
+        ],
+      },
+    ]);
+    mockInstrumentRepository.findOne.mockResolvedValue(null);
+    mockInstrumentRepository.save.mockResolvedValue({
+      id: 'instrument-1',
+      symbol: 'VOO',
+      providerName: 'stooq',
+      providerSymbol: 'voo.us',
+      exchange: 'US',
+      priceCurrency: 'USD',
+      displayName: null,
+    });
+    mockInstrumentRepository.findByIds.mockResolvedValue([
+      {
+        id: 'instrument-1',
+        providerSymbol: 'voo.us',
+        priceCurrency: 'USD',
+      },
+    ]);
+    mockHoldingRepository.save.mockResolvedValue([]);
+    mockPriceProvider.getHistoricalPrices.mockRejectedValue(
+      new Error('price provider unavailable'),
+    );
+
+    await expect(
+      service.replaceSnapshot('account-1', 'user-1', snapshotDate, {
+        cashBalance: {
+          money: { amount: 10000, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        },
+        holdings: [{ symbol: 'VOO', quantity: 2 }],
+      }),
+    ).rejects.toThrow('price provider unavailable');
+
+    expect(mockBalanceSnapshotRepository.delete).not.toHaveBeenCalled();
   });
 });

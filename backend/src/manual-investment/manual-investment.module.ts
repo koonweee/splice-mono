@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountModule } from '../account/account.module';
-import { BalanceSnapshotModule } from '../balance-snapshot/balance-snapshot.module';
 import { CurrencyExchangeModule } from '../currency-exchange/currency-exchange.module';
 import { UserModule } from '../user/user.module';
 import { ManualInvestmentHoldingEntity } from './manual-investment-holding.entity';
@@ -25,7 +24,6 @@ import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.enti
       SecurityPriceDailyEntity,
     ]),
     AccountModule,
-    BalanceSnapshotModule,
     CurrencyExchangeModule,
     UserModule,
   ],

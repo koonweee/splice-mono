@@ -11,6 +11,7 @@ import {
 import { notifications } from '@mantine/notifications'
 import { IconPlus, IconTrash } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
+import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { getAccountControllerFindAllQueryKey } from '../../api/clients/spliceAPI'
 import {
@@ -60,7 +61,7 @@ export function UpdateHoldingsModal({
       return
     }
 
-    const fallbackDate = new Date().toISOString().split('T')[0]
+    const fallbackDate = dayjs().format('YYYY-MM-DD')
     setSnapshotDate(snapshot?.snapshotDate ?? fallbackDate)
 
     const signedCash =
@@ -157,6 +158,7 @@ export function UpdateHoldingsModal({
           label="Snapshot Date"
           type="date"
           value={snapshotDate}
+          disabled={!!snapshot}
           onChange={(event) => setSnapshotDate(event.currentTarget.value)}
         />
         <NumberInput

@@ -10,10 +10,15 @@ import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { AccountSubtype, AccountType } from 'plaid';
-import { Between, IsNull, LessThanOrEqual, Repository } from 'typeorm';
+import {
+  Between,
+  EntityManager,
+  IsNull,
+  LessThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
-import { BalanceSnapshotService } from '../balance-snapshot/balance-snapshot.service';
 import { BalanceColumns } from '../common/balance.columns';
 import { CurrencyExchangeService } from '../currency-exchange/currency-exchange.service';
 import {
@@ -37,6 +42,7 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const HOLDINGS_MODE = 'holdings';
+const SUPPORTED_US_SYMBOL_PATTERN = /^[A-Z]{1,5}(\.[A-Z])?$/;
 const SUPPORTED_INVESTMENT_SUBTYPES = new Set<string | null>([
   AccountSubtype.Brokerage,
   AccountSubtype._401k,
@@ -66,7 +72,6 @@ export class ManualInvestmentService {
     private readonly priceRepository: Repository<SecurityPriceDailyEntity>,
     @InjectRepository(BalanceSnapshotEntity)
     private readonly balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
-    private readonly balanceSnapshotService: BalanceSnapshotService,
     private readonly currencyExchangeService: CurrencyExchangeService,
     private readonly userService: UserService,
     private readonly priceProvider: StooqSecurityPriceProvider,
@@ -237,22 +242,26 @@ export class ManualInvestmentService {
       order: { snapshotDate: 'ASC' },
     });
 
-    await this.balanceSnapshotRepository.delete({
-      accountId: account.id,
-      userId: account.userId,
-      snapshotDate: Between(startDate, endDate),
-      snapshotType: BalanceSnapshotType.HOLDINGS_DERIVED,
-    });
-
     if (snapshots.length === 0) {
-      account.currentBalance = BalanceColumns.fromMoneyWithSign(
-        this.createZeroBalance(account.currentBalance.currency),
+      await this.balanceSnapshotRepository.manager.transaction(
+        async (entityManager) => {
+          await this.deleteDerivedSnapshots(
+            entityManager,
+            account,
+            startDate,
+            endDate,
+          );
+
+          account.currentBalance = BalanceColumns.fromMoneyWithSign(
+            this.createZeroBalance(account.currentBalance.currency),
+          );
+          account.availableBalance = BalanceColumns.fromMoneyWithSign(
+            this.createZeroBalance(account.currentBalance.currency),
+          );
+          account.lastValuationAt = null;
+          await entityManager.getRepository(AccountEntity).save(account);
+        },
       );
-      account.availableBalance = BalanceColumns.fromMoneyWithSign(
-        this.createZeroBalance(account.currentBalance.currency),
-      );
-      account.lastValuationAt = null;
-      await this.accountRepository.save(account);
       return;
     }
 
@@ -267,6 +276,11 @@ export class ManualInvestmentService {
     let currentDate = dayjs(startDate);
     const finalDate = dayjs(endDate);
     let latestDerivedBalance: SerializedMoneyWithSign | null = null;
+    const derivedSnapshots: Array<{
+      snapshotDate: string;
+      currentBalance: SerializedMoneyWithSign;
+      availableBalance: SerializedMoneyWithSign;
+    }> = [];
 
     while (currentDate.diff(finalDate, 'day') <= 0) {
       const dateStr = currentDate.format('YYYY-MM-DD');
@@ -280,33 +294,100 @@ export class ManualInvestmentService {
           dateStr,
         );
 
-        await this.balanceSnapshotService.upsert(
-          {
-            accountId: account.id,
-            currentBalance: balance,
-            availableBalance: this.createZeroBalance(
-              account.currentBalance.currency,
-            ),
-            snapshotType: BalanceSnapshotType.HOLDINGS_DERIVED,
-            snapshotDate: dateStr,
-          },
-          account.userId,
-        );
+        derivedSnapshots.push({
+          snapshotDate: dateStr,
+          currentBalance: balance,
+          availableBalance: this.createZeroBalance(
+            account.currentBalance.currency,
+          ),
+        });
         latestDerivedBalance = balance;
       }
 
       currentDate = currentDate.add(1, 'day');
     }
 
-    account.currentBalance = BalanceColumns.fromMoneyWithSign(
-      latestDerivedBalance ??
-        this.createZeroBalance(account.currentBalance.currency),
+    await this.balanceSnapshotRepository.manager.transaction(
+      async (entityManager) => {
+        await this.deleteDerivedSnapshots(
+          entityManager,
+          account,
+          startDate,
+          endDate,
+        );
+
+        for (const snapshot of derivedSnapshots) {
+          await this.upsertDerivedSnapshot(entityManager, account, snapshot);
+        }
+
+        account.currentBalance = BalanceColumns.fromMoneyWithSign(
+          latestDerivedBalance ??
+            this.createZeroBalance(account.currentBalance.currency),
+        );
+        account.availableBalance = BalanceColumns.fromMoneyWithSign(
+          this.createZeroBalance(account.currentBalance.currency),
+        );
+        account.lastValuationAt = new Date();
+        await entityManager.getRepository(AccountEntity).save(account);
+      },
     );
-    account.availableBalance = BalanceColumns.fromMoneyWithSign(
-      this.createZeroBalance(account.currentBalance.currency),
+  }
+
+  private async deleteDerivedSnapshots(
+    entityManager: EntityManager,
+    account: AccountEntity,
+    startDate: string,
+    endDate: string,
+  ): Promise<void> {
+    await entityManager.getRepository(BalanceSnapshotEntity).delete({
+      accountId: account.id,
+      userId: account.userId,
+      snapshotDate: Between(startDate, endDate),
+      snapshotType: BalanceSnapshotType.HOLDINGS_DERIVED,
+    });
+  }
+
+  private async upsertDerivedSnapshot(
+    entityManager: EntityManager,
+    account: AccountEntity,
+    snapshot: {
+      snapshotDate: string;
+      currentBalance: SerializedMoneyWithSign;
+      availableBalance: SerializedMoneyWithSign;
+    },
+  ): Promise<void> {
+    const repository = entityManager.getRepository(BalanceSnapshotEntity);
+    const existing = await repository.findOne({
+      where: {
+        accountId: account.id,
+        userId: account.userId,
+        snapshotDate: snapshot.snapshotDate,
+      },
+    });
+
+    if (existing) {
+      existing.currentBalance = BalanceColumns.fromMoneyWithSign(
+        snapshot.currentBalance,
+      );
+      existing.availableBalance = BalanceColumns.fromMoneyWithSign(
+        snapshot.availableBalance,
+      );
+      existing.snapshotType = BalanceSnapshotType.HOLDINGS_DERIVED;
+      await repository.save(existing);
+      return;
+    }
+
+    const entity = BalanceSnapshotEntity.fromDto(
+      {
+        accountId: account.id,
+        currentBalance: snapshot.currentBalance,
+        availableBalance: snapshot.availableBalance,
+        snapshotDate: snapshot.snapshotDate,
+        snapshotType: BalanceSnapshotType.HOLDINGS_DERIVED,
+      },
+      account.userId,
     );
-    account.lastValuationAt = new Date();
-    await this.accountRepository.save(account);
+    await repository.save(entity);
   }
 
   private async loadInstruments(
@@ -506,9 +587,17 @@ export class ManualInvestmentService {
   }
 
   private validateHoldings(dto: ReplaceManualInvestmentSnapshotDto): void {
-    const symbols = dto.holdings.map((holding) =>
-      holding.symbol.trim().toUpperCase(),
-    );
+    const symbols = dto.holdings.map((holding) => {
+      const normalizedSymbol = holding.symbol.trim().toUpperCase();
+
+      if (!SUPPORTED_US_SYMBOL_PATTERN.test(normalizedSymbol)) {
+        throw new BadRequestException(
+          `Unsupported symbol "${holding.symbol}". Holdings mode currently supports US-listed equity, ETF, and mutual fund tickers only.`,
+        );
+      }
+
+      return normalizedSymbol;
+    });
     const duplicates = symbols.filter(
       (symbol, index) => symbols.indexOf(symbol) !== index,
     );
