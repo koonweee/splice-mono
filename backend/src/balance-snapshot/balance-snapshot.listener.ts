@@ -80,6 +80,14 @@ export class BalanceSnapshotListener {
   async handleManualAccountUpdate(
     event: ManualAccountCreatedEvent | ManualAccountBalanceUpdatedEvent,
   ): Promise<void> {
+    if (event.account.manualValuationMode === 'holdings') {
+      this.logger.log(
+        { accountId: event.account.id },
+        'Skipping manual balance snapshot for holdings-mode account',
+      );
+      return;
+    }
+
     const eventType =
       event instanceof ManualAccountCreatedEvent
         ? 'manual_created'

@@ -5,6 +5,7 @@ import {
   BalanceSnapshotEvents,
   BalanceSnapshotUpdatedEvent,
 } from '../events/balance-snapshot.events';
+import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import { UserEvents, UserSettingsUpdatedEvent } from '../events/user.events';
 import { CurrencyBackfillService } from './currency-backfill.service';
 
@@ -70,6 +71,10 @@ export class CurrencyExchangeListener {
   handleBalanceSnapshotChanged(
     event: BalanceSnapshotCreatedEvent | BalanceSnapshotUpdatedEvent,
   ): void {
+    if (event.snapshot.snapshotType === BalanceSnapshotType.HOLDINGS_DERIVED) {
+      return;
+    }
+
     const eventType =
       event instanceof BalanceSnapshotCreatedEvent ? 'created' : 'updated';
 

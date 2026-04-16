@@ -15,6 +15,8 @@ export const AccountTypeSchema = z.union([
 ]);
 
 export const AccountSubTypeSchema = z.nativeEnum(AccountSubtype);
+export const ManualValuationModeSchema = z.enum(['simple_balance', 'holdings']);
+export type ManualValuationMode = z.infer<typeof ManualValuationModeSchema>;
 
 export const AccountSchema = registerSchema(
   'Account',
@@ -35,6 +37,12 @@ export const AccountSchema = registerSchema(
       bankLink: SanitizedBankLinkSchema.nullable().optional(),
       /** Latest non-forward-filled snapshot sync time */
       syncedAt: z.date().optional(),
+      /** Manual investment valuation mode for manual investment accounts */
+      manualValuationMode: ManualValuationModeSchema.nullable().optional(),
+      /** Timestamp when the user last changed holdings snapshots */
+      lastUserSnapshotAt: z.date().nullable().optional(),
+      /** Timestamp when holdings were last valued successfully */
+      lastValuationAt: z.date().nullable().optional(),
     })
     .merge(CurrentAndAvailableBalanceSchema)
     .merge(OwnedSchema),
@@ -60,6 +68,8 @@ export const CreateAccountDtoSchema = registerSchema(
       bankLinkId: z.string().nullable().optional(),
       /** Raw API account data from provider */
       rawApiAccount: APIAccountSchema.nullable().optional(),
+      /** Manual investment valuation mode for manual investment accounts */
+      manualValuationMode: ManualValuationModeSchema.nullable().optional(),
     })
     .merge(CurrentAndAvailableBalanceSchema),
 );

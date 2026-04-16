@@ -198,6 +198,22 @@ describe('AccountService', () => {
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
+    it('should not emit ManualAccountCreatedEvent for holdings-mode manual investment accounts', async () => {
+      const holdingsCreateDto = {
+        ...mockCreateManualAccountDto,
+        type: AccountType.Investment,
+        subType: AccountSubtype.Brokerage,
+        manualValuationMode: 'holdings' as const,
+      };
+      const mockEntity = AccountEntity.fromDto(holdingsCreateDto, mockUserId);
+      mockEntity.id = 'holdings-uuid';
+      mockRepository.save.mockResolvedValue(mockEntity);
+
+      await service.create(holdingsCreateDto, mockUserId);
+
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
     it('should associate BankLink when bankLinkId is provided', async () => {
       const createDtoWithBankLink = {
         ...mockCreateAccountDto,
@@ -283,10 +299,9 @@ describe('AccountService', () => {
           updatedAt: new Date('2026-03-20T12:00:00Z'),
         },
       ];
-      mockSnapshotRepository.find.mockImplementation(async ({ where }) => {
-        const blockedType = (where.snapshotType as { _value: string })._value;
-        return rows.filter((row) => row.snapshotType !== blockedType);
-      });
+      mockSnapshotRepository.find.mockResolvedValue(
+        rows.filter((row) => row.snapshotType === BalanceSnapshotType.SYNC),
+      );
 
       const result = await service.findOne('test-id', mockUserId);
       expect(mockSnapshotRepository.find).toHaveBeenCalledWith(
@@ -415,10 +430,9 @@ describe('AccountService', () => {
           updatedAt: new Date('2026-03-22T12:00:00Z'),
         },
       ];
-      mockSnapshotRepository.find.mockImplementation(async ({ where }) => {
-        const blockedType = (where.snapshotType as { _value: string })._value;
-        return rows.filter((row) => row.snapshotType !== blockedType);
-      });
+      mockSnapshotRepository.find.mockResolvedValue(
+        rows.filter((row) => row.snapshotType === BalanceSnapshotType.SYNC),
+      );
 
       const result = await service.findAll(mockUserId);
 
@@ -655,6 +669,53 @@ describe('AccountService', () => {
         }),
       );
     });
+
+    it('should reject direct balance field updates for holdings-mode accounts', async () => {
+      const holdingsAccountDto = {
+        ...mockCreateManualAccountDto,
+        type: AccountType.Investment,
+        subType: AccountSubtype.Brokerage,
+        manualValuationMode: 'holdings' as const,
+      };
+      const entity = AccountEntity.fromDto(holdingsAccountDto, mockUserId);
+      entity.id = 'holdings-id';
+      mockRepository.findOne.mockResolvedValue(entity);
+
+      await expect(
+        service.update(
+          'holdings-id',
+          {
+            currentBalance: {
+              money: { amount: 1000, currency: 'USD' },
+              sign: MoneySign.POSITIVE,
+            },
+          },
+          mockUserId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject changing manual valuation mode after account creation', async () => {
+      const entity = AccountEntity.fromDto(
+        {
+          ...mockCreateManualAccountDto,
+          type: AccountType.Investment,
+          subType: AccountSubtype.Brokerage,
+          manualValuationMode: 'simple_balance' as const,
+        },
+        mockUserId,
+      );
+      entity.id = 'mode-id';
+      mockRepository.findOne.mockResolvedValue(entity);
+
+      await expect(
+        service.update(
+          'mode-id',
+          { manualValuationMode: 'holdings' },
+          mockUserId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('updateManualBalance', () => {
@@ -774,6 +835,24 @@ describe('AccountService', () => {
 
       expect(mockRepository.save).not.toHaveBeenCalled();
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when account uses holdings mode', async () => {
+      const holdingsEntity = AccountEntity.fromDto(
+        {
+          ...mockCreateManualAccountDto,
+          type: AccountType.Investment,
+          subType: AccountSubtype.Brokerage,
+          manualValuationMode: 'holdings',
+        },
+        mockUserId,
+      );
+      holdingsEntity.id = 'holdings-id';
+      mockRepository.findOne.mockResolvedValue(holdingsEntity);
+
+      await expect(
+        service.updateManualBalance('holdings-id', mockUserId, newBalance),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

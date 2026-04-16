@@ -1,5 +1,8 @@
 import { Box, Button, Group, Loader, Modal, Stack, Text } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { useDisclosure } from '@mantine/hooks'
+import { useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
 import {
@@ -8,6 +11,18 @@ import {
   formatRelativeTime,
 } from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
+import {
+  manualInvestmentQueryKeys,
+  useDeleteManualInvestmentSnapshot,
+  useManualInvestmentSnapshots,
+  type ManualInvestmentSnapshot,
+} from '../api/manualInvestment'
+import {
+  getAccountControllerFindAllQueryKey,
+  getBalanceQueryControllerGetAllBalancesQueryKey,
+  getBalanceQueryControllerGetBalancesQueryKey,
+} from '../api/clients/spliceAPI'
+import { UpdateHoldingsModal } from './accounts/UpdateHoldingsModal'
 import { UpdateBalanceModal } from './accounts/UpdateBalanceModal'
 import { Chart } from './Chart'
 import type { TimePeriod } from '../lib/types'
@@ -31,6 +46,11 @@ export function AccountModal({
     updateModalOpened,
     { open: openUpdateModal, close: closeUpdateModal },
   ] = useDisclosure(false)
+  const queryClient = useQueryClient()
+  const deleteSnapshot = useDeleteManualInvestmentSnapshot()
+  const [selectedSnapshot, setSelectedSnapshot] = useState<
+    ManualInvestmentSnapshot | undefined
+  >(undefined)
 
   const { data: balanceHistory, isLoading } = useAccountBalanceHistory(
     account?.id,
@@ -41,6 +61,11 @@ export function AccountModal({
   // Get account from balance history if available
   const fullAccount = balanceHistory.latestBalance?.account
   const isManual = !!fullAccount && !fullAccount.bankLinkId
+  const isHoldingsMode = fullAccount?.manualValuationMode === 'holdings'
+  const { data: snapshots = [] } = useManualInvestmentSnapshots(
+    fullAccount?.id,
+    opened && !!fullAccount?.id && isHoldingsMode,
+  )
 
   // Get balance info from the latest balance result or fall back to account summary
   const latestBalance = balanceHistory.latestBalance
@@ -55,6 +80,50 @@ export function AccountModal({
             : undefined,
       }
     : undefined
+
+  const handleOpenHoldingsModal = (snapshot?: ManualInvestmentSnapshot) => {
+    setSelectedSnapshot(snapshot)
+    openUpdateModal()
+  }
+
+  const handleCloseHoldingsModal = () => {
+    setSelectedSnapshot(undefined)
+    closeUpdateModal()
+  }
+
+  const handleDeleteSnapshot = (snapshotDate: string) => {
+    if (!fullAccount) {
+      return
+    }
+
+    deleteSnapshot.mutate(
+      {
+        accountId: fullAccount.id,
+        date: snapshotDate,
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: getAccountControllerFindAllQueryKey(),
+          })
+          queryClient.invalidateQueries({
+            queryKey: getBalanceQueryControllerGetBalancesQueryKey(),
+          })
+          queryClient.invalidateQueries({
+            queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
+          })
+          queryClient.invalidateQueries({
+            queryKey: manualInvestmentQueryKeys.all(fullAccount.id),
+          })
+          notifications.show({
+            title: 'Snapshot Deleted',
+            message: 'The dated holdings snapshot was deleted.',
+            color: 'green',
+          })
+        },
+      },
+    )
+  }
 
   return (
     <>
@@ -81,9 +150,13 @@ export function AccountModal({
                       <Button
                         variant="light"
                         size="xs"
-                        onClick={openUpdateModal}
+                        onClick={() =>
+                          isHoldingsMode
+                            ? handleOpenHoldingsModal(selectedSnapshot ?? snapshots[0])
+                            : openUpdateModal()
+                        }
                       >
-                        Update Balance
+                        {isHoldingsMode ? 'Update Holdings' : 'Update Balance'}
                       </Button>
                     )}
                   </Group>
@@ -112,13 +185,82 @@ export function AccountModal({
                   </Group>
                 )}
 
-                {balanceHistory.latestSyncedAt && (
+                {balanceHistory.latestSyncedAt && !isHoldingsMode && (
                   <Group justify="space-between">
                     <Text c="dimmed">Last synced</Text>
                     <Text>
                       {formatRelativeTime(balanceHistory.latestSyncedAt)}
                     </Text>
                   </Group>
+                )}
+
+                {isHoldingsMode && (
+                  <>
+                    {fullAccount.lastUserSnapshotAt && (
+                      <Group justify="space-between">
+                        <Text c="dimmed">Positions updated</Text>
+                        <Text>{formatRelativeTime(fullAccount.lastUserSnapshotAt)}</Text>
+                      </Group>
+                    )}
+                    {fullAccount.lastValuationAt && (
+                      <Group justify="space-between">
+                        <Text c="dimmed">Last valued</Text>
+                        <Text>{formatRelativeTime(fullAccount.lastValuationAt)}</Text>
+                      </Group>
+                    )}
+                    <Stack gap="xs" mt="sm">
+                      <Group justify="space-between">
+                        <Text fw={500}>Holdings snapshots</Text>
+                        <Button
+                          variant="subtle"
+                          size="xs"
+                          onClick={() => handleOpenHoldingsModal(undefined)}
+                        >
+                          Add Snapshot
+                        </Button>
+                      </Group>
+                      {snapshots.length === 0 && (
+                        <Text c="dimmed" size="sm">
+                          No holdings snapshots yet.
+                        </Text>
+                      )}
+                      {snapshots.map((snapshot) => (
+                        <Group
+                          key={snapshot.id}
+                          justify="space-between"
+                          align="center"
+                        >
+                          <div>
+                            <Text size="sm" fw={500}>
+                              {snapshot.snapshotDate}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {snapshot.holdings.length} holdings
+                            </Text>
+                          </div>
+                          <Group gap="xs">
+                            <Button
+                              variant="light"
+                              size="xs"
+                              onClick={() => handleOpenHoldingsModal(snapshot)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="subtle"
+                              color="red"
+                              size="xs"
+                              onClick={() =>
+                                handleDeleteSnapshot(snapshot.snapshotDate)
+                              }
+                            >
+                              Delete
+                            </Button>
+                          </Group>
+                        </Group>
+                      ))}
+                    </Stack>
+                  </>
                 )}
               </>
             )}
@@ -141,11 +283,20 @@ export function AccountModal({
         )}
       </Modal>
 
-      {isManual && fullAccount && (
+      {isManual && fullAccount && !isHoldingsMode && (
         <UpdateBalanceModal
           opened={updateModalOpened}
           onClose={closeUpdateModal}
           account={fullAccount}
+        />
+      )}
+
+      {isManual && fullAccount && isHoldingsMode && (
+        <UpdateHoldingsModal
+          opened={updateModalOpened}
+          onClose={handleCloseHoldingsModal}
+          account={fullAccount}
+          snapshot={selectedSnapshot}
         />
       )}
     </>

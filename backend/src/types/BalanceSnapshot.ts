@@ -15,6 +15,8 @@ export enum BalanceSnapshotType {
   FORWARD_FILL = 'FORWARD_FILL',
   /** Balance imported from CSV */
   CSV_IMPORT = 'CSV_IMPORT',
+  /** Balance derived from manual investment holdings valuation */
+  HOLDINGS_DERIVED = 'HOLDINGS_DERIVED',
 }
 
 export const BalanceSnapshotTypeSchema = z.nativeEnum(BalanceSnapshotType);

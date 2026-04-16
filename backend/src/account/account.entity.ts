@@ -50,6 +50,18 @@ export class AccountEntity extends OwnedEntity {
   @Column({ type: 'jsonb', nullable: true })
   rawApiAccount: APIAccount | null;
 
+  /** Manual investment valuation mode for manual investment accounts */
+  @Column({ type: 'varchar', nullable: true })
+  manualValuationMode: string | null;
+
+  /** Timestamp when the user last changed holdings snapshots */
+  @Column({ type: 'timestamptz', nullable: true })
+  lastUserSnapshotAt: Date | null;
+
+  /** Timestamp when the holdings were last valued successfully */
+  @Column({ type: 'timestamptz', nullable: true })
+  lastValuationAt: Date | null;
+
   /** Foreign key for BankLink - set this directly to associate */
   @Column({ type: 'uuid', nullable: true })
   bankLinkId: string | null;
@@ -77,6 +89,9 @@ export class AccountEntity extends OwnedEntity {
     entity.type = dto.type;
     entity.subType = dto.subType;
     entity.externalAccountId = dto.externalAccountId ?? null;
+    entity.manualValuationMode = dto.manualValuationMode ?? null;
+    entity.lastUserSnapshotAt = null;
+    entity.lastValuationAt = null;
     entity.bankLinkId = dto.bankLinkId ?? null;
     entity.rawApiAccount = dto.rawApiAccount ?? null;
     return entity;
@@ -97,6 +112,11 @@ export class AccountEntity extends OwnedEntity {
       type: this.type as AccountType,
       subType: this.subType ? (this.subType as AccountSubtype) : null,
       externalAccountId: this.externalAccountId,
+      manualValuationMode: this.manualValuationMode as
+        | Account['manualValuationMode']
+        | undefined,
+      lastUserSnapshotAt: this.lastUserSnapshotAt,
+      lastValuationAt: this.lastValuationAt,
       bankLinkId: this.bankLinkId,
       bankLink: this.bankLink?.toObject() ?? null,
       createdAt: this.createdAt,

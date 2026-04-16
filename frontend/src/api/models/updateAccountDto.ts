@@ -8,6 +8,7 @@
 import type { UpdateAccountDtoType } from './updateAccountDtoType'
 import type { UpdateAccountDtoSubType } from './updateAccountDtoSubType'
 import type { UpdateAccountDtoRawApiAccount } from './updateAccountDtoRawApiAccount'
+import type { ManualValuationMode } from './manualValuationMode'
 import type { MoneyWithSign } from './moneyWithSign'
 
 export interface UpdateAccountDto {
@@ -26,6 +27,8 @@ export interface UpdateAccountDto {
   bankLinkId?: string | null
   /** @nullable */
   rawApiAccount?: UpdateAccountDtoRawApiAccount
+  /** @nullable */
+  manualValuationMode?: (typeof ManualValuationMode)[keyof typeof ManualValuationMode] | null
   availableBalance?: MoneyWithSign
   currentBalance?: MoneyWithSign
 }
