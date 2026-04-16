@@ -8,6 +8,7 @@
 import type { AccountType } from './accountType'
 import type { AccountSubType } from './accountSubType'
 import type { AccountBankLink } from './accountBankLink'
+import type { ManualValuationMode } from './manualValuationMode'
 import type { MoneyWithSign } from './moneyWithSign'
 
 export interface Account {
@@ -27,6 +28,12 @@ export interface Account {
   bankLinkId?: string | null
   bankLink?: AccountBankLink
   syncedAt?: string
+  /** @nullable */
+  manualValuationMode?: (typeof ManualValuationMode)[keyof typeof ManualValuationMode] | null
+  /** @nullable */
+  lastUserSnapshotAt?: string | null
+  /** @nullable */
+  lastValuationAt?: string | null
   availableBalance: MoneyWithSign
   currentBalance: MoneyWithSign
   createdAt: string

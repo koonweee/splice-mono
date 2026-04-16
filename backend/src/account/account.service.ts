@@ -21,6 +21,8 @@ import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import { AccountEntity } from './account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 
+const HOLDINGS_MODE = 'holdings';
+
 @Injectable()
 export class AccountService extends OwnedCrudService<
   AccountEntity,
@@ -47,9 +49,10 @@ export class AccountService extends OwnedCrudService<
    * Override create to emit event for manual accounts
    */
   async create(dto: CreateAccountDto, userId: string): Promise<Account> {
+    this.validateManualValuationMode(dto.type, dto.bankLinkId, dto.manualValuationMode);
     const account = await super.create(dto, userId);
 
-    if (!account.bankLinkId) {
+    if (!account.bankLinkId && account.manualValuationMode !== HOLDINGS_MODE) {
       this.eventEmitter.emit(
         ManualAccountEvents.CREATED,
         new ManualAccountCreatedEvent(account),
@@ -76,6 +79,11 @@ export class AccountService extends OwnedCrudService<
     if (accountEntity.bankLinkId) {
       throw new BadRequestException(
         `Account with id ${accountId} is linked and cannot be manually updated`,
+      );
+    }
+    if (accountEntity.manualValuationMode === HOLDINGS_MODE) {
+      throw new BadRequestException(
+        `Account with id ${accountId} uses holdings mode and cannot be manually updated`,
       );
     }
 
@@ -123,9 +131,58 @@ export class AccountService extends OwnedCrudService<
     if (dto.subType !== undefined) entity.subType = dto.subType;
     if (dto.externalAccountId !== undefined)
       entity.externalAccountId = dto.externalAccountId;
+    if (dto.manualValuationMode !== undefined) {
+      entity.manualValuationMode = dto.manualValuationMode;
+    }
     if (dto.bankLinkId !== undefined) {
       entity.bankLinkId = dto.bankLinkId;
     }
+  }
+
+  async update(
+    id: string,
+    dto: UpdateAccountDto,
+    userId: string,
+  ): Promise<Account | null> {
+    const accountEntity = await this.repository.findOne({
+      where: { id, userId },
+      relations: this.relations,
+    });
+
+    if (!accountEntity) {
+      return null;
+    }
+
+    if (
+      dto.manualValuationMode !== undefined &&
+      dto.manualValuationMode !== accountEntity.manualValuationMode
+    ) {
+      throw new BadRequestException(
+        'Manual valuation mode cannot be changed after account creation',
+      );
+    }
+
+    if (accountEntity.manualValuationMode === HOLDINGS_MODE) {
+      if (
+        dto.availableBalance !== undefined ||
+        dto.currentBalance !== undefined
+      ) {
+        throw new BadRequestException(
+          'Holdings-mode accounts cannot be updated through balance fields',
+        );
+      }
+    }
+
+    this.validateManualValuationMode(
+      dto.type ?? accountEntity.type,
+      dto.bankLinkId ?? accountEntity.bankLinkId,
+      dto.manualValuationMode ?? accountEntity.manualValuationMode,
+    );
+
+    this.applyUpdate(accountEntity, dto);
+
+    const savedEntity = await this.repository.save(accountEntity);
+    return savedEntity.toObject();
   }
 
   async findOne(id: string, userId: string): Promise<Account | null> {
@@ -166,7 +223,12 @@ export class AccountService extends OwnedCrudService<
       where: {
         userId,
         accountId: In(accountIds),
-        snapshotType: Not(BalanceSnapshotType.FORWARD_FILL),
+        snapshotType: Not(
+          In([
+            BalanceSnapshotType.FORWARD_FILL,
+            BalanceSnapshotType.HOLDINGS_DERIVED,
+          ]),
+        ),
       },
       order: { updatedAt: 'DESC' },
     });
@@ -179,5 +241,30 @@ export class AccountService extends OwnedCrudService<
     });
 
     return lastSyncTimes;
+  }
+
+  private validateManualValuationMode(
+    type: string,
+    bankLinkId: string | null | undefined,
+    manualValuationMode: string | null | undefined,
+  ): void {
+    if (!manualValuationMode) {
+      return;
+    }
+
+    if (bankLinkId) {
+      throw new BadRequestException(
+        'Manual valuation mode is only supported for manual accounts',
+      );
+    }
+
+    const isInvestmentType =
+      type === String(AccountType.Investment) ||
+      type === String(AccountType.Brokerage);
+    if (!isInvestmentType) {
+      throw new BadRequestException(
+        'Manual valuation mode is only supported for investment accounts',
+      );
+    }
   }
 }

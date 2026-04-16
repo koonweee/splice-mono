@@ -28,7 +28,7 @@ import {
 } from '../../api/clients/spliceAPI'
 import { CreateAccountDtoType } from '../../api/models/createAccountDtoType'
 import { CreateAccountDtoSubType } from '../../api/models/createAccountDtoSubType'
-import { MoneyWithSignSign } from '../../api/models'
+import { ManualValuationMode, MoneyWithSignSign } from '../../api/models'
 import type { InitiateLinkRequestNetwork } from '../../api/models'
 import type { ComponentType } from 'react'
 
@@ -133,6 +133,15 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
   const [manualCurrency, setManualCurrency] = useState('USD')
   const [manualBalance, setManualBalance] = useState<number | string>(0)
   const [manualTypeSelection, setManualTypeSelection] = useState('cash')
+  const [manualValuationMode, setManualValuationMode] = useState<
+    (typeof ManualValuationMode)[keyof typeof ManualValuationMode]
+  >(ManualValuationMode.simple_balance)
+
+  const selectedManualType =
+    MANUAL_ACCOUNT_TYPES.find((t) => t.value === manualTypeSelection) ??
+    MANUAL_ACCOUNT_TYPES[0]
+  const isManualInvestmentType =
+    selectedManualType.type === CreateAccountDtoType.investment
 
   const handleClose = () => {
     setShowCryptoForm(false)
@@ -142,6 +151,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
     setManualName('')
     setManualBalance(0)
     setManualTypeSelection('cash')
+    setManualValuationMode(ManualValuationMode.simple_balance)
     setSelectedProvider(undefined)
     onClose()
   }
@@ -212,15 +222,17 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
 
   const handleManualSubmit = () => {
     const amountInCents = Math.round(Number(manualBalance) * 100)
-    const typeDef =
-      MANUAL_ACCOUNT_TYPES.find((t) => t.value === manualTypeSelection) ??
-      MANUAL_ACCOUNT_TYPES[0]
 
     // For investment/brokerage accounts, effective balance = available + current,
     // so set available to zero to avoid doubling.
-    const isInvestmentType = typeDef.type === CreateAccountDtoType.investment
+    const usesHoldingsMode =
+      isManualInvestmentType &&
+      manualValuationMode === ManualValuationMode.holdings
     const balancePayload = {
-      money: { amount: amountInCents, currency: manualCurrency },
+      money: {
+        amount: usesHoldingsMode ? 0 : amountInCents,
+        currency: manualCurrency,
+      },
       sign:
         amountInCents >= 0
           ? MoneyWithSignSign.positive
@@ -235,9 +247,12 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
       {
         data: {
           name: manualName,
-          type: typeDef.type,
-          subType: typeDef.subType,
-          availableBalance: isInvestmentType ? zeroBalance : balancePayload,
+          type: selectedManualType.type,
+          subType: selectedManualType.subType,
+          manualValuationMode: isManualInvestmentType
+            ? manualValuationMode
+            : null,
+          availableBalance: isManualInvestmentType ? zeroBalance : balancePayload,
           currentBalance: balancePayload,
         },
       },
@@ -285,6 +300,31 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         allowDeselect={false}
       />
 
+      {isManualInvestmentType && (
+        <Select
+          label="Valuation Mode"
+          data={[
+            {
+              value: ManualValuationMode.simple_balance,
+              label: 'Simple Balance',
+            },
+            {
+              value: ManualValuationMode.holdings,
+              label: 'Holdings',
+            },
+          ]}
+          value={manualValuationMode}
+          onChange={(value) =>
+            setManualValuationMode(
+              value === ManualValuationMode.holdings
+                ? ManualValuationMode.holdings
+                : ManualValuationMode.simple_balance,
+            )
+          }
+          allowDeselect={false}
+        />
+      )}
+
       <Select
         label="Currency"
         data={['USD', 'SGD', 'EUR', 'GBP', 'JPY']}
@@ -292,14 +332,23 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         onChange={(v) => setManualCurrency(v || 'USD')}
       />
 
-      <NumberInput
-        label="Current Balance"
-        decimalScale={2}
-        fixedDecimalScale
-        prefix={manualCurrency === 'USD' ? '$' : ''}
-        value={manualBalance}
-        onChange={setManualBalance}
-      />
+      {manualValuationMode === ManualValuationMode.simple_balance && (
+        <NumberInput
+          label="Current Balance"
+          decimalScale={2}
+          fixedDecimalScale
+          prefix={manualCurrency === 'USD' ? '$' : ''}
+          value={manualBalance}
+          onChange={setManualBalance}
+        />
+      )}
+
+      {manualValuationMode === ManualValuationMode.holdings && (
+        <Alert color="blue" title="Holdings Mode">
+          This account will start at zero. Add dated holdings snapshots from the
+          account details screen after creation.
+        </Alert>
+      )}
 
       <Button
         onClick={handleManualSubmit}
