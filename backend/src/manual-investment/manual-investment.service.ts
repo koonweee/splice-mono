@@ -37,7 +37,6 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const HOLDINGS_MODE = 'holdings';
-const SIMPLE_BALANCE_MODE = 'simple_balance';
 const SUPPORTED_INVESTMENT_SUBTYPES = new Set<string | null>([
   AccountSubtype.Brokerage,
   AccountSubtype._401k,
@@ -226,7 +225,8 @@ export class ManualInvestmentService {
     startDate: string,
     explicitEndDate?: string,
   ): Promise<void> {
-    const endDate = explicitEndDate ?? (await this.getUserToday(account.userId));
+    const endDate =
+      explicitEndDate ?? (await this.getUserToday(account.userId));
     const snapshots = await this.snapshotRepository.find({
       where: {
         accountId: account.id,
@@ -324,8 +324,11 @@ export class ManualInvestmentService {
       return new Map();
     }
 
-    const instruments = await this.instrumentRepository.findByIds(instrumentIds);
-    return new Map(instruments.map((instrument) => [instrument.id, instrument]));
+    const instruments =
+      await this.instrumentRepository.findByIds(instrumentIds);
+    return new Map(
+      instruments.map((instrument) => [instrument.id, instrument]),
+    );
   }
 
   private async ensurePriceHistory(
@@ -371,7 +374,9 @@ export class ManualInvestmentService {
       return new Map();
     }
 
-    const lookbackStart = dayjs(startDate).subtract(10, 'day').format('YYYY-MM-DD');
+    const lookbackStart = dayjs(startDate)
+      .subtract(10, 'day')
+      .format('YYYY-MM-DD');
     const prices = await this.priceRepository
       .createQueryBuilder('price')
       .where('price.instrumentId IN (:...instrumentIds)', { instrumentIds })
@@ -462,11 +467,15 @@ export class ManualInvestmentService {
     }
 
     if (account.bankLinkId) {
-      throw new BadRequestException('Manual investment snapshots require a manual account');
+      throw new BadRequestException(
+        'Manual investment snapshots require a manual account',
+      );
     }
 
     if (account.manualValuationMode !== HOLDINGS_MODE) {
-      throw new BadRequestException('Account is not configured for holdings mode');
+      throw new BadRequestException(
+        'Account is not configured for holdings mode',
+      );
     }
 
     if (
@@ -475,7 +484,9 @@ export class ManualInvestmentService {
       ) ||
       !SUPPORTED_INVESTMENT_SUBTYPES.has(account.subType)
     ) {
-      throw new BadRequestException('Holdings mode is only supported for manual investment accounts');
+      throw new BadRequestException(
+        'Holdings mode is only supported for manual investment accounts',
+      );
     }
 
     return account;
@@ -488,7 +499,9 @@ export class ManualInvestmentService {
     const timezoneName = await this.userService.getTimezone(userId);
     const today = dayjs().tz(timezoneName).format('YYYY-MM-DD');
     if (snapshotDate > today) {
-      throw new BadRequestException('Future-dated holdings snapshots are not supported');
+      throw new BadRequestException(
+        'Future-dated holdings snapshots are not supported',
+      );
     }
   }
 
@@ -541,8 +554,7 @@ export class ManualInvestmentService {
   private toSignedMajor(balance: SerializedMoneyWithSign): number {
     const signMultiplier = balance.sign === MoneySign.NEGATIVE ? -1 : 1;
     return (
-      signMultiplier *
-      balance.money.amount /
+      (signMultiplier * balance.money.amount) /
       Math.pow(10, getDecimalPlaces(balance.money.currency))
     );
   }

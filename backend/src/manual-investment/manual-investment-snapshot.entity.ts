@@ -65,8 +65,7 @@ export class ManualInvestmentSnapshotEntity extends OwnedEntity {
       accountId: this.accountId,
       snapshotDate: this.snapshotDate,
       cashBalance: this.cashBalance.toMoneyWithSign(),
-      holdings:
-        this.holdings?.map((holding) => holding.toObject()) ?? [],
+      holdings: this.holdings?.map((holding) => holding.toObject()) ?? [],
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Put,
-} from '@nestjs/common';
+import { Controller, Delete, Get, Param, Put } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   CurrentUser,
@@ -31,7 +25,9 @@ export class ManualInvestmentController {
   ) {}
 
   @Get()
-  @ApiOperation({ description: 'List manual investment snapshots for an account' })
+  @ApiOperation({
+    description: 'List manual investment snapshots for an account',
+  })
   @ZodApiResponse({
     status: 200,
     description: 'Returns snapshots',
@@ -57,11 +53,17 @@ export class ManualInvestmentController {
     @Param('date') date: string,
     @CurrentUser() user: JwtUser,
   ): Promise<ManualInvestmentSnapshot> {
-    return this.manualInvestmentService.getSnapshot(accountId, user.userId, date);
+    return this.manualInvestmentService.getSnapshot(
+      accountId,
+      user.userId,
+      date,
+    );
   }
 
   @Put(':date')
-  @ApiOperation({ description: 'Create or replace a manual investment snapshot for a date' })
+  @ApiOperation({
+    description: 'Create or replace a manual investment snapshot for a date',
+  })
   @ZodApiBody({ schema: ReplaceManualInvestmentSnapshotDtoSchema })
   @ZodApiResponse({
     status: 200,

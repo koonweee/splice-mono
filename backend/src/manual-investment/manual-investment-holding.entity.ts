@@ -41,7 +41,12 @@ export class ManualInvestmentHoldingEntity extends TimestampedEntity {
   @Column({ type: 'varchar', nullable: true })
   displayName: string | null;
 
-  @Column({ type: 'numeric', precision: 20, scale: 8, transformer: numericTransformer })
+  @Column({
+    type: 'numeric',
+    precision: 20,
+    scale: 8,
+    transformer: numericTransformer,
+  })
   quantity: number;
 
   toObject(): ManualInvestmentHolding {

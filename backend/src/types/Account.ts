@@ -15,10 +15,7 @@ export const AccountTypeSchema = z.union([
 ]);
 
 export const AccountSubTypeSchema = z.nativeEnum(AccountSubtype);
-export const ManualValuationModeSchema = z.enum([
-  'simple_balance',
-  'holdings',
-]);
+export const ManualValuationModeSchema = z.enum(['simple_balance', 'holdings']);
 export type ManualValuationMode = z.infer<typeof ManualValuationModeSchema>;
 
 export const AccountSchema = registerSchema(

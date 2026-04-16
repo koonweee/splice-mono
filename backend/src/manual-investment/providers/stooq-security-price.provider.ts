@@ -19,7 +19,10 @@ export class StooqSecurityPriceProvider implements SecurityPriceProvider {
   ): Promise<SecurityPricePoint[]> {
     const url = `${this.baseUrl}?s=${providerSymbol}&i=d`;
 
-    this.logger.log({ providerSymbol, startDate, endDate }, 'Fetching security prices');
+    this.logger.log(
+      { providerSymbol, startDate, endDate },
+      'Fetching security prices',
+    );
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -34,7 +37,9 @@ export class StooqSecurityPriceProvider implements SecurityPriceProvider {
       throw new Error(`No price history available for ${providerSymbol}`);
     }
 
-    const normalizedStart = dayjs(startDate).subtract(10, 'day').format('YYYY-MM-DD');
+    const normalizedStart = dayjs(startDate)
+      .subtract(10, 'day')
+      .format('YYYY-MM-DD');
     const normalizedEnd = dayjs(endDate).format('YYYY-MM-DD');
 
     const prices: SecurityPricePoint[] = [];
@@ -61,7 +66,9 @@ export class StooqSecurityPriceProvider implements SecurityPriceProvider {
     });
 
     if (prices.length === 0) {
-      throw new Error(`No prices returned for ${providerSymbol} in requested range`);
+      throw new Error(
+        `No prices returned for ${providerSymbol} in requested range`,
+      );
     }
 
     return prices;

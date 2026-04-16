@@ -30,10 +30,7 @@ import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.enti
     UserModule,
   ],
   controllers: [ManualInvestmentController],
-  providers: [
-    ManualInvestmentService,
-    StooqSecurityPriceProvider,
-  ],
+  providers: [ManualInvestmentService, StooqSecurityPriceProvider],
   exports: [ManualInvestmentService],
 })
 export class ManualInvestmentModule {}

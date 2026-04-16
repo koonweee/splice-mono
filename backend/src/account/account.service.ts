@@ -49,7 +49,11 @@ export class AccountService extends OwnedCrudService<
    * Override create to emit event for manual accounts
    */
   async create(dto: CreateAccountDto, userId: string): Promise<Account> {
-    this.validateManualValuationMode(dto.type, dto.bankLinkId, dto.manualValuationMode);
+    this.validateManualValuationMode(
+      dto.type,
+      dto.bankLinkId,
+      dto.manualValuationMode,
+    );
     const account = await super.create(dto, userId);
 
     if (!account.bankLinkId && account.manualValuationMode !== HOLDINGS_MODE) {

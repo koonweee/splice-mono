@@ -21,7 +21,10 @@ export class SecurityPriceDailyEntity extends TimestampedEntity {
   @Index()
   instrumentId: string;
 
-  @ManyToOne(() => SecurityInstrumentEntity, { nullable: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => SecurityInstrumentEntity, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'instrumentId' })
   instrument: SecurityInstrumentEntity;
 
@@ -29,7 +32,12 @@ export class SecurityPriceDailyEntity extends TimestampedEntity {
   @Index()
   priceDate: string;
 
-  @Column({ type: 'numeric', precision: 20, scale: 8, transformer: numericTransformer })
+  @Column({
+    type: 'numeric',
+    precision: 20,
+    scale: 8,
+    transformer: numericTransformer,
+  })
   closePrice: number;
 
   @Column({ type: 'varchar' })
