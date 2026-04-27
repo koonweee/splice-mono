@@ -1,6 +1,7 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtAuthGuard } from '../../src/auth/guards/jwt-auth.guard';
+import { PERSONAL_ACCESS_TOKEN_ONLY_KEY } from '../../src/auth/decorators/personal-access-token-only.decorator';
 import { IS_PUBLIC_KEY } from '../../src/auth/decorators/public.decorator';
 
 const SESSION_JWT_ONLY_KEY = 'sessionJwtOnly';
@@ -277,5 +278,60 @@ describe('JwtAuthGuard', () => {
 
     expect(patService.validateToken).not.toHaveBeenCalled();
     expect(parentProto.canActivate).toHaveBeenCalledWith(expect.any(Object));
+  });
+
+  it('rejects cookie-only requests on PersonalAccessTokenOnly routes', async () => {
+    reflector.getAllAndOverride.mockImplementation((key) => {
+      if (key === IS_PUBLIC_KEY) {
+        return false;
+      }
+
+      if (key === PERSONAL_ACCESS_TOKEN_ONLY_KEY) {
+        return true;
+      }
+
+      return undefined;
+    });
+
+    const request: MockRequest = {
+      headers: {},
+      cookies: {
+        splice_access_token: 'session-cookie-token',
+      },
+    };
+
+    expect(() => guard.canActivate(createContext(request))).toThrow(
+      UnauthorizedException,
+    );
+
+    expect(parentProto.canActivate).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-PAT bearer tokens on PersonalAccessTokenOnly routes', async () => {
+    reflector.getAllAndOverride.mockImplementation((key) => {
+      if (key === IS_PUBLIC_KEY) {
+        return false;
+      }
+
+      if (key === PERSONAL_ACCESS_TOKEN_ONLY_KEY) {
+        return true;
+      }
+
+      return undefined;
+    });
+    patService.isPersonalAccessToken.mockReturnValue(false);
+
+    const request: MockRequest = {
+      headers: {
+        authorization: 'Bearer session-jwt-token',
+      },
+    };
+
+    expect(() => guard.canActivate(createContext(request))).toThrow(
+      UnauthorizedException,
+    );
+
+    expect(parentProto.canActivate).not.toHaveBeenCalled();
+    expect(patService.validateToken).not.toHaveBeenCalled();
   });
 });

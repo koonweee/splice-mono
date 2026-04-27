@@ -20,6 +20,7 @@ import {
   useUserControllerMe,
   useUserControllerUpdateSettings,
 } from '../../api/clients/spliceAPI'
+import { McpConnectionSection } from '../../components/settings/McpConnectionSection'
 import { PersonalAccessTokenSection } from '../../components/settings/PersonalAccessTokenSection'
 
 export const Route = createFileRoute('/_authed/settings')({
@@ -280,6 +281,8 @@ export function SettingsPage() {
         </Paper>
 
         <PersonalAccessTokenSection />
+
+        <McpConnectionSection />
       </Stack>
     </>
   )
