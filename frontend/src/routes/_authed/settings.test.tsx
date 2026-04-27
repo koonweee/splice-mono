@@ -10,6 +10,7 @@ const mockFns = vi.hoisted(() => ({
   useUserControllerMeMock: vi.fn(),
   useUserControllerUpdateSettingsMock: vi.fn(),
   personalAccessTokenSectionMock: vi.fn(),
+  mcpConnectionSectionMock: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-query', async () => {
@@ -43,6 +44,18 @@ vi.mock('../../components/settings/PersonalAccessTokenSection', () => ({
     return (
       <div data-testid="pat-section">
         <Title order={3}>Personal access tokens</Title>
+      </div>
+    )
+  },
+}))
+
+vi.mock('../../components/settings/McpConnectionSection', () => ({
+  McpConnectionSection: () => {
+    mockFns.mcpConnectionSectionMock()
+
+    return (
+      <div data-testid="mcp-section">
+        <Title order={3}>MCP connection</Title>
       </div>
     )
   },
@@ -139,7 +152,7 @@ afterEach(() => {
 })
 
 describe('SettingsPage', () => {
-  it('keeps the PAT section after the existing settings card', () => {
+  it('keeps the PAT and MCP sections after the existing settings card', () => {
     renderSettingsPage()
 
     expect(
@@ -148,12 +161,20 @@ describe('SettingsPage', () => {
     expect(
       screen.getByRole('heading', { name: /personal access tokens/i, level: 3 }),
     ).toBeTruthy()
+    expect(
+      screen.getByRole('heading', { name: /mcp connection/i, level: 3 }),
+    ).toBeTruthy()
 
     const settingsCard = screen.getByTestId('settings-card')
     const patSection = screen.getByTestId('pat-section')
+    const mcpSection = screen.getByTestId('mcp-section')
 
     expect(
       settingsCard.compareDocumentPosition(patSection) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      patSection.compareDocumentPosition(mcpSection) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
   })
