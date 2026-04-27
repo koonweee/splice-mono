@@ -132,6 +132,19 @@ OPENAI_MODEL=gpt-5.4-mini
 
 `OPENAI_MODEL` is optional. If omitted, Ask defaults to `gpt-5.4-mini`.
 
+## MCP Configuration
+
+Splice exposes a read-only MCP endpoint at `/mcp` for compatible AI tools.
+Authenticate with a personal access token:
+
+```http
+Authorization: Bearer splice_pat_...
+```
+
+The initial MCP surface includes user context, account snapshots, balance
+history, and transaction search. Cash flow analysis and mutations are not
+exposed through MCP.
+
 ## API Documentation
 
 Swagger/OpenAPI documentation is available at `/api` when the server is running.
