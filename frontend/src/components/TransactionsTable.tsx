@@ -11,12 +11,12 @@ import { formatCategoryName, formatMoneyWithSign } from '@/lib/format'
 type HideableColumn = 'accountName' | 'category'
 
 interface TransactionsTableProps {
-  data: Transaction[]
+  data: Array<Transaction>
   totalRows: number
   isLoading: boolean
   isError: boolean
   isFetchingNextPage?: boolean
-  hiddenColumns?: HideableColumn[]
+  hiddenColumns?: Array<HideableColumn>
   enableVirtualization?: boolean
   onScrollNearBottom?: () => void
   manualSorting?: boolean

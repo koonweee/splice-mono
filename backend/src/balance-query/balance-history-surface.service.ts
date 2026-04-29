@@ -41,6 +41,7 @@ export interface BalanceHistorySurfaceAccountSummary {
   changePercent?: number;
   institutionName?: string | null;
   syncedAt?: string;
+  archivedAt?: string | null;
 }
 
 export interface BalanceHistorySurfaceSummary {
@@ -287,6 +288,7 @@ export class BalanceHistorySurfaceService {
               sortedResults,
               accountId,
             )?.toISOString(),
+            archivedAt: accountResult.account.archivedAt?.toISOString() ?? null,
           };
 
           if (isLiabilityType(String(accountResult.account.type))) {

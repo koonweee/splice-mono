@@ -7,10 +7,8 @@ import { AccountModal } from '../../components/AccountModal'
 import { AccountSection } from '../../components/AccountSection'
 import { NetWorthCard } from '../../components/NetWorthCard'
 import { useBalanceData } from '../../hooks/useBalanceData'
-import {
-  isZeroBalanceAccount,
-  type AccountSummaryData,
-} from '../../lib/balance-utils'
+import { isZeroBalanceAccount } from '../../lib/balance-utils'
+import type { AccountSummaryData } from '../../lib/balance-utils'
 import { TIME_PERIOD_LABELS, TimePeriod } from '@/lib/types'
 
 type HomeSearch = {
@@ -67,24 +65,26 @@ export function HomePage() {
 
   const visibleAssets = useMemo(
     () =>
-      dashboard?.assets.filter(
-        (account) => !hideZeroBalanceAccounts || !isZeroBalanceAccount(account),
-      ) ?? [],
+      dashboard?.assets.filter((account) => {
+        if (account.archivedAt) return false
+        return !hideZeroBalanceAccounts || !isZeroBalanceAccount(account)
+      }) ?? [],
     [dashboard?.assets, hideZeroBalanceAccounts],
   )
 
   const visibleLiabilities = useMemo(
     () =>
-      dashboard?.liabilities.filter(
-        (account) => !hideZeroBalanceAccounts || !isZeroBalanceAccount(account),
-      ) ?? [],
+      dashboard?.liabilities.filter((account) => {
+        if (account.archivedAt) return false
+        return !hideZeroBalanceAccounts || !isZeroBalanceAccount(account)
+      }) ?? [],
     [dashboard?.liabilities, hideZeroBalanceAccounts],
   )
 
   // Find the selected account from the dashboard data
   const selectedAccount: AccountSummaryData | undefined =
     accountId && dashboard
-      ? ([...dashboard.assets, ...dashboard.liabilities].find(
+      ? ([...visibleAssets, ...visibleLiabilities].find(
           (a) => a.id === accountId,
         ) ?? undefined)
       : undefined
@@ -174,7 +174,7 @@ export function HomePage() {
 
       <AccountModal
         account={selectedAccount}
-        opened={!!accountId}
+        opened={!!selectedAccount}
         onClose={handleCloseModal}
         period={period}
       />

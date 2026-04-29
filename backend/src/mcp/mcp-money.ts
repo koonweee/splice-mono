@@ -33,7 +33,9 @@ export function toMcpMoney(value: SerializedMoneyWithSign): McpMoney {
   const decimals = getDecimalPlaces(currency);
 
   return {
-    amount: Number((value.money.amount / Math.pow(10, decimals)).toFixed(decimals)),
+    amount: Number(
+      (value.money.amount / Math.pow(10, decimals)).toFixed(decimals),
+    ),
     currency,
     sign: value.sign,
   };
