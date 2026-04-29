@@ -2,11 +2,11 @@
 
 import { AppShell, MantineProvider } from '@mantine/core'
 import { render, screen, within } from '@testing-library/react'
-import type { ComponentType } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import authedStyles from '../_authed.module.css'
-import styles from '@/components/ask/ask.module.css'
 import * as AskRouteModule from './ask'
+import type { ComponentType } from 'react'
+import styles from '@/components/ask/ask.module.css'
 
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (config: unknown) => config,

@@ -3,8 +3,8 @@
 import { MantineProvider } from '@mantine/core'
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import type { AskUIMessage } from '@/lib/ask-types'
 import { AskConversation } from './AskConversation'
+import type { AskUIMessage } from '@/lib/ask-types'
 
 describe('AskConversation layout', () => {
   const scrollIntoViewMock = vi.fn()
