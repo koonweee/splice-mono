@@ -135,4 +135,34 @@ describe('AccountController', () => {
       expect(removeSpy).toHaveBeenCalledWith('test-id-123', mockUser.userId);
     });
   });
+
+  describe('archive', () => {
+    const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
+
+    it('should archive an account when valid ID is provided', async () => {
+      const archivedAccount = {
+        ...mockAccount,
+        archivedAt: new Date('2026-04-05T12:00:00Z'),
+      };
+      const archiveSpy = jest
+        .spyOn(service, 'archive')
+        .mockResolvedValue(archivedAccount);
+
+      const result = await controller.archive('test-id-123', mockUser);
+
+      expect(result).toEqual(archivedAccount);
+      expect(archiveSpy).toHaveBeenCalledWith('test-id-123', mockUser.userId);
+    });
+
+    it('should throw NotFoundException when account is not found', async () => {
+      jest.spyOn(service, 'archive').mockResolvedValue(null);
+
+      await expect(
+        controller.archive('non-existent-id', mockUser),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.archive('non-existent-id', mockUser),
+      ).rejects.toThrow('Account with id non-existent-id not found');
+    });
+  });
 });
