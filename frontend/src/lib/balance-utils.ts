@@ -154,6 +154,7 @@ export interface AccountSummaryData {
   changePercent?: number
   institutionName?: string
   syncedAt?: string
+  archivedAt?: string | null
 }
 
 /**
@@ -265,6 +266,9 @@ export function transformToDashboardData(
           institutionName:
             accountResult.account.bankLink?.institutionName ?? undefined,
           syncedAt: getLatestSyncedAt(sortedResults, accountId)?.toISOString(),
+          archivedAt: (
+            accountResult.account as { archivedAt?: string | null }
+          ).archivedAt,
         }
 
         if (isLiabilityType(accountResult.account.type)) {

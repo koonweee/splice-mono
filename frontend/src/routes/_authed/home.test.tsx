@@ -2,12 +2,12 @@ import { MantineProvider } from '@mantine/core'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountType, MoneyWithSignSign } from '../../api/models'
-import type { DashboardData } from '../../lib/balance-utils'
 import { HOME_BALANCES_HIDDEN_STORAGE_KEY, HomePage } from './home'
-import { TimePeriod } from '@/lib/types'
+import type { DashboardData } from '../../lib/balance-utils'
 import type * as ReactRouter from '@tanstack/react-router'
 import type * as SpliceAPI from '../../api/clients/spliceAPI'
 import type * as BalanceDataHook from '../../hooks/useBalanceData'
+import { TimePeriod } from '@/lib/types'
 
 const mockFns = vi.hoisted(() => ({
   useNavigateMock: vi.fn(),
@@ -201,5 +201,31 @@ describe('HomePage balance visibility', () => {
     expect(screen.getByText('$1,000.00')).toBeTruthy()
     expect(screen.getByText('$600.00')).toBeTruthy()
     expect(screen.getByText('$500.00')).toBeTruthy()
+  })
+
+  it('does not show archived accounts in dashboard account sections', () => {
+    mockFns.useBalanceDataMock.mockReturnValue({
+      data: {
+        ...dashboard,
+        assets: [
+          ...dashboard.assets,
+          {
+            id: 'archived-asset',
+            name: 'Closed Checking',
+            type: AccountType.depository,
+            effectiveBalance: createMoney(0),
+            institutionName: 'Old Bank',
+            archivedAt: '2026-04-05T12:00:00.000Z',
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    })
+
+    renderHomePage()
+
+    expect(screen.getByText('Cash')).toBeTruthy()
+    expect(screen.queryByText('Closed Checking')).toBeNull()
   })
 })

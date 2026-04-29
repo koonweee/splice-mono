@@ -6,6 +6,9 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import { AccountType } from 'plaid';
 import { In, Not, Repository } from 'typeorm';
 import { BalanceColumns } from '../common/balance.columns';
@@ -20,6 +23,14 @@ import { MoneySign, SerializedMoneyWithSign } from '../types/MoneyWithSign';
 import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import { AccountEntity } from './account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
+import { UserService } from '../user/user.service';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+interface FindAllAccountsOptions {
+  includeArchived?: boolean;
+}
 
 @Injectable()
 export class AccountService extends OwnedCrudService<
@@ -39,6 +50,7 @@ export class AccountService extends OwnedCrudService<
     @InjectRepository(BalanceSnapshotEntity)
     private readonly balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
     private readonly eventEmitter: EventEmitter2,
+    private readonly userService: UserService,
   ) {
     super(repository);
   }
@@ -140,8 +152,19 @@ export class AccountService extends OwnedCrudService<
     };
   }
 
-  async findAll(userId: string): Promise<Account[]> {
-    const accounts = await super.findAll(userId);
+  async findAll(
+    userId: string,
+    options: FindAllAccountsOptions = {},
+  ): Promise<Account[]> {
+    this.logger.log({ userId }, 'Finding all Accounts');
+
+    const entities = await this.repository.find({
+      where: { userId },
+      relations: this.relations,
+    });
+    const accounts = entities
+      .map((entity) => entity.toObject())
+      .filter((account) => options.includeArchived || !account.archivedAt);
     const lastSyncTimes = await this.getLastSyncTimes(
       accounts.map((account) => account.id),
       userId,
@@ -154,6 +177,79 @@ export class AccountService extends OwnedCrudService<
         ...(syncedAt ? { syncedAt } : {}),
       };
     });
+  }
+
+  async archive(id: string, userId: string): Promise<Account | null> {
+    const accountEntity = await this.repository.findOne({
+      where: { id, userId },
+      relations: this.relations,
+    });
+
+    if (!accountEntity) {
+      this.logger.warn({ id, userId }, 'Account not found for archive');
+      return null;
+    }
+
+    if (accountEntity.archivedAt) {
+      return accountEntity.toObject();
+    }
+
+    const archivedAt = new Date();
+    accountEntity.archivedAt = archivedAt;
+    accountEntity.currentBalance = this.createZeroBalance(
+      accountEntity.currentBalance.currency,
+    );
+    accountEntity.availableBalance = this.createZeroBalance(
+      accountEntity.availableBalance.currency,
+    );
+
+    const savedEntity = await this.repository.save(accountEntity);
+    await this.upsertArchiveSnapshot(savedEntity, userId);
+
+    this.logger.log({ id, userId }, 'Account archived');
+    return savedEntity.toObject();
+  }
+
+  private createZeroBalance(currency: string): BalanceColumns {
+    return BalanceColumns.fromMoneyWithSign({
+      money: { amount: 0, currency },
+      sign: MoneySign.POSITIVE,
+    });
+  }
+
+  private async upsertArchiveSnapshot(
+    accountEntity: AccountEntity,
+    userId: string,
+  ): Promise<void> {
+    const timezone = await this.userService.getTimezone(userId);
+    const snapshotDate = dayjs().tz(timezone).format('YYYY-MM-DD');
+    const existingSnapshot = await this.balanceSnapshotRepository.findOne({
+      where: {
+        accountId: accountEntity.id,
+        snapshotDate,
+        userId,
+      },
+    });
+
+    if (existingSnapshot) {
+      existingSnapshot.currentBalance = accountEntity.currentBalance;
+      existingSnapshot.availableBalance = accountEntity.availableBalance;
+      existingSnapshot.snapshotType = BalanceSnapshotType.USER_UPDATE;
+      await this.balanceSnapshotRepository.save(existingSnapshot);
+      return;
+    }
+
+    const snapshot = BalanceSnapshotEntity.fromDto(
+      {
+        accountId: accountEntity.id,
+        currentBalance: accountEntity.currentBalance.toMoneyWithSign(),
+        availableBalance: accountEntity.availableBalance.toMoneyWithSign(),
+        snapshotDate,
+        snapshotType: BalanceSnapshotType.USER_UPDATE,
+      },
+      userId,
+    );
+    await this.balanceSnapshotRepository.save(snapshot);
   }
 
   private async getLastSyncTimes(

@@ -137,6 +137,27 @@ export class AccountController {
     );
   }
 
+  @Post(':id/archive')
+  @ApiOperation({
+    description: 'Archive an account and zero its current balances',
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Returns the archived account',
+    schema: AccountSchema,
+  })
+  @ApiResponse({ status: 404, description: 'Account not found' })
+  async archive(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+  ): Promise<Account> {
+    const account = await this.accountService.archive(id, user.userId);
+    if (!account) {
+      throw new NotFoundException(`Account with id ${id} not found`);
+    }
+    return account;
+  }
+
   @Delete(':id')
   @ApiOperation({ description: 'Delete an account' })
   @ApiResponse({ status: 204, description: 'Account deleted successfully' })
