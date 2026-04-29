@@ -3,8 +3,8 @@
 import { MantineProvider } from '@mantine/core'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import type { AskUIMessage } from '@/lib/ask-types'
 import { AskMessageCard } from './AskMessageCard'
+import type { AskUIMessage } from '@/lib/ask-types'
 
 function renderMessageCard(message: AskUIMessage) {
   return render(

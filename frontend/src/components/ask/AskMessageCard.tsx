@@ -1,8 +1,8 @@
 import { Alert, Paper, Stack, Text } from '@mantine/core'
-import type { AskUIMessage } from '@/lib/ask-types'
-import { getAskMetadata } from '@/lib/ask-chat'
 import { AskMarkdown } from './AskMarkdown'
 import styles from './ask.module.css'
+import type { AskUIMessage } from '@/lib/ask-types'
+import { getAskMetadata } from '@/lib/ask-chat'
 
 type AskMessageCardProps = {
   message: AskUIMessage

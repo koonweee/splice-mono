@@ -902,6 +902,17 @@ export class BankLinkService extends OwnedCrudService<
       const dto = this.createAccountDtoFromAPIAccount(apiAccount, bankLinkId);
       const existingAccount = existingAccountMap.get(apiAccount.accountId);
       if (existingAccount) {
+        if (existingAccount.archivedAt) {
+          this.logger.log(
+            {
+              accountId: existingAccount.id,
+              externalAccountId: apiAccount.accountId,
+            },
+            'Skipping archived account during sync',
+          );
+          return;
+        }
+
         // Capture old balance for logging
         const oldCurrentBalance = existingAccount.currentBalance;
         this.applyAccountDtoToEntity(existingAccount, dto);
@@ -932,7 +943,10 @@ export class BankLinkService extends OwnedCrudService<
       }
     });
 
-    const savedAccounts = await this.accountRepository.save(accountsToSave);
+    const savedAccounts =
+      accountsToSave.length > 0
+        ? await this.accountRepository.save(accountsToSave)
+        : [];
 
     // Log event emission counts
     const createdCount = newAccountExternalIds.size;

@@ -7,7 +7,7 @@ export type AskQueryScope = {
   endDate?: string
   comparisonStartDate?: string
   comparisonEndDate?: string
-  accountIds: string[]
+  accountIds: Array<string>
   includePending: boolean
   truncated: boolean
 }
@@ -16,7 +16,7 @@ export type AskAnswer = {
   answerText: string
   confidence: AskConfidence
   queryScope: AskQueryScope
-  followups: string[]
+  followups: Array<string>
 }
 
 export type AskMessageMetadata = {

@@ -50,6 +50,10 @@ export class AccountEntity extends OwnedEntity {
   @Column({ type: 'jsonb', nullable: true })
   rawApiAccount: APIAccount | null;
 
+  /** When set, this account is hidden from default UI/account lists. */
+  @Column({ type: 'timestamp', nullable: true })
+  archivedAt: Date | null;
+
   /** Foreign key for BankLink - set this directly to associate */
   @Column({ type: 'uuid', nullable: true })
   bankLinkId: string | null;
@@ -79,6 +83,7 @@ export class AccountEntity extends OwnedEntity {
     entity.externalAccountId = dto.externalAccountId ?? null;
     entity.bankLinkId = dto.bankLinkId ?? null;
     entity.rawApiAccount = dto.rawApiAccount ?? null;
+    entity.archivedAt = null;
     return entity;
   }
 
@@ -99,6 +104,7 @@ export class AccountEntity extends OwnedEntity {
       externalAccountId: this.externalAccountId,
       bankLinkId: this.bankLinkId,
       bankLink: this.bankLink?.toObject() ?? null,
+      archivedAt: this.archivedAt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
