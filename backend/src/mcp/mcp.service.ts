@@ -205,7 +205,7 @@ export class SpliceMcpService {
       },
       async (input) =>
         toolResult(
-          await this.transactionsSurfaceService.findForAsk(userId, {
+          await this.transactionsSurfaceService.searchTransactions(userId, {
             ...input,
             limit: Math.min(input.limit ?? 20, 20),
           }),
