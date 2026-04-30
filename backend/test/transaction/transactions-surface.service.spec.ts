@@ -1,16 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import type { TransactionSurfaceSearchOptions } from '../../src/transaction/transaction-surface.types';
 import { TransactionsSurfaceService } from '../../src/transaction/transactions-surface.service';
 import { TransactionService } from '../../src/transaction/transaction.service';
 
 describe('TransactionsSurfaceService', () => {
   let service: TransactionsSurfaceService;
   let mockTransactionService: {
-    findForAsk: jest.Mock;
+    searchForSurface: jest.Mock;
   };
 
   beforeEach(async () => {
     mockTransactionService = {
-      findForAsk: jest.fn().mockResolvedValue({
+      searchForSurface: jest.fn().mockResolvedValue({
         matchedCount: 2,
         truncated: false,
         transactions: [
@@ -54,11 +55,13 @@ describe('TransactionsSurfaceService', () => {
       ],
     }).compile();
 
-    service = module.get<TransactionsSurfaceService>(TransactionsSurfaceService);
+    service = module.get<TransactionsSurfaceService>(
+      TransactionsSurfaceService,
+    );
   });
 
-  it('adds user-facing category labels to ask rows', async () => {
-    const result = await service.findForAsk('user-1', {
+  it('adds user-facing category labels to transaction surface rows', async () => {
+    const result = await service.searchTransactions('user-1', {
       limit: 10,
       merchantQuery: '',
     });
@@ -82,39 +85,45 @@ describe('TransactionsSurfaceService', () => {
   });
 
   it('preserves merchantQuery semantics from the underlying transaction search', async () => {
-    mockTransactionService.findForAsk.mockImplementation(async (_, options) => ({
-      matchedCount: 1,
-      truncated: false,
-      transactions: [
-        {
-          id: 'txn-1',
-          accountId: 'account-1',
-          accountName: 'Checking',
-          merchantName: 'Starbucks Reserve',
-          pending: false,
-          date: '2024-01-10',
-          categoryPrimary: 'FOOD_AND_DRINK',
-          amount: {
-            money: { amount: 1250, currency: 'USD' },
-            sign: 'negative',
-          },
-        },
-      ].filter((transaction) =>
-        transaction.merchantName
-          ?.toLowerCase()
-          .includes(options.merchantQuery?.trim().toLowerCase() ?? ''),
-      ),
-    }));
+    mockTransactionService.searchForSurface.mockImplementation(
+      (_: string, options: TransactionSurfaceSearchOptions) =>
+        Promise.resolve({
+          matchedCount: 1,
+          truncated: false,
+          transactions: [
+            {
+              id: 'txn-1',
+              accountId: 'account-1',
+              accountName: 'Checking',
+              merchantName: 'Starbucks Reserve',
+              pending: false,
+              date: '2024-01-10',
+              categoryPrimary: 'FOOD_AND_DRINK',
+              amount: {
+                money: { amount: 1250, currency: 'USD' },
+                sign: 'negative',
+              },
+            },
+          ].filter((transaction) =>
+            transaction.merchantName
+              ?.toLowerCase()
+              .includes(options.merchantQuery?.trim().toLowerCase() ?? ''),
+          ),
+        }),
+    );
 
-    const result = await service.findForAsk('user-1', {
+    const result = await service.searchTransactions('user-1', {
       limit: 10,
       merchantQuery: ' star ',
     });
 
-    expect(mockTransactionService.findForAsk).toHaveBeenCalledWith('user-1', {
-      limit: 10,
-      merchantQuery: ' star ',
-    });
+    expect(mockTransactionService.searchForSurface).toHaveBeenCalledWith(
+      'user-1',
+      {
+        limit: 10,
+        merchantQuery: ' star ',
+      },
+    );
     expect(result.matchedCount).toBe(1);
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]).toEqual(
