@@ -106,6 +106,37 @@ describe('AccountController', () => {
     });
   });
 
+  describe('update', () => {
+    const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
+
+    it('should update account notes and return the updated account', async () => {
+      const updatedAccount = {
+        ...mockAccount,
+        notes: 'Review fee waiver annually.',
+      };
+      jest.spyOn(service, 'update').mockResolvedValue(updatedAccount);
+
+      const result = await controller.update('test-id-123', mockUser, {
+        notes: 'Review fee waiver annually.',
+      });
+
+      expect(result).toEqual(updatedAccount);
+      expect(mockAccountService.update).toHaveBeenCalledWith(
+        'test-id-123',
+        { notes: 'Review fee waiver annually.' },
+        mockUser.userId,
+      );
+    });
+
+    it('should throw NotFoundException when account to update is not found', async () => {
+      jest.spyOn(service, 'update').mockResolvedValue(null);
+
+      await expect(
+        controller.update('non-existent-id', mockUser, { notes: 'Nope' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('remove', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
 

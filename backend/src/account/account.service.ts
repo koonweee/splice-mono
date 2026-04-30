@@ -121,6 +121,7 @@ export class AccountService extends OwnedCrudService<
   protected applyUpdate(entity: AccountEntity, dto: UpdateAccountDto): void {
     if (dto.name !== undefined) entity.name = dto.name;
     if (dto.customName !== undefined) entity.customName = dto.customName;
+    if (dto.notes !== undefined) entity.notes = dto.notes;
     if (dto.availableBalance !== undefined) {
       entity.availableBalance = BalanceColumns.fromMoneyWithSign(
         dto.availableBalance,
