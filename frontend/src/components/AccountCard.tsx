@@ -4,11 +4,11 @@ import { AlertTriangle } from 'lucide-react'
 import {
   formatAccountType,
   formatMoneyWithSign,
-  formatPercent,
   formatRelativeTime,
   getChangeColorMantine,
   resolveBalance,
 } from '../lib/format'
+import { ChangePercentPopover } from './ChangePercentPopover'
 import styles from './AccountCard.module.css'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
@@ -28,7 +28,6 @@ export function AccountCard({
   isLiability: boolean
   onClick?: () => void
 }) {
-  const changePercent = formatPercent(account.changePercent)
   const { primaryBalance, originalBalance } = resolveBalance(
     account.effectiveBalance,
     account.convertedEffectiveBalance,
@@ -87,14 +86,12 @@ export function AccountCard({
               })}
             </Text>
           )}
-          {changePercent && (
-            <Text
-              size="sm"
-              c={getChangeColorMantine(isLiability, account.changePercent)}
-            >
-              {changePercent}
-            </Text>
-          )}
+          <ChangePercentPopover
+            size="sm"
+            color={getChangeColorMantine(isLiability, account.changePercent)}
+            changeAmount={account.changeAmount}
+            changePercent={account.changePercent}
+          />
         </div>
       </Group>
     </Paper>
