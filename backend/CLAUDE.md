@@ -21,7 +21,8 @@ yarn test:watch         # Watch mode
 yarn test:cov           # Coverage report
 
 # Code Quality
-yarn lint               # ESLint with auto-fix
+yarn lint               # ESLint check for src and test files
+yarn lint:fix           # ESLint auto-fix for src and test files
 yarn format             # Prettier formatting
 ```
 
@@ -30,6 +31,7 @@ yarn format             # Prettier formatting
 ### Module Structure
 
 Each feature module follows a consistent pattern in `src/{module}/`:
+
 - `{module}.entity.ts` - TypeORM entity with `fromDto()` and `toObject()` methods
 - `{module}.service.ts` - Business logic extending base CRUD services
 - `{module}.controller.ts` - HTTP endpoints with Zod validation
@@ -85,6 +87,7 @@ import { CreateTransactionDtoSchema, TransactionSchema } from '../types/Transact
 ```
 
 For error responses without a body, continue using `@ApiResponse`:
+
 ```typescript
 @ApiResponse({ status: 404, description: 'Transaction not found' })
 ```
@@ -92,6 +95,7 @@ For error responses without a body, continue using `@ApiResponse`:
 ### Entity Pattern
 
 Entities flatten nested domain objects into columns and provide transformation methods:
+
 ```typescript
 // Entity must implement:
 static fromDto(dto, userId?): Entity  // DTO → Entity for persistence
@@ -110,10 +114,13 @@ toObject(): DomainType                // Entity → Domain for API responses
 - Mocks in `test/mocks/{module}/`: entity mocks, service mocks, repository mocks
 - Controller tests: verify HTTP behavior, mock service dependencies
 - Service tests: verify business logic, mock repository
+- `yarn lint` includes `test/**/*.ts`; keep tests formatted and lint-clean.
+- Test files have scoped ESLint exceptions for Jest mock ergonomics (`no-unsafe-*`, `require-await`, and `unbound-method`). Do not depend on those exceptions in production `src` code.
 
 ### Bank Link Providers (`src/bank-link/providers/`)
 
 Provider interface pattern for banking integrations:
+
 - `BankLinkProviderInterface` defines the contract
 - Implementations (e.g., `PlaidProvider`) registered in `ProviderRegistry`
 - Scheduled sync jobs in `bank-link.scheduled.ts`
@@ -139,11 +146,13 @@ this.logger.log(`Account ${accountId} updated for user ${userId}`);
 ```
 
 **Guidelines:**
+
 - Extract meaningful data into the context object (IDs, counts, status values)
 - Keep the message static and descriptive (no interpolation)
 - For errors, include `error: error instanceof Error ? error.message : String(error)`
 - Use empty object `{}` when no context is needed: `this.logger.log({}, 'Starting sync')`
 
 **Environment variables:**
+
 - `SEQ_SERVER_URL` - Seq server URL (e.g., `http://localhost:5341`)
 - `SEQ_API_KEY` - Optional API key for authenticated ingestion

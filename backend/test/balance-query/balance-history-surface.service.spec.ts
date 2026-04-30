@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing'
-import { BalanceHistorySurfaceService } from '../../src/balance-query/balance-history-surface.service'
-import { BalanceQueryService } from '../../src/balance-query/balance-query.service'
-import { MoneySign } from '../../src/types/MoneyWithSign'
+import { Test, TestingModule } from '@nestjs/testing';
+import { BalanceHistorySurfaceService } from '../../src/balance-query/balance-history-surface.service';
+import { BalanceQueryService } from '../../src/balance-query/balance-query.service';
+import { MoneySign } from '../../src/types/MoneyWithSign';
 
-const mockUserId = 'user-1'
+const mockUserId = 'user-1';
 
 const createBalance = (
   amount: number,
@@ -23,7 +23,7 @@ const createBalance = (
         },
       }
     : {}),
-})
+});
 
 const createAccountResult = (
   id: string,
@@ -67,14 +67,14 @@ const createAccountResult = (
   currentBalance: effectiveBalance,
   effectiveBalance,
   syncedAt: syncedAt ? new Date(syncedAt) : undefined,
-})
+});
 
 describe('BalanceHistorySurfaceService', () => {
-  let service: BalanceHistorySurfaceService
+  let service: BalanceHistorySurfaceService;
   const mockBalanceQueryService = {
     getAllBalancesForDateRange: jest.fn(),
     getBalancesForDateRange: jest.fn(),
-  }
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -85,14 +85,14 @@ describe('BalanceHistorySurfaceService', () => {
           useValue: mockBalanceQueryService,
         },
       ],
-    }).compile()
+    }).compile();
 
-    service = module.get(BalanceHistorySurfaceService)
-  })
+    service = module.get(BalanceHistorySurfaceService);
+  });
 
   afterEach(() => {
-    jest.clearAllMocks()
-  })
+    jest.clearAllMocks();
+  });
 
   it('ports Home-style net worth math, sorting, and change calculation server-side', async () => {
     mockBalanceQueryService.getAllBalancesForDateRange.mockResolvedValue([
@@ -154,39 +154,37 @@ describe('BalanceHistorySurfaceService', () => {
           ),
         },
       },
-    ])
+    ]);
 
     const result = await service.getBalanceHistorySummary(mockUserId, {
       startDate: '2026-03-01',
       endDate: '2026-03-02',
-    })
+    });
 
-    expect(mockBalanceQueryService.getAllBalancesForDateRange).toHaveBeenCalledWith(
-      '2026-03-01',
-      '2026-03-02',
-      mockUserId,
-    )
+    expect(
+      mockBalanceQueryService.getAllBalancesForDateRange,
+    ).toHaveBeenCalledWith('2026-03-01', '2026-03-02', mockUserId);
     expect(result.netWorth).toEqual({
       money: { amount: 54000, currency: 'EUR' },
       sign: MoneySign.POSITIVE,
-    })
-    expect(result.changePercent).toBe(100)
+    });
+    expect(result.changePercent).toBe(100);
     expect(result.chartData).toEqual([
       expect.objectContaining({ date: '2026-03-01', value: 270 }),
       expect.objectContaining({ date: '2026-03-02', value: 540 }),
-    ])
-    expect(result.assets).toHaveLength(2)
+    ]);
+    expect(result.assets).toHaveLength(2);
     expect(result.assets.map((account) => account.id)).toEqual([
       'asset-2',
       'asset-1',
-    ])
+    ]);
     expect(result.assets[0]).toMatchObject({
       id: 'asset-2',
       displayName: 'Retirement',
       type: 'investment',
       groupingLabel: 'Investment',
       changePercent: 100,
-    })
+    });
     expect(result.assets[1]).toMatchObject({
       id: 'asset-1',
       displayName: 'House Checking',
@@ -194,16 +192,16 @@ describe('BalanceHistorySurfaceService', () => {
       groupingLabel: 'Cash',
       changePercent: 100,
       syncedAt: '2026-03-02T12:00:00.000Z',
-    })
+    });
     expect(result.assets[0].convertedEffectiveBalance).toEqual({
       money: { amount: 10000, currency: 'EUR' },
       sign: MoneySign.POSITIVE,
-    })
-    expect(result.liabilities).toHaveLength(2)
+    });
+    expect(result.liabilities).toHaveLength(2);
     expect(result.liabilities.map((account) => account.id)).toEqual([
       'liability-2',
       'liability-1',
-    ])
+    ]);
     expect(result.liabilities[0]).toMatchObject({
       id: 'liability-2',
       displayName: 'Mortgage',
@@ -211,7 +209,7 @@ describe('BalanceHistorySurfaceService', () => {
       grouping: 'liability',
       groupingLabel: 'Liability',
       changePercent: 100,
-    })
+    });
     expect(result.liabilities[1]).toMatchObject({
       id: 'liability-1',
       displayName: 'Visa',
@@ -219,6 +217,6 @@ describe('BalanceHistorySurfaceService', () => {
       grouping: 'credit',
       groupingLabel: 'Credit',
       changePercent: 100,
-    })
-  })
-})
+    });
+  });
+});

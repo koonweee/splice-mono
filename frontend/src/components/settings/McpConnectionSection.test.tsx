@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { McpConnectionSection } from './McpConnectionSection'
 import type * as ApiAxios from '../../api/axios'
@@ -26,7 +26,9 @@ function renderSection() {
 }
 
 beforeEach(() => {
-  mockFns.resolveApiBaseUrlMock.mockReturnValue('https://splice-api.example.com')
+  mockFns.resolveApiBaseUrlMock.mockReturnValue(
+    'https://splice-api.example.com',
+  )
 
   Object.defineProperty(window, 'matchMedia', {
     value: vi.fn().mockImplementation(() => ({
@@ -73,14 +75,12 @@ describe('McpConnectionSection', () => {
   it('copies the endpoint', async () => {
     renderSection()
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /copy endpoint/i }))
-    })
+    fireEvent.click(screen.getByRole('button', { name: /copy endpoint/i }))
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       'https://splice-api.example.com/mcp',
     )
-    expect(screen.getByTestId('mcp-copy-feedback').textContent).toBe(
+    expect((await screen.findByTestId('mcp-copy-feedback')).textContent).toBe(
       'Endpoint copied.',
     )
   })
@@ -88,14 +88,12 @@ describe('McpConnectionSection', () => {
   it('copies the config snippet', async () => {
     renderSection()
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /copy config/i }))
-    })
+    fireEvent.click(screen.getByRole('button', { name: /copy config/i }))
 
     expect(
       String(vi.mocked(navigator.clipboard.writeText).mock.calls[0][0]),
     ).toContain('"Authorization": "Bearer splice_pat_..."')
-    expect(screen.getByTestId('mcp-copy-feedback').textContent).toBe(
+    expect((await screen.findByTestId('mcp-copy-feedback')).textContent).toBe(
       'Config copied.',
     )
   })

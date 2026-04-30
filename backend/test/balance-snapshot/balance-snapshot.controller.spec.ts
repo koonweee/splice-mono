@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -77,7 +76,7 @@ describe('BalanceSnapshotController', () => {
       await controller.getTemplate(mockUser, mockResponse);
 
       expect(accountService.findAll).toHaveBeenCalledWith(mockUserId);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(mockResponse.set).toHaveBeenCalledWith(
         expect.objectContaining({
           'Content-Type': 'text/csv',
@@ -111,7 +110,7 @@ Test Account,${validUuid},depository,USD,100.00,-50.50
       const result = await controller.importCsv(mockUser, validFile);
 
       expect(result).toEqual({ imported: 2 });
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(balanceSnapshotService.bulkUpsert).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
@@ -185,7 +184,7 @@ Test Account,${validUuid},depository,USD,100.00
 
       expect(result.imported).toBe(1);
       // Verify that only the valid row was processed
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(balanceSnapshotService.bulkUpsert).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
@@ -195,9 +194,8 @@ Test Account,${validUuid},depository,USD,100.00
         mockUserId,
       );
       // Ensure the array length is 1
-      const calledArgs =
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        (balanceSnapshotService.bulkUpsert as jest.Mock).mock.calls[0][0];
+      const calledArgs = (balanceSnapshotService.bulkUpsert as jest.Mock).mock
+        .calls[0][0];
       expect(calledArgs).toHaveLength(1);
     });
   });

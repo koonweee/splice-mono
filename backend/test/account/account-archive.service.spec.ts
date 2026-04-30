@@ -8,7 +8,10 @@ import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapsh
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserService } from '../../src/user/user.service';
-import { mockCreateAccountDto, mockUserId } from '../mocks/account/account.mock';
+import {
+  mockCreateAccountDto,
+  mockUserId,
+} from '../mocks/account/account.mock';
 import { mockUserService } from '../mocks/user/user-service.mock';
 
 describe('AccountService archive', () => {
@@ -83,9 +86,7 @@ describe('AccountService archive', () => {
 
     const result = await service.archive('archive-id', mockUserId);
 
-    expect(result?.archivedAt?.toISOString()).toBe(
-      '2026-04-05T12:00:00.000Z',
-    );
+    expect(result?.archivedAt?.toISOString()).toBe('2026-04-05T12:00:00.000Z');
     expect(result?.currentBalance).toEqual({
       money: { currency: 'USD', amount: 0 },
       sign: MoneySign.POSITIVE,
