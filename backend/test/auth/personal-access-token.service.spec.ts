@@ -57,7 +57,8 @@ describe('PersonalAccessTokenService', () => {
     });
 
     const result = await service.createToken(mockUser, { name: 'codex-local' });
-    const savedEntity = mockPatRepository.save.mock.calls[0][0] as PersonalAccessTokenEntity;
+    const savedEntity = mockPatRepository.save.mock
+      .calls[0][0] as PersonalAccessTokenEntity;
     const expectedHash = crypto
       .createHash('sha256')
       .update(result.token)
@@ -85,7 +86,8 @@ describe('PersonalAccessTokenService', () => {
     entity.userId = 'user-123';
     entity.name = 'codex-local';
     entity.prefix = 'deadbeef';
-    entity.tokenHash = 'c8f0e5f8b6b4d2f4fdbb1d8e2a5c9a7f4f7c8a9b4b5c6d7e8f9a0b1c2d3e4f5';
+    entity.tokenHash =
+      'c8f0e5f8b6b4d2f4fdbb1d8e2a5c9a7f4f7c8a9b4b5c6d7e8f9a0b1c2d3e4f5';
     entity.lastUsedAt = null;
     entity.expiresAt = null;
     entity.revokedAt = null;
@@ -103,19 +105,18 @@ describe('PersonalAccessTokenService', () => {
     expect(result[0]).not.toHaveProperty('token');
   });
 
-  it.each([
-    [''],
-    ['not-a-date'],
-    [new Date('invalid')],
-  ])('rejects invalid expiresAt input %p', async (expiresAt) => {
-    await expect(
-      service.createToken(mockUser, {
-        name: 'codex-local',
-        expiresAt,
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(mockPatRepository.save).not.toHaveBeenCalled();
-  });
+  it.each([[''], ['not-a-date'], [new Date('invalid')]])(
+    'rejects invalid expiresAt input %p',
+    async (expiresAt) => {
+      await expect(
+        service.createToken(mockUser, {
+          name: 'codex-local',
+          expiresAt,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(mockPatRepository.save).not.toHaveBeenCalled();
+    },
+  );
 
   it('revokes a token by marking it unusable', async () => {
     mockPatRepository.findOne.mockResolvedValue({
@@ -171,7 +172,8 @@ describe('PersonalAccessTokenService', () => {
     entity.userId = 'user-123';
     entity.name = 'codex-local';
     entity.prefix = 'deadbeef';
-    entity.tokenHash = '3f4b1c2d3e4f5a6b7c8d9e0f1234567890abcdef1234567890abcdef12345678';
+    entity.tokenHash =
+      '3f4b1c2d3e4f5a6b7c8d9e0f1234567890abcdef1234567890abcdef12345678';
     entity.lastUsedAt = null;
     entity.expiresAt = null;
     entity.revokedAt = null;
@@ -222,7 +224,8 @@ describe('PersonalAccessTokenService', () => {
     expiredEntity.userId = 'user-123';
     expiredEntity.name = 'expired';
     expiredEntity.prefix = 'deadbeef';
-    expiredEntity.tokenHash = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    expiredEntity.tokenHash =
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     expiredEntity.lastUsedAt = null;
     expiredEntity.expiresAt = new Date('2024-01-01T00:00:00Z');
     expiredEntity.revokedAt = null;
@@ -235,13 +238,17 @@ describe('PersonalAccessTokenService', () => {
       email: 'user@example.com',
     } as UserEntity);
 
-    await expect(service.validateToken('splice_pat_expired')).resolves.toBeNull();
+    await expect(
+      service.validateToken('splice_pat_expired'),
+    ).resolves.toBeNull();
   });
 
   it('returns null for revoked personal access tokens', async () => {
     mockPatRepository.findOne.mockResolvedValue(null);
 
-    await expect(service.validateToken('splice_pat_revoked')).resolves.toBeNull();
+    await expect(
+      service.validateToken('splice_pat_revoked'),
+    ).resolves.toBeNull();
     expect(mockPatRepository.update).not.toHaveBeenCalled();
     expect(mockUserRepository.findOne).not.toHaveBeenCalled();
   });

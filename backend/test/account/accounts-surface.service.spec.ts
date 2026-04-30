@@ -1,11 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing'
-import { AccountService } from '../../src/account/account.service'
-import { AccountsSurfaceService } from '../../src/account/accounts-surface.service'
-import { MoneySign } from '../../src/types/MoneyWithSign'
+import { Test, TestingModule } from '@nestjs/testing';
+import { AccountService } from '../../src/account/account.service';
+import { AccountsSurfaceService } from '../../src/account/accounts-surface.service';
+import { MoneySign } from '../../src/types/MoneyWithSign';
 
-const mockUserId = 'user-1'
+const mockUserId = 'user-1';
 
-const createMockAccount = (overrides: Partial<Record<string, unknown>> = {}) => ({
+const createMockAccount = (
+  overrides: Partial<Record<string, unknown>> = {},
+) => ({
   id: 'account-1',
   userId: mockUserId,
   name: 'Primary Checking',
@@ -29,14 +31,14 @@ const createMockAccount = (overrides: Partial<Record<string, unknown>> = {}) => 
   createdAt: new Date('2026-03-01T00:00:00Z'),
   updatedAt: new Date('2026-03-01T00:00:00Z'),
   ...overrides,
-})
+});
 
 describe('AccountsSurfaceService', () => {
-  let service: AccountsSurfaceService
+  let service: AccountsSurfaceService;
   const mockAccountService = {
     findAll: jest.fn(),
     findOne: jest.fn(),
-  }
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -47,14 +49,14 @@ describe('AccountsSurfaceService', () => {
           useValue: mockAccountService,
         },
       ],
-    }).compile()
+    }).compile();
 
-    service = module.get(AccountsSurfaceService)
-  })
+    service = module.get(AccountsSurfaceService);
+  });
 
   afterEach(() => {
-    jest.clearAllMocks()
-  })
+    jest.clearAllMocks();
+  });
 
   it('surfaces raw and display account labels with grouped summaries', async () => {
     mockAccountService.findAll.mockResolvedValue([
@@ -107,13 +109,13 @@ describe('AccountsSurfaceService', () => {
           sign: MoneySign.POSITIVE,
         },
       }),
-    ])
+    ]);
 
-    const result = await service.getAccountsSnapshot(mockUserId)
+    const result = await service.getAccountsSnapshot(mockUserId);
 
-    expect(mockAccountService.findAll).toHaveBeenCalledWith(mockUserId)
-    expect(result.matchedCount).toBe(5)
-    expect(result.truncated).toBe(false)
+    expect(mockAccountService.findAll).toHaveBeenCalledWith(mockUserId);
+    expect(result.matchedCount).toBe(5);
+    expect(result.truncated).toBe(false);
     expect(result.accounts[0]).toMatchObject({
       id: 'account-1',
       name: 'Primary Checking',
@@ -125,7 +127,7 @@ describe('AccountsSurfaceService', () => {
       grouping: 'cash',
       groupingLabel: 'Cash',
       institutionName: 'Splice Bank',
-    })
+    });
     expect(result.accounts[1]).toMatchObject({
       id: 'account-2',
       type: 'investment',
@@ -134,7 +136,7 @@ describe('AccountsSurfaceService', () => {
       subTypeLabel: '401(k)',
       grouping: 'investment',
       groupingLabel: 'Investment',
-    })
+    });
     expect(result.accounts[2]).toMatchObject({
       id: 'account-3',
       type: 'credit',
@@ -143,13 +145,13 @@ describe('AccountsSurfaceService', () => {
       subTypeLabel: 'Credit Card',
       grouping: 'credit',
       groupingLabel: 'Credit',
-    })
+    });
     expect(result.accounts[3]).toMatchObject({
       id: 'account-4',
       displayName: 'Mortgage',
       grouping: 'liability',
       groupingLabel: 'Liability',
-    })
+    });
     expect(result.accounts[4]).toMatchObject({
       id: 'account-5',
       type: 'another_cool_type',
@@ -158,6 +160,6 @@ describe('AccountsSurfaceService', () => {
       subTypeLabel: 'PayPal',
       grouping: 'cash',
       groupingLabel: 'Cash',
-    })
-  })
-})
+    });
+  });
+});

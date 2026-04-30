@@ -52,22 +52,7 @@ const mockBankLinkEntity = {
   toObject: jest.fn().mockReturnValue(mockBankLink),
 };
 
-let mockBankLinkRepository: any;
-let mockAccountRepository: any;
-
-const mockEntityManager = {
-  getRepository: jest.fn((entity: unknown) => {
-    if (entity === BankLinkEntity) {
-      return mockBankLinkRepository;
-    }
-    if (entity === AccountEntity) {
-      return mockAccountRepository;
-    }
-    throw new Error('Unexpected repository request');
-  }),
-};
-
-mockBankLinkRepository = {
+const mockBankLinkRepository: any = {
   save: jest.fn().mockImplementation((entities: unknown) => {
     // Handle both single entity and array saves
     if (Array.isArray(entities)) {
@@ -117,7 +102,7 @@ mockBankLinkRepository = {
   },
 };
 
-mockAccountRepository = {
+const mockAccountRepository: any = {
   save: jest.fn().mockImplementation((entities: unknown) => {
     // Handle both single entity and array saves
     if (Array.isArray(entities)) {
@@ -140,6 +125,18 @@ mockAccountRepository = {
   }),
   findOne: jest.fn().mockResolvedValue(null),
   find: jest.fn().mockResolvedValue([]),
+};
+
+const mockEntityManager = {
+  getRepository: jest.fn((entity: unknown) => {
+    if (entity === BankLinkEntity) {
+      return mockBankLinkRepository;
+    }
+    if (entity === AccountEntity) {
+      return mockAccountRepository;
+    }
+    throw new Error('Unexpected repository request');
+  }),
 };
 
 describe('BankLinkService', () => {
@@ -388,7 +385,7 @@ describe('BankLinkService', () => {
       await service.initiateLinking(providerName, mockUserId);
 
       expect(providerRegistry.getProvider).toHaveBeenCalledWith(providerName);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
         userId: mockUserId,
         redirectUri: undefined,
@@ -412,7 +409,6 @@ describe('BankLinkService', () => {
 
       await service.initiateLinking(providerName, mockUserId, redirectUri);
 
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
         userId: mockUserId,
         redirectUri,
@@ -434,7 +430,7 @@ describe('BankLinkService', () => {
         mockUserId,
         providerName,
       );
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
         userId: mockUserId,
         redirectUri: undefined,
@@ -487,7 +483,7 @@ describe('BankLinkService', () => {
       expect(repository.findOne).toHaveBeenCalledWith({
         where: { id: bankLinkId, userId: mockUserId },
       });
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
         userId: mockUserId,
         redirectUri: undefined,
@@ -569,7 +565,7 @@ describe('BankLinkService', () => {
       );
 
       expect(providerRegistry.getProvider).toHaveBeenCalledWith(providerName);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(mockPlaidProvider.verifyWebhook).toHaveBeenCalledWith(
         mockRawBody,
         mockHeaders,
@@ -621,7 +617,7 @@ describe('BankLinkService', () => {
       );
 
       expect(mockWebhookEventService.markCompleted).not.toHaveBeenCalled();
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(mockPlaidProvider.processLinkCompletion).not.toHaveBeenCalled();
     });
 
@@ -1163,7 +1159,7 @@ describe('BankLinkService', () => {
       const result = await service.syncAccounts(mockBankLink.id, mockUserId);
 
       expect(providerRegistry.getProvider).toHaveBeenCalledWith('plaid');
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(mockPlaidProvider.getAccounts).toHaveBeenCalledWith({
         accessToken: 'test-token',
       });
