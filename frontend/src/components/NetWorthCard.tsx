@@ -13,9 +13,9 @@ import {
   HIDDEN_BALANCE_PLACEHOLDER,
   formatMoneyNumber,
   formatMoneyWithSign,
-  formatPercent,
   getChangeColorMantine,
 } from '../lib/format'
+import { ChangePercentPopover } from './ChangePercentPopover'
 import { Chart } from './Chart'
 import type { ChartDataPoint } from './Chart'
 import type { TimePeriod } from '@/lib/types'
@@ -27,6 +27,7 @@ export function NetWorthCard({
   netWorth,
   onToggleBalancesHidden,
   changePercent,
+  changeAmount,
   comparisonPeriod,
   chartData,
 }: {
@@ -34,6 +35,7 @@ export function NetWorthCard({
   netWorth: MoneyWithSign
   onToggleBalancesHidden: () => void
   changePercent?: number
+  changeAmount?: MoneyWithSign
   comparisonPeriod: TimePeriod
   chartData?: Array<ChartDataPoint>
 }) {
@@ -77,9 +79,9 @@ export function NetWorthCard({
         <Title order={2} size="h1">
           {visibleDisplayValue}
         </Title>
-        <Text
-          size="sm"
-          c={getChangeColorMantine(false, changePercent ?? 0)}
+        <Group
+          gap={3}
+          wrap="nowrap"
           style={{
             visibility:
               !hoveredPoint &&
@@ -89,9 +91,17 @@ export function NetWorthCard({
                 : 'hidden',
           }}
         >
-          {formatPercent(changePercent ?? 0)} from last{' '}
-          {TIME_PERIOD_LABELS[comparisonPeriod].toLowerCase()}
-        </Text>
+          <ChangePercentPopover
+            size="sm"
+            color={getChangeColorMantine(false, changePercent)}
+            changeAmount={changeAmount}
+            changePercent={changePercent}
+            hidden={balancesHidden}
+          />
+          <Text size="sm" c={getChangeColorMantine(false, changePercent)}>
+            from last {TIME_PERIOD_LABELS[comparisonPeriod].toLowerCase()}
+          </Text>
+        </Group>
       </Box>
       {hasChartData && (
         <Box mt="md">

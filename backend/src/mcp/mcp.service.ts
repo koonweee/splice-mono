@@ -7,10 +7,37 @@ import { BalanceHistorySurfaceService } from '../balance-query/balance-history-s
 import { TransactionsSurfaceService } from '../transaction/transactions-surface.service';
 import { UserService } from '../user/user.service';
 import { normalizeMcpMoney } from './mcp-money';
+import { McpReadService } from './mcp-read.service';
 
 const DateStringSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD');
+const CurrencySchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(10)
+  .describe('Currency code for major-unit money amounts, e.g. USD or SGD.');
+const CursorSchema = z
+  .string()
+  .optional()
+  .describe('Opaque cursor returned by the previous pageInfo.nextCursor.');
+
+const MCP_GUIDE = `# Splice MCP Guide
+
+Use get_user_context first to get today, timezone, and the user's preferred currency.
+
+For spending totals or patterns, call list_transactions for the full date range and keep paging until pageInfo.hasMore is false. Do not infer totals from a partial page unless you clearly say it is a sample.
+
+For projections, use get_accounts_snapshot for current state and list_balance_snapshots for historical account-level baselines. Ask the user for future income, expense, return, allocation, or one-time-event assumptions; do not invent them.
+
+Use reportingCurrency from get_user_context.currency unless the user asks for another currency. Compare amounts using convertedAmount. Native amount preserves the original transaction currency.
+
+All MCP money amounts are major units and always include currency and sign. Amount filters require a currency and are applied after conversion into reportingCurrency.
+
+Dates are inclusive YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone.
+
+Pending transactions are excluded by default unless includePending is true. State whether pending transactions were included.`;
 
 function toolResult(data: unknown): CallToolResult {
   const structuredContent = normalizeMcpMoney(data) as Record<string, unknown>;
@@ -55,6 +82,9 @@ export class SpliceMcpService {
     'get_accounts_snapshot',
     'get_balance_history',
     'search_transactions',
+    'list_transactions',
+    'list_balance_snapshots',
+    'list_categories',
   ] as const;
 
   constructor(
@@ -62,6 +92,7 @@ export class SpliceMcpService {
     private readonly accountsSurfaceService: AccountsSurfaceService,
     private readonly balanceHistorySurfaceService: BalanceHistorySurfaceService,
     private readonly transactionsSurfaceService: TransactionsSurfaceService,
+    private readonly mcpReadService: McpReadService,
   ) {}
 
   getToolNames(): readonly string[] {
@@ -73,6 +104,26 @@ export class SpliceMcpService {
       name: 'splice',
       version: '1.0.0',
     });
+
+    server.registerResource(
+      'splice_mcp_guide',
+      'splice://mcp-guide',
+      {
+        title: 'Splice MCP Guide',
+        description:
+          'Guidance for using Splice MCP tools safely for spending analysis and projections.',
+        mimeType: 'text/markdown',
+      },
+      (uri) => ({
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: 'text/markdown',
+            text: MCP_GUIDE,
+          },
+        ],
+      }),
+    );
 
     server.registerTool(
       'get_user_context',
@@ -138,7 +189,7 @@ export class SpliceMcpService {
       {
         title: 'Search Transactions',
         description:
-          'Search Splice transactions by date, account, merchant, category, sign, amount, and pending state. Returns at most 20 rows.',
+          'Legacy transaction search by date, account, merchant, category, sign, amount, and pending state. Returns at most 20 rows; use list_transactions for spending totals or patterns.',
         inputSchema: {
           startDate: DateStringSchema.optional(),
           endDate: DateStringSchema.optional(),
@@ -159,6 +210,128 @@ export class SpliceMcpService {
             limit: Math.min(input.limit ?? 20, 20),
           }),
         ),
+    );
+
+    server.registerTool(
+      'list_transactions',
+      {
+        title: 'List Transactions',
+        description:
+          'List raw transactions for analysis with cursor pagination. For spending totals or patterns, keep paging until pageInfo.hasMore is false. All money amounts are major units. Always use convertedAmount for cross-currency comparisons.',
+        inputSchema: {
+          startDate: DateStringSchema.optional().describe(
+            'Inclusive start date in YYYY-MM-DD. Resolve relative dates using get_user_context.today.',
+          ),
+          endDate: DateStringSchema.optional().describe(
+            'Inclusive end date in YYYY-MM-DD. Resolve relative dates using get_user_context.today.',
+          ),
+          accountIds: z
+            .array(z.string().uuid())
+            .optional()
+            .describe('Optional account IDs to restrict the result set.'),
+          categoryPrimary: z
+            .string()
+            .optional()
+            .describe(
+              'Primary category code, e.g. FOOD_AND_DRINK. Use list_categories to discover valid values. Use UNCATEGORIZED for uncategorized rows.',
+            ),
+          merchantQuery: z
+            .string()
+            .optional()
+            .describe('Case-insensitive fuzzy merchant-name search.'),
+          includePending: z
+            .boolean()
+            .optional()
+            .describe(
+              'Defaults to false. State whether pending rows were included.',
+            ),
+          cursor: CursorSchema,
+          pageSize: z
+            .number()
+            .int()
+            .positive()
+            .max(100)
+            .optional()
+            .describe('Defaults to 50, maximum 100.'),
+          reportingCurrency: CurrencySchema.describe(
+            'Required currency for convertedAmount. Use get_user_context.currency unless the user asks for another currency.',
+          ),
+          amountFilter: z
+            .object({
+              min: z
+                .number()
+                .nonnegative()
+                .optional()
+                .describe('Minimum absolute amount in major units.'),
+              max: z
+                .number()
+                .nonnegative()
+                .optional()
+                .describe('Maximum absolute amount in major units.'),
+              currency: CurrencySchema.describe(
+                'Must match reportingCurrency. Candidate transactions are converted before this filter is applied.',
+              ),
+            })
+            .optional()
+            .describe(
+              'Converted amount filter. Requires currency and is applied to convertedAmount after currency conversion.',
+            ),
+        },
+      },
+      async (input) =>
+        toolResult(await this.mcpReadService.listTransactions(userId, input)),
+    );
+
+    server.registerTool(
+      'list_balance_snapshots',
+      {
+        title: 'List Balance Snapshots',
+        description:
+          'List raw per-account balance snapshots for historical baselines and projection setup. Keep paging until pageInfo.hasMore is false when the full range matters.',
+        inputSchema: {
+          startDate: DateStringSchema.optional().describe(
+            'Inclusive start date in YYYY-MM-DD.',
+          ),
+          endDate: DateStringSchema.optional().describe(
+            'Inclusive end date in YYYY-MM-DD.',
+          ),
+          accountIds: z
+            .array(z.string().uuid())
+            .optional()
+            .describe('Optional account IDs to restrict the result set.'),
+          cursor: CursorSchema,
+          pageSize: z
+            .number()
+            .int()
+            .positive()
+            .max(250)
+            .optional()
+            .describe('Defaults to 100, maximum 250.'),
+        },
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpReadService.listBalanceSnapshots(userId, input),
+        ),
+    );
+
+    server.registerTool(
+      'list_categories',
+      {
+        title: 'List Categories',
+        description:
+          'List valid transaction category codes and friendly labels. Use this before category-filtered transaction queries instead of guessing category strings.',
+        inputSchema: {
+          startDate: DateStringSchema.optional().describe(
+            'Optional inclusive start date for transaction counts.',
+          ),
+          endDate: DateStringSchema.optional().describe(
+            'Optional inclusive end date for transaction counts.',
+          ),
+        },
+      },
+      async (input) =>
+        toolResult(await this.mcpReadService.listCategories(userId, input)),
     );
 
     return server;

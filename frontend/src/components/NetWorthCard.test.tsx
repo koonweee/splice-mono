@@ -50,6 +50,10 @@ function renderNetWorthCard(
         }}
         onToggleBalancesHidden={onToggleBalancesHidden}
         changePercent={12.34}
+        changeAmount={{
+          money: { amount: 4567, currency: 'USD' },
+          sign: MoneyWithSignSign.positive,
+        }}
         comparisonPeriod={TimePeriod.month}
         chartData={[{ date: '2026-04-01', label: 'Apr 1', value: 4321 }]}
         {...props}
@@ -99,12 +103,21 @@ describe('NetWorthCard', () => {
     expect(screen.getByText('****')).toBeTruthy()
     expect(screen.queryByText('$123.45')).toBeNull()
     expect(screen.getByRole('button', { name: /show balances/i })).toBeTruthy()
-    expect(screen.getByText('+12.34% from last month')).toBeTruthy()
+    expect(screen.getByText('+12.34%')).toBeTruthy()
+    expect(screen.getByText('from last month')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /hover point/i }))
 
     expect(screen.getByText('Net worth - Apr 1')).toBeTruthy()
     expect(screen.getByText('****')).toBeTruthy()
     expect(screen.queryByText('$4,321.00')).toBeNull()
+  })
+
+  it('shows the absolute net worth change from the percentage trigger', async () => {
+    renderNetWorthCard()
+
+    fireEvent.click(screen.getByText('+12.34%'))
+
+    expect(await screen.findByText('+$45.67')).toBeTruthy()
   })
 })

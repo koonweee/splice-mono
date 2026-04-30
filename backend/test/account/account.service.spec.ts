@@ -164,8 +164,28 @@ describe('AccountService', () => {
       expect(result).toHaveProperty('id');
       expect(result.name).toBeNull();
       expect(result.subType).toBeNull();
+      expect(result.notes).toBeNull();
       expect(result.externalAccountId).toBeNull();
       expect(result.bankLinkId).toBeNull();
+    });
+
+    it('should create an account with notes', async () => {
+      const createDto = {
+        ...mockCreateAccountDto,
+        notes: 'Keep this account for annual taxes.',
+      };
+      const mockEntity = AccountEntity.fromDto(createDto, mockUserId);
+      mockEntity.id = 'generated-uuid';
+      mockRepository.save.mockResolvedValue(mockEntity);
+
+      const result = await service.create(createDto, mockUserId);
+
+      expect(result.notes).toBe('Keep this account for annual taxes.');
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notes: 'Keep this account for annual taxes.',
+        }),
+      );
     });
 
     it('should emit ManualAccountCreatedEvent when creating a manual account', async () => {
@@ -607,6 +627,47 @@ describe('AccountService', () => {
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           customName: null,
+        }),
+      );
+    });
+
+    it('should update notes when provided in update DTO', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockResolvedValue(mockEntity);
+
+      const result = await service.update(
+        'test-id',
+        { notes: 'Call bank before closing.' },
+        mockUserId,
+      );
+
+      expect(result?.notes).toBe('Call bank before closing.');
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notes: 'Call bank before closing.',
+        }),
+      );
+    });
+
+    it('should null out notes when null is passed', async () => {
+      const mockEntity = AccountEntity.fromDto(
+        { ...mockCreateAccountDto, notes: 'Old note' },
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockResolvedValue(mockEntity);
+
+      await service.update('test-id', { notes: null }, mockUserId);
+
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notes: null,
         }),
       );
     });
