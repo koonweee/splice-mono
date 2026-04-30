@@ -17,6 +17,8 @@ export interface Account {
   /** @nullable */
   customName?: string | null
   /** @nullable */
+  notes?: string | null
+  /** @nullable */
   mask?: string | null
   type: (typeof AccountType)[keyof typeof AccountType]
   /** @nullable */

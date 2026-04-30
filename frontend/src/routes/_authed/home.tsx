@@ -144,6 +144,7 @@ export function HomePage() {
             netWorth={dashboard.netWorth}
             onToggleBalancesHidden={handleToggleBalancesHidden}
             changePercent={dashboard.changePercent}
+            changeAmount={dashboard.changeAmount}
             comparisonPeriod={dashboard.comparisonPeriod}
             chartData={dashboard.chartData}
           />

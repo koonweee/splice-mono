@@ -1,0 +1,4 @@
+interface:
+  display_name: "Splice Local Dev"
+  short_description: "Start Splice full-stack dev locally"
+  default_prompt: "Use $splice-local-dev to start the local Splice full-stack development environment."

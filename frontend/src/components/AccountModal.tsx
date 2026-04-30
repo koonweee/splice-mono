@@ -1,5 +1,24 @@
-import { Box, Button, Group, Loader, Modal, Stack, Text } from '@mantine/core'
+import {
+  Box,
+  Button,
+  Group,
+  Loader,
+  Modal,
+  Stack,
+  Text,
+  Textarea,
+} from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
+import { notifications } from '@mantine/notifications'
+import { useQueryClient } from '@tanstack/react-query'
+import { Save } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  getAccountControllerFindAllQueryKey,
+  getBalanceQueryControllerGetAllBalancesQueryKey,
+  getBalanceQueryControllerGetBalancesQueryKey,
+  useAccountControllerUpdate,
+} from '../api/clients/spliceAPI'
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
 import {
@@ -27,6 +46,10 @@ export function AccountModal({
   period,
 }: AccountModalProps) {
   const isMobile = useIsMobile()
+  const queryClient = useQueryClient()
+  const updateAccount = useAccountControllerUpdate()
+  const [notes, setNotes] = useState('')
+  const [savedNotes, setSavedNotes] = useState('')
   const [
     updateModalOpened,
     { open: openUpdateModal, close: closeUpdateModal },
@@ -41,6 +64,57 @@ export function AccountModal({
   // Get account from balance history if available
   const fullAccount = balanceHistory.latestBalance?.account
   const isManual = !!fullAccount && !fullAccount.bankLinkId
+  const notesChanged = notes !== savedNotes
+
+  useEffect(() => {
+    const nextNotes = fullAccount?.notes ?? ''
+    setNotes(nextNotes)
+    setSavedNotes(nextNotes)
+  }, [fullAccount?.id, fullAccount?.notes])
+
+  const invalidateAccountData = useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: getAccountControllerFindAllQueryKey(),
+    })
+    queryClient.invalidateQueries({
+      queryKey: getBalanceQueryControllerGetBalancesQueryKey(),
+    })
+    queryClient.invalidateQueries({
+      queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
+    })
+  }, [queryClient])
+
+  const saveNotes = useCallback(() => {
+    if (!fullAccount || !notesChanged) return
+
+    const normalizedNotes = notes.trim()
+    updateAccount.mutate(
+      {
+        id: fullAccount.id,
+        data: { notes: normalizedNotes.length ? normalizedNotes : null },
+      },
+      {
+        onSuccess: (updatedAccount) => {
+          const nextNotes = updatedAccount.notes ?? ''
+          setNotes(nextNotes)
+          setSavedNotes(nextNotes)
+          invalidateAccountData()
+          notifications.show({
+            title: 'Notes Saved',
+            message: 'Account notes have been updated.',
+            color: 'green',
+          })
+        },
+        onError: () => {
+          notifications.show({
+            title: 'Save Failed',
+            message: 'Unable to save account notes. Please try again.',
+            color: 'red',
+          })
+        },
+      },
+    )
+  }, [fullAccount, invalidateAccountData, notes, notesChanged, updateAccount])
 
   // Get balance info from the latest balance result or fall back to account summary
   const latestBalance = balanceHistory.latestBalance
@@ -120,6 +194,42 @@ export function AccountModal({
                     </Text>
                   </Group>
                 )}
+
+                <Box mt="xs">
+                  <Text fw={500} mb="xs">
+                    Notes
+                  </Text>
+                  <Textarea
+                    aria-label="Account notes"
+                    autosize
+                    minRows={4}
+                    maxRows={10}
+                    placeholder="Enter notes here"
+                    value={notes}
+                    onChange={(event) => setNotes(event.currentTarget.value)}
+                    styles={{
+                      input: {
+                        backgroundColor: 'transparent',
+                        borderColor: 'transparent',
+                        paddingLeft: 0,
+                        paddingRight: 0,
+                      },
+                    }}
+                  />
+                  {notesChanged && (
+                    <Group justify="flex-end" mt="xs">
+                      <Button
+                        aria-label="Save account notes"
+                        size="xs"
+                        leftSection={<Save size={14} />}
+                        loading={updateAccount.isPending}
+                        onClick={saveNotes}
+                      >
+                        Save
+                      </Button>
+                    </Group>
+                  )}
+                </Box>
               </>
             )}
 

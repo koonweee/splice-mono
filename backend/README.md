@@ -141,9 +141,17 @@ Authenticate with a personal access token:
 Authorization: Bearer splice_pat_...
 ```
 
-The initial MCP surface includes user context, account snapshots, balance
-history, and transaction search. Cash flow analysis and mutations are not
-exposed through MCP.
+The MCP surface includes user context, account snapshots, balance history,
+paginated transaction listing, paginated balance snapshot listing, category
+discovery, and legacy transaction search. Cash flow analysis and mutations are
+not exposed through MCP.
+
+Compatible clients can read `splice://mcp-guide` for tool-use guidance. In
+short: call `get_user_context` first, page through `list_transactions` until
+`pageInfo.hasMore` is false for spending-pattern analysis, use
+`get_accounts_snapshot` plus `list_balance_snapshots` for projection baselines,
+and compare transaction amounts with `convertedAmount` in the requested
+`reportingCurrency`.
 
 ## API Documentation
 

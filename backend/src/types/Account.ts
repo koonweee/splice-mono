@@ -23,6 +23,7 @@ export const AccountSchema = registerSchema(
       id: z.string(),
       name: z.string().nullable(),
       customName: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
       /** Mask of account number (e.g., last 4 digits) */
       mask: z.string().nullable().optional(),
       type: AccountTypeSchema,
@@ -52,6 +53,7 @@ export const CreateAccountDtoSchema = registerSchema(
     .object({
       name: z.string().nullable(),
       customName: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
       /** Mask of account number (e.g., last 4 digits) */
       mask: z.string().nullable().optional(),
       type: AccountTypeSchema,
