@@ -19,7 +19,7 @@ describe('SpliceMcpService', () => {
     getBalanceHistorySummary: jest.fn(),
   };
   const transactionsSurfaceService = {
-    findForAsk: jest.fn(),
+    searchTransactions: jest.fn(),
   };
   const mcpReadService = {
     listTransactions: jest.fn(),
@@ -105,9 +105,9 @@ describe('SpliceMcpService', () => {
       expect(guide.contents[0]).toMatchObject({
         mimeType: 'text/markdown',
       });
-      expect('text' in guide.contents[0] ? guide.contents[0].text : '').toContain(
-        'keep paging until pageInfo.hasMore is false',
-      );
+      expect(
+        'text' in guide.contents[0] ? guide.contents[0].text : '',
+      ).toContain('keep paging until pageInfo.hasMore is false');
     } finally {
       await close();
     }
@@ -225,7 +225,7 @@ describe('SpliceMcpService', () => {
   });
 
   it('searches transactions with a default limit of 20', async () => {
-    transactionsSurfaceService.findForAsk.mockResolvedValue({
+    transactionsSurfaceService.searchTransactions.mockResolvedValue({
       matchedCount: 0,
       truncated: false,
       transactions: [],
@@ -241,13 +241,12 @@ describe('SpliceMcpService', () => {
         },
       });
 
-      expect(transactionsSurfaceService.findForAsk).toHaveBeenCalledWith(
-        mockUserId,
-        {
-          merchantQuery: 'coffee',
-          limit: 20,
-        },
-      );
+      expect(
+        transactionsSurfaceService.searchTransactions,
+      ).toHaveBeenCalledWith(mockUserId, {
+        merchantQuery: 'coffee',
+        limit: 20,
+      });
     } finally {
       await close();
     }
