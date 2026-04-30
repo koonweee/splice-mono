@@ -24,6 +24,10 @@ export class AccountEntity extends OwnedEntity {
   @Column({ type: 'varchar', nullable: true })
   customName: string | null;
 
+  /** User-authored notes for this account. */
+  @Column({ type: 'text', nullable: true })
+  notes: string | null;
+
   /** Mask of account number (e.g., last 4 digits) */
   @Column({ type: 'varchar', nullable: true })
   mask: string | null;
@@ -71,6 +75,7 @@ export class AccountEntity extends OwnedEntity {
     entity.userId = userId;
     entity.name = dto.name;
     entity.customName = dto.customName ?? null;
+    entity.notes = dto.notes ?? null;
     entity.mask = dto.mask ?? null;
     entity.availableBalance = BalanceColumns.fromMoneyWithSign(
       dto.availableBalance,
@@ -96,6 +101,7 @@ export class AccountEntity extends OwnedEntity {
       userId: this.userId,
       name: this.name,
       customName: this.customName,
+      notes: this.notes,
       mask: this.mask,
       availableBalance: this.availableBalance.toMoneyWithSign(),
       currentBalance: this.currentBalance.toMoneyWithSign(),
