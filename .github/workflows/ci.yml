@@ -1,8 +1,23 @@
 name: CI
+run-name: CI ${{ github.event.inputs.request_id || github.head_ref || github.ref_name }}
 
 on:
   pull_request:
     branches: [main, deploy]
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Base branch to compare against
+        required: true
+        default: deploy
+      head:
+        description: Head branch to validate
+        required: true
+        default: main
+      request_id:
+        description: Unique caller id for deploy workflow correlation
+        required: false
+        default: manual
 
 jobs:
   changes:
@@ -14,13 +29,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Get changed files
+        env:
+          BASE_BRANCH: ${{ github.event.inputs.base || github.base_ref }}
+          HEAD_BRANCH: ${{ github.event.inputs.head || github.head_ref }}
         id: changes
         run: |
-          # Get list of changed files between HEAD and HEAD~1
-          # For PRs, GitHub merges the PR branch, so HEAD~1 is the base
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            git fetch origin "$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH" "$HEAD_BRANCH:refs/remotes/origin/$HEAD_BRANCH"
+            CHANGED_FILES=$(git diff --name-only "origin/$BASE_BRANCH...origin/$HEAD_BRANCH")
+          else
+            # For PRs, GitHub merges the PR branch, so HEAD~1 is the base.
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
