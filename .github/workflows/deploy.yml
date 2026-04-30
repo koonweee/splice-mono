@@ -33,7 +33,8 @@ jobs:
       - name: Deploy
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Use a user/App token when configured so deploy PRs trigger pull_request CI.
+          GH_TOKEN: ${{ secrets.DEPLOY_GH_TOKEN || github.token }}
         run: |
           set -euo pipefail
 
