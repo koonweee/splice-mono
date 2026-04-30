@@ -152,6 +152,7 @@ export interface AccountSummaryData {
   effectiveBalance: MoneyWithSign
   convertedEffectiveBalance?: MoneyWithSign
   changePercent?: number
+  changeAmount?: MoneyWithSign
   institutionName?: string
   syncedAt?: string
   archivedAt?: string | null
@@ -163,6 +164,7 @@ export interface AccountSummaryData {
 export interface DashboardData {
   netWorth: MoneyWithSign
   changePercent?: number
+  changeAmount?: MoneyWithSign
   comparisonPeriod: TimePeriod
   chartData: Array<ChartDataPoint>
   assets: Array<AccountSummaryData>
@@ -196,7 +198,7 @@ export function transformToDashboardData(
     ? calculateNetWorthForDate(lastResult.balances)
     : 0
 
-  // Calculate percentage change
+  // Calculate period change
   const changePercent = calculateChangePercent(lastNetWorth, firstNetWorth)
 
   // Determine currency from first account (assume all converted to same currency)
@@ -204,6 +206,10 @@ export function transformToDashboardData(
   const currency = firstAccount
     ? resolveEffectiveBalance(firstAccount.effectiveBalance).money.currency
     : 'USD'
+  const changeAmount = createMoneyWithSign(
+    lastNetWorth - firstNetWorth,
+    currency,
+  )
 
   // Build chart data from all dates
   const chartData: Array<ChartDataPoint> = sortedResults
@@ -242,6 +248,7 @@ export function transformToDashboardData(
         const currentAmount = getSignedAmount(currentEffective)
 
         let accountChangePercent: number | undefined = undefined
+        let accountChangeAmount: MoneyWithSign | undefined = undefined
         if (firstAccountResult) {
           const previousEffective = resolveEffectiveBalance(
             firstAccountResult.effectiveBalance,
@@ -250,6 +257,10 @@ export function transformToDashboardData(
           accountChangePercent = calculateChangePercent(
             currentAmount,
             previousAmount,
+          )
+          accountChangeAmount = createMoneyWithSign(
+            currentAmount - previousAmount,
+            currentEffective.money.currency,
           )
         }
 
@@ -263,12 +274,12 @@ export function transformToDashboardData(
           convertedEffectiveBalance:
             accountResult.effectiveBalance.convertedBalance,
           changePercent: accountChangePercent,
+          changeAmount: accountChangeAmount,
           institutionName:
             accountResult.account.bankLink?.institutionName ?? undefined,
           syncedAt: getLatestSyncedAt(sortedResults, accountId)?.toISOString(),
-          archivedAt: (
-            accountResult.account as { archivedAt?: string | null }
-          ).archivedAt,
+          archivedAt: (accountResult.account as { archivedAt?: string | null })
+            .archivedAt,
         }
 
         if (isLiabilityType(accountResult.account.type)) {
@@ -292,6 +303,7 @@ export function transformToDashboardData(
   return {
     netWorth: createMoneyWithSign(lastNetWorth, currency),
     changePercent,
+    changeAmount,
     comparisonPeriod: period,
     chartData,
     assets: sortedAssets,

@@ -21,6 +21,11 @@ describe('SpliceMcpService', () => {
   const transactionsSurfaceService = {
     findForAsk: jest.fn(),
   };
+  const mcpReadService = {
+    listTransactions: jest.fn(),
+    listBalanceSnapshots: jest.fn(),
+    listCategories: jest.fn(),
+  };
 
   let service: SpliceMcpService;
 
@@ -30,6 +35,7 @@ describe('SpliceMcpService', () => {
       accountsSurfaceService as never,
       balanceHistorySurfaceService as never,
       transactionsSurfaceService as never,
+      mcpReadService as never,
     );
   });
 
@@ -57,7 +63,7 @@ describe('SpliceMcpService', () => {
     };
   }
 
-  it('registers only the initial read-only non-cashflow tools', async () => {
+  it('registers read-only MCP tools without cashflow analysis', async () => {
     const { client, close } = await connect(service.createServer(mockUserId));
 
     try {
@@ -67,10 +73,40 @@ describe('SpliceMcpService', () => {
         'get_accounts_snapshot',
         'get_balance_history',
         'get_user_context',
+        'list_balance_snapshots',
+        'list_categories',
+        'list_transactions',
         'search_transactions',
       ]);
       expect(result.tools.map((tool) => tool.name)).not.toContain(
         'get_cashflow_analysis',
+      );
+    } finally {
+      await close();
+    }
+  });
+
+  it('exposes calling-LLM guidance as a resource', async () => {
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      const resources = await client.listResources();
+
+      expect(resources.resources).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            uri: 'splice://mcp-guide',
+            name: 'splice_mcp_guide',
+          }),
+        ]),
+      );
+
+      const guide = await client.readResource({ uri: 'splice://mcp-guide' });
+      expect(guide.contents[0]).toMatchObject({
+        mimeType: 'text/markdown',
+      });
+      expect('text' in guide.contents[0] ? guide.contents[0].text : '').toContain(
+        'keep paging until pageInfo.hasMore is false',
       );
     } finally {
       await close();
@@ -212,6 +248,109 @@ describe('SpliceMcpService', () => {
           limit: 20,
         },
       );
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates list_transactions to the MCP read service', async () => {
+    mcpReadService.listTransactions.mockResolvedValue({
+      data: [],
+      pageInfo: { nextCursor: null, hasMore: false },
+      conversion: { reportingCurrency: 'USD', rates: [] },
+      query: {
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+        includePending: false,
+        reportingCurrency: 'USD',
+      },
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      await client.callTool({
+        name: 'list_transactions',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          merchantQuery: 'coffee',
+          reportingCurrency: 'USD',
+          pageSize: 50,
+        },
+      });
+
+      expect(mcpReadService.listTransactions).toHaveBeenCalledWith(mockUserId, {
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+        merchantQuery: 'coffee',
+        reportingCurrency: 'USD',
+        pageSize: 50,
+      });
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates list_balance_snapshots to the MCP read service', async () => {
+    mcpReadService.listBalanceSnapshots.mockResolvedValue({
+      data: [],
+      pageInfo: { nextCursor: null, hasMore: false },
+      query: {
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+      },
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      await client.callTool({
+        name: 'list_balance_snapshots',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          pageSize: 100,
+        },
+      });
+
+      expect(mcpReadService.listBalanceSnapshots).toHaveBeenCalledWith(
+        mockUserId,
+        {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          pageSize: 100,
+        },
+      );
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates list_categories to the MCP read service', async () => {
+    mcpReadService.listCategories.mockResolvedValue({
+      data: [],
+      query: {
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+      },
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      await client.callTool({
+        name: 'list_categories',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+        },
+      });
+
+      expect(mcpReadService.listCategories).toHaveBeenCalledWith(mockUserId, {
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+      });
     } finally {
       await close();
     }

@@ -26,6 +26,14 @@ Use `yarn` (per project convention) and run commands in the owning project direc
 - `cd frontend && yarn typecheck` – strict TypeScript check.
 - `cd frontend && yarn orval` – regenerate API client from backend OpenAPI.
 
+## Deployment
+Production deploys are handled by merging `main` into the protected `deploy` branch through `.github/workflows/deploy.yml`.
+The workflow creates or reuses a `main` → `deploy` PR, runs the required CI checks for that deploy comparison, waits for them to pass, then merges the PR.
+
+- GitHub UI: open the repo’s **Actions** tab, select **Deploy**, click **Run workflow**, keep `confirm` set to `deploy`, and run it from `main`.
+- GitHub CLI: `gh workflow run deploy.yml -R koonweee/splice-mono --ref main -f confirm=deploy`
+- No deploy token secret is required; the workflow uses `GITHUB_TOKEN` with explicit workflow permissions.
+
 ## Coding Style & Naming Conventions
 - Backend enforces TypeScript type safety and linted style through ESLint/Prettier.
   - Backend `prettier`: `singleQuote`, `trailingComma: all` (default semicolons).
