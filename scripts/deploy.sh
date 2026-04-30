@@ -85,8 +85,28 @@ if ! gh pr checks "$PR_URL" --watch --fail-fast; then
     exit 1
 fi
 
-# Auto-merge the PR
-echo -e "\n${GREEN}Merging PR...${NC}"
-gh pr merge --merge "$PR_URL"
+# Auto-merge the PR through branch protection.
+echo -e "\n${GREEN}Enabling auto-merge for PR...${NC}"
+gh pr merge --auto --merge "$PR_URL"
 
-echo -e "\n${GREEN}=== Deploy complete! ===${NC}"
+echo -e "${YELLOW}Waiting for deploy PR to merge...${NC}"
+for i in {1..60}; do
+    PR_STATE=$(gh pr view "$PR_URL" --json state --jq '.state')
+    PR_MERGED_AT=$(gh pr view "$PR_URL" --json mergedAt --jq '.mergedAt')
+
+    if [ -n "$PR_MERGED_AT" ]; then
+        echo -e "${GREEN}Deploy PR merged: $PR_URL${NC}"
+        echo -e "\n${GREEN}=== Deploy complete! ===${NC}"
+        exit 0
+    fi
+
+    if [ "$PR_STATE" = "CLOSED" ]; then
+        echo -e "${RED}Deploy PR closed without merging: $PR_URL${NC}"
+        exit 1
+    fi
+
+    sleep 10
+done
+
+echo -e "${RED}Timed out waiting for deploy PR auto-merge: $PR_URL${NC}"
+exit 1
