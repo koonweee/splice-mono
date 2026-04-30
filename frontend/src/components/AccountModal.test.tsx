@@ -130,6 +130,14 @@ function renderAccountModal(notes: string | null) {
   )
 }
 
+function getTextarea(element: HTMLElement): HTMLTextAreaElement {
+  if (!(element instanceof HTMLTextAreaElement)) {
+    throw new Error('Expected element to be a textarea')
+  }
+
+  return element
+}
+
 beforeEach(() => {
   mockFns.useAccountControllerUpdateMock.mockReturnValue({
     mutate: mockFns.mutateMock,
@@ -166,9 +174,9 @@ describe('AccountModal notes', () => {
   it('renders an empty notes textarea with placeholder when notes are absent', () => {
     renderAccountModal(null)
 
-    const textarea = screen.getByPlaceholderText(
-      'Enter notes here',
-    ) as HTMLTextAreaElement
+    const textarea = getTextarea(
+      screen.getByPlaceholderText('Enter notes here'),
+    )
 
     expect(textarea.value).toBe('')
   })
@@ -176,9 +184,9 @@ describe('AccountModal notes', () => {
   it('renders existing notes in the textarea', () => {
     renderAccountModal('Use for household bills.')
 
-    expect(
-      (screen.getByLabelText('Account notes') as HTMLTextAreaElement).value,
-    ).toBe('Use for household bills.')
+    const textarea = getTextarea(screen.getByLabelText('Account notes'))
+
+    expect(textarea.value).toBe('Use for household bills.')
   })
 
   it('hides the save button until notes change', () => {

@@ -251,7 +251,7 @@ export function AccountModal({
         )}
       </Modal>
 
-      {isManual && fullAccount && (
+      {isManual && (
         <UpdateBalanceModal
           opened={updateModalOpened}
           onClose={closeUpdateModal}

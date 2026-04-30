@@ -15,8 +15,6 @@ const defaultSettings = {
 
 describe('UserService', () => {
   let service: UserService;
-  let authService: AuthService;
-  let eventEmitter: EventEmitter2;
 
   const mockRepository = {
     save: jest.fn(),
@@ -56,8 +54,6 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
-    authService = module.get<AuthService>(AuthService);
-    eventEmitter = module.get<EventEmitter2>(EventEmitter2);
   });
 
   afterEach(() => {
@@ -129,11 +125,11 @@ describe('UserService', () => {
       );
 
       // Verify the password is hashed (contains salt:hash format)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+
       const savedEntity = mockRepository.save.mock.calls[0][0];
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(savedEntity.hashedPassword).toContain(':');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(savedEntity.hashedPassword).not.toBe(mockCreateUserDto.password);
     });
   });
@@ -152,7 +148,6 @@ describe('UserService', () => {
       // First create a user to get a valid hash
       mockRepository.findOne.mockResolvedValueOnce(null);
       mockRepository.save.mockImplementation((entity) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         mockEntity.hashedPassword = entity.hashedPassword;
         return Promise.resolve(mockEntity);
       });

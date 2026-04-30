@@ -179,7 +179,9 @@ describe('UserController', () => {
         expiresAt: new Date(expiresAt),
         createdAt: new Date('2024-01-01T00:00:00Z'),
       };
-      mockPersonalAccessTokenService.createToken.mockResolvedValue(tokenPayload);
+      mockPersonalAccessTokenService.createToken.mockResolvedValue(
+        tokenPayload,
+      );
 
       const result = await controller.createToken(currentUser, {
         name: 'codex-local',
@@ -266,12 +268,17 @@ describe('UserController', () => {
       mockPersonalAccessTokenService.revokeToken.mockResolvedValue('not_found');
 
       await expect(
-        controller.revokeToken(currentUser, '22222222-2222-4222-8222-222222222222'),
+        controller.revokeToken(
+          currentUser,
+          '22222222-2222-4222-8222-222222222222',
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('revokeToken treats already revoked tokens as a no-op success', async () => {
-      mockPersonalAccessTokenService.revokeToken.mockResolvedValue('already_revoked');
+      mockPersonalAccessTokenService.revokeToken.mockResolvedValue(
+        'already_revoked',
+      );
 
       const result = await controller.revokeToken(
         currentUser,
@@ -291,7 +298,9 @@ describe('UserController', () => {
         UserController,
         'revokeToken',
       ) as Record<string, { data?: string; pipes?: unknown[] }>;
-      const binding = Object.values(routeArgs).find((value) => value.data === 'id');
+      const binding = Object.values(routeArgs).find(
+        (value) => value.data === 'id',
+      );
 
       expect(binding).toBeDefined();
       expect(binding?.pipes).toEqual(

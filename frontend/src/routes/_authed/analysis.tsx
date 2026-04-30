@@ -263,7 +263,7 @@ function AnalysisPage() {
   const {
     data: analysis,
     isPending,
-    error,
+    isError,
   } = useTransactionAnalysisControllerGetAnalysis({ startDate, endDate })
 
   // Category drill-down modal
@@ -359,7 +359,7 @@ function AnalysisPage() {
         </Group>
       )}
 
-      {error && (
+      {isError && (
         <Alert color="red" title="Error" mb="lg">
           Failed to load analysis data. Please try again.
         </Alert>
