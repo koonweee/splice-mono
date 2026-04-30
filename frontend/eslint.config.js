@@ -17,6 +17,13 @@ const config = tanstackConfig.map((config) => {
 })
 
 export default [
-  { ignores: ['*.config.js', '.output/**'] },
+  {
+    ignores: [
+      '*.config.js',
+      '.output/**',
+      'src/api/**',
+      'src/routeTree.gen.ts',
+    ],
+  },
   ...config,
 ]

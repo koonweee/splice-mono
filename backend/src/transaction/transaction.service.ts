@@ -10,57 +10,20 @@ import {
   MoreThanOrEqual,
   Repository,
 } from 'typeorm';
-import type {
-  AskComparePeriodsOptions,
-  AskEvidenceAggregate,
-  AskTransactionSearchOptions,
-  AskTransactionSearchResult,
-  AskTransactionSummaryOptions,
-} from '../ask/ask.types';
 import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
-import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import {
   CreateTransactionDto,
   Transaction,
   UpdateTransactionDto,
 } from '../types/Transaction';
-import { getDecimalPlaces, MoneySign } from '../types/MoneyWithSign';
 import { TransactionEntity } from './transaction.entity';
-
-interface LegacyAskRecurringTransaction {
-  merchantName: string;
-  cadence: 'monthly' | 'weekly' | 'unknown';
-  amount: number;
-  currency: string;
-}
-
-interface LegacyAskTransactionSummaryResult {
-  totalInflow: number;
-  totalOutflow: number;
-  net: number;
-  transactionCount: number;
-  topCategories: AskEvidenceAggregate[];
-  topMerchants: AskEvidenceAggregate[];
-  topAccounts: AskEvidenceAggregate[];
-  recurringTransactions: LegacyAskRecurringTransaction[];
-  matchedCount: number;
-  truncated: boolean;
-}
-
-interface LegacyAskComparePeriodsResult {
-  currentTotalOutflow: number;
-  previousTotalOutflow: number;
-  absoluteDelta: number;
-  percentDelta: number;
-  categoryDrivers: AskEvidenceAggregate[];
-  merchantDrivers: AskEvidenceAggregate[];
-  accountDrivers: AskEvidenceAggregate[];
-  matchedCount: number;
-  truncated: boolean;
-}
+import type {
+  TransactionSurfaceSearchOptions,
+  TransactionSurfaceSearchResult,
+} from './transaction-surface.types';
 
 @Injectable()
 export class TransactionService extends OwnedCrudService<
@@ -79,7 +42,6 @@ export class TransactionService extends OwnedCrudService<
     repository: Repository<TransactionEntity>,
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
-    private readonly currencyConversionService: CurrencyConversionService,
   ) {
     super(repository);
   }
@@ -330,10 +292,10 @@ export class TransactionService extends OwnedCrudService<
       });
   }
 
-  async findForAsk(
+  async searchForSurface(
     userId: string,
-    options: AskTransactionSearchOptions,
-  ): Promise<AskTransactionSearchResult> {
+    options: TransactionSurfaceSearchOptions,
+  ): Promise<TransactionSurfaceSearchResult> {
     const matches = await this.findMatchingTransactions(userId, options);
     const limit = options.limit ?? 20;
 
@@ -350,371 +312,6 @@ export class TransactionService extends OwnedCrudService<
         categoryPrimary: transaction.category?.primary ?? null,
         amount: transaction.amount,
       })),
-    };
-  }
-
-  private static readonly AGGREGATE_LIMIT = 10;
-
-  private toMajorUnitAmount(
-    amountInMinorUnits: number,
-    currency: string,
-  ): number {
-    return amountInMinorUnits / Math.pow(10, getDecimalPlaces(currency));
-  }
-
-  private roundMajorUnitAmount(amount: number, currency: string): number {
-    return Number(amount.toFixed(getDecimalPlaces(currency)));
-  }
-
-  private toRoundedMajorUnitAmount(
-    amountInMinorUnits: number,
-    currency: string,
-  ): number {
-    return this.roundMajorUnitAmount(
-      this.toMajorUnitAmount(amountInMinorUnits, currency),
-      currency,
-    );
-  }
-
-  private buildTopAggregatesFromMinorUnits(
-    entries: Iterable<[string, number]>,
-    currency: string,
-    kind: AskEvidenceAggregate['kind'],
-  ): AskEvidenceAggregate[] {
-    return Array.from(entries)
-      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-      .slice(0, TransactionService.AGGREGATE_LIMIT)
-      .map(([label, amount]) => ({
-        label,
-        amount: this.toRoundedMajorUnitAmount(amount, currency),
-        currency,
-        kind,
-      }));
-  }
-
-  private buildTopAggregates(
-    entries: Iterable<[string, number]>,
-    currency: string,
-    kind: AskEvidenceAggregate['kind'],
-  ): AskEvidenceAggregate[] {
-    return Array.from(entries)
-      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-      .slice(0, TransactionService.AGGREGATE_LIMIT)
-      .map(([label, amount]) => ({
-        label,
-        amount: this.roundMajorUnitAmount(amount, currency),
-        currency,
-        kind,
-      }));
-  }
-
-  private async convertTransactionsToPreferredCurrency(
-    userId: string,
-    transactions: Transaction[],
-    referenceDate?: string,
-  ): Promise<{
-    preferredCurrency: string;
-    convertedTransactions: Array<{
-      transaction: Transaction;
-      amount: number;
-    }>;
-  }> {
-    const preferredCurrency =
-      await this.currencyConversionService.getPreferredCurrency(userId);
-    const effectiveReferenceDate =
-      referenceDate ??
-      transactions.reduce<string | undefined>(
-        (latest, transaction) =>
-          latest && latest > transaction.date ? latest : transaction.date,
-        undefined,
-      ) ??
-      new Date().toISOString().slice(0, 10);
-
-    const foreignCurrencies = [
-      ...new Set(
-        transactions
-          .map((transaction) => transaction.amount.money.currency)
-          .filter((currency) => currency !== preferredCurrency),
-      ),
-    ];
-
-    const rateMap = await this.currencyConversionService.getRateMap(
-      foreignCurrencies,
-      preferredCurrency,
-      effectiveReferenceDate,
-    );
-
-    return {
-      preferredCurrency,
-      convertedTransactions: transactions.map((transaction) => {
-        const sourceCurrency = transaction.amount.money.currency;
-
-        if (sourceCurrency === preferredCurrency) {
-          return {
-            transaction,
-            amount: transaction.amount.money.amount,
-          };
-        }
-
-        const rate = rateMap.get(sourceCurrency);
-        if (rate === undefined) {
-          throw new Error(
-            `Missing exchange rate for ${sourceCurrency} to ${preferredCurrency} on ${effectiveReferenceDate}`,
-          );
-        }
-
-        return {
-          transaction,
-          amount: this.currencyConversionService.convertAmount(
-            transaction.amount.money.amount,
-            sourceCurrency,
-            preferredCurrency,
-            rate,
-          ),
-        };
-      }),
-    };
-  }
-
-  private detectRecurringTransactions(
-    transactions: Array<{
-      transaction: Transaction;
-      amount: number;
-    }>,
-    currency: string,
-  ): LegacyAskTransactionSummaryResult['recurringTransactions'] {
-    const merchants = new Map<
-      string,
-      Array<{
-        transaction: Transaction;
-        amount: number;
-      }>
-    >();
-
-    transactions.forEach((entry) => {
-      const { transaction } = entry;
-      if (
-        !transaction.merchantName ||
-        transaction.amount.sign !== MoneySign.NEGATIVE
-      ) {
-        return;
-      }
-      const key = transaction.merchantName.trim().toLowerCase();
-      const existing = merchants.get(key) ?? [];
-      existing.push(entry);
-      merchants.set(key, existing);
-    });
-
-    return Array.from(merchants.entries())
-      .map(([merchantName, grouped]) => {
-        const sorted = grouped.sort((a, b) =>
-          a.transaction.date.localeCompare(b.transaction.date),
-        );
-        if (sorted.length < 2) {
-          return null;
-        }
-
-        const dayDiffs = sorted.slice(1).map((entry, index) => {
-          const previous = new Date(sorted[index].transaction.date).getTime();
-          const current = new Date(entry.transaction.date).getTime();
-          return Math.round((current - previous) / (1000 * 60 * 60 * 24));
-        });
-
-        const cadence = dayDiffs.some((diff) => diff >= 25 && diff <= 35)
-          ? 'monthly'
-          : dayDiffs.some((diff) => diff >= 6 && diff <= 8)
-            ? 'weekly'
-            : 'unknown';
-
-        return {
-          merchantName: sorted[0].transaction.merchantName ?? merchantName,
-          cadence,
-          amount: this.toRoundedMajorUnitAmount(
-            sorted[sorted.length - 1].amount,
-            currency,
-          ),
-          currency,
-        };
-      })
-      .filter(
-        (
-          value,
-        ): value is LegacyAskTransactionSummaryResult['recurringTransactions'][number] =>
-          value !== null,
-      )
-      .slice(0, TransactionService.AGGREGATE_LIMIT);
-  }
-
-  async summarizeForAsk(
-    userId: string,
-    options: AskTransactionSummaryOptions,
-  ): Promise<LegacyAskTransactionSummaryResult> {
-    const matches = await this.findMatchingTransactions(userId, options);
-    const { preferredCurrency, convertedTransactions } =
-      await this.convertTransactionsToPreferredCurrency(
-        userId,
-        matches,
-        options.endDate,
-      );
-
-    const categoryTotals = new Map<string, number>();
-    const merchantTotals = new Map<string, number>();
-    const accountTotals = new Map<string, number>();
-    let totalInflow = 0;
-    let totalOutflow = 0;
-
-    convertedTransactions.forEach(({ transaction, amount }) => {
-      const signedAmount =
-        transaction.amount.sign === MoneySign.POSITIVE ? amount : -amount;
-      const absoluteAmount = Math.abs(signedAmount);
-
-      if (transaction.amount.sign === MoneySign.POSITIVE) {
-        totalInflow += absoluteAmount;
-      } else {
-        totalOutflow += absoluteAmount;
-      }
-
-      const category = transaction.category?.primary ?? 'UNCATEGORIZED';
-      categoryTotals.set(
-        category,
-        (categoryTotals.get(category) ?? 0) + absoluteAmount,
-      );
-
-      const merchant = transaction.merchantName ?? 'Unknown merchant';
-      merchantTotals.set(
-        merchant,
-        (merchantTotals.get(merchant) ?? 0) + absoluteAmount,
-      );
-
-      const account = transaction.accountName ?? 'Account';
-      accountTotals.set(
-        account,
-        (accountTotals.get(account) ?? 0) + absoluteAmount,
-      );
-    });
-
-    const recurringTransactions = this.detectRecurringTransactions(
-      convertedTransactions,
-      preferredCurrency,
-    );
-
-    return {
-      totalInflow: this.toRoundedMajorUnitAmount(
-        totalInflow,
-        preferredCurrency,
-      ),
-      totalOutflow: this.toRoundedMajorUnitAmount(
-        totalOutflow,
-        preferredCurrency,
-      ),
-      net: this.toRoundedMajorUnitAmount(
-        totalInflow - totalOutflow,
-        preferredCurrency,
-      ),
-      transactionCount: matches.length,
-      topCategories: this.buildTopAggregatesFromMinorUnits(
-        categoryTotals.entries(),
-        preferredCurrency,
-        'category',
-      ),
-      topMerchants: this.buildTopAggregatesFromMinorUnits(
-        merchantTotals.entries(),
-        preferredCurrency,
-        'merchant',
-      ),
-      topAccounts: this.buildTopAggregatesFromMinorUnits(
-        accountTotals.entries(),
-        preferredCurrency,
-        'account',
-      ),
-      recurringTransactions: options.recurringOnly
-        ? recurringTransactions
-        : recurringTransactions,
-      matchedCount: matches.length,
-      truncated: false,
-    };
-  }
-
-  async compareForAsk(
-    userId: string,
-    options: AskComparePeriodsOptions,
-  ): Promise<LegacyAskComparePeriodsResult> {
-    const current = await this.summarizeForAsk(userId, {
-      startDate: options.currentStartDate,
-      endDate: options.currentEndDate,
-      accountIds: options.accountIds,
-      includePending: options.includePending,
-    });
-    const previous = await this.summarizeForAsk(userId, {
-      startDate: options.previousStartDate,
-      endDate: options.previousEndDate,
-      accountIds: options.accountIds,
-      includePending: options.includePending,
-    });
-
-    const buildDeltaDrivers = (
-      currentEntries: AskEvidenceAggregate[],
-      previousEntries: AskEvidenceAggregate[],
-      kind: AskEvidenceAggregate['kind'],
-    ) => {
-      const currentMap = new Map(
-        currentEntries.map((entry) => [entry.label, entry.amount]),
-      );
-      const previousMap = new Map(
-        previousEntries.map((entry) => [entry.label, entry.amount]),
-      );
-      const labels = new Set([...currentMap.keys(), ...previousMap.keys()]);
-      const currency =
-        currentEntries[0]?.currency ?? previousEntries[0]?.currency ?? 'USD';
-
-      return this.buildTopAggregates(
-        Array.from(labels).map((label) => [
-          label,
-          (currentMap.get(label) ?? 0) - (previousMap.get(label) ?? 0),
-        ]),
-        currency,
-        kind,
-      );
-    };
-
-    const absoluteDelta = current.totalOutflow - previous.totalOutflow;
-    const deltaCurrency =
-      current.topCategories[0]?.currency ??
-      previous.topCategories[0]?.currency ??
-      current.topMerchants[0]?.currency ??
-      previous.topMerchants[0]?.currency ??
-      current.topAccounts[0]?.currency ??
-      previous.topAccounts[0]?.currency ??
-      'USD';
-    const percentDelta =
-      previous.totalOutflow === 0
-        ? current.totalOutflow === 0
-          ? 0
-          : 100
-        : (absoluteDelta / previous.totalOutflow) * 100;
-
-    return {
-      currentTotalOutflow: current.totalOutflow,
-      previousTotalOutflow: previous.totalOutflow,
-      absoluteDelta: this.roundMajorUnitAmount(absoluteDelta, deltaCurrency),
-      percentDelta,
-      categoryDrivers: buildDeltaDrivers(
-        current.topCategories,
-        previous.topCategories,
-        'category',
-      ),
-      merchantDrivers: buildDeltaDrivers(
-        current.topMerchants,
-        previous.topMerchants,
-        'merchant',
-      ),
-      accountDrivers: buildDeltaDrivers(
-        current.topAccounts,
-        previous.topAccounts,
-        'account',
-      ),
-      matchedCount: current.matchedCount + previous.matchedCount,
-      truncated: current.truncated || previous.truncated,
     };
   }
 

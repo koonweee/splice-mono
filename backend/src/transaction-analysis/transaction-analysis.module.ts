@@ -5,7 +5,6 @@ import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.enti
 import { CurrencyExchangeModule } from '../currency-exchange/currency-exchange.module';
 import { TransactionEntity } from '../transaction/transaction.entity';
 import { TransactionAnalysisController } from './transaction-analysis.controller';
-import { CashflowAnalysisSurfaceService } from './cashflow-analysis-surface.service';
 import { TransactionAnalysisService } from './transaction-analysis.service';
 
 @Module({
@@ -18,7 +17,7 @@ import { TransactionAnalysisService } from './transaction-analysis.service';
     CurrencyExchangeModule,
   ],
   controllers: [TransactionAnalysisController],
-  providers: [TransactionAnalysisService, CashflowAnalysisSurfaceService],
-  exports: [TransactionAnalysisService, CashflowAnalysisSurfaceService],
+  providers: [TransactionAnalysisService],
+  exports: [TransactionAnalysisService],
 })
 export class TransactionAnalysisModule {}

@@ -47,15 +47,15 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          # Check if backend src files changed
-          if echo "$CHANGED_FILES" | grep -q "^backend/src/"; then
+          # Check if backend runtime, tests, or quality gates changed
+          if echo "$CHANGED_FILES" | grep -Eq "^backend/(src|test|package.json|yarn.lock|eslint.config.mjs|tsconfig.*\\.json)"; then
             echo "backend=true" >> $GITHUB_OUTPUT
           else
             echo "backend=false" >> $GITHUB_OUTPUT
           fi
 
-          # Check if frontend src files changed
-          if echo "$CHANGED_FILES" | grep -q "^frontend/src/"; then
+          # Check if frontend runtime, tests, generated-client config, or quality gates changed
+          if echo "$CHANGED_FILES" | grep -Eq "^frontend/(src|package.json|yarn.lock|eslint.config.js|tsconfig.json|vite.config.ts|orval.config.ts)"; then
             echo "frontend=true" >> $GITHUB_OUTPUT
           else
             echo "frontend=false" >> $GITHUB_OUTPUT
@@ -114,3 +114,21 @@ jobs:
           cache-dependency-path: frontend/yarn.lock
       - run: yarn install --frozen-lockfile
       - run: yarn typecheck
+
+  frontend-lint:
+    name: Frontend Lint
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn lint

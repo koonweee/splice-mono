@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type {
-  AskEvidenceTransaction,
-  AskTransactionSearchOptions,
-  AskTransactionSearchResult,
-} from '../ask/ask.types';
+  TransactionSurfaceSearchOptions,
+  TransactionSurfaceSearchResult,
+  TransactionSurfaceSearchTransaction,
+} from './transaction-surface.types';
 import { TransactionService } from './transaction.service';
 
-export interface TransactionsSurfaceTransaction extends AskEvidenceTransaction {
+export interface TransactionsSurfaceTransaction
+  extends TransactionSurfaceSearchTransaction {
   categoryPrimaryLabel: string;
 }
 
@@ -20,12 +21,12 @@ export interface TransactionsSurfaceResult {
 export class TransactionsSurfaceService {
   constructor(private readonly transactionService: TransactionService) {}
 
-  async findForAsk(
+  async searchTransactions(
     userId: string,
-    options: AskTransactionSearchOptions,
+    options: TransactionSurfaceSearchOptions,
   ): Promise<TransactionsSurfaceResult> {
-    const result: AskTransactionSearchResult =
-      await this.transactionService.findForAsk(userId, options);
+    const result: TransactionSurfaceSearchResult =
+      await this.transactionService.searchForSurface(userId, options);
 
     return {
       matchedCount: result.matchedCount,

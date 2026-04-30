@@ -121,17 +121,6 @@ If you prefer to run the application locally without Docker:
 
 > When updating or installing new dependencies, do `yarn docker:down` then `yarn docker:up:build`
 
-## Ask Configuration
-
-The Ask endpoint streams finance answers from the backend and requires an OpenAI-compatible model configuration:
-
-```bash
-OPENAI_API_KEY=...
-OPENAI_MODEL=gpt-5.4-mini
-```
-
-`OPENAI_MODEL` is optional. If omitted, Ask defaults to `gpt-5.4-mini`.
-
 ## MCP Configuration
 
 Splice exposes a read-only MCP endpoint at `/mcp` for compatible AI tools.

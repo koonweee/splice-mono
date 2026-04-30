@@ -27,9 +27,9 @@ describe('JwtAuthGuard', () => {
     validateToken: jest.Mock;
   };
 
-  const parentProto = Object.getPrototypeOf(
-    JwtAuthGuard.prototype,
-  ) as { canActivate: jest.Mock };
+  const parentProto = Object.getPrototypeOf(JwtAuthGuard.prototype) as {
+    canActivate: jest.Mock;
+  };
 
   beforeEach(() => {
     reflector = {
@@ -111,7 +111,9 @@ describe('JwtAuthGuard', () => {
       Promise.resolve(guard.canActivate(createContext(request))),
     ).resolves.toBe(true);
 
-    expect(patService.validateToken).toHaveBeenCalledWith('splice_pat_deadbeef');
+    expect(patService.validateToken).toHaveBeenCalledWith(
+      'splice_pat_deadbeef',
+    );
     expect(request.user).toEqual({
       userId: 'user-123',
       email: 'user@example.com',
@@ -178,7 +180,9 @@ describe('JwtAuthGuard', () => {
       Promise.resolve(guard.canActivate(createContext(request))),
     ).resolves.toBe(true);
 
-    expect(patService.validateToken).toHaveBeenCalledWith('splice_pat_deadbeef');
+    expect(patService.validateToken).toHaveBeenCalledWith(
+      'splice_pat_deadbeef',
+    );
     expect(parentProto.canActivate).not.toHaveBeenCalled();
     expect(request.user).toEqual({
       userId: 'user-123',

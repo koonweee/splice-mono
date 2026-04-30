@@ -33,7 +33,8 @@ jobs:
       - name: Deploy
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Use a user/App token when configured so deploy PRs trigger pull_request CI.
+          GH_TOKEN: ${{ secrets.DEPLOY_GH_TOKEN || github.token }}
         run: |
           set -euo pipefail
 
@@ -107,9 +108,28 @@ jobs:
             exit 1
           fi
 
-          if ! gh pr merge --merge --match-head-commit "$CI_HEAD_SHA" "$PR_URL"; then
-            echo "::error::Could not merge the deploy PR. Check deploy branch protection and repository Actions workflow permissions."
+          if ! gh pr merge --auto --merge --match-head-commit "$CI_HEAD_SHA" "$PR_URL"; then
+            echo "::error::Could not enable auto-merge for the deploy PR. Check deploy branch protection and repository Actions workflow permissions."
             exit 1
           fi
 
-          echo "Deploy PR merged: $PR_URL"
+          echo "Deploy PR auto-merge enabled: $PR_URL"
+          for i in {1..60}; do
+            PR_STATE=$(gh pr view "$PR_URL" --json state --jq '.state')
+            PR_MERGED_AT=$(gh pr view "$PR_URL" --json mergedAt --jq '.mergedAt')
+
+            if [ -n "$PR_MERGED_AT" ]; then
+              echo "Deploy PR merged: $PR_URL"
+              exit 0
+            fi
+
+            if [ "$PR_STATE" = "CLOSED" ]; then
+              echo "::error::Deploy PR closed without merging: $PR_URL"
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          echo "::error::Timed out waiting for deploy PR auto-merge: $PR_URL"
+          exit 1

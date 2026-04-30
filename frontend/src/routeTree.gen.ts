@@ -14,7 +14,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedTransactionsRouteImport } from './routes/_authed/transactions'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedHomeRouteImport } from './routes/_authed/home'
-import { Route as AuthedAskRouteImport } from './routes/_authed/ask'
 import { Route as AuthedAnalysisRouteImport } from './routes/_authed/analysis'
 import { Route as AuthedAccountsRouteImport } from './routes/_authed/accounts'
 import { Route as AuthedSplatRouteImport } from './routes/_authed/$'
@@ -43,11 +42,6 @@ const AuthedHomeRoute = AuthedHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedAskRoute = AuthedAskRouteImport.update({
-  id: '/ask',
-  path: '/ask',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthedAnalysisRoute = AuthedAnalysisRouteImport.update({
   id: '/analysis',
   path: '/analysis',
@@ -69,7 +63,6 @@ export interface FileRoutesByFullPath {
   '/$': typeof AuthedSplatRoute
   '/accounts': typeof AuthedAccountsRoute
   '/analysis': typeof AuthedAnalysisRoute
-  '/ask': typeof AuthedAskRoute
   '/home': typeof AuthedHomeRoute
   '/settings': typeof AuthedSettingsRoute
   '/transactions': typeof AuthedTransactionsRoute
@@ -79,7 +72,6 @@ export interface FileRoutesByTo {
   '/$': typeof AuthedSplatRoute
   '/accounts': typeof AuthedAccountsRoute
   '/analysis': typeof AuthedAnalysisRoute
-  '/ask': typeof AuthedAskRoute
   '/home': typeof AuthedHomeRoute
   '/settings': typeof AuthedSettingsRoute
   '/transactions': typeof AuthedTransactionsRoute
@@ -91,7 +83,6 @@ export interface FileRoutesById {
   '/_authed/$': typeof AuthedSplatRoute
   '/_authed/accounts': typeof AuthedAccountsRoute
   '/_authed/analysis': typeof AuthedAnalysisRoute
-  '/_authed/ask': typeof AuthedAskRoute
   '/_authed/home': typeof AuthedHomeRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/_authed/transactions': typeof AuthedTransactionsRoute
@@ -103,7 +94,6 @@ export interface FileRouteTypes {
     | '/$'
     | '/accounts'
     | '/analysis'
-    | '/ask'
     | '/home'
     | '/settings'
     | '/transactions'
@@ -113,7 +103,6 @@ export interface FileRouteTypes {
     | '/$'
     | '/accounts'
     | '/analysis'
-    | '/ask'
     | '/home'
     | '/settings'
     | '/transactions'
@@ -124,7 +113,6 @@ export interface FileRouteTypes {
     | '/_authed/$'
     | '/_authed/accounts'
     | '/_authed/analysis'
-    | '/_authed/ask'
     | '/_authed/home'
     | '/_authed/settings'
     | '/_authed/transactions'
@@ -172,13 +160,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedHomeRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/ask': {
-      id: '/_authed/ask'
-      path: '/ask'
-      fullPath: '/ask'
-      preLoaderRoute: typeof AuthedAskRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/analysis': {
       id: '/_authed/analysis'
       path: '/analysis'
@@ -207,7 +188,6 @@ interface AuthedRouteChildren {
   AuthedSplatRoute: typeof AuthedSplatRoute
   AuthedAccountsRoute: typeof AuthedAccountsRoute
   AuthedAnalysisRoute: typeof AuthedAnalysisRoute
-  AuthedAskRoute: typeof AuthedAskRoute
   AuthedHomeRoute: typeof AuthedHomeRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedTransactionsRoute: typeof AuthedTransactionsRoute
@@ -217,7 +197,6 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedSplatRoute: AuthedSplatRoute,
   AuthedAccountsRoute: AuthedAccountsRoute,
   AuthedAnalysisRoute: AuthedAnalysisRoute,
-  AuthedAskRoute: AuthedAskRoute,
   AuthedHomeRoute: AuthedHomeRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedTransactionsRoute: AuthedTransactionsRoute,

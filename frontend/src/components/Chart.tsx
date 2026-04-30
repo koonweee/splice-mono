@@ -90,11 +90,11 @@ export function Chart({
       }}
       tooltipProps={{
         content: ({ label, payload }) => {
-          if (!label || !payload || !payload[0]) return null
+          if (!payload.length) return null
           const point = payload[0]
           return (
             <ChartTooltip
-              label={point.payload.label}
+              label={point.payload.label || String(label)}
               value={onDataPointHover ? undefined : valueFormatter(point.value)}
             />
           )
