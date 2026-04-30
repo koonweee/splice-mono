@@ -97,10 +97,17 @@ jobs:
 
           gh run watch "$CI_RUN_ID" --compact --exit-status
 
-          echo "Verifying required PR checks..."
-          gh pr checks "$PR_URL" --required --watch --fail-fast
+          CI_HEAD_SHA=$(gh run view "$CI_RUN_ID" --json headSha --jq '.headSha')
+          PR_HEAD_SHA=$(gh pr view "$PR_URL" --json headRefOid --jq '.headRefOid')
 
-          if ! gh pr merge --merge "$PR_URL"; then
+          if [ "$PR_HEAD_SHA" != "$CI_HEAD_SHA" ]; then
+            echo "::error::main moved while deploy CI was running. Re-run deploy so the latest main SHA is validated before merging."
+            echo "Validated SHA: $CI_HEAD_SHA"
+            echo "Current PR head SHA: $PR_HEAD_SHA"
+            exit 1
+          fi
+
+          if ! gh pr merge --merge --match-head-commit "$CI_HEAD_SHA" "$PR_URL"; then
             echo "::error::Could not merge the deploy PR. Check deploy branch protection and repository Actions workflow permissions."
             exit 1
           fi
