@@ -5,11 +5,11 @@ import {
   HIDDEN_BALANCE_PLACEHOLDER,
   formatAccountType,
   formatMoneyWithSign,
-  formatPercent,
   formatRelativeTime,
   getChangeColorMantine,
   resolveBalance,
 } from '../lib/format'
+import { ChangePercentPopover } from './ChangePercentPopover'
 import styles from './CompactAccountRow.module.css'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
@@ -31,7 +31,6 @@ export function CompactAccountRow({
   isLiability: boolean
   onClick?: () => void
 }) {
-  const changePercent = formatPercent(account.changePercent)
   const { primaryBalance, originalBalance } = resolveBalance(
     account.effectiveBalance,
     account.convertedEffectiveBalance,
@@ -89,15 +88,14 @@ export function CompactAccountRow({
                 })}
           </Text>
         )}
-        {changePercent && (
-          <Text
-            size="xs"
-            c={getChangeColorMantine(isLiability, account.changePercent)}
-            data-testid="account-change-percent"
-          >
-            {changePercent}
-          </Text>
-        )}
+        <ChangePercentPopover
+          size="xs"
+          color={getChangeColorMantine(isLiability, account.changePercent)}
+          changeAmount={account.changeAmount}
+          changePercent={account.changePercent}
+          hidden={balancesHidden}
+          testId="account-change-percent"
+        />
         {!originalBalance && (
           <Text size="xs" style={{ visibility: 'hidden' }}>
             {'\u00A0'}

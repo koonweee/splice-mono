@@ -67,9 +67,30 @@ function createMoney(amount: number, currency = 'USD') {
   }
 }
 
+function installMockLocalStorage() {
+  const store = new Map<string, string>()
+
+  Object.defineProperty(window, 'localStorage', {
+    value: {
+      getItem: vi.fn((key: string) => store.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => {
+        store.set(key, value)
+      }),
+      removeItem: vi.fn((key: string) => {
+        store.delete(key)
+      }),
+      clear: vi.fn(() => {
+        store.clear()
+      }),
+    },
+    configurable: true,
+  })
+}
+
 const dashboard: DashboardData = {
   netWorth: createMoney(1000),
   changePercent: 10,
+  changeAmount: createMoney(100),
   comparisonPeriod: TimePeriod.month,
   chartData: [],
   assets: [
@@ -79,6 +100,7 @@ const dashboard: DashboardData = {
       type: AccountType.depository,
       effectiveBalance: createMoney(600),
       changePercent: 5,
+      changeAmount: createMoney(50),
       institutionName: 'Bank',
     },
     {
@@ -88,6 +110,7 @@ const dashboard: DashboardData = {
       effectiveBalance: createMoney(450, 'EUR'),
       convertedEffectiveBalance: createMoney(500),
       changePercent: -2,
+      changeAmount: createMoney(-10),
       institutionName: 'Broker',
     },
   ],
@@ -98,6 +121,7 @@ const dashboard: DashboardData = {
       type: AccountType.credit,
       effectiveBalance: createMoney(-100),
       changePercent: -1,
+      changeAmount: createMoney(-1),
       institutionName: 'Card Co',
     },
   ],
@@ -112,6 +136,8 @@ function renderHomePage() {
 }
 
 beforeEach(() => {
+  installMockLocalStorage()
+
   mockFns.useNavigateMock.mockReturnValue(vi.fn())
   mockFns.useSearchMock.mockReturnValue({
     accountId: undefined,
@@ -179,12 +205,21 @@ describe('HomePage balance visibility', () => {
     expect(screen.queryByText(/\(EUR\)/)).toBeNull()
     expect(screen.getAllByText('****').length).toBeGreaterThan(1)
 
-    expect(screen.getByText('+10.00% from last month')).toBeTruthy()
+    expect(screen.getByText('+10.00%')).toBeTruthy()
+    expect(screen.getByText('from last month')).toBeTruthy()
     expect(screen.getByText('+5.00%')).toBeTruthy()
     expect(screen.getByText('-2.00%')).toBeTruthy()
     expect(screen.getByText('-1.00%')).toBeTruthy()
     expect(screen.getByText('54.5%')).toBeTruthy()
     expect(screen.getByText('45.5%')).toBeTruthy()
+  })
+
+  it('reveals absolute change when tapping an account percentage', async () => {
+    renderHomePage()
+
+    fireEvent.click(screen.getByText('+5.00%'))
+
+    expect(await screen.findByText('+$50.00')).toBeTruthy()
   })
 
   it('updates localStorage when the toggle is used', () => {
