@@ -23,6 +23,7 @@ import { MoneySign, SerializedMoneyWithSign } from '../types/MoneyWithSign';
 import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import { AccountEntity } from './account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
+import { BankLinkEntity } from '../bank-link/bank-link.entity';
 import { UserService } from '../user/user.service';
 
 dayjs.extend(utc);
@@ -49,6 +50,8 @@ export class AccountService extends OwnedCrudService<
     repository: Repository<AccountEntity>,
     @InjectRepository(BalanceSnapshotEntity)
     private readonly balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
+    @InjectRepository(BankLinkEntity)
+    private readonly bankLinkRepository: Repository<BankLinkEntity>,
     private readonly eventEmitter: EventEmitter2,
     private readonly userService: UserService,
   ) {
@@ -192,6 +195,7 @@ export class AccountService extends OwnedCrudService<
     }
 
     if (accountEntity.archivedAt) {
+      await this.pruneAccountFromBankLink(accountEntity, userId);
       return accountEntity.toObject();
     }
 
@@ -205,10 +209,47 @@ export class AccountService extends OwnedCrudService<
     );
 
     const savedEntity = await this.repository.save(accountEntity);
+    await this.pruneAccountFromBankLink(savedEntity, userId);
     await this.upsertArchiveSnapshot(savedEntity, userId);
 
     this.logger.log({ id, userId }, 'Account archived');
     return savedEntity.toObject();
+  }
+
+  private async pruneAccountFromBankLink(
+    accountEntity: AccountEntity,
+    userId: string,
+  ): Promise<void> {
+    if (!accountEntity.bankLinkId || !accountEntity.externalAccountId) {
+      return;
+    }
+
+    const bankLink =
+      accountEntity.bankLink ??
+      (await this.bankLinkRepository.findOne({
+        where: { id: accountEntity.bankLinkId, userId },
+      }));
+
+    if (!bankLink || bankLink.userId !== userId) {
+      this.logger.warn(
+        {
+          id: accountEntity.id,
+          userId,
+          bankLinkId: accountEntity.bankLinkId,
+        },
+        'Bank link not found for archived account prune',
+      );
+      return;
+    }
+
+    if (!bankLink.accountIds.includes(accountEntity.externalAccountId)) {
+      return;
+    }
+
+    bankLink.accountIds = bankLink.accountIds.filter(
+      (accountId) => accountId !== accountEntity.externalAccountId,
+    );
+    await this.bankLinkRepository.save(bankLink);
   }
 
   private createZeroBalance(currency: string): BalanceColumns {
