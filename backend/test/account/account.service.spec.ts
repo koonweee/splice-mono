@@ -6,6 +6,7 @@ import { AccountSubtype, AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
 import { AccountService } from '../../src/account/account.service';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
+import { BankLinkEntity } from '../../src/bank-link/bank-link.entity';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import {
   ManualAccountEvents,
@@ -37,6 +38,10 @@ describe('AccountService', () => {
   const mockSnapshotRepository = {
     find: jest.fn(),
   };
+  const mockBankLinkRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+  };
 
   beforeEach(async () => {
     mockSnapshotRepository.find.mockResolvedValue([]);
@@ -62,6 +67,10 @@ describe('AccountService', () => {
         {
           provide: getRepositoryToken(BalanceSnapshotEntity),
           useValue: mockSnapshotRepository,
+        },
+        {
+          provide: getRepositoryToken(BankLinkEntity),
+          useValue: mockBankLinkRepository,
         },
       ],
     }).compile();
