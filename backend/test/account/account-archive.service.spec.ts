@@ -5,6 +5,7 @@ import { AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
 import { AccountService } from '../../src/account/account.service';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
+import { BankLinkEntity } from '../../src/bank-link/bank-link.entity';
 import { BalanceSnapshotType } from '../../src/types/BalanceSnapshot';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserService } from '../../src/user/user.service';
@@ -28,11 +29,17 @@ describe('AccountService archive', () => {
     findOne: jest.fn(),
     save: jest.fn(),
   };
+  const mockBankLinkRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+  };
 
   beforeEach(async () => {
     mockSnapshotRepository.find.mockResolvedValue([]);
     mockSnapshotRepository.findOne.mockResolvedValue(null);
     mockSnapshotRepository.save.mockImplementation(async (entity) => entity);
+    mockBankLinkRepository.findOne.mockResolvedValue(null);
+    mockBankLinkRepository.save.mockImplementation(async (entity) => entity);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -44,6 +51,10 @@ describe('AccountService archive', () => {
         {
           provide: getRepositoryToken(BalanceSnapshotEntity),
           useValue: mockSnapshotRepository,
+        },
+        {
+          provide: getRepositoryToken(BankLinkEntity),
+          useValue: mockBankLinkRepository,
         },
         {
           provide: EventEmitter2,
@@ -105,6 +116,41 @@ describe('AccountService archive', () => {
     );
   });
 
+  it('removes a linked archived account external id from its bank link without removing the provider item', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-04-05T12:00:00Z'));
+    const account = AccountEntity.fromDto(
+      {
+        ...mockCreateAccountDto,
+        externalAccountId: 'external-archive-id',
+        bankLinkId: 'bank-link-id',
+      },
+      mockUserId,
+    );
+    const bankLink = BankLinkEntity.fromDto(
+      {
+        providerName: 'plaid',
+        authentication: { accessToken: 'test-token', itemId: 'item-id' },
+        accountIds: ['external-keep-id', 'external-archive-id'],
+      },
+      mockUserId,
+    );
+    bankLink.id = 'bank-link-id';
+    account.id = 'archive-id';
+    account.bankLink = bankLink;
+    mockRepository.findOne.mockResolvedValue(account);
+    mockRepository.save.mockImplementation(async (entity) => entity);
+
+    await service.archive('archive-id', mockUserId);
+
+    expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'bank-link-id',
+        accountIds: ['external-keep-id'],
+        authentication: { accessToken: 'test-token', itemId: 'item-id' },
+      }),
+    );
+  });
+
   it('excludes archived accounts from default findAll and includes them when requested', async () => {
     const active = AccountEntity.fromDto(mockCreateAccountDto, mockUserId);
     active.id = 'active-id';
@@ -145,5 +191,41 @@ describe('AccountService archive', () => {
     expect(result?.archivedAt?.toISOString()).toBe('2026-04-01T00:00:00.000Z');
     expect(mockRepository.save).not.toHaveBeenCalled();
     expect(mockSnapshotRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('prunes the bank link for an already archived linked account', async () => {
+    const account = AccountEntity.fromDto(
+      {
+        ...mockCreateAccountDto,
+        externalAccountId: 'archived-external-id',
+        bankLinkId: 'bank-link-id',
+      },
+      mockUserId,
+    );
+    const bankLink = BankLinkEntity.fromDto(
+      {
+        providerName: 'plaid',
+        authentication: { accessToken: 'test-token', itemId: 'item-id' },
+        accountIds: ['archived-external-id', 'remaining-external-id'],
+      },
+      mockUserId,
+    );
+    bankLink.id = 'bank-link-id';
+    account.id = 'archived-id';
+    account.archivedAt = new Date('2026-04-01T00:00:00Z');
+    account.bankLink = bankLink;
+    mockRepository.findOne.mockResolvedValue(account);
+
+    const result = await service.archive('archived-id', mockUserId);
+
+    expect(result?.archivedAt?.toISOString()).toBe('2026-04-01T00:00:00.000Z');
+    expect(mockRepository.save).not.toHaveBeenCalled();
+    expect(mockSnapshotRepository.save).not.toHaveBeenCalled();
+    expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'bank-link-id',
+        accountIds: ['remaining-external-id'],
+      }),
+    );
   });
 });
