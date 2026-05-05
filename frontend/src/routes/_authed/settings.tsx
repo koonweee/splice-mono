@@ -209,6 +209,7 @@ export function SettingsPage() {
                 onChange={(value) => value && setCurrency(value)}
                 data={CURRENCY_OPTIONS}
                 searchable
+                size="md"
                 placeholder="Select currency"
               />
             </div>
@@ -226,6 +227,7 @@ export function SettingsPage() {
                   onChange={(value) => value && setTimezone(value)}
                   data={timezoneOptions}
                   searchable
+                  size="md"
                   placeholder="Select timezone"
                   style={{ flex: 1 }}
                 />
