@@ -1,0 +1,105 @@
+.categoryTableCell {
+  min-width: 120px;
+}
+
+.categoryCell {
+  width: fit-content;
+  min-height: 28px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.categoryActions {
+  flex: 0 0 auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.categoryLabel {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.categoryTrigger {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  color: inherit;
+  text-align: left;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
+.categoryOption {
+  display: block;
+  width: 100%;
+  border-radius: 4px;
+  padding: 5px var(--mantine-spacing-xs);
+  text-align: left;
+}
+
+.categoryOptionsList {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.categoryOptionMeta {
+  opacity: 0.75;
+}
+
+.categoryOption:hover {
+  background: var(--mantine-color-gray-1);
+  color: var(--mantine-color-gray-9);
+}
+
+.categoryOption[aria-selected='true'] {
+  background: var(--mantine-primary-color-light);
+  color: var(--mantine-primary-color-light-color);
+}
+
+.categoryOption[aria-selected='true']:hover {
+  background: var(--mantine-primary-color-light-hover);
+  color: var(--mantine-primary-color-light-color);
+}
+
+.categoryCell:hover .categoryActions,
+.categoryCell:focus-within .categoryActions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.transactionsTable :global(.mrt-table-head-cell-resize-handle) {
+  --resize-handle-thickness: 12px;
+  background: transparent;
+  border-radius: 0;
+}
+
+.transactionsTable :global(.mrt-table-head-cell-resize-handle)::after {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 50%;
+  width: 1px;
+  background: var(--mantine-color-gray-5);
+  content: '';
+  opacity: 0.5;
+  transform: translateX(-50%);
+}
+
+.transactionsTable :global(.mrt-table-head-cell-resize-handle:hover),
+.transactionsTable :global(.mrt-table-head-cell-resize-handle:active) {
+  background: transparent;
+}
+
+.transactionsTable :global(.mrt-table-head-cell-resize-handle:hover)::after,
+.transactionsTable :global(.mrt-table-head-cell-resize-handle:active)::after {
+  background: var(--mantine-primary-color-filled);
+}

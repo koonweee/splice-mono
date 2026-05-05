@@ -36,6 +36,16 @@ export const TransactionSchema = registerSchema(
       categoryId: z.string().uuid().nullable(),
       /** Joined category details (nullable) */
       category: CategorySchema.nullable().optional(),
+      /** User-selected category override ID (nullable) */
+      userCategoryId: z.string().uuid().nullable(),
+      /** Joined user-selected category override details (nullable) */
+      userCategory: CategorySchema.nullable().optional(),
+      /** When the user category override was last updated */
+      userCategoryUpdatedAt: z.coerce.date().nullable(),
+      /** Category ID used for user-facing display and aggregation */
+      effectiveCategoryId: z.string().uuid().nullable(),
+      /** Category used for user-facing display and aggregation */
+      effectiveCategory: CategorySchema.nullable().optional(),
       /** Display name of the associated account (customName or name) */
       accountName: z.string().nullable().optional(),
       /** Converted amount in user's preferred currency (set when convert=true) */
@@ -84,6 +94,18 @@ export const UpdateTransactionDtoSchema = registerSchema(
 );
 
 export type UpdateTransactionDto = z.infer<typeof UpdateTransactionDtoSchema>;
+
+export const UpdateTransactionCategoryDtoSchema = registerSchema(
+  'UpdateTransactionCategoryDto',
+  z.object({
+    /** Selected category ID. Null clears the user override. */
+    categoryId: z.string().uuid().nullable(),
+  }),
+);
+
+export type UpdateTransactionCategoryDto = z.infer<
+  typeof UpdateTransactionCategoryDtoSchema
+>;
 
 /**
  * Paginated transaction response with metadata for table rendering

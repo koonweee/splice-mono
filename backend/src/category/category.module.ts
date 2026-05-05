@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CategoryController } from './category.controller';
 import { CategoryEntity } from './category.entity';
+import { CategoryService } from './category.service';
 
-/**
- * Category module - reference entity only.
- * No service or controller needed as categories are global lookup data.
- */
 @Module({
   imports: [TypeOrmModule.forFeature([CategoryEntity])],
-  exports: [TypeOrmModule],
+  controllers: [CategoryController],
+  providers: [CategoryService],
+  exports: [TypeOrmModule, CategoryService],
 })
 export class CategoryModule {}

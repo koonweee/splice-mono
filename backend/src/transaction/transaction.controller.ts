@@ -22,12 +22,14 @@ import type {
   CreateTransactionDto,
   PaginatedTransactionResponse,
   Transaction,
+  UpdateTransactionCategoryDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
 import {
   CreateTransactionDtoSchema,
   PaginatedTransactionResponseSchema,
   TransactionSchema,
+  UpdateTransactionCategoryDtoSchema,
   UpdateTransactionDtoSchema,
 } from '../types/Transaction';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
@@ -227,6 +229,37 @@ export class TransactionController {
     const transaction = await this.transactionService.findOne(id, user.userId);
     if (!transaction) {
       throw new NotFoundException(`Transaction with id ${id} not found`);
+    }
+    return transaction;
+  }
+
+  @Patch(':id/category')
+  @ApiOperation({ description: 'Update a transaction category override' })
+  @ZodApiBody({ schema: UpdateTransactionCategoryDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Transaction category updated successfully',
+    schema: TransactionSchema,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Transaction or category not found',
+  })
+  async updateCategory(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(UpdateTransactionCategoryDtoSchema))
+    updateTransactionCategoryDto: UpdateTransactionCategoryDto,
+  ): Promise<Transaction> {
+    const transaction = await this.transactionService.updateCategory(
+      id,
+      updateTransactionCategoryDto,
+      user.userId,
+    );
+    if (!transaction) {
+      throw new NotFoundException(
+        `Transaction or category for transaction ${id} not found`,
+      );
     }
     return transaction;
   }
