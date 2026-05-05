@@ -73,6 +73,12 @@ const overrideCategory = makeCategory({
   primary: 'GENERAL_MERCHANDISE',
   detailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
 })
+const customCategory = makeCategory({
+  id: 'custom-category-id',
+  primary: 'Home Projects',
+  detailed: 'Hardware',
+  source: 'user',
+})
 
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -89,7 +95,7 @@ beforeEach(() => {
     configurable: true,
   })
   mockFns.useCategoryControllerFindAllMock.mockReturnValue({
-    data: [providerCategory, overrideCategory],
+    data: [providerCategory, overrideCategory, customCategory],
   })
   mockFns.useTransactionControllerUpdateCategoryMock.mockReturnValue({
     mutate: mockFns.updateCategoryMutateMock,
@@ -156,6 +162,21 @@ describe('TransactionsTable', () => {
     })
   })
 
+  it('shows a User badge for custom category selector options', () => {
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+      }),
+    ])
+
+    fireEvent.click(screen.getByLabelText('Edit category'))
+
+    expect(
+      screen.getByRole('option', { name: 'Hardware Home Projects User' }),
+    ).toBeTruthy()
+  })
+
   it('dismisses the category selector when clicking away', () => {
     renderTable([
       makeTransaction({
@@ -195,12 +216,14 @@ function makeCategory(overrides: {
   id: string
   primary: string
   detailed: string
+  source?: Category['source']
 }): Category {
   return {
     id: overrides.id,
     primary: overrides.primary,
     detailed: overrides.detailed,
     description: `${overrides.primary} category`,
+    source: overrides.source,
     createdAt: '2026-02-14T00:00:00.000Z',
     updatedAt: '2026-02-14T00:00:00.000Z',
   }

@@ -9,6 +9,7 @@ const mockFns = vi.hoisted(() => ({
   useQueryClientMock: vi.fn(),
   useUserControllerMeMock: vi.fn(),
   useUserControllerUpdateSettingsMock: vi.fn(),
+  customCategoriesSectionMock: vi.fn(),
   personalAccessTokenSectionMock: vi.fn(),
   mcpConnectionSectionMock: vi.fn(),
 }))
@@ -46,6 +47,14 @@ vi.mock('../../components/settings/PersonalAccessTokenSection', () => ({
         <Title order={3}>Personal access tokens</Title>
       </div>
     )
+  },
+}))
+
+vi.mock('../../components/settings/CustomCategoriesSection', () => ({
+  CustomCategoriesSection: () => {
+    mockFns.customCategoriesSectionMock()
+
+    return <div data-testid="custom-categories-section">Custom categories</div>
   },
 }))
 
@@ -159,7 +168,10 @@ describe('SettingsPage', () => {
       screen.getByRole('heading', { name: /^settings$/i, level: 1 }),
     ).toBeTruthy()
     expect(
-      screen.getByRole('heading', { name: /personal access tokens/i, level: 3 }),
+      screen.getByRole('heading', {
+        name: /personal access tokens/i,
+        level: 3,
+      }),
     ).toBeTruthy()
     expect(
       screen.getByRole('heading', { name: /mcp connection/i, level: 3 }),
@@ -167,6 +179,9 @@ describe('SettingsPage', () => {
 
     const settingsCard = screen.getByTestId('settings-card')
     const patSection = screen.getByTestId('pat-section')
+    const customCategoriesSection = screen.getByTestId(
+      'custom-categories-section',
+    )
     const mcpSection = screen.getByTestId('mcp-section')
 
     expect(
@@ -175,6 +190,14 @@ describe('SettingsPage', () => {
     ).toBeTruthy()
     expect(
       patSection.compareDocumentPosition(mcpSection) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      patSection.compareDocumentPosition(customCategoriesSection) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      customCategoriesSection.compareDocumentPosition(mcpSection) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
   })

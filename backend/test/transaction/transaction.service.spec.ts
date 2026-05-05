@@ -1,6 +1,8 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CategoryEntity } from '../../src/category/category.entity';
+import { CategoryService } from '../../src/category/category.service';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import type { TransactionSyncResponse } from '../../src/types/BankLink';
@@ -10,6 +12,24 @@ import {
   mockCreateTransactionDto,
   mockUserId,
 } from '../mocks/transaction/transaction.mock';
+
+function buildAssignableCategory(
+  overrides: Partial<CategoryEntity> = {},
+): CategoryEntity {
+  const category = new CategoryEntity();
+  category.id = overrides.id ?? 'category-id';
+  category.setLabels(
+    overrides.primary ?? 'FOOD_AND_DRINK',
+    overrides.detailed ?? 'FOOD_AND_DRINK_RESTAURANT',
+  );
+  category.description = overrides.description ?? '';
+  category.source = overrides.source ?? 'plaid';
+  category.userId = overrides.userId ?? null;
+  category.archivedAt = overrides.archivedAt ?? null;
+  category.createdAt = overrides.createdAt ?? new Date('2024-01-01T00:00:00Z');
+  category.updatedAt = overrides.updatedAt ?? new Date('2024-01-01T00:00:00Z');
+  return category;
+}
 
 describe('TransactionService', () => {
   let service: TransactionService;
@@ -56,6 +76,10 @@ describe('TransactionService', () => {
     findOne: jest.fn(),
   };
 
+  const mockCategoryService = {
+    findActiveAssignableCategory: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -67,6 +91,10 @@ describe('TransactionService', () => {
         {
           provide: getRepositoryToken(CategoryEntity),
           useValue: mockCategoryRepository,
+        },
+        {
+          provide: CategoryService,
+          useValue: mockCategoryService,
         },
       ],
     }).compile();
@@ -104,6 +132,52 @@ describe('TransactionService', () => {
       expect(result.pending).toBe(mockCreateTransactionDto.pending);
       expect(result.date).toBe(mockCreateTransactionDto.date);
       expect(mockRepository.save).toHaveBeenCalledTimes(1);
+    });
+
+    it('validates category ownership before creating with a category id', async () => {
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          { ...mockCreateTransactionDto, categoryId: 'other-user-category-id' },
+          mockUserId,
+        ),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).toHaveBeenCalledWith('other-user-category-id', mockUserId);
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('stores an owned custom category create as a user category override', async () => {
+      const userCategory = buildAssignableCategory({
+        id: 'user-category-id',
+        source: 'user',
+        userId: mockUserId,
+        primary: 'Home Projects',
+        detailed: 'Hardware',
+      });
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
+        userCategory,
+      );
+      mockRepository.save.mockImplementation((entity: TransactionEntity) =>
+        Promise.resolve(entity),
+      );
+
+      await service.create(
+        { ...mockCreateTransactionDto, categoryId: userCategory.id },
+        mockUserId,
+      );
+
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          categoryId: null,
+          userCategoryId: userCategory.id,
+          userCategory,
+          userCategoryUpdatedAt: expect.any(Date),
+        }),
+      );
     });
 
     it('should call repository.save with the correct entity', async () => {
@@ -646,12 +720,16 @@ describe('TransactionService', () => {
     });
 
     it('should update categoryId', async () => {
+      const category = buildAssignableCategory({ id: 'new-category-id' });
       const mockEntity = TransactionEntity.fromDto(
         mockCreateTransactionDto,
         mockUserId,
       );
       mockEntity.id = 'test-id';
       mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
+        category,
+      );
       mockRepository.save.mockResolvedValue(mockEntity);
 
       await service.update(
@@ -663,6 +741,70 @@ describe('TransactionService', () => {
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           categoryId: 'new-category-id',
+        }),
+      );
+    });
+
+    it('rejects generic updates to custom categories that are not assignable to the user', async () => {
+      const mockEntity = TransactionEntity.fromDto(
+        mockCreateTransactionDto,
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
+
+      await expect(
+        service.update(
+          'test-id',
+          { categoryId: 'other-user-category-id' },
+          mockUserId,
+        ),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).toHaveBeenCalledWith('other-user-category-id', mockUserId);
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('stores generic updates to owned custom categories as user category overrides', async () => {
+      const providerCategory = buildAssignableCategory({
+        id: 'provider-category-id',
+      });
+      const userCategory = buildAssignableCategory({
+        id: 'user-category-id',
+        source: 'user',
+        userId: mockUserId,
+        primary: 'Home Projects',
+        detailed: 'Hardware',
+      });
+      const mockEntity = TransactionEntity.fromDto(
+        { ...mockCreateTransactionDto, categoryId: providerCategory.id },
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockEntity.category = providerCategory;
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
+        userCategory,
+      );
+      mockRepository.save.mockImplementation((entity: TransactionEntity) =>
+        Promise.resolve(entity),
+      );
+
+      await service.update(
+        'test-id',
+        { categoryId: userCategory.id },
+        mockUserId,
+      );
+
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          categoryId: providerCategory.id,
+          userCategoryId: userCategory.id,
+          userCategory,
+          userCategoryUpdatedAt: expect.any(Date),
         }),
       );
     });
@@ -718,7 +860,9 @@ describe('TransactionService', () => {
       mockRepository.findOne
         .mockResolvedValueOnce(entity)
         .mockResolvedValue(entity);
-      mockCategoryRepository.findOne.mockResolvedValue(userCategory);
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
+        userCategory,
+      );
       mockRepository.save.mockImplementation((saved) => Promise.resolve(saved));
 
       const result = await service.updateCategory(
@@ -727,9 +871,9 @@ describe('TransactionService', () => {
         mockUserId,
       );
 
-      expect(mockCategoryRepository.findOne).toHaveBeenCalledWith({
-        where: { id: userCategory.id },
-      });
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).toHaveBeenCalledWith(userCategory.id, mockUserId);
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           userCategoryId: userCategory.id,
@@ -757,7 +901,9 @@ describe('TransactionService', () => {
         mockUserId,
       );
 
-      expect(mockCategoryRepository.findOne).not.toHaveBeenCalled();
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).not.toHaveBeenCalled();
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           userCategoryId: null,
@@ -793,7 +939,7 @@ describe('TransactionService', () => {
     it('returns null when selected category does not exist', async () => {
       const entity = buildCategorizedEntity();
       mockRepository.findOne.mockResolvedValue(entity);
-      mockCategoryRepository.findOne.mockResolvedValue(null);
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
 
       const result = await service.updateCategory(
         'test-id',
@@ -802,6 +948,24 @@ describe('TransactionService', () => {
       );
 
       expect(result).toBeNull();
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('returns null when selected custom category belongs to another user', async () => {
+      const entity = buildCategorizedEntity();
+      mockRepository.findOne.mockResolvedValue(entity);
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
+
+      const result = await service.updateCategory(
+        'test-id',
+        { categoryId: 'other-user-category-id' },
+        mockUserId,
+      );
+
+      expect(result).toBeNull();
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).toHaveBeenCalledWith('other-user-category-id', mockUserId);
       expect(mockRepository.save).not.toHaveBeenCalled();
     });
 
@@ -1202,7 +1366,7 @@ describe('TransactionService', () => {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-01T00:00:00Z'),
         }),
-      } as TransactionEntity['category'];
+      } as unknown as TransactionEntity['category'];
       netflix.userCategory = {
         id: 'user-category-id',
         primary: 'GENERAL_MERCHANDISE',
@@ -1218,7 +1382,7 @@ describe('TransactionService', () => {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-01T00:00:00Z'),
         }),
-      } as TransactionEntity['userCategory'];
+      } as unknown as TransactionEntity['userCategory'];
       netflix.userCategoryId = 'user-category-id';
 
       mockRepository.find.mockResolvedValue([netflix]);
