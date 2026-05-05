@@ -125,6 +125,7 @@ export function BackfillModal({ opened, onClose }: BackfillModalProps) {
               placeholder="Select CSV file"
               accept=".csv"
               leftSection={<IconUpload size={14} />}
+              size="md"
               {...form.getInputProps('file')}
             />
             <Button type="submit" loading={importCsv.isPending}>

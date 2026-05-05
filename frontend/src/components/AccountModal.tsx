@@ -207,6 +207,7 @@ export function AccountModal({
                     placeholder="Enter notes here"
                     value={notes}
                     onChange={(event) => setNotes(event.currentTarget.value)}
+                    size="md"
                     styles={{
                       input: {
                         backgroundColor: 'transparent',

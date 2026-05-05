@@ -84,6 +84,7 @@ export function UpdateBalanceModal({
             decimalScale={2}
             fixedDecimalScale
             prefix={account.currentBalance.money.currency === 'USD' ? '$' : ''}
+            size="md"
             {...form.getInputProps('amount')}
           />
           <Button type="submit" loading={updateBalance.isPending}>

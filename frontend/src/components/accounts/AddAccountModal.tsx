@@ -270,6 +270,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         label="Account Name"
         placeholder="e.g. Emergency Fund"
         required
+        size="md"
         value={manualName}
         onChange={(e) => setManualName(e.target.value)}
       />
@@ -283,6 +284,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         value={manualTypeSelection}
         onChange={(v) => setManualTypeSelection(v || 'cash')}
         allowDeselect={false}
+        size="md"
       />
 
       <Select
@@ -290,6 +292,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         data={['USD', 'SGD', 'EUR', 'GBP', 'JPY']}
         value={manualCurrency}
         onChange={(v) => setManualCurrency(v || 'USD')}
+        size="md"
       />
 
       <NumberInput
@@ -297,6 +300,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         decimalScale={2}
         fixedDecimalScale
         prefix={manualCurrency === 'USD' ? '$' : ''}
+        size="md"
         value={manualBalance}
         onChange={setManualBalance}
       />
@@ -334,6 +338,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         ]}
         value={network}
         onChange={(v) => setNetwork(v as InitiateLinkRequestNetwork)}
+        size="md"
       />
 
       <TextInput
@@ -343,6 +348,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         }
         value={walletAddress}
         onChange={(e) => setWalletAddress(e.target.value)}
+        size="md"
         description={
           network === 'ethereum'
             ? 'Enter your Ethereum wallet address (0x...)'
