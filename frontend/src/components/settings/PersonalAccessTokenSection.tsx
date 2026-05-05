@@ -213,6 +213,7 @@ export function PersonalAccessTokenSection() {
             label="Token name"
             description="Leading and trailing spaces are trimmed. Up to 100 characters."
             value={tokenName}
+            size="md"
             disabled={createTokenMutation.isPending}
             onChange={(event) => {
               setTokenName(event.currentTarget.value)
