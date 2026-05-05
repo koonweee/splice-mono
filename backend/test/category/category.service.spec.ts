@@ -118,6 +118,43 @@ describe('CategoryService', () => {
     );
   });
 
+  it('returns conflict response when concurrent create hits active duplicate index', async () => {
+    const conflict = buildCategoryEntity({
+      id: '00000000-0000-4000-8000-000000000107',
+      source: 'user',
+      userId: mockUserId,
+      primary: 'Home Projects',
+      detailed: 'Hardware',
+    });
+    mockQueryBuilder.getOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(conflict);
+    mockRepository.save.mockRejectedValueOnce({
+      code: '23505',
+      constraint: 'UQ_category_user_normalized_pair',
+    });
+
+    try {
+      await service.createCustom(mockUserId, {
+        primary: 'Home Projects',
+        detailed: 'Hardware',
+      });
+      throw new Error('Expected conflict');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConflictException);
+      expect((error as ConflictException).getResponse()).toEqual(
+        expect.objectContaining({
+          message: 'Category already exists',
+          category: expect.objectContaining({
+            categoryId: conflict.id,
+            label: 'Home Projects > Hardware',
+            source: 'user',
+          }),
+        }),
+      );
+    }
+  });
+
   it('rejects duplicate custom category creation against Plaid categories', async () => {
     const plaidCategory = buildCategoryEntity();
     mockQueryBuilder.getOne.mockResolvedValue(plaidCategory);
@@ -193,6 +230,53 @@ describe('CategoryService', () => {
     ).rejects.toThrow(ConflictException);
 
     expect(mockRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('returns conflict response when concurrent restore hits active duplicate index', async () => {
+    const category = buildCategoryEntity({
+      id: '00000000-0000-4000-8000-000000000108',
+      source: 'user',
+      userId: mockUserId,
+      primary: 'Pets',
+      detailed: 'Grooming',
+      archivedAt: new Date('2024-02-01T00:00:00.000Z'),
+    });
+    const conflict = buildCategoryEntity({
+      id: '00000000-0000-4000-8000-000000000109',
+      source: 'user',
+      userId: mockUserId,
+      primary: 'Pets',
+      detailed: 'Grooming',
+    });
+    mockRepository.findOne.mockResolvedValue(category);
+    mockQueryBuilder.getOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(conflict);
+    mockRepository.save.mockRejectedValueOnce({
+      driverError: {
+        code: '23505',
+        constraint: 'UQ_category_user_normalized_pair',
+      },
+    });
+
+    try {
+      await service.updateCustom(category.id, mockUserId, {
+        archived: false,
+      });
+      throw new Error('Expected conflict');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConflictException);
+      expect((error as ConflictException).getResponse()).toEqual(
+        expect.objectContaining({
+          message: 'Category already exists',
+          category: expect.objectContaining({
+            categoryId: conflict.id,
+            label: 'Pets > Grooming',
+            source: 'user',
+          }),
+        }),
+      );
+    }
   });
 
   it('archives and restores only user-owned custom categories', async () => {

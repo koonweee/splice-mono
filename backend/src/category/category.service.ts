@@ -108,7 +108,12 @@ export class CategoryService {
     category.userId = userId;
     category.archivedAt = null;
 
-    const saved = await this.categoryRepository.save(category);
+    const saved = await this.saveWithConflictHandling(
+      category,
+      userId,
+      primary,
+      detailed,
+    );
     return saved.toObject();
   }
 
@@ -159,7 +164,13 @@ export class CategoryService {
     }
     category.archivedAt = nextArchivedAt;
 
-    const saved = await this.categoryRepository.save(category);
+    const saved = await this.saveWithConflictHandling(
+      category,
+      userId,
+      nextPrimary,
+      nextDetailed,
+      id,
+    );
     return saved.toObject();
   }
 
@@ -238,5 +249,53 @@ export class CategoryService {
       message: 'Category already exists',
       category: conflict,
     });
+  }
+
+  private async saveWithConflictHandling(
+    category: CategoryEntity,
+    userId: string,
+    primary: string,
+    detailed: string,
+    excludeId?: string,
+  ): Promise<CategoryEntity> {
+    try {
+      return await this.categoryRepository.save(category);
+    } catch (error) {
+      if (!this.isCategoryPairUniqueViolation(error)) {
+        throw error;
+      }
+
+      const conflict = await this.findActiveConflict(
+        userId,
+        primary,
+        detailed,
+        excludeId,
+      );
+
+      if (conflict) {
+        throw this.buildConflictException(conflict);
+      }
+
+      throw new ConflictException({
+        message: 'Category already exists',
+      });
+    }
+  }
+
+  private isCategoryPairUniqueViolation(error: unknown): boolean {
+    const dbError = error as {
+      code?: string;
+      constraint?: string;
+      driverError?: { code?: string; constraint?: string };
+    };
+    const code = dbError.driverError?.code ?? dbError.code;
+    const constraint =
+      dbError.driverError?.constraint ?? dbError.constraint ?? '';
+
+    return (
+      code === '23505' &&
+      (constraint === 'UQ_category_plaid_normalized_pair' ||
+        constraint === 'UQ_category_user_normalized_pair')
+    );
   }
 }
