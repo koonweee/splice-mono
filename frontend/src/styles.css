@@ -19,19 +19,6 @@ code {
     source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
-@media (max-width: 48em) {
-  [data-size='xs'],
-  [data-size='sm'] {
-    --input-fz: var(--mantine-font-size-md);
-  }
-
-  input,
-  select,
-  textarea {
-    font-size: max(16px, 1rem);
-  }
-}
-
 /* Kill all focus rings on Recharts/Mantine chart elements */
 .recharts-wrapper,
 .recharts-surface,

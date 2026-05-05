@@ -252,6 +252,7 @@ export function CustomCategoriesSection() {
               data={primaryOptions}
               value={primary}
               onChange={setPrimary}
+              size="md"
               data-testid="custom-category-primary-input"
               style={{ flex: '1 1 220px' }}
             />
@@ -261,6 +262,7 @@ export function CustomCategoriesSection() {
               data={detailedOptions}
               value={detailed}
               onChange={setDetailed}
+              size="md"
               data-testid="custom-category-detailed-input"
               style={{ flex: '1 1 220px' }}
             />
