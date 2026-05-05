@@ -198,7 +198,7 @@ export function AccountRow({ account }: { account: Account }) {
                   if (e.key === 'Enter') saveName()
                   if (e.key === 'Escape') cancelEditing()
                 }}
-                size="sm"
+                size="md"
                 autoFocus
                 style={{ flex: 1 }}
               />

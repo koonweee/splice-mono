@@ -363,7 +363,7 @@ export function CustomCategoriesSection() {
                       data={primaryOptions}
                       value={editPrimary}
                       onChange={setEditPrimary}
-                      size="xs"
+                      size="md"
                       style={{ flex: '1 1 160px' }}
                     />
                     <Autocomplete
@@ -371,7 +371,7 @@ export function CustomCategoriesSection() {
                       data={detailedOptions}
                       value={editDetailed}
                       onChange={setEditDetailed}
-                      size="xs"
+                      size="md"
                       style={{ flex: '1 1 160px' }}
                     />
                   </Group>
