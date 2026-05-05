@@ -2,14 +2,13 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ACCESS_TOKEN_COOKIE } from '../auth-cookies';
 
 export interface JwtPayload {
   sub: string; // user id
   email?: string;
   // Add other claims as needed
 }
-
-const ACCESS_TOKEN_COOKIE = 'splice_access_token';
 
 /**
  * Extract JWT from cookie first, then fall back to Authorization header.

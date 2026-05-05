@@ -9,6 +9,7 @@
 export type TransactionAnalysisTransactionsQueryFlowDirection =
   (typeof TransactionAnalysisTransactionsQueryFlowDirection)[keyof typeof TransactionAnalysisTransactionsQueryFlowDirection]
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const TransactionAnalysisTransactionsQueryFlowDirection = {
   inflow: 'inflow',
   outflow: 'outflow',

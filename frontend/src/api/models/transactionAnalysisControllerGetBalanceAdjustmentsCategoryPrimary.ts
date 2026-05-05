@@ -9,6 +9,7 @@
 export type TransactionAnalysisControllerGetBalanceAdjustmentsCategoryPrimary =
   (typeof TransactionAnalysisControllerGetBalanceAdjustmentsCategoryPrimary)[keyof typeof TransactionAnalysisControllerGetBalanceAdjustmentsCategoryPrimary]
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const TransactionAnalysisControllerGetBalanceAdjustmentsCategoryPrimary =
   {
     BALANCE_ADJUSTMENT: 'BALANCE_ADJUSTMENT',

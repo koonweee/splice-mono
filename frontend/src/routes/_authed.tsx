@@ -24,21 +24,30 @@ import {
   Settings,
   TrendingUp,
 } from 'lucide-react'
-import { useLogout } from '../lib/auth'
+import { useLogout, validateSession } from '../lib/auth'
 import styles from './_authed.module.css'
 
 export const Route = createFileRoute('/_authed')({
-  beforeLoad: ({ location, context }) => {
+  beforeLoad: async ({ location, context }) => {
     // Skip auth check during SSR - cookies will authenticate API requests
     // The client will handle redirects after hydration if needed
     if (typeof window === 'undefined') {
       return
     }
 
-    if (!context.auth.isAuthenticated()) {
+    if (context.auth.isAuthenticated()) {
+      return
+    }
+
+    const hasValidSession = await validateSession()
+
+    if (!hasValidSession) {
       throw redirect({
         to: '/',
-        search: { login: true, redirect: location.href },
+        search: {
+          login: true,
+          redirect: `${location.pathname}${location.search}${location.hash}`,
+        },
       })
     }
   },

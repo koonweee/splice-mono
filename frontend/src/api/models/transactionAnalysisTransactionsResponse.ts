@@ -7,4 +7,4 @@
  */
 import type { Transaction } from './transaction'
 
-export type TransactionAnalysisTransactionsResponse = Array<Transaction>
+export type TransactionAnalysisTransactionsResponse = Transaction[]

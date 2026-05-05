@@ -50,7 +50,7 @@ A full-stack personal finance application for tracking net worth across multiple
 | Backend | NestJS, TypeORM, PostgreSQL |
 | Frontend | React 19, TanStack Router, TanStack Query, Mantine UI, Tailwind CSS |
 | API Contract | Zod schemas → OpenAPI → Orval-generated client |
-| Auth | JWT with HTTP-only cookies |
+| Auth | Google OAuth browser login, JWT with HTTP-only cookies, personal access tokens for API/MCP access |
 
 ### Repository Structure
 
@@ -105,6 +105,8 @@ Amounts stored as integer cents to avoid floating-point precision issues.
 
 ### Running Locally
 
+Copy `backend/.env.example` and `frontend/.env.example` to local `.env` files before starting the apps.
+
 ```bash
 # Start PostgreSQL
 cd backend && docker-compose up -d
@@ -115,6 +117,39 @@ cd backend && yarn start:dev
 # Start frontend (port 4000)
 cd frontend && yarn dev
 ```
+
+### Google OAuth Setup
+
+Splice uses Google OAuth for browser sign-in. Password login and password registration are intentionally removed. Existing users sign in with a whitelisted, verified Google account that uses the same email address as their existing Splice account.
+
+Create a Google Cloud OAuth 2.0 Web client and configure:
+
+- Authorized JavaScript origin: `http://localhost:4000`
+- Authorized redirect URI: `http://localhost:3000/user/oauth/google/callback`
+
+Set these backend environment variables locally:
+
+```bash
+GOOGLE_OAUTH_CLIENT_ID=<google web client id>
+GOOGLE_OAUTH_CLIENT_SECRET=<google web client secret>
+GOOGLE_OAUTH_CALLBACK_URL=http://localhost:3000/user/oauth/google/callback
+GOOGLE_ALLOWED_EMAILS=alice@example.com,bob@example.com
+```
+
+`GOOGLE_ALLOWED_EMAILS` is a comma-separated allowlist. Only verified Google accounts whose normalized email appears in that list can sign in or be provisioned. Restart the backend after changing these values.
+
+For staging and production, set `API_DOMAIN` to the public backend origin and `FRONTEND_DOMAIN` to the public frontend origin. Set `GOOGLE_OAUTH_CALLBACK_URL=${API_DOMAIN}/user/oauth/google/callback`, add that exact URL to the Google OAuth client's authorized redirect URIs, and add the frontend origin to authorized JavaScript origins. Store `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `GOOGLE_ALLOWED_EMAILS` in the deployment secret manager or environment configuration before deploying the hard cut.
+
+Non-browser API and MCP access uses personal access tokens from the Settings page. Do not use browser session login credentials for API automation.
+
+### Deployment Checklist
+
+- Google OAuth client exists for each deployed environment.
+- `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_CALLBACK_URL`, and `GOOGLE_ALLOWED_EMAILS` are configured.
+- `GOOGLE_OAUTH_CALLBACK_URL` exactly matches an authorized redirect URI.
+- `FRONTEND_DOMAIN` exactly matches an authorized JavaScript origin and CORS origin.
+- Backend and frontend are deployed together for the password-auth hard cut.
+- Smoke test Google login, token refresh, logout, and PAT-authenticated API/MCP access.
 
 ### Commands
 

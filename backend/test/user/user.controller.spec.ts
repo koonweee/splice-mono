@@ -2,21 +2,19 @@ import { NotFoundException, ParseUUIDPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { AuthService } from '../../src/auth/auth.service';
+import { OAUTH_STATE_COOKIE } from '../../src/auth/auth-cookies';
+import { GoogleOAuthService } from '../../src/auth/google-oauth.service';
 import { PersonalAccessTokenService } from '../../src/auth/personal-access-token.service';
 import { UserController } from '../../src/user/user.controller';
 import { UserService } from '../../src/user/user.service';
 import { mockUserService } from '../mocks/user/user-service.mock';
-import {
-  mockCreateUserDto,
-  mockLoginDto,
-  mockLoginResponse,
-  mockUser,
-} from '../mocks/user/user.mock';
+import { mockOAuthLoginResponse } from '../mocks/user/user.mock';
 
 // Mock Express Response object
 const mockResponse = () => ({
   cookie: jest.fn().mockReturnThis(),
   clearCookie: jest.fn().mockReturnThis(),
+  redirect: jest.fn().mockReturnThis(),
 });
 
 // Mock Express Request object
@@ -28,6 +26,7 @@ describe('UserController', () => {
   let controller: UserController;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let service: UserService;
+  const originalJwtSecret = process.env.JWT_SECRET;
 
   const mockPersonalAccessTokenService = {
     createToken: jest.fn(),
@@ -40,7 +39,22 @@ describe('UserController', () => {
     revokeAllUserTokens: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockGoogleOAuthService = {
+    validateRedirectPath: jest.fn().mockReturnValue('/home'),
+    buildAuthorizationUrl: jest
+      .fn()
+      .mockReturnValue('https://accounts.google.com/o/oauth2/v2/auth'),
+    completeCallback: jest.fn().mockResolvedValue({
+      ...mockOAuthLoginResponse,
+      redirectPath: '/home',
+    }),
+    buildFrontendRedirectUrl: jest
+      .fn()
+      .mockReturnValue('http://localhost:4000/home'),
+  };
+
   beforeEach(async () => {
+    process.env.JWT_SECRET = 'test-jwt-secret';
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
       providers: [
@@ -56,6 +70,10 @@ describe('UserController', () => {
           provide: PersonalAccessTokenService,
           useValue: mockPersonalAccessTokenService,
         },
+        {
+          provide: GoogleOAuthService,
+          useValue: mockGoogleOAuthService,
+        },
       ],
     }).compile();
 
@@ -65,50 +83,116 @@ describe('UserController', () => {
     jest.clearAllMocks();
   });
 
+  afterAll(() => {
+    if (originalJwtSecret === undefined) {
+      delete process.env.JWT_SECRET;
+    } else {
+      process.env.JWT_SECRET = originalJwtSecret;
+    }
+  });
+
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('register', () => {
-    it('should create and return a new user', async () => {
-      const result = await controller.register(mockCreateUserDto);
+  describe('oauthGoogleStart', () => {
+    it('sets a state cookie and redirects to Google', () => {
+      const res = mockResponse();
 
-      expect(result).toEqual(mockUser);
-      expect(mockUserService.create).toHaveBeenCalledWith(mockCreateUserDto);
-    });
+      controller.oauthGoogleStart('/home', res as any);
 
-    it('should call userService.create with correct data', async () => {
-      await controller.register(mockCreateUserDto);
-
-      expect(mockUserService.create).toHaveBeenCalledTimes(1);
-      expect(mockUserService.create).toHaveBeenCalledWith(mockCreateUserDto);
+      expect(mockGoogleOAuthService.validateRedirectPath).toHaveBeenCalledWith(
+        '/home',
+      );
+      expect(mockGoogleOAuthService.buildAuthorizationUrl).toHaveBeenCalledWith(
+        expect.any(String) as string,
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        OAUTH_STATE_COOKIE,
+        expect.any(String) as string,
+        expect.objectContaining({ httpOnly: true, maxAge: 600000 }),
+      );
+      expect(res.redirect).toHaveBeenCalledWith(
+        'https://accounts.google.com/o/oauth2/v2/auth',
+      );
     });
   });
 
-  describe('login', () => {
-    it('should return access token and user on successful login', async () => {
+  describe('oauthGoogleCallback', () => {
+    it('sets session cookies and redirects after a valid callback', async () => {
+      const startRes = mockResponse();
+      controller.oauthGoogleStart('/home', startRes as any);
+      const stateCookie = startRes.cookie.mock.calls[0][1] as string;
+      const state = mockGoogleOAuthService.buildAuthorizationUrl.mock
+        .calls[0][0] as string;
+      const req = mockRequest({ [OAUTH_STATE_COOKIE]: stateCookie });
       const res = mockResponse();
-      const result = await controller.login(mockLoginDto, res as any);
 
-      expect(result).toEqual(mockLoginResponse);
-      expect(mockUserService.login).toHaveBeenCalledWith(mockLoginDto);
-    });
+      await controller.oauthGoogleCallback(
+        'google-code',
+        state,
+        req as any,
+        res as any,
+      );
 
-    it('should set HTTP-only cookies on successful login', async () => {
-      const res = mockResponse();
-      await controller.login(mockLoginDto, res as any);
-
-      expect(res.cookie).toHaveBeenCalledTimes(2);
+      expect(mockGoogleOAuthService.completeCallback).toHaveBeenCalledWith(
+        'google-code',
+        '/home',
+      );
       expect(res.cookie).toHaveBeenCalledWith(
         'splice_access_token',
-        mockLoginResponse.accessToken,
+        mockOAuthLoginResponse.accessToken,
         expect.objectContaining({ httpOnly: true }),
       );
       expect(res.cookie).toHaveBeenCalledWith(
         'splice_refresh_token',
-        mockLoginResponse.refreshToken,
+        mockOAuthLoginResponse.refreshToken,
         expect.objectContaining({ httpOnly: true }),
       );
+      expect(
+        mockGoogleOAuthService.buildFrontendRedirectUrl,
+      ).toHaveBeenCalledWith('/home');
+      expect(res.redirect).toHaveBeenCalledWith('http://localhost:4000/home');
+    });
+
+    it('rejects a mismatched state', async () => {
+      const req = mockRequest({ [OAUTH_STATE_COOKIE]: 'bad-cookie' });
+      const res = mockResponse();
+
+      await expect(
+        controller.oauthGoogleCallback(
+          'google-code',
+          'state',
+          req as any,
+          res as any,
+        ),
+      ).rejects.toThrow('Invalid OAuth state');
+      expect(mockGoogleOAuthService.completeCallback).not.toHaveBeenCalled();
+    });
+
+    it('rejects a tampered state cookie payload', async () => {
+      const startRes = mockResponse();
+      controller.oauthGoogleStart('/accounts', startRes as any);
+      const stateCookie = startRes.cookie.mock.calls[0][1] as string;
+      const [payload, signature] = stateCookie.split('.');
+      const tamperedPayload = Buffer.from(
+        JSON.stringify({ state: 'state', redirectPath: '/evil' }),
+        'utf8',
+      ).toString('base64url');
+      const req = mockRequest({
+        [OAUTH_STATE_COOKIE]: `${tamperedPayload}.${signature}`,
+      });
+      const res = mockResponse();
+
+      await expect(
+        controller.oauthGoogleCallback(
+          'google-code',
+          payload,
+          req as any,
+          res as any,
+        ),
+      ).rejects.toThrow('Invalid OAuth state');
+      expect(mockGoogleOAuthService.completeCallback).not.toHaveBeenCalled();
     });
   });
 

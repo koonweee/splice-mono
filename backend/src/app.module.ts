@@ -57,6 +57,10 @@ import { UserModule } from './user/user.module';
                 'req.body.personalAccessToken',
                 'req.body.refreshToken',
                 'req.body.accessToken',
+                'req.query.code',
+                'req.query.state',
+                'req.body.id_token',
+                'req.body.client_secret',
 
                 // Webhook verification headers
                 'req.headers["plaid-verification"]',
@@ -67,6 +71,10 @@ import { UserModule } from './user/user.module';
                 '*.rawToken',
                 '*.accessToken',
                 '*.refreshToken',
+                '*.idToken',
+                '*.clientSecret',
+                '*.code',
+                '*.state',
                 '*.userToken',
                 '*.clientId',
                 '*.public_tokens',

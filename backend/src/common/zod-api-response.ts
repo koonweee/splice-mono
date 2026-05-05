@@ -118,7 +118,7 @@ type ZodApiBodyOptions = Omit<ApiBodyOptions, 'type'> & {
  * Uses $ref to reference registered schemas for proper deduplication.
  *
  * @example
- * @ZodApiBody({ schema: CreateUserDtoSchema })
+ * @ZodApiBody({ schema: CreateTransactionDtoSchema })
  */
 export function ZodApiBody(options: ZodApiBodyOptions) {
   const { schema, ...rest } = options;

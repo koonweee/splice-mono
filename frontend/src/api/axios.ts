@@ -58,7 +58,14 @@ const clearAuthAndRedirect = () => {
   // Clear the auth flag so routing doesn't get stuck in a loop
   if (typeof window !== 'undefined') {
     localStorage.removeItem(AUTH_FLAG_KEY)
-    window.location.href = '/?login=true'
+    const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    const params = new URLSearchParams({ login: 'true' })
+
+    if (currentPath && currentPath !== '/') {
+      params.set('redirect', currentPath)
+    }
+
+    window.location.href = `/?${params.toString()}`
   }
 }
 
@@ -74,9 +81,9 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Don't try to refresh for auth endpoints
       const isAuthEndpoint =
-        originalRequest.url?.includes('/user/login') ||
-        originalRequest.url?.includes('/user/register') ||
-        originalRequest.url?.includes('/user/refresh')
+        originalRequest.url?.includes('/user/refresh') ||
+        originalRequest.url?.includes('/user/oauth/google/start') ||
+        originalRequest.url?.includes('/user/oauth/google/callback')
 
       if (isAuthEndpoint) {
         return Promise.reject(error)

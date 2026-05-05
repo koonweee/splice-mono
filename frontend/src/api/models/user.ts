@@ -11,6 +11,8 @@ import type { UserProviderDetails } from './userProviderDetails'
 export interface User {
   id: string
   email: string
+  displayName?: string
+  avatarUrl?: string
   settings: UserSettings
   providerDetails?: UserProviderDetails
   createdAt: string

@@ -8,7 +8,7 @@
 import type { Transaction } from './transaction'
 
 export interface PaginatedTransactionResponse {
-  data: Array<Transaction>
+  data: Transaction[]
   total: number
   pageIndex: number
   pageSize: number
