@@ -20,6 +20,7 @@ import {
   useUserControllerMe,
   useUserControllerUpdateSettings,
 } from '../../api/clients/spliceAPI'
+import { CustomCategoriesSection } from '../../components/settings/CustomCategoriesSection'
 import { McpConnectionSection } from '../../components/settings/McpConnectionSection'
 import { PersonalAccessTokenSection } from '../../components/settings/PersonalAccessTokenSection'
 
@@ -98,8 +99,7 @@ export function SettingsPage() {
 
   const [currency, setCurrency] = useState<string>('')
   const [timezone, setTimezone] = useState<string>('')
-  const [hideZeroBalanceAccounts, setHideZeroBalanceAccounts] =
-    useState(false)
+  const [hideZeroBalanceAccounts, setHideZeroBalanceAccounts] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
 
   // Initialize form values when user data loads
@@ -168,7 +168,13 @@ export function SettingsPage() {
       </Title>
 
       <Stack gap="xl">
-        <Paper withBorder p="lg" radius="md" maw={500} data-testid="settings-card">
+        <Paper
+          withBorder
+          p="lg"
+          radius="md"
+          maw={500}
+          data-testid="settings-card"
+        >
           <Stack gap="lg">
             <div>
               <Title order={4} mb="xs">
@@ -281,6 +287,8 @@ export function SettingsPage() {
         </Paper>
 
         <PersonalAccessTokenSection />
+
+        <CustomCategoriesSection />
 
         <McpConnectionSection />
       </Stack>

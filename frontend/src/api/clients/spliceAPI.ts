@@ -30,7 +30,10 @@ import type {
   BalanceSnapshotControllerImportCsv201,
   BalanceSnapshotControllerImportCsvBody,
   Category,
+  CategoryControllerFindCustomParams,
+  CategoryControllerSearchParams,
   CreateAccountDto,
+  CreateCustomCategoryDto,
   CreatePersonalAccessTokenDto,
   CreatePersonalAccessTokenResponse,
   CreateTransactionDto,
@@ -49,6 +52,7 @@ import type {
   TransactionAnalysisTransactionsResponse,
   TransactionControllerFindAllParams,
   UpdateAccountDto,
+  UpdateCustomCategoryDto,
   UpdateTransactionCategoryDto,
   UpdateTransactionDto,
   UpdateUserSettingsDto,
@@ -3642,6 +3646,492 @@ export function useCategoryControllerFindAll<
   query.queryKey = queryOptions.queryKey
 
   return query
+}
+
+/**
+ * Search active Plaid categories and current user custom categories
+ */
+export const categoryControllerSearch = (
+  params?: CategoryControllerSearchParams,
+  signal?: AbortSignal,
+) => {
+  return axios<Category[]>({
+    url: `/category/search`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getCategoryControllerSearchQueryKey = (
+  params?: CategoryControllerSearchParams,
+) => {
+  return [`/category/search`, ...(params ? [params] : [])] as const
+}
+
+export const getCategoryControllerSearchQueryOptions = <
+  TData = Awaited<ReturnType<typeof categoryControllerSearch>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerSearchParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerSearch>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getCategoryControllerSearchQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof categoryControllerSearch>>
+  > = ({ signal }) => categoryControllerSearch(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof categoryControllerSearch>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategoryControllerSearchQueryResult = NonNullable<
+  Awaited<ReturnType<typeof categoryControllerSearch>>
+>
+export type CategoryControllerSearchQueryError = unknown
+
+export function useCategoryControllerSearch<
+  TData = Awaited<ReturnType<typeof categoryControllerSearch>>,
+  TError = unknown,
+>(
+  params: undefined | CategoryControllerSearchParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerSearch>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categoryControllerSearch>>,
+          TError,
+          Awaited<ReturnType<typeof categoryControllerSearch>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategoryControllerSearch<
+  TData = Awaited<ReturnType<typeof categoryControllerSearch>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerSearchParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerSearch>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categoryControllerSearch>>,
+          TError,
+          Awaited<ReturnType<typeof categoryControllerSearch>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategoryControllerSearch<
+  TData = Awaited<ReturnType<typeof categoryControllerSearch>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerSearchParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerSearch>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useCategoryControllerSearch<
+  TData = Awaited<ReturnType<typeof categoryControllerSearch>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerSearchParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerSearch>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getCategoryControllerSearchQueryOptions(params, options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Get the current user's custom transaction categories
+ */
+export const categoryControllerFindCustom = (
+  params?: CategoryControllerFindCustomParams,
+  signal?: AbortSignal,
+) => {
+  return axios<Category[]>({
+    url: `/category/custom`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getCategoryControllerFindCustomQueryKey = (
+  params?: CategoryControllerFindCustomParams,
+) => {
+  return [`/category/custom`, ...(params ? [params] : [])] as const
+}
+
+export const getCategoryControllerFindCustomQueryOptions = <
+  TData = Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerFindCustomParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getCategoryControllerFindCustomQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof categoryControllerFindCustom>>
+  > = ({ signal }) => categoryControllerFindCustom(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategoryControllerFindCustomQueryResult = NonNullable<
+  Awaited<ReturnType<typeof categoryControllerFindCustom>>
+>
+export type CategoryControllerFindCustomQueryError = unknown
+
+export function useCategoryControllerFindCustom<
+  TData = Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+  TError = unknown,
+>(
+  params: undefined | CategoryControllerFindCustomParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+          TError,
+          Awaited<ReturnType<typeof categoryControllerFindCustom>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategoryControllerFindCustom<
+  TData = Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerFindCustomParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+          TError,
+          Awaited<ReturnType<typeof categoryControllerFindCustom>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategoryControllerFindCustom<
+  TData = Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerFindCustomParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useCategoryControllerFindCustom<
+  TData = Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerFindCustomParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindCustom>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getCategoryControllerFindCustomQueryOptions(
+    params,
+    options,
+  )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Create a custom transaction category
+ */
+export const categoryControllerCreateCustom = (
+  createCustomCategoryDto: CreateCustomCategoryDto,
+  signal?: AbortSignal,
+) => {
+  return axios<Category>({
+    url: `/category/custom`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createCustomCategoryDto,
+    signal,
+  })
+}
+
+export const getCategoryControllerCreateCustomMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof categoryControllerCreateCustom>>,
+    TError,
+    { data: CreateCustomCategoryDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof categoryControllerCreateCustom>>,
+  TError,
+  { data: CreateCustomCategoryDto },
+  TContext
+> => {
+  const mutationKey = ['categoryControllerCreateCustom']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof categoryControllerCreateCustom>>,
+    { data: CreateCustomCategoryDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return categoryControllerCreateCustom(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type CategoryControllerCreateCustomMutationResult = NonNullable<
+  Awaited<ReturnType<typeof categoryControllerCreateCustom>>
+>
+export type CategoryControllerCreateCustomMutationBody = CreateCustomCategoryDto
+export type CategoryControllerCreateCustomMutationError = void
+
+export const useCategoryControllerCreateCustom = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof categoryControllerCreateCustom>>,
+      TError,
+      { data: CreateCustomCategoryDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof categoryControllerCreateCustom>>,
+  TError,
+  { data: CreateCustomCategoryDto },
+  TContext
+> => {
+  const mutationOptions =
+    getCategoryControllerCreateCustomMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Update, archive, or restore a custom category
+ */
+export const categoryControllerUpdateCustom = (
+  id: string,
+  updateCustomCategoryDto: UpdateCustomCategoryDto,
+) => {
+  return axios<Category>({
+    url: `/category/custom/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateCustomCategoryDto,
+  })
+}
+
+export const getCategoryControllerUpdateCustomMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof categoryControllerUpdateCustom>>,
+    TError,
+    { id: string; data: UpdateCustomCategoryDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof categoryControllerUpdateCustom>>,
+  TError,
+  { id: string; data: UpdateCustomCategoryDto },
+  TContext
+> => {
+  const mutationKey = ['categoryControllerUpdateCustom']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof categoryControllerUpdateCustom>>,
+    { id: string; data: UpdateCustomCategoryDto }
+  > = (props) => {
+    const { id, data } = props ?? {}
+
+    return categoryControllerUpdateCustom(id, data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type CategoryControllerUpdateCustomMutationResult = NonNullable<
+  Awaited<ReturnType<typeof categoryControllerUpdateCustom>>
+>
+export type CategoryControllerUpdateCustomMutationBody = UpdateCustomCategoryDto
+export type CategoryControllerUpdateCustomMutationError = void
+
+export const useCategoryControllerUpdateCustom = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof categoryControllerUpdateCustom>>,
+      TError,
+      { id: string; data: UpdateCustomCategoryDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof categoryControllerUpdateCustom>>,
+  TError,
+  { id: string; data: UpdateCustomCategoryDto },
+  TContext
+> => {
+  const mutationOptions =
+    getCategoryControllerUpdateCustomMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
 }
 
 export const healthControllerCheck = (signal?: AbortSignal) => {
