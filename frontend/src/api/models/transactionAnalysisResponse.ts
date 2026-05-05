@@ -12,12 +12,12 @@ export interface TransactionAnalysisResponse {
   startDate: string
   endDate: string
   currency: string
-  inflows: Array<CategoryAggregate>
-  outflows: Array<CategoryAggregate>
+  inflows: CategoryAggregate[]
+  outflows: CategoryAggregate[]
   totalInflow: number
   totalOutflow: number
   netFlow: number
   uncategorizedInflow: number
   uncategorizedOutflow: number
-  balanceAdjustments: Array<BalanceAdjustment>
+  balanceAdjustments: BalanceAdjustment[]
 }

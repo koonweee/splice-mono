@@ -1,9 +1,4 @@
-import type {
-  CreateUserDto,
-  LoginDto,
-  LoginResponse,
-  User,
-} from '../../../src/types/User';
+import type { User } from '../../../src/types/User';
 
 /** Standard mock timestamps for testing */
 export const mockTimestamps = {
@@ -39,26 +34,7 @@ export const mockUser2: User = {
   ...mockTimestamps,
 };
 
-/**
- * Mock DTO for creating a user
- */
-export const mockCreateUserDto: CreateUserDto = {
-  email: 'test@example.com',
-  password: 'password123',
-};
-
-/**
- * Mock DTO for login
- */
-export const mockLoginDto: LoginDto = {
-  email: 'test@example.com',
-  password: 'password123',
-};
-
-/**
- * Mock login response
- */
-export const mockLoginResponse: LoginResponse = {
+export const mockOAuthLoginResponse = {
   accessToken: 'mock-jwt-token',
   refreshToken: 'mock-refresh-token',
   user: mockUser,

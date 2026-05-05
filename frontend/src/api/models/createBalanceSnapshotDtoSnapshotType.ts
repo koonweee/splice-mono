@@ -9,6 +9,7 @@
 export type CreateBalanceSnapshotDtoSnapshotType =
   (typeof CreateBalanceSnapshotDtoSnapshotType)[keyof typeof CreateBalanceSnapshotDtoSnapshotType]
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateBalanceSnapshotDtoSnapshotType = {
   USER_UPDATE: 'USER_UPDATE',
   SYNC: 'SYNC',

@@ -9,6 +9,7 @@
 export type TransactionAnalysisBalanceAdjustmentsQueryCategoryPrimary =
   (typeof TransactionAnalysisBalanceAdjustmentsQueryCategoryPrimary)[keyof typeof TransactionAnalysisBalanceAdjustmentsQueryCategoryPrimary]
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const TransactionAnalysisBalanceAdjustmentsQueryCategoryPrimary = {
   BALANCE_ADJUSTMENT: 'BALANCE_ADJUSTMENT',
 } as const

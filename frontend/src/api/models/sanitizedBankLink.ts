@@ -11,7 +11,7 @@ import type { SanitizedBankLinkStatusBody } from './sanitizedBankLinkStatusBody'
 export interface SanitizedBankLink {
   id: string
   providerName: string
-  accountIds: Array<string>
+  accountIds: string[]
   /** @nullable */
   institutionId?: string | null
   /** @nullable */

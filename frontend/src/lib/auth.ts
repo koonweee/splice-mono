@@ -1,13 +1,15 @@
 import { useNavigate } from '@tanstack/react-router'
 import {
-  useUserControllerLogin,
   useUserControllerLogout,
   useUserControllerLogoutAll,
 } from '../api/clients/spliceAPI'
+import { resolveApiBaseUrl } from '../api/axios'
 
 // Key used to track if user has logged in (for SSR auth check)
 // The actual tokens are stored in HTTP-only cookies by the backend
 const AUTH_FLAG_KEY = 'splice_authenticated'
+const DEFAULT_LOGIN_REDIRECT = '/home'
+const RELATIVE_URL_ORIGIN = 'http://splice.local'
 
 export const authStorage = {
   /**
@@ -43,6 +45,76 @@ export const authStorage = {
   },
 }
 
+export function getSafeRelativeRedirect(
+  redirectTo?: string,
+  fallback = DEFAULT_LOGIN_REDIRECT,
+): string {
+  const candidate = redirectTo?.trim()
+
+  if (
+    !candidate ||
+    !candidate.startsWith('/') ||
+    candidate.startsWith('//') ||
+    candidate.includes('\\')
+  ) {
+    return fallback
+  }
+
+  try {
+    const parsedUrl = new URL(candidate, RELATIVE_URL_ORIGIN)
+
+    if (parsedUrl.origin !== RELATIVE_URL_ORIGIN) {
+      return fallback
+    }
+
+    return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`
+  } catch {
+    return fallback
+  }
+}
+
+export function buildGoogleOAuthStartUrl(redirectTo?: string): string {
+  const apiBaseUrl = resolveApiBaseUrl()
+  const startPath = '/user/oauth/google/start'
+  const safeRedirect = getSafeRelativeRedirect(redirectTo)
+
+  if (!apiBaseUrl) {
+    const params = new URLSearchParams({ redirect: safeRedirect })
+    return `${startPath}?${params.toString()}`
+  }
+
+  const startUrl = new URL(startPath, apiBaseUrl)
+  startUrl.searchParams.set('redirect', safeRedirect)
+
+  return startUrl.toString()
+}
+
+export function startGoogleLogin(redirectTo?: string): void {
+  if (typeof window === 'undefined') return
+
+  window.location.assign(buildGoogleOAuthStartUrl(redirectTo))
+}
+
+export async function validateSession(): Promise<boolean> {
+  try {
+    const apiBaseUrl = resolveApiBaseUrl()
+    const meUrl = apiBaseUrl ? new URL('/user/me', apiBaseUrl) : '/user/me'
+    const response = await fetch(meUrl, {
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      throw new Error('Session is not authenticated')
+    }
+
+    authStorage.setAuthenticated()
+    return true
+  } catch {
+    authStorage.clearAuthenticated()
+    return false
+  }
+}
+
 // Keep tokenStorage as an alias for backwards compatibility during migration
 export const tokenStorage = {
   hasTokens: authStorage.isAuthenticated,
@@ -57,24 +129,6 @@ export const tokenStorage = {
   removeAccessToken: (): void => {},
   setRefreshToken: (_token: string): void => {},
   removeRefreshToken: (): void => {},
-}
-
-/**
- * Login hook that sets auth flag and navigates on success.
- * Tokens are automatically stored in HTTP-only cookies by the backend.
- */
-export function useLogin(options?: { redirectTo?: string }) {
-  const navigate = useNavigate()
-  const redirectTo = options?.redirectTo ?? '/'
-
-  return useUserControllerLogin({
-    mutation: {
-      onSuccess: () => {
-        authStorage.setAuthenticated()
-        navigate({ to: redirectTo })
-      },
-    },
-  })
 }
 
 /**

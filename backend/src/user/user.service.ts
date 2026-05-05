@@ -6,17 +6,10 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as crypto from 'crypto';
 import { Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 import { UserEvents, UserSettingsUpdatedEvent } from '../events/user.events';
-import type {
-  CreateUserDto,
-  LoginDto,
-  LoginResponse,
-  TokenResponse,
-  User,
-} from '../types/User';
+import type { TokenResponse, User } from '../types/User';
 import type {
   UpdateUserSettingsDto,
   UserSettings,
@@ -30,99 +23,10 @@ export class UserService {
 
   constructor(
     @InjectRepository(UserEntity)
-    private repository: Repository<UserEntity>,
-    private authService: AuthService,
-    private eventEmitter: EventEmitter2,
+    private readonly repository: Repository<UserEntity>,
+    private readonly authService: AuthService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
-
-  /**
-   * Hash a password using scrypt (built-in Node.js crypto)
-   */
-  private async hashPassword(password: string): Promise<string> {
-    const salt = crypto.randomBytes(16).toString('hex');
-    return new Promise((resolve, reject) => {
-      crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-        if (err) reject(err);
-        resolve(`${salt}:${derivedKey.toString('hex')}`);
-      });
-    });
-  }
-
-  /**
-   * Verify a password against a hash
-   */
-  private async verifyPassword(
-    password: string,
-    hash: string,
-  ): Promise<boolean> {
-    const [salt, key] = hash.split(':');
-    return new Promise((resolve, reject) => {
-      crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-        if (err) reject(err);
-        resolve(key === derivedKey.toString('hex'));
-      });
-    });
-  }
-
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    this.logger.log({ email: createUserDto.email }, 'Creating user');
-
-    // Check if user already exists
-    const existingUser = await this.repository.findOne({
-      where: { email: createUserDto.email },
-    });
-
-    if (existingUser) {
-      this.logger.warn({ email: createUserDto.email }, 'User already exists');
-      throw new ConflictException('User with this email already exists');
-    }
-
-    const hashedPassword = await this.hashPassword(createUserDto.password);
-    const entity = UserEntity.fromDto(createUserDto, hashedPassword);
-
-    const savedEntity = await this.repository.save(entity);
-    this.logger.log({ id: savedEntity.id }, 'User created successfully');
-    return savedEntity.toObject();
-  }
-
-  async login(loginDto: LoginDto): Promise<LoginResponse> {
-    this.logger.log({ email: loginDto.email }, 'Login attempt');
-
-    const entity = await this.repository.findOne({
-      where: { email: loginDto.email },
-    });
-
-    if (!entity) {
-      this.logger.warn(
-        { email: loginDto.email },
-        'Login failed - user not found',
-      );
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    const isPasswordValid = await this.verifyPassword(
-      loginDto.password,
-      entity.hashedPassword,
-    );
-
-    if (!isPasswordValid) {
-      this.logger.warn(
-        { email: loginDto.email },
-        'Login failed - invalid password',
-      );
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    const user = entity.toObject();
-    const accessToken = this.authService.generateAccessToken(
-      user.id,
-      user.email,
-    );
-    const refreshToken = await this.authService.generateRefreshToken(user.id);
-
-    this.logger.log({ id: user.id }, 'Login successful');
-    return { accessToken, refreshToken, user };
-  }
 
   async refreshTokens(refreshToken: string): Promise<TokenResponse> {
     const { userId, newRefreshToken } =
@@ -154,6 +58,82 @@ export class UserService {
     }
 
     return entity.toObject();
+  }
+
+  async findByGoogleSubject(googleSubject: string): Promise<User | null> {
+    const entity = await this.repository.findOne({
+      where: { googleSubject },
+    });
+
+    return entity?.toObject() ?? null;
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    const entity = await this.repository.findOne({
+      where: { email: this.normalizeEmail(email) },
+    });
+
+    return entity?.toObject() ?? null;
+  }
+
+  async findOrCreateFromGoogleIdentity(profile: {
+    googleSubject: string;
+    email: string;
+    displayName?: string | null;
+    avatarUrl?: string | null;
+  }): Promise<User> {
+    const email = this.normalizeEmail(profile.email);
+    const existingGoogleUser = await this.repository.findOne({
+      where: { googleSubject: profile.googleSubject },
+    });
+
+    if (existingGoogleUser) {
+      this.logger.log(
+        { userId: existingGoogleUser.id },
+        'Google OAuth login matched existing Google subject',
+      );
+      return existingGoogleUser.toObject();
+    }
+
+    const existingEmailUser = await this.repository.findOne({
+      where: { email },
+    });
+
+    if (existingEmailUser) {
+      if (
+        existingEmailUser.googleSubject &&
+        existingEmailUser.googleSubject !== profile.googleSubject
+      ) {
+        this.logger.warn(
+          { userId: existingEmailUser.id },
+          'Google OAuth email already linked to a different subject',
+        );
+        throw new ConflictException('Google account is already linked');
+      }
+
+      existingEmailUser.googleSubject = profile.googleSubject;
+      existingEmailUser.displayName =
+        profile.displayName ?? existingEmailUser.displayName ?? null;
+      existingEmailUser.avatarUrl =
+        profile.avatarUrl ?? existingEmailUser.avatarUrl ?? null;
+      const savedEntity = await this.repository.save(existingEmailUser);
+      this.logger.log(
+        { userId: savedEntity.id },
+        'Linked Google OAuth identity to existing user by verified email',
+      );
+      return savedEntity.toObject();
+    }
+
+    const entity = UserEntity.fromGoogleIdentity({
+      email,
+      googleSubject: profile.googleSubject,
+      displayName: profile.displayName,
+      avatarUrl: profile.avatarUrl,
+    });
+
+    const savedEntity = await this.repository.save(entity);
+    this.logger.log({ userId: savedEntity.id }, 'Created Google OAuth user');
+    return savedEntity.toObject();
   }
 
   /**
@@ -280,5 +260,9 @@ export class UserService {
       'Updated provider details for user',
     );
     return savedEntity.toObject();
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
   }
 }

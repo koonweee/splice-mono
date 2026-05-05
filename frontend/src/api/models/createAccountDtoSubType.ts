@@ -13,6 +13,7 @@ export type CreateAccountDtoSubType =
   | (typeof CreateAccountDtoSubType)[keyof typeof CreateAccountDtoSubType]
   | null
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateAccountDtoSubType = {
   '401a': '401a',
   '401k': '401k',
