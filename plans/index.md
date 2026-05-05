@@ -1,0 +1,21 @@
+# Plans
+
+This directory tracks product and implementation plans for Splice.
+
+## Status Key
+
+- Planned: not started.
+- In Progress: actively being implemented.
+- Blocked: waiting on a decision or dependency.
+- Done: implemented and validated.
+- Reference: background notes or testing guides rather than an implementation plan.
+
+## Directory
+
+| Plan | Status | Notes |
+|---|---|---|
+| [Transaction Category Overrides](./transaction-category-overrides.md) | Planned | Add user category overrides while preserving Plaid categories and enforcing effective category across UI, analysis, and MCP/surface callers. |
+
+## Templates
+
+- [Plan Template](./template.md)
