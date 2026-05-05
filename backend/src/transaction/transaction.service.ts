@@ -5,7 +5,6 @@ import {
   FindOptionsOrder,
   FindOptionsWhere,
   In,
-  IsNull,
   LessThanOrEqual,
   MoreThanOrEqual,
   Repository,
@@ -17,6 +16,7 @@ import { OwnedCrudService } from '../common/owned-crud.service';
 import {
   CreateTransactionDto,
   Transaction,
+  UpdateTransactionCategoryDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
 import { TransactionEntity } from './transaction.entity';
@@ -35,7 +35,7 @@ export class TransactionService extends OwnedCrudService<
   protected readonly logger = new Logger(TransactionService.name);
   protected readonly entityName = 'Transaction';
   protected readonly EntityClass = TransactionEntity;
-  protected readonly relations = ['account', 'category'];
+  protected readonly relations = ['account', 'category', 'userCategory'];
 
   constructor(
     @InjectRepository(TransactionEntity)
@@ -129,8 +129,6 @@ export class TransactionService extends OwnedCrudService<
     if (accountId) {
       where.accountId = accountId;
     }
-
-    // Date range filters
     if (startDate && endDate) {
       where.date = Between(startDate, endDate);
     } else if (startDate) {
@@ -138,25 +136,8 @@ export class TransactionService extends OwnedCrudService<
     } else if (endDate) {
       where.date = LessThanOrEqual(endDate);
     }
-
-    // Amount sign filter
     if (amountSign === 'positive' || amountSign === 'negative') {
       where.amount = { sign: amountSign } as unknown as BalanceColumns;
-    }
-
-    // Category primary filter
-    if (categoryPrimary) {
-      if (categoryPrimary === 'UNCATEGORIZED') {
-        where.categoryId = IsNull();
-      } else {
-        const matchingCategories = await this.categoryRepository.find({
-          where: { primary: categoryPrimary },
-        });
-        if (matchingCategories.length === 0) {
-          return { data: [], total: 0 };
-        }
-        where.categoryId = In(matchingCategories.map((c) => c.id));
-      }
     }
 
     this.logger.log(
@@ -175,19 +156,77 @@ export class TransactionService extends OwnedCrudService<
       'Finding paginated transactions',
     );
 
-    // Embedded columns (e.g. amount) need nested order syntax for TypeORM
-    const orderClause: FindOptionsOrder<TransactionEntity> =
-      sortColumn === 'amount'
-        ? { amount: { amount: order } }
-        : { [sortColumn]: order };
+    if (!categoryPrimary) {
+      const orderClause: FindOptionsOrder<TransactionEntity> =
+        sortColumn === 'amount'
+          ? { amount: { amount: order } }
+          : { [sortColumn]: order };
 
-    const [entities, total] = await this.repository.findAndCount({
-      where,
-      relations: this.relations,
-      order: orderClause,
-      skip: pageIndex * pageSize,
-      take: pageSize,
-    });
+      const [entities, total] = await this.repository.findAndCount({
+        where,
+        relations: this.relations,
+        order: orderClause,
+        skip: pageIndex * pageSize,
+        take: pageSize,
+      });
+
+      this.logger.log(
+        { userId, count: entities.length, total },
+        'Found paginated transactions',
+      );
+
+      return {
+        data: entities.map((entity) => entity.toObject()),
+        total,
+      };
+    }
+
+    const query = this.repository
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.account', 'account')
+      .leftJoinAndSelect('transaction.category', 'category')
+      .leftJoinAndSelect('transaction.userCategory', 'userCategory')
+      .where('transaction.userId = :userId', { userId });
+
+    if (accountId) {
+      query.andWhere('transaction.accountId = :accountId', { accountId });
+    }
+    if (startDate && endDate) {
+      query.andWhere('transaction.date BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate,
+      });
+    } else if (startDate) {
+      query.andWhere('transaction.date >= :startDate', { startDate });
+    } else if (endDate) {
+      query.andWhere('transaction.date <= :endDate', { endDate });
+    }
+    if (amountSign === 'positive' || amountSign === 'negative') {
+      query.andWhere('transaction.amountSign = :amountSign', { amountSign });
+    }
+    if (categoryPrimary) {
+      if (categoryPrimary === 'UNCATEGORIZED') {
+        query.andWhere(
+          'COALESCE(transaction.userCategoryId, transaction.categoryId) IS NULL',
+        );
+      } else {
+        query.andWhere(
+          'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
+          { categoryPrimary },
+        );
+      }
+    }
+
+    const sortExpression =
+      sortColumn === 'amount'
+        ? 'transaction.amountAmount'
+        : `transaction.${sortColumn}`;
+
+    const [entities, total] = await query
+      .orderBy(sortExpression, order)
+      .skip(pageIndex * pageSize)
+      .take(pageSize)
+      .getManyAndCount();
 
     this.logger.log(
       { userId, count: entities.length, total },
@@ -212,6 +251,57 @@ export class TransactionService extends OwnedCrudService<
       relations: this.relations,
     });
     return entities.map((entity) => entity.toObject());
+  }
+
+  async updateCategory(
+    id: string,
+    dto: UpdateTransactionCategoryDto,
+    userId: string,
+  ): Promise<Transaction | null> {
+    this.logger.log({ id, userId }, 'Updating transaction category override');
+
+    const entity = await this.repository.findOne({
+      where: { id, userId },
+      relations: this.relations,
+    });
+
+    if (!entity) {
+      this.logger.warn(
+        { id, userId },
+        'Transaction not found for category override update',
+      );
+      return null;
+    }
+
+    if (dto.categoryId === null || dto.categoryId === entity.categoryId) {
+      entity.userCategoryId = null;
+      entity.userCategory = null;
+      entity.userCategoryUpdatedAt = null;
+    } else {
+      const category = await this.categoryRepository.findOne({
+        where: { id: dto.categoryId },
+      });
+
+      if (!category) {
+        this.logger.warn(
+          { id, userId, categoryId: dto.categoryId },
+          'Category not found for transaction override',
+        );
+        return null;
+      }
+
+      entity.userCategoryId = category.id;
+      entity.userCategory = category;
+      entity.userCategoryUpdatedAt = new Date();
+    }
+
+    const savedEntity = await this.repository.save(entity);
+    const hydratedEntity = await this.repository.findOne({
+      where: { id: savedEntity.id, userId },
+      relations: this.relations,
+    });
+
+    return (hydratedEntity ?? savedEntity).toObject();
   }
 
   private async findMatchingTransactions(
@@ -270,7 +360,8 @@ export class TransactionService extends OwnedCrudService<
         }
 
         if (options.categoryPrimary) {
-          const primaryCategory = transaction.category?.primary ?? null;
+          const primaryCategory =
+            transaction.effectiveCategory?.primary ?? null;
           if (options.categoryPrimary === 'UNCATEGORIZED') {
             if (primaryCategory !== null) {
               return false;
@@ -309,7 +400,7 @@ export class TransactionService extends OwnedCrudService<
         merchantName: transaction.merchantName,
         pending: transaction.pending,
         date: transaction.date,
-        categoryPrimary: transaction.category?.primary ?? null,
+        categoryPrimary: transaction.effectiveCategory?.primary ?? null,
         amount: transaction.amount,
       })),
     };

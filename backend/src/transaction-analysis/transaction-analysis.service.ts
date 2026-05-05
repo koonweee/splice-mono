@@ -130,7 +130,7 @@ export class TransactionAnalysisService {
     >();
 
     unmatchedTransactions.forEach((transaction) => {
-      const category = transaction.category?.primary ?? 'UNCATEGORIZED';
+      const category = this.getEffectiveCategoryPrimary(transaction);
       const currency = transaction.amount.currency;
       const amount = this.getAmountInSmallestUnit(transaction);
       const isInflow = transaction.amount.sign === MoneySign.POSITIVE;
@@ -232,8 +232,7 @@ export class TransactionAnalysisService {
       await this.currencyConversionService.getPreferredCurrency(userId);
 
     const filteredTransactions = unmatchedTransactions.filter((transaction) => {
-      const transactionCategory =
-        transaction.category?.primary ?? 'UNCATEGORIZED';
+      const transactionCategory = this.getEffectiveCategoryPrimary(transaction);
       const matchesDirection =
         flowDirection === 'inflow'
           ? transaction.amount.sign === MoneySign.POSITIVE
@@ -344,7 +343,7 @@ export class TransactionAnalysisService {
         pending: false,
         date: Between(startDate, endDate),
       },
-      relations: ['account', 'category'],
+      relations: ['account', 'category', 'userCategory'],
     });
   }
 
@@ -737,6 +736,14 @@ export class TransactionAnalysisService {
     return typeof transaction.amount.amount === 'string'
       ? parseInt(transaction.amount.amount, 10)
       : transaction.amount.amount;
+  }
+
+  private getEffectiveCategoryPrimary(transaction: TransactionEntity): string {
+    return (
+      transaction.userCategory?.primary ??
+      transaction.category?.primary ??
+      'UNCATEGORIZED'
+    );
   }
 
   private compareBuckets(
