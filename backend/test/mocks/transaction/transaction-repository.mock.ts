@@ -19,6 +19,9 @@ const mockTransactionEntity = {
   authorizedDate: '2024-01-14',
   authorizedDatetime: '2024-01-14T10:30:00Z',
   categoryId: mockCategoryId,
+  userCategoryId: null,
+  userCategory: null,
+  userCategoryUpdatedAt: null,
   amount: {
     amount: 5000,
     currency: 'USD',
@@ -46,6 +49,9 @@ const mockTransactionEntity2 = {
   authorizedDate: '2024-01-16',
   authorizedDatetime: null,
   categoryId: null,
+  userCategoryId: null,
+  userCategory: null,
+  userCategoryUpdatedAt: null,
   amount: {
     amount: 2500,
     currency: 'USD',

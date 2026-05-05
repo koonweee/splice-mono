@@ -29,6 +29,7 @@ import type {
   BalanceQueryPerDateResult,
   BalanceSnapshotControllerImportCsv201,
   BalanceSnapshotControllerImportCsvBody,
+  Category,
   CreateAccountDto,
   CreatePersonalAccessTokenDto,
   CreatePersonalAccessTokenResponse,
@@ -48,6 +49,7 @@ import type {
   TransactionAnalysisTransactionsResponse,
   TransactionControllerFindAllParams,
   UpdateAccountDto,
+  UpdateTransactionCategoryDto,
   UpdateTransactionDto,
   UpdateUserSettingsDto,
   User,
@@ -3415,6 +3417,231 @@ export const useTransactionControllerRemove = <
   const mutationOptions = getTransactionControllerRemoveMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Update a transaction category override
+ */
+export const transactionControllerUpdateCategory = (
+  id: string,
+  updateTransactionCategoryDto: UpdateTransactionCategoryDto,
+) => {
+  return axios<Transaction>({
+    url: `/transaction/${id}/category`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateTransactionCategoryDto,
+  })
+}
+
+export const getTransactionControllerUpdateCategoryMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerUpdateCategory>>,
+    TError,
+    { id: string; data: UpdateTransactionCategoryDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerUpdateCategory>>,
+  TError,
+  { id: string; data: UpdateTransactionCategoryDto },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerUpdateCategory']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerUpdateCategory>>,
+    { id: string; data: UpdateTransactionCategoryDto }
+  > = (props) => {
+    const { id, data } = props ?? {}
+
+    return transactionControllerUpdateCategory(id, data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerUpdateCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof transactionControllerUpdateCategory>>
+>
+export type TransactionControllerUpdateCategoryMutationBody =
+  UpdateTransactionCategoryDto
+export type TransactionControllerUpdateCategoryMutationError = void
+
+export const useTransactionControllerUpdateCategory = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerUpdateCategory>>,
+      TError,
+      { id: string; data: UpdateTransactionCategoryDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerUpdateCategory>>,
+  TError,
+  { id: string; data: UpdateTransactionCategoryDto },
+  TContext
+> => {
+  const mutationOptions =
+    getTransactionControllerUpdateCategoryMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Get all transaction categories
+ */
+export const categoryControllerFindAll = (signal?: AbortSignal) => {
+  return axios<Category[]>({ url: `/category`, method: 'GET', signal })
+}
+
+export const getCategoryControllerFindAllQueryKey = () => {
+  return [`/category`] as const
+}
+
+export const getCategoryControllerFindAllQueryOptions = <
+  TData = Awaited<ReturnType<typeof categoryControllerFindAll>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof categoryControllerFindAll>>,
+      TError,
+      TData
+    >
+  >
+}) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getCategoryControllerFindAllQueryKey()
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof categoryControllerFindAll>>
+  > = ({ signal }) => categoryControllerFindAll(signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof categoryControllerFindAll>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategoryControllerFindAllQueryResult = NonNullable<
+  Awaited<ReturnType<typeof categoryControllerFindAll>>
+>
+export type CategoryControllerFindAllQueryError = unknown
+
+export function useCategoryControllerFindAll<
+  TData = Awaited<ReturnType<typeof categoryControllerFindAll>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindAll>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categoryControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof categoryControllerFindAll>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategoryControllerFindAll<
+  TData = Awaited<ReturnType<typeof categoryControllerFindAll>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindAll>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categoryControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof categoryControllerFindAll>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategoryControllerFindAll<
+  TData = Awaited<ReturnType<typeof categoryControllerFindAll>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindAll>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useCategoryControllerFindAll<
+  TData = Awaited<ReturnType<typeof categoryControllerFindAll>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindAll>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getCategoryControllerFindAllQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
 }
 
 export const healthControllerCheck = (signal?: AbortSignal) => {

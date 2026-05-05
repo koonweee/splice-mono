@@ -466,6 +466,7 @@ export class McpReadService {
       .leftJoinAndSelect('transaction.account', 'account')
       .leftJoinAndSelect('account.bankLink', 'bankLink')
       .leftJoinAndSelect('transaction.category', 'category')
+      .leftJoinAndSelect('transaction.userCategory', 'userCategory')
       .where('transaction.userId = :userId', { userId })
       .orderBy('transaction.date', 'DESC')
       .addOrderBy('transaction.id', 'DESC');
@@ -490,11 +491,16 @@ export class McpReadService {
     }
     if (options.categoryPrimary) {
       if (options.categoryPrimary === 'UNCATEGORIZED') {
-        query.andWhere('transaction.categoryId IS NULL');
+        query.andWhere(
+          'COALESCE(transaction.userCategoryId, transaction.categoryId) IS NULL',
+        );
       } else {
-        query.andWhere('category.primary = :categoryPrimary', {
-          categoryPrimary: options.categoryPrimary,
-        });
+        query.andWhere(
+          'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
+          {
+            categoryPrimary: options.categoryPrimary,
+          },
+        );
       }
     }
     const merchantQuery = options.merchantQuery?.trim();
@@ -536,6 +542,7 @@ export class McpReadService {
     conversionRates: Map<string, McpConversionRate>,
   ): Promise<McpTransaction> {
     const nativeAmount = transaction.amount.toMoneyWithSign();
+    const effectiveCategory = transaction.userCategory ?? transaction.category;
     const rate = await this.getRate(
       nativeAmount.money.currency,
       reportingCurrency,
@@ -561,13 +568,13 @@ export class McpReadService {
       date: transaction.date,
       datetime: transaction.datetime,
       authorizedDate: transaction.authorizedDate,
-      categoryPrimary: transaction.category?.primary ?? null,
+      categoryPrimary: effectiveCategory?.primary ?? null,
       categoryPrimaryLabel: formatCategoryLabel(
-        transaction.category?.primary ?? null,
+        effectiveCategory?.primary ?? null,
       ),
-      categoryDetailed: transaction.category?.detailed ?? null,
-      categoryDetailedLabel: transaction.category?.detailed
-        ? formatCategoryLabel(transaction.category.detailed)
+      categoryDetailed: effectiveCategory?.detailed ?? null,
+      categoryDetailedLabel: effectiveCategory?.detailed
+        ? formatCategoryLabel(effectiveCategory.detailed)
         : null,
       amount: toMcpMoney(nativeAmount),
       convertedAmount: toMcpMoney(convertedAmount),
@@ -660,11 +667,17 @@ export class McpReadService {
     const query = this.transactionRepository
       .createQueryBuilder('transaction')
       .leftJoin('transaction.category', 'category')
-      .select('COALESCE(category.primary, :uncategorized)', 'primary')
+      .leftJoin('transaction.userCategory', 'userCategory')
+      .select(
+        'COALESCE(userCategory.primary, category.primary, :uncategorized)',
+        'primary',
+      )
       .addSelect('COUNT(transaction.id)', 'count')
       .where('transaction.userId = :userId', { userId })
       .setParameter('uncategorized', 'UNCATEGORIZED')
-      .groupBy('COALESCE(category.primary, :uncategorized)');
+      .groupBy(
+        'COALESCE(userCategory.primary, category.primary, :uncategorized)',
+      );
 
     if (options.startDate) {
       query.andWhere('transaction.date >= :startDate', {

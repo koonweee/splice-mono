@@ -40,6 +40,8 @@ function buildTransaction(params: {
   pending?: boolean;
   primary?: string | null;
   detailed?: string | null;
+  userPrimary?: string | null;
+  userDetailed?: string | null;
   accountName?: string | null;
   accountCustomName?: string | null;
 }): TransactionEntity {
@@ -112,6 +114,29 @@ function buildTransaction(params: {
           };
         },
       } as CategoryEntity)
+    : null;
+  entity.userCategoryId = null;
+  entity.userCategory = params.userPrimary
+    ? ({
+        id: `user-cat-${params.userPrimary}`,
+        primary: params.userPrimary,
+        detailed: params.userDetailed ?? `${params.userPrimary}_DETAIL`,
+        description: `${params.userPrimary} category`,
+        toObject() {
+          return {
+            id: `user-cat-${params.userPrimary}`,
+            primary: params.userPrimary as string,
+            detailed: params.userDetailed ?? `${params.userPrimary}_DETAIL`,
+            description: `${params.userPrimary} category`,
+            createdAt: entity.createdAt,
+            updatedAt: entity.updatedAt,
+          };
+        },
+      } as CategoryEntity)
+    : null;
+  entity.userCategoryId = entity.userCategory?.id ?? null;
+  entity.userCategoryUpdatedAt = entity.userCategory
+    ? new Date('2024-01-02T00:00:00Z')
     : null;
 
   return entity;
@@ -760,7 +785,7 @@ describe('TransactionAnalysisService', () => {
             pending: false,
             date: expect.anything(),
           }),
-          relations: ['account', 'category'],
+          relations: ['account', 'category', 'userCategory'],
         }),
       );
     });
@@ -791,6 +816,38 @@ describe('TransactionAnalysisService', () => {
         inflows: [],
         outflows: [],
       });
+    });
+
+    it('aggregates transactions under the user category override when present', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'overridden',
+          amount: 1200,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-15',
+          primary: 'FOOD_AND_DRINK',
+          userPrimary: 'GENERAL_MERCHANDISE',
+        }),
+      ]);
+
+      const result = await service.getAnalysis(
+        '2024-01-01',
+        '2024-01-31',
+        mockUserId,
+      );
+
+      expect(result.outflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'GENERAL_MERCHANDISE',
+          totalAmount: 1200,
+          transactionCount: 1,
+        }),
+      ]);
+      expect(
+        result.outflows.some(
+          (aggregate) => aggregate.primaryCategory === 'FOOD_AND_DRINK',
+        ),
+      ).toBe(false);
     });
 
     it('matches each negative to the nearest positive after deterministic negative ordering', async () => {
@@ -999,7 +1056,7 @@ describe('TransactionAnalysisService', () => {
             userId: mockUserId,
             pending: false,
           }),
-          relations: ['account', 'category'],
+          relations: ['account', 'category', 'userCategory'],
         }),
       );
       expect(mockTransactionRepository.find).toHaveBeenNthCalledWith(
@@ -1009,7 +1066,7 @@ describe('TransactionAnalysisService', () => {
             userId: mockUserId,
             pending: false,
           }),
-          relations: ['account', 'category'],
+          relations: ['account', 'category', 'userCategory'],
         }),
       );
     });
@@ -1684,6 +1741,32 @@ describe('TransactionAnalysisService', () => {
       expect(result.map((transaction) => transaction.id)).toEqual(['interest']);
     });
 
+    it('filters drilldown rows by effective category override', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'overridden',
+          amount: 1200,
+          sign: MoneySign.NEGATIVE,
+          date: '2024-01-15',
+          primary: 'FOOD_AND_DRINK',
+          userPrimary: 'GENERAL_MERCHANDISE',
+        }),
+      ]);
+
+      const result = await service.getCategoryTransactions(
+        '2024-01-01',
+        '2024-01-31',
+        'GENERAL_MERCHANDISE',
+        'outflow',
+        mockUserId,
+      );
+
+      expect(result.map((transaction) => transaction.id)).toEqual([
+        'overridden',
+      ]);
+      expect(result[0].effectiveCategory?.primary).toBe('GENERAL_MERCHANDISE');
+    });
+
     it('removes matched Bilt mirror rows from the LOAN_PAYMENTS outflow drilldown', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
@@ -1820,7 +1903,7 @@ describe('TransactionAnalysisService', () => {
 
       expect(mockTransactionRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          relations: ['account', 'category'],
+          relations: ['account', 'category', 'userCategory'],
         }),
       );
       expect(result[0]?.accountName).toBe('Main Checking');
