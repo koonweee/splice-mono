@@ -5,12 +5,18 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { CategorySource } from './categorySource'
 
 export interface Category {
   id: string
   primary: string
   detailed: string
   description: string
+  source?: CategorySource
+  /** @nullable */
+  userId?: string | null
+  /** @nullable */
+  archivedAt?: string | null
   createdAt: string
   updatedAt: string
 }

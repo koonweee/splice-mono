@@ -81,8 +81,20 @@ function invalidateTransactionQueries(
   })
 }
 
-function getCategoryLabel(category: Pick<Category, 'primary' | 'detailed'>) {
-  return formatCategoryName(category)
+function getCategoryLabel(
+  category: Pick<Category, 'primary' | 'detailed' | 'source'>,
+) {
+  return category.source === 'user'
+    ? category.detailed
+    : formatCategoryName(category)
+}
+
+function getCategoryPrimaryLabel(
+  category: Pick<Category, 'primary' | 'source'>,
+) {
+  return category.source === 'user'
+    ? category.primary
+    : formatPrimaryCategory(category.primary)
 }
 
 export function TransactionsTable({
@@ -126,7 +138,8 @@ export function TransactionsTable({
         .map((category) => ({
           value: category.id,
           label: getCategoryLabel(category),
-          primaryLabel: formatPrimaryCategory(category.primary),
+          primaryLabel: getCategoryPrimaryLabel(category),
+          source: category.source,
         }))
         .sort(
           (left, right) =>
@@ -178,7 +191,7 @@ export function TransactionsTable({
         maxSize: 480,
         accessorFn: (row) =>
           row.effectiveCategory
-            ? formatCategoryName(row.effectiveCategory)
+            ? getCategoryLabel(row.effectiveCategory)
             : '--',
         mantineTableBodyCellProps: {
           className: styles.categoryTableCell,
@@ -192,9 +205,9 @@ export function TransactionsTable({
           const isEditing = editingTransactionId === transaction.id
           const hasOverride = transaction.userCategoryId !== null
           const resetLabel = transaction.category
-            ? `Reset to Plaid category: ${formatCategoryName(transaction.category)}`
+            ? `Reset to Plaid category: ${getCategoryLabel(transaction.category)}`
             : 'Reset to uncategorized'
-          const categoryLabel = category ? formatCategoryName(category) : '--'
+          const categoryLabel = category ? getCategoryLabel(category) : '--'
           const filteredCategoryOptions = categoryOptions.filter((option) =>
             `${option.label} ${option.primaryLabel}`
               .toLowerCase()
@@ -267,14 +280,21 @@ export function TransactionsTable({
                               <Text c="inherit" component="div" size="sm">
                                 {option.label}
                               </Text>
-                              <Text
-                                c="inherit"
-                                className={styles.categoryOptionMeta}
-                                component="div"
-                                size="xs"
-                              >
-                                {option.primaryLabel}
-                              </Text>
+                              <Group gap={6} wrap="nowrap">
+                                <Text
+                                  c="inherit"
+                                  className={styles.categoryOptionMeta}
+                                  component="div"
+                                  size="xs"
+                                >
+                                  {option.primaryLabel}
+                                </Text>
+                                {option.source === 'user' && (
+                                  <Badge size="xs" variant="light">
+                                    User
+                                  </Badge>
+                                )}
+                              </Group>
                             </UnstyledButton>
                           ))
                         ) : (
@@ -303,12 +323,12 @@ export function TransactionsTable({
           return (
             <Group className={styles.categoryCell} gap={4} wrap="nowrap">
               <Tooltip
-                label={category ? formatCategoryName(category) : '--'}
+                label={category ? getCategoryLabel(category) : '--'}
                 disabled={!category}
                 withArrow
               >
                 <Text className={styles.categoryLabel} size="sm" span>
-                  {category ? formatCategoryName(category) : '--'}
+                  {category ? getCategoryLabel(category) : '--'}
                 </Text>
               </Tooltip>
               <Group className={styles.categoryActions} gap={2} wrap="nowrap">

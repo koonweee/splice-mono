@@ -20,6 +20,7 @@ import {
   UpdateTransactionDto,
 } from '../types/Transaction';
 import { TransactionEntity } from './transaction.entity';
+import { CategoryService } from '../category/category.service';
 import type {
   TransactionSurfaceSearchOptions,
   TransactionSurfaceSearchResult,
@@ -42,6 +43,7 @@ export class TransactionService extends OwnedCrudService<
     repository: Repository<TransactionEntity>,
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
+    private readonly categoryService: CategoryService,
   ) {
     super(repository);
   }
@@ -278,9 +280,10 @@ export class TransactionService extends OwnedCrudService<
       entity.userCategory = null;
       entity.userCategoryUpdatedAt = null;
     } else {
-      const category = await this.categoryRepository.findOne({
-        where: { id: dto.categoryId },
-      });
+      const category = await this.categoryService.findActiveAssignableCategory(
+        dto.categoryId,
+        userId,
+      );
 
       if (!category) {
         this.logger.warn(

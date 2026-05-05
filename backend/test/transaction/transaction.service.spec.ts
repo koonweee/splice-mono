@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CategoryEntity } from '../../src/category/category.entity';
+import { CategoryService } from '../../src/category/category.service';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import type { TransactionSyncResponse } from '../../src/types/BankLink';
@@ -56,6 +57,10 @@ describe('TransactionService', () => {
     findOne: jest.fn(),
   };
 
+  const mockCategoryService = {
+    findActiveAssignableCategory: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -67,6 +72,10 @@ describe('TransactionService', () => {
         {
           provide: getRepositoryToken(CategoryEntity),
           useValue: mockCategoryRepository,
+        },
+        {
+          provide: CategoryService,
+          useValue: mockCategoryService,
         },
       ],
     }).compile();
@@ -718,7 +727,9 @@ describe('TransactionService', () => {
       mockRepository.findOne
         .mockResolvedValueOnce(entity)
         .mockResolvedValue(entity);
-      mockCategoryRepository.findOne.mockResolvedValue(userCategory);
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
+        userCategory,
+      );
       mockRepository.save.mockImplementation((saved) => Promise.resolve(saved));
 
       const result = await service.updateCategory(
@@ -727,9 +738,9 @@ describe('TransactionService', () => {
         mockUserId,
       );
 
-      expect(mockCategoryRepository.findOne).toHaveBeenCalledWith({
-        where: { id: userCategory.id },
-      });
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).toHaveBeenCalledWith(userCategory.id, mockUserId);
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           userCategoryId: userCategory.id,
@@ -757,7 +768,9 @@ describe('TransactionService', () => {
         mockUserId,
       );
 
-      expect(mockCategoryRepository.findOne).not.toHaveBeenCalled();
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).not.toHaveBeenCalled();
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           userCategoryId: null,
@@ -793,7 +806,7 @@ describe('TransactionService', () => {
     it('returns null when selected category does not exist', async () => {
       const entity = buildCategorizedEntity();
       mockRepository.findOne.mockResolvedValue(entity);
-      mockCategoryRepository.findOne.mockResolvedValue(null);
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
 
       const result = await service.updateCategory(
         'test-id',
@@ -802,6 +815,24 @@ describe('TransactionService', () => {
       );
 
       expect(result).toBeNull();
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('returns null when selected custom category belongs to another user', async () => {
+      const entity = buildCategorizedEntity();
+      mockRepository.findOne.mockResolvedValue(entity);
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
+
+      const result = await service.updateCategory(
+        'test-id',
+        { categoryId: 'other-user-category-id' },
+        mockUserId,
+      );
+
+      expect(result).toBeNull();
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).toHaveBeenCalledWith('other-user-category-id', mockUserId);
       expect(mockRepository.save).not.toHaveBeenCalled();
     });
 
@@ -1202,7 +1233,7 @@ describe('TransactionService', () => {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-01T00:00:00Z'),
         }),
-      } as TransactionEntity['category'];
+      } as unknown as TransactionEntity['category'];
       netflix.userCategory = {
         id: 'user-category-id',
         primary: 'GENERAL_MERCHANDISE',
@@ -1218,7 +1249,7 @@ describe('TransactionService', () => {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-01T00:00:00Z'),
         }),
-      } as TransactionEntity['userCategory'];
+      } as unknown as TransactionEntity['userCategory'];
       netflix.userCategoryId = 'user-category-id';
 
       mockRepository.find.mockResolvedValue([netflix]);
