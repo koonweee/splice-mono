@@ -247,6 +247,44 @@ describe('TransactionController', () => {
     });
   });
 
+  describe('updateCategory', () => {
+    const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
+
+    it('should update category override and return a transaction', async () => {
+      mockTransactionService.updateCategory.mockResolvedValue(mockTransaction);
+
+      const result = await controller.updateCategory(
+        'transaction-uuid-123',
+        mockUser,
+        { categoryId: 'category-uuid-123' },
+      );
+
+      expect(result).toEqual(mockTransaction);
+      expect(mockTransactionService.updateCategory).toHaveBeenCalledWith(
+        'transaction-uuid-123',
+        { categoryId: 'category-uuid-123' },
+        mockUser.userId,
+      );
+    });
+
+    it('should throw NotFoundException when transaction or category is not found', async () => {
+      mockTransactionService.updateCategory.mockResolvedValue(null);
+
+      await expect(
+        controller.updateCategory('non-existent-id', mockUser, {
+          categoryId: 'category-uuid-123',
+        }),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.updateCategory('non-existent-id', mockUser, {
+          categoryId: 'category-uuid-123',
+        }),
+      ).rejects.toThrow(
+        'Transaction or category for transaction non-existent-id not found',
+      );
+    });
+  });
+
   describe('remove', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
 
