@@ -20,7 +20,7 @@ The project is organized as a monorepo:
 - **`backend/`**: NestJS API server. Handles business logic, database interactions, and banking integrations.
 - **`frontend/`**: React Single Page Application (SPA). Provides the user interface, utilizing TanStack libraries.
 - **`scripts/`**: Deployment and utility scripts.
-- **`specs/`**: Product specifications and documentation.
+- **`plans/`**: Product and implementation plans.
 
 ## Tech Stack & Architecture
 
@@ -101,4 +101,4 @@ Types are defined in the backend using Zod, exposed via OpenAPI, and consumed in
 ## Documentation
 
 - **Backend API:** `http://localhost:3000/api` (Swagger UI)
-- **Product Spec:** `specs/web-app.md`
+- **Plans Directory:** `plans/index.md`

@@ -7,7 +7,7 @@ Splice is a monorepo with two primary apps:
 - `backend/`: NestJS API (`src/`, `test/`, `docker-compose.yml`, migrations in `src/migrations/`).
 - `frontend/`: TanStack React app (`src/routes/`, `src/components/`, `src/lib/`, `src/api/`).
 - `scripts/`: deployment helper scripts.
-- `docs/`, `specs/`: design and product documentation.
+- `plans/`: design, product, and implementation plans. New plans should start from `plans/template.md`, keep work organized as milestones, and include milestone exit criteria, overall exit criteria, and tests.
 
 For implementation details unique to each app, follow the app-level guidance in `backend/CLAUDE.md` and `frontend/CLAUDE.md`.
 
