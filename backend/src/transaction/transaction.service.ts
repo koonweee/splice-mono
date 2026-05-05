@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Between,
@@ -20,6 +20,7 @@ import {
   UpdateTransactionDto,
 } from '../types/Transaction';
 import { TransactionEntity } from './transaction.entity';
+import { CategoryService } from '../category/category.service';
 import type {
   TransactionSurfaceSearchOptions,
   TransactionSurfaceSearchResult,
@@ -42,6 +43,7 @@ export class TransactionService extends OwnedCrudService<
     repository: Repository<TransactionEntity>,
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
+    private readonly categoryService: CategoryService,
   ) {
     super(repository);
   }
@@ -81,6 +83,122 @@ export class TransactionService extends OwnedCrudService<
       entity.authorizedDatetime = dto.authorizedDatetime;
     }
     if (dto.categoryId !== undefined) entity.categoryId = dto.categoryId;
+  }
+
+  async create(
+    dto: CreateTransactionDto,
+    userId: string,
+  ): Promise<Transaction> {
+    this.logger.log({ userId }, `Creating ${this.entityName}`);
+
+    const entity = this.EntityClass.fromDto(
+      { ...dto, categoryId: null },
+      userId,
+    );
+    const category = await this.resolveAssignableCategorySelection(
+      dto.categoryId,
+      userId,
+    );
+    this.applyCategorySelection(entity, category);
+
+    const savedEntity = await this.repository.save(entity);
+    this.logger.log(
+      { id: savedEntity.id },
+      `${this.entityName} created successfully`,
+    );
+    return savedEntity.toObject();
+  }
+
+  async update(
+    id: string,
+    dto: UpdateTransactionDto,
+    userId: string,
+  ): Promise<Transaction | null> {
+    this.logger.log({ id, userId }, `Updating ${this.entityName}`);
+
+    const entity = await this.repository.findOne({
+      where: { id, userId },
+      relations: this.relations,
+    });
+
+    if (!entity) {
+      this.logger.warn(
+        { id, userId },
+        `${this.entityName} not found for update`,
+      );
+      return null;
+    }
+
+    const category = await this.resolveAssignableCategorySelection(
+      dto.categoryId,
+      userId,
+    );
+
+    const updateDto =
+      dto.categoryId === undefined ? dto : { ...dto, categoryId: undefined };
+    this.applyUpdate(entity, updateDto);
+    if (dto.categoryId !== undefined) {
+      this.applyCategorySelection(entity, category);
+    }
+
+    const savedEntity = await this.repository.save(entity);
+    this.logger.log({ id }, `${this.entityName} updated successfully`);
+    return savedEntity.toObject();
+  }
+
+  private async resolveAssignableCategorySelection(
+    categoryId: string | null | undefined,
+    userId: string,
+  ): Promise<CategoryEntity | null | undefined> {
+    if (categoryId === undefined) {
+      return undefined;
+    }
+
+    if (categoryId === null) {
+      return null;
+    }
+
+    const category = await this.categoryService.findActiveAssignableCategory(
+      categoryId,
+      userId,
+    );
+
+    if (!category) {
+      throw new NotFoundException(`Category with id ${categoryId} not found`);
+    }
+
+    return category;
+  }
+
+  private applyCategorySelection(
+    entity: TransactionEntity,
+    category: CategoryEntity | null | undefined,
+  ): void {
+    if (category === undefined) {
+      return;
+    }
+
+    if (category === null) {
+      entity.categoryId = null;
+      entity.category = null;
+      entity.userCategoryId = null;
+      entity.userCategory = null;
+      entity.userCategoryUpdatedAt = null;
+      return;
+    }
+
+    if (category.source === 'user') {
+      entity.userCategoryId = category.id;
+      entity.userCategory = category;
+      entity.userCategoryUpdatedAt = new Date();
+      return;
+    }
+
+    entity.categoryId = category.id;
+    entity.category = category;
+    entity.userCategoryId = null;
+    entity.userCategory = null;
+    entity.userCategoryUpdatedAt = null;
   }
 
   private static readonly SORTABLE_COLUMNS = new Set([
@@ -278,9 +396,10 @@ export class TransactionService extends OwnedCrudService<
       entity.userCategory = null;
       entity.userCategoryUpdatedAt = null;
     } else {
-      const category = await this.categoryRepository.findOne({
-        where: { id: dto.categoryId },
-      });
+      const category = await this.categoryService.findActiveAssignableCategory(
+        dto.categoryId,
+        userId,
+      );
 
       if (!category) {
         this.logger.warn(

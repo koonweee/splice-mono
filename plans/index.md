@@ -15,6 +15,7 @@ This directory tracks product and implementation plans for Splice.
 | Plan | Status | Notes |
 |---|---|---|
 | [Transaction Category Overrides](./transaction-category-overrides.md) | Planned | Add user category overrides while preserving Plaid categories and enforcing effective category across UI, analysis, and MCP/surface callers. |
+| [User-Defined Categories](./user-defined-categories.md) | Planned | Let users create custom primary/secondary categories from Settings with autocomplete duplicate prevention and backend validation. |
 
 ## Templates
 

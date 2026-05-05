@@ -15,10 +15,14 @@ import {
   getTransactionControllerFindAllQueryKey,
   transactionControllerFindAll,
   useAccountControllerFindAll,
+  useCategoryControllerFindAll,
 } from '../../api/clients/spliceAPI'
 import { CATEGORY_COLORS } from '../../lib/constants'
 import { formatPrimaryCategory } from '../../lib/format'
-import type { TransactionControllerFindAllParams } from '../../api/models'
+import type {
+  Category,
+  TransactionControllerFindAllParams,
+} from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
 import type { MRT_SortingState } from 'mantine-react-table'
 import { TransactionsTable } from '@/components/TransactionsTable'
@@ -34,15 +38,21 @@ type TransactionsSearch = {
 const isValidDateString = (value: unknown): value is string =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 
-const CATEGORY_OPTIONS = Object.keys(CATEGORY_COLORS).map((key) => ({
-  value: key,
-  label: formatPrimaryCategory(key),
-}))
+function getPrimaryCategoryLabel(
+  category: Pick<Category, 'primary' | 'source'>,
+) {
+  return category.source === 'user'
+    ? category.primary
+    : formatPrimaryCategory(category.primary)
+}
 
 export const Route = createFileRoute('/_authed/transactions')({
   validateSearch: (search: Record<string, unknown>): TransactionsSearch => ({
-    accountId: typeof search.accountId === 'string' ? search.accountId : undefined,
-    startDate: isValidDateString(search.startDate) ? search.startDate : undefined,
+    accountId:
+      typeof search.accountId === 'string' ? search.accountId : undefined,
+    startDate: isValidDateString(search.startDate)
+      ? search.startDate
+      : undefined,
     endDate: isValidDateString(search.endDate) ? search.endDate : undefined,
   }),
   component: TransactionsPage,
@@ -60,12 +70,15 @@ function TransactionsPage() {
     search.startDate ? dayjs(search.startDate).toDate() : null,
     search.endDate ? dayjs(search.endDate).toDate() : null,
   ])
-  const [accountId, setAccountId] = useState<string | null>(search.accountId ?? null)
+  const [accountId, setAccountId] = useState<string | null>(
+    search.accountId ?? null,
+  )
   const [categoryPrimary, setCategoryPrimary] = useState<string | null>(null)
   const [amountSign, setAmountSign] = useState('all')
 
   // Account data for the select dropdown
   const { data: accounts } = useAccountControllerFindAll()
+  const { data: categories } = useCategoryControllerFindAll()
 
   const accountOptions = useMemo(
     () =>
@@ -75,6 +88,22 @@ function TransactionsPage() {
       })),
     [accounts],
   )
+
+  const categoryOptions = useMemo(() => {
+    const options = new Map<string, string>()
+    Object.keys(CATEGORY_COLORS).forEach((key) => {
+      options.set(key, formatPrimaryCategory(key))
+    })
+    ;(categories ?? []).forEach((category) => {
+      if (!options.has(category.primary)) {
+        options.set(category.primary, getPrimaryCategoryLabel(category))
+      }
+    })
+
+    return Array.from(options.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((left, right) => left.label.localeCompare(right.label))
+  }, [categories])
 
   const queryParams = useMemo(() => {
     const params: TransactionControllerFindAllParams = {
@@ -184,10 +213,7 @@ function TransactionsPage() {
           variant="light"
           size="xs"
           onClick={() => {
-            const start = dayjs()
-              .subtract(1, 'month')
-              .startOf('month')
-              .toDate()
+            const start = dayjs().subtract(1, 'month').startOf('month').toDate()
             const end = dayjs().subtract(1, 'month').endOf('month').toDate()
             setDateRange([start, end])
           }}
@@ -215,7 +241,7 @@ function TransactionsPage() {
         />
         <Select
           placeholder="Category"
-          data={CATEGORY_OPTIONS}
+          data={categoryOptions}
           value={categoryPrimary}
           onChange={setCategoryPrimary}
           clearable

@@ -239,6 +239,10 @@ export function formatCategoryName(category: {
  * formatPrimaryCategory('UNCATEGORIZED') // => "Uncategorized"
  */
 export function formatPrimaryCategory(primary: string): string {
+  if (primary.includes(' ')) {
+    return primary
+  }
+
   return primary
     .toLowerCase()
     .split('_')
