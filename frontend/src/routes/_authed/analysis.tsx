@@ -348,7 +348,7 @@ function AnalysisPage() {
             value={dateRangeValue}
             onChange={handleDateRangeChange}
             maxDate={new Date()}
-            size="sm"
+            size="md"
           />
         </Group>
       </Group>

@@ -226,7 +226,7 @@ function TransactionsPage() {
           value={dateRange}
           onChange={handleDateRangeChange}
           maxDate={new Date()}
-          size="xs"
+          size="md"
           clearable
         />
         <Select
@@ -236,7 +236,7 @@ function TransactionsPage() {
           onChange={setAccountId}
           clearable
           searchable
-          size="xs"
+          size="md"
           w={200}
         />
         <Select
@@ -246,7 +246,7 @@ function TransactionsPage() {
           onChange={setCategoryPrimary}
           clearable
           searchable
-          size="xs"
+          size="md"
           w={180}
         />
         <SegmentedControl

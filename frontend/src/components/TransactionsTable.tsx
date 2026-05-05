@@ -256,7 +256,7 @@ export function TransactionsTable({
                         }
                       }}
                       placeholder="Search categories"
-                      size="xs"
+                      size="md"
                       value={categorySearch}
                     />
                     <div className={styles.categoryOptionsList}>
