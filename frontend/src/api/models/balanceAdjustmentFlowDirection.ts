@@ -9,6 +9,7 @@
 export type BalanceAdjustmentFlowDirection =
   (typeof BalanceAdjustmentFlowDirection)[keyof typeof BalanceAdjustmentFlowDirection]
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const BalanceAdjustmentFlowDirection = {
   inflow: 'inflow',
   outflow: 'outflow',

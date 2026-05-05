@@ -10,6 +10,8 @@ export const UserSchema = registerSchema(
     .object({
       id: z.string().uuid(),
       email: z.string().email(),
+      displayName: z.string().optional(),
+      avatarUrl: z.string().url().optional(),
       /** User settings (currency, preferences, etc.) */
       settings: UserSettingsSchema,
       /** Provider-specific user details keyed by provider name */
@@ -22,45 +24,10 @@ export type User = z.infer<typeof UserSchema>;
 
 /** User with hashed password (internal use only) */
 export const UserWithPasswordSchema = UserSchema.extend({
-  hashedPassword: z.string(),
+  hashedPassword: z.string().nullable(),
 });
 
 export type UserWithPassword = z.infer<typeof UserWithPasswordSchema>;
-
-/** Service arguments */
-
-export const CreateUserDtoSchema = registerSchema(
-  'CreateUserDto',
-  z.object({
-    email: z.string().email(),
-    password: z.string().min(8),
-    /** Initial user settings (optional, defaults will be applied) */
-    settings: UserSettingsSchema.partial().optional(),
-  }),
-);
-
-export type CreateUserDto = z.infer<typeof CreateUserDtoSchema>;
-
-export const LoginDtoSchema = registerSchema(
-  'LoginDto',
-  z.object({
-    email: z.string().email(),
-    password: z.string(),
-  }),
-);
-
-export type LoginDto = z.infer<typeof LoginDtoSchema>;
-
-export const LoginResponseSchema = registerSchema(
-  'LoginResponse',
-  z.object({
-    accessToken: z.string(),
-    refreshToken: z.string(),
-    user: UserSchema,
-  }),
-);
-
-export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 
 export const RefreshTokenDtoSchema = registerSchema(
   'RefreshTokenDto',

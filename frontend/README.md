@@ -1,12 +1,12 @@
-Welcome to your new TanStack app!
+# Splice Frontend
 
 # Getting Started
 
 To run this application:
 
 ```bash
-npm install
-npm run start
+yarn install
+yarn dev
 ```
 
 # Building For Production
@@ -14,8 +14,23 @@ npm run start
 To build this application for production:
 
 ```bash
-npm run build
+yarn build
 ```
+
+## Authentication
+
+The web app uses backend-owned Google OAuth for browser login. The frontend does not receive Google secrets or tokens. The login button sends the browser to the API at `/user/oauth/google/start` and the backend returns with Splice session cookies.
+
+Password login and registration are intentionally removed. Existing users sign in with a whitelisted, verified Google account whose email matches their Splice account. Non-browser API and MCP access uses personal access tokens from Settings, not session login credentials.
+
+Local Google OAuth setup is owned by the backend environment:
+
+- Google OAuth authorized JavaScript origin: `http://localhost:4000`
+- Google OAuth authorized redirect URI: `http://localhost:3000/user/oauth/google/callback`
+- Backend callback env var: `GOOGLE_OAUTH_CALLBACK_URL=http://localhost:3000/user/oauth/google/callback`
+- Backend allowlist env var: `GOOGLE_ALLOWED_EMAILS=alice@example.com,bob@example.com`
+
+Restart the backend after changing Google OAuth environment variables.
 
 ## Production deployment notes
 
@@ -26,13 +41,16 @@ npm run build
   - frontend: `https://splice.<base-domain>`
   - API: `https://splice-api.<base-domain>`
 - The frontend sends authenticated requests with cookies, so the backend must allow the configured frontend origin and set cookies for the shared parent domain.
+- Add `${API_DOMAIN}/user/oauth/google/callback` to the Google OAuth client's authorized redirect URIs.
+- Add the frontend origin to the Google OAuth client's authorized JavaScript origins.
+- Configure `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_CALLBACK_URL`, and `GOOGLE_ALLOWED_EMAILS` before deploying the password-auth hard cut.
 
 ## Testing
 
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
 
 ```bash
-npm run test
+yarn test
 ```
 
 ## Styling
@@ -44,9 +62,9 @@ This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
 This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
 
 ```bash
-npm run lint
-npm run format
-npm run check
+yarn lint
+yarn format
+yarn typecheck
 ```
 
 ## Routing

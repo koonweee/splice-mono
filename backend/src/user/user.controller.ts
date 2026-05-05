@@ -10,11 +10,21 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import * as crypto from 'crypto';
 import express from 'express';
+import {
+  clearOAuthStateCookie,
+  clearSessionCookies,
+  OAUTH_STATE_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  setOAuthStateCookie,
+  setSessionCookies,
+} from '../auth/auth-cookies';
 import { AuthService } from '../auth/auth.service';
 import {
   CurrentUser,
@@ -22,20 +32,11 @@ import {
 } from '../auth/decorators/current-user.decorator';
 import { SessionJwtOnly } from '../auth/decorators/session-jwt-only.decorator';
 import { Public } from '../auth/decorators/public.decorator';
+import { GoogleOAuthService } from '../auth/google-oauth.service';
 import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import { PersonalAccessTokenService } from '../auth/personal-access-token.service';
-import type {
-  CreateUserDto,
-  LoginDto,
-  LoginResponse,
-  RefreshTokenDto,
-  TokenResponse,
-  User,
-} from '../types/User';
+import type { RefreshTokenDto, TokenResponse, User } from '../types/User';
 import {
-  CreateUserDtoSchema,
-  LoginDtoSchema,
-  LoginResponseSchema,
   RefreshTokenDtoSchema,
   TokenResponseSchema,
   UserSchema,
@@ -61,99 +62,87 @@ import {
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { UserService } from './user.service';
 
-// Cookie configuration
-const isProduction = process.env.NODE_ENV === 'production';
-
-/**
- * Extract parent domain from a URL for cross-subdomain cookie sharing.
- * e.g., "https://app.splice.com" -> ".splice.com"
- */
-function getParentDomain(url: string): string | undefined {
-  try {
-    const hostname = new URL(url).hostname;
-    const parts = hostname.split('.');
-    // Need at least 2 parts (e.g., splice.com)
-    if (parts.length < 2) return undefined;
-    // Return last two parts with leading dot
-    return '.' + parts.slice(-2).join('.');
-  } catch {
-    return undefined;
-  }
-}
-
-const cookieDomain = process.env.FRONTEND_DOMAIN
-  ? getParentDomain(process.env.FRONTEND_DOMAIN)
-  : undefined;
-
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: 'lax' as const,
-  path: '/',
-  ...(cookieDomain && { domain: cookieDomain }),
-};
-const ACCESS_TOKEN_COOKIE = 'splice_access_token';
-const REFRESH_TOKEN_COOKIE = 'splice_refresh_token';
-// Access token: 15 minutes
-const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000;
-// Refresh token: 30 days
-const REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
-
 @ApiTags('user')
 @Controller('user')
 export class UserController {
   constructor(
-    private userService: UserService,
-    private authService: AuthService,
-    private personalAccessTokenService: PersonalAccessTokenService,
+    private readonly userService: UserService,
+    private readonly authService: AuthService,
+    private readonly personalAccessTokenService: PersonalAccessTokenService,
+    private readonly googleOAuthService: GoogleOAuthService,
   ) {}
 
   @Public()
-  @Post('register')
-  @ApiOperation({ description: 'Register a new user' })
-  @ZodApiBody({ schema: CreateUserDtoSchema })
-  @ZodApiResponse({
-    status: 201,
-    description: 'User registered successfully',
-    schema: UserSchema,
+  @Get('oauth/google/start')
+  @ApiOperation({ description: 'Start Google OAuth login' })
+  @ApiQuery({
+    name: 'redirect',
+    required: false,
+    description: 'Relative frontend path to return to after login',
   })
-  @ApiResponse({ status: 409, description: 'User already exists' })
-  async register(
-    @Body(new ZodValidationPipe(CreateUserDtoSchema))
-    createUserDto: CreateUserDto,
-  ): Promise<User> {
-    return this.userService.create(createUserDto);
+  @ApiResponse({ status: 302, description: 'Redirects to Google OAuth' })
+  @ApiResponse({ status: 400, description: 'Invalid redirect target' })
+  oauthGoogleStart(
+    @Query('redirect') redirect: string | undefined,
+    @Res() res: express.Response,
+  ): void {
+    const redirectPath = this.googleOAuthService.validateRedirectPath(redirect);
+    const state = crypto.randomBytes(32).toString('base64url');
+    const cookieValue = this.encodeOAuthState({ state, redirectPath });
+    const authorizationUrl =
+      this.googleOAuthService.buildAuthorizationUrl(state);
+
+    setOAuthStateCookie(res, cookieValue);
+    res.redirect(authorizationUrl);
   }
 
   @Public()
-  @Post('login')
-  @ApiOperation({ description: 'Login and get JWT token' })
-  @ZodApiBody({ schema: LoginDtoSchema })
-  @ZodApiResponse({
-    status: 200,
-    description: 'Login successful',
-    schema: LoginResponseSchema,
+  @Get('oauth/google/callback')
+  @ApiOperation({ description: 'Complete Google OAuth login' })
+  @ApiQuery({
+    name: 'code',
+    required: true,
+    description: 'Google OAuth authorization code',
   })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(
-    @Body(new ZodValidationPipe(LoginDtoSchema))
-    loginDto: LoginDto,
-    @Res({ passthrough: true }) res: express.Response,
-  ): Promise<LoginResponse> {
-    const result = await this.userService.login(loginDto);
+  @ApiQuery({
+    name: 'state',
+    required: true,
+    description: 'OAuth state value returned by Google',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Sets session cookies and redirects',
+  })
+  @ApiResponse({ status: 401, description: 'Invalid Google OAuth callback' })
+  async oauthGoogleCallback(
+    @Query('code') code: string | undefined,
+    @Query('state') state: string | undefined,
+    @Req() req: express.Request,
+    @Res() res: express.Response,
+  ): Promise<void> {
+    if (!code || !state) {
+      throw new BadRequestException('Missing OAuth callback parameters');
+    }
 
-    // Set HTTP-only cookies for web clients
-    res.cookie(ACCESS_TOKEN_COOKIE, result.accessToken, {
-      ...COOKIE_OPTIONS,
-      maxAge: ACCESS_TOKEN_MAX_AGE,
-    });
-    res.cookie(REFRESH_TOKEN_COOKIE, result.refreshToken, {
-      ...COOKIE_OPTIONS,
-      maxAge: REFRESH_TOKEN_MAX_AGE,
-    });
+    const storedState = this.decodeOAuthState(
+      req.cookies?.[OAUTH_STATE_COOKIE] as string | undefined,
+    );
 
-    // Also return tokens in body for mobile clients
-    return result;
+    clearOAuthStateCookie(res);
+
+    if (!storedState || storedState.state !== state) {
+      throw new BadRequestException('Invalid OAuth state');
+    }
+
+    const result = await this.googleOAuthService.completeCallback(
+      code,
+      storedState.redirectPath,
+    );
+
+    setSessionCookies(res, result);
+    res.redirect(
+      this.googleOAuthService.buildFrontendRedirectUrl(result.redirectPath),
+    );
   }
 
   @Get('me')
@@ -225,15 +214,7 @@ export class UserController {
 
     const result = await this.userService.refreshTokens(refreshToken);
 
-    // Set HTTP-only cookies for web clients
-    res.cookie(ACCESS_TOKEN_COOKIE, result.accessToken, {
-      ...COOKIE_OPTIONS,
-      maxAge: ACCESS_TOKEN_MAX_AGE,
-    });
-    res.cookie(REFRESH_TOKEN_COOKIE, result.refreshToken, {
-      ...COOKIE_OPTIONS,
-      maxAge: REFRESH_TOKEN_MAX_AGE,
-    });
+    setSessionCookies(res, result);
 
     // Also return tokens in body for mobile clients
     return result;
@@ -259,9 +240,7 @@ export class UserController {
       await this.authService.revokeToken(refreshToken);
     }
 
-    // Clear cookies for web clients
-    res.clearCookie(ACCESS_TOKEN_COOKIE, COOKIE_OPTIONS);
-    res.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_OPTIONS);
+    clearSessionCookies(res);
   }
 
   @Post('logout-all')
@@ -273,9 +252,7 @@ export class UserController {
   ): Promise<void> {
     await this.authService.revokeAllUserTokens(currentUser.userId);
 
-    // Clear cookies for web clients
-    res.clearCookie(ACCESS_TOKEN_COOKIE, COOKIE_OPTIONS);
-    res.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_OPTIONS);
+    clearSessionCookies(res);
   }
 
   @Post('tokens')
@@ -366,5 +343,85 @@ export class UserController {
     if (result === 'not_found') {
       throw new NotFoundException('Token not found');
     }
+  }
+
+  private encodeOAuthState(value: {
+    state: string;
+    redirectPath: string;
+  }): string {
+    const payload = Buffer.from(JSON.stringify(value), 'utf8').toString(
+      'base64url',
+    );
+    return `${payload}.${this.signOAuthState(payload)}`;
+  }
+
+  private decodeOAuthState(
+    value: string | undefined,
+  ): { state: string; redirectPath: string } | null {
+    if (!value) {
+      return null;
+    }
+
+    try {
+      const [payload, signature] = value.split('.');
+      if (
+        !payload ||
+        !signature ||
+        !this.isValidOAuthStateSignature(payload, signature)
+      ) {
+        return null;
+      }
+
+      const parsed: unknown = JSON.parse(
+        Buffer.from(payload, 'base64url').toString('utf8'),
+      );
+
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'state' in parsed &&
+        'redirectPath' in parsed &&
+        typeof parsed.state === 'string' &&
+        typeof parsed.redirectPath === 'string'
+      ) {
+        return {
+          state: parsed.state,
+          redirectPath: parsed.redirectPath,
+        };
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  private signOAuthState(payload: string): string {
+    return crypto
+      .createHmac('sha256', this.getStateSigningSecret())
+      .update(payload)
+      .digest('base64url');
+  }
+
+  private isValidOAuthStateSignature(
+    payload: string,
+    signature: string,
+  ): boolean {
+    const expectedSignature = this.signOAuthState(payload);
+    const actualBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expectedSignature);
+
+    return (
+      actualBuffer.length === expectedBuffer.length &&
+      crypto.timingSafeEqual(actualBuffer, expectedBuffer)
+    );
+  }
+
+  private getStateSigningSecret(): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+    return secret;
   }
 }

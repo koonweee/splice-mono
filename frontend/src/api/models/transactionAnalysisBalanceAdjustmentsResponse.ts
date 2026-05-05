@@ -7,5 +7,4 @@
  */
 import type { BalanceAdjustment } from './balanceAdjustment'
 
-export type TransactionAnalysisBalanceAdjustmentsResponse =
-  Array<BalanceAdjustment>
+export type TransactionAnalysisBalanceAdjustmentsResponse = BalanceAdjustment[]

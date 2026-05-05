@@ -1,11 +1,10 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthService } from '../../src/auth/auth.service';
 import { UserEntity } from '../../src/user/user.entity';
 import { UserService } from '../../src/user/user.service';
-import { mockCreateUserDto, mockLoginDto } from '../mocks/user/user.mock';
 
 const defaultSettings = {
   currency: 'USD',
@@ -64,143 +63,107 @@ describe('UserService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('create', () => {
-    it('should create a new user with hashed password', async () => {
-      mockRepository.findOne.mockResolvedValue(null); // No existing user
+  describe('findOrCreateFromGoogleIdentity', () => {
+    it('creates a Google-backed user without a password hash', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.save.mockImplementation((entity: UserEntity) => {
+        entity.id = 'user-uuid-123';
+        entity.createdAt = new Date('2024-01-01T00:00:00Z');
+        entity.updatedAt = new Date('2024-01-01T00:00:00Z');
+        return Promise.resolve(entity);
+      });
 
-      const mockEntity = new UserEntity();
-      mockEntity.id = 'user-uuid-123';
-      mockEntity.email = mockCreateUserDto.email;
-      mockEntity.hashedPassword = 'hashed-password';
-      mockEntity.settings = defaultSettings;
-      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
-      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+      const result = await service.findOrCreateFromGoogleIdentity({
+        googleSubject: 'google-subject-123',
+        email: ' Test@Example.com ',
+        displayName: 'Test User',
+        avatarUrl: 'https://example.com/avatar.png',
+      });
 
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      const result = await service.create(mockCreateUserDto);
-
-      expect(result).toHaveProperty('id');
-      expect(result.email).toBe(mockCreateUserDto.email);
-      expect(result).not.toHaveProperty('hashedPassword');
-      expect(mockRepository.save).toHaveBeenCalledTimes(1);
+      expect(result.email).toBe('test@example.com');
+      expect(result.displayName).toBe('Test User');
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'test@example.com',
+          googleSubject: 'google-subject-123',
+          hashedPassword: null,
+        }),
+      );
     });
 
-    it('should throw ConflictException if user already exists', async () => {
+    it('returns an existing user when Google subject already exists', async () => {
       const existingEntity = new UserEntity();
-      existingEntity.id = 'existing-user-id';
-      existingEntity.email = mockCreateUserDto.email;
+      existingEntity.id = 'user-uuid-123';
+      existingEntity.email = 'test@example.com';
+      existingEntity.hashedPassword = null;
+      existingEntity.googleSubject = 'google-subject-123';
+      existingEntity.settings = defaultSettings;
+      existingEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      existingEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
-      mockRepository.findOne.mockResolvedValue(existingEntity);
+      mockRepository.findOne.mockResolvedValueOnce(existingEntity);
 
-      await expect(service.create(mockCreateUserDto)).rejects.toThrow(
-        ConflictException,
-      );
-      await expect(service.create(mockCreateUserDto)).rejects.toThrow(
-        'User with this email already exists',
-      );
+      const result = await service.findOrCreateFromGoogleIdentity({
+        googleSubject: 'google-subject-123',
+        email: 'test@example.com',
+      });
+
+      expect(result.id).toBe(existingEntity.id);
       expect(mockRepository.save).not.toHaveBeenCalled();
     });
 
-    it('should hash the password before saving', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
+    it('links an existing user by verified email', async () => {
+      const existingEntity = new UserEntity();
+      existingEntity.id = 'user-uuid-123';
+      existingEntity.email = 'test@example.com';
+      existingEntity.hashedPassword = 'legacy-password-hash';
+      existingEntity.googleSubject = null;
+      existingEntity.settings = defaultSettings;
+      existingEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      existingEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
-      const mockEntity = new UserEntity();
-      mockEntity.id = 'user-uuid-123';
-      mockEntity.email = mockCreateUserDto.email;
-      mockEntity.hashedPassword = 'hashed-password';
-      mockEntity.settings = defaultSettings;
-      mockEntity.createdAt = new Date();
-      mockEntity.updatedAt = new Date();
+      mockRepository.findOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(existingEntity);
+      mockRepository.save.mockImplementation((entity: UserEntity) =>
+        Promise.resolve(entity),
+      );
 
-      mockRepository.save.mockResolvedValue(mockEntity);
+      const result = await service.findOrCreateFromGoogleIdentity({
+        googleSubject: 'google-subject-123',
+        email: 'test@example.com',
+      });
 
-      await service.create(mockCreateUserDto);
-
+      expect(result.id).toBe(existingEntity.id);
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          email: mockCreateUserDto.email,
-          hashedPassword: expect.any(String) as string,
+          id: existingEntity.id,
+          googleSubject: 'google-subject-123',
         }),
       );
-
-      // Verify the password is hashed (contains salt:hash format)
-
-      const savedEntity = mockRepository.save.mock.calls[0][0];
-
-      expect(savedEntity.hashedPassword).toContain(':');
-
-      expect(savedEntity.hashedPassword).not.toBe(mockCreateUserDto.password);
-    });
-  });
-
-  describe('login', () => {
-    it('should return access token and user on successful login', async () => {
-      // Create an entity with a real hashed password
-      const password = 'password123';
-      const mockEntity = new UserEntity();
-      mockEntity.id = 'user-uuid-123';
-      mockEntity.email = mockLoginDto.email;
-      mockEntity.settings = defaultSettings;
-      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
-      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
-
-      // First create a user to get a valid hash
-      mockRepository.findOne.mockResolvedValueOnce(null);
-      mockRepository.save.mockImplementation((entity) => {
-        mockEntity.hashedPassword = entity.hashedPassword;
-        return Promise.resolve(mockEntity);
-      });
-
-      await service.create({ email: mockLoginDto.email, password });
-
-      // Now test login
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-
-      const result = await service.login({
-        email: mockLoginDto.email,
-        password,
-      });
-
-      expect(result).toHaveProperty('accessToken');
-      expect(result.accessToken).toBe('mock-jwt-token');
-      expect(result).toHaveProperty('refreshToken');
-      expect(result.refreshToken).toBe('mock-refresh-token');
-      expect(result.user.email).toBe(mockLoginDto.email);
-      expect(mockAuthService.generateAccessToken).toHaveBeenCalledWith(
-        mockEntity.id,
-        mockEntity.email,
-      );
-      expect(mockAuthService.generateRefreshToken).toHaveBeenCalledWith(
-        mockEntity.id,
-      );
     });
 
-    it('should throw UnauthorizedException if user not found', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
+    it('throws ConflictException when email is linked to another Google subject', async () => {
+      const existingEntity = new UserEntity();
+      existingEntity.id = 'user-uuid-123';
+      existingEntity.email = 'test@example.com';
+      existingEntity.hashedPassword = null;
+      existingEntity.googleSubject = 'other-google-subject';
+      existingEntity.settings = defaultSettings;
+      existingEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      existingEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
-      await expect(service.login(mockLoginDto)).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(service.login(mockLoginDto)).rejects.toThrow(
-        'Invalid email or password',
-      );
-    });
-
-    it('should throw UnauthorizedException if password is invalid', async () => {
-      const mockEntity = new UserEntity();
-      mockEntity.id = 'user-uuid-123';
-      mockEntity.email = mockLoginDto.email;
-      mockEntity.hashedPassword = 'invalid-hash-format';
-      mockEntity.settings = defaultSettings;
-      mockEntity.createdAt = new Date();
-      mockEntity.updatedAt = new Date();
-
-      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.findOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(existingEntity);
 
       await expect(
-        service.login({ ...mockLoginDto, password: 'wrongpassword' }),
-      ).rejects.toThrow(UnauthorizedException);
+        service.findOrCreateFromGoogleIdentity({
+          googleSubject: 'google-subject-123',
+          email: 'test@example.com',
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(mockRepository.save).not.toHaveBeenCalled();
     });
   });
 

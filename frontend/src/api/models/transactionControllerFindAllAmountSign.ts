@@ -9,6 +9,7 @@
 export type TransactionControllerFindAllAmountSign =
   (typeof TransactionControllerFindAllAmountSign)[keyof typeof TransactionControllerFindAllAmountSign]
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const TransactionControllerFindAllAmountSign = {
   positive: 'positive',
   negative: 'negative',
