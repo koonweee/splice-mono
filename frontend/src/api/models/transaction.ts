@@ -7,6 +7,8 @@
  */
 import type { MoneyWithSign } from './moneyWithSign'
 import type { TransactionCategory } from './transactionCategory'
+import type { TransactionUserCategory } from './transactionUserCategory'
+import type { TransactionEffectiveCategory } from './transactionEffectiveCategory'
 import type { TransactionConvertedAmount } from './transactionConvertedAmount'
 
 export interface Transaction {
@@ -30,6 +32,14 @@ export interface Transaction {
   /** @nullable */
   categoryId: string | null
   category?: TransactionCategory
+  /** @nullable */
+  userCategoryId: string | null
+  userCategory?: TransactionUserCategory
+  /** @nullable */
+  userCategoryUpdatedAt: string | null
+  /** @nullable */
+  effectiveCategoryId: string | null
+  effectiveCategory?: TransactionEffectiveCategory
   /** @nullable */
   accountName?: string | null
   convertedAmount?: TransactionConvertedAmount

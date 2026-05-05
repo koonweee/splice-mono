@@ -9,6 +9,7 @@ export const mockTransactionService = {
     total: 2,
   }),
   update: jest.fn().mockResolvedValue(mockTransaction),
+  updateCategory: jest.fn().mockResolvedValue(mockTransaction),
   remove: jest.fn().mockResolvedValue(true),
   findByAccountId: jest
     .fn()

@@ -41,6 +41,11 @@ export const mockTransaction: Transaction = {
   authorizedDatetime: '2024-01-14T10:30:00Z',
   categoryId: mockCategoryId,
   category: null,
+  userCategoryId: null,
+  userCategory: null,
+  userCategoryUpdatedAt: null,
+  effectiveCategoryId: mockCategoryId,
+  effectiveCategory: null,
   ...mockTimestamps,
 };
 
@@ -65,6 +70,11 @@ export const mockTransaction2: Transaction = {
   authorizedDatetime: null,
   categoryId: null,
   category: null,
+  userCategoryId: null,
+  userCategory: null,
+  userCategoryUpdatedAt: null,
+  effectiveCategoryId: null,
+  effectiveCategory: null,
   ...mockTimestamps,
 };
 

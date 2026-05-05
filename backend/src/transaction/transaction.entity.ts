@@ -72,6 +72,19 @@ export class TransactionEntity extends OwnedEntity {
   @JoinColumn({ name: 'categoryId' })
   category: CategoryEntity | null;
 
+  /** User-selected category override ID */
+  @Column({ type: 'uuid', nullable: true })
+  userCategoryId: string | null;
+
+  /** User-selected category override */
+  @ManyToOne(() => CategoryEntity, { nullable: true })
+  @JoinColumn({ name: 'userCategoryId' })
+  userCategory: CategoryEntity | null;
+
+  /** When the user-selected category override was last updated */
+  @Column({ type: 'timestamptz', nullable: true })
+  userCategoryUpdatedAt: Date | null;
+
   /**
    * Create entity from DTO
    */
@@ -89,6 +102,9 @@ export class TransactionEntity extends OwnedEntity {
     entity.authorizedDate = dto.authorizedDate ?? null;
     entity.authorizedDatetime = dto.authorizedDatetime ?? null;
     entity.categoryId = dto.categoryId ?? null;
+    entity.userCategoryId = null;
+    entity.userCategory = null;
+    entity.userCategoryUpdatedAt = null;
     return entity;
   }
 
@@ -96,6 +112,12 @@ export class TransactionEntity extends OwnedEntity {
    * Convert entity to domain object
    */
   toObject(): Transaction {
+    const category = this.category ? this.category.toObject() : null;
+    const userCategory = this.userCategory
+      ? this.userCategory.toObject()
+      : null;
+    const effectiveCategory = userCategory ?? category;
+
     return {
       id: this.id,
       userId: this.userId,
@@ -110,7 +132,12 @@ export class TransactionEntity extends OwnedEntity {
       authorizedDate: this.authorizedDate,
       authorizedDatetime: this.authorizedDatetime,
       categoryId: this.categoryId,
-      category: this.category ? this.category.toObject() : null,
+      category,
+      userCategoryId: this.userCategoryId,
+      userCategory,
+      userCategoryUpdatedAt: this.userCategoryUpdatedAt,
+      effectiveCategoryId: this.userCategoryId ?? this.categoryId,
+      effectiveCategory,
       accountName: this.account
         ? (this.account.customName ?? this.account.name)
         : null,

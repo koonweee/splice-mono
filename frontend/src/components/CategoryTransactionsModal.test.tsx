@@ -93,6 +93,18 @@ function makeTransaction(
     authorizedDatetime: overrides.authorizedDatetime ?? null,
     categoryId: overrides.categoryId ?? null,
     category: overrides.category,
+    userCategoryId: overrides.userCategoryId ?? null,
+    userCategory: overrides.userCategory,
+    userCategoryUpdatedAt: overrides.userCategoryUpdatedAt ?? null,
+    effectiveCategoryId:
+      overrides.effectiveCategoryId ??
+      overrides.userCategoryId ??
+      overrides.categoryId ??
+      null,
+    effectiveCategory:
+      overrides.effectiveCategory ??
+      overrides.userCategory ??
+      overrides.category,
     accountName: overrides.accountName ?? 'Checking',
     convertedAmount: overrides.convertedAmount,
     createdAt: overrides.createdAt ?? '2026-02-14T00:00:00.000Z',
