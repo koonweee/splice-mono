@@ -58,6 +58,25 @@ The workflow creates or reuses a `main` → `deploy` PR, runs the required CI ch
 - Use targeted runs when possible (`yarn test path/to/file` in backend, Vitest file patterns in frontend).
 - CI (`.github/workflows/ci.yml`) runs backend lint/typecheck and frontend lint/typecheck for changed areas; run the same commands locally before opening or updating a PR.
 
+## Local Auth For Testing
+
+When local testing requires a logged-in browser session, use the local dev auth bypass instead of Google login after the backend and frontend are running.
+
+Required backend `.env` values, for local development only:
+
+```env
+LOCAL_AUTH_BYPASS=true
+LOCAL_AUTH_BYPASS_EMAIL=your-local-user@example.com
+```
+
+Open this URL in the browser:
+
+```text
+http://localhost:3000/user/dev/login?redirect=/home
+```
+
+The backend sets normal HTTP-only Splice session cookies and redirects to the frontend. `LOCAL_AUTH_BYPASS_EMAIL` determines which Splice user, accounts, and transactions are visible. The endpoint is refused in production and for non-local requests.
+
 ## Commit & Pull Request Guidelines
 
 Recent commit history uses Conventional Commit-style prefixes (`feat:`, `fix:`, `test:`, `docs:`, `chore:`) for most direct commits.  

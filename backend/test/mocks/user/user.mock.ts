@@ -16,6 +16,7 @@ export const mockUser: User = {
     currency: 'USD',
     timezone: 'UTC',
     hideZeroBalanceAccounts: false,
+    theme: 'splice-dark',
   },
   ...mockTimestamps,
 };
@@ -30,6 +31,7 @@ export const mockUser2: User = {
     currency: 'USD',
     timezone: 'UTC',
     hideZeroBalanceAccounts: false,
+    theme: 'splice-dark',
   },
   ...mockTimestamps,
 };

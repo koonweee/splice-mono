@@ -1,19 +1,22 @@
 import {
   Alert,
+  Box,
   Button,
+  ColorSwatch,
   Group,
   Loader,
   Paper,
-  SegmentedControl,
   Select,
+  SimpleGrid,
   Stack,
   Switch,
   Text,
   Title,
-  useMantineColorScheme,
+  UnstyledButton,
 } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { Check } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   getUserControllerMeQueryOptions,
@@ -23,6 +26,13 @@ import {
 import { CustomCategoriesSection } from '../../components/settings/CustomCategoriesSection'
 import { McpConnectionSection } from '../../components/settings/McpConnectionSection'
 import { PersonalAccessTokenSection } from '../../components/settings/PersonalAccessTokenSection'
+import {
+  THEME_PRESETS,
+  applyThemePresetId,
+  normalizeThemePresetId,
+  previewThemePresetId,
+} from '../../lib/theme'
+import type { ThemePreset, ThemePresetId } from '../../lib/theme'
 
 export const Route = createFileRoute('/_authed/settings')({
   component: SettingsPage,
@@ -88,15 +98,86 @@ function getBrowserTimezone() {
   }
 }
 
+function ThemePresetOption({
+  preset,
+  selected,
+  onSelect,
+}: {
+  preset: ThemePreset
+  selected: boolean
+  onSelect: (theme: ThemePresetId) => void
+}) {
+  return (
+    <UnstyledButton
+      role="radio"
+      aria-checked={selected}
+      aria-label={preset.label}
+      onClick={() => onSelect(preset.id)}
+      p="sm"
+      style={{
+        width: '100%',
+        minHeight: 96,
+        borderRadius: 'var(--mantine-radius-md)',
+        border: selected
+          ? '2px solid var(--mantine-primary-color-filled)'
+          : '1px solid var(--mantine-color-default-border)',
+        background: selected
+          ? 'var(--mantine-primary-color-light)'
+          : 'var(--mantine-color-body)',
+      }}
+    >
+      <Stack gap={8}>
+        <Group justify="space-between" gap="sm" wrap="nowrap">
+          <Group gap={4} aria-hidden>
+            {preset.swatches.map((swatch) => (
+              <ColorSwatch
+                key={swatch}
+                color={swatch}
+                size={18}
+                withShadow={false}
+                style={{
+                  border: '1px solid var(--mantine-color-default-border)',
+                }}
+              />
+            ))}
+          </Group>
+          <Box
+            aria-hidden
+            style={{
+              width: 18,
+              height: 18,
+              display: 'grid',
+              placeItems: 'center',
+              color: selected
+                ? 'var(--mantine-primary-color-filled)'
+                : 'transparent',
+            }}
+          >
+            <Check size={16} strokeWidth={3} />
+          </Box>
+        </Group>
+        <Box>
+          <Text fw={600} size="sm">
+            {preset.label}
+          </Text>
+          <Text size="xs" c="dimmed" lineClamp={2}>
+            {preset.description}
+          </Text>
+        </Box>
+      </Stack>
+    </UnstyledButton>
+  )
+}
+
 export function SettingsPage() {
   const queryClient = useQueryClient()
   const { data: user, isLoading, error } = useUserControllerMe()
   const updateSettingsMutation = useUserControllerUpdateSettings()
-  const { colorScheme, setColorScheme } = useMantineColorScheme()
 
   const timezoneOptions = useMemo(() => getTimezoneOptions(), [])
   const browserTimezone = useMemo(() => getBrowserTimezone(), [])
 
+  const [theme, setTheme] = useState<ThemePresetId>('splice-dark')
   const [currency, setCurrency] = useState<string>('')
   const [timezone, setTimezone] = useState<string>('')
   const [hideZeroBalanceAccounts, setHideZeroBalanceAccounts] = useState(false)
@@ -105,6 +186,9 @@ export function SettingsPage() {
   // Initialize form values when user data loads
   useEffect(() => {
     if (user?.settings) {
+      const nextTheme = normalizeThemePresetId(user.settings.theme)
+      setTheme(nextTheme)
+      applyThemePresetId(nextTheme)
       setCurrency(user.settings.currency ?? 'USD')
       setTimezone(user.settings.timezone ?? 'UTC')
       setHideZeroBalanceAccounts(user.settings.hideZeroBalanceAccounts ?? false)
@@ -114,27 +198,37 @@ export function SettingsPage() {
   // Track if there are unsaved changes
   useEffect(() => {
     if (user?.settings) {
+      const themeChanged = theme !== normalizeThemePresetId(user.settings.theme)
       const currencyChanged = currency !== (user.settings.currency ?? 'USD')
       const timezoneChanged = timezone !== (user.settings.timezone ?? 'UTC')
       const hideZeroBalanceAccountsChanged =
         hideZeroBalanceAccounts !==
         (user.settings.hideZeroBalanceAccounts ?? false)
       setHasChanges(
-        currencyChanged || timezoneChanged || hideZeroBalanceAccountsChanged,
+        themeChanged ||
+          currencyChanged ||
+          timezoneChanged ||
+          hideZeroBalanceAccountsChanged,
       )
     }
-  }, [currency, timezone, hideZeroBalanceAccounts, user?.settings])
+  }, [theme, currency, timezone, hideZeroBalanceAccounts, user?.settings])
 
   const handleSave = () => {
+    const savedTheme = normalizeThemePresetId(user?.settings.theme)
+
     updateSettingsMutation.mutate(
-      { data: { currency, timezone, hideZeroBalanceAccounts } },
+      { data: { theme, currency, timezone, hideZeroBalanceAccounts } },
       {
         onSuccess: () => {
+          applyThemePresetId(theme)
           // Invalidate user query to refresh the data
           queryClient.invalidateQueries({
             queryKey: getUserControllerMeQueryOptions().queryKey,
           })
           setHasChanges(false)
+        },
+        onError: () => {
+          previewThemePresetId(savedTheme)
         },
       },
     )
@@ -142,6 +236,11 @@ export function SettingsPage() {
 
   const handleSetBrowserTimezone = () => {
     setTimezone(browserTimezone)
+  }
+
+  const handleThemeSelect = (nextTheme: ThemePresetId) => {
+    setTheme(nextTheme)
+    previewThemePresetId(nextTheme)
   }
 
   if (isLoading) {
@@ -172,7 +271,7 @@ export function SettingsPage() {
           withBorder
           p="lg"
           radius="md"
-          maw={500}
+          maw={720}
           data-testid="settings-card"
         >
           <Stack gap="lg">
@@ -181,19 +280,23 @@ export function SettingsPage() {
                 Appearance
               </Title>
               <Text size="sm" c="dimmed" mb="sm">
-                Choose your preferred color scheme.
+                Choose your theme.
               </Text>
-              <SegmentedControl
-                value={colorScheme}
-                onChange={(value) =>
-                  setColorScheme(value as 'light' | 'dark' | 'auto')
-                }
-                data={[
-                  { label: 'Light', value: 'light' },
-                  { label: 'Dark', value: 'dark' },
-                  { label: 'Auto', value: 'auto' },
-                ]}
-              />
+              <SimpleGrid
+                cols={{ base: 1, sm: 2 }}
+                spacing="sm"
+                role="radiogroup"
+                aria-label="Theme"
+              >
+                {THEME_PRESETS.map((preset) => (
+                  <ThemePresetOption
+                    key={preset.id}
+                    preset={preset}
+                    selected={theme === preset.id}
+                    onSelect={handleThemeSelect}
+                  />
+                ))}
+              </SimpleGrid>
             </div>
 
             <div>
