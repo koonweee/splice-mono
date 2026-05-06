@@ -13,4 +13,7 @@ export interface CategoryConflict {
   primary: string
   detailed: string
   source: CategoryConflictSource
+  /** @nullable */
+  archivedAt?: string | null
+  isHidden?: boolean
 }

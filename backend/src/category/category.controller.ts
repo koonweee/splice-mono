@@ -16,9 +16,17 @@ import {
 import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import {
   CategorySchema,
+  BulkCategoryActionResponseSchema,
+  BulkCategoryVisibilityDtoSchema,
+  BulkCustomCategoryActionDtoSchema,
+  CategoryManagementItemSchema,
   CreateCustomCategoryDtoSchema,
   UpdateCustomCategoryDtoSchema,
+  type BulkCategoryActionResponse,
+  type BulkCategoryVisibilityDto,
+  type BulkCustomCategoryActionDto,
   type Category,
+  type CategoryManagementItem,
   type CreateCustomCategoryDto,
   type UpdateCustomCategoryDto,
 } from '../types/Category';
@@ -65,6 +73,47 @@ export class CategoryController {
     return this.categoryService.search(user.userId, query);
   }
 
+  @Get('filter-options')
+  @ApiOperation({
+    description:
+      'Get categories suitable for historical transaction filters, including hidden categories only when used by existing transactions',
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Returns transaction category filter options',
+    schema: CategorySchema,
+    isArray: true,
+  })
+  async findFilterOptions(@CurrentUser() user: JwtUser): Promise<Category[]> {
+    return this.categoryService.findFilterOptions(user.userId);
+  }
+
+  @Get('manage')
+  @ApiOperation({
+    description:
+      'Get the current user category management inventory with visibility and usage metadata',
+  })
+  @ApiQuery({
+    name: 'archived',
+    required: false,
+    description: 'When true, returns archived custom categories only',
+    type: Boolean,
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Returns category management rows',
+    schema: CategoryManagementItemSchema,
+    isArray: true,
+  })
+  async findManagement(
+    @CurrentUser() user: JwtUser,
+    @Query('archived') archived?: string,
+  ): Promise<CategoryManagementItem[]> {
+    return this.categoryService.findManagement(user.userId, {
+      archivedMode: archived === 'true',
+    });
+  }
+
   @Get('custom')
   @ApiOperation({
     description: "Get the current user's custom transaction categories",
@@ -108,6 +157,43 @@ export class CategoryController {
     createDto: CreateCustomCategoryDto,
   ): Promise<Category> {
     return this.categoryService.createCustom(user.userId, createDto);
+  }
+
+  @Patch('visibility/bulk')
+  @ApiOperation({
+    description: 'Hide or show active categories in manual dropdowns',
+  })
+  @ZodApiBody({ schema: BulkCategoryVisibilityDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Category visibility updated successfully',
+    schema: BulkCategoryActionResponseSchema,
+  })
+  async bulkUpdateVisibility(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(BulkCategoryVisibilityDtoSchema))
+    dto: BulkCategoryVisibilityDto,
+  ): Promise<BulkCategoryActionResponse> {
+    return this.categoryService.bulkUpdateVisibility(user.userId, dto);
+  }
+
+  @Patch('custom/bulk')
+  @ApiOperation({
+    description:
+      'Bulk archive, restore, or update primary labels for custom categories',
+  })
+  @ZodApiBody({ schema: BulkCustomCategoryActionDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Custom category bulk action completed',
+    schema: BulkCategoryActionResponseSchema,
+  })
+  async bulkUpdateCustom(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(BulkCustomCategoryActionDtoSchema))
+    dto: BulkCustomCategoryActionDto,
+  ): Promise<BulkCategoryActionResponse> {
+    return this.categoryService.bulkUpdateCustom(user.userId, dto);
   }
 
   @Patch('custom/:id')
