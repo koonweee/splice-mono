@@ -58,7 +58,7 @@ A full-stack personal finance application for tracking net worth across multiple
 splice-mono/
 ├── backend/     # NestJS API server
 ├── frontend/    # React SPA
-└── scripts/     # Deployment scripts
+└── scripts/     # Operational helper scripts
 ```
 
 ### Type-Safe API Contract
