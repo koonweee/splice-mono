@@ -145,9 +145,7 @@ vi.mock('@mantine/core', async () => {
 })
 
 vi.mock('@mantine/dates', () => ({
-  DatePickerInput: ({ placeholder }: { placeholder?: string }) => (
-    <div>{placeholder}</div>
-  ),
+  DatePicker: () => <div>Calendar</div>,
 }))
 
 vi.mock('@mantine/notifications', () => ({
@@ -309,9 +307,20 @@ afterEach(() => {
 })
 
 describe('TransactionsPage category review workflow', () => {
+  it('exposes an accessible icon-only filters trigger', () => {
+    renderTransactionsPage()
+
+    expect(
+      screen.getByRole('button', { name: /Open transaction filters/ }),
+    ).toBeTruthy()
+  })
+
   it('sends the review status in transaction query params and counts bulk review from total rows', async () => {
     renderTransactionsPage()
 
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction filters/ }),
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Needs review' }))
 
     expect(
@@ -335,6 +344,9 @@ describe('TransactionsPage category review workflow', () => {
   it('bulk reviews current filters and exposes undo with returned transaction IDs', () => {
     renderTransactionsPage()
 
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction filters/ }),
+    )
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: 'FOOD_AND_DRINK' },
     })
@@ -404,5 +416,36 @@ describe('TransactionsPage category review workflow', () => {
     expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
       predicate: expect.any(Function),
     })
+  })
+
+  it('clears hidden filters and active filter indicators from the filter panel', async () => {
+    renderTransactionsPage()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction filters/ }),
+    )
+    fireEvent.change(screen.getByLabelText('Category'), {
+      target: { value: 'FOOD_AND_DRINK' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Outflows' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Needs review' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+
+    expect(
+      screen.getByRole('button', { name: 'Open transaction filters' }),
+    ).toBeTruthy()
+
+    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+
+    expect(mockFns.transactionControllerFindAllMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        accountId: expect.any(String),
+        amountSign: expect.any(String),
+        categoryPrimary: expect.any(String),
+        categoryReviewStatus: expect.any(String),
+        endDate: expect.any(String),
+        startDate: expect.any(String),
+      }),
+    )
   })
 })
