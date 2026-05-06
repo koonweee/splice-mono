@@ -1,4 +1,9 @@
-import { NotFoundException, ParseUUIDPipe } from '@nestjs/common';
+import {
+  ForbiddenException,
+  InternalServerErrorException,
+  NotFoundException,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { AuthService } from '../../src/auth/auth.service';
@@ -8,7 +13,7 @@ import { PersonalAccessTokenService } from '../../src/auth/personal-access-token
 import { UserController } from '../../src/user/user.controller';
 import { UserService } from '../../src/user/user.service';
 import { mockUserService } from '../mocks/user/user-service.mock';
-import { mockOAuthLoginResponse } from '../mocks/user/user.mock';
+import { mockOAuthLoginResponse, mockUser } from '../mocks/user/user.mock';
 
 // Mock Express Response object
 const mockResponse = () => ({
@@ -18,8 +23,16 @@ const mockResponse = () => ({
 });
 
 // Mock Express Request object
-const mockRequest = (cookies: Record<string, string> = {}) => ({
+const mockRequest = (
+  cookies: Record<string, string> = {},
+  hostname = 'localhost',
+  remoteAddress = '127.0.0.1',
+) => ({
   cookies,
+  hostname,
+  socket: {
+    remoteAddress,
+  },
 });
 
 describe('UserController', () => {
@@ -27,6 +40,9 @@ describe('UserController', () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let service: UserService;
   const originalJwtSecret = process.env.JWT_SECRET;
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalLocalAuthBypass = process.env.LOCAL_AUTH_BYPASS;
+  const originalLocalAuthBypassEmail = process.env.LOCAL_AUTH_BYPASS_EMAIL;
 
   const mockPersonalAccessTokenService = {
     createToken: jest.fn(),
@@ -35,6 +51,8 @@ describe('UserController', () => {
   };
 
   const mockAuthService = {
+    generateAccessToken: jest.fn().mockReturnValue('mock-dev-access-token'),
+    generateRefreshToken: jest.fn().mockResolvedValue('mock-dev-refresh-token'),
     revokeToken: jest.fn().mockResolvedValue(undefined),
     revokeAllUserTokens: jest.fn().mockResolvedValue(undefined),
   };
@@ -55,6 +73,9 @@ describe('UserController', () => {
 
   beforeEach(async () => {
     process.env.JWT_SECRET = 'test-jwt-secret';
+    process.env.NODE_ENV = 'test';
+    delete process.env.LOCAL_AUTH_BYPASS;
+    delete process.env.LOCAL_AUTH_BYPASS_EMAIL;
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
       providers: [
@@ -88,6 +109,21 @@ describe('UserController', () => {
       delete process.env.JWT_SECRET;
     } else {
       process.env.JWT_SECRET = originalJwtSecret;
+    }
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+    if (originalLocalAuthBypass === undefined) {
+      delete process.env.LOCAL_AUTH_BYPASS;
+    } else {
+      process.env.LOCAL_AUTH_BYPASS = originalLocalAuthBypass;
+    }
+    if (originalLocalAuthBypassEmail === undefined) {
+      delete process.env.LOCAL_AUTH_BYPASS_EMAIL;
+    } else {
+      process.env.LOCAL_AUTH_BYPASS_EMAIL = originalLocalAuthBypassEmail;
     }
   });
 
@@ -193,6 +229,161 @@ describe('UserController', () => {
         ),
       ).rejects.toThrow('Invalid OAuth state');
       expect(mockGoogleOAuthService.completeCallback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('devLogin', () => {
+    beforeEach(() => {
+      mockAuthService.generateAccessToken.mockReturnValue(
+        'mock-dev-access-token',
+      );
+      mockAuthService.generateRefreshToken.mockResolvedValue(
+        'mock-dev-refresh-token',
+      );
+    });
+
+    it('rejects when the local auth bypass flag is disabled', async () => {
+      const req = mockRequest();
+      const res = mockResponse();
+
+      await expect(
+        controller.devLogin('/home', req as any, res as any),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockUserService.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('rejects in production even when the local auth bypass flag is enabled', async () => {
+      process.env.LOCAL_AUTH_BYPASS = 'true';
+      process.env.LOCAL_AUTH_BYPASS_EMAIL = 'dev@example.com';
+      process.env.NODE_ENV = 'production';
+      const req = mockRequest();
+      const res = mockResponse();
+
+      await expect(
+        controller.devLogin('/home', req as any, res as any),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockUserService.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-local hostnames', async () => {
+      process.env.LOCAL_AUTH_BYPASS = 'true';
+      process.env.LOCAL_AUTH_BYPASS_EMAIL = 'dev@example.com';
+      const req = mockRequest({}, 'splice.example.com');
+      const res = mockResponse();
+
+      await expect(
+        controller.devLogin('/home', req as any, res as any),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockUserService.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-loopback remote addresses', async () => {
+      process.env.LOCAL_AUTH_BYPASS = 'true';
+      process.env.LOCAL_AUTH_BYPASS_EMAIL = 'dev@example.com';
+      const req = mockRequest({}, 'localhost', '203.0.113.10');
+      const res = mockResponse();
+
+      await expect(
+        controller.devLogin('/home', req as any, res as any),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockUserService.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the local auth bypass email is missing', async () => {
+      process.env.LOCAL_AUTH_BYPASS = 'true';
+      const req = mockRequest();
+      const res = mockResponse();
+
+      await expect(
+        controller.devLogin('/home', req as any, res as any),
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
+      expect(mockUserService.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('rejects unsafe redirects through the existing redirect validation', async () => {
+      process.env.LOCAL_AUTH_BYPASS = 'true';
+      process.env.LOCAL_AUTH_BYPASS_EMAIL = 'dev@example.com';
+      mockGoogleOAuthService.validateRedirectPath.mockImplementationOnce(() => {
+        throw new Error('Invalid redirect target');
+      });
+      const req = mockRequest();
+      const res = mockResponse();
+
+      await expect(
+        controller.devLogin('//evil.example', req as any, res as any),
+      ).rejects.toThrow('Invalid redirect target');
+      expect(mockGoogleOAuthService.validateRedirectPath).toHaveBeenCalledWith(
+        '//evil.example',
+      );
+      expect(mockUserService.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('sets session cookies and redirects for an existing configured user', async () => {
+      process.env.LOCAL_AUTH_BYPASS = 'true';
+      process.env.LOCAL_AUTH_BYPASS_EMAIL = ' Dev@Example.COM ';
+      mockUserService.findByEmail.mockResolvedValueOnce({
+        ...mockUser,
+        email: 'dev@example.com',
+      });
+      const req = mockRequest();
+      const res = mockResponse();
+
+      await controller.devLogin('/accounts', req as any, res as any);
+
+      expect(mockGoogleOAuthService.validateRedirectPath).toHaveBeenCalledWith(
+        '/accounts',
+      );
+      expect(mockUserService.findByEmail).toHaveBeenCalledWith(
+        'dev@example.com',
+      );
+      expect(
+        mockUserService.findOrCreateFromGoogleIdentity,
+      ).not.toHaveBeenCalled();
+      expect(mockAuthService.generateAccessToken).toHaveBeenCalledWith(
+        'user-uuid-123',
+        'dev@example.com',
+      );
+      expect(mockAuthService.generateRefreshToken).toHaveBeenCalledWith(
+        'user-uuid-123',
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        'splice_access_token',
+        'mock-dev-access-token',
+        expect.objectContaining({ httpOnly: true }),
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        'splice_refresh_token',
+        'mock-dev-refresh-token',
+        expect.objectContaining({ httpOnly: true }),
+      );
+      expect(
+        mockGoogleOAuthService.buildFrontendRedirectUrl,
+      ).toHaveBeenCalledWith('/home');
+      expect(res.redirect).toHaveBeenCalledWith('http://localhost:4000/home');
+    });
+
+    it('creates a stable local dev user when the configured email does not exist', async () => {
+      process.env.LOCAL_AUTH_BYPASS = 'true';
+      process.env.LOCAL_AUTH_BYPASS_EMAIL = 'new-dev@example.com';
+      mockUserService.findByEmail.mockResolvedValueOnce(null);
+      const req = mockRequest();
+      const res = mockResponse();
+
+      await controller.devLogin('/home', req as any, res as any);
+
+      expect(
+        mockUserService.findOrCreateFromGoogleIdentity,
+      ).toHaveBeenCalledWith({
+        googleSubject: 'local-dev:new-dev@example.com',
+        email: 'new-dev@example.com',
+        displayName: 'Local Dev',
+        avatarUrl: null,
+      });
+      expect(mockAuthService.generateAccessToken).toHaveBeenCalledWith(
+        'user-uuid-123',
+        'test@example.com',
+      );
+      expect(res.redirect).toHaveBeenCalledWith('http://localhost:4000/home');
     });
   });
 

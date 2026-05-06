@@ -3,8 +3,10 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   HttpCode,
   Get,
+  InternalServerErrorException,
   NotFoundException,
   Patch,
   Param,
@@ -145,6 +147,29 @@ export class UserController {
     );
   }
 
+  @Public()
+  @Get('dev/login')
+  @ApiOperation({
+    description: 'Development-only local browser login for automation tools',
+  })
+  @ApiQuery({
+    name: 'redirect',
+    required: false,
+    description: 'Relative frontend path to return to after login',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Sets session cookies and redirects',
+  })
+  @ApiResponse({ status: 403, description: 'Local auth bypass is not allowed' })
+  devLogin(
+    @Query('redirect') redirect: string | undefined,
+    @Req() req: express.Request,
+    @Res() res: express.Response,
+  ): Promise<void> {
+    return this.localDevLogin(redirect, req, res);
+  }
+
   @Get('me')
   @ApiOperation({ description: 'Get current user profile' })
   @ZodApiResponse({
@@ -241,6 +266,77 @@ export class UserController {
     }
 
     clearSessionCookies(res);
+  }
+
+  private async localDevLogin(
+    redirect: string | undefined,
+    req: express.Request,
+    res: express.Response,
+  ): Promise<void> {
+    this.assertLocalDevLoginAllowed(req);
+
+    const redirectPath = this.googleOAuthService.validateRedirectPath(redirect);
+    const email = this.getLocalAuthBypassEmail();
+    const existingUser = await this.userService.findByEmail(email);
+    const user =
+      existingUser ??
+      (await this.userService.findOrCreateFromGoogleIdentity({
+        googleSubject: `local-dev:${email}`,
+        email,
+        displayName: 'Local Dev',
+        avatarUrl: null,
+      }));
+    const accessToken = this.authService.generateAccessToken(
+      user.id,
+      user.email,
+    );
+    const refreshToken = await this.authService.generateRefreshToken(user.id);
+
+    setSessionCookies(res, { accessToken, refreshToken });
+    res.redirect(
+      this.googleOAuthService.buildFrontendRedirectUrl(redirectPath),
+    );
+  }
+
+  private assertLocalDevLoginAllowed(req: express.Request): void {
+    if (
+      process.env.LOCAL_AUTH_BYPASS !== 'true' ||
+      process.env.NODE_ENV === 'production' ||
+      !this.isLocalRequest(req)
+    ) {
+      throw new ForbiddenException('Local auth bypass is not allowed');
+    }
+  }
+
+  private isLocalRequest(req: express.Request): boolean {
+    return (
+      this.isLocalHostname(req.hostname) &&
+      this.isLoopbackAddress(req.socket.remoteAddress)
+    );
+  }
+
+  private isLocalHostname(hostname: string | undefined): boolean {
+    return (
+      hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+    );
+  }
+
+  private isLoopbackAddress(address: string | undefined): boolean {
+    return (
+      address === '127.0.0.1' ||
+      address === '::1' ||
+      address === '::ffff:127.0.0.1'
+    );
+  }
+
+  private getLocalAuthBypassEmail(): string {
+    const email = process.env.LOCAL_AUTH_BYPASS_EMAIL?.trim().toLowerCase();
+    if (!email) {
+      throw new InternalServerErrorException(
+        'Local auth bypass is not configured',
+      );
+    }
+    return email;
   }
 
   @Post('logout-all')
