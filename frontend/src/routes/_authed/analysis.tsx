@@ -3,7 +3,6 @@ import { DonutChart } from '@mantine/charts'
 import {
   Alert,
   Box,
-  Button,
   Grid,
   Group,
   Loader,
@@ -14,13 +13,13 @@ import {
   Title,
   UnstyledButton,
 } from '@mantine/core'
-import { DatePickerInput } from '@mantine/dates'
 import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { useTransactionAnalysisControllerGetAnalysis } from '../../api/clients/spliceAPI'
 import { CategoryTransactionsModal } from '../../components/CategoryTransactionsModal'
+import { DateRangeControl } from '../../components/DateRangeControl'
 import {
   formatMoneyNumber,
   formatPrimaryCategory,
@@ -307,48 +306,10 @@ function AnalysisPage() {
       <Group justify="space-between" mb="xl" wrap="wrap">
         <Title order={1}>Analysis</Title>
         <Group gap="xs">
-          <Button
-            variant="light"
-            size="xs"
-            onClick={() => {
-              const start = dayjs()
-                .subtract(1, 'month')
-                .startOf('month')
-                .format('YYYY-MM-DD')
-              const end = dayjs()
-                .subtract(1, 'month')
-                .endOf('month')
-                .format('YYYY-MM-DD')
-              setDateRangeValue([dayjs(start).toDate(), dayjs(end).toDate()])
-              navigate({
-                to: '/analysis',
-                search: { startDate: start, endDate: end },
-              })
-            }}
-          >
-            Last Month
-          </Button>
-          <Button
-            variant="light"
-            size="xs"
-            onClick={() => {
-              const start = dayjs().startOf('month').format('YYYY-MM-DD')
-              const end = dayjs().format('YYYY-MM-DD')
-              setDateRangeValue([dayjs(start).toDate(), dayjs(end).toDate()])
-              navigate({
-                to: '/analysis',
-                search: { startDate: start, endDate: end },
-              })
-            }}
-          >
-            This Month
-          </Button>
-          <DatePickerInput
-            type="range"
+          <DateRangeControl
             value={dateRangeValue}
             onChange={handleDateRangeChange}
-            maxDate={new Date()}
-            size="md"
+            clearable={false}
           />
         </Group>
       </Group>

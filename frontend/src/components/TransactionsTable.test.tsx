@@ -97,11 +97,12 @@ const customCategory = makeCategory({
   source: 'user',
 })
 
-beforeEach(() => {
+function mockMatchMedia(supportsFineHover = false) {
   Object.defineProperty(window, 'matchMedia', {
-    value: vi.fn().mockImplementation(() => ({
-      matches: false,
-      media: '',
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches:
+        supportsFineHover && query === '(hover: hover) and (pointer: fine)',
+      media: query,
       onchange: null,
       addListener: vi.fn(),
       removeListener: vi.fn(),
@@ -111,6 +112,10 @@ beforeEach(() => {
     })),
     configurable: true,
   })
+}
+
+beforeEach(() => {
+  mockMatchMedia()
   mockFns.useCategoryControllerFindAllMock.mockReturnValue({
     data: [providerCategory, overrideCategory, customCategory],
   })
@@ -287,6 +292,26 @@ describe('TransactionsTable', () => {
     expect(screen.getAllByText('SQ *SHAKE SHACK').length).toBeGreaterThan(1)
     expect(screen.getByText('Square · payment terminal · very high')).toBeTruthy()
     expect(screen.getByText(/in store/)).toBeTruthy()
+  })
+
+  it('opens metadata in the info popover on hover for desktop pointers', async () => {
+    mockMatchMedia(true)
+
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+        merchantName: 'Shake Shack',
+        originalDescription: 'SQ *SHAKE SHACK',
+      }),
+    ])
+
+    fireEvent.mouseEnter(
+      screen.getByLabelText('Show transaction details for Shake Shack'),
+    )
+
+    expect(await screen.findByText('Transaction details')).toBeTruthy()
+    expect(screen.getAllByText('SQ *SHAKE SHACK').length).toBeGreaterThan(1)
   })
 
   it('does not show a metadata popover trigger for plain categorized rows', () => {
