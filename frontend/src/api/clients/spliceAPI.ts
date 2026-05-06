@@ -29,12 +29,17 @@ import type {
   BalanceQueryPerDateResult,
   BalanceSnapshotControllerImportCsv201,
   BalanceSnapshotControllerImportCsvBody,
+  BulkCategoryActionResponse,
+  BulkCategoryVisibilityDto,
+  BulkCustomCategoryActionDto,
   BulkTransactionCategoryReviewDto,
   BulkTransactionCategoryReviewResponse,
   BulkTransactionCategoryReviewUndoDto,
   Category,
   CategoryControllerFindCustomParams,
+  CategoryControllerFindManagementParams,
   CategoryControllerSearchParams,
+  CategoryManagementItem,
   CreateAccountDto,
   CreateCustomCategoryDto,
   CreatePersonalAccessTokenDto,
@@ -4227,6 +4232,168 @@ export function useCategoryControllerSearch<
 }
 
 /**
+ * Get the current user category management inventory with visibility and usage metadata
+ */
+export const categoryControllerFindManagement = (
+  params?: CategoryControllerFindManagementParams,
+  signal?: AbortSignal,
+) => {
+  return axios<CategoryManagementItem[]>({
+    url: `/category/manage`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getCategoryControllerFindManagementQueryKey = (
+  params?: CategoryControllerFindManagementParams,
+) => {
+  return [`/category/manage`, ...(params ? [params] : [])] as const
+}
+
+export const getCategoryControllerFindManagementQueryOptions = <
+  TData = Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerFindManagementParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getCategoryControllerFindManagementQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof categoryControllerFindManagement>>
+  > = ({ signal }) => categoryControllerFindManagement(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategoryControllerFindManagementQueryResult = NonNullable<
+  Awaited<ReturnType<typeof categoryControllerFindManagement>>
+>
+export type CategoryControllerFindManagementQueryError = unknown
+
+export function useCategoryControllerFindManagement<
+  TData = Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+  TError = unknown,
+>(
+  params: undefined | CategoryControllerFindManagementParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+          TError,
+          Awaited<ReturnType<typeof categoryControllerFindManagement>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategoryControllerFindManagement<
+  TData = Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerFindManagementParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+          TError,
+          Awaited<ReturnType<typeof categoryControllerFindManagement>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategoryControllerFindManagement<
+  TData = Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerFindManagementParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useCategoryControllerFindManagement<
+  TData = Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+  TError = unknown,
+>(
+  params?: CategoryControllerFindManagementParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindManagement>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getCategoryControllerFindManagementQueryOptions(
+    params,
+    options,
+  )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
  * Get the current user's custom transaction categories
  */
 export const categoryControllerFindCustom = (
@@ -4467,6 +4634,172 @@ export const useCategoryControllerCreateCustom = <
 > => {
   const mutationOptions =
     getCategoryControllerCreateCustomMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Hide or show active categories in manual dropdowns
+ */
+export const categoryControllerBulkUpdateVisibility = (
+  bulkCategoryVisibilityDto: BulkCategoryVisibilityDto,
+) => {
+  return axios<BulkCategoryActionResponse>({
+    url: `/category/visibility/bulk`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: bulkCategoryVisibilityDto,
+  })
+}
+
+export const getCategoryControllerBulkUpdateVisibilityMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof categoryControllerBulkUpdateVisibility>>,
+    TError,
+    { data: BulkCategoryVisibilityDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof categoryControllerBulkUpdateVisibility>>,
+  TError,
+  { data: BulkCategoryVisibilityDto },
+  TContext
+> => {
+  const mutationKey = ['categoryControllerBulkUpdateVisibility']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof categoryControllerBulkUpdateVisibility>>,
+    { data: BulkCategoryVisibilityDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return categoryControllerBulkUpdateVisibility(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type CategoryControllerBulkUpdateVisibilityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof categoryControllerBulkUpdateVisibility>>
+>
+export type CategoryControllerBulkUpdateVisibilityMutationBody =
+  BulkCategoryVisibilityDto
+export type CategoryControllerBulkUpdateVisibilityMutationError = unknown
+
+export const useCategoryControllerBulkUpdateVisibility = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof categoryControllerBulkUpdateVisibility>>,
+      TError,
+      { data: BulkCategoryVisibilityDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof categoryControllerBulkUpdateVisibility>>,
+  TError,
+  { data: BulkCategoryVisibilityDto },
+  TContext
+> => {
+  const mutationOptions =
+    getCategoryControllerBulkUpdateVisibilityMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Bulk archive, restore, or update primary labels for custom categories
+ */
+export const categoryControllerBulkUpdateCustom = (
+  bulkCustomCategoryActionDto: BulkCustomCategoryActionDto,
+) => {
+  return axios<BulkCategoryActionResponse>({
+    url: `/category/custom/bulk`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: bulkCustomCategoryActionDto,
+  })
+}
+
+export const getCategoryControllerBulkUpdateCustomMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof categoryControllerBulkUpdateCustom>>,
+    TError,
+    { data: BulkCustomCategoryActionDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof categoryControllerBulkUpdateCustom>>,
+  TError,
+  { data: BulkCustomCategoryActionDto },
+  TContext
+> => {
+  const mutationKey = ['categoryControllerBulkUpdateCustom']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof categoryControllerBulkUpdateCustom>>,
+    { data: BulkCustomCategoryActionDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return categoryControllerBulkUpdateCustom(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type CategoryControllerBulkUpdateCustomMutationResult = NonNullable<
+  Awaited<ReturnType<typeof categoryControllerBulkUpdateCustom>>
+>
+export type CategoryControllerBulkUpdateCustomMutationBody =
+  BulkCustomCategoryActionDto
+export type CategoryControllerBulkUpdateCustomMutationError = unknown
+
+export const useCategoryControllerBulkUpdateCustom = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof categoryControllerBulkUpdateCustom>>,
+      TError,
+      { data: BulkCustomCategoryActionDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof categoryControllerBulkUpdateCustom>>,
+  TError,
+  { data: BulkCustomCategoryActionDto },
+  TContext
+> => {
+  const mutationOptions =
+    getCategoryControllerBulkUpdateCustomMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }

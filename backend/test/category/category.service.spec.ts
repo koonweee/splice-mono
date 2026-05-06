@@ -1,8 +1,10 @@
 import { ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { CategoryVisibilityPreferenceEntity } from '../../src/category/category-visibility-preference.entity';
 import { CategoryEntity } from '../../src/category/category.entity';
 import { CategoryService } from '../../src/category/category.service';
+import { TransactionEntity } from '../../src/transaction/transaction.entity';
 
 const mockUserId = '00000000-0000-4000-8000-000000000001';
 const otherUserId = '00000000-0000-4000-8000-000000000002';
@@ -39,11 +41,30 @@ describe('CategoryService', () => {
     getOne: jest.fn(),
   };
 
+  const mockTransactionQueryBuilder = {
+    select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
+    getRawMany: jest.fn(),
+  };
+
   const mockRepository = {
     find: jest.fn(),
     findOne: jest.fn(),
     save: jest.fn(),
     createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+  };
+
+  const mockVisibilityRepository = {
+    find: jest.fn(),
+    findOne: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockTransactionRepository = {
+    createQueryBuilder: jest.fn().mockReturnValue(mockTransactionQueryBuilder),
   };
 
   beforeEach(async () => {
@@ -54,16 +75,28 @@ describe('CategoryService', () => {
           provide: getRepositoryToken(CategoryEntity),
           useValue: mockRepository,
         },
+        {
+          provide: getRepositoryToken(CategoryVisibilityPreferenceEntity),
+          useValue: mockVisibilityRepository,
+        },
+        {
+          provide: getRepositoryToken(TransactionEntity),
+          useValue: mockTransactionRepository,
+        },
       ],
     }).compile();
 
     service = module.get<CategoryService>(CategoryService);
+    mockVisibilityRepository.find.mockResolvedValue([]);
+    mockVisibilityRepository.findOne.mockResolvedValue(null);
+    mockTransactionQueryBuilder.getRawMany.mockResolvedValue([]);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
     mockQueryBuilder.getMany.mockReset();
     mockQueryBuilder.getOne.mockReset();
+    mockTransactionQueryBuilder.getRawMany.mockReset();
   });
 
   it('returns Plaid categories and active custom categories for the current user', async () => {
@@ -88,6 +121,34 @@ describe('CategoryService', () => {
         ]),
       }),
     );
+  });
+
+  it('hides categories from selector results using user visibility preferences', async () => {
+    const plaidCategory = buildCategoryEntity();
+    const hiddenCustomCategory = buildCategoryEntity({
+      id: '00000000-0000-4000-8000-000000000101',
+      primary: 'Home Projects',
+      detailed: 'Hardware',
+      source: 'user',
+      userId: mockUserId,
+    });
+    mockRepository.find.mockResolvedValue([
+      plaidCategory,
+      hiddenCustomCategory,
+    ]);
+    mockVisibilityRepository.find.mockResolvedValue([
+      {
+        id: 'visibility-id',
+        userId: mockUserId,
+        categoryId: hiddenCustomCategory.id,
+        hiddenAt: new Date('2024-01-01T00:00:00.000Z'),
+      },
+    ]);
+
+    const result = await service.findAll(mockUserId);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.id).toBe(plaidCategory.id);
   });
 
   it('creates a user category with cleaned labels when no duplicate exists', async () => {
@@ -304,6 +365,71 @@ describe('CategoryService', () => {
     });
 
     expect(restored?.archivedAt).toBeNull();
+  });
+
+  it('returns management rows with hidden state and effective usage metadata', async () => {
+    const plaidCategory = buildCategoryEntity();
+    mockRepository.find.mockResolvedValue([plaidCategory]);
+    mockVisibilityRepository.find.mockResolvedValue([
+      {
+        id: 'visibility-id',
+        userId: mockUserId,
+        categoryId: plaidCategory.id,
+        hiddenAt: new Date('2024-01-01T00:00:00.000Z'),
+      },
+    ]);
+    mockTransactionQueryBuilder.getRawMany.mockResolvedValue([
+      {
+        categoryId: plaidCategory.id,
+        transactionCount: '3',
+        lastUsedAt: '2026-03-04',
+      },
+    ]);
+
+    const result = await service.findManagement(mockUserId);
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: plaidCategory.id,
+        isHidden: true,
+        isSelectable: false,
+        transactionCount: 3,
+        lastUsedAt: '2026-03-04',
+      }),
+    ]);
+  });
+
+  it('updates visibility only for active categories assignable by the user', async () => {
+    const category = buildCategoryEntity();
+    mockRepository.find.mockResolvedValue([category]);
+    mockVisibilityRepository.findOne.mockResolvedValue(null);
+    mockVisibilityRepository.save.mockImplementation(
+      (preference: CategoryVisibilityPreferenceEntity) =>
+        Promise.resolve(preference),
+    );
+
+    const result = await service.bulkUpdateVisibility(mockUserId, {
+      categoryIds: [category.id, '00000000-0000-4000-8000-000000000999'],
+      hidden: true,
+    });
+
+    expect(result).toEqual({
+      requested: 2,
+      updated: 1,
+      skipped: [
+        {
+          categoryId: '00000000-0000-4000-8000-000000000999',
+          reason: 'not_found',
+        },
+      ],
+    });
+    expect(mockVisibilityRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockUserId,
+        categoryId: category.id,
+        hiddenAt: expect.any(Date),
+      }),
+    );
   });
 
   it('returns null when updating another user category or a Plaid category through custom update', async () => {

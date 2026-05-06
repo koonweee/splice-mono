@@ -11,7 +11,7 @@ import type * as SpliceAPI from '../../api/clients/spliceAPI'
 import type {
   Account,
   BulkTransactionCategoryReviewResponse,
-  Category,
+  CategoryManagementItem,
   PaginatedTransactionResponse,
 } from '../../api/models'
 
@@ -32,7 +32,7 @@ const mockFns = vi.hoisted(() => ({
   useInfiniteQueryMock: vi.fn(),
   invalidateQueriesMock: vi.fn(),
   useAccountControllerFindAllMock: vi.fn(),
-  useCategoryControllerFindAllMock: vi.fn(),
+  useCategoryControllerFindManagementMock: vi.fn(),
   useTransactionControllerBulkReviewCategoriesMock: vi.fn(),
   useTransactionControllerUndoBulkReviewCategoriesMock: vi.fn(),
   bulkReviewMutateMock: vi.fn(),
@@ -167,7 +167,8 @@ vi.mock('../../api/clients/spliceAPI', async () => {
     ],
     transactionControllerFindAll: mockFns.transactionControllerFindAllMock,
     useAccountControllerFindAll: mockFns.useAccountControllerFindAllMock,
-    useCategoryControllerFindAll: mockFns.useCategoryControllerFindAllMock,
+    useCategoryControllerFindManagement:
+      mockFns.useCategoryControllerFindManagementMock,
     useTransactionControllerBulkReviewCategories:
       mockFns.useTransactionControllerBulkReviewCategoriesMock,
     useTransactionControllerUndoBulkReviewCategories:
@@ -210,13 +211,30 @@ const account: Account = {
   updatedAt: '2026-02-14T00:00:00.000Z',
 }
 
-const category: Category = {
+const category: CategoryManagementItem = {
   id: 'category-1',
   primary: 'FOOD_AND_DRINK',
   detailed: 'FOOD_AND_DRINK_RESTAURANT',
   description: 'Food category',
+  source: 'plaid',
+  userId: null,
+  archivedAt: null,
+  isHidden: false,
+  isSelectable: true,
+  transactionCount: 0,
+  lastUsedAt: null,
   createdAt: '2026-02-14T00:00:00.000Z',
   updatedAt: '2026-02-14T00:00:00.000Z',
+}
+
+const hiddenCategory: CategoryManagementItem = {
+  ...category,
+  id: 'category-2',
+  primary: 'Hidden Primary',
+  detailed: 'Hidden Detail',
+  source: 'user',
+  userId: 'user-1',
+  isHidden: true,
 }
 
 const transactionsPageData: PaginatedTransactionResponse = {
@@ -265,8 +283,8 @@ beforeEach(() => {
   mockFns.useAccountControllerFindAllMock.mockReturnValue({
     data: [account],
   })
-  mockFns.useCategoryControllerFindAllMock.mockReturnValue({
-    data: [category],
+  mockFns.useCategoryControllerFindManagementMock.mockReturnValue({
+    data: [category, hiddenCategory],
   })
   mockFns.useTransactionControllerBulkReviewCategoriesMock.mockReturnValue({
     mutate: mockFns.bulkReviewMutateMock,
@@ -312,6 +330,22 @@ describe('TransactionsPage category review workflow', () => {
 
     expect(
       screen.getByRole('button', { name: /Open transaction filters/ }),
+    ).toBeTruthy()
+  })
+
+  it('keeps hidden categories available in historical transaction filters', () => {
+    renderTransactionsPage()
+
+    expect(mockFns.useCategoryControllerFindManagementMock).toHaveBeenCalledWith(
+      { archived: false },
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction filters/ }),
+    )
+
+    expect(
+      screen.getByRole('option', { name: 'Hidden Primary' }),
     ).toBeTruthy()
   })
 

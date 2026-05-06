@@ -25,7 +25,7 @@ import {
   getTransactionControllerFindAllQueryKey,
   transactionControllerFindAll,
   useAccountControllerFindAll,
-  useCategoryControllerFindAll,
+  useCategoryControllerFindManagement,
   useTransactionControllerBulkReviewCategories,
   useTransactionControllerUndoBulkReviewCategories,
 } from '../../api/clients/spliceAPI'
@@ -33,7 +33,7 @@ import { CATEGORY_COLORS } from '../../lib/constants'
 import { formatPrimaryCategory } from '../../lib/format'
 import type {
   BulkTransactionCategoryReviewDto,
-  Category,
+  CategoryManagementItem,
   TransactionControllerFindAllParams,
 } from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
@@ -103,7 +103,7 @@ const isValidDateString = (value: unknown): value is string =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 
 function getPrimaryCategoryLabel(
-  category: Pick<Category, 'primary' | 'source'>,
+  category: Pick<CategoryManagementItem, 'primary' | 'source'>,
 ) {
   return category.source === 'user'
     ? category.primary
@@ -253,7 +253,9 @@ function TransactionsPage() {
 
   // Account data for the select dropdown
   const { data: accounts } = useAccountControllerFindAll()
-  const { data: categories } = useCategoryControllerFindAll()
+  const { data: categories } = useCategoryControllerFindManagement({
+    archived: false,
+  })
   const bulkReviewCategories = useTransactionControllerBulkReviewCategories()
   const undoBulkReviewCategories = useTransactionControllerUndoBulkReviewCategories()
 

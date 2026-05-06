@@ -131,6 +131,7 @@ function installMockLocalStorage() {
 }
 
 beforeEach(() => {
+  window.history.replaceState(null, '', '/settings')
   installMockLocalStorage()
 
   queryClientState = {
@@ -193,45 +194,50 @@ afterEach(() => {
 })
 
 describe('SettingsPage', () => {
-  it('keeps the PAT and MCP sections after the existing settings card', () => {
+  it('shows settings sections in separate tabs', () => {
     renderSettingsPage()
 
     expect(
       screen.getByRole('heading', { name: /^settings$/i, level: 1 }),
     ).toBeTruthy()
     expect(
+      screen.getByRole('tab', { name: /general/i }).getAttribute(
+        'aria-selected',
+      ),
+    ).toBe('true')
+    expect(screen.getByTestId('settings-card')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('tab', { name: /access/i }))
+    expect(
+      screen.getByRole('tab', { name: /access/i }).getAttribute(
+        'aria-selected',
+      ),
+    ).toBe('true')
+    expect(
       screen.getByRole('heading', {
         name: /personal access tokens/i,
         level: 3,
       }),
     ).toBeTruthy()
+    expect(window.location.search).toBe('?tab=access')
+
+    fireEvent.click(screen.getByRole('tab', { name: /categories/i }))
+    expect(
+      screen.getByRole('tab', { name: /categories/i }).getAttribute(
+        'aria-selected',
+      ),
+    ).toBe('true')
+    expect(screen.getByTestId('custom-categories-section')).toBeTruthy()
+    expect(window.location.search).toBe('?tab=categories')
+
+    fireEvent.click(screen.getByRole('tab', { name: /mcp/i }))
+    expect(
+      screen.getByRole('tab', { name: /mcp/i }).getAttribute('aria-selected'),
+    ).toBe('true')
     expect(
       screen.getByRole('heading', { name: /mcp connection/i, level: 3 }),
     ).toBeTruthy()
-
-    const settingsCard = screen.getByTestId('settings-card')
-    const patSection = screen.getByTestId('pat-section')
-    const customCategoriesSection = screen.getByTestId(
-      'custom-categories-section',
-    )
-    const mcpSection = screen.getByTestId('mcp-section')
-
-    expect(
-      settingsCard.compareDocumentPosition(patSection) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    expect(
-      patSection.compareDocumentPosition(mcpSection) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    expect(
-      patSection.compareDocumentPosition(customCategoriesSection) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    expect(
-      customCategoriesSection.compareDocumentPosition(mcpSection) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+    expect(window.location.search).toBe('?tab=mcp')
   })
 
   it('saves the hide zero balance accounts setting', () => {

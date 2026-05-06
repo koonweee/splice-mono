@@ -10,6 +10,7 @@ import {
   SimpleGrid,
   Stack,
   Switch,
+  Tabs,
   Text,
   Title,
   UnstyledButton,
@@ -34,7 +35,18 @@ import {
 } from '../../lib/theme'
 import type { ThemePreset, ThemePresetId } from '../../lib/theme'
 
+type SettingsTab = 'general' | 'access' | 'categories' | 'mcp'
+
 export const Route = createFileRoute('/_authed/settings')({
+  validateSearch: (search: Record<string, unknown>): { tab?: SettingsTab } => {
+    const tab = search.tab
+    return tab === 'general' ||
+      tab === 'access' ||
+      tab === 'categories' ||
+      tab === 'mcp'
+      ? { tab }
+      : {}
+  },
   component: SettingsPage,
 })
 
@@ -61,6 +73,17 @@ const CURRENCY_OPTIONS = [
   { value: 'ZAR', label: 'ZAR - South African Rand' },
   { value: 'THB', label: 'THB - Thai Baht' },
 ]
+
+function getInitialSettingsTab(): SettingsTab {
+  if (typeof window === 'undefined') {
+    return 'general'
+  }
+
+  const tab = new URLSearchParams(window.location.search).get('tab')
+  return tab === 'access' || tab === 'categories' || tab === 'mcp'
+    ? tab
+    : 'general'
+}
 
 // Get all IANA timezones from the browser
 function getTimezoneOptions() {
@@ -173,6 +196,9 @@ export function SettingsPage() {
   const queryClient = useQueryClient()
   const { data: user, isLoading, error } = useUserControllerMe()
   const updateSettingsMutation = useUserControllerUpdateSettings()
+  const [selectedTab, setSelectedTab] = useState<SettingsTab>(
+    getInitialSettingsTab,
+  )
 
   const timezoneOptions = useMemo(() => getTimezoneOptions(), [])
   const browserTimezone = useMemo(() => getBrowserTimezone(), [])
@@ -243,6 +269,21 @@ export function SettingsPage() {
     previewThemePresetId(nextTheme)
   }
 
+  const handleTabChange = (value: string | null) => {
+    const nextTab = (value ?? 'general') as SettingsTab
+    setSelectedTab(nextTab)
+
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      if (nextTab === 'general') {
+        url.searchParams.delete('tab')
+      } else {
+        url.searchParams.set('tab', nextTab)
+      }
+      window.history.replaceState(null, '', url)
+    }
+  }
+
   if (isLoading) {
     return (
       <Group justify="center" py="xl">
@@ -266,137 +307,152 @@ export function SettingsPage() {
         Settings
       </Title>
 
-      <Stack gap="xl">
-        <Paper
-          withBorder
-          p="lg"
-          radius="md"
-          maw={720}
-          data-testid="settings-card"
-        >
-          <Stack gap="lg">
-            <div>
-              <Title order={4} mb="xs">
-                Appearance
-              </Title>
-              <Text size="sm" c="dimmed" mb="sm">
-                Choose your theme.
-              </Text>
-              <SimpleGrid
-                cols={{ base: 1, sm: 2 }}
-                spacing="sm"
-                role="radiogroup"
-                aria-label="Theme"
-              >
-                {THEME_PRESETS.map((preset) => (
-                  <ThemePresetOption
-                    key={preset.id}
-                    preset={preset}
-                    selected={theme === preset.id}
-                    onSelect={handleThemeSelect}
-                  />
-                ))}
-              </SimpleGrid>
-            </div>
+      <Tabs value={selectedTab} onChange={handleTabChange}>
+        <Tabs.List mb="lg">
+          <Tabs.Tab value="general">General</Tabs.Tab>
+          <Tabs.Tab value="access">Access</Tabs.Tab>
+          <Tabs.Tab value="categories">Categories</Tabs.Tab>
+          <Tabs.Tab value="mcp">MCP</Tabs.Tab>
+        </Tabs.List>
 
-            <div>
-              <Title order={4} mb="xs">
-                Display Currency
-              </Title>
-              <Text size="sm" c="dimmed" mb="sm">
-                All balances and amounts will be converted to this currency for
-                display.
-              </Text>
-              <Select
-                value={currency}
-                onChange={(value) => value && setCurrency(value)}
-                data={CURRENCY_OPTIONS}
-                searchable
-                size="md"
-                placeholder="Select currency"
-              />
-            </div>
+        <Tabs.Panel value="general">
+          <Paper
+            withBorder
+            p="lg"
+            radius="md"
+            maw={720}
+            data-testid="settings-card"
+          >
+            <Stack gap="lg">
+              <div>
+                <Title order={4} mb="xs">
+                  Appearance
+                </Title>
+                <Text size="sm" c="dimmed" mb="sm">
+                  Choose your theme.
+                </Text>
+                <SimpleGrid
+                  cols={{ base: 1, sm: 2 }}
+                  spacing="sm"
+                  role="radiogroup"
+                  aria-label="Theme"
+                >
+                  {THEME_PRESETS.map((preset) => (
+                    <ThemePresetOption
+                      key={preset.id}
+                      preset={preset}
+                      selected={theme === preset.id}
+                      onSelect={handleThemeSelect}
+                    />
+                  ))}
+                </SimpleGrid>
+              </div>
 
-            <div>
-              <Title order={4} mb="xs">
-                Timezone
-              </Title>
-              <Text size="sm" c="dimmed" mb="sm">
-                Used for displaying dates and times throughout the app.
-              </Text>
-              <Group gap="sm" align="flex-end">
+              <div>
+                <Title order={4} mb="xs">
+                  Display Currency
+                </Title>
+                <Text size="sm" c="dimmed" mb="sm">
+                  All balances and amounts will be converted to this currency
+                  for display.
+                </Text>
                 <Select
-                  value={timezone}
-                  onChange={(value) => value && setTimezone(value)}
-                  data={timezoneOptions}
+                  value={currency}
+                  onChange={(value) => value && setCurrency(value)}
+                  data={CURRENCY_OPTIONS}
                   searchable
                   size="md"
-                  placeholder="Select timezone"
-                  style={{ flex: 1 }}
+                  placeholder="Select currency"
                 />
+              </div>
+
+              <div>
+                <Title order={4} mb="xs">
+                  Timezone
+                </Title>
+                <Text size="sm" c="dimmed" mb="sm">
+                  Used for displaying dates and times throughout the app.
+                </Text>
+                <Group gap="sm" align="flex-end">
+                  <Select
+                    value={timezone}
+                    onChange={(value) => value && setTimezone(value)}
+                    data={timezoneOptions}
+                    searchable
+                    size="md"
+                    placeholder="Select timezone"
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    variant="light"
+                    size="sm"
+                    onClick={handleSetBrowserTimezone}
+                    disabled={timezone === browserTimezone}
+                  >
+                    Use Browser
+                  </Button>
+                </Group>
+                {browserTimezone && (
+                  <Text size="xs" c="dimmed" mt="xs">
+                    Detected: {browserTimezone}
+                  </Text>
+                )}
+              </div>
+
+              <div>
+                <Title order={4} mb="xs">
+                  Home Dashboard
+                </Title>
+                <Text size="sm" c="dimmed" mb="sm">
+                  Hide zero-balance accounts from the Assets and Liabilities
+                  sections on Home.
+                </Text>
+                <Switch
+                  label="Hide 0 balance accounts"
+                  checked={hideZeroBalanceAccounts}
+                  onChange={(event) =>
+                    setHideZeroBalanceAccounts(event.currentTarget.checked)
+                  }
+                />
+              </div>
+
+              <Group justify="flex-end" mt="md">
                 <Button
-                  variant="light"
-                  size="sm"
-                  onClick={handleSetBrowserTimezone}
-                  disabled={timezone === browserTimezone}
+                  onClick={handleSave}
+                  loading={updateSettingsMutation.isPending}
+                  disabled={!hasChanges}
                 >
-                  Use Browser
+                  Save Changes
                 </Button>
               </Group>
-              {browserTimezone && (
-                <Text size="xs" c="dimmed" mt="xs">
-                  Detected: {browserTimezone}
-                </Text>
+
+              {updateSettingsMutation.isError && (
+                <Alert color="red" title="Error">
+                  Failed to save settings
+                </Alert>
               )}
-            </div>
 
-            <div>
-              <Title order={4} mb="xs">
-                Home Dashboard
-              </Title>
-              <Text size="sm" c="dimmed" mb="sm">
-                Hide zero-balance accounts from the Assets and Liabilities
-                sections on Home.
-              </Text>
-              <Switch
-                label="Hide 0 balance accounts"
-                checked={hideZeroBalanceAccounts}
-                onChange={(event) =>
-                  setHideZeroBalanceAccounts(event.currentTarget.checked)
-                }
-              />
-            </div>
+              {updateSettingsMutation.isSuccess && !hasChanges && (
+                <Alert color="green" title="Success">
+                  Settings saved successfully
+                </Alert>
+              )}
+            </Stack>
+          </Paper>
+        </Tabs.Panel>
 
-            <Group justify="flex-end" mt="md">
-              <Button
-                onClick={handleSave}
-                loading={updateSettingsMutation.isPending}
-                disabled={!hasChanges}
-              >
-                Save Changes
-              </Button>
-            </Group>
+        <Tabs.Panel value="access">
+          <PersonalAccessTokenSection />
+        </Tabs.Panel>
 
-            {updateSettingsMutation.isError && (
-              <Alert color="red" title="Error">
-                Failed to save settings
-              </Alert>
-            )}
+        <Tabs.Panel value="categories">
+          <CustomCategoriesSection />
+        </Tabs.Panel>
 
-            {updateSettingsMutation.isSuccess && !hasChanges && (
-              <Alert color="green" title="Success">
-                Settings saved successfully
-              </Alert>
-            )}
-          </Stack>
-        </Paper>
-
-        <PersonalAccessTokenSection />
-
-        <CustomCategoriesSection />
-
-        <McpConnectionSection />
-      </Stack>
+        <Tabs.Panel value="mcp">
+          <McpConnectionSection />
+        </Tabs.Panel>
+      </Tabs>
     </>
   )
 }
