@@ -5,9 +5,11 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { UserSettingsTheme } from './userSettingsTheme'
 
 export interface UserSettings {
   currency?: string
   timezone?: string
   hideZeroBalanceAccounts?: boolean
+  theme?: UserSettingsTheme
 }
