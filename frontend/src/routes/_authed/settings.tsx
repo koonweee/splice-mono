@@ -307,7 +307,7 @@ export function SettingsPage() {
         Settings
       </Title>
 
-      <Tabs value={selectedTab} onChange={handleTabChange}>
+      <Tabs value={selectedTab} onChange={handleTabChange} keepMounted={false}>
         <Tabs.List mb="lg">
           <Tabs.Tab value="general">General</Tabs.Tab>
           <Tabs.Tab value="access">Access</Tabs.Tab>

@@ -4232,6 +4232,152 @@ export function useCategoryControllerSearch<
 }
 
 /**
+ * Get categories suitable for historical transaction filters, including hidden categories only when used by existing transactions
+ */
+export const categoryControllerFindFilterOptions = (signal?: AbortSignal) => {
+  return axios<Category[]>({
+    url: `/category/filter-options`,
+    method: 'GET',
+    signal,
+  })
+}
+
+export const getCategoryControllerFindFilterOptionsQueryKey = () => {
+  return [`/category/filter-options`] as const
+}
+
+export const getCategoryControllerFindFilterOptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+      TError,
+      TData
+    >
+  >
+}) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getCategoryControllerFindFilterOptionsQueryKey()
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>
+  > = ({ signal }) => categoryControllerFindFilterOptions(signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategoryControllerFindFilterOptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>
+>
+export type CategoryControllerFindFilterOptionsQueryError = unknown
+
+export function useCategoryControllerFindFilterOptions<
+  TData = Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+          TError,
+          Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategoryControllerFindFilterOptions<
+  TData = Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+          TError,
+          Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategoryControllerFindFilterOptions<
+  TData = Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useCategoryControllerFindFilterOptions<
+  TData = Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categoryControllerFindFilterOptions>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getCategoryControllerFindFilterOptionsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
  * Get the current user category management inventory with visibility and usage metadata
  */
 export const categoryControllerFindManagement = (

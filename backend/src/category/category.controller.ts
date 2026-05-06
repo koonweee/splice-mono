@@ -73,6 +73,21 @@ export class CategoryController {
     return this.categoryService.search(user.userId, query);
   }
 
+  @Get('filter-options')
+  @ApiOperation({
+    description:
+      'Get categories suitable for historical transaction filters, including hidden categories only when used by existing transactions',
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Returns transaction category filter options',
+    schema: CategorySchema,
+    isArray: true,
+  })
+  async findFilterOptions(@CurrentUser() user: JwtUser): Promise<Category[]> {
+    return this.categoryService.findFilterOptions(user.userId);
+  }
+
   @Get('manage')
   @ApiOperation({
     description:

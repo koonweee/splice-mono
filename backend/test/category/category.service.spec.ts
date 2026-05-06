@@ -151,6 +151,53 @@ describe('CategoryService', () => {
     expect(result[0]?.id).toBe(plaidCategory.id);
   });
 
+  it('returns hidden categories as filter options only when historically used', async () => {
+    const visibleCategory = buildCategoryEntity();
+    const hiddenUsedCategory = buildCategoryEntity({
+      id: '00000000-0000-4000-8000-000000000101',
+      primary: 'Home Projects',
+      detailed: 'Hardware',
+      source: 'user',
+      userId: mockUserId,
+    });
+    const hiddenUnusedCategory = buildCategoryEntity({
+      id: '00000000-0000-4000-8000-000000000102',
+      primary: 'Pets',
+      detailed: 'Grooming',
+      source: 'user',
+      userId: mockUserId,
+    });
+    mockRepository.find.mockResolvedValue([
+      visibleCategory,
+      hiddenUsedCategory,
+      hiddenUnusedCategory,
+    ]);
+    mockVisibilityRepository.find.mockResolvedValue([
+      {
+        id: 'visibility-id-1',
+        userId: mockUserId,
+        categoryId: hiddenUsedCategory.id,
+        hiddenAt: new Date('2024-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 'visibility-id-2',
+        userId: mockUserId,
+        categoryId: hiddenUnusedCategory.id,
+        hiddenAt: new Date('2024-01-01T00:00:00.000Z'),
+      },
+    ]);
+    mockTransactionQueryBuilder.getRawMany.mockResolvedValue([
+      { categoryId: hiddenUsedCategory.id },
+    ]);
+
+    const result = await service.findFilterOptions(mockUserId);
+
+    expect(result.map((category) => category.id)).toEqual([
+      visibleCategory.id,
+      hiddenUsedCategory.id,
+    ]);
+  });
+
   it('creates a user category with cleaned labels when no duplicate exists', async () => {
     mockQueryBuilder.getOne.mockResolvedValue(null);
     mockRepository.save.mockImplementation((entity: CategoryEntity) => {
@@ -430,6 +477,61 @@ describe('CategoryService', () => {
         hiddenAt: expect.any(Date),
       }),
     );
+  });
+
+  it('returns precise visibility skip reasons for archived or unowned categories', async () => {
+    const archivedCategory = buildCategoryEntity({
+      archivedAt: new Date('2024-02-01T00:00:00.000Z'),
+    });
+    const otherUserCategory = buildCategoryEntity({
+      id: '00000000-0000-4000-8000-000000000101',
+      source: 'user',
+      userId: otherUserId,
+    });
+    mockRepository.find.mockResolvedValue([
+      archivedCategory,
+      otherUserCategory,
+    ]);
+
+    const result = await service.bulkUpdateVisibility(mockUserId, {
+      categoryIds: [archivedCategory.id, otherUserCategory.id],
+      hidden: true,
+    });
+
+    expect(result).toEqual({
+      requested: 2,
+      updated: 0,
+      skipped: [
+        { categoryId: archivedCategory.id, reason: 'archived' },
+        { categoryId: otherUserCategory.id, reason: 'not_owned' },
+      ],
+    });
+    expect(mockVisibilityRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('returns precise custom bulk skip reasons for system or unowned categories', async () => {
+    const systemCategory = buildCategoryEntity();
+    const otherUserCategory = buildCategoryEntity({
+      id: '00000000-0000-4000-8000-000000000101',
+      source: 'user',
+      userId: otherUserId,
+    });
+    mockRepository.find.mockResolvedValue([systemCategory, otherUserCategory]);
+
+    const result = await service.bulkUpdateCustom(mockUserId, {
+      categoryIds: [systemCategory.id, otherUserCategory.id],
+      action: 'archive',
+    });
+
+    expect(result).toEqual({
+      requested: 2,
+      updated: 0,
+      skipped: [
+        { categoryId: systemCategory.id, reason: 'system_category' },
+        { categoryId: otherUserCategory.id, reason: 'not_owned' },
+      ],
+    });
+    expect(mockRepository.save).not.toHaveBeenCalled();
   });
 
   it('returns null when updating another user category or a Plaid category through custom update', async () => {

@@ -37,6 +37,19 @@ export class CategoryService {
     return categories.map((category) => category.toObject());
   }
 
+  async findFilterOptions(userId: string): Promise<Category[]> {
+    const categories = await this.findActiveCategoryEntities(userId);
+    const categoryIds = categories.map((category) => category.id);
+    const hiddenIds = await this.findHiddenCategoryIds(userId, categoryIds);
+    const usedIds = await this.findUsedCategoryIds(userId, categoryIds);
+
+    return categories
+      .filter(
+        (category) => !hiddenIds.has(category.id) || usedIds.has(category.id),
+      )
+      .map((category) => category.toObject());
+  }
+
   async findManagement(
     userId: string,
     options: { archivedMode?: boolean } = {},
@@ -255,27 +268,28 @@ export class CategoryService {
     userId: string,
     dto: BulkCategoryVisibilityDto,
   ): Promise<BulkCategoryActionResponse> {
+    const requestedIds = Array.from(new Set(dto.categoryIds));
     const categories = await this.categoryRepository.find({
-      where: [
-        { id: In(dto.categoryIds), source: 'plaid', archivedAt: IsNull() },
-        {
-          id: In(dto.categoryIds),
-          source: 'user',
-          userId,
-          archivedAt: IsNull(),
-        },
-      ],
+      where: { id: In(requestedIds) },
     });
     const categoryById = new Map(
       categories.map((category) => [category.id, category]),
     );
-    const requestedIds = Array.from(new Set(dto.categoryIds));
     const skipped: BulkCategoryActionResponse['skipped'] = [];
     let updated = 0;
 
     for (const categoryId of requestedIds) {
-      if (!categoryById.has(categoryId)) {
+      const category = categoryById.get(categoryId);
+      if (!category) {
         skipped.push({ categoryId, reason: 'not_found' });
+        continue;
+      }
+      if (category.archivedAt !== null) {
+        skipped.push({ categoryId, reason: 'archived' });
+        continue;
+      }
+      if (category.source === 'user' && category.userId !== userId) {
+        skipped.push({ categoryId, reason: 'not_owned' });
         continue;
       }
 
@@ -310,7 +324,7 @@ export class CategoryService {
   ): Promise<BulkCategoryActionResponse> {
     const requestedIds = Array.from(new Set(dto.categoryIds));
     const categories = await this.categoryRepository.find({
-      where: { id: In(requestedIds), source: 'user', userId },
+      where: { id: In(requestedIds) },
     });
     const categoryById = new Map(
       categories.map((category) => [category.id, category]),
@@ -322,6 +336,14 @@ export class CategoryService {
       const category = categoryById.get(categoryId);
       if (!category) {
         skipped.push({ categoryId, reason: 'not_found' });
+        continue;
+      }
+      if (category.source !== 'user') {
+        skipped.push({ categoryId, reason: 'system_category' });
+        continue;
+      }
+      if (category.userId !== userId) {
+        skipped.push({ categoryId, reason: 'not_owned' });
         continue;
       }
 
@@ -484,19 +506,25 @@ export class CategoryService {
   private async findActiveVisibleCategoryEntities(
     userId: string,
   ): Promise<CategoryEntity[]> {
-    const categories = await this.categoryRepository.find({
-      where: [
-        { source: 'plaid', archivedAt: IsNull() },
-        { source: 'user', userId, archivedAt: IsNull() },
-      ],
-      order: { primary: 'ASC', detailed: 'ASC' },
-    });
+    const categories = await this.findActiveCategoryEntities(userId);
     const hiddenIds = await this.findHiddenCategoryIds(
       userId,
       categories.map((category) => category.id),
     );
 
     return categories.filter((category) => !hiddenIds.has(category.id));
+  }
+
+  private async findActiveCategoryEntities(
+    userId: string,
+  ): Promise<CategoryEntity[]> {
+    return this.categoryRepository.find({
+      where: [
+        { source: 'plaid', archivedAt: IsNull() },
+        { source: 'user', userId, archivedAt: IsNull() },
+      ],
+      order: { primary: 'ASC', detailed: 'ASC' },
+    });
   }
 
   private async findHiddenCategoryIds(
@@ -524,6 +552,30 @@ export class CategoryService {
     });
 
     return preference !== null;
+  }
+
+  private async findUsedCategoryIds(
+    userId: string,
+    categoryIds: Array<string>,
+  ): Promise<Set<string>> {
+    if (categoryIds.length === 0) {
+      return new Set();
+    }
+
+    const rows = await this.transactionRepository
+      .createQueryBuilder('transaction')
+      .select(
+        'DISTINCT COALESCE(transaction."userCategoryId", transaction."categoryId")',
+        'categoryId',
+      )
+      .where('transaction."userId" = :userId', { userId })
+      .andWhere(
+        'COALESCE(transaction."userCategoryId", transaction."categoryId") IN (:...categoryIds)',
+        { categoryIds },
+      )
+      .getRawMany<{ categoryId: string }>();
+
+    return new Set(rows.map((row) => row.categoryId));
   }
 
   private async findEffectiveUsage(
