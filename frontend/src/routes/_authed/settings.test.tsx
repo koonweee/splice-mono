@@ -77,6 +77,7 @@ let queryClientState: {
 let meState: {
   data: {
     settings: {
+      theme?: string | null
       currency: string | null
       timezone: string | null
       hideZeroBalanceAccounts?: boolean | null
@@ -93,6 +94,13 @@ let updateSettingsState: {
   isSuccess: boolean
 }
 
+let localStorageState: {
+  getItem: ReturnType<typeof vi.fn>
+  setItem: ReturnType<typeof vi.fn>
+  removeItem: ReturnType<typeof vi.fn>
+  clear: ReturnType<typeof vi.fn>
+}
+
 function renderSettingsPage() {
   return render(
     <MantineProvider>
@@ -101,7 +109,30 @@ function renderSettingsPage() {
   )
 }
 
+function installMockLocalStorage() {
+  const store = new Map<string, string>()
+  localStorageState = {
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store.set(key, value)
+    }),
+    removeItem: vi.fn((key: string) => {
+      store.delete(key)
+    }),
+    clear: vi.fn(() => {
+      store.clear()
+    }),
+  }
+
+  Object.defineProperty(window, 'localStorage', {
+    value: localStorageState,
+    configurable: true,
+  })
+}
+
 beforeEach(() => {
+  installMockLocalStorage()
+
   queryClientState = {
     invalidateQueries: vi.fn(),
   }
@@ -109,6 +140,7 @@ beforeEach(() => {
   meState = {
     data: {
       settings: {
+        theme: 'splice-dark',
         currency: 'USD',
         timezone: 'UTC',
         hideZeroBalanceAccounts: false,
@@ -213,10 +245,71 @@ describe('SettingsPage', () => {
     expect(updateSettingsState.mutate).toHaveBeenCalledTimes(1)
     expect(updateSettingsState.mutate.mock.calls[0][0]).toEqual({
       data: {
+        theme: 'splice-dark',
         currency: 'USD',
         timezone: 'UTC',
         hideZeroBalanceAccounts: true,
       },
     })
+  })
+
+  it('saves the selected theme setting', () => {
+    renderSettingsPage()
+
+    localStorageState.setItem.mockClear()
+    fireEvent.click(screen.getByRole('radio', { name: /dracula/i }))
+
+    expect(localStorageState.setItem).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect(updateSettingsState.mutate).toHaveBeenCalledTimes(1)
+    expect(updateSettingsState.mutate.mock.calls[0][0]).toEqual({
+      data: {
+        theme: 'dracula',
+        currency: 'USD',
+        timezone: 'UTC',
+        hideZeroBalanceAccounts: false,
+      },
+    })
+  })
+
+  it('persists the selected theme after save succeeds', () => {
+    updateSettingsState.mutate.mockImplementation((_variables, options) => {
+      options?.onSuccess?.({}, undefined, undefined)
+    })
+    renderSettingsPage()
+
+    localStorageState.setItem.mockClear()
+    fireEvent.click(screen.getByRole('radio', { name: /oled black/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect(localStorageState.setItem).toHaveBeenCalledWith(
+      'splice_theme_preset',
+      'oled-black',
+    )
+  })
+
+  it('reverts the theme preview when save fails', () => {
+    const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent')
+    updateSettingsState.mutate.mockImplementation((_variables, options) => {
+      options?.onError?.(new Error('Save failed'), undefined, undefined)
+    })
+    renderSettingsPage()
+
+    dispatchEventSpy.mockClear()
+    localStorageState.setItem.mockClear()
+    fireEvent.click(screen.getByRole('radio', { name: /dracula/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect(localStorageState.setItem).not.toHaveBeenCalled()
+    expect(
+      dispatchEventSpy.mock.calls
+        .map(([event]) => event)
+        .filter((event): event is CustomEvent<{ theme: string }> =>
+          event instanceof CustomEvent,
+        )
+        .map((event) => event.detail.theme),
+    ).toEqual(['dracula', 'splice-dark'])
   })
 })

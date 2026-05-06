@@ -24,7 +24,10 @@ import {
   Settings,
   TrendingUp,
 } from 'lucide-react'
+import { useEffect } from 'react'
+import { useUserControllerMe } from '../api/clients/spliceAPI'
 import { useLogout, validateSession } from '../lib/auth'
+import { applyThemePresetId, normalizeThemePresetId } from '../lib/theme'
 import styles from './_authed.module.css'
 
 export const Route = createFileRoute('/_authed')({
@@ -58,6 +61,13 @@ function AuthedLayout() {
   const [opened, { toggle }] = useDisclosure()
   const location = useLocation()
   const logoutMutation = useLogout()
+  const { data: user } = useUserControllerMe()
+
+  useEffect(() => {
+    if (user?.settings) {
+      applyThemePresetId(normalizeThemePresetId(user.settings.theme))
+    }
+  }, [user?.settings])
 
   const navItems = [
     { to: '/home', label: 'Home', icon: Home },
