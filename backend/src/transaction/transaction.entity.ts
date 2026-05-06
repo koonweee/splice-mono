@@ -39,9 +39,25 @@ export class TransactionEntity extends OwnedEntity {
   @Column({ type: 'varchar', nullable: true })
   merchantName: string | null;
 
+  /** Provider's raw transaction name/description */
+  @Column({ type: 'varchar', nullable: true })
+  providerTransactionName: string | null;
+
+  /** Original transaction description from the financial institution */
+  @Column({ type: 'varchar', nullable: true })
+  originalDescription: string | null;
+
   /** Whether the transaction is pending (unsettled) */
   @Column({ type: 'boolean' })
   pending: boolean;
+
+  /** Provider ID of the related pending transaction, when available */
+  @Column({ type: 'varchar', nullable: true })
+  pendingTransactionId: string | null;
+
+  /** Account owner supplied by the provider, when available */
+  @Column({ type: 'varchar', nullable: true })
+  accountOwner: string | null;
 
   /** External transaction ID from provider (e.g., Plaid transaction_id) */
   @Column({ type: 'varchar', nullable: true })
@@ -50,6 +66,42 @@ export class TransactionEntity extends OwnedEntity {
   /** Logo URL for the merchant */
   @Column({ type: 'varchar', nullable: true })
   logoUrl: string | null;
+
+  /** Website URL associated with the merchant */
+  @Column({ type: 'varchar', nullable: true })
+  website: string | null;
+
+  /** Stable provider merchant entity ID */
+  @Column({ type: 'varchar', nullable: true })
+  merchantEntityId: string | null;
+
+  /** Channel used to make the payment */
+  @Column({ type: 'varchar', nullable: true })
+  paymentChannel: string | null;
+
+  /** Provider transaction code */
+  @Column({ type: 'varchar', nullable: true })
+  transactionCode: string | null;
+
+  /** Icon URL for the provider's personal finance category */
+  @Column({ type: 'varchar', nullable: true })
+  personalFinanceCategoryIconUrl: string | null;
+
+  /** Provider confidence level for the personal finance category */
+  @Column({ type: 'varchar', nullable: true })
+  personalFinanceCategoryConfidenceLevel: string | null;
+
+  /** Provider-extracted counterparties for this transaction */
+  @Column({ type: 'jsonb', nullable: true })
+  counterparties: Array<Record<string, unknown>> | null;
+
+  /** Provider location metadata for this transaction */
+  @Column({ type: 'jsonb', nullable: true })
+  location: Record<string, unknown> | null;
+
+  /** Provider payment metadata for this transaction */
+  @Column({ type: 'jsonb', nullable: true })
+  paymentMeta: Record<string, unknown> | null;
 
   /** Transaction date (yyyy-mm-dd) - occurrence date for pending, posted date for posted */
   @Column({ type: 'date' })
@@ -106,9 +158,24 @@ export class TransactionEntity extends OwnedEntity {
     entity.amount = BalanceColumns.fromMoneyWithSign(dto.amount);
     entity.accountId = dto.accountId;
     entity.merchantName = dto.merchantName ?? null;
+    entity.providerTransactionName = dto.providerTransactionName ?? null;
+    entity.originalDescription = dto.originalDescription ?? null;
     entity.pending = dto.pending;
+    entity.pendingTransactionId = dto.pendingTransactionId ?? null;
+    entity.accountOwner = dto.accountOwner ?? null;
     entity.externalTransactionId = dto.externalTransactionId ?? null;
     entity.logoUrl = dto.logoUrl ?? null;
+    entity.website = dto.website ?? null;
+    entity.merchantEntityId = dto.merchantEntityId ?? null;
+    entity.paymentChannel = dto.paymentChannel ?? null;
+    entity.transactionCode = dto.transactionCode ?? null;
+    entity.personalFinanceCategoryIconUrl =
+      dto.personalFinanceCategoryIconUrl ?? null;
+    entity.personalFinanceCategoryConfidenceLevel =
+      dto.personalFinanceCategoryConfidenceLevel ?? null;
+    entity.counterparties = dto.counterparties ?? null;
+    entity.location = dto.location ?? null;
+    entity.paymentMeta = dto.paymentMeta ?? null;
     entity.date = dto.date;
     entity.datetime = dto.datetime ?? null;
     entity.authorizedDate = dto.authorizedDate ?? null;
@@ -138,9 +205,23 @@ export class TransactionEntity extends OwnedEntity {
       amount: this.amount.toMoneyWithSign(),
       accountId: this.accountId,
       merchantName: this.merchantName,
+      providerTransactionName: this.providerTransactionName,
+      originalDescription: this.originalDescription,
       pending: this.pending,
+      pendingTransactionId: this.pendingTransactionId,
+      accountOwner: this.accountOwner,
       externalTransactionId: this.externalTransactionId,
       logoUrl: this.logoUrl,
+      website: this.website,
+      merchantEntityId: this.merchantEntityId,
+      paymentChannel: this.paymentChannel,
+      transactionCode: this.transactionCode,
+      personalFinanceCategoryIconUrl: this.personalFinanceCategoryIconUrl,
+      personalFinanceCategoryConfidenceLevel:
+        this.personalFinanceCategoryConfidenceLevel,
+      counterparties: this.counterparties,
+      location: this.location,
+      paymentMeta: this.paymentMeta,
       date: this.date,
       datetime: this.datetime,
       authorizedDate: this.authorizedDate,

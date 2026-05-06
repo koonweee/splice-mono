@@ -2,6 +2,44 @@
   min-width: 120px;
 }
 
+.merchantCell {
+  width: 100%;
+  min-width: 0;
+}
+
+.merchantText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.merchantPrimary,
+.merchantSecondary {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.merchantInfoButton {
+  flex: 0 0 auto;
+  min-width: 32px;
+  min-height: 32px;
+  color: var(--mantine-color-dimmed);
+}
+
+@media (pointer: coarse) {
+  .merchantInfoButton {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+.metadataPopover {
+  border-color: var(--mantine-color-dark-4);
+}
+
 .categoryCell {
   width: fit-content;
   min-height: 28px;
