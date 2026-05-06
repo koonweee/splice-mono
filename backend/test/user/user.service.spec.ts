@@ -3,13 +3,15 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthService } from '../../src/auth/auth.service';
+import type { UserSettings } from '../../src/types/UserSettings';
 import { UserEntity } from '../../src/user/user.entity';
 import { UserService } from '../../src/user/user.service';
 
-const defaultSettings = {
+const defaultSettings: UserSettings = {
   currency: 'USD',
   timezone: 'UTC',
   hideZeroBalanceAccounts: false,
+  theme: 'splice-dark',
 };
 
 describe('UserService', () => {
@@ -185,6 +187,7 @@ describe('UserService', () => {
       expect(result?.id).toBe('user-uuid-123');
       expect(result?.email).toBe('test@example.com');
       expect(result?.settings.hideZeroBalanceAccounts).toBe(false);
+      expect(result?.settings.theme).toBe('splice-dark');
       expect(result).not.toHaveProperty('hashedPassword');
     });
 
@@ -537,6 +540,32 @@ describe('UserService', () => {
       expect(result).toEqual({
         ...defaultSettings,
         hideZeroBalanceAccounts: true,
+      });
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should update theme without affecting currency or timezone events', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = defaultSettings;
+      mockEntity.providerDetails = null;
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
+
+      const result = await service.updateSettings('user-uuid-123', {
+        theme: 'dracula',
+      });
+
+      expect(result).toEqual({
+        ...defaultSettings,
+        theme: 'dracula',
       });
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });

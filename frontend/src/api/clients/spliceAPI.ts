@@ -57,6 +57,7 @@ import type {
   UpdateTransactionDto,
   UpdateUserSettingsDto,
   User,
+  UserControllerDevLoginParams,
   UserControllerOauthGoogleCallbackParams,
   UserControllerOauthGoogleStartParams,
   UserSettings,
@@ -1063,6 +1064,164 @@ export function useUserControllerOauthGoogleCallback<
     params,
     options,
   )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Development-only local browser login for automation tools
+ */
+export const userControllerDevLogin = (
+  params?: UserControllerDevLoginParams,
+  signal?: AbortSignal,
+) => {
+  return axios<unknown>({
+    url: `/user/dev/login`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getUserControllerDevLoginQueryKey = (
+  params?: UserControllerDevLoginParams,
+) => {
+  return [`/user/dev/login`, ...(params ? [params] : [])] as const
+}
+
+export const getUserControllerDevLoginQueryOptions = <
+  TData = Awaited<ReturnType<typeof userControllerDevLogin>>,
+  TError = void,
+>(
+  params?: UserControllerDevLoginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof userControllerDevLogin>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getUserControllerDevLoginQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof userControllerDevLogin>>
+  > = ({ signal }) => userControllerDevLogin(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof userControllerDevLogin>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UserControllerDevLoginQueryResult = NonNullable<
+  Awaited<ReturnType<typeof userControllerDevLogin>>
+>
+export type UserControllerDevLoginQueryError = void
+
+export function useUserControllerDevLogin<
+  TData = Awaited<ReturnType<typeof userControllerDevLogin>>,
+  TError = void,
+>(
+  params: undefined | UserControllerDevLoginParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof userControllerDevLogin>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof userControllerDevLogin>>,
+          TError,
+          Awaited<ReturnType<typeof userControllerDevLogin>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useUserControllerDevLogin<
+  TData = Awaited<ReturnType<typeof userControllerDevLogin>>,
+  TError = void,
+>(
+  params?: UserControllerDevLoginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof userControllerDevLogin>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof userControllerDevLogin>>,
+          TError,
+          Awaited<ReturnType<typeof userControllerDevLogin>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useUserControllerDevLogin<
+  TData = Awaited<ReturnType<typeof userControllerDevLogin>>,
+  TError = void,
+>(
+  params?: UserControllerDevLoginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof userControllerDevLogin>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useUserControllerDevLogin<
+  TData = Awaited<ReturnType<typeof userControllerDevLogin>>,
+  TError = void,
+>(
+  params?: UserControllerDevLoginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof userControllerDevLogin>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getUserControllerDevLoginQueryOptions(params, options)
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
