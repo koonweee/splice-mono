@@ -32,7 +32,7 @@ const mockFns = vi.hoisted(() => ({
   useInfiniteQueryMock: vi.fn(),
   invalidateQueriesMock: vi.fn(),
   useAccountControllerFindAllMock: vi.fn(),
-  useCategoryControllerFindAllMock: vi.fn(),
+  useCategoryControllerFindFilterOptionsMock: vi.fn(),
   useTransactionControllerBulkReviewCategoriesMock: vi.fn(),
   useTransactionControllerUndoBulkReviewCategoriesMock: vi.fn(),
   bulkReviewMutateMock: vi.fn(),
@@ -167,7 +167,8 @@ vi.mock('../../api/clients/spliceAPI', async () => {
     ],
     transactionControllerFindAll: mockFns.transactionControllerFindAllMock,
     useAccountControllerFindAll: mockFns.useAccountControllerFindAllMock,
-    useCategoryControllerFindAll: mockFns.useCategoryControllerFindAllMock,
+    useCategoryControllerFindFilterOptions:
+      mockFns.useCategoryControllerFindFilterOptionsMock,
     useTransactionControllerBulkReviewCategories:
       mockFns.useTransactionControllerBulkReviewCategoriesMock,
     useTransactionControllerUndoBulkReviewCategories:
@@ -215,8 +216,20 @@ const category: Category = {
   primary: 'FOOD_AND_DRINK',
   detailed: 'FOOD_AND_DRINK_RESTAURANT',
   description: 'Food category',
+  source: 'plaid',
+  userId: null,
+  archivedAt: null,
   createdAt: '2026-02-14T00:00:00.000Z',
   updatedAt: '2026-02-14T00:00:00.000Z',
+}
+
+const hiddenCategory: Category = {
+  ...category,
+  id: 'category-2',
+  primary: 'Hidden Primary',
+  detailed: 'Hidden Detail',
+  source: 'user',
+  userId: 'user-1',
 }
 
 const transactionsPageData: PaginatedTransactionResponse = {
@@ -265,8 +278,8 @@ beforeEach(() => {
   mockFns.useAccountControllerFindAllMock.mockReturnValue({
     data: [account],
   })
-  mockFns.useCategoryControllerFindAllMock.mockReturnValue({
-    data: [category],
+  mockFns.useCategoryControllerFindFilterOptionsMock.mockReturnValue({
+    data: [category, hiddenCategory],
   })
   mockFns.useTransactionControllerBulkReviewCategoriesMock.mockReturnValue({
     mutate: mockFns.bulkReviewMutateMock,
@@ -312,6 +325,39 @@ describe('TransactionsPage category review workflow', () => {
 
     expect(
       screen.getByRole('button', { name: /Open transaction filters/ }),
+    ).toBeTruthy()
+  })
+
+  it('keeps hidden categories available in historical transaction filters', () => {
+    renderTransactionsPage()
+
+    expect(mockFns.useCategoryControllerFindFilterOptionsMock).toHaveBeenCalled()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction filters/ }),
+    )
+
+    expect(
+      screen.getByRole('option', { name: 'Hidden Primary' }),
+    ).toBeTruthy()
+  })
+
+  it('does not show default categories omitted from filter options', () => {
+    mockFns.useCategoryControllerFindFilterOptionsMock.mockReturnValue({
+      data: [hiddenCategory],
+    })
+
+    renderTransactionsPage()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction filters/ }),
+    )
+
+    expect(
+      screen.queryByRole('option', { name: 'Food And Drink' }),
+    ).toBeNull()
+    expect(
+      screen.getByRole('option', { name: 'Uncategorized' }),
     ).toBeTruthy()
   })
 

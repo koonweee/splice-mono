@@ -25,11 +25,10 @@ import {
   getTransactionControllerFindAllQueryKey,
   transactionControllerFindAll,
   useAccountControllerFindAll,
-  useCategoryControllerFindAll,
+  useCategoryControllerFindFilterOptions,
   useTransactionControllerBulkReviewCategories,
   useTransactionControllerUndoBulkReviewCategories,
 } from '../../api/clients/spliceAPI'
-import { CATEGORY_COLORS } from '../../lib/constants'
 import { formatPrimaryCategory } from '../../lib/format'
 import type {
   BulkTransactionCategoryReviewDto,
@@ -102,9 +101,7 @@ const mobileSegmentedControlStyles = {
 const isValidDateString = (value: unknown): value is string =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 
-function getPrimaryCategoryLabel(
-  category: Pick<Category, 'primary' | 'source'>,
-) {
+function getPrimaryCategoryLabel(category: Pick<Category, 'primary' | 'source'>) {
   return category.source === 'user'
     ? category.primary
     : formatPrimaryCategory(category.primary)
@@ -253,7 +250,7 @@ function TransactionsPage() {
 
   // Account data for the select dropdown
   const { data: accounts } = useAccountControllerFindAll()
-  const { data: categories } = useCategoryControllerFindAll()
+  const { data: categories } = useCategoryControllerFindFilterOptions()
   const bulkReviewCategories = useTransactionControllerBulkReviewCategories()
   const undoBulkReviewCategories = useTransactionControllerUndoBulkReviewCategories()
 
@@ -277,9 +274,7 @@ function TransactionsPage() {
 
   const categoryOptions = useMemo(() => {
     const options = new Map<string, string>()
-    Object.keys(CATEGORY_COLORS).forEach((key) => {
-      options.set(key, formatPrimaryCategory(key))
-    })
+    options.set('UNCATEGORIZED', formatPrimaryCategory('UNCATEGORIZED'))
     ;(categories ?? []).forEach((category) => {
       if (!options.has(category.primary)) {
         options.set(category.primary, getPrimaryCategoryLabel(category))
