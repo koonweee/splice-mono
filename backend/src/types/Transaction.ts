@@ -4,6 +4,24 @@ import { registerSchema } from '../common/zod-api-response';
 import { MoneyWithSignSchema } from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
 
+export const TransactionCategoryReviewMethodSchema = registerSchema(
+  'TransactionCategoryReviewMethod',
+  z.enum(['manual_accept', 'manual_change', 'bulk_accept']),
+);
+
+export type TransactionCategoryReviewMethod = z.infer<
+  typeof TransactionCategoryReviewMethodSchema
+>;
+
+export const TransactionCategoryReviewStatusSchema = registerSchema(
+  'TransactionCategoryReviewStatus',
+  z.enum(['needs_review', 'reviewed']),
+);
+
+export type TransactionCategoryReviewStatus = z.infer<
+  typeof TransactionCategoryReviewStatusSchema
+>;
+
 /**
  * Transaction schema for financial transactions linked to accounts.
  */
@@ -46,6 +64,12 @@ export const TransactionSchema = registerSchema(
       effectiveCategoryId: z.string().uuid().nullable(),
       /** Category used for user-facing display and aggregation */
       effectiveCategory: CategorySchema.nullable().optional(),
+      /** When the category was reviewed by the user */
+      categoryReviewedAt: z.coerce.date().nullable(),
+      /** How the category review was completed */
+      categoryReviewMethod: TransactionCategoryReviewMethodSchema.nullable(),
+      /** Whether the category still needs user review */
+      categoryNeedsReview: z.boolean(),
       /** Display name of the associated account (customName or name) */
       accountName: z.string().nullable().optional(),
       /** Converted amount in user's preferred currency (set when convert=true) */
@@ -105,6 +129,67 @@ export const UpdateTransactionCategoryDtoSchema = registerSchema(
 
 export type UpdateTransactionCategoryDto = z.infer<
   typeof UpdateTransactionCategoryDtoSchema
+>;
+
+export const UpdateTransactionCategoryReviewDtoSchema = registerSchema(
+  'UpdateTransactionCategoryReviewDto',
+  z.object({
+    reviewed: z.boolean(),
+  }),
+);
+
+export type UpdateTransactionCategoryReviewDto = z.infer<
+  typeof UpdateTransactionCategoryReviewDtoSchema
+>;
+
+export const BulkTransactionCategoryReviewFiltersSchema = registerSchema(
+  'BulkTransactionCategoryReviewFilters',
+  z.object({
+    accountId: z.string().uuid().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    categoryPrimary: z.string().optional(),
+    amountSign: z.enum(['positive', 'negative']).optional(),
+    categoryReviewStatus: TransactionCategoryReviewStatusSchema.optional(),
+  }),
+);
+
+export type BulkTransactionCategoryReviewFilters = z.infer<
+  typeof BulkTransactionCategoryReviewFiltersSchema
+>;
+
+export const BulkTransactionCategoryReviewDtoSchema = registerSchema(
+  'BulkTransactionCategoryReviewDto',
+  z.object({
+    filters: BulkTransactionCategoryReviewFiltersSchema.default({}),
+  }),
+);
+
+export type BulkTransactionCategoryReviewDto = z.infer<
+  typeof BulkTransactionCategoryReviewDtoSchema
+>;
+
+export const BulkTransactionCategoryReviewUndoDtoSchema = registerSchema(
+  'BulkTransactionCategoryReviewUndoDto',
+  z.object({
+    transactionIds: z.array(z.string().uuid()),
+  }),
+);
+
+export type BulkTransactionCategoryReviewUndoDto = z.infer<
+  typeof BulkTransactionCategoryReviewUndoDtoSchema
+>;
+
+export const BulkTransactionCategoryReviewResponseSchema = registerSchema(
+  'BulkTransactionCategoryReviewResponse',
+  z.object({
+    count: z.number().int(),
+    transactionIds: z.array(z.string().uuid()),
+  }),
+);
+
+export type BulkTransactionCategoryReviewResponse = z.infer<
+  typeof BulkTransactionCategoryReviewResponseSchema
 >;
 
 /**

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TransactionsTable } from './TransactionsTable'
+import type React from 'react'
 import type * as SpliceAPI from '../api/clients/spliceAPI'
 import type { Category, Transaction } from '../api/models'
 import type { MRT_ColumnDef } from 'mantine-react-table'
@@ -10,7 +11,10 @@ import type { MRT_ColumnDef } from 'mantine-react-table'
 const mockFns = vi.hoisted(() => ({
   useCategoryControllerFindAllMock: vi.fn(),
   useTransactionControllerUpdateCategoryMock: vi.fn(),
+  useTransactionControllerUpdateCategoryReviewMock: vi.fn(),
   updateCategoryMutateMock: vi.fn(),
+  updateCategoryReviewMutateMock: vi.fn(),
+  notificationsShowMock: vi.fn(),
 }))
 
 vi.mock('mantine-react-table', () => ({
@@ -60,8 +64,16 @@ vi.mock('../api/clients/spliceAPI', async () => {
     useCategoryControllerFindAll: mockFns.useCategoryControllerFindAllMock,
     useTransactionControllerUpdateCategory:
       mockFns.useTransactionControllerUpdateCategoryMock,
+    useTransactionControllerUpdateCategoryReview:
+      mockFns.useTransactionControllerUpdateCategoryReviewMock,
   }
 })
+
+vi.mock('@mantine/notifications', () => ({
+  notifications: {
+    show: mockFns.notificationsShowMock,
+  },
+}))
 
 const providerCategory = makeCategory({
   id: 'provider-category-id',
@@ -99,6 +111,11 @@ beforeEach(() => {
   })
   mockFns.useTransactionControllerUpdateCategoryMock.mockReturnValue({
     mutate: mockFns.updateCategoryMutateMock,
+    isPending: false,
+    variables: undefined,
+  })
+  mockFns.useTransactionControllerUpdateCategoryReviewMock.mockReturnValue({
+    mutate: mockFns.updateCategoryReviewMutateMock,
     isPending: false,
     variables: undefined,
   })
@@ -177,6 +194,68 @@ describe('TransactionsTable', () => {
     ).toBeTruthy()
   })
 
+  it('marks unreviewed categories as reviewed inline', () => {
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+        categoryNeedsReview: true,
+      }),
+    ])
+
+    expect(screen.getByLabelText('Category needs review')).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText('Mark category as reviewed'))
+
+    expect(mockFns.updateCategoryReviewMutateMock).toHaveBeenCalledWith(
+      {
+        id: 'txn-1',
+        data: { reviewed: true },
+      },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+      }),
+    )
+  })
+
+  it('shows an undo notification after reviewing a category inline', () => {
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+        categoryNeedsReview: true,
+      }),
+    ])
+
+    fireEvent.click(screen.getByLabelText('Mark category as reviewed'))
+
+    const reviewOptions = mockFns.updateCategoryReviewMutateMock.mock
+      .calls[0]?.[1] as { onSuccess?: () => void }
+    reviewOptions.onSuccess?.()
+
+    expect(mockFns.notificationsShowMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Category reviewed',
+        color: 'green',
+      }),
+    )
+
+    const notification = mockFns.notificationsShowMock.mock.calls[0]?.[0] as {
+      message: React.ReactNode
+    }
+
+    render(<MantineProvider>{notification.message}</MantineProvider>)
+
+    expect(screen.getByText('Category marked as reviewed.')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+
+    expect(mockFns.updateCategoryReviewMutateMock).toHaveBeenLastCalledWith({
+      id: 'txn-1',
+      data: { reviewed: false },
+    })
+  })
+
   it('dismisses the category selector when clicking away', () => {
     renderTable([
       makeTransaction({
@@ -232,6 +311,7 @@ function makeCategory(overrides: {
 function makeTransaction(params: {
   category: Category
   userCategory: Category | null
+  categoryNeedsReview?: boolean
 }): Transaction {
   return {
     id: 'txn-1',
@@ -258,6 +338,11 @@ function makeTransaction(params: {
     effectiveCategoryId: params.userCategory?.id ?? params.category.id,
     effectiveCategory: params.userCategory ?? params.category,
     accountName: 'Checking',
+    categoryReviewedAt: params.categoryNeedsReview
+      ? null
+      : '2026-02-14T00:00:00.000Z',
+    categoryReviewMethod: params.categoryNeedsReview ? null : 'manual_accept',
+    categoryNeedsReview: params.categoryNeedsReview ?? false,
     createdAt: '2026-02-14T00:00:00.000Z',
     updatedAt: '2026-02-14T00:00:00.000Z',
     userId: 'user-1',

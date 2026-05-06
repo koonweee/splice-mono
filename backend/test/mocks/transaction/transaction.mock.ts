@@ -46,6 +46,9 @@ export const mockTransaction: Transaction = {
   userCategoryUpdatedAt: null,
   effectiveCategoryId: mockCategoryId,
   effectiveCategory: null,
+  categoryReviewedAt: null,
+  categoryReviewMethod: null,
+  categoryNeedsReview: true,
   ...mockTimestamps,
 };
 
@@ -75,6 +78,9 @@ export const mockTransaction2: Transaction = {
   userCategoryUpdatedAt: null,
   effectiveCategoryId: null,
   effectiveCategory: null,
+  categoryReviewedAt: null,
+  categoryReviewMethod: null,
+  categoryNeedsReview: true,
   ...mockTimestamps,
 };
 

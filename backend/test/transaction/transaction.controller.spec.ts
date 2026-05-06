@@ -62,13 +62,13 @@ describe('TransactionController', () => {
       });
       expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
         mockUser.userId,
-        {
+        expect.objectContaining({
           pageIndex: 0,
           pageSize: 20,
           sortBy: undefined,
           sortOrder: 'DESC',
           accountId: undefined,
-        },
+        }),
       );
     });
 
@@ -77,13 +77,13 @@ describe('TransactionController', () => {
 
       expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
         mockUser.userId,
-        {
+        expect.objectContaining({
           pageIndex: 2,
           pageSize: 10,
           sortBy: 'merchantName',
           sortOrder: 'ASC',
           accountId: undefined,
-        },
+        }),
       );
     });
 
@@ -99,13 +99,13 @@ describe('TransactionController', () => {
 
       expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
         mockUser.userId,
-        {
+        expect.objectContaining({
           pageIndex: 0,
           pageSize: 20,
           sortBy: undefined,
           sortOrder: 'DESC',
           accountId: mockAccountId,
-        },
+        }),
       );
     });
 
@@ -124,6 +124,30 @@ describe('TransactionController', () => {
       expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
         mockUser.userId,
         expect.objectContaining({ pageIndex: 0 }),
+      );
+    });
+
+    it('should pass category review status when valid', async () => {
+      await controller.findAll(
+        mockUser,
+        '0',
+        '20',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'true',
+        'needs_review',
+      );
+
+      expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
+        mockUser.userId,
+        expect.objectContaining({
+          categoryReviewStatus: 'needs_review',
+        }),
       );
     });
   });
@@ -282,6 +306,74 @@ describe('TransactionController', () => {
       ).rejects.toThrow(
         'Transaction or category for transaction non-existent-id not found',
       );
+    });
+  });
+
+  describe('updateCategoryReview', () => {
+    const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
+
+    it('should update category review and return a transaction', async () => {
+      mockTransactionService.updateCategoryReview.mockResolvedValue(
+        mockTransaction,
+      );
+
+      const result = await controller.updateCategoryReview(
+        'transaction-uuid-123',
+        mockUser,
+        { reviewed: true },
+      );
+
+      expect(result).toEqual(mockTransaction);
+      expect(mockTransactionService.updateCategoryReview).toHaveBeenCalledWith(
+        'transaction-uuid-123',
+        { reviewed: true },
+        mockUser.userId,
+      );
+    });
+
+    it('should throw NotFoundException when transaction is not found', async () => {
+      mockTransactionService.updateCategoryReview.mockResolvedValue(null);
+
+      await expect(
+        controller.updateCategoryReview('non-existent-id', mockUser, {
+          reviewed: true,
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('bulk category review', () => {
+    const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
+
+    it('should bulk review categories', async () => {
+      const result = await controller.bulkReviewCategories(mockUser, {
+        filters: { categoryReviewStatus: 'needs_review' },
+      });
+
+      expect(result).toEqual({
+        count: 1,
+        transactionIds: [mockTransaction.id],
+      });
+      expect(mockTransactionService.bulkReviewCategories).toHaveBeenCalledWith(
+        mockUser.userId,
+        { filters: { categoryReviewStatus: 'needs_review' } },
+      );
+    });
+
+    it('should undo bulk review categories', async () => {
+      const result = await controller.undoBulkReviewCategories(mockUser, {
+        transactionIds: [mockTransaction.id],
+      });
+
+      expect(result).toEqual({
+        count: 1,
+        transactionIds: [mockTransaction.id],
+      });
+      expect(
+        mockTransactionService.undoBulkReviewCategories,
+      ).toHaveBeenCalledWith(mockUser.userId, {
+        transactionIds: [mockTransaction.id],
+      });
     });
   });
 

@@ -5,18 +5,27 @@ import {
   FindOptionsOrder,
   FindOptionsWhere,
   In,
+  IsNull,
   LessThanOrEqual,
   MoreThanOrEqual,
+  Not,
   Repository,
+  SelectQueryBuilder,
 } from 'typeorm';
 import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
 import {
+  BulkTransactionCategoryReviewDto,
+  BulkTransactionCategoryReviewResponse,
+  BulkTransactionCategoryReviewUndoDto,
   CreateTransactionDto,
   Transaction,
+  TransactionCategoryReviewMethod,
+  TransactionCategoryReviewStatus,
   UpdateTransactionCategoryDto,
+  UpdateTransactionCategoryReviewDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
 import { TransactionEntity } from './transaction.entity';
@@ -25,6 +34,15 @@ import type {
   TransactionSurfaceSearchOptions,
   TransactionSurfaceSearchResult,
 } from './transaction-surface.types';
+
+type TransactionFilterOptions = {
+  accountId?: string;
+  startDate?: string;
+  endDate?: string;
+  categoryPrimary?: string;
+  amountSign?: string;
+  categoryReviewStatus?: TransactionCategoryReviewStatus;
+};
 
 @Injectable()
 export class TransactionService extends OwnedCrudService<
@@ -208,6 +226,145 @@ export class TransactionService extends OwnedCrudService<
     'amount',
   ]);
 
+  private markCategoryReviewed(
+    entity: TransactionEntity,
+    method: TransactionCategoryReviewMethod,
+  ): void {
+    entity.categoryReviewedAt = new Date();
+    entity.categoryReviewMethod = method;
+  }
+
+  private clearCategoryReview(entity: TransactionEntity): void {
+    entity.categoryReviewedAt = null;
+    entity.categoryReviewMethod = null;
+  }
+
+  private buildFindOrder(
+    sortColumn: string,
+    order: 'ASC' | 'DESC',
+  ): FindOptionsOrder<TransactionEntity> {
+    const orderClause: FindOptionsOrder<TransactionEntity> =
+      sortColumn === 'amount'
+        ? { amount: { amount: order } }
+        : sortColumn === 'merchantName'
+          ? { merchantName: order }
+          : sortColumn === 'pending'
+            ? { pending: order }
+            : { date: order };
+
+    const chronologicalTieOrder = sortColumn === 'date' ? order : 'DESC';
+    if (sortColumn !== 'date') {
+      orderClause.date = 'DESC';
+    }
+    orderClause.datetime = chronologicalTieOrder;
+    orderClause.authorizedDatetime = chronologicalTieOrder;
+    orderClause.id = chronologicalTieOrder;
+
+    return orderClause;
+  }
+
+  private applyTransactionOrder(
+    query: SelectQueryBuilder<TransactionEntity>,
+    sortColumn: string,
+    order: 'ASC' | 'DESC',
+  ): SelectQueryBuilder<TransactionEntity> {
+    const sortExpression =
+      sortColumn === 'amount'
+        ? 'transaction.amountAmount'
+        : `transaction.${sortColumn}`;
+    const chronologicalTieOrder = sortColumn === 'date' ? order : 'DESC';
+
+    query.orderBy(sortExpression, order);
+    if (sortColumn !== 'date') {
+      query.addOrderBy('transaction.date', 'DESC');
+    }
+    query
+      .addOrderBy('transaction.datetime', chronologicalTieOrder, 'NULLS LAST')
+      .addOrderBy(
+        'transaction.authorizedDatetime',
+        chronologicalTieOrder,
+        'NULLS LAST',
+      )
+      .addOrderBy('transaction.id', chronologicalTieOrder);
+
+    return query;
+  }
+
+  private applyCategoryReviewStatusWhere(
+    where: FindOptionsWhere<TransactionEntity>,
+    categoryReviewStatus?: TransactionCategoryReviewStatus,
+  ): void {
+    if (categoryReviewStatus === 'needs_review') {
+      where.categoryReviewedAt = IsNull();
+    } else if (categoryReviewStatus === 'reviewed') {
+      where.categoryReviewedAt = Not(IsNull());
+    }
+  }
+
+  private applyQueryFilters(
+    query: SelectQueryBuilder<TransactionEntity>,
+    options: TransactionFilterOptions,
+  ): void {
+    const {
+      accountId,
+      startDate,
+      endDate,
+      categoryPrimary,
+      amountSign,
+      categoryReviewStatus,
+    } = options;
+
+    if (accountId) {
+      query.andWhere('transaction.accountId = :accountId', { accountId });
+    }
+    if (startDate && endDate) {
+      query.andWhere('transaction.date BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate,
+      });
+    } else if (startDate) {
+      query.andWhere('transaction.date >= :startDate', { startDate });
+    } else if (endDate) {
+      query.andWhere('transaction.date <= :endDate', { endDate });
+    }
+    if (amountSign === 'positive' || amountSign === 'negative') {
+      query.andWhere('transaction.amountSign = :amountSign', { amountSign });
+    }
+    if (categoryReviewStatus === 'needs_review') {
+      query.andWhere('transaction.categoryReviewedAt IS NULL');
+    } else if (categoryReviewStatus === 'reviewed') {
+      query.andWhere('transaction.categoryReviewedAt IS NOT NULL');
+    }
+    if (categoryPrimary) {
+      if (categoryPrimary === 'UNCATEGORIZED') {
+        query.andWhere(
+          'COALESCE(transaction.userCategoryId, transaction.categoryId) IS NULL',
+        );
+      } else {
+        query.andWhere(
+          'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
+          { categoryPrimary },
+        );
+      }
+    }
+  }
+
+  private buildFilteredTransactionQuery(
+    userId: string,
+    options: TransactionFilterOptions,
+  ): SelectQueryBuilder<TransactionEntity> {
+    const query = this.repository
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.account', 'account')
+      .leftJoinAndSelect('transaction.category', 'category')
+      .leftJoinAndSelect('transaction.userCategory', 'userCategory')
+      .where('transaction.userId = :userId', { userId });
+
+    this.applyQueryFilters(query, options);
+
+    return query;
+  }
+
   /**
    * Find all transactions with pagination, sorting, and optional filters
    */
@@ -223,6 +380,7 @@ export class TransactionService extends OwnedCrudService<
       endDate?: string;
       categoryPrimary?: string;
       amountSign?: string;
+      categoryReviewStatus?: TransactionCategoryReviewStatus;
     },
   ): Promise<{ data: Transaction[]; total: number }> {
     const {
@@ -235,6 +393,7 @@ export class TransactionService extends OwnedCrudService<
       endDate,
       categoryPrimary,
       amountSign,
+      categoryReviewStatus,
     } = options;
 
     const sortColumn =
@@ -257,6 +416,7 @@ export class TransactionService extends OwnedCrudService<
     if (amountSign === 'positive' || amountSign === 'negative') {
       where.amount = { sign: amountSign } as unknown as BalanceColumns;
     }
+    this.applyCategoryReviewStatusWhere(where, categoryReviewStatus);
 
     this.logger.log(
       {
@@ -270,15 +430,13 @@ export class TransactionService extends OwnedCrudService<
         endDate,
         categoryPrimary,
         amountSign,
+        categoryReviewStatus,
       },
       'Finding paginated transactions',
     );
 
     if (!categoryPrimary) {
-      const orderClause: FindOptionsOrder<TransactionEntity> =
-        sortColumn === 'amount'
-          ? { amount: { amount: order } }
-          : { [sortColumn]: order };
+      const orderClause = this.buildFindOrder(sortColumn, order);
 
       const [entities, total] = await this.repository.findAndCount({
         where,
@@ -299,49 +457,20 @@ export class TransactionService extends OwnedCrudService<
       };
     }
 
-    const query = this.repository
-      .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.account', 'account')
-      .leftJoinAndSelect('transaction.category', 'category')
-      .leftJoinAndSelect('transaction.userCategory', 'userCategory')
-      .where('transaction.userId = :userId', { userId });
+    const query = this.buildFilteredTransactionQuery(userId, {
+      accountId,
+      startDate,
+      endDate,
+      categoryPrimary,
+      amountSign,
+      categoryReviewStatus,
+    });
 
-    if (accountId) {
-      query.andWhere('transaction.accountId = :accountId', { accountId });
-    }
-    if (startDate && endDate) {
-      query.andWhere('transaction.date BETWEEN :startDate AND :endDate', {
-        startDate,
-        endDate,
-      });
-    } else if (startDate) {
-      query.andWhere('transaction.date >= :startDate', { startDate });
-    } else if (endDate) {
-      query.andWhere('transaction.date <= :endDate', { endDate });
-    }
-    if (amountSign === 'positive' || amountSign === 'negative') {
-      query.andWhere('transaction.amountSign = :amountSign', { amountSign });
-    }
-    if (categoryPrimary) {
-      if (categoryPrimary === 'UNCATEGORIZED') {
-        query.andWhere(
-          'COALESCE(transaction.userCategoryId, transaction.categoryId) IS NULL',
-        );
-      } else {
-        query.andWhere(
-          'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
-          { categoryPrimary },
-        );
-      }
-    }
-
-    const sortExpression =
-      sortColumn === 'amount'
-        ? 'transaction.amountAmount'
-        : `transaction.${sortColumn}`;
-
-    const [entities, total] = await query
-      .orderBy(sortExpression, order)
+    const [entities, total] = await this.applyTransactionOrder(
+      query,
+      sortColumn,
+      order,
+    )
       .skip(pageIndex * pageSize)
       .take(pageSize)
       .getManyAndCount();
@@ -395,6 +524,7 @@ export class TransactionService extends OwnedCrudService<
       entity.userCategoryId = null;
       entity.userCategory = null;
       entity.userCategoryUpdatedAt = null;
+      this.markCategoryReviewed(entity, 'manual_change');
     } else {
       const category = await this.categoryService.findActiveAssignableCategory(
         dto.categoryId,
@@ -412,6 +542,7 @@ export class TransactionService extends OwnedCrudService<
       entity.userCategoryId = category.id;
       entity.userCategory = category;
       entity.userCategoryUpdatedAt = new Date();
+      this.markCategoryReviewed(entity, 'manual_change');
     }
 
     const savedEntity = await this.repository.save(entity);
@@ -421,6 +552,105 @@ export class TransactionService extends OwnedCrudService<
     });
 
     return (hydratedEntity ?? savedEntity).toObject();
+  }
+
+  async updateCategoryReview(
+    id: string,
+    dto: UpdateTransactionCategoryReviewDto,
+    userId: string,
+  ): Promise<Transaction | null> {
+    this.logger.log({ id, userId }, 'Updating transaction category review');
+
+    const entity = await this.repository.findOne({
+      where: { id, userId },
+      relations: this.relations,
+    });
+
+    if (!entity) {
+      this.logger.warn(
+        { id, userId },
+        'Transaction not found for category review update',
+      );
+      return null;
+    }
+
+    if (dto.reviewed) {
+      this.markCategoryReviewed(entity, 'manual_accept');
+    } else {
+      this.clearCategoryReview(entity);
+    }
+
+    const savedEntity = await this.repository.save(entity);
+    const hydratedEntity = await this.repository.findOne({
+      where: { id: savedEntity.id, userId },
+      relations: this.relations,
+    });
+
+    return (hydratedEntity ?? savedEntity).toObject();
+  }
+
+  async bulkReviewCategories(
+    userId: string,
+    dto: BulkTransactionCategoryReviewDto,
+  ): Promise<BulkTransactionCategoryReviewResponse> {
+    this.logger.log(
+      { userId, filters: dto.filters },
+      'Bulk reviewing transaction categories',
+    );
+
+    const query = this.buildFilteredTransactionQuery(userId, dto.filters);
+    query.andWhere('transaction.categoryReviewedAt IS NULL');
+
+    const entities = await query.getMany();
+    if (entities.length === 0) {
+      return { count: 0, transactionIds: [] };
+    }
+
+    entities.forEach((entity) => {
+      this.markCategoryReviewed(entity, 'bulk_accept');
+    });
+
+    await this.repository.save(entities);
+
+    return {
+      count: entities.length,
+      transactionIds: entities.map((entity) => entity.id),
+    };
+  }
+
+  async undoBulkReviewCategories(
+    userId: string,
+    dto: BulkTransactionCategoryReviewUndoDto,
+  ): Promise<BulkTransactionCategoryReviewResponse> {
+    const transactionIds = [...new Set(dto.transactionIds)];
+    this.logger.log(
+      { userId, count: transactionIds.length },
+      'Undoing bulk transaction category review',
+    );
+
+    if (transactionIds.length === 0) {
+      return { count: 0, transactionIds: [] };
+    }
+
+    const entities = await this.repository.find({
+      where: { id: In(transactionIds), userId },
+      relations: this.relations,
+    });
+
+    if (entities.length === 0) {
+      return { count: 0, transactionIds: [] };
+    }
+
+    entities.forEach((entity) => {
+      this.clearCategoryReview(entity);
+    });
+
+    await this.repository.save(entities);
+
+    return {
+      count: entities.length,
+      transactionIds: entities.map((entity) => entity.id),
+    };
   }
 
   private async findMatchingTransactions(
@@ -622,8 +852,13 @@ export class TransactionService extends OwnedCrudService<
               return;
             }
 
+            const syncUpdateDto =
+              (existing.categoryReviewedAt ?? null) === null
+                ? resolvedDto
+                : { ...resolvedDto, categoryId: undefined };
+
             this.applyUpdate(existing, {
-              ...resolvedDto,
+              ...syncUpdateDto,
               accountId: internalAccountId,
             });
             await txnRepo.save(existing);

@@ -16,6 +16,15 @@
   transition: opacity 120ms ease;
 }
 
+.categoryReviewDot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--mantine-color-yellow-6);
+  box-shadow: 0 0 0 1px var(--mantine-color-yellow-3);
+}
+
 .categoryLabel {
   display: block;
   flex: 0 1 auto;

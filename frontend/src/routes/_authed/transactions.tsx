@@ -4,10 +4,12 @@ import {
   Group,
   SegmentedControl,
   Select,
+  Text,
   Title,
 } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { notifications } from '@mantine/notifications'
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { useCallback, useMemo, useRef, useState } from 'react'
@@ -16,10 +18,13 @@ import {
   transactionControllerFindAll,
   useAccountControllerFindAll,
   useCategoryControllerFindAll,
+  useTransactionControllerBulkReviewCategories,
+  useTransactionControllerUndoBulkReviewCategories,
 } from '../../api/clients/spliceAPI'
 import { CATEGORY_COLORS } from '../../lib/constants'
 import { formatPrimaryCategory } from '../../lib/format'
 import type {
+  BulkTransactionCategoryReviewDto,
   Category,
   TransactionControllerFindAllParams,
 } from '../../api/models'
@@ -28,6 +33,8 @@ import type { MRT_SortingState } from 'mantine-react-table'
 import { TransactionsTable } from '@/components/TransactionsTable'
 
 const PAGE_SIZE = 50
+
+type CategoryReviewFilter = 'all' | 'needs_review' | 'reviewed'
 
 type TransactionsSearch = {
   accountId?: string
@@ -61,6 +68,7 @@ export const Route = createFileRoute('/_authed/transactions')({
 function TransactionsPage() {
   const search = Route.useSearch()
   const tableContainerRef = useRef<HTMLDivElement>(null)
+  const queryClient = useQueryClient()
   const [sorting, setSorting] = useState<MRT_SortingState>([
     { id: 'date', desc: true },
   ])
@@ -75,10 +83,23 @@ function TransactionsPage() {
   )
   const [categoryPrimary, setCategoryPrimary] = useState<string | null>(null)
   const [amountSign, setAmountSign] = useState('all')
+  const [categoryReviewStatus, setCategoryReviewStatus] =
+    useState<CategoryReviewFilter>('all')
 
   // Account data for the select dropdown
   const { data: accounts } = useAccountControllerFindAll()
   const { data: categories } = useCategoryControllerFindAll()
+  const bulkReviewCategories = useTransactionControllerBulkReviewCategories()
+  const undoBulkReviewCategories = useTransactionControllerUndoBulkReviewCategories()
+
+  const invalidateTransactions = useCallback(() => {
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        Array.isArray(query.queryKey) &&
+        typeof query.queryKey[0] === 'string' &&
+        query.queryKey[0].includes('transaction'),
+    })
+  }, [queryClient])
 
   const accountOptions = useMemo(
     () =>
@@ -128,8 +149,44 @@ function TransactionsPage() {
     if (amountSign === 'positive' || amountSign === 'negative') {
       params.amountSign = amountSign
     }
+    if (categoryReviewStatus !== 'all') {
+      params.categoryReviewStatus = categoryReviewStatus
+    }
     return params
-  }, [sorting, dateRange, accountId, categoryPrimary, amountSign])
+  }, [
+    sorting,
+    dateRange,
+    accountId,
+    categoryPrimary,
+    amountSign,
+    categoryReviewStatus,
+  ])
+
+  const bulkReviewFilters = useMemo(() => {
+    const filters: NonNullable<BulkTransactionCategoryReviewDto['filters']> = {
+      categoryReviewStatus: 'needs_review',
+    }
+    const [start, end] = dateRange
+    if (start && end) {
+      filters.startDate = dayjs(start).format('YYYY-MM-DD')
+      filters.endDate = dayjs(end).format('YYYY-MM-DD')
+    }
+    if (accountId) {
+      filters.accountId = accountId
+    }
+    if (categoryPrimary) {
+      filters.categoryPrimary = categoryPrimary
+    }
+    if (amountSign === 'positive' || amountSign === 'negative') {
+      filters.amountSign = amountSign
+    }
+    return filters
+  }, [
+    accountId,
+    amountSign,
+    categoryPrimary,
+    dateRange,
+  ])
 
   const {
     data,
@@ -177,13 +234,55 @@ function TransactionsPage() {
     dateRange[0] !== null ||
     accountId !== null ||
     categoryPrimary !== null ||
-    amountSign !== 'all'
+    amountSign !== 'all' ||
+    categoryReviewStatus !== 'all'
 
   const clearFilters = () => {
     setDateRange([null, null])
     setAccountId(null)
     setCategoryPrimary(null)
     setAmountSign('all')
+    setCategoryReviewStatus('all')
+  }
+
+  const markFilteredAsReviewed = () => {
+    bulkReviewCategories.mutate(
+      {
+        data: { filters: bulkReviewFilters },
+      },
+      {
+        onSuccess: (result) => {
+          invalidateTransactions()
+          notifications.show({
+            title: 'Categories reviewed',
+            message: (
+              <Group gap="xs" wrap="nowrap">
+                <Text size="sm">
+                  Marked {result.count} transactions as reviewed.
+                </Text>
+                {result.transactionIds.length > 0 && (
+                  <Button
+                    size="compact-xs"
+                    variant="subtle"
+                    onClick={() =>
+                      undoBulkReviewCategories.mutate(
+                        {
+                          data: { transactionIds: result.transactionIds },
+                        },
+                        { onSuccess: invalidateTransactions },
+                      )
+                    }
+                  >
+                    Undo
+                  </Button>
+                )}
+              </Group>
+            ),
+            color: 'green',
+          })
+        },
+      },
+    )
   }
 
   return (
@@ -259,6 +358,28 @@ function TransactionsPage() {
             { label: 'Outflows', value: 'negative' },
           ]}
         />
+        <SegmentedControl
+          value={categoryReviewStatus}
+          onChange={(value) =>
+            setCategoryReviewStatus(value as CategoryReviewFilter)
+          }
+          size="xs"
+          data={[
+            { label: 'All', value: 'all' },
+            { label: 'Needs review', value: 'needs_review' },
+            { label: 'Reviewed', value: 'reviewed' },
+          ]}
+        />
+        {categoryReviewStatus === 'needs_review' && totalRows > 0 && (
+          <Button
+            variant="light"
+            size="xs"
+            loading={bulkReviewCategories.isPending}
+            onClick={markFilteredAsReviewed}
+          >
+            Mark {totalRows} as reviewed
+          </Button>
+        )}
         {hasActiveFilters && (
           <Button variant="subtle" size="xs" onClick={clearFilters}>
             Clear filters
