@@ -13,11 +13,12 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Check, Info, Pencil, RotateCcw, X } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   useCategoryControllerFindAll,
   useTransactionControllerUpdateCategory,
@@ -83,6 +84,13 @@ function MetadataRow({
 }
 
 function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
+  const [opened, setOpened] = useState(false)
+  const closeTimeoutRef = useRef<number | null>(null)
+  const supportsHover = useMediaQuery(
+    '(hover: hover) and (pointer: fine)',
+    false,
+    { getInitialValueInEffect: false },
+  )
   const details = getMetadataDetails(transaction)
   const rawDescription = formatMetadataValue(transaction.originalDescription)
   const providerName = formatMetadataValue(transaction.providerTransactionName)
@@ -104,23 +112,94 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
     details.paymentProcessor ||
     transaction.accountOwner
 
+  function clearCloseTimeout() {
+    if (closeTimeoutRef.current === null) {
+      return
+    }
+
+    window.clearTimeout(closeTimeoutRef.current)
+    closeTimeoutRef.current = null
+  }
+
+  function openPopover() {
+    clearCloseTimeout()
+    setOpened(true)
+  }
+
+  function closePopover() {
+    clearCloseTimeout()
+    setOpened(false)
+  }
+
+  function scheduleClosePopover() {
+    clearCloseTimeout()
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setOpened(false)
+      closeTimeoutRef.current = null
+    }, 100)
+  }
+
+  useEffect(
+    () => () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current)
+      }
+    },
+    [],
+  )
+
   if (!hasPopoverContent) {
     return null
   }
 
   return (
-    <Popover position="bottom-start" shadow="md" width={360} withinPortal>
+    <Popover
+      opened={opened}
+      onChange={setOpened}
+      position="bottom-start"
+      shadow="md"
+      width={360}
+      withinPortal
+    >
       <Popover.Target>
         <ActionIcon
           aria-label={`Show transaction details for ${details.merchantDisplay.primary}`}
           className={styles.merchantInfoButton}
+          onBlur={supportsHover ? scheduleClosePopover : undefined}
+          onClick={(event) => {
+            event.stopPropagation()
+            if (supportsHover) {
+              return
+            }
+
+            setOpened((current) => !current)
+          }}
+          onFocus={supportsHover ? openPopover : undefined}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') {
+              return
+            }
+
+            event.preventDefault()
+            event.stopPropagation()
+            setOpened((current) => !current)
+          }}
+          onMouseDown={(event) => event.stopPropagation()}
+          onMouseEnter={supportsHover ? openPopover : undefined}
+          onMouseLeave={supportsHover ? scheduleClosePopover : undefined}
           size="sm"
           variant="subtle"
         >
           <Info size={14} />
         </ActionIcon>
       </Popover.Target>
-      <Popover.Dropdown className={styles.metadataPopover}>
+      <Popover.Dropdown
+        className={styles.metadataPopover}
+        onBlur={supportsHover ? scheduleClosePopover : undefined}
+        onFocus={supportsHover ? openPopover : undefined}
+        onMouseEnter={supportsHover ? openPopover : undefined}
+        onMouseLeave={supportsHover ? closePopover : undefined}
+      >
         <Stack gap="xs">
           <Text fw={600} size="sm">
             Transaction details
