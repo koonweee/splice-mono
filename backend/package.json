@@ -40,9 +40,7 @@
     "docker:migration:run": "docker-compose exec app sh -c 'yarn build && yarn typeorm migration:run -d dist/data-source.js'",
     "docker:migration:run:prod": "docker-compose exec app node dist/run-migrations.js",
     "jwt:generate": "node scripts/generate-jwt.js",
-    "prepare": "husky",
-    "deploy": "./scripts/deploy.sh",
-    "deploy:simple": "./scripts/deploy.sh --simple"
+    "prepare": "husky"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.1.0",
