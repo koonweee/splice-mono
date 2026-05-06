@@ -555,6 +555,7 @@ function TransactionsPage() {
                     zIndex: 20,
                   }}
                 >
+                  <FocusTrap.InitialFocus />
                   {filterPanel}
                 </Box>
               </FocusTrap>
