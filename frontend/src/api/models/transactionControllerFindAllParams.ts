@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { TransactionControllerFindAllAmountSign } from './transactionControllerFindAllAmountSign'
+import type { TransactionControllerFindAllCategoryReviewStatus } from './transactionControllerFindAllCategoryReviewStatus'
 
 export type TransactionControllerFindAllParams = {
   /**
@@ -48,4 +49,8 @@ export type TransactionControllerFindAllParams = {
    * When true, adds convertedAmount in user preferred currency to each transaction
    */
   convert?: boolean
+  /**
+   * Filter by category review status
+   */
+  categoryReviewStatus?: TransactionControllerFindAllCategoryReviewStatus
 }

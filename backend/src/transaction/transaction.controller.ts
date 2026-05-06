@@ -19,17 +19,25 @@ import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import { MoneySign } from '../types/MoneyWithSign';
 import type {
+  BulkTransactionCategoryReviewDto,
+  BulkTransactionCategoryReviewResponse,
+  BulkTransactionCategoryReviewUndoDto,
   CreateTransactionDto,
   PaginatedTransactionResponse,
   Transaction,
   UpdateTransactionCategoryDto,
+  UpdateTransactionCategoryReviewDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
 import {
+  BulkTransactionCategoryReviewDtoSchema,
+  BulkTransactionCategoryReviewResponseSchema,
+  BulkTransactionCategoryReviewUndoDtoSchema,
   CreateTransactionDtoSchema,
   PaginatedTransactionResponseSchema,
   TransactionSchema,
   UpdateTransactionCategoryDtoSchema,
+  UpdateTransactionCategoryReviewDtoSchema,
   UpdateTransactionDtoSchema,
 } from '../types/Transaction';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
@@ -101,6 +109,12 @@ export class TransactionController {
     enum: ['positive', 'negative'],
   })
   @ApiQuery({
+    name: 'categoryReviewStatus',
+    required: false,
+    description: 'Filter by category review status',
+    enum: ['needs_review', 'reviewed'],
+  })
+  @ApiQuery({
     name: 'convert',
     required: false,
     description:
@@ -119,6 +133,7 @@ export class TransactionController {
     @Query('categoryPrimary') categoryPrimary?: string,
     @Query('amountSign') amountSign?: string,
     @Query('convert') convertStr?: string,
+    @Query('categoryReviewStatus') categoryReviewStatus?: string,
   ): Promise<PaginatedTransactionResponse> {
     const pageIndex = Math.max(0, parseInt(pageIndexStr ?? '0', 10) || 0);
     const pageSize = Math.min(
@@ -139,6 +154,11 @@ export class TransactionController {
         endDate,
         categoryPrimary,
         amountSign,
+        categoryReviewStatus:
+          categoryReviewStatus === 'needs_review' ||
+          categoryReviewStatus === 'reviewed'
+            ? categoryReviewStatus
+            : undefined,
       },
     );
 
@@ -262,6 +282,75 @@ export class TransactionController {
       );
     }
     return transaction;
+  }
+
+  @Patch(':id/category-review')
+  @ApiOperation({ description: 'Update transaction category review status' })
+  @ZodApiBody({ schema: UpdateTransactionCategoryReviewDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Transaction category review updated successfully',
+    schema: TransactionSchema,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Transaction not found',
+  })
+  async updateCategoryReview(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(UpdateTransactionCategoryReviewDtoSchema))
+    updateTransactionCategoryReviewDto: UpdateTransactionCategoryReviewDto,
+  ): Promise<Transaction> {
+    const transaction = await this.transactionService.updateCategoryReview(
+      id,
+      updateTransactionCategoryReviewDto,
+      user.userId,
+    );
+    if (!transaction) {
+      throw new NotFoundException(`Transaction with id ${id} not found`);
+    }
+    return transaction;
+  }
+
+  @Post('category-review/bulk')
+  @ApiOperation({
+    description: 'Mark matching unreviewed transaction categories as reviewed',
+  })
+  @ZodApiBody({ schema: BulkTransactionCategoryReviewDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Transaction categories bulk reviewed successfully',
+    schema: BulkTransactionCategoryReviewResponseSchema,
+  })
+  async bulkReviewCategories(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(BulkTransactionCategoryReviewDtoSchema))
+    bulkReviewDto: BulkTransactionCategoryReviewDto,
+  ): Promise<BulkTransactionCategoryReviewResponse> {
+    return this.transactionService.bulkReviewCategories(
+      user.userId,
+      bulkReviewDto,
+    );
+  }
+
+  @Post('category-review/bulk/undo')
+  @ApiOperation({ description: 'Undo a bulk transaction category review' })
+  @ZodApiBody({ schema: BulkTransactionCategoryReviewUndoDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Bulk transaction category review undone successfully',
+    schema: BulkTransactionCategoryReviewResponseSchema,
+  })
+  async undoBulkReviewCategories(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(BulkTransactionCategoryReviewUndoDtoSchema))
+    undoDto: BulkTransactionCategoryReviewUndoDto,
+  ): Promise<BulkTransactionCategoryReviewResponse> {
+    return this.transactionService.undoBulkReviewCategories(
+      user.userId,
+      undoDto,
+    );
   }
 
   @Patch(':id')
