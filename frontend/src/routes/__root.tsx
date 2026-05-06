@@ -16,6 +16,11 @@ import mantineDatesCss from '@mantine/dates/styles.css?url'
 import mantineNotificationsCss from '@mantine/notifications/styles.css?url'
 import mantineReactTableCss from 'mantine-react-table/styles.css?url'
 import appCss from '../styles.css?url'
+import {
+  DEFAULT_THEME_PRESET_ID,
+  THEME_PRESET_IDS,
+  THEME_STORAGE_KEY,
+} from '../lib/theme'
 import type { RouterContext } from '../router'
 import { AppThemeProvider } from '@/components/AppThemeProvider'
 
@@ -68,6 +73,19 @@ function RootComponent() {
   return (
     <html lang="en" {...mantineHtmlProps}>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+try {
+  var theme = window.localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
+  var knownThemes = ${JSON.stringify(THEME_PRESET_IDS)};
+  if (knownThemes.indexOf(theme) !== -1 && theme !== ${JSON.stringify(DEFAULT_THEME_PRESET_ID)}) {
+    document.documentElement.setAttribute('data-splice-theme-loading', '');
+  }
+} catch (_) {}
+`,
+          }}
+        />
         <ColorSchemeScript defaultColorScheme="auto" />
         <HeadContent />
       </head>
