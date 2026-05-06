@@ -14,6 +14,7 @@ This directory tracks product and implementation plans for Splice.
 
 | Plan | Status | Notes |
 |---|---|---|
+| [Transaction Category Review](./transaction-category-review.md) | Done | Add category review status, inline accept, review filters, bulk review, undo toasts, and sync lifecycle rules. |
 | [Transaction Category Overrides](./transaction-category-overrides.md) | Planned | Add user category overrides while preserving Plaid categories and enforcing effective category across UI, analysis, and MCP/surface callers. |
 | [User-Defined Categories](./user-defined-categories.md) | Planned | Let users create custom primary/secondary categories from Settings with autocomplete duplicate prevention and backend validation. |
 

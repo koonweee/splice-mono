@@ -29,6 +29,9 @@ import type {
   BalanceQueryPerDateResult,
   BalanceSnapshotControllerImportCsv201,
   BalanceSnapshotControllerImportCsvBody,
+  BulkTransactionCategoryReviewDto,
+  BulkTransactionCategoryReviewResponse,
+  BulkTransactionCategoryReviewUndoDto,
   Category,
   CategoryControllerFindCustomParams,
   CategoryControllerSearchParams,
@@ -54,6 +57,7 @@ import type {
   UpdateAccountDto,
   UpdateCustomCategoryDto,
   UpdateTransactionCategoryDto,
+  UpdateTransactionCategoryReviewDto,
   UpdateTransactionDto,
   UpdateUserSettingsDto,
   User,
@@ -3662,6 +3666,263 @@ export const useTransactionControllerUpdateCategory = <
 > => {
   const mutationOptions =
     getTransactionControllerUpdateCategoryMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Update transaction category review status
+ */
+export const transactionControllerUpdateCategoryReview = (
+  id: string,
+  updateTransactionCategoryReviewDto: UpdateTransactionCategoryReviewDto,
+) => {
+  return axios<Transaction>({
+    url: `/transaction/${id}/category-review`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateTransactionCategoryReviewDto,
+  })
+}
+
+export const getTransactionControllerUpdateCategoryReviewMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerUpdateCategoryReview>>,
+    TError,
+    { id: string; data: UpdateTransactionCategoryReviewDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerUpdateCategoryReview>>,
+  TError,
+  { id: string; data: UpdateTransactionCategoryReviewDto },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerUpdateCategoryReview']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerUpdateCategoryReview>>,
+    { id: string; data: UpdateTransactionCategoryReviewDto }
+  > = (props) => {
+    const { id, data } = props ?? {}
+
+    return transactionControllerUpdateCategoryReview(id, data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerUpdateCategoryReviewMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof transactionControllerUpdateCategoryReview>>
+  >
+export type TransactionControllerUpdateCategoryReviewMutationBody =
+  UpdateTransactionCategoryReviewDto
+export type TransactionControllerUpdateCategoryReviewMutationError = void
+
+export const useTransactionControllerUpdateCategoryReview = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerUpdateCategoryReview>>,
+      TError,
+      { id: string; data: UpdateTransactionCategoryReviewDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerUpdateCategoryReview>>,
+  TError,
+  { id: string; data: UpdateTransactionCategoryReviewDto },
+  TContext
+> => {
+  const mutationOptions =
+    getTransactionControllerUpdateCategoryReviewMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Mark matching unreviewed transaction categories as reviewed
+ */
+export const transactionControllerBulkReviewCategories = (
+  bulkTransactionCategoryReviewDto: BulkTransactionCategoryReviewDto,
+  signal?: AbortSignal,
+) => {
+  return axios<BulkTransactionCategoryReviewResponse>({
+    url: `/transaction/category-review/bulk`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: bulkTransactionCategoryReviewDto,
+    signal,
+  })
+}
+
+export const getTransactionControllerBulkReviewCategoriesMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerBulkReviewCategories>>,
+    TError,
+    { data: BulkTransactionCategoryReviewDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerBulkReviewCategories>>,
+  TError,
+  { data: BulkTransactionCategoryReviewDto },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerBulkReviewCategories']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerBulkReviewCategories>>,
+    { data: BulkTransactionCategoryReviewDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return transactionControllerBulkReviewCategories(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerBulkReviewCategoriesMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof transactionControllerBulkReviewCategories>>
+  >
+export type TransactionControllerBulkReviewCategoriesMutationBody =
+  BulkTransactionCategoryReviewDto
+export type TransactionControllerBulkReviewCategoriesMutationError = unknown
+
+export const useTransactionControllerBulkReviewCategories = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerBulkReviewCategories>>,
+      TError,
+      { data: BulkTransactionCategoryReviewDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerBulkReviewCategories>>,
+  TError,
+  { data: BulkTransactionCategoryReviewDto },
+  TContext
+> => {
+  const mutationOptions =
+    getTransactionControllerBulkReviewCategoriesMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Undo a bulk transaction category review
+ */
+export const transactionControllerUndoBulkReviewCategories = (
+  bulkTransactionCategoryReviewUndoDto: BulkTransactionCategoryReviewUndoDto,
+  signal?: AbortSignal,
+) => {
+  return axios<BulkTransactionCategoryReviewResponse>({
+    url: `/transaction/category-review/bulk/undo`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: bulkTransactionCategoryReviewUndoDto,
+    signal,
+  })
+}
+
+export const getTransactionControllerUndoBulkReviewCategoriesMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerUndoBulkReviewCategories>>,
+    TError,
+    { data: BulkTransactionCategoryReviewUndoDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerUndoBulkReviewCategories>>,
+  TError,
+  { data: BulkTransactionCategoryReviewUndoDto },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerUndoBulkReviewCategories']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerUndoBulkReviewCategories>>,
+    { data: BulkTransactionCategoryReviewUndoDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return transactionControllerUndoBulkReviewCategories(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerUndoBulkReviewCategoriesMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof transactionControllerUndoBulkReviewCategories>>
+  >
+export type TransactionControllerUndoBulkReviewCategoriesMutationBody =
+  BulkTransactionCategoryReviewUndoDto
+export type TransactionControllerUndoBulkReviewCategoriesMutationError = unknown
+
+export const useTransactionControllerUndoBulkReviewCategories = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerUndoBulkReviewCategories>>,
+      TError,
+      { data: BulkTransactionCategoryReviewUndoDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerUndoBulkReviewCategories>>,
+  TError,
+  { data: BulkTransactionCategoryReviewUndoDto },
+  TContext
+> => {
+  const mutationOptions =
+    getTransactionControllerUndoBulkReviewCategoriesMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }
