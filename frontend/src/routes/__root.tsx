@@ -1,6 +1,5 @@
 import {
   ColorSchemeScript,
-  MantineProvider,
   mantineHtmlProps,
 } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
@@ -18,7 +17,7 @@ import mantineNotificationsCss from '@mantine/notifications/styles.css?url'
 import mantineReactTableCss from 'mantine-react-table/styles.css?url'
 import appCss from '../styles.css?url'
 import type { RouterContext } from '../router'
-import { themes } from '@/lib/theme'
+import { AppThemeProvider } from '@/components/AppThemeProvider'
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
@@ -73,10 +72,10 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body>
-        <MantineProvider defaultColorScheme="auto" theme={themes.warm}>
+        <AppThemeProvider>
           <Notifications />
           <Outlet />
-        </MantineProvider>
+        </AppThemeProvider>
         <Scripts />
       </body>
     </html>

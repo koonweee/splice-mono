@@ -2,7 +2,7 @@ import { defineConfig } from 'orval'
 
 export default defineConfig({
   api: {
-    input: 'http://localhost:3000/api-json',
+    input: process.env.ORVAL_API_INPUT ?? 'http://localhost:3000/api-json',
     output: {
       target: './src/api/clients',
       schemas: './src/api/models',
