@@ -138,6 +138,25 @@ GOOGLE_ALLOWED_EMAILS=alice@example.com,bob@example.com
 
 `GOOGLE_ALLOWED_EMAILS` is a comma-separated allowlist. Only verified Google accounts whose normalized email appears in that list can sign in or be provisioned. Restart the backend after changing these values.
 
+### Local Dev Auth Bypass
+
+For local browser automation tools such as Codex agent browser, the backend can create a normal browser session without Google OAuth. This is development-only and is refused in production and for non-local requests.
+
+Set these backend environment variables locally:
+
+```bash
+LOCAL_AUTH_BYPASS=true
+LOCAL_AUTH_BYPASS_EMAIL=alice@example.com
+```
+
+`LOCAL_AUTH_BYPASS_EMAIL` maps the browser session to that Splice user, which controls which accounts and transactions are visible. Start the backend and frontend, then open:
+
+```text
+http://localhost:3000/user/dev/login?redirect=/home
+```
+
+The endpoint sets the same HTTP-only session cookies as Google OAuth and redirects to the frontend. Do not configure these variables in staging or production.
+
 For staging and production, set `API_DOMAIN` to the public backend origin and `FRONTEND_DOMAIN` to the public frontend origin. Set `GOOGLE_OAUTH_CALLBACK_URL=${API_DOMAIN}/user/oauth/google/callback`, add that exact URL to the Google OAuth client's authorized redirect URIs, and add the frontend origin to authorized JavaScript origins. Store `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `GOOGLE_ALLOWED_EMAILS` in the deployment secret manager or environment configuration before deploying the hard cut.
 
 Non-browser API and MCP access uses personal access tokens from the Settings page. Do not use browser session login credentials for API automation.
