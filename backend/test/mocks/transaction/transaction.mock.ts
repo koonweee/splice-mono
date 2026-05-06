@@ -20,6 +20,22 @@ export const mockAccountId = 'account-uuid-123';
 /** Mock category ID for testing */
 export const mockCategoryId = 'category-uuid-123';
 
+const mockProviderMetadata = {
+  providerTransactionName: null,
+  originalDescription: null,
+  pendingTransactionId: null,
+  accountOwner: null,
+  website: null,
+  merchantEntityId: null,
+  paymentChannel: null,
+  transactionCode: null,
+  personalFinanceCategoryIconUrl: null,
+  personalFinanceCategoryConfidenceLevel: null,
+  counterparties: null,
+  location: null,
+  paymentMeta: null,
+};
+
 /**
  * Mock transaction - $50.00 negative (expense) at Starbucks
  */
@@ -32,6 +48,7 @@ export const mockTransaction: Transaction = {
   },
   accountId: mockAccountId,
   merchantName: 'Starbucks',
+  ...mockProviderMetadata,
   pending: false,
   externalTransactionId: 'plaid-txn-123',
   logoUrl: 'https://example.com/starbucks-logo.png',
@@ -64,6 +81,7 @@ export const mockTransaction2: Transaction = {
   },
   accountId: mockAccountId,
   merchantName: 'Amazon',
+  ...mockProviderMetadata,
   pending: true,
   externalTransactionId: 'plaid-txn-456',
   logoUrl: null,

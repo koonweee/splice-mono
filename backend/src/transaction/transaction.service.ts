@@ -87,11 +87,44 @@ export class TransactionService extends OwnedCrudService<
     }
     if (dto.accountId !== undefined) entity.accountId = dto.accountId;
     if (dto.merchantName !== undefined) entity.merchantName = dto.merchantName;
+    if (dto.providerTransactionName !== undefined) {
+      entity.providerTransactionName = dto.providerTransactionName;
+    }
+    if (dto.originalDescription !== undefined) {
+      entity.originalDescription = dto.originalDescription;
+    }
     if (dto.pending !== undefined) entity.pending = dto.pending;
+    if (dto.pendingTransactionId !== undefined) {
+      entity.pendingTransactionId = dto.pendingTransactionId;
+    }
+    if (dto.accountOwner !== undefined) entity.accountOwner = dto.accountOwner;
     if (dto.externalTransactionId !== undefined) {
       entity.externalTransactionId = dto.externalTransactionId;
     }
     if (dto.logoUrl !== undefined) entity.logoUrl = dto.logoUrl;
+    if (dto.website !== undefined) entity.website = dto.website;
+    if (dto.merchantEntityId !== undefined) {
+      entity.merchantEntityId = dto.merchantEntityId;
+    }
+    if (dto.paymentChannel !== undefined) {
+      entity.paymentChannel = dto.paymentChannel;
+    }
+    if (dto.transactionCode !== undefined) {
+      entity.transactionCode = dto.transactionCode;
+    }
+    if (dto.personalFinanceCategoryIconUrl !== undefined) {
+      entity.personalFinanceCategoryIconUrl =
+        dto.personalFinanceCategoryIconUrl;
+    }
+    if (dto.personalFinanceCategoryConfidenceLevel !== undefined) {
+      entity.personalFinanceCategoryConfidenceLevel =
+        dto.personalFinanceCategoryConfidenceLevel;
+    }
+    if (dto.counterparties !== undefined) {
+      entity.counterparties = dto.counterparties;
+    }
+    if (dto.location !== undefined) entity.location = dto.location;
+    if (dto.paymentMeta !== undefined) entity.paymentMeta = dto.paymentMeta;
     if (dto.date !== undefined) entity.date = dto.date;
     if (dto.datetime !== undefined) entity.datetime = dto.datetime;
     if (dto.authorizedDate !== undefined) {

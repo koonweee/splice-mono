@@ -3,6 +3,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TransactionsTable } from './TransactionsTable'
+import {
+  getCategoryReviewTooltip,
+  getMerchantDisplay,
+  getMetadataDetails,
+} from './transactions/transactionMetadata'
 import type React from 'react'
 import type * as SpliceAPI from '../api/clients/spliceAPI'
 import type { Category, Transaction } from '../api/models'
@@ -218,6 +223,83 @@ describe('TransactionsTable', () => {
     )
   })
 
+  it('renders deterministic merchant metadata and removes posted status badges', () => {
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+        categoryNeedsReview: true,
+        merchantName: 'Crackedan',
+        providerTransactionName: 'DD *DOORDASH CRACKEDAN',
+        originalDescription: 'DD *DOORDASH CRACKEDAN',
+        paymentChannel: 'online',
+        personalFinanceCategoryConfidenceLevel: 'HIGH',
+        counterparties: [
+          {
+            name: 'Crackedan',
+            type: 'merchant',
+            confidence_level: 'LOW',
+          },
+          {
+            name: 'DoorDash',
+            type: 'marketplace',
+            confidence_level: 'VERY_HIGH',
+          },
+        ],
+      }),
+    ])
+
+    expect(screen.getByText('DoorDash · Crackedan')).toBeTruthy()
+    expect(screen.getByText('DD *DOORDASH CRACKEDAN')).toBeTruthy()
+    expect(screen.queryByText('Posted')).toBeNull()
+  })
+
+  it('shows pending inline and exposes metadata in the info popover', async () => {
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+        merchantName: 'Shake Shack',
+        originalDescription: 'SQ *SHAKE SHACK',
+        paymentChannel: 'in store',
+        pending: true,
+        counterparties: [
+          {
+            name: 'Shake Shack',
+            type: 'merchant',
+            confidence_level: 'VERY_HIGH',
+          },
+          {
+            name: 'Square',
+            type: 'payment_terminal',
+            confidence_level: 'VERY_HIGH',
+          },
+        ],
+      }),
+    ])
+
+    expect(screen.getByText('Pending')).toBeTruthy()
+    expect(screen.getByText('SQ *SHAKE SHACK')).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText('Show transaction details for Shake Shack'))
+
+    expect(await screen.findByText('Transaction details')).toBeTruthy()
+    expect(screen.getAllByText('SQ *SHAKE SHACK').length).toBeGreaterThan(1)
+    expect(screen.getByText('Square · payment terminal · very high')).toBeTruthy()
+    expect(screen.getByText(/in store/)).toBeTruthy()
+  })
+
+  it('does not show a metadata popover trigger for plain categorized rows', () => {
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+      }),
+    ])
+
+    expect(screen.queryByLabelText(/Show transaction details for/)).toBeNull()
+  })
+
   it('shows an undo notification after reviewing a category inline', () => {
     renderTable([
       makeTransaction({
@@ -274,6 +356,60 @@ describe('TransactionsTable', () => {
   })
 })
 
+describe('transaction metadata helpers', () => {
+  it('promotes very-high marketplace counterparties ahead of provider merchants', () => {
+    const transaction = makeTransaction({
+      category: providerCategory,
+      userCategory: null,
+      merchantName: 'Crackedan',
+      providerTransactionName: 'DD *DOORDASH CRACKEDAN',
+      originalDescription: 'DD *DOORDASH CRACKEDAN',
+      counterparties: [
+        {
+          name: 'DoorDash',
+          type: 'marketplace',
+          confidence_level: 'VERY_HIGH',
+        },
+      ],
+    })
+
+    expect(getMerchantDisplay(transaction)).toMatchObject({
+      primary: 'DoorDash · Crackedan',
+      secondary: 'DD *DOORDASH CRACKEDAN',
+      marketplaceName: 'DoorDash',
+    })
+  })
+
+  it('falls back to provider names and suppresses duplicate secondary text', () => {
+    const transaction = makeTransaction({
+      category: providerCategory,
+      userCategory: null,
+      merchantName: null,
+      providerTransactionName: 'APPLE.COM/US',
+      originalDescription: 'APPLE.COM/US',
+    })
+
+    expect(getMerchantDisplay(transaction)).toMatchObject({
+      primary: 'APPLE.COM/US',
+      secondary: null,
+    })
+  })
+
+  it('uses metadata to explain category review hints', () => {
+    const transaction = makeTransaction({
+      category: providerCategory,
+      userCategory: null,
+      categoryNeedsReview: true,
+      personalFinanceCategoryConfidenceLevel: 'LOW',
+    })
+    const details = getMetadataDetails(transaction)
+
+    expect(getCategoryReviewTooltip(transaction, details)).toBe(
+      'Category needs review · Plaid confidence low',
+    )
+  })
+})
+
 function renderTable(data: Array<Transaction>) {
   const queryClient = new QueryClient()
 
@@ -312,6 +448,13 @@ function makeTransaction(params: {
   category: Category
   userCategory: Category | null
   categoryNeedsReview?: boolean
+  merchantName?: string | null
+  providerTransactionName?: string | null
+  originalDescription?: string | null
+  paymentChannel?: string | null
+  personalFinanceCategoryConfidenceLevel?: string | null
+  counterparties?: Transaction['counterparties']
+  pending?: boolean
 }): Transaction {
   return {
     id: 'txn-1',
@@ -320,10 +463,25 @@ function makeTransaction(params: {
       sign: 'negative',
     },
     accountId: 'account-1',
-    merchantName: 'Store',
-    pending: false,
+    merchantName:
+      'merchantName' in params ? params.merchantName ?? null : 'Store',
+    providerTransactionName: params.providerTransactionName ?? null,
+    originalDescription: params.originalDescription ?? null,
+    pending: params.pending ?? false,
+    pendingTransactionId: null,
+    accountOwner: null,
     externalTransactionId: 'external-1',
     logoUrl: null,
+    website: null,
+    merchantEntityId: null,
+    paymentChannel: params.paymentChannel ?? null,
+    transactionCode: null,
+    personalFinanceCategoryIconUrl: null,
+    personalFinanceCategoryConfidenceLevel:
+      params.personalFinanceCategoryConfidenceLevel ?? null,
+    counterparties: params.counterparties ?? null,
+    location: null,
+    paymentMeta: null,
     date: '2026-02-14',
     datetime: null,
     authorizedDate: null,

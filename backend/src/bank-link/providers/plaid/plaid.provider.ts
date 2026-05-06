@@ -929,6 +929,10 @@ export class PlaidProvider implements IBankLinkProvider {
         access_token: accessToken,
         cursor: currentCursor,
         count: 500,
+        options: {
+          include_original_description: true,
+          include_personal_finance_category: true,
+        },
       });
 
       const { added, modified, removed, next_cursor, has_more } = response.data;
@@ -985,13 +989,25 @@ export class PlaidProvider implements IBankLinkProvider {
       amount,
       iso_currency_code,
       unofficial_currency_code,
+      name,
       merchant_name,
+      original_description,
       pending,
+      pending_transaction_id,
+      account_owner,
       date,
       datetime,
       authorized_date,
       authorized_datetime,
       logo_url,
+      website,
+      merchant_entity_id,
+      payment_channel,
+      transaction_code,
+      personal_finance_category_icon_url,
+      counterparties,
+      location,
+      payment_meta,
       personal_finance_category,
     } = plaidTransaction;
 
@@ -1012,9 +1028,25 @@ export class PlaidProvider implements IBankLinkProvider {
       amount: serializedAmount,
       accountId: account_id, // External account ID; mapped to internal ID by service
       merchantName: merchant_name ?? null,
+      providerTransactionName: name ?? null,
+      originalDescription: original_description ?? null,
       pending,
+      pendingTransactionId: pending_transaction_id ?? null,
+      accountOwner: account_owner ?? null,
       externalTransactionId: transaction_id,
       logoUrl: logo_url ?? null,
+      website: website ?? null,
+      merchantEntityId: merchant_entity_id ?? null,
+      paymentChannel: payment_channel ?? null,
+      transactionCode: transaction_code ?? null,
+      personalFinanceCategoryIconUrl:
+        personal_finance_category_icon_url ?? null,
+      personalFinanceCategoryConfidenceLevel:
+        personal_finance_category?.confidence_level ?? null,
+      counterparties:
+        counterparties?.map((counterparty) => ({ ...counterparty })) ?? null,
+      location: location ? { ...location } : null,
+      paymentMeta: payment_meta ? { ...payment_meta } : null,
       date,
       datetime: datetime ?? null,
       authorizedDate: authorized_date ?? null,

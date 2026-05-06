@@ -1356,7 +1356,23 @@ describe('TransactionService', () => {
 
     it('should insert added transactions with mapped account IDs', async () => {
       const syncResults: TransactionSyncResponse = {
-        added: [mockSyncTransaction],
+        added: [
+          {
+            ...mockSyncTransaction,
+            providerTransactionName: 'DD *DOORDASH CRACKEDAN',
+            originalDescription: 'DOORDASH CRACKEDAN 855-973-1040 CA',
+            pendingTransactionId: 'pending-id',
+            website: 'https://www.doordash.com',
+            merchantEntityId: 'merchant-entity-id',
+            paymentChannel: 'online',
+            personalFinanceCategoryIconUrl:
+              'https://plaid-category-icon.example/food.png',
+            personalFinanceCategoryConfidenceLevel: 'VERY_HIGH',
+            counterparties: [{ name: 'DoorDash' }],
+            location: { city: 'San Francisco' },
+            paymentMeta: { payment_processor: 'DoorDash' },
+          },
+        ],
         modified: [],
         removed: [],
         nextCursor: 'cursor-1',
@@ -1370,6 +1386,18 @@ describe('TransactionService', () => {
           expect.objectContaining({
             accountId: 'int-acc-1', // Mapped from ext-acc-1
             userId: mockUserId,
+            providerTransactionName: 'DD *DOORDASH CRACKEDAN',
+            originalDescription: 'DOORDASH CRACKEDAN 855-973-1040 CA',
+            pendingTransactionId: 'pending-id',
+            website: 'https://www.doordash.com',
+            merchantEntityId: 'merchant-entity-id',
+            paymentChannel: 'online',
+            personalFinanceCategoryIconUrl:
+              'https://plaid-category-icon.example/food.png',
+            personalFinanceCategoryConfidenceLevel: 'VERY_HIGH',
+            counterparties: [{ name: 'DoorDash' }],
+            location: { city: 'San Francisco' },
+            paymentMeta: { payment_processor: 'DoorDash' },
           }),
         ]),
       );

@@ -6,6 +6,9 @@
  * OpenAPI spec version: 1.0
  */
 import type { MoneyWithSign } from './moneyWithSign'
+import type { UpdateTransactionDtoCounterpartiesItem } from './updateTransactionDtoCounterpartiesItem'
+import type { UpdateTransactionDtoLocation } from './updateTransactionDtoLocation'
+import type { UpdateTransactionDtoPaymentMeta } from './updateTransactionDtoPaymentMeta'
 import type { UpdateTransactionDtoPersonalFinanceCategory } from './updateTransactionDtoPersonalFinanceCategory'
 
 export interface UpdateTransactionDto {
@@ -13,11 +16,37 @@ export interface UpdateTransactionDto {
   accountId?: string
   /** @nullable */
   merchantName?: string | null
+  /** @nullable */
+  providerTransactionName?: string | null
+  /** @nullable */
+  originalDescription?: string | null
   pending?: boolean
+  /** @nullable */
+  pendingTransactionId?: string | null
+  /** @nullable */
+  accountOwner?: string | null
   /** @nullable */
   externalTransactionId?: string | null
   /** @nullable */
   logoUrl?: string | null
+  /** @nullable */
+  website?: string | null
+  /** @nullable */
+  merchantEntityId?: string | null
+  /** @nullable */
+  paymentChannel?: string | null
+  /** @nullable */
+  transactionCode?: string | null
+  /** @nullable */
+  personalFinanceCategoryIconUrl?: string | null
+  /** @nullable */
+  personalFinanceCategoryConfidenceLevel?: string | null
+  /** @nullable */
+  counterparties?: UpdateTransactionDtoCounterpartiesItem[] | null
+  /** @nullable */
+  location?: UpdateTransactionDtoLocation
+  /** @nullable */
+  paymentMeta?: UpdateTransactionDtoPaymentMeta
   date?: string
   /** @nullable */
   datetime?: string | null
