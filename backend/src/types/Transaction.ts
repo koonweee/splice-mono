@@ -22,6 +22,8 @@ export type TransactionCategoryReviewStatus = z.infer<
   typeof TransactionCategoryReviewStatusSchema
 >;
 
+const ProviderJsonObjectSchema = z.record(z.string(), z.unknown());
+
 /**
  * Transaction schema for financial transactions linked to accounts.
  */
@@ -36,12 +38,38 @@ export const TransactionSchema = registerSchema(
       accountId: z.string().uuid(),
       /** Merchant name (e.g., "Starbucks") */
       merchantName: z.string().nullable(),
+      /** Provider's raw transaction name/description */
+      providerTransactionName: z.string().nullable(),
+      /** Original transaction description from the financial institution */
+      originalDescription: z.string().nullable(),
       /** Whether the transaction is pending (unsettled) */
       pending: z.boolean(),
+      /** Provider ID of the related pending transaction, when available */
+      pendingTransactionId: z.string().nullable(),
+      /** Account owner supplied by the provider, when available */
+      accountOwner: z.string().nullable(),
       /** External transaction ID from provider (e.g., Plaid transaction_id) */
       externalTransactionId: z.string().nullable(),
       /** Logo URL for the merchant */
       logoUrl: z.string().nullable(),
+      /** Website URL associated with the merchant */
+      website: z.string().nullable(),
+      /** Stable provider merchant entity ID */
+      merchantEntityId: z.string().nullable(),
+      /** Channel used to make the payment */
+      paymentChannel: z.string().nullable(),
+      /** Provider transaction code */
+      transactionCode: z.string().nullable(),
+      /** Icon URL for the provider's personal finance category */
+      personalFinanceCategoryIconUrl: z.string().nullable(),
+      /** Provider confidence level for the personal finance category */
+      personalFinanceCategoryConfidenceLevel: z.string().nullable(),
+      /** Provider-extracted counterparties for this transaction */
+      counterparties: z.array(ProviderJsonObjectSchema).nullable(),
+      /** Provider location metadata for this transaction */
+      location: ProviderJsonObjectSchema.nullable(),
+      /** Provider payment metadata for this transaction */
+      paymentMeta: ProviderJsonObjectSchema.nullable(),
       /** Transaction date (yyyy-mm-dd format) - occurrence date for pending, posted date for posted */
       date: z.string(),
       /** Transaction datetime with time info (nullable) */
@@ -89,9 +117,22 @@ export const CreateTransactionDtoSchema = registerSchema(
     amount: MoneyWithSignSchema,
     accountId: z.string().uuid(),
     merchantName: z.string().nullable().optional(),
+    providerTransactionName: z.string().nullable().optional(),
+    originalDescription: z.string().nullable().optional(),
     pending: z.boolean(),
+    pendingTransactionId: z.string().nullable().optional(),
+    accountOwner: z.string().nullable().optional(),
     externalTransactionId: z.string().nullable().optional(),
     logoUrl: z.string().nullable().optional(),
+    website: z.string().nullable().optional(),
+    merchantEntityId: z.string().nullable().optional(),
+    paymentChannel: z.string().nullable().optional(),
+    transactionCode: z.string().nullable().optional(),
+    personalFinanceCategoryIconUrl: z.string().nullable().optional(),
+    personalFinanceCategoryConfidenceLevel: z.string().nullable().optional(),
+    counterparties: z.array(ProviderJsonObjectSchema).nullable().optional(),
+    location: ProviderJsonObjectSchema.nullable().optional(),
+    paymentMeta: ProviderJsonObjectSchema.nullable().optional(),
     date: z.string(),
     datetime: z.string().datetime().nullable().optional(),
     authorizedDate: z.string().nullable().optional(),

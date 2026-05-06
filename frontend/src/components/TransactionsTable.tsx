@@ -1,9 +1,12 @@
 import {
   ActionIcon,
+  Anchor,
   Badge,
   Button,
+  Divider,
   Group,
   Popover,
+  Stack,
   Text,
   TextInput,
   Tooltip,
@@ -12,7 +15,7 @@ import {
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { Check, Pencil, RotateCcw, X } from 'lucide-react'
+import { Check, Info, Pencil, RotateCcw, X } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useMemo, useState } from 'react'
 import {
@@ -21,7 +24,14 @@ import {
   useTransactionControllerUpdateCategoryReview,
 } from '../api/clients/spliceAPI'
 import styles from './TransactionsTable.module.css'
+import {
+  formatCounterpartyLabel,
+  getCategoryReviewTooltip,
+  getMerchantDisplay,
+  getMetadataDetails,
+} from './transactions/transactionMetadata'
 import type { MRT_ColumnDef, MRT_SortingState } from 'mantine-react-table'
+import type { ReactNode } from 'react'
 import type { Category, Transaction } from '../api/models'
 import {
   formatCategoryName,
@@ -47,6 +57,156 @@ interface TransactionsTableProps {
   ) => void
   mantinePaperProps?: Record<string, unknown>
   mantineTableContainerProps?: Record<string, unknown>
+}
+
+function formatMetadataValue(value: string | null | undefined) {
+  return value && value.trim().length > 0 ? value : null
+}
+
+function MetadataRow({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <Stack gap={2}>
+      <Text c="dimmed" size="xs" tt="uppercase">
+        {label}
+      </Text>
+      <Text component="div" size="sm">
+        {children}
+      </Text>
+    </Stack>
+  )
+}
+
+function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
+  const details = getMetadataDetails(transaction)
+  const rawDescription = formatMetadataValue(transaction.originalDescription)
+  const providerName = formatMetadataValue(transaction.providerTransactionName)
+  const paymentChannel = formatMetadataValue(transaction.paymentChannel)
+  const website = formatMetadataValue(transaction.website)
+  const categoryConfidence = formatMetadataValue(details.categoryConfidence)
+  const categoryText =
+    details.categoryPrimaryLabel && details.categoryLabel
+      ? `${details.categoryPrimaryLabel} > ${details.categoryLabel}`
+      : details.categoryLabel
+  const hasPopoverContent =
+    rawDescription ||
+    providerName ||
+    details.counterparties.length > 0 ||
+    paymentChannel ||
+    categoryConfidence ||
+    details.authorizedAt ||
+    website ||
+    details.paymentProcessor ||
+    transaction.accountOwner
+
+  if (!hasPopoverContent) {
+    return null
+  }
+
+  return (
+    <Popover position="bottom-start" shadow="md" width={360} withinPortal>
+      <Popover.Target>
+        <ActionIcon
+          aria-label={`Show transaction details for ${details.merchantDisplay.primary}`}
+          className={styles.merchantInfoButton}
+          size="sm"
+          variant="subtle"
+        >
+          <Info size={14} />
+        </ActionIcon>
+      </Popover.Target>
+      <Popover.Dropdown className={styles.metadataPopover}>
+        <Stack gap="xs">
+          <Text fw={600} size="sm">
+            Transaction details
+          </Text>
+          <MetadataRow label="Display">
+            {details.merchantDisplay.primary}
+          </MetadataRow>
+          {rawDescription && (
+            <MetadataRow label="Raw description">{rawDescription}</MetadataRow>
+          )}
+          {providerName && providerName !== rawDescription && (
+            <MetadataRow label="Provider name">{providerName}</MetadataRow>
+          )}
+          {details.counterparties.length > 0 && (
+            <MetadataRow label="Counterparties">
+              <Stack gap={2}>
+                {details.counterparties.map((counterparty) => (
+                  <Text key={`${counterparty.name}-${counterparty.type}`} size="sm">
+                    {formatCounterpartyLabel(counterparty)}
+                  </Text>
+                ))}
+              </Stack>
+            </MetadataRow>
+          )}
+          {(paymentChannel || details.paymentProcessor) && (
+            <MetadataRow label="Payment">
+              {[paymentChannel, details.paymentProcessor && `via ${details.paymentProcessor}`]
+                .filter(Boolean)
+                .join(' · ')}
+            </MetadataRow>
+          )}
+          {(categoryText || categoryConfidence) && (
+            <MetadataRow label="Plaid category">
+              {[categoryText, categoryConfidence && `${categoryConfidence.toLowerCase()} confidence`]
+                .filter(Boolean)
+                .join(' · ')}
+            </MetadataRow>
+          )}
+          {details.authorizedAt && (
+            <MetadataRow label="Authorized">{details.authorizedAt}</MetadataRow>
+          )}
+          {transaction.accountOwner && (
+            <MetadataRow label="Account owner">
+              {transaction.accountOwner}
+            </MetadataRow>
+          )}
+          {website && (
+            <>
+              <Divider />
+              <Anchor href={website.startsWith('http') ? website : `https://${website}`} size="sm" target="_blank">
+                {website}
+              </Anchor>
+            </>
+          )}
+        </Stack>
+      </Popover.Dropdown>
+    </Popover>
+  )
+}
+
+function MerchantCell({ row }: { row: { original: Transaction } }) {
+  const transaction = row.original
+  const merchantDisplay = getMerchantDisplay(transaction)
+
+  return (
+    <Group className={styles.merchantCell} gap="xs" wrap="nowrap">
+      <Stack className={styles.merchantText} gap={1}>
+        <Group gap={6} wrap="nowrap">
+          <Text className={styles.merchantPrimary} size="sm" span>
+            {merchantDisplay.primary}
+          </Text>
+          {transaction.pending && (
+            <Badge color="yellow" size="xs" variant="light">
+              Pending
+            </Badge>
+          )}
+        </Group>
+        {merchantDisplay.secondary && (
+          <Text c="dimmed" className={styles.merchantSecondary} size="xs">
+            {merchantDisplay.secondary}
+          </Text>
+        )}
+      </Stack>
+      <TransactionInfoPopover transaction={transaction} />
+    </Group>
+  )
 }
 
 function AmountCell({ row }: { row: { original: Transaction } }) {
@@ -204,10 +364,10 @@ export function TransactionsTable({
       {
         accessorKey: 'merchantName',
         header: 'Merchant',
-        size: 130,
-        minSize: 110,
-        maxSize: 280,
-        Cell: ({ cell }) => cell.getValue<string | null>() ?? '--',
+        size: 260,
+        minSize: 180,
+        maxSize: 420,
+        Cell: MerchantCell,
       },
       {
         accessorKey: 'amount',
@@ -246,6 +406,11 @@ export function TransactionsTable({
           const isEditing = editingTransactionId === transaction.id
           const hasOverride = transaction.userCategoryId !== null
           const needsReview = transaction.categoryNeedsReview
+          const metadataDetails = getMetadataDetails(transaction)
+          const reviewTooltip = getCategoryReviewTooltip(
+            transaction,
+            metadataDetails,
+          )
           const resetLabel = transaction.category
             ? `Reset to Plaid category: ${getCategoryLabel(transaction.category)}`
             : 'Reset to uncategorized'
@@ -365,9 +530,9 @@ export function TransactionsTable({
           return (
             <Group className={styles.categoryCell} gap={4} wrap="nowrap">
               {needsReview && (
-                <Tooltip label="Category needs review" withArrow>
+                <Tooltip label={reviewTooltip} withArrow>
                   <span
-                    aria-label="Category needs review"
+                    aria-label={reviewTooltip}
                     className={styles.categoryReviewDot}
                   />
                 </Tooltip>
@@ -436,25 +601,6 @@ export function TransactionsTable({
             </Group>
           )
         },
-      },
-      {
-        accessorKey: 'pending',
-        header: 'Status',
-        enableResizing: false,
-        size: 100,
-        minSize: 100,
-        maxSize: 100,
-        grow: false,
-        Cell: ({ cell }) =>
-          cell.getValue<boolean>() ? (
-            <Badge color="yellow" variant="light">
-              Pending
-            </Badge>
-          ) : (
-            <Badge color="green" variant="light">
-              Posted
-            </Badge>
-          ),
       },
     ],
     [

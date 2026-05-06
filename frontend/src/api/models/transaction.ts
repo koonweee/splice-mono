@@ -6,6 +6,9 @@
  * OpenAPI spec version: 1.0
  */
 import type { MoneyWithSign } from './moneyWithSign'
+import type { TransactionCounterpartiesItem } from './transactionCounterpartiesItem'
+import type { TransactionLocation } from './transactionLocation'
+import type { TransactionPaymentMeta } from './transactionPaymentMeta'
 import type { TransactionCategory } from './transactionCategory'
 import type { TransactionUserCategory } from './transactionUserCategory'
 import type { TransactionEffectiveCategory } from './transactionEffectiveCategory'
@@ -18,11 +21,37 @@ export interface Transaction {
   accountId: string
   /** @nullable */
   merchantName: string | null
+  /** @nullable */
+  providerTransactionName: string | null
+  /** @nullable */
+  originalDescription: string | null
   pending: boolean
+  /** @nullable */
+  pendingTransactionId: string | null
+  /** @nullable */
+  accountOwner: string | null
   /** @nullable */
   externalTransactionId: string | null
   /** @nullable */
   logoUrl: string | null
+  /** @nullable */
+  website: string | null
+  /** @nullable */
+  merchantEntityId: string | null
+  /** @nullable */
+  paymentChannel: string | null
+  /** @nullable */
+  transactionCode: string | null
+  /** @nullable */
+  personalFinanceCategoryIconUrl: string | null
+  /** @nullable */
+  personalFinanceCategoryConfidenceLevel: string | null
+  /** @nullable */
+  counterparties: TransactionCounterpartiesItem[] | null
+  /** @nullable */
+  location: TransactionLocation
+  /** @nullable */
+  paymentMeta: TransactionPaymentMeta
   date: string
   /** @nullable */
   datetime: string | null
