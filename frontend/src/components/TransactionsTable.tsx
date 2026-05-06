@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Badge,
+  Button,
   Group,
   Popover,
   Text,
@@ -8,14 +9,16 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { Pencil, RotateCcw, X } from 'lucide-react'
+import { Check, Pencil, RotateCcw, X } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useMemo, useState } from 'react'
 import {
   useCategoryControllerFindAll,
   useTransactionControllerUpdateCategory,
+  useTransactionControllerUpdateCategoryReview,
 } from '../api/clients/spliceAPI'
 import styles from './TransactionsTable.module.css'
 import type { MRT_ColumnDef, MRT_SortingState } from 'mantine-react-table'
@@ -126,10 +129,48 @@ export function TransactionsTable({
       },
     },
   })
+  const updateCategoryReview = useTransactionControllerUpdateCategoryReview({
+    mutation: {
+      onSuccess: () => {
+        invalidateTransactionQueries(queryClient)
+      },
+    },
+  })
 
   function closeCategoryEditor() {
     setEditingTransactionId(null)
     setCategorySearch('')
+  }
+
+  function markCategoryReviewed(transaction: Transaction) {
+    updateCategoryReview.mutate(
+      { id: transaction.id, data: { reviewed: true } },
+      {
+        onSuccess: () => {
+          notifications.show({
+            title: 'Category reviewed',
+            message: (
+              <Group gap="xs" wrap="nowrap">
+                <Text size="sm">Category marked as reviewed.</Text>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  onClick={() =>
+                    updateCategoryReview.mutate({
+                      id: transaction.id,
+                      data: { reviewed: false },
+                    })
+                  }
+                >
+                  Undo
+                </Button>
+              </Group>
+            ),
+            color: 'green',
+          })
+        },
+      },
+    )
   }
 
   const categoryOptions = useMemo(
@@ -204,6 +245,7 @@ export function TransactionsTable({
           const category = transaction.effectiveCategory
           const isEditing = editingTransactionId === transaction.id
           const hasOverride = transaction.userCategoryId !== null
+          const needsReview = transaction.categoryNeedsReview
           const resetLabel = transaction.category
             ? `Reset to Plaid category: ${getCategoryLabel(transaction.category)}`
             : 'Reset to uncategorized'
@@ -322,6 +364,14 @@ export function TransactionsTable({
 
           return (
             <Group className={styles.categoryCell} gap={4} wrap="nowrap">
+              {needsReview && (
+                <Tooltip label="Category needs review" withArrow>
+                  <span
+                    aria-label="Category needs review"
+                    className={styles.categoryReviewDot}
+                  />
+                </Tooltip>
+              )}
               <Tooltip
                 label={category ? getCategoryLabel(category) : '--'}
                 disabled={!category}
@@ -332,6 +382,22 @@ export function TransactionsTable({
                 </Text>
               </Tooltip>
               <Group className={styles.categoryActions} gap={2} wrap="nowrap">
+                {needsReview && (
+                  <Tooltip label="Mark category as reviewed">
+                    <ActionIcon
+                      aria-label="Mark category as reviewed"
+                      variant="subtle"
+                      size="sm"
+                      loading={
+                        updateCategoryReview.isPending &&
+                        updateCategoryReview.variables.id === transaction.id
+                      }
+                      onClick={() => markCategoryReviewed(transaction)}
+                    >
+                      <Check size={14} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
                 <Tooltip label="Edit category">
                   <ActionIcon
                     aria-label="Edit category"
@@ -398,6 +464,9 @@ export function TransactionsTable({
       updateCategory.isPending,
       updateCategory.mutate,
       updateCategory.variables?.id,
+      updateCategoryReview.isPending,
+      updateCategoryReview.mutate,
+      updateCategoryReview.variables?.id,
     ],
   )
 

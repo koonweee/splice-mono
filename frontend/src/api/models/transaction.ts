@@ -9,6 +9,7 @@ import type { MoneyWithSign } from './moneyWithSign'
 import type { TransactionCategory } from './transactionCategory'
 import type { TransactionUserCategory } from './transactionUserCategory'
 import type { TransactionEffectiveCategory } from './transactionEffectiveCategory'
+import type { TransactionCategoryReviewMethodProperty } from './transactionCategoryReviewMethodProperty'
 import type { TransactionConvertedAmount } from './transactionConvertedAmount'
 
 export interface Transaction {
@@ -40,6 +41,10 @@ export interface Transaction {
   /** @nullable */
   effectiveCategoryId: string | null
   effectiveCategory?: TransactionEffectiveCategory
+  /** @nullable */
+  categoryReviewedAt: string | null
+  categoryReviewMethod: TransactionCategoryReviewMethodProperty
+  categoryNeedsReview: boolean
   /** @nullable */
   accountName?: string | null
   convertedAmount?: TransactionConvertedAmount

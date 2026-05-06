@@ -10,7 +10,11 @@ import { AccountEntity } from '../account/account.entity';
 import { CategoryEntity } from '../category/category.entity';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedEntity } from '../common/owned.entity';
-import { CreateTransactionDto, Transaction } from '../types/Transaction';
+import {
+  CreateTransactionDto,
+  Transaction,
+  TransactionCategoryReviewMethod,
+} from '../types/Transaction';
 
 @Entity()
 @Unique(['accountId', 'externalTransactionId']) // Prevent duplicate imports from providers
@@ -85,6 +89,14 @@ export class TransactionEntity extends OwnedEntity {
   @Column({ type: 'timestamptz', nullable: true })
   userCategoryUpdatedAt: Date | null;
 
+  /** When the category was reviewed by the user */
+  @Column({ type: 'timestamptz', nullable: true })
+  categoryReviewedAt: Date | null;
+
+  /** How the category review was completed */
+  @Column({ type: 'varchar', nullable: true })
+  categoryReviewMethod: TransactionCategoryReviewMethod | null;
+
   /**
    * Create entity from DTO
    */
@@ -105,6 +117,8 @@ export class TransactionEntity extends OwnedEntity {
     entity.userCategoryId = null;
     entity.userCategory = null;
     entity.userCategoryUpdatedAt = null;
+    entity.categoryReviewedAt = null;
+    entity.categoryReviewMethod = null;
     return entity;
   }
 
@@ -138,6 +152,9 @@ export class TransactionEntity extends OwnedEntity {
       userCategoryUpdatedAt: this.userCategoryUpdatedAt,
       effectiveCategoryId: this.userCategoryId ?? this.categoryId,
       effectiveCategory,
+      categoryReviewedAt: this.categoryReviewedAt ?? null,
+      categoryReviewMethod: this.categoryReviewMethod ?? null,
+      categoryNeedsReview: (this.categoryReviewedAt ?? null) === null,
       accountName: this.account
         ? (this.account.customName ?? this.account.name)
         : null,
