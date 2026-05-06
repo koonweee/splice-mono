@@ -1,17 +1,25 @@
 import {
+  ActionIcon,
+  Badge,
+  Box,
   Button,
+  Divider,
+  Drawer,
   Flex,
+  FocusTrap,
   Group,
   SegmentedControl,
   Select,
+  Stack,
   Text,
   Title,
 } from '@mantine/core'
-import { DatePickerInput } from '@mantine/dates'
+import { useClickOutside, useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
+import { Filter } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   getTransactionControllerFindAllQueryKey,
@@ -30,6 +38,7 @@ import type {
 } from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
 import type { MRT_SortingState } from 'mantine-react-table'
+import { DateRangeControl } from '@/components/DateRangeControl'
 import { TransactionsTable } from '@/components/TransactionsTable'
 
 const PAGE_SIZE = 50
@@ -42,6 +51,54 @@ type TransactionsSearch = {
   endDate?: string
 }
 
+type TransactionFiltersPanelProps = {
+  accountId: string | null
+  accountOptions: Array<{ value: string; label: string }>
+  amountSign: string
+  categoryOptions: Array<{ value: string; label: string }>
+  categoryPrimary: string | null
+  categoryReviewStatus: CategoryReviewFilter
+  hasActiveFilters: boolean
+  isMobile: boolean
+  onAccountChange: (value: string | null) => void
+  onAmountSignChange: (value: string) => void
+  onCategoryChange: (value: string | null) => void
+  onCategoryReviewStatusChange: (value: CategoryReviewFilter) => void
+  onClearFilters: () => void
+}
+
+const amountSignOptions = [
+  { label: 'All', value: 'all' },
+  { label: 'Inflows', value: 'positive' },
+  { label: 'Outflows', value: 'negative' },
+]
+
+const categoryReviewOptions = [
+  { label: 'All', value: 'all' },
+  { label: 'Needs review', value: 'needs_review' },
+  { label: 'Reviewed', value: 'reviewed' },
+]
+
+const mobileControlStyles = {
+  input: {
+    fontSize: 16,
+    minHeight: 48,
+  },
+}
+
+const mobileSegmentedControlStyles = {
+  root: {
+    minHeight: 48,
+  },
+  label: {
+    alignItems: 'center',
+    display: 'flex',
+    fontSize: 16,
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+}
+
 const isValidDateString = (value: unknown): value is string =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 
@@ -51,6 +108,104 @@ function getPrimaryCategoryLabel(
   return category.source === 'user'
     ? category.primary
     : formatPrimaryCategory(category.primary)
+}
+
+function TransactionsFilterPanel({
+  accountId,
+  accountOptions,
+  amountSign,
+  categoryOptions,
+  categoryPrimary,
+  categoryReviewStatus,
+  hasActiveFilters,
+  isMobile,
+  onAccountChange,
+  onAmountSignChange,
+  onCategoryChange,
+  onCategoryReviewStatusChange,
+  onClearFilters,
+}: TransactionFiltersPanelProps) {
+  const selectStyles = isMobile ? mobileControlStyles : undefined
+  const segmentedControlStyles = isMobile
+    ? mobileSegmentedControlStyles
+    : undefined
+
+  return (
+    <Stack gap="md">
+      <Stack gap="xs">
+        <Text fw={600} size="sm">
+          Filters
+        </Text>
+        <Select
+          placeholder="Account"
+          data={accountOptions}
+          value={accountId}
+          onChange={onAccountChange}
+          clearable
+          searchable
+          size="md"
+          comboboxProps={{ withinPortal: false }}
+          styles={selectStyles}
+        />
+        <Select
+          placeholder="Category"
+          data={categoryOptions}
+          value={categoryPrimary}
+          onChange={onCategoryChange}
+          clearable
+          searchable
+          size="md"
+          comboboxProps={{ withinPortal: false }}
+          styles={selectStyles}
+        />
+      </Stack>
+
+      <Divider />
+
+      <Stack gap="xs">
+        <Text fw={600} size="sm">
+          Flow
+        </Text>
+        <SegmentedControl
+          value={amountSign}
+          onChange={onAmountSignChange}
+          size={isMobile ? 'md' : 'sm'}
+          fullWidth
+          data={amountSignOptions}
+          styles={segmentedControlStyles}
+        />
+      </Stack>
+
+      <Stack gap="xs">
+        <Text fw={600} size="sm">
+          Review
+        </Text>
+        <SegmentedControl
+          value={categoryReviewStatus}
+          onChange={(value) =>
+            onCategoryReviewStatusChange(value as CategoryReviewFilter)
+          }
+          size={isMobile ? 'md' : 'sm'}
+          fullWidth
+          data={categoryReviewOptions}
+          styles={segmentedControlStyles}
+        />
+      </Stack>
+
+      {hasActiveFilters ? (
+        <>
+          <Divider />
+          <Button
+            variant="subtle"
+            size={isMobile ? 'md' : 'xs'}
+            onClick={onClearFilters}
+          >
+            Clear filters
+          </Button>
+        </>
+      ) : null}
+    </Stack>
+  )
 }
 
 export const Route = createFileRoute('/_authed/transactions')({
@@ -69,6 +224,16 @@ function TransactionsPage() {
   const search = Route.useSearch()
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
+  const isMobile = useMediaQuery('(max-width: 48em)')
+  const [
+    filtersOpened,
+    { close: closeFilters, toggle: toggleFilters },
+  ] = useDisclosure(false)
+  const desktopFilterRef = useClickOutside<HTMLDivElement>(() => {
+    if (!isMobile && filtersOpened) {
+      closeFilters()
+    }
+  })
   const [sorting, setSorting] = useState<MRT_SortingState>([
     { id: 'date', desc: true },
   ])
@@ -226,10 +391,6 @@ function TransactionsPage() {
     }
   }, [fetchNextPage, isFetching, hasNextPage])
 
-  const handleDateRangeChange = (range: DatesRangeValue) => {
-    setDateRange(range)
-  }
-
   const hasActiveFilters =
     dateRange[0] !== null ||
     accountId !== null ||
@@ -244,6 +405,18 @@ function TransactionsPage() {
     setAmountSign('all')
     setCategoryReviewStatus('all')
   }
+
+  const hiddenActiveFilterCount = [
+    accountId,
+    categoryPrimary,
+    amountSign !== 'all' ? amountSign : null,
+    categoryReviewStatus !== 'all' ? categoryReviewStatus : null,
+  ].filter(Boolean).length
+
+  const filterButtonLabel =
+    hiddenActiveFilterCount > 0
+      ? `Open transaction filters, ${hiddenActiveFilterCount} active`
+      : 'Open transaction filters'
 
   const markFilteredAsReviewed = () => {
     bulkReviewCategories.mutate(
@@ -285,6 +458,24 @@ function TransactionsPage() {
     )
   }
 
+  const filterPanel = (
+    <TransactionsFilterPanel
+      accountId={accountId}
+      accountOptions={accountOptions}
+      amountSign={amountSign}
+      categoryOptions={categoryOptions}
+      categoryPrimary={categoryPrimary}
+      categoryReviewStatus={categoryReviewStatus}
+      hasActiveFilters={hasActiveFilters}
+      isMobile={Boolean(isMobile)}
+      onAccountChange={setAccountId}
+      onAmountSignChange={setAmountSign}
+      onCategoryChange={setCategoryPrimary}
+      onCategoryReviewStatusChange={setCategoryReviewStatus}
+      onClearFilters={clearFilters}
+    />
+  )
+
   return (
     <Flex
       direction="column"
@@ -296,93 +487,89 @@ function TransactionsPage() {
         <Title order={1}>Transactions</Title>
       </Group>
 
-      <Group mb="md" gap="xs" wrap="wrap">
-        <Button
-          variant="light"
-          size="xs"
-          onClick={() => {
-            const start = dayjs().startOf('month').toDate()
-            const end = dayjs().toDate()
-            setDateRange([start, end])
-          }}
-        >
-          This Month
-        </Button>
-        <Button
-          variant="light"
-          size="xs"
-          onClick={() => {
-            const start = dayjs().subtract(1, 'month').startOf('month').toDate()
-            const end = dayjs().subtract(1, 'month').endOf('month').toDate()
-            setDateRange([start, end])
-          }}
-        >
-          Last Month
-        </Button>
-        <DatePickerInput
-          type="range"
-          placeholder="Date range"
-          value={dateRange}
-          onChange={handleDateRangeChange}
-          maxDate={new Date()}
-          size="md"
-          clearable
-        />
-        <Select
-          placeholder="Account"
-          data={accountOptions}
-          value={accountId}
-          onChange={setAccountId}
-          clearable
-          searchable
-          size="md"
-          w={200}
-        />
-        <Select
-          placeholder="Category"
-          data={categoryOptions}
-          value={categoryPrimary}
-          onChange={setCategoryPrimary}
-          clearable
-          searchable
-          size="md"
-          w={180}
-        />
-        <SegmentedControl
-          value={amountSign}
-          onChange={setAmountSign}
-          size="xs"
-          data={[
-            { label: 'All', value: 'all' },
-            { label: 'Inflows', value: 'positive' },
-            { label: 'Outflows', value: 'negative' },
-          ]}
-        />
-        <SegmentedControl
-          value={categoryReviewStatus}
-          onChange={(value) =>
-            setCategoryReviewStatus(value as CategoryReviewFilter)
-          }
-          size="xs"
-          data={[
-            { label: 'All', value: 'all' },
-            { label: 'Needs review', value: 'needs_review' },
-            { label: 'Reviewed', value: 'reviewed' },
-          ]}
-        />
+      <Group mb="md" gap="xs" wrap="wrap" align="center">
+        {isMobile ? (
+          <Group flex={1} gap="xs" miw={0} wrap="nowrap">
+            <DateRangeControl onChange={setDateRange} value={dateRange} />
+            <ActionIcon
+              aria-label={filterButtonLabel}
+              variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
+              size={48}
+              onClick={toggleFilters}
+            >
+              <Filter size={20} />
+            </ActionIcon>
+          </Group>
+        ) : (
+          <DateRangeControl onChange={setDateRange} value={dateRange} />
+        )}
+
+        {isMobile ? (
+          <Drawer
+            opened={filtersOpened}
+            onClose={closeFilters}
+            title="Filters"
+            position="bottom"
+            size="auto"
+            padding="md"
+          >
+            {filterPanel}
+          </Drawer>
+        ) : (
+          <Box pos="relative" ref={desktopFilterRef}>
+            <ActionIcon
+              aria-label={filterButtonLabel}
+              variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
+              size={42}
+              onClick={toggleFilters}
+            >
+              <Filter size={18} />
+            </ActionIcon>
+            {hiddenActiveFilterCount > 0 && (
+              <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
+                {hiddenActiveFilterCount}
+              </Badge>
+            )}
+            {filtersOpened && (
+              <FocusTrap active>
+                <Box
+                  aria-label="Transaction filters"
+                  role="dialog"
+                  p="md"
+                  pos="absolute"
+                  tabIndex={-1}
+                  top="calc(100% + 8px)"
+                  right={0}
+                  w={360}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      closeFilters()
+                    }
+                  }}
+                  style={{
+                    background: 'var(--mantine-color-body)',
+                    border:
+                      '1px solid var(--mantine-color-default-border)',
+                    borderRadius: 'var(--mantine-radius-md)',
+                    boxShadow: 'var(--mantine-shadow-md)',
+                    zIndex: 20,
+                  }}
+                >
+                  {filterPanel}
+                </Box>
+              </FocusTrap>
+            )}
+          </Box>
+        )}
         {categoryReviewStatus === 'needs_review' && totalRows > 0 && (
           <Button
             variant="light"
-            size="xs"
+            size="md"
+            mih={isMobile ? 48 : undefined}
             loading={bulkReviewCategories.isPending}
             onClick={markFilteredAsReviewed}
           >
             Mark {totalRows} as reviewed
-          </Button>
-        )}
-        {hasActiveFilters && (
-          <Button variant="subtle" size="xs" onClick={clearFilters}>
-            Clear filters
           </Button>
         )}
       </Group>
