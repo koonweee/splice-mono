@@ -24,6 +24,7 @@ const SNAPSHOT_MAX_PAGE_SIZE = 250;
 const CANDIDATE_BATCH_SIZE = 250;
 const ACTIVITY_DATE_EXPRESSION =
   'COALESCE(transaction."authorizedDate", transaction."providerDate")';
+const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
 
 interface CursorPayload {
   date: string;
@@ -507,8 +508,9 @@ export class McpReadService {
       .leftJoinAndSelect('account.bankLink', 'bankLink')
       .leftJoinAndSelect('transaction.category', 'category')
       .leftJoinAndSelect('transaction.userCategory', 'userCategory')
+      .addSelect(ACTIVITY_DATE_EXPRESSION, ACTIVITY_DATE_SORT_ALIAS)
       .where('transaction.userId = :userId', { userId })
-      .orderBy(ACTIVITY_DATE_EXPRESSION, 'DESC')
+      .orderBy(ACTIVITY_DATE_SORT_ALIAS, 'DESC')
       .addOrderBy('transaction.id', 'DESC');
 
     if (options.startDate) {

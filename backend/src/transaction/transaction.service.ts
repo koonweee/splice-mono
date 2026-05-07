@@ -60,6 +60,8 @@ const ACTIVITY_DATE_EXPRESSION =
   'COALESCE(transaction."authorizedDate", transaction."providerDate")';
 const ACTIVITY_DATETIME_EXPRESSION =
   'COALESCE(transaction."authorizedDatetime", transaction."providerDatetime")';
+const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
+const ACTIVITY_DATETIME_SORT_ALIAS = 'activity_datetime_sort';
 
 function parseRawInteger(value: string | number | null): number {
   if (typeof value === 'number') {
@@ -306,22 +308,26 @@ export class TransactionService extends OwnedCrudService<
     sortColumn: string,
     order: 'ASC' | 'DESC',
   ): SelectQueryBuilder<TransactionEntity> {
+    query
+      .addSelect(ACTIVITY_DATE_EXPRESSION, ACTIVITY_DATE_SORT_ALIAS)
+      .addSelect(ACTIVITY_DATETIME_EXPRESSION, ACTIVITY_DATETIME_SORT_ALIAS);
+
     let sortExpression = `transaction.${sortColumn}`;
     if (sortColumn === 'amount') {
       sortExpression = 'transaction.amountAmount';
     } else if (sortColumn === 'activityDate') {
-      sortExpression = ACTIVITY_DATE_EXPRESSION;
+      sortExpression = ACTIVITY_DATE_SORT_ALIAS;
     }
     const chronologicalTieOrder =
       sortColumn === 'activityDate' ? order : 'DESC';
 
     query.orderBy(sortExpression, order);
     if (sortColumn !== 'activityDate') {
-      query.addOrderBy(ACTIVITY_DATE_EXPRESSION, 'DESC');
+      query.addOrderBy(ACTIVITY_DATE_SORT_ALIAS, 'DESC');
     }
     query
       .addOrderBy(
-        ACTIVITY_DATETIME_EXPRESSION,
+        ACTIVITY_DATETIME_SORT_ALIAS,
         chronologicalTieOrder,
         'NULLS LAST',
       )
