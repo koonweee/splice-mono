@@ -102,7 +102,7 @@ describe('TransactionsMobileList', () => {
     renderMobileList([
       makeTransaction({
         id: 'txn-1',
-        date: '2026-05-07',
+        activityDate: '2026-05-07',
         merchantName: 'Whole Foods Market',
         amount: 6824,
         sign: MoneyWithSignSign.negative,
@@ -110,7 +110,7 @@ describe('TransactionsMobileList', () => {
       }),
       makeTransaction({
         id: 'txn-2',
-        date: '2026-05-06',
+        activityDate: '2026-05-06',
         merchantName: 'Salary',
         amount: 215000,
         sign: MoneyWithSignSign.positive,
@@ -153,7 +153,7 @@ describe('TransactionsMobileList', () => {
     expect(onScrollNearBottom).toHaveBeenCalled()
   })
 
-  it('opens transaction actions with category controls and metadata details', async () => {
+  it('opens transaction details from the full row', async () => {
     renderMobileList([
       makeTransaction({
         id: 'txn-1',
@@ -164,8 +164,14 @@ describe('TransactionsMobileList', () => {
       }),
     ])
 
+    expect(
+      screen.queryByLabelText('Open transaction actions for Whole Foods Market'),
+    ).toBeNull()
+
     fireEvent.click(
-      screen.getByLabelText('Open transaction actions for Whole Foods Market'),
+      screen.getByRole('button', {
+        name: /Open transaction details for Whole Foods Market/,
+      }),
     )
 
     expect(await screen.findByLabelText('Search categories')).toBeTruthy()
@@ -184,7 +190,9 @@ describe('TransactionsMobileList', () => {
       }),
     ])
 
-    fireEvent.click(screen.getByLabelText('Open transaction actions for Salary'))
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction details for Salary/ }),
+    )
     fireEvent.click(await screen.findByRole('button', { name: 'Mark reviewed' }))
 
     expect(mockFns.updateCategoryReviewMutateMock).toHaveBeenCalledWith(
@@ -207,7 +215,9 @@ describe('TransactionsMobileList', () => {
       }),
     ])
 
-    fireEvent.click(screen.getByLabelText('Open transaction actions for Store'))
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction details for Store/ }),
+    )
     fireEvent.click(await screen.findByRole('button', { name: 'Reset override' }))
 
     expect(mockFns.updateCategoryMutateMock).toHaveBeenCalledWith({
@@ -224,7 +234,9 @@ describe('TransactionsMobileList', () => {
       }),
     ])
 
-    fireEvent.click(screen.getByLabelText('Open transaction actions for Store'))
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction details for Store/ }),
+    )
     fireEvent.click(
       await screen.findByRole('option', {
         name: 'Hardware Home Projects User',
@@ -281,8 +293,8 @@ function makeCategory(overrides: {
 function makeTransaction(
   overrides: Partial<{
     amount: number
+    activityDate: string
     categoryNeedsReview: boolean
-    date: string
     id: string
     merchantName: string
     originalDescription: string | null
@@ -320,8 +332,9 @@ function makeTransaction(
     counterparties: null,
     location: null,
     paymentMeta: null,
-    date: overrides.date ?? '2026-05-07',
-    datetime: null,
+    activityDate: overrides.activityDate ?? '2026-05-07',
+    providerDate: overrides.activityDate ?? '2026-05-07',
+    providerDatetime: null,
     authorizedDate: null,
     authorizedDatetime: null,
     categoryId: category.id,

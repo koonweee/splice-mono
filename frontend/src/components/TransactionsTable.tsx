@@ -308,6 +308,16 @@ function MerchantCell({ row }: { row: { original: Transaction } }) {
               Pending
             </Badge>
           )}
+          {transaction.categoryNeedsReview && (
+            <Badge
+              className={`${styles.statusBadge} ${styles.reviewBadge}`}
+              color="orange"
+              size="xs"
+              variant="light"
+            >
+              Needs review
+            </Badge>
+          )}
         </Group>
         {merchantDisplay.secondary && (
           <Text c="dimmed" className={styles.merchantSecondary} size="xs">
@@ -352,47 +362,6 @@ function AmountCell({ row }: { row: { original: Transaction } }) {
   }
 
   return amountNode
-}
-
-function StatusCell({ row }: { row: { original: Transaction } }) {
-  const transaction = row.original
-
-  if (transaction.pending) {
-    return (
-      <Badge
-        className={`${styles.statusBadge} ${styles.pendingBadge}`}
-        color="yellow"
-        size="xs"
-        variant="light"
-      >
-        Pending
-      </Badge>
-    )
-  }
-
-  if (transaction.categoryNeedsReview) {
-    return (
-      <Badge
-        className={`${styles.statusBadge} ${styles.reviewBadge}`}
-        color="orange"
-        size="xs"
-        variant="light"
-      >
-        Needs review
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge
-      className={`${styles.statusBadge} ${styles.reviewedBadge}`}
-      color="teal"
-      size="xs"
-      variant="light"
-    >
-      Reviewed
-    </Badge>
-  )
 }
 
 function getCategoryToneClass(label: string) {
@@ -553,7 +522,7 @@ export function TransactionsTable({
   const allColumns = useMemo<Array<MRT_ColumnDef<Transaction>>>(
     () => [
       {
-        accessorKey: 'date',
+        accessorKey: 'activityDate',
         header: 'Date',
         size: 110,
         minSize: 90,
@@ -563,7 +532,7 @@ export function TransactionsTable({
       },
       {
         accessorKey: 'merchantName',
-        header: 'Merchant',
+        header: 'Description',
         size: 260,
         minSize: 180,
         maxSize: 420,
@@ -809,15 +778,6 @@ export function TransactionsTable({
             </Group>
           )
         },
-      },
-      {
-        id: 'status',
-        header: 'Status',
-        enableSorting: false,
-        size: 118,
-        minSize: 100,
-        maxSize: 150,
-        Cell: StatusCell,
       },
     ],
     [

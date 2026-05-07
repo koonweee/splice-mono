@@ -14,11 +14,11 @@ export type TransactionControllerGetSummaryParams = {
    */
   accountId?: string
   /**
-   * Filter by start date (YYYY-MM-DD)
+   * Filter by activity start date (YYYY-MM-DD)
    */
   startDate?: string
   /**
-   * Filter by end date (YYYY-MM-DD)
+   * Filter by activity end date (YYYY-MM-DD)
    */
   endDate?: string
   /**

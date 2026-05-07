@@ -8,11 +8,11 @@
 
 export type TransactionAnalysisControllerGetAnalysisParams = {
   /**
-   * End date (YYYY-MM-DD, inclusive)
+   * Activity end date (YYYY-MM-DD, inclusive)
    */
   endDate: string
   /**
-   * Start date (YYYY-MM-DD, inclusive)
+   * Activity start date (YYYY-MM-DD, inclusive)
    */
   startDate: string
 }

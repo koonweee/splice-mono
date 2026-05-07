@@ -427,9 +427,17 @@ describe('TransactionsPage category review workflow', () => {
       }),
     )
     expect(screen.getByLabelText('Transaction summary')).toBeTruthy()
-    expect(screen.getByText('$2,500.00')).toBeTruthy()
-    expect(screen.getByText('-$1,017.00')).toBeTruthy()
-    expect(screen.getByText('125')).toBeTruthy()
+    expect(screen.getByText('$1,483.00')).toBeTruthy()
+    expect(screen.queryByText('125')).toBeNull()
+    expect(screen.queryByText('Pending')).toBeNull()
+    expect(screen.queryByText('Needs review')).toBeNull()
+
+    const summaryDisclosure = screen.getByRole('button', {
+      name: 'Show inflow and outflow summary',
+    })
+    fireEvent.click(summaryDisclosure)
+
+    expect(summaryDisclosure.getAttribute('aria-expanded')).toBe('true')
   })
 
   it('uses the mobile transaction list at narrow viewports', () => {

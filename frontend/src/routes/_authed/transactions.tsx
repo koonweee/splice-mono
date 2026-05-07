@@ -236,7 +236,7 @@ function TransactionsPage() {
     }
   })
   const [sorting, setSorting] = useState<MRT_SortingState>([
-    { id: 'date', desc: true },
+    { id: 'activityDate', desc: true },
   ])
 
   // Filter state
@@ -482,6 +482,14 @@ function TransactionsPage() {
     )
   }
 
+  const transactionSummaryStrip = (
+    <TransactionSummaryStrip
+      summary={summary}
+      isLoading={isSummaryLoading}
+      isError={isSummaryError}
+    />
+  )
+
   const filterPanel = (
     <TransactionsFilterPanel
       accountId={accountId}
@@ -511,18 +519,25 @@ function TransactionsPage() {
         <Title order={1}>Transactions</Title>
       </Group>
 
-      <Group mb="md" gap="xs" wrap="wrap" align="center">
+      <Group mb={isMobile ? 'xs' : 'md'} gap="xs" wrap="wrap" align="center">
         {isMobile ? (
           <Group flex={1} gap="xs" miw={0} wrap="nowrap">
             <DateRangeControl onChange={setDateRange} value={dateRange} />
-            <ActionIcon
-              aria-label={filterButtonLabel}
-              variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
-              size={48}
-              onClick={toggleFilters}
-            >
-              <Filter size={20} />
-            </ActionIcon>
+            <Box pos="relative">
+              <ActionIcon
+                aria-label={filterButtonLabel}
+                variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
+                size={48}
+                onClick={toggleFilters}
+              >
+                <Filter size={20} />
+              </ActionIcon>
+              {hiddenActiveFilterCount > 0 && (
+                <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
+                  {hiddenActiveFilterCount}
+                </Badge>
+              )}
+            </Box>
           </Group>
         ) : (
           <DateRangeControl onChange={setDateRange} value={dateRange} />
@@ -585,6 +600,7 @@ function TransactionsPage() {
             )}
           </Box>
         )}
+        {!isMobile && transactionSummaryStrip}
         {categoryReviewStatus === 'needs_review' && totalRows > 0 && (
           <Button
             variant="light"
@@ -598,11 +614,7 @@ function TransactionsPage() {
         )}
       </Group>
 
-      <TransactionSummaryStrip
-        summary={summary}
-        isLoading={isSummaryLoading}
-        isError={isSummaryError}
-      />
+      {isMobile && <Box mb="md">{transactionSummaryStrip}</Box>}
 
       {isMobile ? (
         <TransactionsMobileList

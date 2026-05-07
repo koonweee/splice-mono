@@ -35,7 +35,7 @@ Use reportingCurrency from get_user_context.currency unless the user asks for an
 
 All MCP money amounts are major units and always include currency and sign. Amount filters require a currency and are applied after conversion into reportingCurrency.
 
-Dates are inclusive YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone.
+Transaction date ranges use activityDate (authorizedDate when available, otherwise providerDate). Dates are inclusive YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone.
 
 Pending transactions are excluded by default unless includePending is true. State whether pending transactions were included.`;
 
@@ -189,7 +189,7 @@ export class SpliceMcpService {
       {
         title: 'Search Transactions',
         description:
-          'Legacy transaction search by date, account, merchant, category, sign, amount, and pending state. Returns at most 20 rows; use list_transactions for spending totals or patterns.',
+          'Legacy transaction search by activity date, account, merchant, category, sign, amount, and pending state. Returns at most 20 rows; use list_transactions for spending totals or patterns.',
         inputSchema: {
           startDate: DateStringSchema.optional(),
           endDate: DateStringSchema.optional(),
@@ -220,10 +220,10 @@ export class SpliceMcpService {
           'List raw transactions for analysis with cursor pagination. For spending totals or patterns, keep paging until pageInfo.hasMore is false. All money amounts are major units. Always use convertedAmount for cross-currency comparisons.',
         inputSchema: {
           startDate: DateStringSchema.optional().describe(
-            'Inclusive start date in YYYY-MM-DD. Resolve relative dates using get_user_context.today.',
+            'Inclusive activity start date in YYYY-MM-DD. Resolve relative dates using get_user_context.today.',
           ),
           endDate: DateStringSchema.optional().describe(
-            'Inclusive end date in YYYY-MM-DD. Resolve relative dates using get_user_context.today.',
+            'Inclusive activity end date in YYYY-MM-DD. Resolve relative dates using get_user_context.today.',
           ),
           accountIds: z
             .array(z.string().uuid())
@@ -323,10 +323,10 @@ export class SpliceMcpService {
           'List valid transaction category codes and friendly labels. Use this before category-filtered transaction queries instead of guessing category strings.',
         inputSchema: {
           startDate: DateStringSchema.optional().describe(
-            'Optional inclusive start date for transaction counts.',
+            'Optional inclusive activity start date for transaction counts.',
           ),
           endDate: DateStringSchema.optional().describe(
-            'Optional inclusive end date for transaction counts.',
+            'Optional inclusive activity end date for transaction counts.',
           ),
         },
       },

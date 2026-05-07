@@ -109,18 +109,6 @@
   color: light-dark(var(--mantine-color-orange-9), var(--mantine-color-orange-3));
 }
 
-.reviewedBadge {
-  border-color: light-dark(
-    var(--mantine-color-teal-4),
-    var(--mantine-color-teal-7)
-  );
-  background: light-dark(
-    var(--mantine-color-teal-0),
-    rgba(18, 184, 134, 0.15)
-  );
-  color: light-dark(var(--mantine-color-teal-9), var(--mantine-color-teal-3));
-}
-
 @media (pointer: coarse) {
   .merchantInfoButton {
     min-width: 40px;

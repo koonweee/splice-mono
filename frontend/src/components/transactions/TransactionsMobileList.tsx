@@ -1,5 +1,5 @@
 import {
-  ActionIcon,
+  Avatar,
   Badge,
   Button,
   Divider,
@@ -14,7 +14,7 @@ import {
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { Check, MoreHorizontal, RotateCcw } from 'lucide-react'
+import { Check, RotateCcw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   useCategoryControllerFindAll,
@@ -83,9 +83,9 @@ function groupTransactionsByDate(data: Array<Transaction>) {
   const groups = new Map<string, Array<Transaction>>()
 
   data.forEach((transaction) => {
-    const transactions = groups.get(transaction.date) ?? []
+    const transactions = groups.get(transaction.activityDate) ?? []
     transactions.push(transaction)
-    groups.set(transaction.date, transactions)
+    groups.set(transaction.activityDate, transactions)
   })
 
   return Array.from(groups.entries())
@@ -249,58 +249,78 @@ export function TransactionsMobileList({
             </div>
             {transactions.map((transaction) => {
               const merchantDisplay = getMerchantDisplay(transaction)
+              const avatarLabel = merchantDisplay.primary
+                .trim()
+                .slice(0, 1)
+                .toUpperCase()
               const amount = transaction.convertedAmount ?? transaction.amount
 
               return (
-                <article className={styles.row} key={transaction.id}>
-                  <div>
-                    <div className={styles.merchantLine}>
-                      <span className={styles.merchant}>
-                        {merchantDisplay.primary}
-                      </span>
-                    </div>
-                    {(transaction.pending || transaction.categoryNeedsReview) && (
-                      <div className={styles.statusLine}>
-                        {transaction.pending && (
-                          <Badge
-                            className={`${styles.statusBadge} ${styles.pendingBadge}`}
-                            color="yellow"
-                            size="xs"
-                            variant="light"
-                          >
-                            Pending
-                          </Badge>
-                        )}
-                        {!transaction.pending &&
-                          transaction.categoryNeedsReview && (
+                <UnstyledButton
+                  aria-label={`Open transaction details for ${merchantDisplay.primary}`}
+                  className={styles.row}
+                  key={transaction.id}
+                  onClick={() => setActiveTransactionId(transaction.id)}
+                >
+                  <div className={styles.rowMain}>
+                    <Avatar
+                      className={styles.merchantAvatar}
+                      radius="sm"
+                      size={28}
+                      src={transaction.logoUrl}
+                    >
+                      {avatarLabel}
+                    </Avatar>
+                    <div className={styles.rowDetails}>
+                      <div className={styles.merchantLine}>
+                        <span className={styles.merchant}>
+                          {merchantDisplay.primary}
+                        </span>
+                      </div>
+                      {(transaction.pending ||
+                        transaction.categoryNeedsReview) && (
+                        <div className={styles.statusLine}>
+                          {transaction.pending && (
                             <Badge
-                              className={`${styles.statusBadge} ${styles.reviewBadge}`}
-                              color="orange"
+                              className={`${styles.statusBadge} ${styles.pendingBadge}`}
+                              color="yellow"
                               size="xs"
                               variant="light"
                             >
-                              Needs review
+                              Pending
                             </Badge>
                           )}
-                      </div>
-                    )}
-                    <div className={styles.metaLine}>
-                      <span className={styles.meta}>
-                        {[
-                          transaction.accountName,
-                          getCategoryLabel(transaction),
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    </div>
-                    {formatPaymentChannel(transaction.paymentChannel) && (
+                          {!transaction.pending &&
+                            transaction.categoryNeedsReview && (
+                              <Badge
+                                className={`${styles.statusBadge} ${styles.reviewBadge}`}
+                                color="orange"
+                                size="xs"
+                                variant="light"
+                              >
+                                Needs review
+                              </Badge>
+                            )}
+                        </div>
+                      )}
                       <div className={styles.metaLine}>
                         <span className={styles.meta}>
-                          {formatPaymentChannel(transaction.paymentChannel)}
+                          {[
+                            transaction.accountName,
+                            getCategoryLabel(transaction),
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </span>
                       </div>
-                    )}
+                      {formatPaymentChannel(transaction.paymentChannel) && (
+                        <div className={styles.metaLine}>
+                          <span className={styles.meta}>
+                            {formatPaymentChannel(transaction.paymentChannel)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className={styles.rowAside}>
                     <span
@@ -310,16 +330,8 @@ export function TransactionsMobileList({
                     >
                       {formatMoneyWithSign({ value: amount })}
                     </span>
-                    <ActionIcon
-                      aria-label={`Open transaction actions for ${merchantDisplay.primary}`}
-                      size="sm"
-                      variant="subtle"
-                      onClick={() => setActiveTransactionId(transaction.id)}
-                    >
-                      <MoreHorizontal size={16} />
-                    </ActionIcon>
                   </div>
-                </article>
+                </UnstyledButton>
               )
             })}
           </section>
@@ -345,7 +357,7 @@ export function TransactionsMobileList({
             <div>
               <Group justify="space-between" wrap="nowrap">
                 <Text c="dimmed" size="sm">
-                  {dayjs(activeTransaction.date).format('MMM D, YYYY')}
+                  {dayjs(activeTransaction.activityDate).format('MMM D, YYYY')}
                 </Text>
                 <Text
                   className={`${styles.drawerAmount} ${getAmountClass(

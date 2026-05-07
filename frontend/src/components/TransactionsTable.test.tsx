@@ -259,7 +259,7 @@ describe('TransactionsTable', () => {
     expect(screen.queryByText('Posted')).toBeNull()
   })
 
-  it('renders amount sign styling and transaction status chips', () => {
+  it('renders amount sign styling and review status in the description cell', () => {
     renderTable([
       makeTransaction({
         category: providerCategory,
@@ -270,6 +270,7 @@ describe('TransactionsTable', () => {
 
     expect(screen.getByText('-$12.00')).toBeTruthy()
     expect(screen.getByText('Needs review')).toBeTruthy()
+    expect(screen.queryByText('Status')).toBeNull()
   })
 
   it('shows pending inline and exposes metadata in the info popover', async () => {
@@ -524,8 +525,9 @@ function makeTransaction(params: {
     counterparties: params.counterparties ?? null,
     location: null,
     paymentMeta: null,
-    date: '2026-02-14',
-    datetime: null,
+    activityDate: '2026-02-14',
+    providerDate: '2026-02-14',
+    providerDatetime: null,
     authorizedDate: null,
     authorizedDatetime: null,
     categoryId: params.category.id,
