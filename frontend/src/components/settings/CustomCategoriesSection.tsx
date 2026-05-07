@@ -47,7 +47,7 @@ import type {
 
 type SourceFilter = 'all' | 'system' | 'custom'
 type VisibilityFilter = 'all' | 'visible' | 'hidden'
-type SortKey = 'category' | 'source' | 'status' | 'used' | 'lastUsed'
+type SortKey = 'category' | 'source' | 'status' | 'used'
 type SortDirection = 'asc' | 'desc'
 type PanelMode = 'create' | 'edit-custom' | 'view-system' | 'view-archived'
 type PanelState = { mode: PanelMode; category?: CategoryManagementItem } | null
@@ -174,13 +174,6 @@ function getSkippedReasonLabel(reason: string) {
   }
 
   return labels[reason] ?? reason
-}
-
-function compareNullableDate(left?: string | null, right?: string | null) {
-  if (!left && !right) return 0
-  if (!left) return 1
-  if (!right) return -1
-  return left.localeCompare(right)
 }
 
 function getDefaultRank(category: CategoryManagementItem) {
@@ -367,10 +360,8 @@ export function CustomCategoriesSection() {
           result = (left.source ?? 'plaid').localeCompare(right.source ?? 'plaid')
         } else if (sortKey === 'status') {
           result = getStatus(left).localeCompare(getStatus(right))
-        } else if (sortKey === 'used') {
-          result = (left.transactionCount ?? 0) - (right.transactionCount ?? 0)
         } else {
-          result = compareNullableDate(left.lastUsedAt, right.lastUsedAt)
+          result = (left.transactionCount ?? 0) - (right.transactionCount ?? 0)
         }
 
         return sortDirection === 'asc' ? result : -result
@@ -772,18 +763,13 @@ export function CustomCategoriesSection() {
                       Used
                     </Button>
                   </Table.Th>
-                  <Table.Th>
-                    <Button variant="subtle" size="compact-sm" onClick={() => handleSort('lastUsed')}>
-                      Last used
-                    </Button>
-                  </Table.Th>
                   <Table.Th>Actions</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {pageCategories.length === 0 ? (
                   <Table.Tr>
-                    <Table.Td colSpan={7}>
+                    <Table.Td colSpan={6}>
                       <Text c="dimmed" size="sm" ta="center" py="lg">
                         No categories match the current filters.
                       </Text>
@@ -845,7 +831,6 @@ export function CustomCategoriesSection() {
                           </Tooltip>
                         </Table.Td>
                         <Table.Td>{category.transactionCount ?? 0}</Table.Td>
-                        <Table.Td>{category.lastUsedAt ?? '--'}</Table.Td>
                         <Table.Td>
                           <Group gap={4} wrap="nowrap">
                             <Tooltip label="Details">
