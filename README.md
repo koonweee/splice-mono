@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="frontend/public/splice-icon.png" alt="Splice logo" width="160" />
+</p>
+
 # Splice
 
 A full-stack personal finance application for tracking net worth across multiple accounts and currencies.
