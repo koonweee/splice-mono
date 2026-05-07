@@ -6,11 +6,13 @@ import { defineConfig } from 'vite'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 
 const isTest = process.env.VITEST === 'true'
+const disableDevtools = process.env.VITE_DISABLE_DEVTOOLS === 'true'
 
 const config = defineConfig({
   plugins: [
     // Skip devtools, nitro, and tanstackStart in test mode to avoid hanging processes
-    ...(!isTest ? [devtools(), nitro(), tanstackStart()] : []),
+    ...(!isTest && !disableDevtools ? [devtools()] : []),
+    ...(!isTest ? [nitro(), tanstackStart()] : []),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],

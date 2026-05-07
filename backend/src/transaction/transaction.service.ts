@@ -28,6 +28,7 @@ import {
   UpdateTransactionCategoryReviewDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
+import { MoneySign } from '../types/MoneyWithSign';
 import { TransactionEntity } from './transaction.entity';
 import { CategoryService } from '../category/category.service';
 import type {
@@ -43,6 +44,36 @@ type TransactionFilterOptions = {
   amountSign?: string;
   categoryReviewStatus?: TransactionCategoryReviewStatus;
 };
+
+export type TransactionSummaryBucket = {
+  currency: string;
+  inflowAmount: number;
+  outflowAmount: number;
+};
+
+export type TransactionSummaryTotals = {
+  buckets: TransactionSummaryBucket[];
+  transactionCount: number;
+  pendingCount: number;
+  needsReviewCount: number;
+};
+
+type TransactionSummaryRawRow = {
+  currency: string;
+  inflowAmount: string | number | null;
+  outflowAmount: string | number | null;
+  transactionCount: string | number;
+  pendingCount: string | number | null;
+  needsReviewCount: string | number | null;
+};
+
+function parseRawInteger(value: string | number | null): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  return value ? parseInt(value, 10) : 0;
+}
 
 @Injectable()
 export class TransactionService extends OwnedCrudService<
@@ -516,6 +547,58 @@ export class TransactionService extends OwnedCrudService<
     return {
       data: entities.map((entity) => entity.toObject()),
       total,
+    };
+  }
+
+  async getSummary(
+    userId: string,
+    options: TransactionFilterOptions,
+  ): Promise<TransactionSummaryTotals> {
+    const rows = await this.buildFilteredTransactionQuery(userId, options)
+      .select('transaction.amountCurrency', 'currency')
+      .addSelect(
+        `SUM(CASE WHEN transaction.amountSign = :positiveSign THEN transaction.amountAmount ELSE 0 END)`,
+        'inflowAmount',
+      )
+      .addSelect(
+        `SUM(CASE WHEN transaction.amountSign = :negativeSign THEN transaction.amountAmount ELSE 0 END)`,
+        'outflowAmount',
+      )
+      .addSelect('COUNT(transaction.id)', 'transactionCount')
+      .addSelect(
+        'SUM(CASE WHEN transaction.pending = true THEN 1 ELSE 0 END)',
+        'pendingCount',
+      )
+      .addSelect(
+        'SUM(CASE WHEN transaction.categoryReviewedAt IS NULL THEN 1 ELSE 0 END)',
+        'needsReviewCount',
+      )
+      .groupBy('transaction.amountCurrency')
+      .setParameters({
+        positiveSign: MoneySign.POSITIVE,
+        negativeSign: MoneySign.NEGATIVE,
+      })
+      .getRawMany<TransactionSummaryRawRow>();
+    let transactionCount = 0;
+    let pendingCount = 0;
+    let needsReviewCount = 0;
+    const buckets = rows.map((row) => {
+      transactionCount += parseRawInteger(row.transactionCount);
+      pendingCount += parseRawInteger(row.pendingCount);
+      needsReviewCount += parseRawInteger(row.needsReviewCount);
+
+      return {
+        currency: row.currency,
+        inflowAmount: parseRawInteger(row.inflowAmount),
+        outflowAmount: parseRawInteger(row.outflowAmount),
+      };
+    });
+
+    return {
+      buckets,
+      transactionCount,
+      pendingCount,
+      needsReviewCount,
     };
   }
 

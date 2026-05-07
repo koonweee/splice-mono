@@ -59,6 +59,8 @@ import type {
   TransactionAnalysisResponse,
   TransactionAnalysisTransactionsResponse,
   TransactionControllerFindAllParams,
+  TransactionControllerGetSummaryParams,
+  TransactionSummary,
   UpdateAccountDto,
   UpdateCustomCategoryDto,
   UpdateTransactionCategoryDto,
@@ -3273,6 +3275,167 @@ export const useTransactionControllerCreate = <
   const mutationOptions = getTransactionControllerCreateMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Get filtered transaction summary totals
+ */
+export const transactionControllerGetSummary = (
+  params?: TransactionControllerGetSummaryParams,
+  signal?: AbortSignal,
+) => {
+  return axios<TransactionSummary>({
+    url: `/transaction/summary`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getTransactionControllerGetSummaryQueryKey = (
+  params?: TransactionControllerGetSummaryParams,
+) => {
+  return [`/transaction/summary`, ...(params ? [params] : [])] as const
+}
+
+export const getTransactionControllerGetSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+  TError = unknown,
+>(
+  params?: TransactionControllerGetSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getTransactionControllerGetSummaryQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof transactionControllerGetSummary>>
+  > = ({ signal }) => transactionControllerGetSummary(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TransactionControllerGetSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof transactionControllerGetSummary>>
+>
+export type TransactionControllerGetSummaryQueryError = unknown
+
+export function useTransactionControllerGetSummary<
+  TData = Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+  TError = unknown,
+>(
+  params: undefined | TransactionControllerGetSummaryParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+          TError,
+          Awaited<ReturnType<typeof transactionControllerGetSummary>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionControllerGetSummary<
+  TData = Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+  TError = unknown,
+>(
+  params?: TransactionControllerGetSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+          TError,
+          Awaited<ReturnType<typeof transactionControllerGetSummary>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionControllerGetSummary<
+  TData = Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+  TError = unknown,
+>(
+  params?: TransactionControllerGetSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useTransactionControllerGetSummary<
+  TData = Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+  TError = unknown,
+>(
+  params?: TransactionControllerGetSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionControllerGetSummary>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getTransactionControllerGetSummaryQueryOptions(
+    params,
+    options,
+  )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
 }
 
 /**
