@@ -17,6 +17,8 @@ const ACTIVITY_DATE_EXPRESSION =
   'COALESCE(transaction."authorizedDate", transaction."providerDate")';
 const ACTIVITY_DATETIME_EXPRESSION =
   'COALESCE(transaction."authorizedDatetime", transaction."providerDatetime")';
+const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
+const ACTIVITY_DATETIME_SORT_ALIAS = 'activity_datetime_sort';
 
 function buildAssignableCategory(
   overrides: Partial<CategoryEntity> = {},
@@ -406,13 +408,21 @@ describe('TransactionService', () => {
         { userId: mockUserId },
       );
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATE_EXPRESSION,
+        ACTIVITY_DATE_SORT_ALIAS,
         'DESC',
       );
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATETIME_EXPRESSION,
+        ACTIVITY_DATETIME_SORT_ALIAS,
         'DESC',
         'NULLS LAST',
+      );
+      expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
+        ACTIVITY_DATE_EXPRESSION,
+        ACTIVITY_DATE_SORT_ALIAS,
+      );
+      expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
+        ACTIVITY_DATETIME_EXPRESSION,
+        ACTIVITY_DATETIME_SORT_ALIAS,
       );
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
         'transaction.id',
@@ -435,11 +445,11 @@ describe('TransactionService', () => {
         'ASC',
       );
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATE_EXPRESSION,
+        ACTIVITY_DATE_SORT_ALIAS,
         'DESC',
       );
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATETIME_EXPRESSION,
+        ACTIVITY_DATETIME_SORT_ALIAS,
         'DESC',
         'NULLS LAST',
       );
@@ -453,7 +463,7 @@ describe('TransactionService', () => {
       });
 
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATE_EXPRESSION,
+        ACTIVITY_DATE_SORT_ALIAS,
         'DESC',
       );
     });
@@ -467,11 +477,11 @@ describe('TransactionService', () => {
       });
 
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATE_EXPRESSION,
+        ACTIVITY_DATE_SORT_ALIAS,
         'ASC',
       );
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATETIME_EXPRESSION,
+        ACTIVITY_DATETIME_SORT_ALIAS,
         'ASC',
         'NULLS LAST',
       );
@@ -715,11 +725,11 @@ describe('TransactionService', () => {
       });
 
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATE_EXPRESSION,
+        ACTIVITY_DATE_SORT_ALIAS,
         'DESC',
       );
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATETIME_EXPRESSION,
+        ACTIVITY_DATETIME_SORT_ALIAS,
         'DESC',
         'NULLS LAST',
       );
