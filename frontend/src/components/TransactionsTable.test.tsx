@@ -259,6 +259,19 @@ describe('TransactionsTable', () => {
     expect(screen.queryByText('Posted')).toBeNull()
   })
 
+  it('renders amount sign styling and transaction status chips', () => {
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+        categoryNeedsReview: true,
+      }),
+    ])
+
+    expect(screen.getByText('-$12.00')).toBeTruthy()
+    expect(screen.getByText('Needs review')).toBeTruthy()
+  })
+
   it('shows pending inline and exposes metadata in the info popover', async () => {
     renderTable([
       makeTransaction({
@@ -283,14 +296,18 @@ describe('TransactionsTable', () => {
       }),
     ])
 
-    expect(screen.getByText('Pending')).toBeTruthy()
+    expect(screen.getAllByText('Pending').length).toBeGreaterThan(0)
     expect(screen.getByText('SQ *SHAKE SHACK')).toBeTruthy()
 
-    fireEvent.click(screen.getByLabelText('Show transaction details for Shake Shack'))
+    fireEvent.click(
+      screen.getByLabelText('Show transaction details for Shake Shack'),
+    )
 
     expect(await screen.findByText('Transaction details')).toBeTruthy()
     expect(screen.getAllByText('SQ *SHAKE SHACK').length).toBeGreaterThan(1)
-    expect(screen.getByText('Square · payment terminal · very high')).toBeTruthy()
+    expect(
+      screen.getByText('Square · payment terminal · very high'),
+    ).toBeTruthy()
     expect(screen.getByText(/in store/)).toBeTruthy()
   })
 
@@ -489,7 +506,7 @@ function makeTransaction(params: {
     },
     accountId: 'account-1',
     merchantName:
-      'merchantName' in params ? params.merchantName ?? null : 'Store',
+      'merchantName' in params ? (params.merchantName ?? null) : 'Store',
     providerTransactionName: params.providerTransactionName ?? null,
     originalDescription: params.originalDescription ?? null,
     pending: params.pending ?? false,

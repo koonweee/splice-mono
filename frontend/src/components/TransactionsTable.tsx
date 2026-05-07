@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Anchor,
+  Avatar,
   Badge,
   Button,
   Divider,
@@ -217,7 +218,10 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
             <MetadataRow label="Counterparties">
               <Stack gap={2}>
                 {details.counterparties.map((counterparty) => (
-                  <Text key={`${counterparty.name}-${counterparty.type}`} size="sm">
+                  <Text
+                    key={`${counterparty.name}-${counterparty.type}`}
+                    size="sm"
+                  >
                     {formatCounterpartyLabel(counterparty)}
                   </Text>
                 ))}
@@ -226,14 +230,21 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
           )}
           {(paymentChannel || details.paymentProcessor) && (
             <MetadataRow label="Payment">
-              {[paymentChannel, details.paymentProcessor && `via ${details.paymentProcessor}`]
+              {[
+                paymentChannel,
+                details.paymentProcessor && `via ${details.paymentProcessor}`,
+              ]
                 .filter(Boolean)
                 .join(' · ')}
             </MetadataRow>
           )}
           {(categoryText || categoryConfidence) && (
             <MetadataRow label="Plaid category">
-              {[categoryText, categoryConfidence && `${categoryConfidence.toLowerCase()} confidence`]
+              {[
+                categoryText,
+                categoryConfidence &&
+                  `${categoryConfidence.toLowerCase()} confidence`,
+              ]
                 .filter(Boolean)
                 .join(' · ')}
             </MetadataRow>
@@ -249,7 +260,13 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
           {website && (
             <>
               <Divider />
-              <Anchor href={website.startsWith('http') ? website : `https://${website}`} size="sm" target="_blank">
+              <Anchor
+                href={
+                  website.startsWith('http') ? website : `https://${website}`
+                }
+                size="sm"
+                target="_blank"
+              >
                 {website}
               </Anchor>
             </>
@@ -263,16 +280,31 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
 function MerchantCell({ row }: { row: { original: Transaction } }) {
   const transaction = row.original
   const merchantDisplay = getMerchantDisplay(transaction)
+  const avatarLabel = merchantDisplay.primary.trim().slice(0, 1).toUpperCase()
 
   return (
     <Group className={styles.merchantCell} gap="xs" wrap="nowrap">
+      <Avatar
+        className={styles.merchantAvatar}
+        radius="sm"
+        size={28}
+        src={transaction.logoUrl}
+      >
+        {avatarLabel}
+      </Avatar>
       <Stack className={styles.merchantText} gap={1}>
-        <Group gap={6} wrap="nowrap">
+        <Group gap={4} wrap="nowrap">
           <Text className={styles.merchantPrimary} size="sm" span>
             {merchantDisplay.primary}
           </Text>
+          <TransactionInfoPopover transaction={transaction} />
           {transaction.pending && (
-            <Badge color="yellow" size="xs" variant="light">
+            <Badge
+              className={`${styles.statusBadge} ${styles.pendingBadge}`}
+              color="yellow"
+              size="xs"
+              variant="light"
+            >
               Pending
             </Badge>
           )}
@@ -283,7 +315,6 @@ function MerchantCell({ row }: { row: { original: Transaction } }) {
           </Text>
         )}
       </Stack>
-      <TransactionInfoPopover transaction={transaction} />
     </Group>
   )
 }
@@ -296,6 +327,17 @@ function AmountCell({ row }: { row: { original: Transaction } }) {
     convertedAmount && convertedAmount.money.currency !== amount.money.currency
 
   const formatted = formatMoneyWithSign({ value: displayAmount })
+  const amountNode = (
+    <Text
+      className={`${styles.amountText} ${
+        displayAmount.sign === 'positive' ? styles.positive : styles.negative
+      }`}
+      component="span"
+      span
+    >
+      {formatted}
+    </Text>
+  )
 
   if (hasDifferentCurrency) {
     const originalFormatted = formatMoneyWithSign({
@@ -304,12 +346,91 @@ function AmountCell({ row }: { row: { original: Transaction } }) {
     })
     return (
       <Tooltip label={`Original: ${originalFormatted}`} withArrow>
-        <span>{formatted}</span>
+        {amountNode}
       </Tooltip>
     )
   }
 
-  return <>{formatted}</>
+  return amountNode
+}
+
+function StatusCell({ row }: { row: { original: Transaction } }) {
+  const transaction = row.original
+
+  if (transaction.pending) {
+    return (
+      <Badge
+        className={`${styles.statusBadge} ${styles.pendingBadge}`}
+        color="yellow"
+        size="xs"
+        variant="light"
+      >
+        Pending
+      </Badge>
+    )
+  }
+
+  if (transaction.categoryNeedsReview) {
+    return (
+      <Badge
+        className={`${styles.statusBadge} ${styles.reviewBadge}`}
+        color="orange"
+        size="xs"
+        variant="light"
+      >
+        Needs review
+      </Badge>
+    )
+  }
+
+  return (
+    <Badge
+      className={`${styles.statusBadge} ${styles.reviewedBadge}`}
+      color="teal"
+      size="xs"
+      variant="light"
+    >
+      Reviewed
+    </Badge>
+  )
+}
+
+function getCategoryToneClass(label: string) {
+  const normalized = label.toLowerCase()
+
+  if (
+    normalized.includes('restaurant') ||
+    normalized.includes('food') ||
+    normalized.includes('groceries')
+  ) {
+    return styles.categoryFoodBadge
+  }
+
+  if (normalized.includes('deposit')) {
+    return styles.categoryDepositBadge
+  }
+
+  if (normalized.includes('transfer')) {
+    return styles.categoryTransferBadge
+  }
+
+  if (normalized.includes('electronics')) {
+    return styles.categoryElectronicsBadge
+  }
+
+  if (
+    normalized.includes('sport') ||
+    normalized.includes('entertainment') ||
+    normalized.includes('amusement')
+  ) {
+    return styles.categoryEntertainmentBadge
+  }
+
+  if (normalized.includes('service')) {
+    return styles.categoryServiceBadge
+  }
+
+  return ''
 }
 
 function invalidateTransactionQueries(
@@ -451,9 +572,15 @@ export function TransactionsTable({
       {
         accessorKey: 'amount',
         header: 'Amount',
-        size: 90,
+        size: 110,
         minSize: 80,
         maxSize: 150,
+        mantineTableBodyCellProps: {
+          className: styles.amountTableCell,
+        },
+        mantineTableHeadCellProps: {
+          className: styles.amountTableCell,
+        },
         Cell: AmountCell,
       },
       {
@@ -608,22 +735,24 @@ export function TransactionsTable({
 
           return (
             <Group className={styles.categoryCell} gap={4} wrap="nowrap">
-              {needsReview && (
-                <Tooltip label={reviewTooltip} withArrow>
-                  <span
-                    aria-label={reviewTooltip}
-                    className={styles.categoryReviewDot}
-                  />
-                </Tooltip>
-              )}
               <Tooltip
-                label={category ? getCategoryLabel(category) : '--'}
+                label={needsReview ? reviewTooltip : categoryLabel}
                 disabled={!category}
                 withArrow
               >
-                <Text className={styles.categoryLabel} size="sm" span>
-                  {category ? getCategoryLabel(category) : '--'}
-                </Text>
+                <Badge
+                  aria-label={needsReview ? reviewTooltip : categoryLabel}
+                  className={`${styles.categoryBadge} ${
+                    category ? getCategoryToneClass(categoryLabel) : ''
+                  } ${
+                    needsReview ? styles.categoryReviewBadge : ''
+                  } ${hasOverride ? styles.categoryOverrideBadge : ''}`}
+                  radius="sm"
+                  size="sm"
+                  variant="outline"
+                >
+                  {categoryLabel}
+                </Badge>
               </Tooltip>
               <Group className={styles.categoryActions} gap={2} wrap="nowrap">
                 {needsReview && (
@@ -680,6 +809,15 @@ export function TransactionsTable({
             </Group>
           )
         },
+      },
+      {
+        id: 'status',
+        header: 'Status',
+        enableSorting: false,
+        size: 118,
+        minSize: 100,
+        maxSize: 150,
+        Cell: StatusCell,
       },
     ],
     [
