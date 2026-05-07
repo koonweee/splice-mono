@@ -63,7 +63,6 @@ type PanelState = { mode: PanelMode; category?: CategoryManagementItem } | null
 
 const VIRTUAL_ROW_HEIGHT = 66
 const TABLE_HEADER_HEIGHT = 52
-const VIRTUAL_OVERSCAN_ROWS = 6
 const SELECT_COLUMN_WIDTH = 56
 const SOURCE_COLUMN_WIDTH = 130
 const STATUS_COLUMN_WIDTH = 130
@@ -1016,10 +1015,6 @@ export function CustomCategoriesSection() {
       Cell: ({ cell }) => cell.getValue<number>(),
     },
   ]
-  const shouldVirtualizeRows =
-    typeof window !== 'undefined' &&
-    !window.navigator.userAgent.includes('jsdom')
-
   const categoryTable = useMantineReactTable({
     columns: categoryColumns,
     data: sortedCategories,
@@ -1031,11 +1026,6 @@ export function CustomCategoriesSection() {
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
     layoutMode: 'grid',
-    enableRowVirtualization: shouldVirtualizeRows,
-    rowVirtualizerOptions: {
-      estimateSize: () => VIRTUAL_ROW_HEIGHT,
-      overscan: VIRTUAL_OVERSCAN_ROWS,
-    },
     enableRowSelection: true,
     enableSelectAll: true,
     selectAllMode: 'all',

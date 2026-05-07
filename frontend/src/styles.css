@@ -23,6 +23,15 @@ code {
     source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+@media (max-width: 48em) {
+  input,
+  select,
+  textarea,
+  .mantine-Input-input {
+    font-size: 16px !important;
+  }
+}
+
 /* Kill all focus rings on Recharts/Mantine chart elements */
 .recharts-wrapper,
 .recharts-surface,
