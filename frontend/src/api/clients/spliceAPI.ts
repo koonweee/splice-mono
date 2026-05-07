@@ -5542,7 +5542,7 @@ export function useMcpControllerHandleUnsupportedMethod<
 }
 
 /**
- * Get cash flow analysis grouped by category for a date range. Pending transactions are excluded. Exact equal-and-opposite posted transactions within the requested range are neutralized before aggregation. Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.
+ * Get cash flow analysis grouped by category for an activity date range. Pending transactions are excluded. Exact equal-and-opposite posted transactions within the requested range are neutralized before aggregation. Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.
  */
 export const transactionAnalysisControllerGetAnalysis = (
   params: TransactionAnalysisControllerGetAnalysisParams,
@@ -5704,7 +5704,7 @@ export function useTransactionAnalysisControllerGetAnalysis<
 }
 
 /**
- * Get unmatched posted transactions for a category drilldown within a date range. Transactions are neutralized using the same exact equal-and-opposite matching pipeline as the summary analysis before category and flow filtering. Returned rows include converted amounts using exchange rates anchored to the requested endDate.
+ * Get unmatched posted transactions for a category drilldown within an activity date range. Transactions are neutralized using the same exact equal-and-opposite matching pipeline as the summary analysis before category and flow filtering. Returned rows include converted amounts using exchange rates anchored to the requested endDate.
  */
 export const transactionAnalysisControllerGetTransactions = (
   params: TransactionAnalysisControllerGetTransactionsParams,
@@ -5897,7 +5897,7 @@ export function useTransactionAnalysisControllerGetTransactions<
 }
 
 /**
- * Get synthetic balance adjustment drilldown rows for a date range. The route only accepts BALANCE_ADJUSTMENT as the category filter and reuses the same snapshot-based adjustment pipeline as the summary endpoint.
+ * Get synthetic balance adjustment drilldown rows for an activity date range. The route only accepts BALANCE_ADJUSTMENT as the category filter and reuses the same snapshot-based adjustment pipeline as the summary endpoint.
  */
 export const transactionAnalysisControllerGetBalanceAdjustments = (
   params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,

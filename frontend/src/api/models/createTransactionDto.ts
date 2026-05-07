@@ -47,9 +47,9 @@ export interface CreateTransactionDto {
   location?: CreateTransactionDtoLocation
   /** @nullable */
   paymentMeta?: CreateTransactionDtoPaymentMeta
-  date: string
+  providerDate: string
   /** @nullable */
-  datetime?: string | null
+  providerDatetime?: string | null
   /** @nullable */
   authorizedDate?: string | null
   /** @nullable */

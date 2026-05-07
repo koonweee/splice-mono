@@ -13,6 +13,11 @@ import {
   mockUserId,
 } from '../mocks/transaction/transaction.mock';
 
+const ACTIVITY_DATE_EXPRESSION =
+  'COALESCE(transaction."authorizedDate", transaction."providerDate")';
+const ACTIVITY_DATETIME_EXPRESSION =
+  'COALESCE(transaction."authorizedDatetime", transaction."providerDatetime")';
+
 function buildAssignableCategory(
   overrides: Partial<CategoryEntity> = {},
 ): CategoryEntity {
@@ -142,7 +147,7 @@ describe('TransactionService', () => {
       expect(result.id.length).toBeGreaterThan(0);
       expect(result.accountId).toBe(mockCreateTransactionDto.accountId);
       expect(result.pending).toBe(mockCreateTransactionDto.pending);
-      expect(result.date).toBe(mockCreateTransactionDto.date);
+      expect(result.providerDate).toBe(mockCreateTransactionDto.providerDate);
       expect(mockRepository.save).toHaveBeenCalledTimes(1);
     });
 
@@ -236,7 +241,7 @@ describe('TransactionService', () => {
         },
         accountId: mockAccountId,
         pending: true,
-        date: '2024-01-01',
+        providerDate: '2024-01-01',
       };
 
       const mockEntity = TransactionEntity.fromDto(createDto, mockUserId);
@@ -249,7 +254,7 @@ describe('TransactionService', () => {
       expect(result.merchantName).toBeNull();
       expect(result.externalTransactionId).toBeNull();
       expect(result.logoUrl).toBeNull();
-      expect(result.datetime).toBeNull();
+      expect(result.providerDatetime).toBeNull();
       expect(result.authorizedDate).toBeNull();
       expect(result.authorizedDatetime).toBeNull();
       expect(result.categoryId).toBeNull();
@@ -384,7 +389,7 @@ describe('TransactionService', () => {
       );
       mockEntity2.id = 'id-2';
 
-      mockRepository.findAndCount.mockResolvedValue([
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([
         [mockEntity1, mockEntity2],
         5,
       ]);
@@ -396,23 +401,28 @@ describe('TransactionService', () => {
 
       expect(result.data).toHaveLength(2);
       expect(result.total).toBe(5);
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith({
-        where: { userId: mockUserId },
-        relations: ['account', 'category', 'userCategory'],
-        order: {
-          date: 'DESC',
-          datetime: 'DESC',
-          authorizedDatetime: 'DESC',
-          id: 'DESC',
-        },
-        skip: 0,
-        take: 2,
-      });
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'transaction.userId = :userId',
+        { userId: mockUserId },
+      );
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        ACTIVITY_DATE_EXPRESSION,
+        'DESC',
+      );
+      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
+        ACTIVITY_DATETIME_EXPRESSION,
+        'DESC',
+        'NULLS LAST',
+      );
+      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
+        'transaction.id',
+        'DESC',
+      );
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(2);
     });
 
     it('should apply custom sort column and order', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
@@ -420,96 +430,82 @@ describe('TransactionService', () => {
         sortOrder: 'ASC',
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          order: {
-            merchantName: 'ASC',
-            date: 'DESC',
-            datetime: 'DESC',
-            authorizedDatetime: 'DESC',
-            id: 'DESC',
-          },
-        }),
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        'transaction.merchantName',
+        'ASC',
+      );
+      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
+        ACTIVITY_DATE_EXPRESSION,
+        'DESC',
+      );
+      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
+        ACTIVITY_DATETIME_EXPRESSION,
+        'DESC',
+        'NULLS LAST',
       );
     });
 
-    it('should fall back to date sort for invalid sortBy', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
+    it('should fall back to activityDate sort for invalid sortBy', async () => {
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
         sortBy: 'invalidColumn',
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          order: {
-            date: 'DESC',
-            datetime: 'DESC',
-            authorizedDatetime: 'DESC',
-            id: 'DESC',
-          },
-        }),
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        ACTIVITY_DATE_EXPRESSION,
+        'DESC',
       );
     });
 
-    it('should use transaction time and id as stable tie-breakers for date sort', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
+    it('should use transaction time and id as stable tie-breakers for activityDate sort', async () => {
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
-        sortBy: 'date',
+        sortBy: 'activityDate',
         sortOrder: 'ASC',
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          order: {
-            date: 'ASC',
-            datetime: 'ASC',
-            authorizedDatetime: 'ASC',
-            id: 'ASC',
-          },
-        }),
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        ACTIVITY_DATE_EXPRESSION,
+        'ASC',
+      );
+      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
+        ACTIVITY_DATETIME_EXPRESSION,
+        'ASC',
+        'NULLS LAST',
+      );
+      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
+        'transaction.id',
+        'ASC',
       );
     });
 
     it('should calculate skip correctly from pageIndex', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
       await service.findAllPaginated(mockUserId, {
         pageIndex: 3,
         pageSize: 15,
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          skip: 45,
-          take: 15,
-        }),
-      );
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(45);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(15);
     });
 
     it('should filter by accountId when provided', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
         accountId: mockAccountId,
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { userId: mockUserId, accountId: mockAccountId },
-        }),
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'transaction.accountId = :accountId',
+        { accountId: mockAccountId },
       );
     });
 
     it('should return empty data with total 0 when no results', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
       const result = await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
@@ -521,8 +517,6 @@ describe('TransactionService', () => {
     });
 
     it('should filter by date range when startDate and endDate are provided', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
@@ -530,60 +524,35 @@ describe('TransactionService', () => {
         endDate: '2024-01-31',
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            userId: mockUserId,
-            date: expect.objectContaining({
-              _type: 'between',
-              _value: ['2024-01-01', '2024-01-31'],
-            }),
-          }),
-        }),
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        `${ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
+        { startDate: '2024-01-01', endDate: '2024-01-31' },
       );
     });
 
     it('should apply MoreThanOrEqual when only startDate is provided', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
         startDate: '2024-01-01',
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            userId: mockUserId,
-            date: expect.objectContaining({
-              _type: 'moreThanOrEqual',
-              _value: '2024-01-01',
-            }),
-          }),
-        }),
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        `${ACTIVITY_DATE_EXPRESSION} >= :startDate`,
+        { startDate: '2024-01-01' },
       );
     });
 
     it('should apply LessThanOrEqual when only endDate is provided', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
         endDate: '2024-01-31',
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            userId: mockUserId,
-            date: expect.objectContaining({
-              _type: 'lessThanOrEqual',
-              _value: '2024-01-31',
-            }),
-          }),
-        }),
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        `${ACTIVITY_DATE_EXPRESSION} <= :endDate`,
+        { endDate: '2024-01-31' },
       );
     });
 
@@ -643,7 +612,7 @@ describe('TransactionService', () => {
         { accountId: mockAccountId },
       );
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.date BETWEEN :startDate AND :endDate',
+        `${ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
         { startDate: '2024-01-01', endDate: '2024-01-31' },
       );
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
@@ -653,21 +622,15 @@ describe('TransactionService', () => {
     });
 
     it('should filter by amountSign when provided', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
         amountSign: 'positive',
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            userId: mockUserId,
-            amount: { sign: 'positive' },
-          }),
-        }),
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'transaction.amountSign = :amountSign',
+        { amountSign: 'positive' },
       );
     });
 
@@ -692,54 +655,38 @@ describe('TransactionService', () => {
     });
 
     it('should not include amountSign filter when not provided', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
       });
 
-      const calledWith = mockRepository.findAndCount.mock.calls[0][0];
-      expect(calledWith.where).not.toHaveProperty('amount');
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
+        'transaction.amountSign = :amountSign',
+        expect.anything(),
+      );
     });
 
     it('should filter by needs-review status', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
         categoryReviewStatus: 'needs_review',
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            categoryReviewedAt: expect.objectContaining({
-              _type: 'isNull',
-            }),
-          }),
-        }),
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'transaction.categoryReviewedAt IS NULL',
       );
     });
 
     it('should filter by reviewed status', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-
       await service.findAllPaginated(mockUserId, {
         pageIndex: 0,
         pageSize: 10,
         categoryReviewStatus: 'reviewed',
       });
 
-      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            categoryReviewedAt: expect.objectContaining({
-              _type: 'not',
-            }),
-          }),
-        }),
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'transaction.categoryReviewedAt IS NOT NULL',
       );
     });
 
@@ -768,16 +715,11 @@ describe('TransactionService', () => {
       });
 
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
-        'transaction.date',
+        ACTIVITY_DATE_EXPRESSION,
         'DESC',
       );
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        'transaction.datetime',
-        'DESC',
-        'NULLS LAST',
-      );
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        'transaction.authorizedDatetime',
+        ACTIVITY_DATETIME_EXPRESSION,
         'DESC',
         'NULLS LAST',
       );
@@ -827,7 +769,7 @@ describe('TransactionService', () => {
       );
       expect(mockQueryBuilder.getMany).not.toHaveBeenCalled();
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.date BETWEEN :startDate AND :endDate',
+        `${ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
         {
           startDate: '2026-05-01',
           endDate: '2026-05-07',
@@ -1448,8 +1390,8 @@ describe('TransactionService', () => {
       pending: false,
       externalTransactionId: 'ext-txn-1',
       logoUrl: null,
-      date: '2024-01-15',
-      datetime: null,
+      providerDate: '2024-01-15',
+      providerDatetime: null,
       authorizedDate: null,
       authorizedDatetime: null,
     };
@@ -1829,7 +1771,7 @@ describe('TransactionService', () => {
         {
           ...mockCreateTransactionDto,
           merchantName: 'Netflix',
-          date: '2026-03-03',
+          providerDate: '2026-03-03',
         },
         mockUserId,
       );
@@ -1872,7 +1814,7 @@ describe('TransactionService', () => {
       } as unknown as TransactionEntity['userCategory'];
       netflix.userCategoryId = 'user-category-id';
 
-      mockRepository.find.mockResolvedValue([netflix]);
+      mockQueryBuilder.getMany.mockResolvedValue([netflix]);
 
       const result = await service.searchForSurface(mockUserId, {
         categoryPrimary: 'GENERAL_MERCHANDISE',

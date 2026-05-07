@@ -47,9 +47,9 @@ export interface UpdateTransactionDto {
   location?: UpdateTransactionDtoLocation
   /** @nullable */
   paymentMeta?: UpdateTransactionDtoPaymentMeta
-  date?: string
+  providerDate?: string
   /** @nullable */
-  datetime?: string | null
+  providerDatetime?: string | null
   /** @nullable */
   authorizedDate?: string | null
   /** @nullable */

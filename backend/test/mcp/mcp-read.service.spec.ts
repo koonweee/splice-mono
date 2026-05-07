@@ -73,6 +73,25 @@ describe('McpReadService', () => {
       categoryDetailedLabel: 'General Merchandise Other General Merchandise',
     });
   });
+
+  it('accepts legacy transaction cursors encoded with date', async () => {
+    queryBuilder.getMany.mockResolvedValue([]);
+    const cursor = Buffer.from(
+      JSON.stringify({ date: '2026-02-14', id: 'txn-1' }),
+      'utf8',
+    ).toString('base64url');
+
+    await expect(
+      service.listTransactions('user-1', {
+        reportingCurrency: 'USD',
+        cursor,
+      }),
+    ).resolves.toMatchObject({
+      data: [],
+    });
+
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(expect.anything());
+  });
 });
 
 function buildTransactionWithOverride(params: {
@@ -88,7 +107,7 @@ function buildTransactionWithOverride(params: {
       accountId: 'account-1',
       merchantName: 'Store',
       pending: false,
-      date: '2026-02-14',
+      providerDate: '2026-02-14',
     },
     'user-1',
   );

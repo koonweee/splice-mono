@@ -595,7 +595,10 @@ export class CategoryService {
         'categoryId',
       )
       .addSelect('COUNT(*)', 'transactionCount')
-      .addSelect('MAX(transaction.date)', 'lastUsedAt')
+      .addSelect(
+        'MAX(COALESCE(transaction."authorizedDate", transaction."providerDate"))',
+        'lastUsedAt',
+      )
       .where('transaction."userId" = :userId', { userId })
       .andWhere(
         'COALESCE(transaction."userCategoryId", transaction."categoryId") IN (:...categoryIds)',

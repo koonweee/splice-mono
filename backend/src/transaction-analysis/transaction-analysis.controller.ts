@@ -31,7 +31,7 @@ export class TransactionAnalysisController {
   @Get()
   @ApiOperation({
     description:
-      'Get cash flow analysis grouped by category for a date range. ' +
+      'Get cash flow analysis grouped by category for an activity date range. ' +
       'Pending transactions are excluded. Exact equal-and-opposite posted transactions within the requested range are neutralized before aggregation. ' +
       'Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.',
   })
@@ -39,13 +39,13 @@ export class TransactionAnalysisController {
     name: 'startDate',
     required: true,
     type: String,
-    description: 'Start date (YYYY-MM-DD, inclusive)',
+    description: 'Activity start date (YYYY-MM-DD, inclusive)',
   })
   @ApiQuery({
     name: 'endDate',
     required: true,
     type: String,
-    description: 'End date (YYYY-MM-DD, inclusive)',
+    description: 'Activity end date (YYYY-MM-DD, inclusive)',
   })
   @ZodApiResponse({
     status: 200,
@@ -74,7 +74,7 @@ export class TransactionAnalysisController {
   @Get('transactions')
   @ApiOperation({
     description:
-      'Get unmatched posted transactions for a category drilldown within a date range. ' +
+      'Get unmatched posted transactions for a category drilldown within an activity date range. ' +
       'Transactions are neutralized using the same exact equal-and-opposite matching pipeline as the summary analysis before category and flow filtering. ' +
       'Returned rows include converted amounts using exchange rates anchored to the requested endDate.',
   })
@@ -82,13 +82,13 @@ export class TransactionAnalysisController {
     name: 'startDate',
     required: true,
     type: String,
-    description: 'Start date (YYYY-MM-DD, inclusive)',
+    description: 'Activity start date (YYYY-MM-DD, inclusive)',
   })
   @ApiQuery({
     name: 'endDate',
     required: true,
     type: String,
-    description: 'End date (YYYY-MM-DD, inclusive)',
+    description: 'Activity end date (YYYY-MM-DD, inclusive)',
   })
   @ApiQuery({
     name: 'categoryPrimary',
@@ -134,20 +134,20 @@ export class TransactionAnalysisController {
   @Get('balance-adjustments')
   @ApiOperation({
     description:
-      'Get synthetic balance adjustment drilldown rows for a date range. ' +
+      'Get synthetic balance adjustment drilldown rows for an activity date range. ' +
       'The route only accepts BALANCE_ADJUSTMENT as the category filter and reuses the same snapshot-based adjustment pipeline as the summary endpoint.',
   })
   @ApiQuery({
     name: 'startDate',
     required: true,
     type: String,
-    description: 'Start date (YYYY-MM-DD, inclusive)',
+    description: 'Activity start date (YYYY-MM-DD, inclusive)',
   })
   @ApiQuery({
     name: 'endDate',
     required: true,
     type: String,
-    description: 'End date (YYYY-MM-DD, inclusive)',
+    description: 'Activity end date (YYYY-MM-DD, inclusive)',
   })
   @ApiQuery({
     name: 'categoryPrimary',

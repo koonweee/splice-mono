@@ -1047,8 +1047,8 @@ export class PlaidProvider implements IBankLinkProvider {
         counterparties?.map((counterparty) => ({ ...counterparty })) ?? null,
       location: location ? { ...location } : null,
       paymentMeta: payment_meta ? { ...payment_meta } : null,
-      date,
-      datetime: datetime ?? null,
+      providerDate: date,
+      providerDatetime: datetime ?? null,
       authorizedDate: authorized_date ?? null,
       authorizedDatetime: authorized_datetime ?? null,
       ...(personal_finance_category && {
