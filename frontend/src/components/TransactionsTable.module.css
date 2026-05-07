@@ -151,3 +151,34 @@
 .transactionsTable :global(.mrt-table-head-cell-resize-handle:active)::after {
   background: var(--mantine-primary-color-filled);
 }
+
+.categoryManagementActions {
+  width: fit-content;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.categoryManagementActionsHeader,
+.categoryManagementActionsCell {
+  background-color: inherit !important;
+  border-left: 1px solid var(--mantine-color-dark-4) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+.categoryManagementActionsHeader::before,
+.categoryManagementActionsCell::before {
+  background-color: inherit !important;
+  box-shadow: none !important;
+}
+
+.categoryManagementActionsHeader :global(.mrt-table-head-cell-content),
+.categoryManagementActionsHeader :global(.mrt-table-head-cell-labels),
+.categoryManagementActionsHeader :global(.mrt-table-head-cell-content-wrapper) {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.categoryManagementActionsHeader :global(.mrt-table-head-cell-labels) {
+  padding-left: 0 !important;
+}
