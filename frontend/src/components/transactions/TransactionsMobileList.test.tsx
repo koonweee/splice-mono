@@ -153,7 +153,7 @@ describe('TransactionsMobileList', () => {
     expect(onScrollNearBottom).toHaveBeenCalled()
   })
 
-  it('opens transaction actions with category controls and metadata details', async () => {
+  it('opens transaction details from the full row', async () => {
     renderMobileList([
       makeTransaction({
         id: 'txn-1',
@@ -164,8 +164,14 @@ describe('TransactionsMobileList', () => {
       }),
     ])
 
+    expect(
+      screen.queryByLabelText('Open transaction actions for Whole Foods Market'),
+    ).toBeNull()
+
     fireEvent.click(
-      screen.getByLabelText('Open transaction actions for Whole Foods Market'),
+      screen.getByRole('button', {
+        name: /Open transaction details for Whole Foods Market/,
+      }),
     )
 
     expect(await screen.findByLabelText('Search categories')).toBeTruthy()
@@ -184,7 +190,9 @@ describe('TransactionsMobileList', () => {
       }),
     ])
 
-    fireEvent.click(screen.getByLabelText('Open transaction actions for Salary'))
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction details for Salary/ }),
+    )
     fireEvent.click(await screen.findByRole('button', { name: 'Mark reviewed' }))
 
     expect(mockFns.updateCategoryReviewMutateMock).toHaveBeenCalledWith(
@@ -207,7 +215,9 @@ describe('TransactionsMobileList', () => {
       }),
     ])
 
-    fireEvent.click(screen.getByLabelText('Open transaction actions for Store'))
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction details for Store/ }),
+    )
     fireEvent.click(await screen.findByRole('button', { name: 'Reset override' }))
 
     expect(mockFns.updateCategoryMutateMock).toHaveBeenCalledWith({
@@ -224,7 +234,9 @@ describe('TransactionsMobileList', () => {
       }),
     ])
 
-    fireEvent.click(screen.getByLabelText('Open transaction actions for Store'))
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open transaction details for Store/ }),
+    )
     fireEvent.click(
       await screen.findByRole('option', {
         name: 'Hardware Home Projects User',

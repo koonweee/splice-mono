@@ -1,33 +1,42 @@
 .summaryStrip {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(112px, 1fr));
+  display: flex;
   gap: var(--mantine-spacing-xs);
-  margin-bottom: var(--mantine-spacing-sm);
 }
 
 .summaryItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-md);
   min-width: 0;
   border: 1px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-sm);
-  padding: 8px 10px;
+  min-height: 42px;
+  padding: 0 12px;
   background: light-dark(
     var(--mantine-color-white),
     var(--mantine-color-dark-6)
   );
+  color: inherit;
+  text-align: left;
+}
+
+button.summaryItem {
+  cursor: pointer;
+}
+
+.netSummaryItem {
+  width: 190px;
 }
 
 .primaryMetric {
-  border-color: light-dark(var(--mantine-color-teal-5), var(--mantine-color-teal-7));
+  border-color: light-dark(
+    var(--mantine-color-teal-5),
+    var(--mantine-color-teal-7)
+  );
   background: light-dark(
     var(--mantine-color-teal-0),
     rgba(18, 184, 134, 0.08)
-  );
-}
-
-.countMetric {
-  background: light-dark(
-    var(--mantine-color-gray-0),
-    rgba(255, 255, 255, 0.025)
   );
 }
 
@@ -45,7 +54,6 @@
 .summaryValue {
   display: block;
   overflow: hidden;
-  margin-top: 2px;
   font-size: var(--mantine-font-size-md);
   font-weight: 700;
   text-overflow: ellipsis;
@@ -60,17 +68,42 @@
   color: var(--mantine-color-red-6);
 }
 
+.flowBreakdown {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.flowRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-md);
+}
+
+.flowLabel {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.flowValue {
+  font-size: var(--mantine-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 @media (max-width: 48em) {
   .summaryStrip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .primaryMetric {
-    order: -1;
+    display: block;
   }
 
   .summaryItem {
-    padding: 7px 8px;
+    min-height: 48px;
+    width: 100%;
+    padding: 0 14px;
   }
 
   .summaryValue {
