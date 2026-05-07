@@ -102,7 +102,7 @@ describe('TransactionsMobileList', () => {
     renderMobileList([
       makeTransaction({
         id: 'txn-1',
-        date: '2026-05-07',
+        activityDate: '2026-05-07',
         merchantName: 'Whole Foods Market',
         amount: 6824,
         sign: MoneyWithSignSign.negative,
@@ -110,7 +110,7 @@ describe('TransactionsMobileList', () => {
       }),
       makeTransaction({
         id: 'txn-2',
-        date: '2026-05-06',
+        activityDate: '2026-05-06',
         merchantName: 'Salary',
         amount: 215000,
         sign: MoneyWithSignSign.positive,
@@ -293,8 +293,8 @@ function makeCategory(overrides: {
 function makeTransaction(
   overrides: Partial<{
     amount: number
+    activityDate: string
     categoryNeedsReview: boolean
-    date: string
     id: string
     merchantName: string
     originalDescription: string | null
@@ -332,8 +332,9 @@ function makeTransaction(
     counterparties: null,
     location: null,
     paymentMeta: null,
-    date: overrides.date ?? '2026-05-07',
-    datetime: null,
+    activityDate: overrides.activityDate ?? '2026-05-07',
+    providerDate: overrides.activityDate ?? '2026-05-07',
+    providerDatetime: null,
     authorizedDate: null,
     authorizedDatetime: null,
     categoryId: category.id,

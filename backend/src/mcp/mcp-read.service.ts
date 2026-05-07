@@ -22,9 +22,16 @@ const TRANSACTION_MAX_PAGE_SIZE = 100;
 const SNAPSHOT_DEFAULT_PAGE_SIZE = 100;
 const SNAPSHOT_MAX_PAGE_SIZE = 250;
 const CANDIDATE_BATCH_SIZE = 250;
+const ACTIVITY_DATE_EXPRESSION =
+  'COALESCE(transaction."authorizedDate", transaction."providerDate")';
 
 interface CursorPayload {
   date: string;
+  id: string;
+}
+
+interface TransactionCursorPayload {
+  activityDate: string;
   id: string;
 }
 
@@ -70,8 +77,9 @@ export interface McpTransaction {
   accountName: string;
   merchantName: string | null;
   pending: boolean;
-  date: string;
-  datetime: string | null;
+  activityDate: string;
+  providerDate: string;
+  providerDatetime: string | null;
   authorizedDate: string | null;
   categoryPrimary: string | null;
   categoryPrimaryLabel: string;
@@ -165,7 +173,9 @@ function formatCategoryLabel(rawLabel: string | null): string {
     .join(' ');
 }
 
-function encodeCursor(payload: CursorPayload): string {
+function encodeCursor(
+  payload: CursorPayload | TransactionCursorPayload,
+): string {
   return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
 }
 
@@ -180,6 +190,33 @@ function decodeCursor(cursor: string | undefined): CursorPayload | undefined {
     ) as Partial<CursorPayload>;
     if (typeof parsed.date === 'string' && typeof parsed.id === 'string') {
       return { date: parsed.date, id: parsed.id };
+    }
+  } catch {
+    // Throw below with a stable client-facing message.
+  }
+
+  throw new BadRequestException('Invalid cursor.');
+}
+
+function decodeTransactionCursor(
+  cursor: string | undefined,
+): TransactionCursorPayload | undefined {
+  if (!cursor) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(cursor, 'base64url').toString('utf8'),
+    ) as Partial<TransactionCursorPayload & CursorPayload>;
+    if (
+      typeof parsed.activityDate === 'string' &&
+      typeof parsed.id === 'string'
+    ) {
+      return { activityDate: parsed.activityDate, id: parsed.id };
+    }
+    if (typeof parsed.date === 'string' && typeof parsed.id === 'string') {
+      return { activityDate: parsed.date, id: parsed.id };
     }
   } catch {
     // Throw below with a stable client-facing message.
@@ -265,7 +302,7 @@ export class McpReadService {
     const query = this.buildTransactionQuery(userId, options);
     const conversionRates = new Map<string, McpConversionRate>();
     const data: McpTransaction[] = [];
-    let cursor = decodeCursor(options.cursor);
+    let cursor = decodeTransactionCursor(options.cursor);
     let hasMore = false;
     let nextCursor: string | null = null;
 
@@ -294,7 +331,7 @@ export class McpReadService {
         data.push(mapped);
         if (data.length === pageSize) {
           nextCursor = encodeCursor({
-            date: transaction.date,
+            activityDate: this.getActivityDate(transaction),
             id: transaction.id,
           });
           hasMore = true;
@@ -307,7 +344,10 @@ export class McpReadService {
       }
 
       const lastCandidate = batch[batch.length - 1];
-      cursor = { date: lastCandidate.date, id: lastCandidate.id };
+      cursor = {
+        activityDate: this.getActivityDate(lastCandidate),
+        id: lastCandidate.id,
+      };
       hasMore = batch.length === CANDIDATE_BATCH_SIZE;
 
       if (!hasMore) {
@@ -468,16 +508,16 @@ export class McpReadService {
       .leftJoinAndSelect('transaction.category', 'category')
       .leftJoinAndSelect('transaction.userCategory', 'userCategory')
       .where('transaction.userId = :userId', { userId })
-      .orderBy('transaction.date', 'DESC')
+      .orderBy(ACTIVITY_DATE_EXPRESSION, 'DESC')
       .addOrderBy('transaction.id', 'DESC');
 
     if (options.startDate) {
-      query.andWhere('transaction.date >= :startDate', {
+      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
         startDate: options.startDate,
       });
     }
     if (options.endDate) {
-      query.andWhere('transaction.date <= :endDate', {
+      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
         endDate: options.endDate,
       });
     }
@@ -515,7 +555,7 @@ export class McpReadService {
 
   private applyTransactionCursor(
     query: SelectQueryBuilder<TransactionEntity>,
-    cursor: CursorPayload | undefined,
+    cursor: TransactionCursorPayload | undefined,
   ): SelectQueryBuilder<TransactionEntity> {
     if (!cursor) {
       return query;
@@ -523,12 +563,12 @@ export class McpReadService {
 
     return query.andWhere(
       new Brackets((qb) => {
-        qb.where('transaction.date < :cursorDate', {
-          cursorDate: cursor.date,
+        qb.where(`${ACTIVITY_DATE_EXPRESSION} < :cursorActivityDate`, {
+          cursorActivityDate: cursor.activityDate,
         }).orWhere(
-          'transaction.date = :cursorDate AND transaction.id < :cursorId',
+          `${ACTIVITY_DATE_EXPRESSION} = :cursorActivityDate AND transaction.id < :cursorId`,
           {
-            cursorDate: cursor.date,
+            cursorActivityDate: cursor.activityDate,
             cursorId: cursor.id,
           },
         );
@@ -546,7 +586,7 @@ export class McpReadService {
     const rate = await this.getRate(
       nativeAmount.money.currency,
       reportingCurrency,
-      transaction.date,
+      this.getActivityDate(transaction),
       conversionRates,
     );
     const convertedAmount = convertMoney(
@@ -565,8 +605,9 @@ export class McpReadService {
         'Account',
       merchantName: transaction.merchantName,
       pending: transaction.pending,
-      date: transaction.date,
-      datetime: transaction.datetime,
+      activityDate: this.getActivityDate(transaction),
+      providerDate: transaction.providerDate,
+      providerDatetime: transaction.providerDatetime,
       authorizedDate: transaction.authorizedDate,
       categoryPrimary: effectiveCategory?.primary ?? null,
       categoryPrimaryLabel: formatCategoryLabel(
@@ -615,6 +656,10 @@ export class McpReadService {
 
     conversionRates.set(key, { from, to, rate, rateDate });
     return rate;
+  }
+
+  private getActivityDate(transaction: TransactionEntity): string {
+    return transaction.authorizedDate ?? transaction.providerDate;
   }
 
   private matchesAmountFilter(
@@ -680,12 +725,12 @@ export class McpReadService {
       );
 
     if (options.startDate) {
-      query.andWhere('transaction.date >= :startDate', {
+      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
         startDate: options.startDate,
       });
     }
     if (options.endDate) {
-      query.andWhere('transaction.date <= :endDate', {
+      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
         endDate: options.endDate,
       });
     }

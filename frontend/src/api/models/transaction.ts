@@ -52,9 +52,10 @@ export interface Transaction {
   location: TransactionLocation
   /** @nullable */
   paymentMeta: TransactionPaymentMeta
-  date: string
+  activityDate: string
+  providerDate: string
   /** @nullable */
-  datetime: string | null
+  providerDatetime: string | null
   /** @nullable */
   authorizedDate: string | null
   /** @nullable */

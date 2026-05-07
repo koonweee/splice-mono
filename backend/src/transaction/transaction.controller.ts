@@ -148,7 +148,7 @@ export class TransactionController {
   @ApiQuery({
     name: 'sortBy',
     required: false,
-    description: 'Sort column (date, merchantName, pending, amount)',
+    description: 'Sort column (activityDate, merchantName, pending, amount)',
   })
   @ApiQuery({
     name: 'sortOrder',
@@ -164,12 +164,12 @@ export class TransactionController {
   @ApiQuery({
     name: 'startDate',
     required: false,
-    description: 'Filter by start date (YYYY-MM-DD)',
+    description: 'Filter by activity start date (YYYY-MM-DD)',
   })
   @ApiQuery({
     name: 'endDate',
     required: false,
-    description: 'Filter by end date (YYYY-MM-DD)',
+    description: 'Filter by activity end date (YYYY-MM-DD)',
   })
   @ApiQuery({
     name: 'categoryPrimary',
@@ -308,12 +308,12 @@ export class TransactionController {
   @ApiQuery({
     name: 'startDate',
     required: false,
-    description: 'Filter by start date (YYYY-MM-DD)',
+    description: 'Filter by activity start date (YYYY-MM-DD)',
   })
   @ApiQuery({
     name: 'endDate',
     required: false,
-    description: 'Filter by end date (YYYY-MM-DD)',
+    description: 'Filter by activity end date (YYYY-MM-DD)',
   })
   @ApiQuery({
     name: 'categoryPrimary',

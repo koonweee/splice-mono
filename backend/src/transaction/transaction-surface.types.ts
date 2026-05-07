@@ -19,7 +19,8 @@ export interface TransactionSurfaceSearchTransaction {
   accountName: string;
   merchantName: string | null;
   pending: boolean;
-  date: string;
+  activityDate: string;
+  providerDate: string;
   categoryPrimary: string | null;
   amount: SerializedMoneyWithSign;
 }

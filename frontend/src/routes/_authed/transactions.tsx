@@ -236,7 +236,7 @@ function TransactionsPage() {
     }
   })
   const [sorting, setSorting] = useState<MRT_SortingState>([
-    { id: 'date', desc: true },
+    { id: 'activityDate', desc: true },
   ])
 
   // Filter state
