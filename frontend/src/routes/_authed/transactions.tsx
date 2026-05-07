@@ -27,6 +27,7 @@ import {
   useAccountControllerFindAll,
   useCategoryControllerFindFilterOptions,
   useTransactionControllerBulkReviewCategories,
+  useTransactionControllerGetSummary,
   useTransactionControllerUndoBulkReviewCategories,
 } from '../../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../../lib/format'
@@ -34,11 +35,14 @@ import type {
   BulkTransactionCategoryReviewDto,
   Category,
   TransactionControllerFindAllParams,
+  TransactionControllerGetSummaryParams,
 } from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
 import type { MRT_SortingState } from 'mantine-react-table'
 import { DateRangeControl } from '@/components/DateRangeControl'
 import { TransactionsTable } from '@/components/TransactionsTable'
+import { TransactionSummaryStrip } from '@/components/transactions/TransactionSummaryStrip'
+import { TransactionsMobileList } from '@/components/transactions/TransactionsMobileList'
 
 const PAGE_SIZE = 50
 
@@ -101,7 +105,9 @@ const mobileSegmentedControlStyles = {
 const isValidDateString = (value: unknown): value is string =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 
-function getPrimaryCategoryLabel(category: Pick<Category, 'primary' | 'source'>) {
+function getPrimaryCategoryLabel(
+  category: Pick<Category, 'primary' | 'source'>,
+) {
   return category.source === 'user'
     ? category.primary
     : formatPrimaryCategory(category.primary)
@@ -222,10 +228,8 @@ function TransactionsPage() {
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
   const isMobile = useMediaQuery('(max-width: 48em)')
-  const [
-    filtersOpened,
-    { close: closeFilters, toggle: toggleFilters },
-  ] = useDisclosure(false)
+  const [filtersOpened, { close: closeFilters, toggle: toggleFilters }] =
+    useDisclosure(false)
   const desktopFilterRef = useClickOutside<HTMLDivElement>(() => {
     if (!isMobile && filtersOpened) {
       closeFilters()
@@ -252,7 +256,8 @@ function TransactionsPage() {
   const { data: accounts } = useAccountControllerFindAll()
   const { data: categories } = useCategoryControllerFindFilterOptions()
   const bulkReviewCategories = useTransactionControllerBulkReviewCategories()
-  const undoBulkReviewCategories = useTransactionControllerUndoBulkReviewCategories()
+  const undoBulkReviewCategories =
+    useTransactionControllerUndoBulkReviewCategories()
 
   const invalidateTransactions = useCallback(() => {
     queryClient.invalidateQueries({
@@ -322,6 +327,30 @@ function TransactionsPage() {
     categoryReviewStatus,
   ])
 
+  const summaryParams = useMemo(() => {
+    const params: TransactionControllerGetSummaryParams = {
+      convert: true,
+    }
+    const [start, end] = dateRange
+    if (start && end) {
+      params.startDate = dayjs(start).format('YYYY-MM-DD')
+      params.endDate = dayjs(end).format('YYYY-MM-DD')
+    }
+    if (accountId) {
+      params.accountId = accountId
+    }
+    if (categoryPrimary) {
+      params.categoryPrimary = categoryPrimary
+    }
+    if (amountSign === 'positive' || amountSign === 'negative') {
+      params.amountSign = amountSign
+    }
+    if (categoryReviewStatus !== 'all') {
+      params.categoryReviewStatus = categoryReviewStatus
+    }
+    return params
+  }, [accountId, amountSign, categoryPrimary, categoryReviewStatus, dateRange])
+
   const bulkReviewFilters = useMemo(() => {
     const filters: NonNullable<BulkTransactionCategoryReviewDto['filters']> = {
       categoryReviewStatus: 'needs_review',
@@ -341,12 +370,7 @@ function TransactionsPage() {
       filters.amountSign = amountSign
     }
     return filters
-  }, [
-    accountId,
-    amountSign,
-    categoryPrimary,
-    dateRange,
-  ])
+  }, [accountId, amountSign, categoryPrimary, dateRange])
 
   const {
     data,
@@ -373,6 +397,11 @@ function TransactionsPage() {
       return totalFetched < lastPage.total ? allPages.length : undefined
     },
   })
+  const {
+    data: summary,
+    isError: isSummaryError,
+    isLoading: isSummaryLoading,
+  } = useTransactionControllerGetSummary(summaryParams)
 
   const flatData = useMemo(
     () => data?.pages.flatMap((page) => page.data) ?? [],
@@ -543,8 +572,7 @@ function TransactionsPage() {
                   }}
                   style={{
                     background: 'var(--mantine-color-body)',
-                    border:
-                      '1px solid var(--mantine-color-default-border)',
+                    border: '1px solid var(--mantine-color-default-border)',
                     borderRadius: 'var(--mantine-radius-md)',
                     boxShadow: 'var(--mantine-shadow-md)',
                     zIndex: 20,
@@ -570,25 +598,42 @@ function TransactionsPage() {
         )}
       </Group>
 
-      <TransactionsTable
-        data={flatData}
-        totalRows={totalRows}
-        isLoading={isLoading}
-        isError={isError}
-        isFetchingNextPage={isFetchingNextPage}
-        enableVirtualization
-        onScrollNearBottom={fetchMoreOnScroll}
-        manualSorting
-        sorting={sorting}
-        onSortingChange={setSorting}
-        mantinePaperProps={{
-          style: { display: 'flex', flexDirection: 'column', flex: 1 },
-        }}
-        mantineTableContainerProps={{
-          ref: tableContainerRef,
-          style: { flex: 1, overflow: 'auto' },
-        }}
+      <TransactionSummaryStrip
+        summary={summary}
+        isLoading={isSummaryLoading}
+        isError={isSummaryError}
       />
+
+      {isMobile ? (
+        <TransactionsMobileList
+          data={flatData}
+          totalRows={totalRows}
+          isLoading={isLoading}
+          isError={isError}
+          isFetchingNextPage={isFetchingNextPage}
+          onScrollNearBottom={fetchMoreOnScroll}
+        />
+      ) : (
+        <TransactionsTable
+          data={flatData}
+          totalRows={totalRows}
+          isLoading={isLoading}
+          isError={isError}
+          isFetchingNextPage={isFetchingNextPage}
+          enableVirtualization
+          onScrollNearBottom={fetchMoreOnScroll}
+          manualSorting
+          sorting={sorting}
+          onSortingChange={setSorting}
+          mantinePaperProps={{
+            style: { display: 'flex', flexDirection: 'column', flex: 1 },
+          }}
+          mantineTableContainerProps={{
+            ref: tableContainerRef,
+            style: { flex: 1, overflow: 'auto' },
+          }}
+        />
+      )}
     </Flex>
   )
 }

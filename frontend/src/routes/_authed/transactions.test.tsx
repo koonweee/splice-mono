@@ -33,12 +33,14 @@ const mockFns = vi.hoisted(() => ({
   invalidateQueriesMock: vi.fn(),
   useAccountControllerFindAllMock: vi.fn(),
   useCategoryControllerFindFilterOptionsMock: vi.fn(),
+  useTransactionControllerGetSummaryMock: vi.fn(),
   useTransactionControllerBulkReviewCategoriesMock: vi.fn(),
   useTransactionControllerUndoBulkReviewCategoriesMock: vi.fn(),
   bulkReviewMutateMock: vi.fn(),
   undoBulkReviewMutateMock: vi.fn(),
   transactionControllerFindAllMock: vi.fn(),
   transactionsTableMock: vi.fn(),
+  transactionsMobileListMock: vi.fn(),
   notificationsShowMock: vi.fn(),
 }))
 
@@ -96,9 +98,7 @@ vi.mock('@mantine/core', async () => {
       value,
     }: SelectMockProps) => {
       const options = data.map((option) =>
-        typeof option === 'string'
-          ? { value: option, label: option }
-          : option,
+        typeof option === 'string' ? { value: option, label: option } : option,
       )
 
       return (
@@ -169,6 +169,8 @@ vi.mock('../../api/clients/spliceAPI', async () => {
     useAccountControllerFindAll: mockFns.useAccountControllerFindAllMock,
     useCategoryControllerFindFilterOptions:
       mockFns.useCategoryControllerFindFilterOptionsMock,
+    useTransactionControllerGetSummary:
+      mockFns.useTransactionControllerGetSummaryMock,
     useTransactionControllerBulkReviewCategories:
       mockFns.useTransactionControllerBulkReviewCategoriesMock,
     useTransactionControllerUndoBulkReviewCategories:
@@ -184,9 +186,17 @@ vi.mock('@/components/TransactionsTable', () => ({
   },
 }))
 
+vi.mock('@/components/transactions/TransactionsMobileList', () => ({
+  TransactionsMobileList: (props: unknown) => {
+    mockFns.transactionsMobileListMock(props)
+
+    return <div data-testid="transactions-mobile-list" />
+  },
+}))
+
 let latestInfiniteQueryOptions: InfiniteQueryOptions
-const transactionsPage =
-  (Route as unknown as { component: ComponentType }).component
+const transactionsPage = (Route as unknown as { component: ComponentType })
+  .component
 
 const account: Account = {
   id: 'account-1',
@@ -281,6 +291,28 @@ beforeEach(() => {
   mockFns.useCategoryControllerFindFilterOptionsMock.mockReturnValue({
     data: [category, hiddenCategory],
   })
+  mockFns.useTransactionControllerGetSummaryMock.mockReturnValue({
+    data: {
+      currency: 'USD',
+      inflow: {
+        money: { amount: 250000, currency: 'USD' },
+        sign: MoneyWithSignSign.positive,
+      },
+      outflow: {
+        money: { amount: 101700, currency: 'USD' },
+        sign: MoneyWithSignSign.negative,
+      },
+      net: {
+        money: { amount: 148300, currency: 'USD' },
+        sign: MoneyWithSignSign.positive,
+      },
+      transactionCount: 125,
+      pendingCount: 4,
+      needsReviewCount: 12,
+    },
+    isError: false,
+    isLoading: false,
+  })
   mockFns.useTransactionControllerBulkReviewCategoriesMock.mockReturnValue({
     mutate: mockFns.bulkReviewMutateMock,
     isPending: false,
@@ -331,15 +363,15 @@ describe('TransactionsPage category review workflow', () => {
   it('keeps hidden categories available in historical transaction filters', () => {
     renderTransactionsPage()
 
-    expect(mockFns.useCategoryControllerFindFilterOptionsMock).toHaveBeenCalled()
+    expect(
+      mockFns.useCategoryControllerFindFilterOptionsMock,
+    ).toHaveBeenCalled()
 
     fireEvent.click(
       screen.getByRole('button', { name: /Open transaction filters/ }),
     )
 
-    expect(
-      screen.getByRole('option', { name: 'Hidden Primary' }),
-    ).toBeTruthy()
+    expect(screen.getByRole('option', { name: 'Hidden Primary' })).toBeTruthy()
   })
 
   it('does not show default categories omitted from filter options', () => {
@@ -353,12 +385,8 @@ describe('TransactionsPage category review workflow', () => {
       screen.getByRole('button', { name: /Open transaction filters/ }),
     )
 
-    expect(
-      screen.queryByRole('option', { name: 'Food And Drink' }),
-    ).toBeNull()
-    expect(
-      screen.getByRole('option', { name: 'Uncategorized' }),
-    ).toBeTruthy()
+    expect(screen.queryByRole('option', { name: 'Food And Drink' })).toBeNull()
+    expect(screen.getByRole('option', { name: 'Uncategorized' })).toBeTruthy()
   })
 
   it('sends the review status in transaction query params and counts bulk review from total rows', async () => {
@@ -383,6 +411,45 @@ describe('TransactionsPage category review workflow', () => {
         categoryReviewStatus: 'needs_review',
         pageIndex: '2',
         pageSize: '50',
+      }),
+    )
+  })
+
+  it('requests filtered summary params and renders summary totals', () => {
+    renderTransactionsPage()
+
+    expect(mockFns.useTransactionControllerGetSummaryMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: 'account-1',
+        startDate: '2026-02-01',
+        endDate: '2026-02-28',
+        convert: true,
+      }),
+    )
+    expect(screen.getByLabelText('Transaction summary')).toBeTruthy()
+    expect(screen.getByText('$2,500.00')).toBeTruthy()
+    expect(screen.getByText('-$1,017.00')).toBeTruthy()
+    expect(screen.getByText('125')).toBeTruthy()
+  })
+
+  it('uses the mobile transaction list at narrow viewports', () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: query === '(max-width: 48em)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
+
+    renderTransactionsPage()
+
+    expect(screen.getByTestId('transactions-mobile-list')).toBeTruthy()
+    expect(mockFns.transactionsMobileListMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalRows: 125,
       }),
     )
   })

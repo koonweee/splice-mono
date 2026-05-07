@@ -51,10 +51,15 @@ describe('TransactionService', () => {
     andWhere: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
     addOrderBy: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    setParameters: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
     getMany: jest.fn(),
     getManyAndCount: jest.fn(),
+    getRawMany: jest.fn(),
   };
 
   // Mock repository methods
@@ -103,6 +108,7 @@ describe('TransactionService', () => {
 
     service = module.get<TransactionService>(TransactionService);
     mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+    mockQueryBuilder.getRawMany.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -111,6 +117,8 @@ describe('TransactionService', () => {
     mockQueryBuilder.getMany.mockResolvedValue([]);
     mockQueryBuilder.getManyAndCount.mockReset();
     mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+    mockQueryBuilder.getRawMany.mockReset();
+    mockQueryBuilder.getRawMany.mockResolvedValue([]);
   });
 
   it('should be defined', () => {
@@ -776,6 +784,107 @@ describe('TransactionService', () => {
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
         'transaction.id',
         'DESC',
+      );
+    });
+  });
+
+  describe('getSummary', () => {
+    it('aggregates filtered transaction totals by currency and sign', async () => {
+      mockQueryBuilder.getRawMany.mockResolvedValue([
+        {
+          currency: 'USD',
+          inflowAmount: '250000',
+          outflowAmount: '9750',
+          transactionCount: '2',
+          pendingCount: '1',
+          needsReviewCount: '1',
+        },
+      ]);
+
+      const result = await service.getSummary(mockUserId, {
+        startDate: '2026-05-01',
+        endDate: '2026-05-07',
+      });
+
+      expect(result).toEqual({
+        buckets: [
+          {
+            currency: 'USD',
+            inflowAmount: 250000,
+            outflowAmount: 9750,
+          },
+        ],
+        transactionCount: 2,
+        pendingCount: 1,
+        needsReviewCount: 1,
+      });
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        'transaction.amountCurrency',
+        'currency',
+      );
+      expect(mockQueryBuilder.groupBy).toHaveBeenCalledWith(
+        'transaction.amountCurrency',
+      );
+      expect(mockQueryBuilder.getMany).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'transaction.date BETWEEN :startDate AND :endDate',
+        {
+          startDate: '2026-05-01',
+          endDate: '2026-05-07',
+        },
+      );
+    });
+
+    it('keeps separate buckets for native currencies before controller conversion', async () => {
+      mockQueryBuilder.getRawMany.mockResolvedValue([
+        {
+          currency: 'USD',
+          inflowAmount: '0',
+          outflowAmount: '1000',
+          transactionCount: '1',
+          pendingCount: '0',
+          needsReviewCount: '1',
+        },
+        {
+          currency: 'EUR',
+          inflowAmount: '2000',
+          outflowAmount: '0',
+          transactionCount: '1',
+          pendingCount: '0',
+          needsReviewCount: '1',
+        },
+      ]);
+
+      const result = await service.getSummary(mockUserId, {});
+
+      expect(result.buckets).toEqual([
+        { currency: 'USD', inflowAmount: 0, outflowAmount: 1000 },
+        { currency: 'EUR', inflowAmount: 2000, outflowAmount: 0 },
+      ]);
+    });
+
+    it('applies effective category and review status filters to summary queries', async () => {
+      await service.getSummary(mockUserId, {
+        accountId: mockAccountId,
+        categoryPrimary: 'FOOD_AND_DRINK',
+        amountSign: 'negative',
+        categoryReviewStatus: 'needs_review',
+      });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'transaction.accountId = :accountId',
+        { accountId: mockAccountId },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'transaction.amountSign = :amountSign',
+        { amountSign: 'negative' },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'transaction.categoryReviewedAt IS NULL',
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
+        { categoryPrimary: 'FOOD_AND_DRINK' },
       );
     });
   });
