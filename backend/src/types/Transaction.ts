@@ -70,10 +70,12 @@ export const TransactionSchema = registerSchema(
       location: ProviderJsonObjectSchema.nullable(),
       /** Provider payment metadata for this transaction */
       paymentMeta: ProviderJsonObjectSchema.nullable(),
-      /** Transaction date (yyyy-mm-dd format) - occurrence date for pending, posted date for posted */
-      date: z.string(),
-      /** Transaction datetime with time info (nullable) */
-      datetime: z.string().datetime().nullable(),
+      /** User-facing activity date (yyyy-mm-dd format): authorizedDate when available, otherwise providerDate */
+      activityDate: z.string(),
+      /** Provider transaction date from Plaid (pending occurrence date while pending, posted date when posted) */
+      providerDate: z.string(),
+      /** Provider transaction datetime with time info (nullable) */
+      providerDatetime: z.string().datetime().nullable(),
       /** Date the transaction was authorized (yyyy-mm-dd format) */
       authorizedDate: z.string().nullable(),
       /** Datetime the transaction was authorized with time info */
@@ -133,8 +135,8 @@ export const CreateTransactionDtoSchema = registerSchema(
     counterparties: z.array(ProviderJsonObjectSchema).nullable().optional(),
     location: ProviderJsonObjectSchema.nullable().optional(),
     paymentMeta: ProviderJsonObjectSchema.nullable().optional(),
-    date: z.string(),
-    datetime: z.string().datetime().nullable().optional(),
+    providerDate: z.string(),
+    providerDatetime: z.string().datetime().nullable().optional(),
     authorizedDate: z.string().nullable().optional(),
     authorizedDatetime: z.string().datetime().nullable().optional(),
     categoryId: z.string().uuid().nullable().optional(),

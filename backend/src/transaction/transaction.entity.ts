@@ -103,13 +103,13 @@ export class TransactionEntity extends OwnedEntity {
   @Column({ type: 'jsonb', nullable: true })
   paymentMeta: Record<string, unknown> | null;
 
-  /** Transaction date (yyyy-mm-dd) - occurrence date for pending, posted date for posted */
+  /** Provider transaction date - occurrence date for pending, posted date for posted */
   @Column({ type: 'date' })
-  date: string;
+  providerDate: string;
 
-  /** Transaction datetime with time info */
+  /** Provider transaction datetime with time info */
   @Column({ type: 'timestamptz', nullable: true })
-  datetime: string | null;
+  providerDatetime: string | null;
 
   /** Date the transaction was authorized (yyyy-mm-dd) */
   @Column({ type: 'date', nullable: true })
@@ -176,8 +176,8 @@ export class TransactionEntity extends OwnedEntity {
     entity.counterparties = dto.counterparties ?? null;
     entity.location = dto.location ?? null;
     entity.paymentMeta = dto.paymentMeta ?? null;
-    entity.date = dto.date;
-    entity.datetime = dto.datetime ?? null;
+    entity.providerDate = dto.providerDate;
+    entity.providerDatetime = dto.providerDatetime ?? null;
     entity.authorizedDate = dto.authorizedDate ?? null;
     entity.authorizedDatetime = dto.authorizedDatetime ?? null;
     entity.categoryId = dto.categoryId ?? null;
@@ -222,8 +222,9 @@ export class TransactionEntity extends OwnedEntity {
       counterparties: this.counterparties,
       location: this.location,
       paymentMeta: this.paymentMeta,
-      date: this.date,
-      datetime: this.datetime,
+      activityDate: this.authorizedDate ?? this.providerDate,
+      providerDate: this.providerDate,
+      providerDatetime: this.providerDatetime,
       authorizedDate: this.authorizedDate,
       authorizedDatetime: this.authorizedDatetime,
       categoryId: this.categoryId,

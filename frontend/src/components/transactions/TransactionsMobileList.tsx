@@ -83,9 +83,9 @@ function groupTransactionsByDate(data: Array<Transaction>) {
   const groups = new Map<string, Array<Transaction>>()
 
   data.forEach((transaction) => {
-    const transactions = groups.get(transaction.date) ?? []
+    const transactions = groups.get(transaction.activityDate) ?? []
     transactions.push(transaction)
-    groups.set(transaction.date, transactions)
+    groups.set(transaction.activityDate, transactions)
   })
 
   return Array.from(groups.entries())
@@ -357,7 +357,7 @@ export function TransactionsMobileList({
             <div>
               <Group justify="space-between" wrap="nowrap">
                 <Text c="dimmed" size="sm">
-                  {dayjs(activeTransaction.date).format('MMM D, YYYY')}
+                  {dayjs(activeTransaction.activityDate).format('MMM D, YYYY')}
                 </Text>
                 <Text
                   className={`${styles.drawerAmount} ${getAmountClass(

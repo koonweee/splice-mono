@@ -522,7 +522,7 @@ export function TransactionsTable({
   const allColumns = useMemo<Array<MRT_ColumnDef<Transaction>>>(
     () => [
       {
-        accessorKey: 'date',
+        accessorKey: 'activityDate',
         header: 'Date',
         size: 110,
         minSize: 90,

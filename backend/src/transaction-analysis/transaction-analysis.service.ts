@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AccountType } from 'plaid';
-import { Between, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { calculateEffectiveBalance } from '../common/effective-balance';
@@ -43,6 +43,8 @@ interface BalanceAdjustmentRow {
 }
 
 const BALANCE_ADJUSTMENT_CATEGORY = 'BALANCE_ADJUSTMENT';
+const ACTIVITY_DATE_EXPRESSION =
+  'COALESCE(transaction."authorizedDate", transaction."providerDate")';
 
 @Injectable()
 export class TransactionAnalysisService {
@@ -241,7 +243,9 @@ export class TransactionAnalysisService {
       return matchesDirection && transactionCategory === categoryPrimary;
     });
     filteredTransactions.sort((left, right) => {
-      const dateComparison = right.date.localeCompare(left.date);
+      const dateComparison = this.getActivityDate(right).localeCompare(
+        this.getActivityDate(left),
+      );
       if (dateComparison !== 0) {
         return dateComparison;
       }
@@ -337,14 +341,18 @@ export class TransactionAnalysisService {
     endDate: string,
     userId: string,
   ): Promise<TransactionEntity[]> {
-    return this.transactionRepository.find({
-      where: {
-        userId,
-        pending: false,
-        date: Between(startDate, endDate),
-      },
-      relations: ['account', 'category', 'userCategory'],
-    });
+    return this.transactionRepository
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.account', 'account')
+      .leftJoinAndSelect('transaction.category', 'category')
+      .leftJoinAndSelect('transaction.userCategory', 'userCategory')
+      .where('transaction.userId = :userId', { userId })
+      .andWhere('transaction.pending = false')
+      .andWhere(`${ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`, {
+        startDate,
+        endDate,
+      })
+      .getMany();
   }
 
   private async getBalanceAdjustmentRows(
@@ -746,6 +754,10 @@ export class TransactionAnalysisService {
     );
   }
 
+  private getActivityDate(transaction: TransactionEntity): string {
+    return transaction.authorizedDate ?? transaction.providerDate;
+  }
+
   private compareBuckets(
     left: NeutralizationBucket,
     right: NeutralizationBucket,
@@ -762,7 +774,9 @@ export class TransactionAnalysisService {
     left: TransactionEntity,
     right: TransactionEntity,
   ): number {
-    const dateComparison = left.date.localeCompare(right.date);
+    const dateComparison = this.getActivityDate(left).localeCompare(
+      this.getActivityDate(right),
+    );
     if (dateComparison !== 0) {
       return dateComparison;
     }
@@ -776,8 +790,14 @@ export class TransactionAnalysisService {
     right: TransactionEntity,
   ): number {
     const differenceComparison =
-      this.getAbsoluteDateDifferenceInDays(negative.date, left.date) -
-      this.getAbsoluteDateDifferenceInDays(negative.date, right.date);
+      this.getAbsoluteDateDifferenceInDays(
+        this.getActivityDate(negative),
+        this.getActivityDate(left),
+      ) -
+      this.getAbsoluteDateDifferenceInDays(
+        this.getActivityDate(negative),
+        this.getActivityDate(right),
+      );
     if (differenceComparison !== 0) {
       return differenceComparison;
     }

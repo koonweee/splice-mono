@@ -36,7 +36,7 @@ function buildTransaction(params: {
   sign: MoneySign;
   accountId?: string;
   currency?: string;
-  date: string;
+  providerDate: string;
   pending?: boolean;
   primary?: string | null;
   detailed?: string | null;
@@ -56,7 +56,7 @@ function buildTransaction(params: {
       },
       accountId: params.accountId ?? 'account-1',
       pending: params.pending ?? false,
-      date: params.date,
+      providerDate: params.providerDate,
     },
     mockUserId,
   );
@@ -226,7 +226,7 @@ type ComparisonOperator = '<=' | '<' | '>=' | '>';
 
 interface DateConstraint {
   operator: ComparisonOperator;
-  date: string;
+  providerDate: string;
   column: 'snapshotDate' | 'date';
 }
 
@@ -283,14 +283,14 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
   const addDateConstraint = (constraint: {
     column: 'snapshotDate' | 'date';
     operator: ComparisonOperator;
-    date: string;
+    providerDate: string;
   }) => {
     if (
       state.dateConstraints.some(
         (existing) =>
           existing.column === constraint.column &&
           existing.operator === constraint.operator &&
-          existing.date === constraint.date,
+          existing.providerDate === constraint.providerDate,
       )
     ) {
       return;
@@ -316,7 +316,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
     if (isDateValue(value) && isTrackedDateColumn(rawColumn)) {
       addDateConstraint({
         operator: operator as ComparisonOperator,
-        date: value,
+        providerDate: value,
         column: rawColumn,
       });
       return;
@@ -490,7 +490,7 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
       if (isDateValue(value)) {
         addDateConstraint({
           operator: constraint.operator,
-          date: value,
+          providerDate: value,
           column: constraint.column,
         });
         return;
@@ -577,13 +577,13 @@ function buildSnapshotQueryBuilder(rows: BalanceSnapshotEntity[]) {
 
     switch (constraint.operator) {
       case '<':
-        return candidateValue < constraint.date;
+        return candidateValue < constraint.providerDate;
       case '<=':
-        return candidateValue <= constraint.date;
+        return candidateValue <= constraint.providerDate;
       case '>':
-        return candidateValue > constraint.date;
+        return candidateValue > constraint.providerDate;
       case '>=':
-        return candidateValue >= constraint.date;
+        return candidateValue >= constraint.providerDate;
       default:
         return true;
     }
@@ -707,14 +707,42 @@ describe('TransactionAnalysisService', () => {
     convertAmount: jest.Mock;
   };
 
+  const buildTransactionQueryBuilder = () => {
+    const params: Record<string, unknown> = {};
+    const queryBuilder = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn((_query: string, nextParams?: Record<string, unknown>) => {
+        Object.assign(params, nextParams);
+        return queryBuilder;
+      }),
+      andWhere: jest.fn(
+        (_query: string, nextParams?: Record<string, unknown>) => {
+          Object.assign(params, nextParams);
+          return queryBuilder;
+        },
+      ),
+      getMany: jest.fn(() =>
+        mockTransactionRepository.find({
+          where: {
+            userId: params.userId,
+            pending: false,
+            providerDate: {
+              startDate: params.startDate,
+              endDate: params.endDate,
+            },
+          },
+          relations: ['account', 'category', 'userCategory'],
+        }),
+      ),
+    };
+
+    return queryBuilder;
+  };
+
   beforeEach(async () => {
     mockTransactionRepository = {
       find: jest.fn(),
-      createQueryBuilder: jest.fn(() => {
-        throw new Error(
-          'TransactionAnalysisService must load raw posted transactions instead of using the SQL aggregate path',
-        );
-      }),
+      createQueryBuilder: jest.fn(() => buildTransactionQueryBuilder()),
     };
     mockAccountRepository = {
       find: jest.fn().mockResolvedValue([]),
@@ -783,7 +811,7 @@ describe('TransactionAnalysisService', () => {
           where: expect.objectContaining({
             userId: mockUserId,
             pending: false,
-            date: expect.anything(),
+            providerDate: expect.anything(),
           }),
           relations: ['account', 'category', 'userCategory'],
         }),
@@ -796,14 +824,14 @@ describe('TransactionAnalysisService', () => {
           id: 'expense',
           amount: 243360,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-28',
+          providerDate: '2024-01-28',
           primary: 'LOAN_PAYMENTS',
         }),
         buildTransaction({
           id: 'mirror-income',
           amount: 243360,
           sign: MoneySign.POSITIVE,
-          date: '2024-01-28',
+          providerDate: '2024-01-28',
           primary: 'INCOME',
         }),
       ]);
@@ -824,7 +852,7 @@ describe('TransactionAnalysisService', () => {
           id: 'overridden',
           amount: 1200,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-15',
+          providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
           userPrimary: 'GENERAL_MERCHANDISE',
         }),
@@ -856,21 +884,21 @@ describe('TransactionAnalysisService', () => {
           id: 'neg-near',
           amount: 6000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-15',
+          providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'neg-far',
           amount: 6000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-01',
+          providerDate: '2024-01-01',
           primary: 'RENT_AND_UTILITIES',
         }),
         buildTransaction({
           id: 'pos',
           amount: 6000,
           sign: MoneySign.POSITIVE,
-          date: '2024-01-14',
+          providerDate: '2024-01-14',
           primary: 'INCOME',
         }),
       ]);
@@ -895,28 +923,28 @@ describe('TransactionAnalysisService', () => {
           id: 'neg-late',
           amount: 6000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-15',
+          providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'neg-early-b',
           amount: 6000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-10',
+          providerDate: '2024-01-10',
           primary: 'GENERAL_SERVICES',
         }),
         buildTransaction({
           id: 'neg-early-a',
           amount: 6000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-10',
+          providerDate: '2024-01-10',
           primary: 'RENT_AND_UTILITIES',
         }),
         buildTransaction({
           id: 'pos-early',
           amount: 6000,
           sign: MoneySign.POSITIVE,
-          date: '2024-01-10',
+          providerDate: '2024-01-10',
           primary: 'INCOME',
         }),
       ]);
@@ -946,7 +974,7 @@ describe('TransactionAnalysisService', () => {
         amount: 10000,
         sign: MoneySign.NEGATIVE,
         currency: 'USD',
-        date: '2024-01-10',
+        providerDate: '2024-01-10',
         primary: 'GENERAL_SERVICES',
       });
       const eurIncome = buildTransaction({
@@ -954,7 +982,7 @@ describe('TransactionAnalysisService', () => {
         amount: 10000,
         sign: MoneySign.POSITIVE,
         currency: 'EUR',
-        date: '2024-01-10',
+        providerDate: '2024-01-10',
         primary: 'INCOME',
       });
 
@@ -998,14 +1026,14 @@ describe('TransactionAnalysisService', () => {
         id: 'feb-expense',
         amount: 9000,
         sign: MoneySign.NEGATIVE,
-        date: '2024-02-29',
+        providerDate: '2024-02-29',
         primary: 'GENERAL_SERVICES',
       });
       const marchIncome = buildTransaction({
         id: 'march-income',
         amount: 9000,
         sign: MoneySign.POSITIVE,
-        date: '2024-03-01',
+        providerDate: '2024-03-01',
         primary: 'INCOME',
       });
 
@@ -1077,14 +1105,14 @@ describe('TransactionAnalysisService', () => {
           id: 'bilt-negative',
           amount: 243360,
           sign: MoneySign.NEGATIVE,
-          date: '2026-02-28',
+          providerDate: '2026-02-28',
           primary: 'LOAN_PAYMENTS',
         }),
         buildTransaction({
           id: 'bilt-positive',
           amount: 243360,
           sign: MoneySign.POSITIVE,
-          date: '2026-02-28',
+          providerDate: '2026-02-28',
           primary: 'INCOME',
         }),
       ]);
@@ -1105,7 +1133,7 @@ describe('TransactionAnalysisService', () => {
           id: 'unmatched-transfer-in',
           amount: 25000,
           sign: MoneySign.POSITIVE,
-          date: '2024-01-06',
+          providerDate: '2024-01-06',
           primary: 'TRANSFER_IN',
           detailed: 'TRANSFER_IN_ACCOUNT_TRANSFER',
         }),
@@ -1113,7 +1141,7 @@ describe('TransactionAnalysisService', () => {
           id: 'unmatched-transfer-out',
           amount: 150000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-07',
+          providerDate: '2024-01-07',
           primary: 'TRANSFER_OUT',
           detailed: 'TRANSFER_OUT_ACCOUNT_TRANSFER',
         }),
@@ -1121,7 +1149,7 @@ describe('TransactionAnalysisService', () => {
           id: 'unmatched-loan-payment',
           amount: 45000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-08',
+          providerDate: '2024-01-08',
           primary: 'LOAN_PAYMENTS',
           detailed: 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT',
         }),
@@ -1160,21 +1188,21 @@ describe('TransactionAnalysisService', () => {
           id: 'paycheck',
           amount: 300000,
           sign: MoneySign.POSITIVE,
-          date: '2024-01-05',
+          providerDate: '2024-01-05',
           primary: 'INCOME',
         }),
         buildTransaction({
           id: 'rent',
           amount: 150000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-07',
+          providerDate: '2024-01-07',
           primary: 'RENT_AND_UTILITIES',
         }),
         buildTransaction({
           id: 'groceries',
           amount: 50000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-08',
+          providerDate: '2024-01-08',
           primary: 'FOOD_AND_DRINK',
         }),
       ]);
@@ -1366,7 +1394,7 @@ describe('TransactionAnalysisService', () => {
           id: 'posted-adjustment-offset',
           amount: 1000,
           sign: MoneySign.POSITIVE,
-          date: '2024-01-15',
+          providerDate: '2024-01-15',
           accountId: 'acct-posted-excluded',
           primary: 'INCOME',
         }),
@@ -1502,7 +1530,7 @@ describe('TransactionAnalysisService', () => {
           id: 'uncategorized-receipt',
           amount: 700,
           sign: MoneySign.POSITIVE,
-          date: '2024-01-10',
+          providerDate: '2024-01-10',
           accountId: 'acct-with-posted',
         }),
       ]);
@@ -1711,21 +1739,21 @@ describe('TransactionAnalysisService', () => {
           id: 'bilt-negative',
           amount: 243360,
           sign: MoneySign.NEGATIVE,
-          date: '2026-02-28',
+          providerDate: '2026-02-28',
           primary: 'LOAN_PAYMENTS',
         }),
         buildTransaction({
           id: 'bilt-positive',
           amount: 243360,
           sign: MoneySign.POSITIVE,
-          date: '2026-02-28',
+          providerDate: '2026-02-28',
           primary: 'INCOME',
         }),
         buildTransaction({
           id: 'interest',
           amount: 4083,
           sign: MoneySign.POSITIVE,
-          date: '2026-02-28',
+          providerDate: '2026-02-28',
           primary: 'INCOME',
         }),
       ]);
@@ -1747,7 +1775,7 @@ describe('TransactionAnalysisService', () => {
           id: 'overridden',
           amount: 1200,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-15',
+          providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
           userPrimary: 'GENERAL_MERCHANDISE',
         }),
@@ -1773,7 +1801,7 @@ describe('TransactionAnalysisService', () => {
           id: 'bilt-negative',
           amount: 243360,
           sign: MoneySign.NEGATIVE,
-          date: '2026-02-28',
+          providerDate: '2026-02-28',
           primary: 'LOAN_PAYMENTS',
           detailed: 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT',
         }),
@@ -1781,7 +1809,7 @@ describe('TransactionAnalysisService', () => {
           id: 'bilt-positive',
           amount: 243360,
           sign: MoneySign.POSITIVE,
-          date: '2026-02-28',
+          providerDate: '2026-02-28',
           primary: 'INCOME',
           detailed: 'INCOME_OTHER_INCOME',
         }),
@@ -1789,7 +1817,7 @@ describe('TransactionAnalysisService', () => {
           id: 'real-loan-payment',
           amount: 1887,
           sign: MoneySign.NEGATIVE,
-          date: '2026-02-19',
+          providerDate: '2026-02-19',
           primary: 'LOAN_PAYMENTS',
           detailed: 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT',
         }),
@@ -1815,7 +1843,7 @@ describe('TransactionAnalysisService', () => {
           amount: 10000,
           sign: MoneySign.POSITIVE,
           currency: 'EUR',
-          date: '2024-01-10',
+          providerDate: '2024-01-10',
           primary: 'INCOME',
         }),
       ]);
@@ -1846,21 +1874,21 @@ describe('TransactionAnalysisService', () => {
           id: 'older-id',
           amount: 1000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-10',
+          providerDate: '2024-01-10',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'newer-id',
           amount: 2000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-12',
+          providerDate: '2024-01-12',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'same-day-b',
           amount: 3000,
           sign: MoneySign.NEGATIVE,
-          date: '2024-01-10',
+          providerDate: '2024-01-10',
           primary: 'FOOD_AND_DRINK',
         }),
       ]);
@@ -1886,7 +1914,7 @@ describe('TransactionAnalysisService', () => {
           id: 'paycheck',
           amount: 10000,
           sign: MoneySign.POSITIVE,
-          date: '2024-01-10',
+          providerDate: '2024-01-10',
           primary: 'INCOME',
           accountName: 'Payroll Checking',
           accountCustomName: 'Main Checking',

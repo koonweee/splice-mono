@@ -18,7 +18,7 @@ export type TransactionControllerFindAllParams = {
    */
   pageSize?: string
   /**
-   * Sort column (date, merchantName, pending, amount)
+   * Sort column (activityDate, merchantName, pending, amount)
    */
   sortBy?: string
   /**
@@ -30,11 +30,11 @@ export type TransactionControllerFindAllParams = {
    */
   accountId?: string
   /**
-   * Filter by start date (YYYY-MM-DD)
+   * Filter by activity start date (YYYY-MM-DD)
    */
   startDate?: string
   /**
-   * Filter by end date (YYYY-MM-DD)
+   * Filter by activity end date (YYYY-MM-DD)
    */
   endDate?: string
   /**

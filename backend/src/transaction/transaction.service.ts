@@ -1,17 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  Between,
-  FindOptionsOrder,
-  FindOptionsWhere,
-  In,
-  IsNull,
-  LessThanOrEqual,
-  MoreThanOrEqual,
-  Not,
-  Repository,
-  SelectQueryBuilder,
-} from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
@@ -66,6 +55,11 @@ type TransactionSummaryRawRow = {
   pendingCount: string | number | null;
   needsReviewCount: string | number | null;
 };
+
+const ACTIVITY_DATE_EXPRESSION =
+  'COALESCE(transaction."authorizedDate", transaction."providerDate")';
+const ACTIVITY_DATETIME_EXPRESSION =
+  'COALESCE(transaction."authorizedDatetime", transaction."providerDatetime")';
 
 function parseRawInteger(value: string | number | null): number {
   if (typeof value === 'number') {
@@ -156,8 +150,12 @@ export class TransactionService extends OwnedCrudService<
     }
     if (dto.location !== undefined) entity.location = dto.location;
     if (dto.paymentMeta !== undefined) entity.paymentMeta = dto.paymentMeta;
-    if (dto.date !== undefined) entity.date = dto.date;
-    if (dto.datetime !== undefined) entity.datetime = dto.datetime;
+    if (dto.providerDate !== undefined) {
+      entity.providerDate = dto.providerDate;
+    }
+    if (dto.providerDatetime !== undefined) {
+      entity.providerDatetime = dto.providerDatetime;
+    }
     if (dto.authorizedDate !== undefined) {
       entity.authorizedDate = dto.authorizedDate;
     }
@@ -284,7 +282,7 @@ export class TransactionService extends OwnedCrudService<
   }
 
   private static readonly SORTABLE_COLUMNS = new Set([
-    'date',
+    'activityDate',
     'merchantName',
     'pending',
     'amount',
@@ -303,49 +301,27 @@ export class TransactionService extends OwnedCrudService<
     entity.categoryReviewMethod = null;
   }
 
-  private buildFindOrder(
-    sortColumn: string,
-    order: 'ASC' | 'DESC',
-  ): FindOptionsOrder<TransactionEntity> {
-    const orderClause: FindOptionsOrder<TransactionEntity> =
-      sortColumn === 'amount'
-        ? { amount: { amount: order } }
-        : sortColumn === 'merchantName'
-          ? { merchantName: order }
-          : sortColumn === 'pending'
-            ? { pending: order }
-            : { date: order };
-
-    const chronologicalTieOrder = sortColumn === 'date' ? order : 'DESC';
-    if (sortColumn !== 'date') {
-      orderClause.date = 'DESC';
-    }
-    orderClause.datetime = chronologicalTieOrder;
-    orderClause.authorizedDatetime = chronologicalTieOrder;
-    orderClause.id = chronologicalTieOrder;
-
-    return orderClause;
-  }
-
   private applyTransactionOrder(
     query: SelectQueryBuilder<TransactionEntity>,
     sortColumn: string,
     order: 'ASC' | 'DESC',
   ): SelectQueryBuilder<TransactionEntity> {
-    const sortExpression =
-      sortColumn === 'amount'
-        ? 'transaction.amountAmount'
-        : `transaction.${sortColumn}`;
-    const chronologicalTieOrder = sortColumn === 'date' ? order : 'DESC';
+    let sortExpression = `transaction.${sortColumn}`;
+    if (sortColumn === 'amount') {
+      sortExpression = 'transaction.amountAmount';
+    } else if (sortColumn === 'activityDate') {
+      sortExpression = ACTIVITY_DATE_EXPRESSION;
+    }
+    const chronologicalTieOrder =
+      sortColumn === 'activityDate' ? order : 'DESC';
 
     query.orderBy(sortExpression, order);
-    if (sortColumn !== 'date') {
-      query.addOrderBy('transaction.date', 'DESC');
+    if (sortColumn !== 'activityDate') {
+      query.addOrderBy(ACTIVITY_DATE_EXPRESSION, 'DESC');
     }
     query
-      .addOrderBy('transaction.datetime', chronologicalTieOrder, 'NULLS LAST')
       .addOrderBy(
-        'transaction.authorizedDatetime',
+        ACTIVITY_DATETIME_EXPRESSION,
         chronologicalTieOrder,
         'NULLS LAST',
       )
@@ -354,14 +330,24 @@ export class TransactionService extends OwnedCrudService<
     return query;
   }
 
-  private applyCategoryReviewStatusWhere(
-    where: FindOptionsWhere<TransactionEntity>,
-    categoryReviewStatus?: TransactionCategoryReviewStatus,
+  private applyActivityDateFilters(
+    query: SelectQueryBuilder<TransactionEntity>,
+    startDate?: string,
+    endDate?: string,
   ): void {
-    if (categoryReviewStatus === 'needs_review') {
-      where.categoryReviewedAt = IsNull();
-    } else if (categoryReviewStatus === 'reviewed') {
-      where.categoryReviewedAt = Not(IsNull());
+    if (startDate && endDate) {
+      query.andWhere(
+        `${ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
+        { startDate, endDate },
+      );
+    } else if (startDate) {
+      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
+        startDate,
+      });
+    } else if (endDate) {
+      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
+        endDate,
+      });
     }
   }
 
@@ -381,16 +367,7 @@ export class TransactionService extends OwnedCrudService<
     if (accountId) {
       query.andWhere('transaction.accountId = :accountId', { accountId });
     }
-    if (startDate && endDate) {
-      query.andWhere('transaction.date BETWEEN :startDate AND :endDate', {
-        startDate,
-        endDate,
-      });
-    } else if (startDate) {
-      query.andWhere('transaction.date >= :startDate', { startDate });
-    } else if (endDate) {
-      query.andWhere('transaction.date <= :endDate', { endDate });
-    }
+    this.applyActivityDateFilters(query, startDate, endDate);
     if (amountSign === 'positive' || amountSign === 'negative') {
       query.andWhere('transaction.amountSign = :amountSign', { amountSign });
     }
@@ -463,24 +440,8 @@ export class TransactionService extends OwnedCrudService<
     const sortColumn =
       sortBy && TransactionService.SORTABLE_COLUMNS.has(sortBy)
         ? sortBy
-        : 'date';
+        : 'activityDate';
     const order: 'ASC' | 'DESC' = sortOrder === 'ASC' ? 'ASC' : 'DESC';
-
-    const where: FindOptionsWhere<TransactionEntity> = { userId };
-    if (accountId) {
-      where.accountId = accountId;
-    }
-    if (startDate && endDate) {
-      where.date = Between(startDate, endDate);
-    } else if (startDate) {
-      where.date = MoreThanOrEqual(startDate);
-    } else if (endDate) {
-      where.date = LessThanOrEqual(endDate);
-    }
-    if (amountSign === 'positive' || amountSign === 'negative') {
-      where.amount = { sign: amountSign } as unknown as BalanceColumns;
-    }
-    this.applyCategoryReviewStatusWhere(where, categoryReviewStatus);
 
     this.logger.log(
       {
@@ -498,28 +459,6 @@ export class TransactionService extends OwnedCrudService<
       },
       'Finding paginated transactions',
     );
-
-    if (!categoryPrimary) {
-      const orderClause = this.buildFindOrder(sortColumn, order);
-
-      const [entities, total] = await this.repository.findAndCount({
-        where,
-        relations: this.relations,
-        order: orderClause,
-        skip: pageIndex * pageSize,
-        take: pageSize,
-      });
-
-      this.logger.log(
-        { userId, count: entities.length, total },
-        'Found paginated transactions',
-      );
-
-      return {
-        data: entities.map((entity) => entity.toObject()),
-        total,
-      };
-    }
 
     const query = this.buildFilteredTransactionQuery(userId, {
       accountId,
@@ -783,35 +722,35 @@ export class TransactionService extends OwnedCrudService<
       maxAmount?: number;
     },
   ): Promise<Transaction[]> {
-    const where: FindOptionsWhere<TransactionEntity> = { userId };
+    const query = this.buildFilteredTransactionQuery(userId, {
+      categoryPrimary: options.categoryPrimary,
+    });
 
     if (options.accountIds?.length === 1) {
-      where.accountId = options.accountIds[0];
+      query.andWhere('transaction.accountId = :accountId', {
+        accountId: options.accountIds[0],
+      });
     } else if (options.accountIds && options.accountIds.length > 1) {
-      where.accountId = In(options.accountIds);
+      query.andWhere('transaction.accountId IN (:...accountIds)', {
+        accountIds: options.accountIds,
+      });
     }
 
-    if (options.startDate && options.endDate) {
-      where.date = Between(options.startDate, options.endDate);
-    } else if (options.startDate) {
-      where.date = MoreThanOrEqual(options.startDate);
-    } else if (options.endDate) {
-      where.date = LessThanOrEqual(options.endDate);
-    }
+    this.applyActivityDateFilters(query, options.startDate, options.endDate);
 
     if (!options.includePending) {
-      where.pending = false;
+      query.andWhere('transaction.pending = false');
     }
 
     if (options.sign === 'positive' || options.sign === 'negative') {
-      where.amount = { sign: options.sign } as unknown as BalanceColumns;
+      query.andWhere('transaction.amountSign = :amountSign', {
+        amountSign: options.sign,
+      });
     }
 
-    const entities = await this.repository.find({
-      where,
-      relations: this.relations,
-      order: { date: 'DESC' },
-    });
+    this.applyTransactionOrder(query, 'activityDate', 'DESC');
+
+    const entities = await query.getMany();
 
     return entities
       .map((entity) => entity.toObject())
@@ -822,18 +761,6 @@ export class TransactionService extends OwnedCrudService<
           !transaction.merchantName?.toLowerCase().includes(merchantQuery)
         ) {
           return false;
-        }
-
-        if (options.categoryPrimary) {
-          const primaryCategory =
-            transaction.effectiveCategory?.primary ?? null;
-          if (options.categoryPrimary === 'UNCATEGORIZED') {
-            if (primaryCategory !== null) {
-              return false;
-            }
-          } else if (primaryCategory !== options.categoryPrimary) {
-            return false;
-          }
         }
 
         const amount = transaction.amount.money.amount;
@@ -864,7 +791,8 @@ export class TransactionService extends OwnedCrudService<
         accountName: transaction.accountName ?? 'Account',
         merchantName: transaction.merchantName,
         pending: transaction.pending,
-        date: transaction.date,
+        activityDate: transaction.activityDate,
+        providerDate: transaction.providerDate,
         categoryPrimary: transaction.effectiveCategory?.primary ?? null,
         amount: transaction.amount,
       })),
