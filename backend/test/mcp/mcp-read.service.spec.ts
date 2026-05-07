@@ -9,6 +9,7 @@ describe('McpReadService', () => {
     where: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
     addOrderBy: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     clone: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
