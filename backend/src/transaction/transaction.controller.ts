@@ -25,6 +25,8 @@ import type {
   CreateTransactionDto,
   PaginatedTransactionResponse,
   Transaction,
+  TransactionCategoryReviewStatus,
+  TransactionSummary,
   UpdateTransactionCategoryDto,
   UpdateTransactionCategoryReviewDto,
   UpdateTransactionDto,
@@ -36,6 +38,7 @@ import {
   CreateTransactionDtoSchema,
   PaginatedTransactionResponseSchema,
   TransactionSchema,
+  TransactionSummarySchema,
   UpdateTransactionCategoryDtoSchema,
   UpdateTransactionCategoryReviewDtoSchema,
   UpdateTransactionDtoSchema,
@@ -50,6 +53,78 @@ export class TransactionController {
     private transactionService: TransactionService,
     private currencyConversionService: CurrencyConversionService,
   ) {}
+
+  private normalizeCategoryReviewStatus(
+    categoryReviewStatus?: string,
+  ): TransactionCategoryReviewStatus | undefined {
+    return categoryReviewStatus === 'needs_review' ||
+      categoryReviewStatus === 'reviewed'
+      ? categoryReviewStatus
+      : undefined;
+  }
+
+  private async buildPreferredCurrencySummary(
+    userId: string,
+    nativeSummary: Awaited<ReturnType<TransactionService['getSummary']>>,
+  ): Promise<TransactionSummary> {
+    const preferredCurrency =
+      await this.currencyConversionService.getPreferredCurrency(userId);
+    const foreignCurrencies = nativeSummary.buckets
+      .map((bucket) => bucket.currency)
+      .filter((currency) => currency !== preferredCurrency);
+    const rateMap = await this.currencyConversionService.getRateMap(
+      foreignCurrencies,
+      preferredCurrency,
+      dayjs().format('YYYY-MM-DD'),
+    );
+    let inflowAmount = 0;
+    let outflowAmount = 0;
+
+    nativeSummary.buckets.forEach((bucket) => {
+      const rate =
+        bucket.currency === preferredCurrency
+          ? 1
+          : rateMap.get(bucket.currency);
+
+      if (!rate) {
+        return;
+      }
+
+      inflowAmount += this.currencyConversionService.convertAmount(
+        bucket.inflowAmount,
+        bucket.currency,
+        preferredCurrency,
+        rate,
+      );
+      outflowAmount += this.currencyConversionService.convertAmount(
+        bucket.outflowAmount,
+        bucket.currency,
+        preferredCurrency,
+        rate,
+      );
+    });
+
+    const netAmount = inflowAmount - outflowAmount;
+
+    return {
+      currency: preferredCurrency,
+      inflow: {
+        money: { currency: preferredCurrency, amount: inflowAmount },
+        sign: MoneySign.POSITIVE,
+      },
+      outflow: {
+        money: { currency: preferredCurrency, amount: outflowAmount },
+        sign: MoneySign.NEGATIVE,
+      },
+      net: {
+        money: { currency: preferredCurrency, amount: Math.abs(netAmount) },
+        sign: netAmount >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE,
+      },
+      transactionCount: nativeSummary.transactionCount,
+      pendingCount: nativeSummary.pendingCount,
+      needsReviewCount: nativeSummary.needsReviewCount,
+    };
+  }
 
   @Get()
   @ApiOperation({ description: 'Get all transactions (paginated)' })
@@ -216,6 +291,79 @@ export class TransactionController {
     }
 
     return { data, total, pageIndex, pageSize };
+  }
+
+  @Get('summary')
+  @ApiOperation({ description: 'Get filtered transaction summary totals' })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Returns filtered transaction summary totals',
+    schema: TransactionSummarySchema,
+  })
+  @ApiQuery({
+    name: 'accountId',
+    required: false,
+    description: 'Filter by account ID',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: 'Filter by start date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: 'Filter by end date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'categoryPrimary',
+    required: false,
+    description:
+      'Filter by primary category (e.g. FOOD_AND_DRINK, UNCATEGORIZED)',
+  })
+  @ApiQuery({
+    name: 'amountSign',
+    required: false,
+    description: 'Filter by amount sign (positive or negative)',
+    enum: ['positive', 'negative'],
+  })
+  @ApiQuery({
+    name: 'categoryReviewStatus',
+    required: false,
+    description: 'Filter by category review status',
+    enum: ['needs_review', 'reviewed'],
+  })
+  @ApiQuery({
+    name: 'convert',
+    required: false,
+    description:
+      'When false, still returns preferred-currency totals for stable frontend display',
+    type: Boolean,
+  })
+  async getSummary(
+    @CurrentUser() user: JwtUser,
+    @Query('accountId') accountId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('categoryPrimary') categoryPrimary?: string,
+    @Query('amountSign') amountSign?: string,
+    @Query('convert') _convertStr?: string,
+    @Query('categoryReviewStatus') categoryReviewStatus?: string,
+  ): Promise<TransactionSummary> {
+    const nativeSummary = await this.transactionService.getSummary(
+      user.userId,
+      {
+        accountId,
+        startDate,
+        endDate,
+        categoryPrimary,
+        amountSign,
+        categoryReviewStatus:
+          this.normalizeCategoryReviewStatus(categoryReviewStatus),
+      },
+    );
+
+    return this.buildPreferredCurrencySummary(user.userId, nativeSummary);
   }
 
   @Post()

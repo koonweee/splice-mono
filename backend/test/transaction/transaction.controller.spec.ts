@@ -42,6 +42,11 @@ describe('TransactionController', () => {
 
     // Reset mocks before each test
     jest.clearAllMocks();
+    mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue('USD');
+    mockCurrencyConversionService.getRateMap.mockResolvedValue(new Map());
+    mockCurrencyConversionService.convertAmount.mockImplementation(
+      (amount: number) => amount,
+    );
   });
 
   it('should be defined', () => {
@@ -148,6 +153,116 @@ describe('TransactionController', () => {
         expect.objectContaining({
           categoryReviewStatus: 'needs_review',
         }),
+      );
+    });
+  });
+
+  describe('getSummary', () => {
+    const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
+
+    it('should return preferred-currency transaction summary totals', async () => {
+      const result = await controller.getSummary(mockUser);
+
+      expect(result).toEqual({
+        currency: 'USD',
+        inflow: {
+          money: { currency: 'USD', amount: 0 },
+          sign: 'positive',
+        },
+        outflow: {
+          money: { currency: 'USD', amount: 7500 },
+          sign: 'negative',
+        },
+        net: {
+          money: { currency: 'USD', amount: 7500 },
+          sign: 'negative',
+        },
+        transactionCount: 2,
+        pendingCount: 1,
+        needsReviewCount: 2,
+      });
+      expect(mockTransactionService.getSummary).toHaveBeenCalledWith(
+        mockUser.userId,
+        expect.objectContaining({
+          accountId: undefined,
+          startDate: undefined,
+          endDate: undefined,
+          categoryPrimary: undefined,
+          amountSign: undefined,
+          categoryReviewStatus: undefined,
+        }),
+      );
+    });
+
+    it('should pass valid summary filters and ignore invalid review status', async () => {
+      await controller.getSummary(
+        mockUser,
+        mockAccountId,
+        '2026-05-01',
+        '2026-05-07',
+        'FOOD_AND_DRINK',
+        'negative',
+        'true',
+        'ignored',
+      );
+
+      expect(mockTransactionService.getSummary).toHaveBeenCalledWith(
+        mockUser.userId,
+        {
+          accountId: mockAccountId,
+          startDate: '2026-05-01',
+          endDate: '2026-05-07',
+          categoryPrimary: 'FOOD_AND_DRINK',
+          amountSign: 'negative',
+          categoryReviewStatus: undefined,
+        },
+      );
+    });
+
+    it('should convert foreign summary buckets into preferred currency', async () => {
+      mockTransactionService.getSummary.mockResolvedValueOnce({
+        buckets: [
+          { currency: 'USD', inflowAmount: 10000, outflowAmount: 2500 },
+          { currency: 'EUR', inflowAmount: 5000, outflowAmount: 1000 },
+        ],
+        transactionCount: 4,
+        pendingCount: 1,
+        needsReviewCount: 2,
+      });
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(
+        new Map([['EUR', 1.1]]),
+      );
+      mockCurrencyConversionService.convertAmount.mockImplementation(
+        (
+          amount: number,
+          sourceCurrency: string,
+          _targetCurrency: string,
+          rate: number,
+        ) => (sourceCurrency === 'USD' ? amount : Math.round(amount * rate)),
+      );
+
+      const result = await controller.getSummary(mockUser);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          inflow: {
+            money: { currency: 'USD', amount: 15500 },
+            sign: 'positive',
+          },
+          outflow: {
+            money: { currency: 'USD', amount: 3600 },
+            sign: 'negative',
+          },
+          net: {
+            money: { currency: 'USD', amount: 11900 },
+            sign: 'positive',
+          },
+        }),
+      );
+      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
+        ['EUR'],
+        'USD',
+        expect.any(String),
       );
     });
   });

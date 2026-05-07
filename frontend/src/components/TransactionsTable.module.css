@@ -2,9 +2,49 @@
   min-width: 120px;
 }
 
+.amountTableCell {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.amountTableCell :global(.mrt-table-head-cell-content),
+.amountTableCell :global(.mrt-table-head-cell-labels),
+.amountTableCell :global(.mrt-table-head-cell-content-wrapper) {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.amountText {
+  display: inline-block;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  text-align: right;
+}
+
+.positive {
+  color: var(--mantine-color-teal-6);
+}
+
+.negative {
+  color: var(--mantine-color-red-6);
+}
+
 .merchantCell {
   width: 100%;
   min-width: 0;
+}
+
+.merchantAvatar {
+  flex: 0 0 auto;
+  border: 1px solid var(--mantine-color-default-border);
+  background: light-dark(
+    var(--mantine-color-gray-0),
+    var(--mantine-color-dark-5)
+  );
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 700;
 }
 
 .merchantText {
@@ -24,9 +64,61 @@
 
 .merchantInfoButton {
   flex: 0 0 auto;
-  min-width: 32px;
-  min-height: 32px;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
   color: var(--mantine-color-dimmed);
+  opacity: 0.72;
+  transition: opacity 120ms ease;
+}
+
+.merchantInfoButton:hover,
+.merchantInfoButton:focus-visible {
+  opacity: 1;
+}
+
+.statusBadge {
+  height: 18px;
+  border: 1px solid transparent;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+.pendingBadge {
+  border-color: light-dark(
+    var(--mantine-color-yellow-4),
+    var(--mantine-color-yellow-7)
+  );
+  background: light-dark(
+    var(--mantine-color-yellow-0),
+    rgba(245, 159, 0, 0.18)
+  );
+  color: light-dark(var(--mantine-color-yellow-9), var(--mantine-color-yellow-3));
+}
+
+.reviewBadge {
+  border-color: light-dark(
+    var(--mantine-color-orange-4),
+    var(--mantine-color-orange-7)
+  );
+  background: light-dark(
+    var(--mantine-color-orange-0),
+    rgba(253, 126, 20, 0.18)
+  );
+  color: light-dark(var(--mantine-color-orange-9), var(--mantine-color-orange-3));
+}
+
+.reviewedBadge {
+  border-color: light-dark(
+    var(--mantine-color-teal-4),
+    var(--mantine-color-teal-7)
+  );
+  background: light-dark(
+    var(--mantine-color-teal-0),
+    rgba(18, 184, 134, 0.15)
+  );
+  color: light-dark(var(--mantine-color-teal-9), var(--mantine-color-teal-3));
 }
 
 @media (pointer: coarse) {
@@ -54,14 +146,110 @@
   transition: opacity 120ms ease;
 }
 
-.categoryReviewDot {
-  width: 6px;
-  height: 6px;
+.categoryBadge {
+  max-width: 100%;
   flex: 0 0 auto;
-  margin-right: 2px;
-  border-radius: 999px;
-  background: var(--mantine-color-yellow-6);
-  opacity: 0.72;
+  border-color: light-dark(
+    var(--mantine-color-teal-5),
+    rgba(56, 217, 169, 0.55)
+  );
+  background: light-dark(
+    var(--mantine-color-teal-0),
+    rgba(18, 184, 134, 0.08)
+  );
+  color: light-dark(var(--mantine-color-teal-9), var(--mantine-color-teal-2));
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.categoryReviewBadge {
+  box-shadow: inset 0 -1px 0
+    light-dark(var(--mantine-color-orange-5), rgba(255, 146, 43, 0.52));
+}
+
+.categoryFoodBadge {
+  border-color: light-dark(
+    var(--mantine-color-green-5),
+    rgba(81, 207, 102, 0.56)
+  );
+  background: light-dark(
+    var(--mantine-color-green-0),
+    rgba(64, 192, 87, 0.08)
+  );
+  color: light-dark(var(--mantine-color-green-9), var(--mantine-color-green-2));
+}
+
+.categoryDepositBadge {
+  border-color: light-dark(
+    var(--mantine-color-blue-5),
+    rgba(77, 171, 247, 0.58)
+  );
+  background: light-dark(
+    var(--mantine-color-blue-0),
+    rgba(34, 139, 230, 0.08)
+  );
+  color: light-dark(var(--mantine-color-blue-9), var(--mantine-color-blue-2));
+}
+
+.categoryTransferBadge {
+  border-color: light-dark(
+    var(--mantine-color-violet-5),
+    rgba(151, 117, 250, 0.58)
+  );
+  background: light-dark(
+    var(--mantine-color-violet-0),
+    rgba(121, 80, 242, 0.08)
+  );
+  color: light-dark(var(--mantine-color-violet-9), var(--mantine-color-violet-2));
+}
+
+.categoryElectronicsBadge {
+  border-color: light-dark(
+    var(--mantine-color-cyan-5),
+    rgba(59, 201, 219, 0.58)
+  );
+  background: light-dark(
+    var(--mantine-color-cyan-0),
+    rgba(21, 170, 191, 0.08)
+  );
+  color: light-dark(var(--mantine-color-cyan-9), var(--mantine-color-cyan-2));
+}
+
+.categoryEntertainmentBadge {
+  border-color: light-dark(
+    var(--mantine-color-grape-5),
+    rgba(218, 119, 242, 0.54)
+  );
+  background: light-dark(
+    var(--mantine-color-grape-0),
+    rgba(174, 62, 201, 0.08)
+  );
+  color: light-dark(var(--mantine-color-grape-9), var(--mantine-color-grape-2));
+}
+
+.categoryServiceBadge {
+  border-color: light-dark(
+    var(--mantine-color-gray-5),
+    rgba(173, 181, 189, 0.5)
+  );
+  background: light-dark(
+    var(--mantine-color-gray-0),
+    rgba(173, 181, 189, 0.06)
+  );
+  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-gray-3));
+}
+
+.categoryOverrideBadge {
+  border-color: light-dark(
+    var(--mantine-color-indigo-5),
+    rgba(116, 143, 252, 0.62)
+  );
+  background: light-dark(
+    var(--mantine-color-indigo-0),
+    rgba(92, 124, 250, 0.08)
+  );
+  color: light-dark(var(--mantine-color-indigo-9), var(--mantine-color-indigo-2));
 }
 
 .categoryLabel {
@@ -122,6 +310,31 @@
 .categoryCell:focus-within .categoryActions {
   opacity: 1;
   pointer-events: auto;
+}
+
+.transactionsTable {
+  --splice-table-border: light-dark(
+    var(--mantine-color-gray-2),
+    rgba(255, 255, 255, 0.075)
+  );
+}
+
+.transactionsTable :global(.mrt-table-paper) {
+  border-color: var(--splice-table-border);
+}
+
+.transactionsTable :global(.mrt-table-head-row),
+.transactionsTable :global(.mrt-table-body-row),
+.transactionsTable :global(.mrt-table-body-cell),
+.transactionsTable :global(.mrt-table-head-cell) {
+  border-color: var(--splice-table-border) !important;
+}
+
+.transactionsTable :global(.mrt-table-body-row:hover td) {
+  background: light-dark(
+    var(--mantine-color-gray-0),
+    rgba(255, 255, 255, 0.025)
+  );
 }
 
 .transactionsTable :global(.mrt-table-head-cell-resize-handle) {
