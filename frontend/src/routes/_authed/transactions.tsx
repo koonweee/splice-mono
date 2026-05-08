@@ -82,26 +82,6 @@ const categoryReviewOptions = [
   { label: 'Reviewed', value: 'reviewed' },
 ]
 
-const mobileControlStyles = {
-  input: {
-    fontSize: 16,
-    minHeight: 48,
-  },
-}
-
-const mobileSegmentedControlStyles = {
-  root: {
-    minHeight: 48,
-  },
-  label: {
-    alignItems: 'center',
-    display: 'flex',
-    fontSize: 16,
-    justifyContent: 'center',
-    minHeight: 44,
-  },
-}
-
 const isValidDateString = (value: unknown): value is string =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 
@@ -128,11 +108,6 @@ function TransactionsFilterPanel({
   onCategoryReviewStatusChange,
   onClearFilters,
 }: TransactionFiltersPanelProps) {
-  const selectStyles = isMobile ? mobileControlStyles : undefined
-  const segmentedControlStyles = isMobile
-    ? mobileSegmentedControlStyles
-    : undefined
-
   return (
     <Stack gap="md">
       <Stack gap="xs">
@@ -148,7 +123,6 @@ function TransactionsFilterPanel({
           searchable
           size="md"
           comboboxProps={{ withinPortal: false }}
-          styles={selectStyles}
         />
         <Select
           placeholder="Category"
@@ -159,7 +133,6 @@ function TransactionsFilterPanel({
           searchable
           size="md"
           comboboxProps={{ withinPortal: false }}
-          styles={selectStyles}
         />
       </Stack>
 
@@ -175,7 +148,6 @@ function TransactionsFilterPanel({
           size={isMobile ? 'md' : 'sm'}
           fullWidth
           data={amountSignOptions}
-          styles={segmentedControlStyles}
         />
       </Stack>
 
@@ -191,7 +163,6 @@ function TransactionsFilterPanel({
           size={isMobile ? 'md' : 'sm'}
           fullWidth
           data={categoryReviewOptions}
-          styles={segmentedControlStyles}
         />
       </Stack>
 
@@ -573,6 +544,7 @@ function TransactionsPage() {
               <FocusTrap active>
                 <Box
                   aria-label="Transaction filters"
+                  className="splice-floating-panel"
                   role="dialog"
                   p="md"
                   pos="absolute"
@@ -584,13 +556,6 @@ function TransactionsPage() {
                     if (event.key === 'Escape') {
                       closeFilters()
                     }
-                  }}
-                  style={{
-                    background: 'var(--mantine-color-body)',
-                    border: '1px solid var(--mantine-color-default-border)',
-                    borderRadius: 'var(--mantine-radius-md)',
-                    boxShadow: 'var(--mantine-shadow-md)',
-                    zIndex: 20,
                   }}
                 >
                   <FocusTrap.InitialFocus />

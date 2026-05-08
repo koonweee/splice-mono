@@ -34,6 +34,7 @@ import {
   getMetadataDetails,
 } from './transactionMetadata'
 import styles from './TransactionsMobileList.module.css'
+import statusBadgeStyles from './TransactionStatusBadge.module.css'
 import type { UIEvent } from 'react'
 import type { Category, Transaction } from '../../api/models'
 
@@ -302,7 +303,7 @@ export function TransactionsMobileList({
                 >
                   <div className={styles.rowMain}>
                     <Avatar
-                      className={styles.merchantAvatar}
+                      classNames={{ root: styles.merchantAvatar }}
                       radius="sm"
                       size={28}
                       src={transaction.logoUrl}
@@ -320,7 +321,9 @@ export function TransactionsMobileList({
                         <div className={styles.statusLine}>
                           {transaction.pending && (
                             <Badge
-                              className={`${styles.statusBadge} ${styles.pendingBadge}`}
+                              classNames={{
+                                root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.pendingBadge}`,
+                              }}
                               color="yellow"
                               size="xs"
                               variant="light"
@@ -331,7 +334,9 @@ export function TransactionsMobileList({
                           {!transaction.pending &&
                             transaction.categoryNeedsReview && (
                               <Badge
-                                className={`${styles.statusBadge} ${styles.reviewBadge}`}
+                                classNames={{
+                                  root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.reviewBadge}`,
+                                }}
                                 color="orange"
                                 size="xs"
                                 variant="light"

@@ -27,10 +27,11 @@ import {
   useTransactionControllerUpdateCategory,
   useTransactionControllerUpdateCategoryReview,
 } from '../api/clients/spliceAPI'
+import tableChrome from './MantineTableChrome.module.css'
 import styles from './TransactionsTable.module.css'
+import statusBadgeStyles from './transactions/TransactionStatusBadge.module.css'
 import {
   formatCounterpartyLabel,
-  getCategoryReviewTooltip,
   getMerchantDisplay,
   getMetadataDetails,
 } from './transactions/transactionMetadata'
@@ -159,6 +160,7 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
     <Popover
       opened={opened}
       onChange={setOpened}
+      classNames={{ dropdown: styles.metadataPopover }}
       position="bottom-start"
       shadow="md"
       width={360}
@@ -167,7 +169,7 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
       <Popover.Target>
         <ActionIcon
           aria-label={`Show transaction details for ${details.merchantDisplay.primary}`}
-          className={styles.merchantInfoButton}
+          classNames={{ root: styles.merchantInfoButton }}
           onBlur={supportsHover ? scheduleClosePopover : undefined}
           onClick={(event) => {
             event.stopPropagation()
@@ -197,7 +199,6 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
         </ActionIcon>
       </Popover.Target>
       <Popover.Dropdown
-        className={styles.metadataPopover}
         onBlur={supportsHover ? scheduleClosePopover : undefined}
         onFocus={supportsHover ? openPopover : undefined}
         onMouseEnter={supportsHover ? openPopover : undefined}
@@ -287,7 +288,7 @@ function MerchantCell({ row }: { row: { original: Transaction } }) {
   return (
     <Group className={styles.merchantCell} gap="xs" wrap="nowrap">
       <Avatar
-        className={styles.merchantAvatar}
+        classNames={{ root: styles.merchantAvatar }}
         radius="sm"
         size={28}
         src={transaction.logoUrl}
@@ -302,7 +303,9 @@ function MerchantCell({ row }: { row: { original: Transaction } }) {
           <TransactionInfoPopover transaction={transaction} />
           {transaction.pending && (
             <Badge
-              className={`${styles.statusBadge} ${styles.pendingBadge}`}
+              classNames={{
+                root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.pendingBadge}`,
+              }}
               color="yellow"
               size="xs"
               variant="light"
@@ -312,7 +315,9 @@ function MerchantCell({ row }: { row: { original: Transaction } }) {
           )}
           {transaction.categoryNeedsReview && (
             <Badge
-              className={`${styles.statusBadge} ${styles.reviewBadge}`}
+              classNames={{
+                root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.reviewBadge}`,
+              }}
               color="orange"
               size="xs"
               variant="light"
@@ -752,11 +757,6 @@ export function TransactionsTable({
           const isEditing = editingTransactionId === transaction.id
           const hasOverride = transaction.userCategoryId !== null
           const needsReview = transaction.categoryNeedsReview
-          const metadataDetails = getMetadataDetails(transaction)
-          const reviewTooltip = getCategoryReviewTooltip(
-            transaction,
-            metadataDetails,
-          )
           const resetLabel = transaction.category
             ? `Reset to Plaid category: ${getCategoryLabel(transaction.category)}`
             : 'Reset to uncategorized'
@@ -875,25 +875,21 @@ export function TransactionsTable({
 
           return (
             <Group className={styles.categoryCell} gap={4} wrap="nowrap">
-              <Tooltip
-                label={needsReview ? reviewTooltip : categoryLabel}
-                disabled={!category}
-                withArrow
-              >
-                <Badge
-                  aria-label={needsReview ? reviewTooltip : categoryLabel}
-                  className={`${styles.categoryBadge} ${
+              <Badge
+                aria-label={categoryLabel}
+                classNames={{
+                  root: `${styles.categoryBadge} ${
                     category ? getCategoryToneClass(categoryLabel) : ''
                   } ${
                     needsReview ? styles.categoryReviewBadge : ''
-                  } ${hasOverride ? styles.categoryOverrideBadge : ''}`}
-                  radius="sm"
-                  size="sm"
-                  variant="outline"
-                >
-                  {categoryLabel}
-                </Badge>
-              </Tooltip>
+                  } ${hasOverride ? styles.categoryOverrideBadge : ''}`,
+                }}
+                radius="sm"
+                size="sm"
+                variant="outline"
+              >
+                {categoryLabel}
+              </Badge>
               <Group className={styles.categoryActions} gap={2} wrap="nowrap">
                 {needsReview && (
                   <Tooltip label="Mark category as reviewed">
@@ -1007,7 +1003,7 @@ export function TransactionsTable({
     enableStickyHeader: true,
     initialState: { density: 'xs' },
     mantineTableProps: {
-      className: styles.transactionsTable,
+      className: tableChrome.table,
     },
     mantineTableContainerProps: {
       ...mantineTableContainerProps,

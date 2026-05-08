@@ -123,10 +123,6 @@ function AuthedLayout() {
               leftSection={<item.icon size={18} />}
               active={location.pathname === item.to}
               onClick={() => toggle()}
-              styles={{
-                root: { borderRadius: 'var(--mantine-radius-md)' },
-                label: location.pathname === item.to ? { fontWeight: 600 } : {},
-              }}
             />
           ))}
         </Stack>

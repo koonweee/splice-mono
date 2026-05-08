@@ -1,0 +1,31 @@
+.themePresetOption {
+  width: 100%;
+  min-height: 96px;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.themePresetOption[data-selected='true'] {
+  border: 2px solid var(--mantine-primary-color-filled);
+  background: var(--mantine-primary-color-light);
+}
+
+.themeSwatch {
+  border: 1px solid var(--mantine-color-default-border);
+}
+
+.themeCheck {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  color: transparent;
+  place-items: center;
+}
+
+.themeCheck[data-selected='true'] {
+  color: var(--mantine-primary-color-filled);
+}

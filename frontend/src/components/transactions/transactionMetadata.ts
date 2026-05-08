@@ -227,22 +227,6 @@ export function getMetadataDetails(
   }
 }
 
-export function getCategoryReviewTooltip(
-  transaction: Transaction,
-  details: TransactionMetadataDetails,
-): string {
-  if (!transaction.categoryNeedsReview) {
-    return 'Category reviewed'
-  }
-  if (details.hasMarketplaceCounterparty) {
-    return 'Category needs review · Marketplace detected'
-  }
-  if (details.hasLowCategoryConfidence) {
-    return 'Category needs review · Plaid confidence low'
-  }
-  return 'Category needs review'
-}
-
 export function formatCounterpartyLabel(
   counterparty: TransactionCounterpartyView,
 ): string {

@@ -33,6 +33,7 @@ import {
   normalizeThemePresetId,
   previewThemePresetId,
 } from '../../lib/theme'
+import styles from './settings.module.css'
 import type { ThemePreset, ThemePresetId } from '../../lib/theme'
 
 type SettingsTab = 'general' | 'access' | 'categories' | 'mcp'
@@ -135,19 +136,10 @@ function ThemePresetOption({
       role="radio"
       aria-checked={selected}
       aria-label={preset.label}
+      className={styles.themePresetOption}
+      data-selected={selected}
       onClick={() => onSelect(preset.id)}
       p="sm"
-      style={{
-        width: '100%',
-        minHeight: 96,
-        borderRadius: 'var(--mantine-radius-md)',
-        border: selected
-          ? '2px solid var(--mantine-primary-color-filled)'
-          : '1px solid var(--mantine-color-default-border)',
-        background: selected
-          ? 'var(--mantine-primary-color-light)'
-          : 'var(--mantine-color-body)',
-      }}
     >
       <Stack gap={8}>
         <Group justify="space-between" gap="sm" wrap="nowrap">
@@ -156,25 +148,16 @@ function ThemePresetOption({
               <ColorSwatch
                 key={swatch}
                 color={swatch}
+                className={styles.themeSwatch}
                 size={18}
                 withShadow={false}
-                style={{
-                  border: '1px solid var(--mantine-color-default-border)',
-                }}
               />
             ))}
           </Group>
           <Box
             aria-hidden
-            style={{
-              width: 18,
-              height: 18,
-              display: 'grid',
-              placeItems: 'center',
-              color: selected
-                ? 'var(--mantine-primary-color-filled)'
-                : 'transparent',
-            }}
+            className={styles.themeCheck}
+            data-selected={selected}
           >
             <Check size={16} strokeWidth={3} />
           </Box>
