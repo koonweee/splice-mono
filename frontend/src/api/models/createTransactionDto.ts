@@ -55,6 +55,8 @@ export interface CreateTransactionDto {
   /** @nullable */
   authorizedDatetime?: string | null
   /** @nullable */
+  reportingDateOverride?: string | null
+  /** @nullable */
   categoryId?: string | null
   personalFinanceCategory?: CreateTransactionDtoPersonalFinanceCategory
 }

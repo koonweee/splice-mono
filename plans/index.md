@@ -14,6 +14,7 @@ This directory tracks product and implementation plans for Splice.
 
 | Plan | Status | Notes |
 |---|---|---|
+| [Transaction Reporting Date Override](./transaction-reporting-date-override.md) | Planned | Add optional user-controlled reporting dates while keeping `activityDate` as the effective date for UI, analysis, and MCP. |
 | [Transaction Category Review](./transaction-category-review.md) | Done | Add category review status, inline accept, review filters, bulk review, undo toasts, and sync lifecycle rules. |
 | [Transactions Toolbar Variant A](./transactions-toolbar-variant-a.md) | Planned | Simplify the transactions toolbar with date controls plus an icon-only filters trigger, moving account/category/flow/review filters into responsive panels. |
 | [Transaction Category Overrides](./transaction-category-overrides.md) | Planned | Add user category overrides while preserving Plaid categories and enforcing effective category across UI, analysis, and MCP/surface callers. |

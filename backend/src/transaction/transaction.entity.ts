@@ -15,6 +15,7 @@ import {
   Transaction,
   TransactionCategoryReviewMethod,
 } from '../types/Transaction';
+import { getTransactionActivityDate } from './transaction-date';
 
 @Entity()
 @Unique(['accountId', 'externalTransactionId']) // Prevent duplicate imports from providers
@@ -119,6 +120,10 @@ export class TransactionEntity extends OwnedEntity {
   @Column({ type: 'timestamptz', nullable: true })
   authorizedDatetime: string | null;
 
+  /** User-selected date for reporting and analysis grouping */
+  @Column({ type: 'date', nullable: true })
+  reportingDateOverride: string | null;
+
   /** Foreign key for Category (optional) */
   @Column({ type: 'uuid', nullable: true })
   categoryId: string | null;
@@ -180,6 +185,7 @@ export class TransactionEntity extends OwnedEntity {
     entity.providerDatetime = dto.providerDatetime ?? null;
     entity.authorizedDate = dto.authorizedDate ?? null;
     entity.authorizedDatetime = dto.authorizedDatetime ?? null;
+    entity.reportingDateOverride = dto.reportingDateOverride ?? null;
     entity.categoryId = dto.categoryId ?? null;
     entity.userCategoryId = null;
     entity.userCategory = null;
@@ -222,7 +228,8 @@ export class TransactionEntity extends OwnedEntity {
       counterparties: this.counterparties,
       location: this.location,
       paymentMeta: this.paymentMeta,
-      activityDate: this.authorizedDate ?? this.providerDate,
+      activityDate: getTransactionActivityDate(this),
+      reportingDateOverride: this.reportingDateOverride,
       providerDate: this.providerDate,
       providerDatetime: this.providerDatetime,
       authorizedDate: this.authorizedDate,

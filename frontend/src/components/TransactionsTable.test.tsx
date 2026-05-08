@@ -1,6 +1,7 @@
 import { MantineProvider } from '@mantine/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import dayjs from 'dayjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TransactionsTable } from './TransactionsTable'
 import {
@@ -15,8 +16,10 @@ import type { MRT_ColumnDef } from 'mantine-react-table'
 
 const mockFns = vi.hoisted(() => ({
   useCategoryControllerFindAllMock: vi.fn(),
+  useTransactionControllerUpdateMock: vi.fn(),
   useTransactionControllerUpdateCategoryMock: vi.fn(),
   useTransactionControllerUpdateCategoryReviewMock: vi.fn(),
+  updateTransactionMutateMock: vi.fn(),
   updateCategoryMutateMock: vi.fn(),
   updateCategoryReviewMutateMock: vi.fn(),
   notificationsShowMock: vi.fn(),
@@ -67,6 +70,7 @@ vi.mock('../api/clients/spliceAPI', async () => {
   return {
     ...actual,
     useCategoryControllerFindAll: mockFns.useCategoryControllerFindAllMock,
+    useTransactionControllerUpdate: mockFns.useTransactionControllerUpdateMock,
     useTransactionControllerUpdateCategory:
       mockFns.useTransactionControllerUpdateCategoryMock,
     useTransactionControllerUpdateCategoryReview:
@@ -121,6 +125,11 @@ beforeEach(() => {
   })
   mockFns.useTransactionControllerUpdateCategoryMock.mockReturnValue({
     mutate: mockFns.updateCategoryMutateMock,
+    isPending: false,
+    variables: undefined,
+  })
+  mockFns.useTransactionControllerUpdateMock.mockReturnValue({
+    mutate: mockFns.updateTransactionMutateMock,
     isPending: false,
     variables: undefined,
   })
@@ -397,6 +406,50 @@ describe('TransactionsTable', () => {
     expect(screen.queryByLabelText('Search categories')).toBeNull()
     expect(screen.queryByLabelText('Category')).toBeNull()
   })
+
+  it('updates reporting date overrides from the inline date editor', () => {
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+      }),
+    ])
+
+    fireEvent.click(screen.getByLabelText('Edit reporting date'))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+
+    expect(mockFns.updateTransactionMutateMock).toHaveBeenCalledWith({
+      id: 'txn-1',
+      data: { reportingDateOverride: '2026-02-14' },
+    })
+  })
+
+  it('resets reporting date overrides from the date cell', async () => {
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+        activityDate: '2026-03-01',
+        providerDate: '2026-02-28',
+        authorizedDate: '2026-02-27',
+        reportingDateOverride: '2026-03-01',
+      }),
+    ])
+
+    const resetButton = screen.getByLabelText('Reset reporting date override')
+    fireEvent.mouseEnter(resetButton)
+    expect(
+      await screen.findByText('Reset to bank date: Feb 27, 2026'),
+    ).toBeTruthy()
+
+    fireEvent.click(resetButton)
+
+    expect(mockFns.updateTransactionMutateMock).toHaveBeenCalledWith({
+      id: 'txn-1',
+      data: { reportingDateOverride: null },
+    })
+    expect(screen.getByLabelText(/Activity date Mar 1, 2026/)).toBeTruthy()
+  })
 })
 
 describe('transaction metadata helpers', () => {
@@ -451,6 +504,31 @@ describe('transaction metadata helpers', () => {
       'Category needs review · Plaid confidence low',
     )
   })
+
+  it('formats midnight UTC authorization timestamps as date-only values', () => {
+    const transaction = makeTransaction({
+      category: providerCategory,
+      userCategory: null,
+      authorizedDate: '2026-05-05',
+      authorizedDatetime: '2026-05-05T00:00:00.000Z',
+    })
+
+    expect(getMetadataDetails(transaction).authorizedAt).toBe('May 5, 2026')
+  })
+
+  it('keeps non-midnight authorization timestamps as localized date-times', () => {
+    const authorizedDatetime = '2026-05-03T13:51:41.000Z'
+    const transaction = makeTransaction({
+      category: providerCategory,
+      userCategory: null,
+      authorizedDate: '2026-05-03',
+      authorizedDatetime,
+    })
+
+    expect(getMetadataDetails(transaction).authorizedAt).toBe(
+      dayjs(authorizedDatetime).format('MMM D, YYYY h:mm A'),
+    )
+  })
 })
 
 function renderTable(data: Array<Transaction>) {
@@ -497,6 +575,11 @@ function makeTransaction(params: {
   paymentChannel?: string | null
   personalFinanceCategoryConfidenceLevel?: string | null
   counterparties?: Transaction['counterparties']
+  activityDate?: string
+  authorizedDate?: string | null
+  authorizedDatetime?: string | null
+  providerDate?: string
+  reportingDateOverride?: string | null
   pending?: boolean
 }): Transaction {
   return {
@@ -525,11 +608,12 @@ function makeTransaction(params: {
     counterparties: params.counterparties ?? null,
     location: null,
     paymentMeta: null,
-    activityDate: '2026-02-14',
-    providerDate: '2026-02-14',
+    activityDate: params.activityDate ?? '2026-02-14',
+    reportingDateOverride: params.reportingDateOverride ?? null,
+    providerDate: params.providerDate ?? '2026-02-14',
     providerDatetime: null,
-    authorizedDate: null,
-    authorizedDatetime: null,
+    authorizedDate: params.authorizedDate ?? null,
+    authorizedDatetime: params.authorizedDatetime ?? null,
     categoryId: params.category.id,
     category: params.category,
     userCategoryId: params.userCategory?.id ?? null,

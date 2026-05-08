@@ -53,6 +53,8 @@ export interface Transaction {
   /** @nullable */
   paymentMeta: TransactionPaymentMeta
   activityDate: string
+  /** @nullable */
+  reportingDateOverride: string | null
   providerDate: string
   /** @nullable */
   providerDatetime: string | null

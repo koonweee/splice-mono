@@ -75,6 +75,27 @@ describe('McpReadService', () => {
     });
   });
 
+  it('returns activityDate from reportingDateOverride when present', async () => {
+    queryBuilder.getMany.mockResolvedValue([
+      buildTransactionWithOverride({
+        providerPrimary: 'INCOME',
+        userPrimary: 'INCOME',
+        reportingDateOverride: '2026-03-01',
+      }),
+    ]);
+
+    const result = await service.listTransactions('user-1', {
+      reportingCurrency: 'USD',
+      pageSize: 1,
+    });
+
+    expect(result.data[0]).toMatchObject({
+      activityDate: '2026-03-01',
+      reportingDateOverride: '2026-03-01',
+      providerDate: '2026-02-14',
+    });
+  });
+
   it('accepts legacy transaction cursors encoded with date', async () => {
     queryBuilder.getMany.mockResolvedValue([]);
     const cursor = Buffer.from(
@@ -98,6 +119,7 @@ describe('McpReadService', () => {
 function buildTransactionWithOverride(params: {
   providerPrimary: string;
   userPrimary: string;
+  reportingDateOverride?: string | null;
 }): TransactionEntity {
   const transaction = TransactionEntity.fromDto(
     {
@@ -130,6 +152,7 @@ function buildTransactionWithOverride(params: {
   transaction.categoryId = transaction.category.id;
   transaction.userCategoryId = transaction.userCategory.id;
   transaction.userCategoryUpdatedAt = new Date('2026-02-14T00:00:00Z');
+  transaction.reportingDateOverride = params.reportingDateOverride ?? null;
 
   return transaction;
 }

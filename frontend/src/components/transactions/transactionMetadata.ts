@@ -65,6 +65,34 @@ function formatCounterpartyType(type: string | null): string {
   return type ? type.replaceAll('_', ' ') : 'counterparty'
 }
 
+function isMidnightUtc(datetime: string): boolean {
+  return /(?:T|\s)00:00:00(?:\.0+)?(?:Z|\+00(?::?00)?)$/.test(
+    datetime.trim(),
+  )
+}
+
+function formatDateOnly(date: string): string {
+  return dayjs(date.slice(0, 10)).format('MMM D, YYYY')
+}
+
+function formatAuthorizedAt(
+  transaction: Pick<Transaction, 'authorizedDate' | 'authorizedDatetime'>,
+): string | null {
+  if (transaction.authorizedDatetime) {
+    if (!isMidnightUtc(transaction.authorizedDatetime)) {
+      return dayjs(transaction.authorizedDatetime).format('MMM D, YYYY h:mm A')
+    }
+
+    return formatDateOnly(
+      transaction.authorizedDate ?? transaction.authorizedDatetime,
+    )
+  }
+
+  return transaction.authorizedDate
+    ? formatDateOnly(transaction.authorizedDate)
+    : null
+}
+
 export function getTransactionCounterparties(
   transaction: Pick<Transaction, 'counterparties'>,
 ): Array<TransactionCounterpartyView> {
@@ -178,12 +206,7 @@ export function getMetadataDetails(
     transaction.paymentMeta && 'payment_processor' in transaction.paymentMeta
       ? normalizeText(String(transaction.paymentMeta.payment_processor ?? ''))
       : null
-  const authorizedAt =
-    transaction.authorizedDatetime || transaction.authorizedDate
-      ? dayjs(transaction.authorizedDatetime ?? transaction.authorizedDate).format(
-          transaction.authorizedDatetime ? 'MMM D, YYYY h:mm A' : 'MMM D, YYYY',
-        )
-      : null
+  const authorizedAt = formatAuthorizedAt(transaction)
 
   return {
     merchantDisplay,
