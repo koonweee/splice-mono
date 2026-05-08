@@ -25,19 +25,6 @@ const monthPresetOptions = [
   { label: 'This', value: 'this' },
 ]
 
-const mobileSegmentedControlStyles = {
-  root: {
-    minHeight: 48,
-  },
-  label: {
-    alignItems: 'center',
-    display: 'flex',
-    fontSize: 16,
-    justifyContent: 'center',
-    minHeight: 44,
-  },
-}
-
 function formatDateRangeLabel(value: DatesRangeValue) {
   const [start, end] = value
 
@@ -179,7 +166,6 @@ export function DateRangeControl({
             fullWidth
             size={isMobile ? 'md' : 'sm'}
             data={monthPresetOptions}
-            styles={isMobile ? mobileSegmentedControlStyles : undefined}
           />
         </Stack>
       </Popover.Dropdown>

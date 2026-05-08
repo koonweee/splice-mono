@@ -20,6 +20,7 @@ This directory tracks product and implementation plans for Splice.
 | [Transaction Category Overrides](./transaction-category-overrides.md) | Planned | Add user category overrides while preserving Plaid categories and enforcing effective category across UI, analysis, and MCP/surface callers. |
 | [User-Defined Categories](./user-defined-categories.md) | Planned | Let users create custom primary/secondary categories from Settings with autocomplete duplicate prevention and backend validation. |
 | [Settings Categories Manager](./settings-categories-manager.md) | Planned | Move categories to a dedicated Settings tab with system/custom inventory, dropdown visibility controls, and bulk category management. |
+| [Mantine Theme Cleanup](./mantine-theme-cleanup.md) | Planned | Centralize reusable Mantine component chrome while preserving feature-specific layout, behavior, and accessibility. |
 
 ## Templates
 

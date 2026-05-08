@@ -43,7 +43,7 @@ import {
   useCategoryControllerUpdateCustom,
 } from '../../api/clients/spliceAPI'
 import { formatCategoryName, formatPrimaryCategory } from '../../lib/format'
-import styles from '../TransactionsTable.module.css'
+import tableChrome from '../MantineTableChrome.module.css'
 import type {
   MRT_ColumnDef,
   MRT_RowSelectionState,
@@ -69,26 +69,6 @@ const STATUS_COLUMN_WIDTH = 130
 const USED_COLUMN_WIDTH = 88
 const ACTIONS_COLUMN_WIDTH = 124
 const ACTION_ICON_SIZE = 36
-
-const mobileControlStyles = {
-  input: {
-    fontSize: 16,
-    minHeight: 48,
-  },
-}
-
-const mobileSegmentedControlStyles = {
-  root: {
-    minHeight: 48,
-  },
-  label: {
-    alignItems: 'center',
-    display: 'flex',
-    fontSize: 16,
-    justifyContent: 'center',
-    minHeight: 44,
-  },
-}
 
 const tableHeaderCellStyle = {
   height: TABLE_HEADER_HEIGHT,
@@ -680,10 +660,6 @@ export function CustomCategoriesSection() {
     { value: '', label: 'All primary categories' },
     ...primaryOptions.map((option) => ({ value: option, label: option })),
   ]
-  const selectStyles = isMobile ? mobileControlStyles : undefined
-  const segmentedControlStyles = isMobile
-    ? mobileSegmentedControlStyles
-    : undefined
   const filterPanel = (
     <Stack gap="md">
       <Stack gap="xs">
@@ -701,7 +677,6 @@ export function CustomCategoriesSection() {
           disabled={archivedMode}
           fullWidth
           size={isMobile ? 'md' : 'sm'}
-          styles={segmentedControlStyles}
         />
       </Stack>
 
@@ -721,7 +696,6 @@ export function CustomCategoriesSection() {
         ]}
         disabled={archivedMode}
         size="md"
-        styles={selectStyles}
       />
       <Select
         aria-label="Primary category"
@@ -733,7 +707,6 @@ export function CustomCategoriesSection() {
         searchable
         placeholder="Primary category"
         size="md"
-        styles={selectStyles}
       />
       <Checkbox
         label="Archived"
@@ -787,7 +760,6 @@ export function CustomCategoriesSection() {
           onChange={(event) => setPrimary(event.currentTarget.value)}
           data-testid="custom-category-primary-input"
           size={isMobile ? 'md' : undefined}
-          styles={selectStyles}
         />
         <TextInput
           label="Secondary category"
@@ -795,7 +767,6 @@ export function CustomCategoriesSection() {
           onChange={(event) => setDetailed(event.currentTarget.value)}
           data-testid="custom-category-detailed-input"
           size={isMobile ? 'md' : undefined}
-          styles={selectStyles}
         />
         <Textarea
           label="Description"
@@ -803,7 +774,6 @@ export function CustomCategoriesSection() {
           onChange={(event) => setDescription(event.currentTarget.value)}
           minRows={3}
           size={isMobile ? 'md' : undefined}
-          styles={selectStyles}
         />
         {panel.mode === 'edit-custom' && (
           <Text size="xs" c="dimmed">
@@ -860,7 +830,7 @@ export function CustomCategoriesSection() {
 
     return (
       <Group
-        className={styles.categoryManagementActions}
+        className={tableChrome.actions}
         gap={4}
         justify="flex-end"
         wrap="nowrap"
@@ -1066,11 +1036,11 @@ export function CustomCategoriesSection() {
         enableResizing: false,
         grow: false,
         mantineTableHeadCellProps: {
-          className: styles.categoryManagementActionsHeader,
+          className: tableChrome.actionsHeader,
           style: tableActionsHeaderStyle,
         },
         mantineTableBodyCellProps: {
-          className: styles.categoryManagementActionsCell,
+          className: tableChrome.actionsCell,
           style: tableActionsCellStyle,
         },
       },
@@ -1091,7 +1061,7 @@ export function CustomCategoriesSection() {
       style: tableBodyCellStyle,
     },
     mantineTableProps: {
-      className: styles.transactionsTable,
+      className: tableChrome.table,
     },
     mantineTableContainerProps: {
       style: { maxHeight: tableScrollMaxHeight, overflow: 'auto' },
@@ -1137,7 +1107,6 @@ export function CustomCategoriesSection() {
           value={search}
           onChange={(event) => setSearch(event.currentTarget.value)}
           size="md"
-          styles={selectStyles}
           style={{ flex: '1 1 240px', minWidth: 0 }}
         />
         {isMobile ? (
@@ -1284,7 +1253,6 @@ export function CustomCategoriesSection() {
                       setBulkPrimary(event.currentTarget.value)
                     }
                     size={isMobile ? 'sm' : 'xs'}
-                    styles={selectStyles}
                     w={isMobile ? 160 : 180}
                   />
                   {renderBulkButton(
