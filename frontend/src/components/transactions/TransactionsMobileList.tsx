@@ -15,9 +15,10 @@ import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Check, RotateCcw } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   useCategoryControllerFindAll,
+  useTransactionControllerUpdate,
   useTransactionControllerUpdateCategory,
   useTransactionControllerUpdateCategoryReview,
 } from '../../api/clients/spliceAPI'
@@ -98,7 +99,8 @@ function invalidateTransactionQueries(
     predicate: (query) =>
       Array.isArray(query.queryKey) &&
       typeof query.queryKey[0] === 'string' &&
-      query.queryKey[0].includes('transaction'),
+      (query.queryKey[0].includes('transaction') ||
+        query.queryKey[0].includes('category')),
   })
 }
 
@@ -114,6 +116,10 @@ function formatPaymentChannel(value: string | null | undefined) {
     : null
 }
 
+function getBankActivityDate(transaction: Transaction) {
+  return transaction.authorizedDate ?? transaction.providerDate
+}
+
 export function TransactionsMobileList({
   data,
   isError,
@@ -127,6 +133,9 @@ export function TransactionsMobileList({
     null,
   )
   const [categorySearch, setCategorySearch] = useState('')
+  const [reportingDateDraft, setReportingDateDraft] = useState<string | null>(
+    null,
+  )
   const activeTransaction =
     data.find((transaction) => transaction.id === activeTransactionId) ?? null
   const activeMerchant = activeTransaction
@@ -136,6 +145,13 @@ export function TransactionsMobileList({
     ? getMetadataDetails(activeTransaction)
     : null
   const { data: categories = [] } = useCategoryControllerFindAll()
+  const updateTransaction = useTransactionControllerUpdate({
+    mutation: {
+      onSuccess: () => {
+        invalidateTransactionQueries(queryClient)
+      },
+    },
+  })
   const updateCategory = useTransactionControllerUpdateCategory({
     mutation: {
       onSuccess: () => {
@@ -168,6 +184,28 @@ export function TransactionsMobileList({
         ),
     [categories],
   )
+  const currentReportingDateValue = activeTransaction
+    ? (activeTransaction.reportingDateOverride ??
+      activeTransaction.activityDate)
+    : null
+  const hasReportingDateDraftChange =
+    activeTransaction !== null &&
+    reportingDateDraft !== null &&
+    reportingDateDraft !== currentReportingDateValue
+  const activeBankActivityDate = activeTransaction
+    ? getBankActivityDate(activeTransaction)
+    : null
+
+  useEffect(() => {
+    if (!activeTransaction) {
+      setReportingDateDraft(null)
+      return
+    }
+
+    setReportingDateDraft(
+      activeTransaction.reportingDateOverride ?? activeTransaction.activityDate,
+    )
+  }, [activeTransaction])
 
   function handleScroll(event: UIEvent<HTMLDivElement>) {
     if (!onScrollNearBottom) {
@@ -372,11 +410,75 @@ export function TransactionsMobileList({
                 </Text>
               </Group>
               <Text c="dimmed" size="sm">
-                {[activeTransaction.accountName, activeTransaction.paymentChannel]
+                {[
+                  activeTransaction.accountName,
+                  activeTransaction.paymentChannel,
+                ]
                   .filter(Boolean)
                   .join(' · ')}
               </Text>
             </div>
+
+            <Stack gap={6}>
+              <TextInput
+                label="Reporting date"
+                type="date"
+                value={reportingDateDraft ?? ''}
+                onChange={(event) =>
+                  setReportingDateDraft(event.currentTarget.value || null)
+                }
+              />
+              <Group gap="xs" grow>
+                <Button
+                  disabled={!hasReportingDateDraftChange}
+                  leftSection={<Check size={16} />}
+                  loading={
+                    updateTransaction.isPending &&
+                    updateTransaction.variables.id === activeTransaction.id
+                  }
+                  onClick={() => {
+                    if (!reportingDateDraft) {
+                      return
+                    }
+
+                    updateTransaction.mutate({
+                      id: activeTransaction.id,
+                      data: { reportingDateOverride: reportingDateDraft },
+                    })
+                  }}
+                  variant="light"
+                >
+                  Apply date
+                </Button>
+                {activeTransaction.reportingDateOverride != null && (
+                  <Button
+                    color="gray"
+                    leftSection={<RotateCcw size={16} />}
+                    loading={
+                      updateTransaction.isPending &&
+                      updateTransaction.variables.id === activeTransaction.id
+                    }
+                    onClick={() =>
+                      updateTransaction.mutate({
+                        id: activeTransaction.id,
+                        data: { reportingDateOverride: null },
+                      })
+                    }
+                    variant="light"
+                  >
+                    Use bank date
+                  </Button>
+                )}
+              </Group>
+              {activeTransaction.reportingDateOverride != null && (
+                <Text c="dimmed" size="xs">
+                  Bank date{' '}
+                  {activeBankActivityDate
+                    ? dayjs(activeBankActivityDate).format('MMM D, YYYY')
+                    : ''}
+                </Text>
+              )}
+            </Stack>
 
             <Stack gap={6}>
               <TextInput
@@ -483,7 +585,9 @@ export function TransactionsMobileList({
               <MetadataItem label="Display" value={activeMerchant?.primary} />
               <MetadataItem
                 label="Raw description"
-                value={formatMetadataValue(activeTransaction.originalDescription)}
+                value={formatMetadataValue(
+                  activeTransaction.originalDescription,
+                )}
               />
               <MetadataItem
                 label="Provider name"
@@ -497,7 +601,10 @@ export function TransactionsMobileList({
                     Counterparties
                   </Text>
                   {activeDetails.counterparties.map((counterparty) => (
-                    <Text key={`${counterparty.name}-${counterparty.type}`} size="sm">
+                    <Text
+                      key={`${counterparty.name}-${counterparty.type}`}
+                      size="sm"
+                    >
                       {formatCounterpartyLabel(counterparty)}
                     </Text>
                   ))}
@@ -514,7 +621,10 @@ export function TransactionsMobileList({
                   .filter(Boolean)
                   .join(' · ')}
               />
-              <MetadataItem label="Authorized" value={activeDetails.authorizedAt} />
+              <MetadataItem
+                label="Authorized"
+                value={activeDetails.authorizedAt}
+              />
             </Stack>
           </Stack>
         )}

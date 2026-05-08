@@ -9,9 +9,11 @@ import type { Category, Transaction } from '../../api/models'
 
 const mockFns = vi.hoisted(() => ({
   notificationsShowMock: vi.fn(),
+  updateTransactionMutateMock: vi.fn(),
   updateCategoryMutateMock: vi.fn(),
   updateCategoryReviewMutateMock: vi.fn(),
   useCategoryControllerFindAllMock: vi.fn(),
+  useTransactionControllerUpdateMock: vi.fn(),
   useTransactionControllerUpdateCategoryMock: vi.fn(),
   useTransactionControllerUpdateCategoryReviewMock: vi.fn(),
 }))
@@ -24,6 +26,7 @@ vi.mock('../../api/clients/spliceAPI', async () => {
   return {
     ...actual,
     useCategoryControllerFindAll: mockFns.useCategoryControllerFindAllMock,
+    useTransactionControllerUpdate: mockFns.useTransactionControllerUpdateMock,
     useTransactionControllerUpdateCategory:
       mockFns.useTransactionControllerUpdateCategoryMock,
     useTransactionControllerUpdateCategoryReview:
@@ -80,6 +83,11 @@ describe('TransactionsMobileList', () => {
     })
     mockFns.useCategoryControllerFindAllMock.mockReturnValue({
       data: [category, overrideCategory, customCategory],
+    })
+    mockFns.useTransactionControllerUpdateMock.mockReturnValue({
+      mutate: mockFns.updateTransactionMutateMock,
+      isPending: false,
+      variables: undefined,
     })
     mockFns.useTransactionControllerUpdateCategoryMock.mockReturnValue({
       mutate: mockFns.updateCategoryMutateMock,
@@ -165,7 +173,9 @@ describe('TransactionsMobileList', () => {
     ])
 
     expect(
-      screen.queryByLabelText('Open transaction actions for Whole Foods Market'),
+      screen.queryByLabelText(
+        'Open transaction actions for Whole Foods Market',
+      ),
     ).toBeNull()
 
     fireEvent.click(
@@ -191,9 +201,13 @@ describe('TransactionsMobileList', () => {
     ])
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Open transaction details for Salary/ }),
+      screen.getByRole('button', {
+        name: /Open transaction details for Salary/,
+      }),
     )
-    fireEvent.click(await screen.findByRole('button', { name: 'Mark reviewed' }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Mark reviewed' }),
+    )
 
     expect(mockFns.updateCategoryReviewMutateMock).toHaveBeenCalledWith(
       {
@@ -216,9 +230,13 @@ describe('TransactionsMobileList', () => {
     ])
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Open transaction details for Store/ }),
+      screen.getByRole('button', {
+        name: /Open transaction details for Store/,
+      }),
     )
-    fireEvent.click(await screen.findByRole('button', { name: 'Reset override' }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Reset override' }),
+    )
 
     expect(mockFns.updateCategoryMutateMock).toHaveBeenCalledWith({
       id: 'txn-1',
@@ -235,7 +253,9 @@ describe('TransactionsMobileList', () => {
     ])
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Open transaction details for Store/ }),
+      screen.getByRole('button', {
+        name: /Open transaction details for Store/,
+      }),
     )
     fireEvent.click(
       await screen.findByRole('option', {
@@ -247,6 +267,58 @@ describe('TransactionsMobileList', () => {
       id: 'txn-1',
       data: { categoryId: customCategory.id },
     })
+  })
+
+  it('updates reporting date overrides from the transaction details drawer', async () => {
+    renderMobileList([
+      makeTransaction({
+        id: 'txn-1',
+        merchantName: 'Salary',
+        activityDate: '2026-04-29',
+      }),
+    ])
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Open transaction details for Salary/,
+      }),
+    )
+    const input = await screen.findByLabelText('Reporting date')
+    fireEvent.change(input, { target: { value: '2026-05-01' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply date' }))
+
+    expect(mockFns.updateTransactionMutateMock).toHaveBeenCalledWith({
+      id: 'txn-1',
+      data: { reportingDateOverride: '2026-05-01' },
+    })
+  })
+
+  it('resets reporting date overrides from the transaction details drawer', async () => {
+    renderMobileList([
+      makeTransaction({
+        id: 'txn-1',
+        merchantName: 'Salary',
+        activityDate: '2026-05-01',
+        providerDate: '2026-04-29',
+        authorizedDate: '2026-04-28',
+        reportingDateOverride: '2026-05-01',
+      }),
+    ])
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Open transaction details for Salary/,
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Use bank date' }),
+    )
+
+    expect(mockFns.updateTransactionMutateMock).toHaveBeenCalledWith({
+      id: 'txn-1',
+      data: { reportingDateOverride: null },
+    })
+    expect(screen.getByText(/Bank date Apr 28, 2026/)).toBeTruthy()
   })
 })
 
@@ -300,6 +372,9 @@ function makeTransaction(
     originalDescription: string | null
     paymentChannel: string | null
     pending: boolean
+    providerDate: string
+    authorizedDate: string | null
+    reportingDateOverride: string | null
     providerTransactionName: string | null
     sign: MoneyWithSignSign
     userCategory: Category | null
@@ -333,17 +408,17 @@ function makeTransaction(
     location: null,
     paymentMeta: null,
     activityDate: overrides.activityDate ?? '2026-05-07',
-    providerDate: overrides.activityDate ?? '2026-05-07',
+    reportingDateOverride: overrides.reportingDateOverride ?? null,
+    providerDate:
+      overrides.providerDate ?? overrides.activityDate ?? '2026-05-07',
     providerDatetime: null,
-    authorizedDate: null,
+    authorizedDate: overrides.authorizedDate ?? null,
     authorizedDatetime: null,
     categoryId: category.id,
     category,
     userCategoryId: userCategory?.id ?? null,
     userCategory,
-    userCategoryUpdatedAt: userCategory
-      ? '2026-02-14T00:00:00.000Z'
-      : null,
+    userCategoryUpdatedAt: userCategory ? '2026-02-14T00:00:00.000Z' : null,
     effectiveCategoryId: userCategory?.id ?? category.id,
     effectiveCategory: userCategory ?? category,
     accountName: 'Checking',

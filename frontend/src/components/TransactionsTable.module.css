@@ -7,6 +7,43 @@
   text-align: right;
 }
 
+.dateCell {
+  width: fit-content;
+  min-height: 28px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dateActions {
+  flex: 0 0 auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.dateText,
+.dateLabel {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dateTrigger {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  color: inherit;
+  text-align: left;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
 .amountTableCell :global(.mrt-table-head-cell-content),
 .amountTableCell :global(.mrt-table-head-cell-labels),
 .amountTableCell :global(.mrt-table-head-cell-content-wrapper) {
@@ -94,7 +131,10 @@
     var(--mantine-color-yellow-0),
     rgba(245, 159, 0, 0.18)
   );
-  color: light-dark(var(--mantine-color-yellow-9), var(--mantine-color-yellow-3));
+  color: light-dark(
+    var(--mantine-color-yellow-9),
+    var(--mantine-color-yellow-3)
+  );
 }
 
 .reviewBadge {
@@ -106,7 +146,10 @@
     var(--mantine-color-orange-0),
     rgba(253, 126, 20, 0.18)
   );
-  color: light-dark(var(--mantine-color-orange-9), var(--mantine-color-orange-3));
+  color: light-dark(
+    var(--mantine-color-orange-9),
+    var(--mantine-color-orange-3)
+  );
 }
 
 @media (pointer: coarse) {
@@ -141,10 +184,7 @@
     var(--mantine-color-teal-5),
     rgba(56, 217, 169, 0.55)
   );
-  background: light-dark(
-    var(--mantine-color-teal-0),
-    rgba(18, 184, 134, 0.08)
-  );
+  background: light-dark(var(--mantine-color-teal-0), rgba(18, 184, 134, 0.08));
   color: light-dark(var(--mantine-color-teal-9), var(--mantine-color-teal-2));
   font-weight: 500;
   letter-spacing: 0;
@@ -161,10 +201,7 @@
     var(--mantine-color-green-5),
     rgba(81, 207, 102, 0.56)
   );
-  background: light-dark(
-    var(--mantine-color-green-0),
-    rgba(64, 192, 87, 0.08)
-  );
+  background: light-dark(var(--mantine-color-green-0), rgba(64, 192, 87, 0.08));
   color: light-dark(var(--mantine-color-green-9), var(--mantine-color-green-2));
 }
 
@@ -173,10 +210,7 @@
     var(--mantine-color-blue-5),
     rgba(77, 171, 247, 0.58)
   );
-  background: light-dark(
-    var(--mantine-color-blue-0),
-    rgba(34, 139, 230, 0.08)
-  );
+  background: light-dark(var(--mantine-color-blue-0), rgba(34, 139, 230, 0.08));
   color: light-dark(var(--mantine-color-blue-9), var(--mantine-color-blue-2));
 }
 
@@ -189,7 +223,10 @@
     var(--mantine-color-violet-0),
     rgba(121, 80, 242, 0.08)
   );
-  color: light-dark(var(--mantine-color-violet-9), var(--mantine-color-violet-2));
+  color: light-dark(
+    var(--mantine-color-violet-9),
+    var(--mantine-color-violet-2)
+  );
 }
 
 .categoryElectronicsBadge {
@@ -197,10 +234,7 @@
     var(--mantine-color-cyan-5),
     rgba(59, 201, 219, 0.58)
   );
-  background: light-dark(
-    var(--mantine-color-cyan-0),
-    rgba(21, 170, 191, 0.08)
-  );
+  background: light-dark(var(--mantine-color-cyan-0), rgba(21, 170, 191, 0.08));
   color: light-dark(var(--mantine-color-cyan-9), var(--mantine-color-cyan-2));
 }
 
@@ -237,7 +271,10 @@
     var(--mantine-color-indigo-0),
     rgba(92, 124, 250, 0.08)
   );
-  color: light-dark(var(--mantine-color-indigo-9), var(--mantine-color-indigo-2));
+  color: light-dark(
+    var(--mantine-color-indigo-9),
+    var(--mantine-color-indigo-2)
+  );
 }
 
 .categoryLabel {
@@ -295,7 +332,9 @@
 }
 
 .categoryCell:hover .categoryActions,
-.categoryCell:focus-within .categoryActions {
+.categoryCell:focus-within .categoryActions,
+.dateCell:hover .dateActions,
+.dateCell:focus-within .dateActions {
   opacity: 1;
   pointer-events: auto;
 }

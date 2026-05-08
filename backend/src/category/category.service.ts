@@ -18,6 +18,7 @@ import {
   UpdateCustomCategoryDto,
 } from '../types/Category';
 import { TransactionEntity } from '../transaction/transaction.entity';
+import { TRANSACTION_ACTIVITY_DATE_EXPRESSION } from '../transaction/transaction-date';
 import { CategoryEntity } from './category.entity';
 
 @Injectable()
@@ -595,10 +596,7 @@ export class CategoryService {
         'categoryId',
       )
       .addSelect('COUNT(*)', 'transactionCount')
-      .addSelect(
-        'MAX(COALESCE(transaction."authorizedDate", transaction."providerDate"))',
-        'lastUsedAt',
-      )
+      .addSelect(`MAX(${TRANSACTION_ACTIVITY_DATE_EXPRESSION})`, 'lastUsedAt')
       .where('transaction."userId" = :userId', { userId })
       .andWhere(
         'COALESCE(transaction."userCategoryId", transaction."categoryId") IN (:...categoryIds)',

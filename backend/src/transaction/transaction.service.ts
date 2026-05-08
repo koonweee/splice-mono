@@ -24,6 +24,10 @@ import type {
   TransactionSurfaceSearchOptions,
   TransactionSurfaceSearchResult,
 } from './transaction-surface.types';
+import {
+  TRANSACTION_ACTIVITY_DATE_EXPRESSION,
+  TRANSACTION_ACTIVITY_DATETIME_EXPRESSION,
+} from './transaction-date';
 
 type TransactionFilterOptions = {
   accountId?: string;
@@ -56,10 +60,6 @@ type TransactionSummaryRawRow = {
   needsReviewCount: string | number | null;
 };
 
-const ACTIVITY_DATE_EXPRESSION =
-  'COALESCE(transaction."authorizedDate", transaction."providerDate")';
-const ACTIVITY_DATETIME_EXPRESSION =
-  'COALESCE(transaction."authorizedDatetime", transaction."providerDatetime")';
 const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
 const ACTIVITY_DATETIME_SORT_ALIAS = 'activity_datetime_sort';
 
@@ -163,6 +163,9 @@ export class TransactionService extends OwnedCrudService<
     }
     if (dto.authorizedDatetime !== undefined) {
       entity.authorizedDatetime = dto.authorizedDatetime;
+    }
+    if (dto.reportingDateOverride !== undefined) {
+      entity.reportingDateOverride = dto.reportingDateOverride;
     }
     if (dto.categoryId !== undefined) entity.categoryId = dto.categoryId;
   }
@@ -309,8 +312,11 @@ export class TransactionService extends OwnedCrudService<
     order: 'ASC' | 'DESC',
   ): SelectQueryBuilder<TransactionEntity> {
     query
-      .addSelect(ACTIVITY_DATE_EXPRESSION, ACTIVITY_DATE_SORT_ALIAS)
-      .addSelect(ACTIVITY_DATETIME_EXPRESSION, ACTIVITY_DATETIME_SORT_ALIAS);
+      .addSelect(TRANSACTION_ACTIVITY_DATE_EXPRESSION, ACTIVITY_DATE_SORT_ALIAS)
+      .addSelect(
+        TRANSACTION_ACTIVITY_DATETIME_EXPRESSION,
+        ACTIVITY_DATETIME_SORT_ALIAS,
+      );
 
     let sortExpression = `transaction.${sortColumn}`;
     if (sortColumn === 'amount') {
@@ -343,15 +349,15 @@ export class TransactionService extends OwnedCrudService<
   ): void {
     if (startDate && endDate) {
       query.andWhere(
-        `${ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
+        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
         { startDate, endDate },
       );
     } else if (startDate) {
-      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
+      query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
         startDate,
       });
     } else if (endDate) {
-      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
+      query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
         endDate,
       });
     }
@@ -798,6 +804,7 @@ export class TransactionService extends OwnedCrudService<
         merchantName: transaction.merchantName,
         pending: transaction.pending,
         activityDate: transaction.activityDate,
+        reportingDateOverride: transaction.reportingDateOverride,
         providerDate: transaction.providerDate,
         categoryPrimary: transaction.effectiveCategory?.primary ?? null,
         amount: transaction.amount,

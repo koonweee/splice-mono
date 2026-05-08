@@ -37,6 +37,7 @@ function buildTransaction(params: {
   accountId?: string;
   currency?: string;
   providerDate: string;
+  reportingDateOverride?: string | null;
   pending?: boolean;
   primary?: string | null;
   detailed?: string | null;
@@ -57,6 +58,7 @@ function buildTransaction(params: {
       accountId: params.accountId ?? 'account-1',
       pending: params.pending ?? false,
       providerDate: params.providerDate,
+      reportingDateOverride: params.reportingDateOverride ?? null,
     },
     mockUserId,
   );
@@ -816,6 +818,72 @@ describe('TransactionAnalysisService', () => {
           relations: ['account', 'category', 'userCategory'],
         }),
       );
+    });
+
+    it('uses reportingDateOverride for analysis window membership', async () => {
+      const rows = [
+        buildTransaction({
+          id: 'salary',
+          amount: 560520,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2026-04-29',
+          reportingDateOverride: '2026-05-01',
+          primary: 'INCOME',
+        }),
+        buildTransaction({
+          id: 'purchase',
+          amount: 1200,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2026-04-30',
+          primary: 'FOOD_AND_DRINK',
+        }),
+      ];
+      mockTransactionRepository.find.mockImplementation(
+        (query: {
+          where: {
+            providerDate: { startDate: string; endDate: string };
+          };
+        }) =>
+          Promise.resolve(
+            rows.filter((transaction) => {
+              const activityDate =
+                transaction.reportingDateOverride ??
+                transaction.authorizedDate ??
+                transaction.providerDate;
+
+              return (
+                activityDate >= query.where.providerDate.startDate &&
+                activityDate <= query.where.providerDate.endDate
+              );
+            }),
+          ),
+      );
+
+      const april = await service.getAnalysis(
+        '2026-04-01',
+        '2026-04-30',
+        mockUserId,
+      );
+      const may = await service.getAnalysis(
+        '2026-05-01',
+        '2026-05-31',
+        mockUserId,
+      );
+
+      expect(april.inflows).toEqual([]);
+      expect(april.outflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'FOOD_AND_DRINK',
+          totalAmount: 1200,
+        }),
+      ]);
+      expect(may.inflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'INCOME',
+          totalAmount: 560520,
+        }),
+      ]);
+      expect(may.outflows).toEqual([]);
     });
 
     it('cancels exact equal and opposite posted transactions in the same currency', async () => {

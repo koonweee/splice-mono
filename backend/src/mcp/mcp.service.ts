@@ -35,7 +35,7 @@ Use reportingCurrency from get_user_context.currency unless the user asks for an
 
 All MCP money amounts are major units and always include currency and sign. Amount filters require a currency and are applied after conversion into reportingCurrency.
 
-Transaction date ranges use activityDate (authorizedDate when available, otherwise providerDate). Dates are inclusive YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone.
+Transaction date ranges use activityDate (reportingDateOverride when set, otherwise authorizedDate when available, otherwise providerDate). Dates are inclusive YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone. Raw provider and authorized dates remain available for audit.
 
 Pending transactions are excluded by default unless includePending is true. State whether pending transactions were included.`;
 
@@ -189,7 +189,7 @@ export class SpliceMcpService {
       {
         title: 'Search Transactions',
         description:
-          'Legacy transaction search by activity date, account, merchant, category, sign, amount, and pending state. Returns at most 20 rows; use list_transactions for spending totals or patterns.',
+          'Legacy transaction search by activity date, account, merchant, category, sign, amount, and pending state. activityDate uses reportingDateOverride when set. Returns at most 20 rows; use list_transactions for spending totals or patterns.',
         inputSchema: {
           startDate: DateStringSchema.optional(),
           endDate: DateStringSchema.optional(),
@@ -217,13 +217,13 @@ export class SpliceMcpService {
       {
         title: 'List Transactions',
         description:
-          'List raw transactions for analysis with cursor pagination. For spending totals or patterns, keep paging until pageInfo.hasMore is false. All money amounts are major units. Always use convertedAmount for cross-currency comparisons.',
+          'List raw transactions for analysis with cursor pagination. Date ranges use activityDate, which respects reportingDateOverride when set. For spending totals or patterns, keep paging until pageInfo.hasMore is false. All money amounts are major units. Always use convertedAmount for cross-currency comparisons.',
         inputSchema: {
           startDate: DateStringSchema.optional().describe(
-            'Inclusive activity start date in YYYY-MM-DD. Resolve relative dates using get_user_context.today.',
+            'Inclusive activity start date in YYYY-MM-DD. activityDate uses reportingDateOverride when set. Resolve relative dates using get_user_context.today.',
           ),
           endDate: DateStringSchema.optional().describe(
-            'Inclusive activity end date in YYYY-MM-DD. Resolve relative dates using get_user_context.today.',
+            'Inclusive activity end date in YYYY-MM-DD. activityDate uses reportingDateOverride when set. Resolve relative dates using get_user_context.today.',
           ),
           accountIds: z
             .array(z.string().uuid())

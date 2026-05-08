@@ -135,7 +135,10 @@
     var(--mantine-color-yellow-0),
     rgba(245, 159, 0, 0.18)
   );
-  color: light-dark(var(--mantine-color-yellow-9), var(--mantine-color-yellow-3));
+  color: light-dark(
+    var(--mantine-color-yellow-9),
+    var(--mantine-color-yellow-3)
+  );
 }
 
 .reviewBadge {
@@ -147,7 +150,10 @@
     var(--mantine-color-orange-0),
     rgba(253, 126, 20, 0.18)
   );
-  color: light-dark(var(--mantine-color-orange-9), var(--mantine-color-orange-3));
+  color: light-dark(
+    var(--mantine-color-orange-9),
+    var(--mantine-color-orange-3)
+  );
 }
 
 .rowAside {

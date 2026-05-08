@@ -20,6 +20,7 @@ export interface TransactionSurfaceSearchTransaction {
   merchantName: string | null;
   pending: boolean;
   activityDate: string;
+  reportingDateOverride: string | null;
   providerDate: string;
   categoryPrimary: string | null;
   amount: SerializedMoneyWithSign;

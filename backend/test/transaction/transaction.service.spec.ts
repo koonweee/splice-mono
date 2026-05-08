@@ -5,6 +5,10 @@ import { CategoryEntity } from '../../src/category/category.entity';
 import { CategoryService } from '../../src/category/category.service';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
+import {
+  TRANSACTION_ACTIVITY_DATE_EXPRESSION,
+  TRANSACTION_ACTIVITY_DATETIME_EXPRESSION,
+} from '../../src/transaction/transaction-date';
 import type { TransactionSyncResponse } from '../../src/types/BankLink';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import {
@@ -13,10 +17,6 @@ import {
   mockUserId,
 } from '../mocks/transaction/transaction.mock';
 
-const ACTIVITY_DATE_EXPRESSION =
-  'COALESCE(transaction."authorizedDate", transaction."providerDate")';
-const ACTIVITY_DATETIME_EXPRESSION =
-  'COALESCE(transaction."authorizedDatetime", transaction."providerDatetime")';
 const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
 const ACTIVITY_DATETIME_SORT_ALIAS = 'activity_datetime_sort';
 
@@ -150,6 +150,7 @@ describe('TransactionService', () => {
       expect(result.accountId).toBe(mockCreateTransactionDto.accountId);
       expect(result.pending).toBe(mockCreateTransactionDto.pending);
       expect(result.providerDate).toBe(mockCreateTransactionDto.providerDate);
+      expect(result.reportingDateOverride).toBeNull();
       expect(mockRepository.save).toHaveBeenCalledTimes(1);
     });
 
@@ -259,6 +260,7 @@ describe('TransactionService', () => {
       expect(result.providerDatetime).toBeNull();
       expect(result.authorizedDate).toBeNull();
       expect(result.authorizedDatetime).toBeNull();
+      expect(result.reportingDateOverride).toBeNull();
       expect(result.categoryId).toBeNull();
       expect(result.categoryReviewedAt).toBeNull();
       expect(result.categoryReviewMethod).toBeNull();
@@ -417,11 +419,11 @@ describe('TransactionService', () => {
         'NULLS LAST',
       );
       expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
-        ACTIVITY_DATE_EXPRESSION,
+        TRANSACTION_ACTIVITY_DATE_EXPRESSION,
         ACTIVITY_DATE_SORT_ALIAS,
       );
       expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
-        ACTIVITY_DATETIME_EXPRESSION,
+        TRANSACTION_ACTIVITY_DATETIME_EXPRESSION,
         ACTIVITY_DATETIME_SORT_ALIAS,
       );
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
@@ -535,7 +537,7 @@ describe('TransactionService', () => {
       });
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        `${ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
+        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
         { startDate: '2024-01-01', endDate: '2024-01-31' },
       );
     });
@@ -548,7 +550,7 @@ describe('TransactionService', () => {
       });
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        `${ACTIVITY_DATE_EXPRESSION} >= :startDate`,
+        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} >= :startDate`,
         { startDate: '2024-01-01' },
       );
     });
@@ -561,7 +563,7 @@ describe('TransactionService', () => {
       });
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        `${ACTIVITY_DATE_EXPRESSION} <= :endDate`,
+        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} <= :endDate`,
         { endDate: '2024-01-31' },
       );
     });
@@ -622,7 +624,7 @@ describe('TransactionService', () => {
         { accountId: mockAccountId },
       );
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        `${ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
+        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
         { startDate: '2024-01-01', endDate: '2024-01-31' },
       );
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
@@ -779,7 +781,7 @@ describe('TransactionService', () => {
       );
       expect(mockQueryBuilder.getMany).not.toHaveBeenCalled();
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        `${ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
+        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
         {
           startDate: '2026-05-01',
           endDate: '2026-05-07',
@@ -907,6 +909,67 @@ describe('TransactionService', () => {
           pending: false,
         }),
       );
+    });
+
+    it('should use reportingDateOverride as activityDate when set', async () => {
+      const mockEntity = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          providerDate: '2026-04-29',
+          authorizedDate: '2026-04-29',
+        },
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity: TransactionEntity) =>
+        Promise.resolve(entity),
+      );
+
+      const result = await service.update(
+        'test-id',
+        { reportingDateOverride: '2026-05-01' },
+        mockUserId,
+      );
+
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reportingDateOverride: '2026-05-01',
+        }),
+      );
+      expect(result?.activityDate).toBe('2026-05-01');
+      expect(result?.providerDate).toBe('2026-04-29');
+      expect(result?.authorizedDate).toBe('2026-04-29');
+    });
+
+    it('should fall back to authorized date when reportingDateOverride is cleared', async () => {
+      const mockEntity = TransactionEntity.fromDto(
+        {
+          ...mockCreateTransactionDto,
+          providerDate: '2026-04-30',
+          authorizedDate: '2026-04-29',
+          reportingDateOverride: '2026-05-01',
+        },
+        mockUserId,
+      );
+      mockEntity.id = 'test-id';
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity: TransactionEntity) =>
+        Promise.resolve(entity),
+      );
+
+      const result = await service.update(
+        'test-id',
+        { reportingDateOverride: null },
+        mockUserId,
+      );
+
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reportingDateOverride: null,
+        }),
+      );
+      expect(result?.activityDate).toBe('2026-04-29');
     });
 
     it('should update categoryId', async () => {
