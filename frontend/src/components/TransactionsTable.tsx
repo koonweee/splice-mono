@@ -13,6 +13,7 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
+import { DatePicker } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
 import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
@@ -22,6 +23,7 @@ import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   useCategoryControllerFindAll,
+  useTransactionControllerUpdate,
   useTransactionControllerUpdateCategory,
   useTransactionControllerUpdateCategoryReview,
 } from '../api/clients/spliceAPI'
@@ -409,7 +411,8 @@ function invalidateTransactionQueries(
     predicate: (query) =>
       Array.isArray(query.queryKey) &&
       typeof query.queryKey[0] === 'string' &&
-      query.queryKey[0].includes('transaction'),
+      (query.queryKey[0].includes('transaction') ||
+        query.queryKey[0].includes('category')),
   })
 }
 
@@ -427,6 +430,10 @@ function getCategoryPrimaryLabel(
   return category.source === 'user'
     ? category.primary
     : formatPrimaryCategory(category.primary)
+}
+
+function getBankActivityDate(transaction: Transaction) {
+  return transaction.authorizedDate ?? transaction.providerDate
 }
 
 export function TransactionsTable({
@@ -448,8 +455,23 @@ export function TransactionsTable({
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
   >(null)
+  const [
+    editingReportingDateTransactionId,
+    setEditingReportingDateTransactionId,
+  ] = useState<string | null>(null)
   const [categorySearch, setCategorySearch] = useState('')
+  const [reportingDateDraft, setReportingDateDraft] = useState<string | null>(
+    null,
+  )
   const { data: categories = [] } = useCategoryControllerFindAll()
+  const updateTransaction = useTransactionControllerUpdate({
+    mutation: {
+      onSuccess: () => {
+        closeReportingDateEditor()
+        invalidateTransactionQueries(queryClient)
+      },
+    },
+  })
   const updateCategory = useTransactionControllerUpdateCategory({
     mutation: {
       onSuccess: () => {
@@ -469,6 +491,36 @@ export function TransactionsTable({
   function closeCategoryEditor() {
     setEditingTransactionId(null)
     setCategorySearch('')
+  }
+
+  function openReportingDateEditor(transaction: Transaction) {
+    setEditingReportingDateTransactionId(transaction.id)
+    setReportingDateDraft(
+      transaction.reportingDateOverride ?? transaction.activityDate,
+    )
+  }
+
+  function closeReportingDateEditor() {
+    setEditingReportingDateTransactionId(null)
+    setReportingDateDraft(null)
+  }
+
+  function saveReportingDateOverride(transaction: Transaction) {
+    if (!reportingDateDraft) {
+      return
+    }
+
+    updateTransaction.mutate({
+      id: transaction.id,
+      data: { reportingDateOverride: reportingDateDraft },
+    })
+  }
+
+  function resetReportingDateOverride(transaction: Transaction) {
+    updateTransaction.mutate({
+      id: transaction.id,
+      data: { reportingDateOverride: null },
+    })
   }
 
   function markCategoryReviewed(transaction: Transaction) {
@@ -524,11 +576,130 @@ export function TransactionsTable({
       {
         accessorKey: 'activityDate',
         header: 'Date',
-        size: 110,
+        size: 150,
         minSize: 90,
-        maxSize: 170,
-        Cell: ({ cell }) =>
-          dayjs(cell.getValue<string>()).format('MMM D, YYYY'),
+        maxSize: 220,
+        Cell: ({ row }) => {
+          const transaction = row.original
+          const isEditing = editingReportingDateTransactionId === transaction.id
+          const hasOverride = transaction.reportingDateOverride != null
+          const bankActivityDate = getBankActivityDate(transaction)
+          const dateLabel = dayjs(transaction.activityDate).format(
+            'MMM D, YYYY',
+          )
+          const resetDateLabel = dayjs(bankActivityDate).format('MMM D, YYYY')
+
+          if (isEditing) {
+            return (
+              <Group className={styles.dateCell} gap={4} wrap="nowrap">
+                <Popover
+                  opened
+                  onDismiss={closeReportingDateEditor}
+                  position="bottom-start"
+                  shadow="md"
+                  withinPortal
+                  zIndex={400}
+                >
+                  <Popover.Target>
+                    <UnstyledButton
+                      aria-label="Reporting date"
+                      className={styles.dateTrigger}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                          closeReportingDateEditor()
+                        }
+                      }}
+                    >
+                      <Text className={styles.dateLabel} size="sm" span>
+                        {reportingDateDraft
+                          ? dayjs(reportingDateDraft).format('MMM D, YYYY')
+                          : dateLabel}
+                      </Text>
+                    </UnstyledButton>
+                  </Popover.Target>
+                  <Popover.Dropdown p="sm">
+                    <Stack gap="sm">
+                      <DatePicker
+                        value={reportingDateDraft}
+                        onChange={setReportingDateDraft}
+                      />
+                      <Group justify="space-between" wrap="nowrap">
+                        <Button
+                          leftSection={<Check size={14} />}
+                          loading={
+                            updateTransaction.isPending &&
+                            updateTransaction.variables.id === transaction.id
+                          }
+                          onClick={() => saveReportingDateOverride(transaction)}
+                          size="xs"
+                        >
+                          Apply
+                        </Button>
+                        <Button
+                          onClick={closeReportingDateEditor}
+                          size="xs"
+                          variant="subtle"
+                        >
+                          Cancel
+                        </Button>
+                      </Group>
+                    </Stack>
+                  </Popover.Dropdown>
+                </Popover>
+                <Tooltip label="Cancel">
+                  <ActionIcon
+                    aria-label="Cancel reporting date edit"
+                    onClick={closeReportingDateEditor}
+                    size="sm"
+                    variant="subtle"
+                  >
+                    <X size={14} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            )
+          }
+
+          return (
+            <Group className={styles.dateCell} gap={4} wrap="nowrap">
+              <Text
+                aria-label={`Activity date ${dateLabel}`}
+                className={styles.dateText}
+                size="sm"
+              >
+                {dateLabel}
+              </Text>
+              <Group className={styles.dateActions} gap={2} wrap="nowrap">
+                <Tooltip label="Edit reporting date">
+                  <ActionIcon
+                    aria-label="Edit reporting date"
+                    onClick={() => openReportingDateEditor(transaction)}
+                    size="sm"
+                    variant="subtle"
+                  >
+                    <Pencil size={14} />
+                  </ActionIcon>
+                </Tooltip>
+                {hasOverride && (
+                  <Tooltip label={`Reset to bank date: ${resetDateLabel}`}>
+                    <ActionIcon
+                      aria-label="Reset reporting date override"
+                      loading={
+                        updateTransaction.isPending &&
+                        updateTransaction.variables.id === transaction.id
+                      }
+                      onClick={() => resetReportingDateOverride(transaction)}
+                      size="sm"
+                      variant="subtle"
+                    >
+                      <RotateCcw size={14} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+              </Group>
+            </Group>
+          )
+        },
       },
       {
         accessorKey: 'merchantName',
@@ -783,7 +954,12 @@ export function TransactionsTable({
     [
       categoryOptions,
       categorySearch,
+      editingReportingDateTransactionId,
       editingTransactionId,
+      reportingDateDraft,
+      updateTransaction.isPending,
+      updateTransaction.mutate,
+      updateTransaction.variables?.id,
       updateCategory.isPending,
       updateCategory.mutate,
       updateCategory.variables?.id,

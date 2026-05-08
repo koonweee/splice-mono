@@ -6,6 +6,10 @@ import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { calculateEffectiveBalance } from '../common/effective-balance';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
+import {
+  getTransactionActivityDate,
+  TRANSACTION_ACTIVITY_DATE_EXPRESSION,
+} from '../transaction/transaction-date';
 import { TransactionEntity } from '../transaction/transaction.entity';
 import { MoneySign } from '../types/MoneyWithSign';
 import type { Transaction } from '../types/Transaction';
@@ -43,8 +47,6 @@ interface BalanceAdjustmentRow {
 }
 
 const BALANCE_ADJUSTMENT_CATEGORY = 'BALANCE_ADJUSTMENT';
-const ACTIVITY_DATE_EXPRESSION =
-  'COALESCE(transaction."authorizedDate", transaction."providerDate")';
 
 @Injectable()
 export class TransactionAnalysisService {
@@ -348,10 +350,13 @@ export class TransactionAnalysisService {
       .leftJoinAndSelect('transaction.userCategory', 'userCategory')
       .where('transaction.userId = :userId', { userId })
       .andWhere('transaction.pending = false')
-      .andWhere(`${ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`, {
-        startDate,
-        endDate,
-      })
+      .andWhere(
+        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
+        {
+          startDate,
+          endDate,
+        },
+      )
       .getMany();
   }
 
@@ -755,7 +760,7 @@ export class TransactionAnalysisService {
   }
 
   private getActivityDate(transaction: TransactionEntity): string {
-    return transaction.authorizedDate ?? transaction.providerDate;
+    return getTransactionActivityDate(transaction);
   }
 
   private compareBuckets(

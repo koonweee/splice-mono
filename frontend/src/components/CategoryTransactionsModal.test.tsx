@@ -103,6 +103,7 @@ function makeTransaction(
     location: overrides.location ?? null,
     paymentMeta: overrides.paymentMeta ?? null,
     activityDate: overrides.activityDate ?? '2026-02-14',
+    reportingDateOverride: overrides.reportingDateOverride ?? null,
     providerDate: overrides.providerDate ?? '2026-02-14',
     providerDatetime: overrides.providerDatetime ?? null,
     authorizedDate: overrides.authorizedDate ?? null,

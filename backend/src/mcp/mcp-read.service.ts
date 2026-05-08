@@ -10,6 +10,10 @@ import {
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { CategoryEntity } from '../category/category.entity';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
+import {
+  getTransactionActivityDate,
+  TRANSACTION_ACTIVITY_DATE_EXPRESSION,
+} from '../transaction/transaction-date';
 import { TransactionEntity } from '../transaction/transaction.entity';
 import {
   MoneySign,
@@ -22,8 +26,6 @@ const TRANSACTION_MAX_PAGE_SIZE = 100;
 const SNAPSHOT_DEFAULT_PAGE_SIZE = 100;
 const SNAPSHOT_MAX_PAGE_SIZE = 250;
 const CANDIDATE_BATCH_SIZE = 250;
-const ACTIVITY_DATE_EXPRESSION =
-  'COALESCE(transaction."authorizedDate", transaction."providerDate")';
 const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
 
 interface CursorPayload {
@@ -79,6 +81,7 @@ export interface McpTransaction {
   merchantName: string | null;
   pending: boolean;
   activityDate: string;
+  reportingDateOverride: string | null;
   providerDate: string;
   providerDatetime: string | null;
   authorizedDate: string | null;
@@ -508,18 +511,18 @@ export class McpReadService {
       .leftJoinAndSelect('account.bankLink', 'bankLink')
       .leftJoinAndSelect('transaction.category', 'category')
       .leftJoinAndSelect('transaction.userCategory', 'userCategory')
-      .addSelect(ACTIVITY_DATE_EXPRESSION, ACTIVITY_DATE_SORT_ALIAS)
+      .addSelect(TRANSACTION_ACTIVITY_DATE_EXPRESSION, ACTIVITY_DATE_SORT_ALIAS)
       .where('transaction.userId = :userId', { userId })
       .orderBy(ACTIVITY_DATE_SORT_ALIAS, 'DESC')
       .addOrderBy('transaction.id', 'DESC');
 
     if (options.startDate) {
-      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
+      query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
         startDate: options.startDate,
       });
     }
     if (options.endDate) {
-      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
+      query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
         endDate: options.endDate,
       });
     }
@@ -565,10 +568,13 @@ export class McpReadService {
 
     return query.andWhere(
       new Brackets((qb) => {
-        qb.where(`${ACTIVITY_DATE_EXPRESSION} < :cursorActivityDate`, {
-          cursorActivityDate: cursor.activityDate,
-        }).orWhere(
-          `${ACTIVITY_DATE_EXPRESSION} = :cursorActivityDate AND transaction.id < :cursorId`,
+        qb.where(
+          `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} < :cursorActivityDate`,
+          {
+            cursorActivityDate: cursor.activityDate,
+          },
+        ).orWhere(
+          `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} = :cursorActivityDate AND transaction.id < :cursorId`,
           {
             cursorActivityDate: cursor.activityDate,
             cursorId: cursor.id,
@@ -608,6 +614,7 @@ export class McpReadService {
       merchantName: transaction.merchantName,
       pending: transaction.pending,
       activityDate: this.getActivityDate(transaction),
+      reportingDateOverride: transaction.reportingDateOverride,
       providerDate: transaction.providerDate,
       providerDatetime: transaction.providerDatetime,
       authorizedDate: transaction.authorizedDate,
@@ -661,7 +668,7 @@ export class McpReadService {
   }
 
   private getActivityDate(transaction: TransactionEntity): string {
-    return transaction.authorizedDate ?? transaction.providerDate;
+    return getTransactionActivityDate(transaction);
   }
 
   private matchesAmountFilter(
@@ -727,12 +734,12 @@ export class McpReadService {
       );
 
     if (options.startDate) {
-      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
+      query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
         startDate: options.startDate,
       });
     }
     if (options.endDate) {
-      query.andWhere(`${ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
+      query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
         endDate: options.endDate,
       });
     }
