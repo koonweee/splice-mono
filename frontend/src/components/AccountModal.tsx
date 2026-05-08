@@ -27,6 +27,7 @@ import {
   formatRelativeTime,
 } from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
+import styles from './AccountModal.module.css'
 import { UpdateBalanceModal } from './accounts/UpdateBalanceModal'
 import { Chart } from './Chart'
 import type { TimePeriod } from '../lib/types'
@@ -208,14 +209,7 @@ export function AccountModal({
                     value={notes}
                     onChange={(event) => setNotes(event.currentTarget.value)}
                     size="md"
-                    styles={{
-                      input: {
-                        backgroundColor: 'transparent',
-                        borderColor: 'transparent',
-                        paddingLeft: 0,
-                        paddingRight: 0,
-                      },
-                    }}
+                    classNames={{ input: styles.notesInput }}
                   />
                   {notesChanged && (
                     <Group justify="flex-end" mt="xs">

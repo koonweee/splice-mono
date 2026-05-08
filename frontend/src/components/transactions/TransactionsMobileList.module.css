@@ -119,43 +119,6 @@
   margin-top: 2px;
 }
 
-.statusBadge {
-  height: 18px;
-  border: 1px solid transparent;
-  font-size: 9px;
-  letter-spacing: 0;
-}
-
-.pendingBadge {
-  border-color: light-dark(
-    var(--mantine-color-yellow-4),
-    var(--mantine-color-yellow-7)
-  );
-  background: light-dark(
-    var(--mantine-color-yellow-0),
-    rgba(245, 159, 0, 0.18)
-  );
-  color: light-dark(
-    var(--mantine-color-yellow-9),
-    var(--mantine-color-yellow-3)
-  );
-}
-
-.reviewBadge {
-  border-color: light-dark(
-    var(--mantine-color-orange-4),
-    var(--mantine-color-orange-7)
-  );
-  background: light-dark(
-    var(--mantine-color-orange-0),
-    rgba(253, 126, 20, 0.18)
-  );
-  color: light-dark(
-    var(--mantine-color-orange-9),
-    var(--mantine-color-orange-3)
-  );
-}
-
 .rowAside {
   display: grid;
   justify-items: end;

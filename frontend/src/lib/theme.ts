@@ -1,4 +1,30 @@
-import { createTheme } from '@mantine/core'
+import {
+  ActionIcon,
+  Badge,
+  Button,
+  Checkbox,
+  Drawer,
+  FileInput,
+  Input,
+  InputWrapper,
+  Loader,
+  Modal,
+  NavLink,
+  NumberInput,
+  Paper,
+  Popover,
+  Progress,
+  Radio,
+  SegmentedControl,
+  Select,
+  Skeleton,
+  Switch,
+  Tabs,
+  TextInput,
+  Textarea,
+  Tooltip,
+  createTheme,
+} from '@mantine/core'
 import type {
   MantineColorScheme,
   MantineColorsTuple,
@@ -224,6 +250,128 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
     primaryColor: 'brand',
     primaryShade: { light: 6, dark: 4 },
     defaultRadius: 'md',
+    components: {
+      ActionIcon: ActionIcon.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { root: 'splice-action-icon-root' },
+      }),
+      Badge: Badge.extend({
+        defaultProps: { radius: 'sm' },
+        classNames: { root: 'splice-badge-root' },
+      }),
+      Button: Button.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { root: 'splice-button-root' },
+      }),
+      Checkbox: Checkbox.extend({
+        defaultProps: { color: 'brand', radius: 'sm' },
+        classNames: { root: 'splice-inline-control-root' },
+      }),
+      Drawer: Drawer.extend({
+        defaultProps: { padding: 'md', radius: 'md', shadow: 'xl' },
+        classNames: {
+          body: 'splice-overlay-body',
+          content: 'splice-overlay-content splice-drawer-content',
+          header: 'splice-overlay-header',
+          title: 'splice-overlay-title',
+        },
+      }),
+      FileInput: FileInput.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { input: 'splice-input-input' },
+      }),
+      Input: Input.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { input: 'splice-input-input' },
+      }),
+      InputWrapper: InputWrapper.extend({
+        classNames: {
+          description: 'splice-input-description',
+          error: 'splice-input-error',
+          label: 'splice-input-label',
+        },
+      }),
+      Loader: Loader.extend({
+        defaultProps: { color: 'brand' },
+      }),
+      Modal: Modal.extend({
+        defaultProps: { padding: 'md', radius: 'md', shadow: 'xl' },
+        classNames: {
+          body: 'splice-overlay-body',
+          content: 'splice-overlay-content',
+          header: 'splice-overlay-header',
+          title: 'splice-overlay-title',
+        },
+      }),
+      NavLink: NavLink.extend({
+        classNames: {
+          label: 'splice-navlink-label',
+          root: 'splice-navlink-root',
+        },
+      }),
+      NumberInput: NumberInput.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { input: 'splice-input-input' },
+      }),
+      Paper: Paper.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { root: 'splice-paper-root' },
+      }),
+      Popover: Popover.extend({
+        defaultProps: { radius: 'md', shadow: 'md' },
+        classNames: { dropdown: 'splice-popover-dropdown' },
+      }),
+      Progress: Progress.extend({
+        defaultProps: { radius: 'xl' },
+      }),
+      Radio: Radio.extend({
+        defaultProps: { color: 'brand' },
+        classNames: { root: 'splice-inline-control-root' },
+      }),
+      SegmentedControl: SegmentedControl.extend({
+        defaultProps: { radius: 'md' },
+        classNames: {
+          indicator: 'splice-segmented-control-indicator',
+          label: 'splice-segmented-control-label',
+          root: 'splice-segmented-control-root',
+        },
+      }),
+      Select: Select.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { input: 'splice-input-input' },
+      }),
+      Skeleton: Skeleton.extend({
+        defaultProps: { radius: 'sm' },
+      }),
+      Switch: Switch.extend({
+        defaultProps: { color: 'brand' },
+        classNames: { root: 'splice-inline-control-root' },
+      }),
+      Tabs: Tabs.extend({
+        defaultProps: { radius: 'md' },
+        classNames: {
+          list: 'splice-tabs-list',
+          tab: 'splice-tabs-tab',
+        },
+      }),
+      Textarea: Textarea.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { input: 'splice-input-input' },
+      }),
+      TextInput: TextInput.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { input: 'splice-input-input' },
+      }),
+      Tooltip: Tooltip.extend({
+        defaultProps: {
+          arrowRadius: 2,
+          openDelay: 250,
+          transitionProps: { duration: 120, transition: 'fade' },
+          withArrow: true,
+        },
+        classNames: { tooltip: 'splice-tooltip' },
+      }),
+    },
   })
 }
 

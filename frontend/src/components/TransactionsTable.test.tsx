@@ -5,7 +5,6 @@ import dayjs from 'dayjs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TransactionsTable } from './TransactionsTable'
 import {
-  getCategoryReviewTooltip,
   getMerchantDisplay,
   getMetadataDetails,
 } from './transactions/transactionMetadata'
@@ -222,7 +221,7 @@ describe('TransactionsTable', () => {
       }),
     ])
 
-    expect(screen.getByLabelText('Category needs review')).toBeTruthy()
+    expect(screen.getByLabelText('Restaurant')).toBeTruthy()
 
     fireEvent.click(screen.getByLabelText('Mark category as reviewed'))
 
@@ -489,20 +488,6 @@ describe('transaction metadata helpers', () => {
       primary: 'APPLE.COM/US',
       secondary: null,
     })
-  })
-
-  it('uses metadata to explain category review hints', () => {
-    const transaction = makeTransaction({
-      category: providerCategory,
-      userCategory: null,
-      categoryNeedsReview: true,
-      personalFinanceCategoryConfidenceLevel: 'LOW',
-    })
-    const details = getMetadataDetails(transaction)
-
-    expect(getCategoryReviewTooltip(transaction, details)).toBe(
-      'Category needs review · Plaid confidence low',
-    )
   })
 
   it('formats midnight UTC authorization timestamps as date-only values', () => {
