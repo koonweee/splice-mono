@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Alert,
+  Autocomplete,
   Badge,
   Box,
   Button,
@@ -10,8 +11,6 @@ import {
   Group,
   Loader,
   Paper,
-  SegmentedControl,
-  Select,
   Stack,
   Text,
   TextInput,
@@ -23,8 +22,7 @@ import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Archive,
-  Eye,
-  EyeOff,
+  Copy,
   Filter,
   Info,
   Pencil,
@@ -37,12 +35,11 @@ import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
 import {
   useCategoryControllerBulkUpdateCustom,
-  useCategoryControllerBulkUpdateVisibility,
   useCategoryControllerCreateCustom,
   useCategoryControllerFindManagement,
   useCategoryControllerUpdateCustom,
 } from '../../api/clients/spliceAPI'
-import { formatCategoryName, formatPrimaryCategory } from '../../lib/format'
+import { CategorySelect } from '../categories/CategorySelect'
 import tableChrome from '../MantineTableChrome.module.css'
 import type {
   MRT_ColumnDef,
@@ -52,22 +49,26 @@ import type {
 import type { CSSProperties, ReactNode } from 'react'
 import type {
   BulkCategoryActionResponse,
-  CategoryConflict,
   CategoryManagementItem,
 } from '../../api/models'
+import type { CategorySelectOption } from '../categories/CategorySelect'
 
-type SourceFilter = 'all' | 'system' | 'custom'
-type VisibilityFilter = 'all' | 'visible' | 'hidden'
-type PanelMode = 'create' | 'edit-custom' | 'view-system' | 'view-archived'
+type PanelMode = 'create' | 'edit-custom' | 'view-archived'
 type PanelState = { mode: PanelMode; category?: CategoryManagementItem } | null
+type CategoryConflictView = {
+  categoryId: string
+  label: string
+  primary: string
+  detailed: string
+  archivedAt?: string | null
+}
 
 const VIRTUAL_ROW_HEIGHT = 66
 const TABLE_HEADER_HEIGHT = 52
 const SELECT_COLUMN_WIDTH = 56
-const SOURCE_COLUMN_WIDTH = 130
 const STATUS_COLUMN_WIDTH = 130
 const USED_COLUMN_WIDTH = 88
-const ACTIONS_COLUMN_WIDTH = 124
+const ACTIONS_COLUMN_WIDTH = 48
 const ACTION_ICON_SIZE = 36
 
 const tableHeaderCellStyle = {
@@ -100,6 +101,11 @@ const tableActionsCellStyle = {
   textAlign: 'right',
 } satisfies CSSProperties
 
+const tableClippedBodyCellStyle = {
+  ...tableBodyCellStyle,
+  overflow: 'hidden',
+} satisfies CSSProperties
+
 const categoryCellContentStyle = {
   display: 'flex',
   flexDirection: 'column',
@@ -116,46 +122,38 @@ function normalizeCategoryLabel(value: string): string {
 }
 
 function getPrimaryDisplay(category: CategoryManagementItem): string {
-  return category.source === 'user'
-    ? category.primary
-    : formatPrimaryCategory(category.primary)
+  return category.primary
 }
 
 function getDetailedDisplay(category: CategoryManagementItem): string {
-  return category.source === 'user'
-    ? category.detailed
-    : formatCategoryName(category)
+  return category.detailed
 }
 
 function getCategoryPairLabel(category: CategoryManagementItem): string {
   return `${getPrimaryDisplay(category)} > ${getDetailedDisplay(category)}`
 }
 
-function getStatus(
-  category: CategoryManagementItem,
-): 'Archived' | 'Hidden' | 'Visible' {
+function getStatus(category: CategoryManagementItem): 'Archived' | 'Active' {
   if (category.archivedAt !== null && category.archivedAt !== undefined) {
     return 'Archived'
   }
 
-  return category.isHidden ? 'Hidden' : 'Visible'
+  return 'Active'
 }
 
 function getCategoryConflictFromManagementItem(
   category: CategoryManagementItem,
-): CategoryConflict {
+): CategoryConflictView {
   return {
     categoryId: category.id,
     label: getCategoryPairLabel(category),
     primary: category.primary,
     detailed: category.detailed,
-    source: category.source === 'user' ? 'user' : 'plaid',
     archivedAt: category.archivedAt,
-    isHidden: category.isHidden,
   }
 }
 
-function getCategoryConflict(error: unknown): CategoryConflict | null {
+function getCategoryConflict(error: unknown): CategoryConflictView | null {
   if (typeof error !== 'object' || error === null) {
     return null
   }
@@ -171,7 +169,7 @@ function getCategoryConflict(error: unknown): CategoryConflict | null {
     return null
   }
 
-  return category as CategoryConflict
+  return category as CategoryConflictView
 }
 
 function getCategoryErrorMessage(error: unknown): string {
@@ -225,15 +223,13 @@ function getSkippedReasonLabel(reason: string) {
     duplicate_conflict: 'Duplicate conflict',
     not_found: 'Not found',
     not_owned: 'Not owned',
-    system_category: 'System category',
   }
 
   return labels[reason] ?? reason
 }
 
 function getDefaultRank(category: CategoryManagementItem) {
-  if (category.archivedAt) return 3
-  if (category.isHidden) return 2
+  if (category.archivedAt) return 2
   return 1
 }
 
@@ -244,9 +240,6 @@ export function CustomCategoriesSection() {
   const [filtersOpened, { close: closeFilters, toggle: toggleFilters }] =
     useDisclosure(false)
   const [archivedMode, setArchivedMode] = useState(false)
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
-  const [visibilityFilter, setVisibilityFilter] =
-    useState<VisibilityFilter>('all')
   const [primaryFilter, setPrimaryFilter] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({})
@@ -257,7 +250,6 @@ export function CustomCategoriesSection() {
   const [primary, setPrimary] = useState('')
   const [detailed, setDetailed] = useState('')
   const [description, setDescription] = useState('')
-  const [bulkPrimary, setBulkPrimary] = useState('')
   const [lastBulkResult, setLastBulkResult] =
     useState<BulkCategoryActionResponse | null>(null)
 
@@ -291,21 +283,12 @@ export function CustomCategoriesSection() {
       },
     },
   })
-  const updateVisibility = useCategoryControllerBulkUpdateVisibility({
-    mutation: {
-      onSuccess: (result) => {
-        setLastBulkResult(result.skipped.length > 0 ? result : null)
-        showSkippedNotification(result)
-        invalidateCategoryConsumers(queryClient)
-      },
-    },
-  })
   const bulkUpdateCustom = useCategoryControllerBulkUpdateCustom({
     mutation: {
       onSuccess: (result) => {
         setLastBulkResult(result.skipped.length > 0 ? result : null)
+        setRowSelection({})
         showSkippedNotification(result)
-        setBulkPrimary('')
         invalidateCategoryConsumers(queryClient)
       },
     },
@@ -315,7 +298,7 @@ export function CustomCategoriesSection() {
     setRowSelection({})
     setPanel(null)
     setLastBulkResult(null)
-  }, [archivedMode, sourceFilter, visibilityFilter, primaryFilter, search])
+  }, [archivedMode, primaryFilter, search])
 
   const primaryOptions = useMemo(
     () =>
@@ -324,6 +307,18 @@ export function CustomCategoriesSection() {
           categories.map((category) => [
             normalizeCategoryLabel(getPrimaryDisplay(category)),
             getPrimaryDisplay(category),
+          ]),
+        ).values(),
+      ).sort((left, right) => left.localeCompare(right)),
+    [categories],
+  )
+  const detailedOptions = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          categories.map((category) => [
+            normalizeCategoryLabel(getDetailedDisplay(category)),
+            getDetailedDisplay(category),
           ]),
         ).values(),
       ).sort((left, right) => left.localeCompare(right)),
@@ -373,22 +368,7 @@ export function CustomCategoriesSection() {
     const normalizedSearch = normalizeCategoryLabel(search)
 
     return categories.filter((category) => {
-      if (archivedMode && category.source !== 'user') return false
       if (!archivedMode && category.archivedAt) return false
-
-      if (!archivedMode && sourceFilter !== 'all') {
-        if (sourceFilter === 'system' && category.source === 'user') {
-          return false
-        }
-        if (sourceFilter === 'custom' && category.source !== 'user') {
-          return false
-        }
-      }
-
-      if (!archivedMode && visibilityFilter !== 'all') {
-        if (visibilityFilter === 'visible' && category.isHidden) return false
-        if (visibilityFilter === 'hidden' && !category.isHidden) return false
-      }
 
       if (
         primaryFilter &&
@@ -404,20 +384,12 @@ export function CustomCategoriesSection() {
         getPrimaryDisplay(category),
         getDetailedDisplay(category),
         getCategoryPairLabel(category),
-        category.source === 'user' ? 'custom' : 'system',
         getStatus(category),
       ].some((value) =>
         normalizeCategoryLabel(value).includes(normalizedSearch),
       )
     })
-  }, [
-    archivedMode,
-    categories,
-    primaryFilter,
-    search,
-    sourceFilter,
-    visibilityFilter,
-  ])
+  }, [archivedMode, categories, primaryFilter, search])
 
   const sortedCategories = useMemo(() => {
     const activeSort = sorting.at(0)
@@ -428,9 +400,7 @@ export function CustomCategoriesSection() {
         getDefaultRank(left) - getDefaultRank(right) ||
         getCategoryPairLabel(left).localeCompare(getCategoryPairLabel(right))
 
-      if (activeSort?.id === 'source') {
-        result = (left.source ?? 'plaid').localeCompare(right.source ?? 'plaid')
-      } else if (activeSort?.id === 'status') {
+      if (activeSort?.id === 'status') {
         result = getStatus(left).localeCompare(getStatus(right))
       } else if (activeSort?.id === 'used') {
         result = (left.transactionCount ?? 0) - (right.transactionCount ?? 0)
@@ -455,13 +425,6 @@ export function CustomCategoriesSection() {
   const selectedRows = categories.filter((category) =>
     selectedIds.has(category.id),
   )
-  const tableScrollMaxHeight = isMobile
-    ? selectedRows.length > 0
-      ? 'max(180px, calc(100dvh - 616px))'
-      : 'max(220px, calc(100dvh - 436px))'
-    : selectedRows.length > 0
-      ? 'calc(100vh - 470px)'
-      : 'calc(100vh - 400px)'
   const categoryLabelById = useMemo(
     () =>
       new Map(
@@ -472,31 +435,17 @@ export function CustomCategoriesSection() {
       ),
     [categories],
   )
-  const allSelectedRowsActive = selectedRows.every(
-    (category) => !category.archivedAt,
-  )
-  const canHide =
-    selectedRows.length > 0 &&
-    allSelectedRowsActive &&
-    selectedRows.some((category) => !category.isHidden)
-  const canShow =
-    selectedRows.length > 0 &&
-    allSelectedRowsActive &&
-    selectedRows.some((category) => category.isHidden)
   const canArchive =
     selectedRows.length > 0 &&
-    selectedRows.every(
-      (category) => category.source === 'user' && !category.archivedAt,
-    )
+    selectedRows.every((category) => !category.archivedAt)
   const canRestore =
     selectedRows.length > 0 &&
-    selectedRows.every(
-      (category) => category.source === 'user' && Boolean(category.archivedAt),
-    )
-  const canSetPrimary = canArchive && cleanCategoryLabel(bulkPrimary).length > 0
+    selectedRows.every((category) => Boolean(category.archivedAt))
+  const canDuplicate = canArchive
+  const categoryColumnSize = isMobile ? 168 : 320
+  const categoryColumnMinSize = isMobile ? 96 : 180
+  const categoryColumnMaxSize = isMobile ? 220 : undefined
   const hiddenActiveFilterCount = [
-    sourceFilter !== 'all' ? sourceFilter : null,
-    visibilityFilter !== 'all' ? visibilityFilter : null,
     archivedMode ? 'archived' : null,
     primaryFilter,
   ].filter(Boolean).length
@@ -514,8 +463,6 @@ export function CustomCategoriesSection() {
   }
 
   function clearFilters() {
-    setSourceFilter('all')
-    setVisibilityFilter('all')
     setArchivedMode(false)
     setPrimaryFilter(null)
   }
@@ -541,12 +488,12 @@ export function CustomCategoriesSection() {
     })
   }
 
-  function hideOrShow(ids: Array<string>, hidden: boolean) {
-    updateVisibility.mutate({ data: { categoryIds: ids, hidden } })
-  }
-
   function archiveOrRestore(ids: Array<string>, action: 'archive' | 'restore') {
     bulkUpdateCustom.mutate({ data: { categoryIds: ids, action } })
+  }
+
+  function duplicateCategories(ids: Array<string>) {
+    bulkUpdateCustom.mutate({ data: { categoryIds: ids, action: 'duplicate' } })
   }
 
   function restoreConflictCategory(categoryId: string) {
@@ -561,7 +508,7 @@ export function CustomCategoriesSection() {
     const conflict = getCategoryConflict(error)
     if (!conflict) return null
 
-    if (conflict.source === 'user' && conflict.archivedAt) {
+    if (conflict.archivedAt) {
       return (
         <Button
           size="xs"
@@ -574,24 +521,11 @@ export function CustomCategoriesSection() {
       )
     }
 
-    if (conflict.source === 'plaid' && conflict.isHidden) {
-      return (
-        <Button
-          size="xs"
-          variant="light"
-          onClick={() => hideOrShow([conflict.categoryId], false)}
-          mt="xs"
-        >
-          Show existing system category
-        </Button>
-      )
-    }
-
     return null
   }
 
   function renderManagementConflictAction(category: CategoryManagementItem) {
-    if (category.source === 'user' && category.archivedAt) {
+    if (category.archivedAt) {
       return (
         <Button
           size="xs"
@@ -600,19 +534,6 @@ export function CustomCategoriesSection() {
           mt="xs"
         >
           Restore existing category
-        </Button>
-      )
-    }
-
-    if (category.source !== 'user' && category.isHidden) {
-      return (
-        <Button
-          size="xs"
-          variant="light"
-          onClick={() => hideOrShow([category.id], false)}
-          mt="xs"
-        >
-          Show existing system category
         </Button>
       )
     }
@@ -633,7 +554,7 @@ export function CustomCategoriesSection() {
           {isNarrow && icon ? (
             <ActionIcon
               aria-label={label}
-              size={48}
+              size={40}
               variant="light"
               disabled={!enabled}
               onClick={onClick}
@@ -656,55 +577,26 @@ export function CustomCategoriesSection() {
     )
   }
 
-  const primaryFilterData = [
-    { value: '', label: 'All primary categories' },
-    ...primaryOptions.map((option) => ({ value: option, label: option })),
+  const primaryFilterData: Array<CategorySelectOption> = [
+    {
+      value: '',
+      primary: 'All primary categories',
+      secondary: 'Show every secondary category',
+    },
+    ...primaryOptions.map((option) => ({
+      value: option,
+      primary: option,
+      secondary: 'All secondary categories',
+    })),
   ]
   const filterPanel = (
     <Stack gap="md">
-      <Stack gap="xs">
-        <Text fw={600} size="sm">
-          Source
-        </Text>
-        <SegmentedControl
-          value={sourceFilter}
-          onChange={(value) => setSourceFilter(value as SourceFilter)}
-          data={[
-            { label: 'All', value: 'all' },
-            { label: 'System', value: 'system' },
-            { label: 'Custom', value: 'custom' },
-          ]}
-          disabled={archivedMode}
-          fullWidth
-          size={isMobile ? 'md' : 'sm'}
-        />
-      </Stack>
-
-      <Divider />
-
-      <Select
-        aria-label="Visibility"
-        label="Visibility"
-        value={visibilityFilter}
-        onChange={(value) =>
-          setVisibilityFilter((value as VisibilityFilter | null) ?? 'all')
-        }
-        data={[
-          { value: 'all', label: 'All visibility' },
-          { value: 'visible', label: 'Visible' },
-          { value: 'hidden', label: 'Hidden' },
-        ]}
-        disabled={archivedMode}
-        size="md"
-      />
-      <Select
+      <CategorySelect
         aria-label="Primary category"
         label="Primary category"
         value={primaryFilter}
         onChange={setPrimaryFilter}
         data={primaryFilterData}
-        clearable
-        searchable
         placeholder="Primary category"
         size="md"
       />
@@ -731,12 +623,12 @@ export function CustomCategoriesSection() {
   )
   const panelTitle =
     panel?.mode === 'create'
-      ? 'New custom category'
+      ? 'New category'
       : panel?.mode === 'edit-custom'
-        ? 'Edit custom category'
+        ? 'Edit category'
         : 'Category details'
   const panelBody = panel ? (
-    panel.mode === 'view-system' || panel.mode === 'view-archived' ? (
+    panel.mode === 'view-archived' ? (
       <Stack gap="sm">
         {panel.category && (
           <>
@@ -754,18 +646,26 @@ export function CustomCategoriesSection() {
       </Stack>
     ) : (
       <Stack gap="sm">
-        <TextInput
+        <Autocomplete
           label="Primary category"
           value={primary}
-          onChange={(event) => setPrimary(event.currentTarget.value)}
+          onChange={setPrimary}
+          data={primaryOptions}
           data-testid="custom-category-primary-input"
+          placeholder="Primary category"
+          clearable
+          clearButtonProps={{ 'aria-label': 'Clear primary category' }}
           size={isMobile ? 'md' : undefined}
         />
-        <TextInput
+        <Autocomplete
           label="Secondary category"
           value={detailed}
-          onChange={(event) => setDetailed(event.currentTarget.value)}
+          onChange={setDetailed}
+          data={detailedOptions}
           data-testid="custom-category-detailed-input"
+          placeholder="Secondary category"
+          clearable
+          clearButtonProps={{ 'aria-label': 'Clear secondary category' }}
           size={isMobile ? 'md' : undefined}
         />
         <Textarea
@@ -777,8 +677,7 @@ export function CustomCategoriesSection() {
         />
         {panel.mode === 'edit-custom' && (
           <Text size="xs" c="dimmed">
-            Renaming a custom category updates existing transactions that use
-            it.
+            Renaming a category updates existing transactions that use it.
           </Text>
         )}
         {formDuplicateConflict && (
@@ -825,7 +724,6 @@ export function CustomCategoriesSection() {
   ) : null
 
   function renderCategoryRowActions(category: CategoryManagementItem) {
-    const isCustom = category.source === 'user'
     const isArchived = Boolean(category.archivedAt)
 
     return (
@@ -841,52 +739,18 @@ export function CustomCategoriesSection() {
             variant="subtle"
             size={ACTION_ICON_SIZE}
             onClick={() =>
-              isCustom && !isArchived
+              !isArchived
                 ? openEditPanel(category)
                 : setPanel({
-                    mode: isArchived ? 'view-archived' : 'view-system',
+                    mode: 'view-archived',
                     category,
                   })
             }
           >
-            {isCustom && !isArchived ? (
-              <Pencil size={16} />
-            ) : (
-              <Info size={16} />
-            )}
+            {!isArchived ? <Pencil size={16} /> : <Info size={16} />}
           </ActionIcon>
         </Tooltip>
-        {!isArchived && (
-          <Tooltip
-            label={
-              category.isHidden ? 'Show in dropdowns' : 'Hide from dropdowns'
-            }
-          >
-            <ActionIcon
-              aria-label={
-                category.isHidden ? 'Show in dropdowns' : 'Hide from dropdowns'
-              }
-              variant="subtle"
-              size={ACTION_ICON_SIZE}
-              onClick={() => hideOrShow([category.id], !category.isHidden)}
-            >
-              {category.isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
-            </ActionIcon>
-          </Tooltip>
-        )}
-        {isCustom && !isArchived && (
-          <Tooltip label="Archive category">
-            <ActionIcon
-              aria-label="Archive category"
-              variant="subtle"
-              size={ACTION_ICON_SIZE}
-              onClick={() => archiveOrRestore([category.id], 'archive')}
-            >
-              <Archive size={16} />
-            </ActionIcon>
-          </Tooltip>
-        )}
-        {isCustom && isArchived && (
+        {isArchived && (
           <Tooltip label="Restore category">
             <ActionIcon
               aria-label="Restore category"
@@ -907,8 +771,9 @@ export function CustomCategoriesSection() {
       id: 'category',
       header: 'Category',
       accessorFn: getCategoryPairLabel,
-      size: 320,
-      minSize: 180,
+      size: categoryColumnSize,
+      minSize: categoryColumnMinSize,
+      maxSize: categoryColumnMaxSize,
       grow: true,
       Cell: ({ row }) => (
         <div style={categoryCellContentStyle}>
@@ -922,23 +787,14 @@ export function CustomCategoriesSection() {
       ),
     },
     {
-      id: 'source',
-      header: 'Source',
-      accessorFn: (category) =>
-        category.source === 'user' ? 'Custom' : 'System',
-      size: SOURCE_COLUMN_WIDTH,
-      minSize: SOURCE_COLUMN_WIDTH,
-      maxSize: SOURCE_COLUMN_WIDTH,
+      id: 'used',
+      header: 'Used',
+      accessorFn: (category) => category.transactionCount ?? 0,
+      size: USED_COLUMN_WIDTH,
+      minSize: USED_COLUMN_WIDTH,
+      maxSize: USED_COLUMN_WIDTH,
       grow: false,
-      Cell: ({ row }) => {
-        const isCustom = row.original.source === 'user'
-
-        return (
-          <Badge size="sm" color={isCustom ? 'violet' : 'blue'} variant="light">
-            {isCustom ? 'Custom' : 'System'}
-          </Badge>
-        )
-      },
+      Cell: ({ cell }) => cell.getValue<number>(),
     },
     {
       id: 'status',
@@ -948,24 +804,17 @@ export function CustomCategoriesSection() {
       minSize: STATUS_COLUMN_WIDTH,
       maxSize: STATUS_COLUMN_WIDTH,
       grow: false,
+      mantineTableBodyCellProps: {
+        style: tableClippedBodyCellStyle,
+      },
       Cell: ({ row }) => {
         const status = getStatus(row.original)
 
         return (
-          <Tooltip
-            label={
-              status === 'Hidden' ? 'Hidden from manual dropdowns' : status
-            }
-          >
+          <Tooltip label={status}>
             <Badge
               size="sm"
-              color={
-                status === 'Visible'
-                  ? 'green'
-                  : status === 'Hidden'
-                    ? 'gray'
-                    : 'orange'
-              }
+              color={status === 'Active' ? 'green' : 'orange'}
               variant="light"
             >
               {status}
@@ -973,16 +822,6 @@ export function CustomCategoriesSection() {
           </Tooltip>
         )
       },
-    },
-    {
-      id: 'used',
-      header: 'Used',
-      accessorFn: (category) => category.transactionCount ?? 0,
-      size: USED_COLUMN_WIDTH,
-      minSize: USED_COLUMN_WIDTH,
-      maxSize: USED_COLUMN_WIDTH,
-      grow: false,
-      Cell: ({ cell }) => cell.getValue<number>(),
     },
   ]
   const categoryTable = useMantineReactTable({
@@ -1029,7 +868,7 @@ export function CustomCategoriesSection() {
         enableResizing: false,
       },
       'mrt-row-actions': {
-        header: 'Actions',
+        header: '',
         size: ACTIONS_COLUMN_WIDTH,
         minSize: ACTIONS_COLUMN_WIDTH,
         maxSize: ACTIONS_COLUMN_WIDTH,
@@ -1064,12 +903,27 @@ export function CustomCategoriesSection() {
       className: tableChrome.table,
     },
     mantineTableContainerProps: {
-      style: { maxHeight: tableScrollMaxHeight, overflow: 'auto' },
+      style: {
+        flex: '1 1 0',
+        height: '100%',
+        maxHeight: '100%',
+        minHeight: 0,
+        overflow: 'auto',
+      },
     },
     mantinePaperProps: {
       withBorder: true,
       radius: 'md',
-      style: { flex: '1 1 0', minWidth: 0, overflow: 'hidden' },
+      style: {
+        display: 'flex',
+        flex: '1 1 0',
+        flexDirection: 'column',
+        height: '100%',
+        maxHeight: '100%',
+        minHeight: 0,
+        minWidth: 0,
+        overflow: 'hidden',
+      },
     },
     renderEmptyRowsFallback: () => (
       <Text c="dimmed" size="sm" ta="center" py="lg">
@@ -1079,25 +933,31 @@ export function CustomCategoriesSection() {
   })
 
   return (
-    <Stack gap="md" data-testid="custom-categories-section">
+    <Stack
+      gap="md"
+      data-testid="custom-categories-section"
+      style={{ flex: '1 1 auto', minHeight: 0 }}
+    >
       <Group justify="space-between" align="flex-end" gap="sm" wrap="wrap">
         <Box style={{ flex: '1 1 260px' }}>
           <Text fw={700} size="lg">
             Categories
           </Text>
           <Text size="sm" c="dimmed">
-            Manage system and custom categories used by transaction dropdowns.
+            Manage categories used by transaction dropdowns.
           </Text>
         </Box>
-        <Button
-          leftSection={<Plus size={16} />}
-          mih={isMobile ? 48 : undefined}
-          onClick={openCreatePanel}
-          size="md"
-          style={{ flex: isMobile ? '1 1 100%' : undefined }}
-        >
-          New category
-        </Button>
+        {selectedRows.length === 0 && (
+          <Button
+            leftSection={<Plus size={16} />}
+            mih={isMobile ? 48 : undefined}
+            onClick={openCreatePanel}
+            size="md"
+            style={{ flex: isMobile ? '1 1 100%' : undefined }}
+          >
+            New category
+          </Button>
+        )}
       </Group>
 
       <Group align="center" gap="xs" wrap={isMobile ? 'nowrap' : 'wrap'}>
@@ -1127,44 +987,16 @@ export function CustomCategoriesSection() {
           </Box>
         ) : (
           <>
-            <SegmentedControl
-              value={sourceFilter}
-              onChange={(value) => setSourceFilter(value as SourceFilter)}
-              data={[
-                { label: 'All', value: 'all' },
-                { label: 'System', value: 'system' },
-                { label: 'Custom', value: 'custom' },
-              ]}
-              disabled={archivedMode}
-              size="md"
-            />
-            <Select
-              aria-label="Visibility"
-              value={visibilityFilter}
-              onChange={(value) =>
-                setVisibilityFilter((value as VisibilityFilter | null) ?? 'all')
-              }
-              data={[
-                { value: 'all', label: 'All visibility' },
-                { value: 'visible', label: 'Visible' },
-                { value: 'hidden', label: 'Hidden' },
-              ]}
-              disabled={archivedMode}
-              size="md"
-              w={170}
-            />
             <Checkbox
               label="Archived"
               checked={archivedMode}
               onChange={(event) => setArchivedMode(event.currentTarget.checked)}
             />
-            <Select
+            <CategorySelect
               aria-label="Primary category"
               value={primaryFilter}
               onChange={setPrimaryFilter}
               data={primaryFilterData}
-              clearable
-              searchable
               placeholder="Primary category"
               size="md"
               w={220}
@@ -1185,9 +1017,9 @@ export function CustomCategoriesSection() {
       </Drawer>
 
       {selectedRows.length > 0 && (
-        <Paper withBorder p="sm" radius="md">
+        <Paper withBorder px="sm" py={6} radius="md">
           <Group
-            gap="xs"
+            gap={6}
             justify="space-between"
             wrap={isMobile ? 'wrap' : 'nowrap'}
           >
@@ -1195,83 +1027,47 @@ export function CustomCategoriesSection() {
               {selectedRows.length} selected
             </Text>
             <Group
-              gap="xs"
+              gap={6}
               wrap="wrap"
               justify={isMobile ? 'flex-start' : 'flex-end'}
             >
-              {renderBulkButton(
-                'Hide from dropdowns',
-                canHide,
-                'Select active visible categories to hide.',
-                () =>
-                  hideOrShow(
-                    selectedRows.map((category) => category.id),
-                    true,
-                  ),
-                <EyeOff size={14} />,
-              )}
-              {renderBulkButton(
-                'Show in dropdowns',
-                canShow,
-                'Select active hidden categories to show.',
-                () =>
-                  hideOrShow(
-                    selectedRows.map((category) => category.id),
-                    false,
-                  ),
-                <Eye size={14} />,
-              )}
-              {renderBulkButton(
-                'Archive custom',
-                canArchive,
-                'Select active custom categories only.',
-                () =>
-                  archiveOrRestore(
-                    selectedRows.map((category) => category.id),
-                    'archive',
-                  ),
-                <Archive size={14} />,
-              )}
-              {renderBulkButton(
-                'Restore custom',
-                canRestore,
-                'Select archived custom categories only.',
-                () =>
-                  archiveOrRestore(
-                    selectedRows.map((category) => category.id),
-                    'restore',
-                  ),
-                <RotateCcw size={14} />,
-              )}
+              {canArchive &&
+                renderBulkButton(
+                  'Archive',
+                  true,
+                  'Select active categories.',
+                  () =>
+                    archiveOrRestore(
+                      selectedRows.map((category) => category.id),
+                      'archive',
+                    ),
+                  <Archive size={14} />,
+                )}
+              {canRestore &&
+                renderBulkButton(
+                  'Restore',
+                  true,
+                  'Select archived categories.',
+                  () =>
+                    archiveOrRestore(
+                      selectedRows.map((category) => category.id),
+                      'restore',
+                    ),
+                  <RotateCcw size={14} />,
+                )}
               {!archivedMode && (
-                <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
-                  <TextInput
-                    aria-label="Bulk primary category"
-                    placeholder="New primary"
-                    value={bulkPrimary}
-                    onChange={(event) =>
-                      setBulkPrimary(event.currentTarget.value)
-                    }
-                    size={isMobile ? 'sm' : 'xs'}
-                    w={isMobile ? 160 : 180}
-                  />
+                <>
                   {renderBulkButton(
-                    'Set primary',
-                    canSetPrimary,
-                    'Select active custom categories and enter a primary.',
+                    'Duplicate',
+                    canDuplicate,
+                    'Select active categories.',
                     () =>
-                      bulkUpdateCustom.mutate({
-                        data: {
-                          categoryIds: selectedRows.map(
-                            (category) => category.id,
-                          ),
-                          action: 'setPrimary',
-                          primary: bulkPrimary,
-                        },
-                      }),
-                    <Save size={14} />,
+                      duplicateCategories(
+                        selectedRows.map((category) => category.id),
+                      ),
+                    <Copy size={14} />,
                   )}
-                </Group>
+                </>
               )}
             </Group>
           </Group>
@@ -1308,7 +1104,17 @@ export function CustomCategoriesSection() {
       )}
 
       {!isLoading && !isError && (
-        <Group align="stretch" gap="md" wrap={isMobile ? 'wrap' : 'nowrap'}>
+        <Group
+          align="stretch"
+          gap="md"
+          wrap="nowrap"
+          style={{
+            flex: '1 1 auto',
+            minHeight: 0,
+            overflow: 'hidden',
+            width: '100%',
+          }}
+        >
           <MantineReactTable table={categoryTable} />
 
           {!isMobile && panel && (

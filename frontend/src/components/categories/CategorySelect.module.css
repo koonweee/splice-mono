@@ -1,0 +1,18 @@
+.option {
+  min-width: 0;
+}
+
+.label,
+.meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.meta {
+  color: var(--mantine-color-dimmed);
+}

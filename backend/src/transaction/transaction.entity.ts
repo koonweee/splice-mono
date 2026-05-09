@@ -10,11 +10,8 @@ import { AccountEntity } from '../account/account.entity';
 import { CategoryEntity } from '../category/category.entity';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedEntity } from '../common/owned.entity';
-import {
-  CreateTransactionDto,
-  Transaction,
-  TransactionCategoryReviewMethod,
-} from '../types/Transaction';
+import { formatProviderCategoryDisplayLabel } from '../category/category-normalization';
+import { CreateTransactionDto, Transaction } from '../types/Transaction';
 import { getTransactionActivityDate } from './transaction-date';
 
 @Entity()
@@ -92,6 +89,18 @@ export class TransactionEntity extends OwnedEntity {
   @Column({ type: 'varchar', nullable: true })
   personalFinanceCategoryConfidenceLevel: string | null;
 
+  /** Provider that supplied the raw category hint */
+  @Column({ type: 'varchar', nullable: true })
+  providerCategoryProvider: 'plaid' | null;
+
+  /** Raw provider primary category code */
+  @Column({ type: 'varchar', nullable: true })
+  providerCategoryPrimary: string | null;
+
+  /** Raw provider detailed category code */
+  @Column({ type: 'varchar', nullable: true })
+  providerCategoryDetailed: string | null;
+
   /** Provider-extracted counterparties for this transaction */
   @Column({ type: 'jsonb', nullable: true })
   counterparties: Array<Record<string, unknown>> | null;
@@ -133,26 +142,9 @@ export class TransactionEntity extends OwnedEntity {
   @JoinColumn({ name: 'categoryId' })
   category: CategoryEntity | null;
 
-  /** User-selected category override ID */
-  @Column({ type: 'uuid', nullable: true })
-  userCategoryId: string | null;
-
-  /** User-selected category override */
-  @ManyToOne(() => CategoryEntity, { nullable: true })
-  @JoinColumn({ name: 'userCategoryId' })
-  userCategory: CategoryEntity | null;
-
-  /** When the user-selected category override was last updated */
+  /** When the user-selected category was last updated */
   @Column({ type: 'timestamptz', nullable: true })
-  userCategoryUpdatedAt: Date | null;
-
-  /** When the category was reviewed by the user */
-  @Column({ type: 'timestamptz', nullable: true })
-  categoryReviewedAt: Date | null;
-
-  /** How the category review was completed */
-  @Column({ type: 'varchar', nullable: true })
-  categoryReviewMethod: TransactionCategoryReviewMethod | null;
+  categoryUpdatedAt: Date | null;
 
   /**
    * Create entity from DTO
@@ -178,6 +170,7 @@ export class TransactionEntity extends OwnedEntity {
       dto.personalFinanceCategoryIconUrl ?? null;
     entity.personalFinanceCategoryConfidenceLevel =
       dto.personalFinanceCategoryConfidenceLevel ?? null;
+    entity.applyProviderCategoryHint(dto);
     entity.counterparties = dto.counterparties ?? null;
     entity.location = dto.location ?? null;
     entity.paymentMeta = dto.paymentMeta ?? null;
@@ -187,12 +180,18 @@ export class TransactionEntity extends OwnedEntity {
     entity.authorizedDatetime = dto.authorizedDatetime ?? null;
     entity.reportingDateOverride = dto.reportingDateOverride ?? null;
     entity.categoryId = dto.categoryId ?? null;
-    entity.userCategoryId = null;
-    entity.userCategory = null;
-    entity.userCategoryUpdatedAt = null;
-    entity.categoryReviewedAt = null;
-    entity.categoryReviewMethod = null;
+    entity.categoryUpdatedAt = null;
     return entity;
+  }
+
+  applyProviderCategoryHint(
+    dto: Pick<CreateTransactionDto, 'personalFinanceCategory'>,
+  ): void {
+    const hint = dto.personalFinanceCategory;
+    const hasHint = Boolean(hint?.primary || hint?.detailed);
+    this.providerCategoryProvider = hasHint ? 'plaid' : null;
+    this.providerCategoryPrimary = hint?.primary ?? null;
+    this.providerCategoryDetailed = hint?.detailed ?? null;
   }
 
   /**
@@ -200,10 +199,19 @@ export class TransactionEntity extends OwnedEntity {
    */
   toObject(): Transaction {
     const category = this.category ? this.category.toObject() : null;
-    const userCategory = this.userCategory
-      ? this.userCategory.toObject()
+    const providerCategoryHint = this.providerCategoryProvider
+      ? {
+          provider: this.providerCategoryProvider,
+          primary: this.providerCategoryPrimary,
+          detailed: this.providerCategoryDetailed,
+          displayLabel: formatProviderCategoryDisplayLabel(
+            this.providerCategoryPrimary,
+            this.providerCategoryDetailed,
+          ),
+          confidenceLevel: this.personalFinanceCategoryConfidenceLevel,
+          iconUrl: this.personalFinanceCategoryIconUrl,
+        }
       : null;
-    const effectiveCategory = userCategory ?? category;
 
     return {
       id: this.id,
@@ -222,9 +230,6 @@ export class TransactionEntity extends OwnedEntity {
       merchantEntityId: this.merchantEntityId,
       paymentChannel: this.paymentChannel,
       transactionCode: this.transactionCode,
-      personalFinanceCategoryIconUrl: this.personalFinanceCategoryIconUrl,
-      personalFinanceCategoryConfidenceLevel:
-        this.personalFinanceCategoryConfidenceLevel,
       counterparties: this.counterparties,
       location: this.location,
       paymentMeta: this.paymentMeta,
@@ -236,14 +241,8 @@ export class TransactionEntity extends OwnedEntity {
       authorizedDatetime: this.authorizedDatetime,
       categoryId: this.categoryId,
       category,
-      userCategoryId: this.userCategoryId,
-      userCategory,
-      userCategoryUpdatedAt: this.userCategoryUpdatedAt,
-      effectiveCategoryId: this.userCategoryId ?? this.categoryId,
-      effectiveCategory,
-      categoryReviewedAt: this.categoryReviewedAt ?? null,
-      categoryReviewMethod: this.categoryReviewMethod ?? null,
-      categoryNeedsReview: (this.categoryReviewedAt ?? null) === null,
+      categoryUpdatedAt: this.categoryUpdatedAt,
+      providerCategoryHint,
       accountName: this.account
         ? (this.account.customName ?? this.account.name)
         : null,

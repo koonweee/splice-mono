@@ -13,7 +13,6 @@ export type BulkCategoryActionResponseSkippedItemReason =
 export const BulkCategoryActionResponseSkippedItemReason = {
   not_found: 'not_found',
   not_owned: 'not_owned',
-  system_category: 'system_category',
   archived: 'archived',
   duplicate_conflict: 'duplicate_conflict',
 } as const

@@ -10,9 +10,7 @@ import type { TransactionCounterpartiesItem } from './transactionCounterpartiesI
 import type { TransactionLocation } from './transactionLocation'
 import type { TransactionPaymentMeta } from './transactionPaymentMeta'
 import type { TransactionCategory } from './transactionCategory'
-import type { TransactionUserCategory } from './transactionUserCategory'
-import type { TransactionEffectiveCategory } from './transactionEffectiveCategory'
-import type { TransactionCategoryReviewMethodProperty } from './transactionCategoryReviewMethodProperty'
+import type { TransactionProviderCategoryHint } from './transactionProviderCategoryHint'
 import type { TransactionConvertedAmount } from './transactionConvertedAmount'
 
 export interface Transaction {
@@ -43,10 +41,6 @@ export interface Transaction {
   /** @nullable */
   transactionCode: string | null
   /** @nullable */
-  personalFinanceCategoryIconUrl: string | null
-  /** @nullable */
-  personalFinanceCategoryConfidenceLevel: string | null
-  /** @nullable */
   counterparties: TransactionCounterpartiesItem[] | null
   /** @nullable */
   location: TransactionLocation
@@ -66,17 +60,8 @@ export interface Transaction {
   categoryId: string | null
   category?: TransactionCategory
   /** @nullable */
-  userCategoryId: string | null
-  userCategory?: TransactionUserCategory
-  /** @nullable */
-  userCategoryUpdatedAt: string | null
-  /** @nullable */
-  effectiveCategoryId: string | null
-  effectiveCategory?: TransactionEffectiveCategory
-  /** @nullable */
-  categoryReviewedAt: string | null
-  categoryReviewMethod: TransactionCategoryReviewMethodProperty
-  categoryNeedsReview: boolean
+  categoryUpdatedAt: string | null
+  providerCategoryHint: TransactionProviderCategoryHint
   /** @nullable */
   accountName?: string | null
   convertedAmount?: TransactionConvertedAmount

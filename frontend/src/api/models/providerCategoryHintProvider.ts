@@ -6,11 +6,10 @@
  * OpenAPI spec version: 1.0
  */
 
-export type CategorySource =
-  (typeof CategorySource)[keyof typeof CategorySource]
+export type ProviderCategoryHintProvider =
+  (typeof ProviderCategoryHintProvider)[keyof typeof ProviderCategoryHintProvider]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CategorySource = {
+export const ProviderCategoryHintProvider = {
   plaid: 'plaid',
-  user: 'user',
 } as const

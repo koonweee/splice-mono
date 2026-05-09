@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, Repository, SelectQueryBuilder } from 'typeorm';
+import { Brackets, IsNull, Repository, SelectQueryBuilder } from 'typeorm';
 import {
   formatAccountLabel,
   getAccountGrouping,
@@ -89,6 +89,14 @@ export interface McpTransaction {
   categoryPrimaryLabel: string;
   categoryDetailed: string | null;
   categoryDetailedLabel: string | null;
+  providerCategoryHint: {
+    provider: 'plaid';
+    primary: string | null;
+    detailed: string | null;
+    displayLabel: string | null;
+    confidenceLevel: string | null;
+    iconUrl: string | null;
+  } | null;
   amount: McpMoney;
   convertedAmount: McpMoney;
 }
@@ -460,6 +468,7 @@ export class McpReadService {
     options: McpListCategoriesOptions,
   ): Promise<McpListCategoriesResult> {
     const categories = await this.categoryRepository.find({
+      where: { userId, archivedAt: IsNull() },
       order: { primary: 'ASC', detailed: 'ASC' },
     });
     const counts = await this.getCategoryCounts(userId, options);
@@ -510,7 +519,6 @@ export class McpReadService {
       .leftJoinAndSelect('transaction.account', 'account')
       .leftJoinAndSelect('account.bankLink', 'bankLink')
       .leftJoinAndSelect('transaction.category', 'category')
-      .leftJoinAndSelect('transaction.userCategory', 'userCategory')
       .addSelect(TRANSACTION_ACTIVITY_DATE_EXPRESSION, ACTIVITY_DATE_SORT_ALIAS)
       .where('transaction.userId = :userId', { userId })
       .orderBy(ACTIVITY_DATE_SORT_ALIAS, 'DESC')
@@ -536,16 +544,11 @@ export class McpReadService {
     }
     if (options.categoryPrimary) {
       if (options.categoryPrimary === 'UNCATEGORIZED') {
-        query.andWhere(
-          'COALESCE(transaction.userCategoryId, transaction.categoryId) IS NULL',
-        );
+        query.andWhere('transaction.categoryId IS NULL');
       } else {
-        query.andWhere(
-          'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
-          {
-            categoryPrimary: options.categoryPrimary,
-          },
-        );
+        query.andWhere('category.primary = :categoryPrimary', {
+          categoryPrimary: options.categoryPrimary,
+        });
       }
     }
     const merchantQuery = options.merchantQuery?.trim();
@@ -590,7 +593,8 @@ export class McpReadService {
     conversionRates: Map<string, McpConversionRate>,
   ): Promise<McpTransaction> {
     const nativeAmount = transaction.amount.toMoneyWithSign();
-    const effectiveCategory = transaction.userCategory ?? transaction.category;
+    const category = transaction.category;
+    const providerCategoryHint = transaction.toObject().providerCategoryHint;
     const rate = await this.getRate(
       nativeAmount.money.currency,
       reportingCurrency,
@@ -618,14 +622,13 @@ export class McpReadService {
       providerDate: transaction.providerDate,
       providerDatetime: transaction.providerDatetime,
       authorizedDate: transaction.authorizedDate,
-      categoryPrimary: effectiveCategory?.primary ?? null,
-      categoryPrimaryLabel: formatCategoryLabel(
-        effectiveCategory?.primary ?? null,
-      ),
-      categoryDetailed: effectiveCategory?.detailed ?? null,
-      categoryDetailedLabel: effectiveCategory?.detailed
-        ? formatCategoryLabel(effectiveCategory.detailed)
+      categoryPrimary: category?.primary ?? null,
+      categoryPrimaryLabel: formatCategoryLabel(category?.primary ?? null),
+      categoryDetailed: category?.detailed ?? null,
+      categoryDetailedLabel: category?.detailed
+        ? formatCategoryLabel(category.detailed)
         : null,
+      providerCategoryHint,
       amount: toMcpMoney(nativeAmount),
       convertedAmount: toMcpMoney(convertedAmount),
     };
@@ -721,17 +724,11 @@ export class McpReadService {
     const query = this.transactionRepository
       .createQueryBuilder('transaction')
       .leftJoin('transaction.category', 'category')
-      .leftJoin('transaction.userCategory', 'userCategory')
-      .select(
-        'COALESCE(userCategory.primary, category.primary, :uncategorized)',
-        'primary',
-      )
+      .select('COALESCE(category.primary, :uncategorized)', 'primary')
       .addSelect('COUNT(transaction.id)', 'count')
       .where('transaction.userId = :userId', { userId })
       .setParameter('uncategorized', 'UNCATEGORIZED')
-      .groupBy(
-        'COALESCE(userCategory.primary, category.primary, :uncategorized)',
-      );
+      .groupBy('COALESCE(category.primary, :uncategorized)');
 
     if (options.startDate) {
       query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} >= :startDate`, {

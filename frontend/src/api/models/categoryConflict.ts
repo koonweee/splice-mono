@@ -5,15 +5,12 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { CategoryConflictSource } from './categoryConflictSource'
 
 export interface CategoryConflict {
   categoryId: string
   label: string
   primary: string
   detailed: string
-  source: CategoryConflictSource
   /** @nullable */
   archivedAt?: string | null
-  isHidden?: boolean
 }

@@ -71,9 +71,9 @@ function AuthedLayout() {
 
   const navItems = [
     { to: '/home', label: 'Home', icon: Home },
-    { to: '/accounts', label: 'Accounts', icon: CreditCard },
     { to: '/transactions', label: 'Transactions', icon: TrendingUp },
     { to: '/analysis', label: 'Analysis', icon: PieChart },
+    { to: '/accounts', label: 'Accounts', icon: CreditCard },
     { to: '/settings', label: 'Settings', icon: Settings },
   ]
 

@@ -1,3 +1,35 @@
+.settingsPage {
+  display: flex;
+  height: calc(
+    100dvh - var(--app-shell-header-offset, 0rem) -
+      (var(--app-shell-padding) * 2)
+  );
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.settingsTabs {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.settingsPanel {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.categoriesPanel {
+  overflow: hidden;
+  padding-bottom: 1px;
+}
+
 .themePresetOption {
   width: 100%;
   min-height: 96px;

@@ -1,8 +1,20 @@
 import dayjs from 'dayjs'
 import type { Transaction } from '@/api/models'
-import { formatCategoryName, formatPrimaryCategory } from '@/lib/format'
 
 const HIGH_CONFIDENCE = new Set(['VERY_HIGH', 'HIGH'])
+
+export type ProviderCategoryHint = {
+  provider?: string | null
+  primary?: string | null
+  detailed?: string | null
+  displayLabel?: string | null
+  confidenceLevel?: string | null
+  iconUrl?: string | null
+}
+
+type TransactionWithProviderCategoryHint = Transaction & {
+  providerCategoryHint?: ProviderCategoryHint | null
+}
 
 export type TransactionCounterpartyView = {
   name: string
@@ -47,6 +59,15 @@ function normalizeText(value: string | null | undefined): string | null {
   return normalized && normalized.length > 0 ? normalized : null
 }
 
+export function getProviderCategoryHint(
+  transaction: Transaction,
+): ProviderCategoryHint | null {
+  return (
+    (transaction as TransactionWithProviderCategoryHint).providerCategoryHint ??
+    null
+  )
+}
+
 function canonicalize(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '')
 }
@@ -66,9 +87,7 @@ function formatCounterpartyType(type: string | null): string {
 }
 
 function isMidnightUtc(datetime: string): boolean {
-  return /(?:T|\s)00:00:00(?:\.0+)?(?:Z|\+00(?::?00)?)$/.test(
-    datetime.trim(),
-  )
+  return /(?:T|\s)00:00:00(?:\.0+)?(?:Z|\+00(?::?00)?)$/.test(datetime.trim())
 }
 
 function formatDateOnly(date: string): string {
@@ -144,7 +163,9 @@ export function getMerchantDisplay(transaction: Transaction): MerchantDisplay {
       : baseMerchant
 
   const originalDescription = normalizeText(transaction.originalDescription)
-  const providerTransactionName = normalizeText(transaction.providerTransactionName)
+  const providerTransactionName = normalizeText(
+    transaction.providerTransactionName,
+  )
   let secondary: string | null = null
 
   if (
@@ -168,18 +189,18 @@ export function getMerchantDisplay(transaction: Transaction): MerchantDisplay {
 
   const hasAdditionalInfo = Boolean(
     secondary ||
-      transaction.website ||
-      transaction.logoUrl ||
-      transaction.merchantEntityId ||
-      transaction.paymentChannel ||
-      transaction.personalFinanceCategoryIconUrl ||
-      transaction.pendingTransactionId ||
-      transaction.accountOwner ||
-      transaction.authorizedDate ||
-      transaction.authorizedDatetime ||
-      counterparties.length > 0 ||
-      transaction.paymentMeta ||
-      transaction.location,
+    transaction.website ||
+    transaction.logoUrl ||
+    transaction.merchantEntityId ||
+    transaction.paymentChannel ||
+    getProviderCategoryHint(transaction)?.iconUrl ||
+    transaction.pendingTransactionId ||
+    transaction.accountOwner ||
+    transaction.authorizedDate ||
+    transaction.authorizedDatetime ||
+    counterparties.length > 0 ||
+    transaction.paymentMeta ||
+    transaction.location,
   )
 
   return {
@@ -192,7 +213,7 @@ export function getMerchantDisplay(transaction: Transaction): MerchantDisplay {
 }
 
 export function getCategoryConfidence(transaction: Transaction): string | null {
-  return normalizeText(transaction.personalFinanceCategoryConfidenceLevel)
+  return normalizeText(getProviderCategoryHint(transaction)?.confidenceLevel)
 }
 
 export function getMetadataDetails(
@@ -200,8 +221,8 @@ export function getMetadataDetails(
 ): TransactionMetadataDetails {
   const merchantDisplay = getMerchantDisplay(transaction)
   const counterparties = getTransactionCounterparties(transaction)
+  const providerCategoryHint = getProviderCategoryHint(transaction)
   const categoryConfidence = getCategoryConfidence(transaction)
-  const effectiveCategory = transaction.effectiveCategory ?? null
   const paymentProcessor =
     transaction.paymentMeta && 'payment_processor' in transaction.paymentMeta
       ? normalizeText(String(transaction.paymentMeta.payment_processor ?? ''))
@@ -212,12 +233,8 @@ export function getMetadataDetails(
     merchantDisplay,
     counterparties,
     categoryConfidence,
-    categoryLabel: effectiveCategory ? formatCategoryName(effectiveCategory) : null,
-    categoryPrimaryLabel: effectiveCategory
-      ? effectiveCategory.source === 'user'
-        ? effectiveCategory.primary
-        : formatPrimaryCategory(effectiveCategory.primary)
-      : null,
+    categoryLabel: normalizeText(providerCategoryHint?.displayLabel),
+    categoryPrimaryLabel: null,
     authorizedAt,
     paymentProcessor,
     hasLowCategoryConfidence: categoryConfidence === 'LOW',

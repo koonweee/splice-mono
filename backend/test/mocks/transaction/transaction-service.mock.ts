@@ -18,19 +18,10 @@ export const mockTransactionService = {
     ],
     transactionCount: 2,
     pendingCount: 1,
-    needsReviewCount: 2,
+    uncategorizedCount: 1,
   }),
   update: jest.fn().mockResolvedValue(mockTransaction),
   updateCategory: jest.fn().mockResolvedValue(mockTransaction),
-  updateCategoryReview: jest.fn().mockResolvedValue(mockTransaction),
-  bulkReviewCategories: jest.fn().mockResolvedValue({
-    count: 1,
-    transactionIds: [mockTransaction.id],
-  }),
-  undoBulkReviewCategories: jest.fn().mockResolvedValue({
-    count: 1,
-    transactionIds: [mockTransaction.id],
-  }),
   bulkUpdateCategories: jest.fn().mockResolvedValue({
     count: 1,
     transactionIds: [mockTransaction.id],

@@ -1,7 +1,7 @@
+import { CategoryEntity } from '../../src/category/category.entity';
 import { McpReadService } from '../../src/mcp/mcp-read.service';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { MoneySign } from '../../src/types/MoneyWithSign';
-import { CategoryEntity } from '../../src/category/category.entity';
 
 describe('McpReadService', () => {
   const queryBuilder = {
@@ -38,9 +38,9 @@ describe('McpReadService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     queryBuilder.getMany.mockResolvedValue([
-      buildTransactionWithOverride({
-        providerPrimary: 'FOOD_AND_DRINK',
-        userPrimary: 'GENERAL_MERCHANDISE',
+      buildTransaction({
+        categoryPrimary: 'GENERAL_MERCHANDISE',
+        categoryDetailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
       }),
     ]);
     service = new McpReadService(
@@ -51,7 +51,7 @@ describe('McpReadService', () => {
     );
   });
 
-  it('lists and filters transactions by effective category override', async () => {
+  it('lists and filters transactions by user category only', async () => {
     const result = await service.listTransactions('user-1', {
       reportingCurrency: 'USD',
       categoryPrimary: 'GENERAL_MERCHANDISE',
@@ -59,11 +59,11 @@ describe('McpReadService', () => {
     });
 
     expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
-      'transaction.userCategory',
-      'userCategory',
+      'transaction.category',
+      'category',
     );
     expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
+      'category.primary = :categoryPrimary',
       { categoryPrimary: 'GENERAL_MERCHANDISE' },
     );
     expect(result.data[0]).toMatchObject({
@@ -75,12 +75,27 @@ describe('McpReadService', () => {
     });
   });
 
-  it('returns activityDate from reportingDateOverride when present', async () => {
+  it('filters uncategorized transactions by null categoryId', async () => {
+    queryBuilder.getMany.mockResolvedValue([]);
+
+    await service.listTransactions('user-1', {
+      reportingCurrency: 'USD',
+      categoryPrimary: 'UNCATEGORIZED',
+      pageSize: 1,
+    });
+
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'transaction.categoryId IS NULL',
+    );
+  });
+
+  it('exposes provider category hint as guidance', async () => {
     queryBuilder.getMany.mockResolvedValue([
-      buildTransactionWithOverride({
-        providerPrimary: 'INCOME',
-        userPrimary: 'INCOME',
-        reportingDateOverride: '2026-03-01',
+      buildTransaction({
+        categoryPrimary: null,
+        categoryDetailed: null,
+        providerPrimary: 'FOOD_AND_DRINK',
+        providerDetailed: 'FOOD_AND_DRINK_RESTAURANT',
       }),
     ]);
 
@@ -89,37 +104,21 @@ describe('McpReadService', () => {
       pageSize: 1,
     });
 
-    expect(result.data[0]).toMatchObject({
-      activityDate: '2026-03-01',
-      reportingDateOverride: '2026-03-01',
-      providerDate: '2026-02-14',
+    expect(result.data[0].categoryPrimary).toBeNull();
+    expect(result.data[0].providerCategoryHint).toMatchObject({
+      provider: 'plaid',
+      primary: 'FOOD_AND_DRINK',
+      detailed: 'FOOD_AND_DRINK_RESTAURANT',
+      displayLabel: 'Food And Drink > Restaurant',
     });
-  });
-
-  it('accepts legacy transaction cursors encoded with date', async () => {
-    queryBuilder.getMany.mockResolvedValue([]);
-    const cursor = Buffer.from(
-      JSON.stringify({ date: '2026-02-14', id: 'txn-1' }),
-      'utf8',
-    ).toString('base64url');
-
-    await expect(
-      service.listTransactions('user-1', {
-        reportingCurrency: 'USD',
-        cursor,
-      }),
-    ).resolves.toMatchObject({
-      data: [],
-    });
-
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith(expect.anything());
   });
 });
 
-function buildTransactionWithOverride(params: {
-  providerPrimary: string;
-  userPrimary: string;
-  reportingDateOverride?: string | null;
+function buildTransaction(params: {
+  categoryPrimary: string | null;
+  categoryDetailed: string | null;
+  providerPrimary?: string | null;
+  providerDetailed?: string | null;
 }): TransactionEntity {
   const transaction = TransactionEntity.fromDto(
     {
@@ -131,6 +130,13 @@ function buildTransactionWithOverride(params: {
       merchantName: 'Store',
       pending: false,
       providerDate: '2026-02-14',
+      personalFinanceCategory:
+        params.providerPrimary || params.providerDetailed
+          ? {
+              primary: params.providerPrimary ?? null,
+              detailed: params.providerDetailed ?? null,
+            }
+          : undefined,
     },
     'user-1',
   );
@@ -139,20 +145,16 @@ function buildTransactionWithOverride(params: {
     name: 'Checking',
     customName: null,
   } as TransactionEntity['account'];
-  transaction.category = buildCategory(
-    'provider-category-id',
-    params.providerPrimary,
-    `${params.providerPrimary}_DETAIL`,
-  );
-  transaction.userCategory = buildCategory(
-    'user-category-id',
-    params.userPrimary,
-    `${params.userPrimary}_OTHER_GENERAL_MERCHANDISE`,
-  );
-  transaction.categoryId = transaction.category.id;
-  transaction.userCategoryId = transaction.userCategory.id;
-  transaction.userCategoryUpdatedAt = new Date('2026-02-14T00:00:00Z');
-  transaction.reportingDateOverride = params.reportingDateOverride ?? null;
+  transaction.category =
+    params.categoryPrimary && params.categoryDetailed
+      ? buildCategory(
+          'category-id',
+          params.categoryPrimary,
+          params.categoryDetailed,
+        )
+      : null;
+  transaction.categoryId = transaction.category?.id ?? null;
+  transaction.reportingDateOverride = null;
 
   return transaction;
 }
@@ -169,12 +171,14 @@ function buildCategory(
     description: `${primary} category`,
     createdAt: new Date('2026-02-14T00:00:00Z'),
     updatedAt: new Date('2026-02-14T00:00:00Z'),
+    archivedAt: null,
     toObject() {
       return {
         id,
         primary,
         detailed,
         description: `${primary} category`,
+        archivedAt: null,
         createdAt: this.createdAt,
         updatedAt: this.updatedAt,
       };

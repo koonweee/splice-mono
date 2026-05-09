@@ -71,7 +71,7 @@
 .rowMain {
   display: flex;
   min-width: 0;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
 }
 
