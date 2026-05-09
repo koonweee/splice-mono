@@ -10,7 +10,7 @@ export function formatCategoryPair(primary: string, detailed: string): string {
   return `${primary} > ${detailed}`;
 }
 
-function formatPlaidLabel(value: string): string {
+export function formatProviderCategoryLabel(value: string): string {
   return value
     .toLowerCase()
     .split('_')
@@ -18,34 +18,26 @@ function formatPlaidLabel(value: string): string {
     .join(' ');
 }
 
-export function formatCategoryDisplayPair(
-  source: 'plaid' | 'user',
-  primary: string,
-  detailed: string,
-): string {
-  if (source === 'user') {
-    return formatCategoryPair(primary, detailed);
+export function formatProviderCategoryDisplayLabel(
+  primary: string | null,
+  detailed: string | null,
+): string | null {
+  if (!primary && !detailed) {
+    return null;
   }
-
+  if (!primary) {
+    return detailed ? formatProviderCategoryLabel(detailed) : null;
+  }
+  if (!detailed) {
+    return formatProviderCategoryLabel(primary);
+  }
   const prefix = `${primary}_`;
   const displayDetailed = detailed.startsWith(prefix)
     ? detailed.slice(prefix.length)
     : detailed;
 
   return formatCategoryPair(
-    formatPlaidLabel(primary),
-    formatPlaidLabel(displayDetailed),
+    formatProviderCategoryLabel(primary),
+    formatProviderCategoryLabel(displayDetailed),
   );
-}
-
-export function normalizePlaidDetailedKey(
-  primary: string,
-  detailed: string,
-): string {
-  const prefix = `${primary}_`;
-  const displayDetailed = detailed.startsWith(prefix)
-    ? detailed.slice(prefix.length)
-    : detailed;
-
-  return normalizeCategoryKey(displayDetailed);
 }

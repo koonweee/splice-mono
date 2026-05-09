@@ -13,7 +13,6 @@ import {
   Stack,
   Switch,
   Text,
-  Title,
 } from '@mantine/core'
 import { useClickOutside, useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
@@ -28,32 +27,31 @@ import {
   useAccountControllerFindAll,
   useCategoryControllerFindAll,
   useCategoryControllerFindFilterOptions,
-  useTransactionControllerBulkReviewCategories,
   useTransactionControllerBulkUpdateCategories,
   useTransactionControllerGetSummary,
-  useTransactionControllerUndoBulkReviewCategories,
   useTransactionControllerUndoBulkUpdateCategories,
 } from '../../api/clients/spliceAPI'
-import { formatCategoryName, formatPrimaryCategory } from '../../lib/format'
+import { formatPrimaryCategory } from '../../lib/format'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import type {
-  BulkTransactionCategoryReviewDto,
   Category,
   TransactionControllerFindAllParams,
   TransactionControllerGetSummaryParams,
 } from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
 import type { MRT_SortingState } from 'mantine-react-table'
+import type { CategorySelectOption } from '@/components/categories/CategorySelect'
 import { DateRangeControl } from '@/components/DateRangeControl'
 import { TransactionsTable } from '@/components/TransactionsTable'
+import { CategorySelect } from '@/components/categories/CategorySelect'
 import { TransactionBulkEditToolbar } from '@/components/transactions/TransactionBulkEditToolbar'
 import { TransactionSummaryStrip } from '@/components/transactions/TransactionSummaryStrip'
 import { TransactionsMobileList } from '@/components/transactions/TransactionsMobileList'
+import { PageHeader } from '@/components/PageHeader'
 
 const PAGE_SIZE = 50
-const PROVIDER_CATEGORY_VALUE = '__provider_category__'
-
-type CategoryReviewFilter = 'all' | 'needs_review' | 'reviewed'
+const CLEAR_CATEGORY_VALUE = '__clear_category__'
+const UNCATEGORIZED_CATEGORY_VALUE = 'UNCATEGORIZED'
 
 type TransactionsSearch = {
   accountId?: string
@@ -65,15 +63,13 @@ type TransactionFiltersPanelProps = {
   accountId: string | null
   accountOptions: Array<{ value: string; label: string }>
   amountSign: string
-  categoryOptions: Array<{ value: string; label: string }>
-  categoryPrimary: string | null
-  categoryReviewStatus: CategoryReviewFilter
+  categoryId: string | null
+  categoryOptions: Array<CategorySelectOption>
   hasActiveFilters: boolean
   isMobile: boolean
   onAccountChange: (value: string | null) => void
   onAmountSignChange: (value: string) => void
   onCategoryChange: (value: string | null) => void
-  onCategoryReviewStatusChange: (value: CategoryReviewFilter) => void
   onClearFilters: () => void
 }
 
@@ -83,44 +79,40 @@ const amountSignOptions = [
   { label: 'Outflows', value: 'negative' },
 ]
 
-const categoryReviewOptions = [
-  { label: 'All', value: 'all' },
-  { label: 'Needs review', value: 'needs_review' },
-  { label: 'Reviewed', value: 'reviewed' },
-]
-
 const isValidDateString = (value: unknown): value is string =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 
-function getPrimaryCategoryLabel(
-  category: Pick<Category, 'primary' | 'source'>,
-) {
-  return category.source === 'user'
-    ? category.primary
-    : formatPrimaryCategory(category.primary)
+function getCategorySelectOption(
+  category: Pick<Category, 'id' | 'primary' | 'detailed'>,
+): CategorySelectOption {
+  return {
+    value: category.id,
+    primary: category.primary,
+    secondary: category.detailed,
+  }
 }
 
-function getAssignableCategoryLabel(
-  category: Pick<Category, 'primary' | 'detailed' | 'source'>,
+function sortCategoryOptions(
+  left: CategorySelectOption,
+  right: CategorySelectOption,
 ) {
-  return category.source === 'user'
-    ? category.detailed
-    : formatCategoryName(category)
+  return (
+    left.primary.localeCompare(right.primary) ||
+    left.secondary.localeCompare(right.secondary)
+  )
 }
 
 function TransactionsFilterPanel({
   accountId,
   accountOptions,
   amountSign,
+  categoryId,
   categoryOptions,
-  categoryPrimary,
-  categoryReviewStatus,
   hasActiveFilters,
   isMobile,
   onAccountChange,
   onAmountSignChange,
   onCategoryChange,
-  onCategoryReviewStatusChange,
   onClearFilters,
 }: TransactionFiltersPanelProps) {
   return (
@@ -139,13 +131,12 @@ function TransactionsFilterPanel({
           size="md"
           comboboxProps={{ withinPortal: false }}
         />
-        <Select
+        <CategorySelect
+          aria-label="Category"
           placeholder="Category"
           data={categoryOptions}
-          value={categoryPrimary}
+          value={categoryId}
           onChange={onCategoryChange}
-          clearable
-          searchable
           size="md"
           comboboxProps={{ withinPortal: false }}
         />
@@ -163,21 +154,6 @@ function TransactionsFilterPanel({
           size={isMobile ? 'md' : 'sm'}
           fullWidth
           data={amountSignOptions}
-        />
-      </Stack>
-
-      <Stack gap="xs">
-        <Text fw={600} size="sm">
-          Review
-        </Text>
-        <SegmentedControl
-          value={categoryReviewStatus}
-          onChange={(value) =>
-            onCategoryReviewStatusChange(value as CategoryReviewFilter)
-          }
-          size={isMobile ? 'md' : 'sm'}
-          fullWidth
-          data={categoryReviewOptions}
         />
       </Stack>
 
@@ -240,18 +216,13 @@ function TransactionsPage() {
   const [accountId, setAccountId] = useState<string | null>(
     search.accountId ?? null,
   )
-  const [categoryPrimary, setCategoryPrimary] = useState<string | null>(null)
+  const [categoryId, setCategoryId] = useState<string | null>(null)
   const [amountSign, setAmountSign] = useState('all')
-  const [categoryReviewStatus, setCategoryReviewStatus] =
-    useState<CategoryReviewFilter>('all')
 
   // Account data for the select dropdown
   const { data: accounts } = useAccountControllerFindAll()
   const { data: categories } = useCategoryControllerFindFilterOptions()
   const { data: assignableCategories = [] } = useCategoryControllerFindAll()
-  const bulkReviewCategories = useTransactionControllerBulkReviewCategories()
-  const undoBulkReviewCategories =
-    useTransactionControllerUndoBulkReviewCategories()
   const bulkUpdateCategories = useTransactionControllerBulkUpdateCategories()
   const undoBulkUpdateCategories =
     useTransactionControllerUndoBulkUpdateCategories()
@@ -275,36 +246,40 @@ function TransactionsPage() {
     [accounts],
   )
 
-  const categoryOptions = useMemo(() => {
-    const options = new Map<string, string>()
-    options.set('UNCATEGORIZED', formatPrimaryCategory('UNCATEGORIZED'))
-    ;(categories ?? []).forEach((category) => {
-      if (!options.has(category.primary)) {
-        options.set(category.primary, getPrimaryCategoryLabel(category))
-      }
-    })
-
-    return Array.from(options.entries())
-      .map(([value, label]) => ({ value, label }))
-      .sort((left, right) => left.label.localeCompare(right.label))
-  }, [categories])
+  const categoryOptions = useMemo(
+    () => [
+      {
+        value: UNCATEGORIZED_CATEGORY_VALUE,
+        primary: formatPrimaryCategory(UNCATEGORIZED_CATEGORY_VALUE),
+        secondary: 'No assigned category',
+      },
+      ...(categories ?? [])
+        .filter(isAssignableCategoryOption)
+        .map(getCategorySelectOption)
+        .sort(sortCategoryOptions),
+    ],
+    [categories],
+  )
 
   const assignableCategoryOptions = useMemo(
     () => [
-      { value: PROVIDER_CATEGORY_VALUE, label: 'Use provider category' },
+      {
+        value: CLEAR_CATEGORY_VALUE,
+        primary: 'Clear category',
+        secondary: 'Remove category from selected transactions',
+      },
       ...assignableCategories
         .filter(isAssignableCategoryOption)
-        .map((category) => ({
-          value: category.id,
-          label: getAssignableCategoryLabel(category),
-        }))
-        .sort((left, right) => left.label.localeCompare(right.label)),
+        .map(getCategorySelectOption)
+        .sort(sortCategoryOptions),
     ],
     [assignableCategories],
   )
 
   const queryParams = useMemo(() => {
-    const params: TransactionControllerFindAllParams = {
+    const params: TransactionControllerFindAllParams & {
+      categoryId?: string
+    } = {
       pageSize: String(PAGE_SIZE),
       convert: true,
     }
@@ -320,27 +295,19 @@ function TransactionsPage() {
     if (accountId) {
       params.accountId = accountId
     }
-    if (categoryPrimary) {
-      params.categoryPrimary = categoryPrimary
+    if (categoryId) {
+      params.categoryId = categoryId
     }
     if (amountSign === 'positive' || amountSign === 'negative') {
       params.amountSign = amountSign
     }
-    if (categoryReviewStatus !== 'all') {
-      params.categoryReviewStatus = categoryReviewStatus
-    }
     return params
-  }, [
-    sorting,
-    dateRange,
-    accountId,
-    categoryPrimary,
-    amountSign,
-    categoryReviewStatus,
-  ])
+  }, [sorting, dateRange, accountId, categoryId, amountSign])
 
   const summaryParams = useMemo(() => {
-    const params: TransactionControllerGetSummaryParams = {
+    const params: TransactionControllerGetSummaryParams & {
+      categoryId?: string
+    } = {
       convert: true,
     }
     const [start, end] = dateRange
@@ -351,38 +318,14 @@ function TransactionsPage() {
     if (accountId) {
       params.accountId = accountId
     }
-    if (categoryPrimary) {
-      params.categoryPrimary = categoryPrimary
+    if (categoryId) {
+      params.categoryId = categoryId
     }
     if (amountSign === 'positive' || amountSign === 'negative') {
       params.amountSign = amountSign
     }
-    if (categoryReviewStatus !== 'all') {
-      params.categoryReviewStatus = categoryReviewStatus
-    }
     return params
-  }, [accountId, amountSign, categoryPrimary, categoryReviewStatus, dateRange])
-
-  const bulkReviewFilters = useMemo(() => {
-    const filters: NonNullable<BulkTransactionCategoryReviewDto['filters']> = {
-      categoryReviewStatus: 'needs_review',
-    }
-    const [start, end] = dateRange
-    if (start && end) {
-      filters.startDate = dayjs(start).format('YYYY-MM-DD')
-      filters.endDate = dayjs(end).format('YYYY-MM-DD')
-    }
-    if (accountId) {
-      filters.accountId = accountId
-    }
-    if (categoryPrimary) {
-      filters.categoryPrimary = categoryPrimary
-    }
-    if (amountSign === 'positive' || amountSign === 'negative') {
-      filters.amountSign = amountSign
-    }
-    return filters
-  }, [accountId, amountSign, categoryPrimary, dateRange])
+  }, [accountId, amountSign, categoryId, dateRange])
 
   const {
     data,
@@ -445,16 +388,14 @@ function TransactionsPage() {
   const hasActiveFilters =
     dateRange[0] !== null ||
     accountId !== null ||
-    categoryPrimary !== null ||
-    amountSign !== 'all' ||
-    categoryReviewStatus !== 'all'
+    categoryId !== null ||
+    amountSign !== 'all'
 
   const clearFilters = () => {
     setDateRange([null, null])
     setAccountId(null)
-    setCategoryPrimary(null)
+    setCategoryId(null)
     setAmountSign('all')
-    setCategoryReviewStatus('all')
   }
 
   const selectedCount = selectedTransactionIds.size
@@ -503,7 +444,7 @@ function TransactionsPage() {
         data: {
           transactionIds: Array.from(selectedTransactionIds),
           categoryId:
-            bulkCategoryValue === PROVIDER_CATEGORY_VALUE
+            bulkCategoryValue === CLEAR_CATEGORY_VALUE
               ? null
               : bulkCategoryValue,
         },
@@ -559,55 +500,14 @@ function TransactionsPage() {
 
   const hiddenActiveFilterCount = [
     accountId,
-    categoryPrimary,
+    categoryId,
     amountSign !== 'all' ? amountSign : null,
-    categoryReviewStatus !== 'all' ? categoryReviewStatus : null,
   ].filter(Boolean).length
 
   const filterButtonLabel =
     hiddenActiveFilterCount > 0
       ? `Open transaction filters, ${hiddenActiveFilterCount} active`
       : 'Open transaction filters'
-
-  const markFilteredAsReviewed = () => {
-    bulkReviewCategories.mutate(
-      {
-        data: { filters: bulkReviewFilters },
-      },
-      {
-        onSuccess: (result) => {
-          invalidateTransactions()
-          notifications.show({
-            title: 'Categories reviewed',
-            message: (
-              <Group gap="xs" wrap="nowrap">
-                <Text size="sm">
-                  Marked {result.count} transactions as reviewed.
-                </Text>
-                {result.transactionIds.length > 0 && (
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    onClick={() =>
-                      undoBulkReviewCategories.mutate(
-                        {
-                          data: { transactionIds: result.transactionIds },
-                        },
-                        { onSuccess: invalidateTransactions },
-                      )
-                    }
-                  >
-                    Undo
-                  </Button>
-                )}
-              </Group>
-            ),
-            color: 'green',
-          })
-        },
-      },
-    )
-  }
 
   const transactionSummaryStrip = (
     <TransactionSummaryStrip
@@ -622,15 +522,13 @@ function TransactionsPage() {
       accountId={accountId}
       accountOptions={accountOptions}
       amountSign={amountSign}
+      categoryId={categoryId}
       categoryOptions={categoryOptions}
-      categoryPrimary={categoryPrimary}
-      categoryReviewStatus={categoryReviewStatus}
       hasActiveFilters={hasActiveFilters}
       isMobile={Boolean(isMobile)}
       onAccountChange={setAccountId}
       onAmountSignChange={setAmountSign}
-      onCategoryChange={setCategoryPrimary}
-      onCategoryReviewStatusChange={setCategoryReviewStatus}
+      onCategoryChange={setCategoryId}
       onClearFilters={clearFilters}
     />
   )
@@ -642,18 +540,27 @@ function TransactionsPage() {
         height: 'calc(100vh - 60px - 2 * var(--mantine-spacing-md))',
       }}
     >
-      <Group align="baseline" justify="space-between" mb="md" wrap="nowrap">
-        <Title order={1}>Transactions</Title>
-        <Switch
-          checked={bulkModeEnabled}
-          label="Bulk edit"
-          onChange={(event) =>
-            setBulkModeEnabled(event.currentTarget.checked)
-          }
-        />
-      </Group>
+      <PageHeader
+        title="Transactions"
+        mb="md"
+        wrap="nowrap"
+        actions={
+          <Switch
+            checked={bulkModeEnabled}
+            label="Bulk edit"
+            onChange={(event) =>
+              setBulkModeEnabled(event.currentTarget.checked)
+            }
+          />
+        }
+      />
 
-      <Group mb={isMobile ? 'xs' : 'md'} gap="xs" wrap="wrap" align="center">
+      <Group
+        mb={isMobile ? 'xs' : 'md'}
+        gap="xs"
+        wrap={isMobile ? 'wrap' : 'nowrap'}
+        align="center"
+      >
         {isMobile ? (
           <Group flex={1} gap="xs" miw={0} wrap="nowrap">
             <DateRangeControl onChange={setDateRange} value={dateRange} />
@@ -728,21 +635,53 @@ function TransactionsPage() {
             )}
           </Box>
         )}
-        {!isMobile && transactionSummaryStrip}
-        {categoryReviewStatus === 'needs_review' && totalRows > 0 && (
-          <Button
-            variant="light"
-            size="md"
-            mih={isMobile ? 48 : undefined}
-            loading={bulkReviewCategories.isPending}
-            onClick={markFilteredAsReviewed}
-          >
-            Mark {totalRows} as reviewed
-          </Button>
-        )}
+        {!isMobile &&
+          (bulkModeEnabled ? (
+            <TransactionBulkEditToolbar
+              categoryOptions={assignableCategoryOptions}
+              isSaving={bulkUpdateCategories.isPending}
+              loadedCount={loadedTransactionIds.length}
+              selectedCount={selectedCount}
+              selectLoadedChecked={allLoadedSelected}
+              selectLoadedIndeterminate={
+                someLoadedSelected && !allLoadedSelected
+              }
+              value={bulkCategoryValue}
+              onChange={setBulkCategoryValue}
+              onSave={saveBulkCategoryUpdate}
+              onToggleLoaded={toggleLoadedSelection}
+              showSelectLoaded={false}
+              variant="summary"
+            />
+          ) : (
+            transactionSummaryStrip
+          ))}
       </Group>
 
-      {isMobile && <Box mb="md">{transactionSummaryStrip}</Box>}
+      {isMobile && (
+        <Box mb="md">
+          {bulkModeEnabled ? (
+            <TransactionBulkEditToolbar
+              categoryOptions={assignableCategoryOptions}
+              isSaving={bulkUpdateCategories.isPending}
+              loadedCount={loadedTransactionIds.length}
+              selectedCount={selectedCount}
+              selectLoadedChecked={allLoadedSelected}
+              selectLoadedIndeterminate={
+                someLoadedSelected && !allLoadedSelected
+              }
+              value={bulkCategoryValue}
+              onChange={setBulkCategoryValue}
+              onSave={saveBulkCategoryUpdate}
+              onToggleLoaded={toggleLoadedSelection}
+              showSelectLoaded
+              variant="inline"
+            />
+          ) : (
+            transactionSummaryStrip
+          )}
+        </Box>
+      )}
 
       {isMobile ? (
         <TransactionsMobileList
@@ -779,21 +718,6 @@ function TransactionsPage() {
             ref: tableContainerRef,
             style: { flex: 1, overflow: 'auto' },
           }}
-        />
-      )}
-      {bulkModeEnabled && selectedCount > 0 && (
-        <TransactionBulkEditToolbar
-          categoryOptions={assignableCategoryOptions}
-          isSaving={bulkUpdateCategories.isPending}
-          loadedCount={loadedTransactionIds.length}
-          selectedCount={selectedCount}
-          selectLoadedChecked={allLoadedSelected}
-          selectLoadedIndeterminate={someLoadedSelected && !allLoadedSelected}
-          value={bulkCategoryValue}
-          onChange={setBulkCategoryValue}
-          onSave={saveBulkCategoryUpdate}
-          onToggleLoaded={toggleLoadedSelection}
-          showSelectLoaded={isMobile}
         />
       )}
     </Flex>

@@ -17,13 +17,11 @@ import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import {
   CategorySchema,
   BulkCategoryActionResponseSchema,
-  BulkCategoryVisibilityDtoSchema,
   BulkCustomCategoryActionDtoSchema,
   CategoryManagementItemSchema,
   CreateCustomCategoryDtoSchema,
   UpdateCustomCategoryDtoSchema,
   type BulkCategoryActionResponse,
-  type BulkCategoryVisibilityDto,
   type BulkCustomCategoryActionDto,
   type Category,
   type CategoryManagementItem,
@@ -52,8 +50,7 @@ export class CategoryController {
 
   @Get('search')
   @ApiOperation({
-    description:
-      'Search active Plaid categories and current user custom categories',
+    description: "Search the current user's active transaction categories",
   })
   @ApiQuery({
     name: 'q',
@@ -76,7 +73,7 @@ export class CategoryController {
   @Get('filter-options')
   @ApiOperation({
     description:
-      'Get categories suitable for historical transaction filters, including hidden categories only when used by existing transactions',
+      "Get the current user's categories suitable for transaction filters",
   })
   @ZodApiResponse({
     status: 200,
@@ -91,7 +88,7 @@ export class CategoryController {
   @Get('manage')
   @ApiOperation({
     description:
-      'Get the current user category management inventory with visibility and usage metadata',
+      'Get the current user category management inventory with usage metadata',
   })
   @ApiQuery({
     name: 'archived',
@@ -159,28 +156,10 @@ export class CategoryController {
     return this.categoryService.createCustom(user.userId, createDto);
   }
 
-  @Patch('visibility/bulk')
-  @ApiOperation({
-    description: 'Hide or show active categories in manual dropdowns',
-  })
-  @ZodApiBody({ schema: BulkCategoryVisibilityDtoSchema })
-  @ZodApiResponse({
-    status: 200,
-    description: 'Category visibility updated successfully',
-    schema: BulkCategoryActionResponseSchema,
-  })
-  async bulkUpdateVisibility(
-    @CurrentUser() user: JwtUser,
-    @Body(new ZodValidationPipe(BulkCategoryVisibilityDtoSchema))
-    dto: BulkCategoryVisibilityDto,
-  ): Promise<BulkCategoryActionResponse> {
-    return this.categoryService.bulkUpdateVisibility(user.userId, dto);
-  }
-
   @Patch('custom/bulk')
   @ApiOperation({
     description:
-      'Bulk archive, restore, or update primary labels for custom categories',
+      'Bulk archive, restore, duplicate, or update primary labels for custom categories',
   })
   @ZodApiBody({ schema: BulkCustomCategoryActionDtoSchema })
   @ZodApiResponse({

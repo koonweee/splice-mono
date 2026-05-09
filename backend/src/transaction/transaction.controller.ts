@@ -19,25 +19,17 @@ import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import { MoneySign } from '../types/MoneyWithSign';
 import type {
-  BulkTransactionCategoryReviewDto,
-  BulkTransactionCategoryReviewResponse,
-  BulkTransactionCategoryReviewUndoDto,
   BulkTransactionCategoryUpdateDto,
   BulkTransactionCategoryUpdateResponse,
   BulkTransactionCategoryUpdateUndoDto,
   CreateTransactionDto,
   PaginatedTransactionResponse,
   Transaction,
-  TransactionCategoryReviewStatus,
   TransactionSummary,
   UpdateTransactionCategoryDto,
-  UpdateTransactionCategoryReviewDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
 import {
-  BulkTransactionCategoryReviewDtoSchema,
-  BulkTransactionCategoryReviewResponseSchema,
-  BulkTransactionCategoryReviewUndoDtoSchema,
   BulkTransactionCategoryUpdateDtoSchema,
   BulkTransactionCategoryUpdateResponseSchema,
   BulkTransactionCategoryUpdateUndoDtoSchema,
@@ -46,7 +38,6 @@ import {
   TransactionSchema,
   TransactionSummarySchema,
   UpdateTransactionCategoryDtoSchema,
-  UpdateTransactionCategoryReviewDtoSchema,
   UpdateTransactionDtoSchema,
 } from '../types/Transaction';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
@@ -59,15 +50,6 @@ export class TransactionController {
     private transactionService: TransactionService,
     private currencyConversionService: CurrencyConversionService,
   ) {}
-
-  private normalizeCategoryReviewStatus(
-    categoryReviewStatus?: string,
-  ): TransactionCategoryReviewStatus | undefined {
-    return categoryReviewStatus === 'needs_review' ||
-      categoryReviewStatus === 'reviewed'
-      ? categoryReviewStatus
-      : undefined;
-  }
 
   private async buildPreferredCurrencySummary(
     userId: string,
@@ -128,7 +110,7 @@ export class TransactionController {
       },
       transactionCount: nativeSummary.transactionCount,
       pendingCount: nativeSummary.pendingCount,
-      needsReviewCount: nativeSummary.needsReviewCount,
+      uncategorizedCount: nativeSummary.uncategorizedCount,
     };
   }
 
@@ -184,16 +166,16 @@ export class TransactionController {
       'Filter by primary category (e.g. FOOD_AND_DRINK, UNCATEGORIZED)',
   })
   @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description:
+      'Filter by exact category ID, or UNCATEGORIZED for transactions without a category',
+  })
+  @ApiQuery({
     name: 'amountSign',
     required: false,
     description: 'Filter by amount sign (positive or negative)',
     enum: ['positive', 'negative'],
-  })
-  @ApiQuery({
-    name: 'categoryReviewStatus',
-    required: false,
-    description: 'Filter by category review status',
-    enum: ['needs_review', 'reviewed'],
   })
   @ApiQuery({
     name: 'convert',
@@ -214,7 +196,7 @@ export class TransactionController {
     @Query('categoryPrimary') categoryPrimary?: string,
     @Query('amountSign') amountSign?: string,
     @Query('convert') convertStr?: string,
-    @Query('categoryReviewStatus') categoryReviewStatus?: string,
+    @Query('categoryId') categoryId?: string,
   ): Promise<PaginatedTransactionResponse> {
     const pageIndex = Math.max(0, parseInt(pageIndexStr ?? '0', 10) || 0);
     const pageSize = Math.min(
@@ -233,13 +215,9 @@ export class TransactionController {
         accountId,
         startDate,
         endDate,
+        categoryId,
         categoryPrimary,
         amountSign,
-        categoryReviewStatus:
-          categoryReviewStatus === 'needs_review' ||
-          categoryReviewStatus === 'reviewed'
-            ? categoryReviewStatus
-            : undefined,
       },
     );
 
@@ -328,16 +306,16 @@ export class TransactionController {
       'Filter by primary category (e.g. FOOD_AND_DRINK, UNCATEGORIZED)',
   })
   @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description:
+      'Filter by exact category ID, or UNCATEGORIZED for transactions without a category',
+  })
+  @ApiQuery({
     name: 'amountSign',
     required: false,
     description: 'Filter by amount sign (positive or negative)',
     enum: ['positive', 'negative'],
-  })
-  @ApiQuery({
-    name: 'categoryReviewStatus',
-    required: false,
-    description: 'Filter by category review status',
-    enum: ['needs_review', 'reviewed'],
   })
   @ApiQuery({
     name: 'convert',
@@ -353,8 +331,7 @@ export class TransactionController {
     @Query('endDate') endDate?: string,
     @Query('categoryPrimary') categoryPrimary?: string,
     @Query('amountSign') amountSign?: string,
-    @Query('convert') _convertStr?: string,
-    @Query('categoryReviewStatus') categoryReviewStatus?: string,
+    @Query('categoryId') categoryId?: string,
   ): Promise<TransactionSummary> {
     const nativeSummary = await this.transactionService.getSummary(
       user.userId,
@@ -362,10 +339,9 @@ export class TransactionController {
         accountId,
         startDate,
         endDate,
+        categoryId,
         categoryPrimary,
         amountSign,
-        categoryReviewStatus:
-          this.normalizeCategoryReviewStatus(categoryReviewStatus),
       },
     );
 
@@ -494,75 +470,6 @@ export class TransactionController {
     }
 
     return result;
-  }
-
-  @Patch(':id/category-review')
-  @ApiOperation({ description: 'Update transaction category review status' })
-  @ZodApiBody({ schema: UpdateTransactionCategoryReviewDtoSchema })
-  @ZodApiResponse({
-    status: 200,
-    description: 'Transaction category review updated successfully',
-    schema: TransactionSchema,
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Transaction not found',
-  })
-  async updateCategoryReview(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtUser,
-    @Body(new ZodValidationPipe(UpdateTransactionCategoryReviewDtoSchema))
-    updateTransactionCategoryReviewDto: UpdateTransactionCategoryReviewDto,
-  ): Promise<Transaction> {
-    const transaction = await this.transactionService.updateCategoryReview(
-      id,
-      updateTransactionCategoryReviewDto,
-      user.userId,
-    );
-    if (!transaction) {
-      throw new NotFoundException(`Transaction with id ${id} not found`);
-    }
-    return transaction;
-  }
-
-  @Post('category-review/bulk')
-  @ApiOperation({
-    description: 'Mark matching unreviewed transaction categories as reviewed',
-  })
-  @ZodApiBody({ schema: BulkTransactionCategoryReviewDtoSchema })
-  @ZodApiResponse({
-    status: 200,
-    description: 'Transaction categories bulk reviewed successfully',
-    schema: BulkTransactionCategoryReviewResponseSchema,
-  })
-  async bulkReviewCategories(
-    @CurrentUser() user: JwtUser,
-    @Body(new ZodValidationPipe(BulkTransactionCategoryReviewDtoSchema))
-    bulkReviewDto: BulkTransactionCategoryReviewDto,
-  ): Promise<BulkTransactionCategoryReviewResponse> {
-    return this.transactionService.bulkReviewCategories(
-      user.userId,
-      bulkReviewDto,
-    );
-  }
-
-  @Post('category-review/bulk/undo')
-  @ApiOperation({ description: 'Undo a bulk transaction category review' })
-  @ZodApiBody({ schema: BulkTransactionCategoryReviewUndoDtoSchema })
-  @ZodApiResponse({
-    status: 200,
-    description: 'Bulk transaction category review undone successfully',
-    schema: BulkTransactionCategoryReviewResponseSchema,
-  })
-  async undoBulkReviewCategories(
-    @CurrentUser() user: JwtUser,
-    @Body(new ZodValidationPipe(BulkTransactionCategoryReviewUndoDtoSchema))
-    undoDto: BulkTransactionCategoryReviewUndoDto,
-  ): Promise<BulkTransactionCategoryReviewResponse> {
-    return this.transactionService.undoBulkReviewCategories(
-      user.userId,
-      undoDto,
-    );
   }
 
   @Patch(':id')

@@ -7,6 +7,8 @@
  */
 
 export type CreateTransactionDtoPersonalFinanceCategory = {
-  primary: string
-  detailed: string
+  /** @nullable */
+  primary: string | null
+  /** @nullable */
+  detailed: string | null
 }

@@ -10,12 +10,10 @@ import {
   Popover,
   Stack,
   Text,
-  TextInput,
   Tooltip,
   UnstyledButton,
 } from '@mantine/core'
 import { DatePicker } from '@mantine/dates'
-import { notifications } from '@mantine/notifications'
 import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
@@ -26,9 +24,9 @@ import {
   useCategoryControllerFindAll,
   useTransactionControllerUpdate,
   useTransactionControllerUpdateCategory,
-  useTransactionControllerUpdateCategoryReview,
 } from '../api/clients/spliceAPI'
 import { isAssignableCategoryOption } from '../lib/category-options'
+import { CategorySelect } from './categories/CategorySelect'
 import tableChrome from './MantineTableChrome.module.css'
 import styles from './TransactionsTable.module.css'
 import statusBadgeStyles from './transactions/TransactionStatusBadge.module.css'
@@ -36,15 +34,13 @@ import {
   formatCounterpartyLabel,
   getMerchantDisplay,
   getMetadataDetails,
+  getProviderCategoryHint,
 } from './transactions/transactionMetadata'
 import type { MRT_ColumnDef, MRT_SortingState } from 'mantine-react-table'
 import type { ReactNode } from 'react'
 import type { Category, Transaction } from '../api/models'
-import {
-  formatCategoryName,
-  formatMoneyWithSign,
-  formatPrimaryCategory,
-} from '@/lib/format'
+import type { CategorySelectOption } from './categories/CategorySelect'
+import { formatMoneyWithSign } from '@/lib/format'
 
 type HideableColumn = 'accountName' | 'category'
 
@@ -248,7 +244,7 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
             </MetadataRow>
           )}
           {(categoryText || categoryConfidence) && (
-            <MetadataRow label="Plaid category">
+            <MetadataRow label="Provider category">
               {[
                 categoryText,
                 categoryConfidence &&
@@ -327,18 +323,6 @@ function MerchantCell({
               Pending
             </Badge>
           )}
-          {transaction.categoryNeedsReview && (
-            <Badge
-              classNames={{
-                root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.reviewBadge}`,
-              }}
-              color="orange"
-              size="xs"
-              variant="light"
-            >
-              Needs review
-            </Badge>
-          )}
         </Group>
         {merchantDisplay.secondary && (
           <Text c="dimmed" className={styles.merchantSecondary} size="xs">
@@ -383,6 +367,139 @@ function AmountCell({ row }: { row: { original: Transaction } }) {
   }
 
   return amountNode
+}
+
+function ProviderCategoryHintPopover({
+  transaction,
+}: {
+  transaction: Transaction
+}) {
+  const [opened, setOpened] = useState(false)
+  const closeTimeoutRef = useRef<number | null>(null)
+  const supportsHover = useMediaQuery(
+    '(hover: hover) and (pointer: fine)',
+    false,
+    { getInitialValueInEffect: false },
+  )
+  const providerCategoryHint = getProviderCategoryHint(transaction)
+  const displayLabel = formatMetadataValue(providerCategoryHint?.displayLabel)
+
+  if (transaction.category || !providerCategoryHint || !displayLabel) {
+    return null
+  }
+
+  const confidence = formatMetadataValue(providerCategoryHint.confidenceLevel)
+
+  function clearCloseTimeout() {
+    if (closeTimeoutRef.current === null) {
+      return
+    }
+
+    window.clearTimeout(closeTimeoutRef.current)
+    closeTimeoutRef.current = null
+  }
+
+  function openPopover() {
+    clearCloseTimeout()
+    setOpened(true)
+  }
+
+  function closePopover() {
+    clearCloseTimeout()
+    setOpened(false)
+  }
+
+  function scheduleClosePopover() {
+    clearCloseTimeout()
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setOpened(false)
+      closeTimeoutRef.current = null
+    }, 100)
+  }
+
+  useEffect(
+    () => () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current)
+      }
+    },
+    [],
+  )
+
+  return (
+    <Popover
+      opened={opened}
+      onChange={setOpened}
+      classNames={{ dropdown: styles.metadataPopover }}
+      position="bottom-start"
+      shadow="md"
+      width={260}
+      withinPortal
+    >
+      <Popover.Target>
+        <ActionIcon
+          aria-label={`Provider category hint: ${displayLabel}`}
+          onBlur={supportsHover ? scheduleClosePopover : undefined}
+          onClick={(event) => {
+            event.stopPropagation()
+            if (supportsHover) {
+              return
+            }
+
+            setOpened((current) => !current)
+          }}
+          onFocus={supportsHover ? openPopover : undefined}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') {
+              return
+            }
+
+            event.preventDefault()
+            event.stopPropagation()
+            setOpened((current) => !current)
+          }}
+          onMouseDown={(event) => event.stopPropagation()}
+          onMouseEnter={supportsHover ? openPopover : undefined}
+          onMouseLeave={supportsHover ? scheduleClosePopover : undefined}
+          size="sm"
+          variant="subtle"
+        >
+          <Info size={14} />
+        </ActionIcon>
+      </Popover.Target>
+      <Popover.Dropdown
+        onBlur={supportsHover ? scheduleClosePopover : undefined}
+        onFocus={supportsHover ? openPopover : undefined}
+        onMouseEnter={supportsHover ? openPopover : undefined}
+        onMouseLeave={supportsHover ? closePopover : undefined}
+      >
+        <Stack gap={6}>
+          <Group gap="xs" wrap="nowrap">
+            {providerCategoryHint.iconUrl && (
+              <Avatar
+                radius="sm"
+                size={20}
+                src={providerCategoryHint.iconUrl}
+              />
+            )}
+            <Text fw={600} size="sm">
+              {displayLabel}
+            </Text>
+          </Group>
+          {confidence && (
+            <Text c="dimmed" size="xs">
+              Provider hint · {confidence.toLowerCase()} confidence
+            </Text>
+          )}
+          {!confidence && (
+            <Text c="dimmed" size="xs">
+              Provider hint
+            </Text>
+          )}
+        </Stack>
+      </Popover.Dropdown>
+    </Popover>
+  )
 }
 
 function getCategoryToneClass(label: string) {
@@ -435,20 +552,12 @@ function invalidateTransactionQueries(
   })
 }
 
-function getCategoryLabel(
-  category: Pick<Category, 'primary' | 'detailed' | 'source'>,
-) {
-  return category.source === 'user'
-    ? category.detailed
-    : formatCategoryName(category)
+function getCategoryLabel(category: Pick<Category, 'primary' | 'detailed'>) {
+  return category.detailed
 }
 
-function getCategoryPrimaryLabel(
-  category: Pick<Category, 'primary' | 'source'>,
-) {
-  return category.source === 'user'
-    ? category.primary
-    : formatPrimaryCategory(category.primary)
+function getCategoryPrimaryLabel(category: Pick<Category, 'primary'>) {
+  return category.primary
 }
 
 function getBankActivityDate(transaction: Transaction) {
@@ -482,7 +591,6 @@ export function TransactionsTable({
     editingReportingDateTransactionId,
     setEditingReportingDateTransactionId,
   ] = useState<string | null>(null)
-  const [categorySearch, setCategorySearch] = useState('')
   const [reportingDateDraft, setReportingDateDraft] = useState<string | null>(
     null,
   )
@@ -494,7 +602,6 @@ export function TransactionsTable({
 
     setEditingTransactionId(null)
     setEditingReportingDateTransactionId(null)
-    setCategorySearch('')
     setReportingDateDraft(null)
   }, [bulkModeEnabled])
   const { data: categories = [] } = useCategoryControllerFindAll()
@@ -514,17 +621,9 @@ export function TransactionsTable({
       },
     },
   })
-  const updateCategoryReview = useTransactionControllerUpdateCategoryReview({
-    mutation: {
-      onSuccess: () => {
-        invalidateTransactionQueries(queryClient)
-      },
-    },
-  })
 
   function closeCategoryEditor() {
     setEditingTransactionId(null)
-    setCategorySearch('')
   }
 
   function openReportingDateEditor(transaction: Transaction) {
@@ -557,55 +656,23 @@ export function TransactionsTable({
     })
   }
 
-  function markCategoryReviewed(transaction: Transaction) {
-    updateCategoryReview.mutate(
-      { id: transaction.id, data: { reviewed: true } },
-      {
-        onSuccess: () => {
-          notifications.show({
-            title: 'Category reviewed',
-            message: (
-              <Group gap="xs" wrap="nowrap">
-                <Text size="sm">Category marked as reviewed.</Text>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  onClick={() =>
-                    updateCategoryReview.mutate({
-                      id: transaction.id,
-                      data: { reviewed: false },
-                    })
-                  }
-                >
-                  Undo
-                </Button>
-              </Group>
-            ),
-            color: 'green',
-          })
-        },
-      },
-    )
-  }
-
   function toggleBulkSelection(transaction: Transaction) {
     onToggleTransactionSelection?.(transaction.id)
   }
 
   const categoryOptions = useMemo(
-    () =>
+    (): Array<CategorySelectOption> =>
       categories
         .filter(isAssignableCategoryOption)
         .map((category) => ({
           value: category.id,
-          label: getCategoryLabel(category),
-          primaryLabel: getCategoryPrimaryLabel(category),
-          source: category.source,
+          primary: getCategoryPrimaryLabel(category),
+          secondary: getCategoryLabel(category),
         }))
         .sort(
           (left, right) =>
-            left.label.localeCompare(right.label) ||
-            left.primaryLabel.localeCompare(right.primaryLabel),
+            left.primary.localeCompare(right.primary) ||
+            left.secondary.localeCompare(right.secondary),
         ),
     [categories],
   )
@@ -820,9 +887,7 @@ export function TransactionsTable({
         minSize: 120,
         maxSize: 480,
         accessorFn: (row) =>
-          row.effectiveCategory
-            ? getCategoryLabel(row.effectiveCategory)
-            : '--',
+          row.category ? getCategoryLabel(row.category) : 'Uncategorized',
         mantineTableBodyCellProps: {
           className: styles.categoryTableCell,
         },
@@ -831,122 +896,36 @@ export function TransactionsTable({
         },
         Cell: ({ row }) => {
           const transaction = row.original
-          const category = transaction.effectiveCategory
+          const category = transaction.category ?? null
           const isEditing = editingTransactionId === transaction.id
-          const hasOverride = transaction.userCategoryId !== null
-          const needsReview = transaction.categoryNeedsReview
-          const resetLabel = transaction.category
-            ? `Reset to Plaid category: ${getCategoryLabel(transaction.category)}`
-            : 'Reset to uncategorized'
-          const categoryLabel = category ? getCategoryLabel(category) : '--'
-          const filteredCategoryOptions = categoryOptions.filter((option) =>
-            `${option.label} ${option.primaryLabel}`
-              .toLowerCase()
-              .includes(categorySearch.toLowerCase()),
-          )
-
+          const categoryLabel = category
+            ? getCategoryLabel(category)
+            : 'Uncategorized'
           if (isEditing && !bulkModeEnabled) {
             return (
               <Group className={styles.categoryCell} gap={4} wrap="nowrap">
-                <Popover
-                  opened
-                  onDismiss={closeCategoryEditor}
-                  position="bottom-start"
-                  shadow="md"
-                  width={280}
-                  withinPortal
-                  zIndex={400}
-                >
-                  <Popover.Target>
-                    <UnstyledButton
-                      aria-label="Category"
-                      aria-haspopup="listbox"
-                      className={styles.categoryTrigger}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Escape') {
-                          closeCategoryEditor()
-                        }
-                      }}
-                    >
-                      <Text className={styles.categoryLabel} size="sm" span>
-                        {categoryLabel}
-                      </Text>
-                    </UnstyledButton>
-                  </Popover.Target>
-                  <Popover.Dropdown p="xs">
-                    <TextInput
-                      aria-label="Search categories"
-                      autoFocus
-                      mb="xs"
-                      onChange={(event) =>
-                        setCategorySearch(event.currentTarget.value)
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === 'Escape') {
-                          closeCategoryEditor()
-                        }
-                      }}
-                      placeholder="Search categories"
-                      size="md"
-                      value={categorySearch}
-                    />
-                    <div className={styles.categoryOptionsList}>
-                      <div role="listbox">
-                        {filteredCategoryOptions.length > 0 ? (
-                          filteredCategoryOptions.map((option) => (
-                            <UnstyledButton
-                              aria-selected={
-                                option.value === transaction.effectiveCategoryId
-                              }
-                              className={styles.categoryOption}
-                              key={option.value}
-                              onClick={() =>
-                                updateCategory.mutate({
-                                  id: transaction.id,
-                                  data: { categoryId: option.value },
-                                })
-                              }
-                              role="option"
-                            >
-                              <Text c="inherit" component="div" size="sm">
-                                {option.label}
-                              </Text>
-                              <Group gap={6} wrap="nowrap">
-                                <Text
-                                  c="inherit"
-                                  className={styles.categoryOptionMeta}
-                                  component="div"
-                                  size="xs"
-                                >
-                                  {option.primaryLabel}
-                                </Text>
-                                {option.source === 'user' && (
-                                  <Badge size="xs" variant="light">
-                                    User
-                                  </Badge>
-                                )}
-                              </Group>
-                            </UnstyledButton>
-                          ))
-                        ) : (
-                          <Text c="dimmed" px="xs" py={6} size="sm">
-                            No categories found
-                          </Text>
-                        )}
-                      </div>
-                    </div>
-                  </Popover.Dropdown>
-                </Popover>
-                <Tooltip label="Cancel">
-                  <ActionIcon
-                    aria-label="Cancel category edit"
-                    variant="subtle"
-                    size="sm"
-                    onClick={closeCategoryEditor}
-                  >
-                    <X size={14} />
-                  </ActionIcon>
-                </Tooltip>
+                <CategorySelect
+                  aria-label="Category"
+                  autoFocus
+                  data={categoryOptions}
+                  onChange={(value) =>
+                    updateCategory.mutate({
+                      id: transaction.id,
+                      data: { categoryId: value },
+                    })
+                  }
+                  onDropdownClose={closeCategoryEditor}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      closeCategoryEditor()
+                    }
+                  }}
+                  placeholder="Category"
+                  size="md"
+                  value={transaction.categoryId}
+                  w={280}
+                  comboboxProps={{ withinPortal: true, zIndex: 400 }}
+                />
               </Group>
             )
           }
@@ -958,9 +937,7 @@ export function TransactionsTable({
                 classNames={{
                   root: `${styles.categoryBadge} ${
                     category ? getCategoryToneClass(categoryLabel) : ''
-                  } ${
-                    needsReview ? styles.categoryReviewBadge : ''
-                  } ${hasOverride ? styles.categoryOverrideBadge : ''}`,
+                  }`,
                 }}
                 radius="sm"
                 size="sm"
@@ -968,28 +945,9 @@ export function TransactionsTable({
               >
                 {categoryLabel}
               </Badge>
+              <ProviderCategoryHintPopover transaction={transaction} />
               {!bulkModeEnabled && (
-                <Group
-                  className={styles.categoryActions}
-                  gap={2}
-                  wrap="nowrap"
-                >
-                  {needsReview && (
-                    <Tooltip label="Mark category as reviewed">
-                      <ActionIcon
-                        aria-label="Mark category as reviewed"
-                        variant="subtle"
-                        size="sm"
-                        loading={
-                          updateCategoryReview.isPending &&
-                          updateCategoryReview.variables.id === transaction.id
-                        }
-                        onClick={() => markCategoryReviewed(transaction)}
-                      >
-                        <Check size={14} />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
+                <Group className={styles.categoryActions} gap={2} wrap="nowrap">
                   <Tooltip label="Edit category">
                     <ActionIcon
                       aria-label="Edit category"
@@ -997,16 +955,15 @@ export function TransactionsTable({
                       size="sm"
                       onClick={() => {
                         setEditingTransactionId(transaction.id)
-                        setCategorySearch('')
                       }}
                     >
                       <Pencil size={14} />
                     </ActionIcon>
                   </Tooltip>
-                  {hasOverride && (
-                    <Tooltip label={resetLabel}>
+                  {category && (
+                    <Tooltip label="Clear category">
                       <ActionIcon
-                        aria-label="Reset category override"
+                        aria-label="Clear category"
                         variant="subtle"
                         size="sm"
                         loading={
@@ -1034,7 +991,6 @@ export function TransactionsTable({
     [
       bulkModeEnabled,
       categoryOptions,
-      categorySearch,
       editingReportingDateTransactionId,
       editingTransactionId,
       reportingDateDraft,
@@ -1046,9 +1002,6 @@ export function TransactionsTable({
       updateCategory.isPending,
       updateCategory.mutate,
       updateCategory.variables?.id,
-      updateCategoryReview.isPending,
-      updateCategoryReview.mutate,
-      updateCategoryReview.variables?.id,
       allLoadedSelected,
       data.length,
       onToggleLoadedSelection,

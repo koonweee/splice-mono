@@ -6,7 +6,6 @@
  * OpenAPI spec version: 1.0
  */
 import type { TransactionControllerFindAllAmountSign } from './transactionControllerFindAllAmountSign'
-import type { TransactionControllerFindAllCategoryReviewStatus } from './transactionControllerFindAllCategoryReviewStatus'
 
 export type TransactionControllerFindAllParams = {
   /**
@@ -50,7 +49,7 @@ export type TransactionControllerFindAllParams = {
    */
   convert?: boolean
   /**
-   * Filter by category review status
+   * Filter by exact category ID, or UNCATEGORIZED for transactions without a category
    */
-  categoryReviewStatus?: TransactionControllerFindAllCategoryReviewStatus
+  categoryId?: string
 }

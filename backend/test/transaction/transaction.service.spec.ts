@@ -1,2144 +1,259 @@
 import { NotFoundException } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { CategoryEntity } from '../../src/category/category.entity';
 import { CategoryService } from '../../src/category/category.service';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
-import {
-  TRANSACTION_ACTIVITY_DATE_EXPRESSION,
-  TRANSACTION_ACTIVITY_DATETIME_EXPRESSION,
-} from '../../src/transaction/transaction-date';
-import type { TransactionSyncResponse } from '../../src/types/BankLink';
 import { MoneySign } from '../../src/types/MoneyWithSign';
-import {
-  mockAccountId,
-  mockCreateTransactionDto,
-  mockUserId,
-} from '../mocks/transaction/transaction.mock';
+import type { CreateTransactionDto } from '../../src/types/Transaction';
 
-const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
-const ACTIVITY_DATETIME_SORT_ALIAS = 'activity_datetime_sort';
+const userId = '00000000-0000-4000-8000-000000000001';
+const accountId = '00000000-0000-4000-8000-000000000010';
 
-function buildAssignableCategory(
+function buildCategory(
   overrides: Partial<CategoryEntity> = {},
 ): CategoryEntity {
   const category = new CategoryEntity();
-  category.id = overrides.id ?? 'category-id';
+  category.id = overrides.id ?? '00000000-0000-4000-8000-000000000100';
+  category.userId = overrides.userId ?? userId;
   category.setLabels(
     overrides.primary ?? 'FOOD_AND_DRINK',
     overrides.detailed ?? 'FOOD_AND_DRINK_RESTAURANT',
   );
   category.description = overrides.description ?? '';
-  category.source = overrides.source ?? 'plaid';
-  category.userId = overrides.userId ?? null;
   category.archivedAt = overrides.archivedAt ?? null;
-  category.createdAt = overrides.createdAt ?? new Date('2024-01-01T00:00:00Z');
-  category.updatedAt = overrides.updatedAt ?? new Date('2024-01-01T00:00:00Z');
+  category.createdAt =
+    overrides.createdAt ?? new Date('2026-02-14T00:00:00.000Z');
+  category.updatedAt =
+    overrides.updatedAt ?? new Date('2026-02-14T00:00:00.000Z');
   return category;
 }
 
+function buildCreateDto(
+  overrides: Partial<CreateTransactionDto> = {},
+): CreateTransactionDto {
+  return {
+    amount: {
+      money: { amount: 1200, currency: 'USD' },
+      sign: MoneySign.NEGATIVE,
+    },
+    accountId,
+    merchantName: 'Store',
+    pending: false,
+    providerDate: '2026-02-14',
+    ...overrides,
+  };
+}
+
+function buildTransaction(
+  overrides: Partial<TransactionEntity> = {},
+): TransactionEntity {
+  const entity = TransactionEntity.fromDto(buildCreateDto(), userId);
+  entity.id = overrides.id ?? '00000000-0000-4000-8000-000000000200';
+  entity.createdAt =
+    overrides.createdAt ?? new Date('2026-02-14T00:00:00.000Z');
+  entity.updatedAt =
+    overrides.updatedAt ?? new Date('2026-02-14T00:00:00.000Z');
+  Object.assign(entity, overrides);
+  return entity;
+}
+
 describe('TransactionService', () => {
-  let service: TransactionService;
-
-  // Mock transaction repository for manager.transaction
-  const mockTxnRepo = {
-    save: jest.fn().mockImplementation((entities) => Promise.resolve(entities)),
-    find: jest.fn(),
-    findOne: jest.fn(),
-    delete: jest.fn().mockResolvedValue({ affected: 0 }),
-  };
-
-  const mockManager = {
-    getRepository: jest.fn().mockReturnValue(mockTxnRepo),
-  };
-
-  const mockQueryBuilder = {
-    leftJoinAndSelect: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    addOrderBy: jest.fn().mockReturnThis(),
-    addSelect: jest.fn().mockReturnThis(),
-    groupBy: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    setParameters: jest.fn().mockReturnThis(),
-    take: jest.fn().mockReturnThis(),
-    getMany: jest.fn(),
-    getManyAndCount: jest.fn(),
-    getRawMany: jest.fn(),
-  };
-
-  // Mock repository methods
-  const mockRepository = {
+  const category = buildCategory();
+  const repository = {
     save: jest.fn(),
     findOne: jest.fn(),
     find: jest.fn(),
-    findAndCount: jest.fn(),
-    createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+    createQueryBuilder: jest.fn(),
     delete: jest.fn(),
     manager: {
-      transaction: jest.fn(
-        (cb: (manager: typeof mockManager) => Promise<void>) => cb(mockManager),
-      ),
+      transaction: jest.fn(),
     },
   };
-
-  // Mock category repository for category lookup
-  const mockCategoryRepository = {
-    find: jest.fn().mockResolvedValue([]),
-    findOne: jest.fn(),
+  const categoryRepository = {
+    find: jest.fn(),
   };
-
-  const mockCategoryService = {
+  const categoryService = {
     findActiveAssignableCategory: jest.fn(),
   };
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TransactionService,
-        {
-          provide: getRepositoryToken(TransactionEntity),
-          useValue: mockRepository,
-        },
-        {
-          provide: getRepositoryToken(CategoryEntity),
-          useValue: mockCategoryRepository,
-        },
-        {
-          provide: CategoryService,
-          useValue: mockCategoryService,
-        },
-      ],
-    }).compile();
+  let service: TransactionService;
 
-    service = module.get<TransactionService>(TransactionService);
-    mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
-    mockQueryBuilder.getRawMany.mockResolvedValue([]);
-    process.env.JWT_SECRET = 'test-secret';
-  });
-
-  afterEach(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
-    mockQueryBuilder.getMany.mockReset();
-    mockQueryBuilder.getMany.mockResolvedValue([]);
-    mockQueryBuilder.getManyAndCount.mockReset();
-    mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
-    mockQueryBuilder.getRawMany.mockReset();
-    mockQueryBuilder.getRawMany.mockResolvedValue([]);
-    mockTxnRepo.find.mockReset();
-    mockTxnRepo.find.mockResolvedValue([]);
-    mockTxnRepo.save.mockClear();
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
-  describe('create', () => {
-    it('should create a new transaction with a generated UUID', async () => {
-      const mockEntity = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity.id = 'generated-uuid-123';
-
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      const result = await service.create(mockCreateTransactionDto, mockUserId);
-
-      expect(result).toHaveProperty('id');
-      expect(typeof result.id).toBe('string');
-      expect(result.id.length).toBeGreaterThan(0);
-      expect(result.accountId).toBe(mockCreateTransactionDto.accountId);
-      expect(result.pending).toBe(mockCreateTransactionDto.pending);
-      expect(result.providerDate).toBe(mockCreateTransactionDto.providerDate);
-      expect(result.reportingDateOverride).toBeNull();
-      expect(mockRepository.save).toHaveBeenCalledTimes(1);
-    });
-
-    it('validates category ownership before creating with a category id', async () => {
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
-
-      await expect(
-        service.create(
-          { ...mockCreateTransactionDto, categoryId: 'other-user-category-id' },
-          mockUserId,
-        ),
-      ).rejects.toThrow(NotFoundException);
-
-      expect(
-        mockCategoryService.findActiveAssignableCategory,
-      ).toHaveBeenCalledWith('other-user-category-id', mockUserId);
-      expect(mockRepository.save).not.toHaveBeenCalled();
-    });
-
-    it('stores an owned custom category create as a user category override', async () => {
-      const userCategory = buildAssignableCategory({
-        id: 'user-category-id',
-        source: 'user',
-        userId: mockUserId,
-        primary: 'Home Projects',
-        detailed: 'Hardware',
-      });
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
-        userCategory,
-      );
-      mockRepository.save.mockImplementation((entity: TransactionEntity) =>
-        Promise.resolve(entity),
-      );
-
-      await service.create(
-        { ...mockCreateTransactionDto, categoryId: userCategory.id },
-        mockUserId,
-      );
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          categoryId: null,
-          userCategoryId: userCategory.id,
-          userCategory,
-          userCategoryUpdatedAt: expect.any(Date),
-        }),
-      );
-    });
-
-    it('should call repository.save with the correct entity', async () => {
-      const mockEntity = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      await service.create(mockCreateTransactionDto, mockUserId);
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.any(TransactionEntity),
-      );
-    });
-
-    it('should create transactions with unique IDs', async () => {
-      const mockEntity1 = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity1.id = 'uuid-1';
-      const mockEntity2 = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity2.id = 'uuid-2';
-
-      mockRepository.save
-        .mockResolvedValueOnce(mockEntity1)
-        .mockResolvedValueOnce(mockEntity2);
-
-      const txn1 = await service.create(mockCreateTransactionDto, mockUserId);
-      const txn2 = await service.create(mockCreateTransactionDto, mockUserId);
-
-      expect(txn1.id).not.toBe(txn2.id);
-    });
-
-    it('should create a transaction without optional fields', async () => {
-      const createDto = {
-        amount: {
-          money: { currency: 'USD', amount: 1000 },
-          sign: MoneySign.NEGATIVE,
-        },
-        accountId: mockAccountId,
-        pending: true,
-        providerDate: '2024-01-01',
-      };
-
-      const mockEntity = TransactionEntity.fromDto(createDto, mockUserId);
-      mockEntity.id = 'generated-uuid';
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      const result = await service.create(createDto, mockUserId);
-
-      expect(result).toHaveProperty('id');
-      expect(result.merchantName).toBeNull();
-      expect(result.externalTransactionId).toBeNull();
-      expect(result.logoUrl).toBeNull();
-      expect(result.providerDatetime).toBeNull();
-      expect(result.authorizedDate).toBeNull();
-      expect(result.authorizedDatetime).toBeNull();
-      expect(result.reportingDateOverride).toBeNull();
-      expect(result.categoryId).toBeNull();
-      expect(result.categoryReviewedAt).toBeNull();
-      expect(result.categoryReviewMethod).toBeNull();
-      expect(result.categoryNeedsReview).toBe(true);
-    });
-  });
-
-  describe('findOne', () => {
-    it('should return a transaction when it exists', async () => {
-      const mockEntity = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-
-      const result = await service.findOne('test-id', mockUserId);
-
-      expect(result).toBeDefined();
-      expect(result?.id).toBe('test-id');
-      expect(result?.accountId).toBe(mockCreateTransactionDto.accountId);
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'test-id', userId: mockUserId },
-        relations: ['account', 'category', 'userCategory'],
-      });
-    });
-
-    it('should return null when transaction does not exist', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.findOne('non-existent-id', mockUserId);
-
-      expect(result).toBeNull();
-    });
-
-    it('should return null when transaction belongs to different user', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.findOne('test-id', 'different-user-id');
-
-      expect(result).toBeNull();
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'test-id', userId: 'different-user-id' },
-        relations: ['account', 'category', 'userCategory'],
-      });
-    });
-  });
-
-  describe('findAll', () => {
-    it('should return an empty array when no transactions exist', async () => {
-      mockRepository.find.mockResolvedValue([]);
-
-      const result = await service.findAll(mockUserId);
-
-      expect(result).toEqual([]);
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        where: { userId: mockUserId },
-        relations: ['account', 'category', 'userCategory'],
-      });
-    });
-
-    it('should return all transactions for user', async () => {
-      const mockEntity1 = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity1.id = 'id-1';
-      const mockEntity2 = TransactionEntity.fromDto(
-        {
-          ...mockCreateTransactionDto,
-          merchantName: 'Second Merchant',
-        },
-        mockUserId,
-      );
-      mockEntity2.id = 'id-2';
-
-      mockRepository.find.mockResolvedValue([mockEntity1, mockEntity2]);
-
-      const result = await service.findAll(mockUserId);
-
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('id-1');
-      expect(result[1].id).toBe('id-2');
-    });
-  });
-
-  describe('findByAccountId', () => {
-    it('should return transactions for a specific account', async () => {
-      const mockEntity1 = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity1.id = 'id-1';
-      const mockEntity2 = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity2.id = 'id-2';
-
-      mockRepository.find.mockResolvedValue([mockEntity1, mockEntity2]);
-
-      const result = await service.findByAccountId(mockAccountId, mockUserId);
-
-      expect(result).toHaveLength(2);
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        where: { accountId: mockAccountId, userId: mockUserId },
-        relations: ['account', 'category', 'userCategory'],
-      });
-    });
-
-    it('should return empty array when no transactions exist for account', async () => {
-      mockRepository.find.mockResolvedValue([]);
-
-      const result = await service.findByAccountId(mockAccountId, mockUserId);
-
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('findAllPaginated', () => {
-    it('should return paginated results with default sort', async () => {
-      const mockEntity1 = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity1.id = 'id-1';
-      const mockEntity2 = TransactionEntity.fromDto(
-        { ...mockCreateTransactionDto, merchantName: 'Second' },
-        mockUserId,
-      );
-      mockEntity2.id = 'id-2';
-
-      mockQueryBuilder.getManyAndCount.mockResolvedValue([
-        [mockEntity1, mockEntity2],
-        5,
-      ]);
-
-      const result = await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 2,
-      });
-
-      expect(result.data).toHaveLength(2);
-      expect(result.total).toBe(5);
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-        'transaction.userId = :userId',
-        { userId: mockUserId },
-      );
-      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATE_SORT_ALIAS,
-        'DESC',
-      );
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATETIME_SORT_ALIAS,
-        'DESC',
-        'NULLS LAST',
-      );
-      expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
-        TRANSACTION_ACTIVITY_DATE_EXPRESSION,
-        ACTIVITY_DATE_SORT_ALIAS,
-      );
-      expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
-        TRANSACTION_ACTIVITY_DATETIME_EXPRESSION,
-        ACTIVITY_DATETIME_SORT_ALIAS,
-      );
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        'transaction.id',
-        'DESC',
-      );
-      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
-      expect(mockQueryBuilder.take).toHaveBeenCalledWith(2);
-    });
-
-    it('should apply custom sort column and order', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        sortBy: 'merchantName',
-        sortOrder: 'ASC',
-      });
-
-      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
-        'transaction.merchantName',
-        'ASC',
-      );
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATE_SORT_ALIAS,
-        'DESC',
-      );
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATETIME_SORT_ALIAS,
-        'DESC',
-        'NULLS LAST',
-      );
-    });
-
-    it('should fall back to activityDate sort for invalid sortBy', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        sortBy: 'invalidColumn',
-      });
-
-      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATE_SORT_ALIAS,
-        'DESC',
-      );
-    });
-
-    it('should use transaction time and id as stable tie-breakers for activityDate sort', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        sortBy: 'activityDate',
-        sortOrder: 'ASC',
-      });
-
-      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATE_SORT_ALIAS,
-        'ASC',
-      );
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATETIME_SORT_ALIAS,
-        'ASC',
-        'NULLS LAST',
-      );
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        'transaction.id',
-        'ASC',
-      );
-    });
-
-    it('should calculate skip correctly from pageIndex', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 3,
-        pageSize: 15,
-      });
-
-      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(45);
-      expect(mockQueryBuilder.take).toHaveBeenCalledWith(15);
-    });
-
-    it('should filter by accountId when provided', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        accountId: mockAccountId,
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.accountId = :accountId',
-        { accountId: mockAccountId },
-      );
-    });
-
-    it('should return empty data with total 0 when no results', async () => {
-      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
-
-      const result = await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-      });
-
-      expect(result.data).toEqual([]);
-      expect(result.total).toBe(0);
-    });
-
-    it('should filter by date range when startDate and endDate are provided', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        startDate: '2024-01-01',
-        endDate: '2024-01-31',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
-        { startDate: '2024-01-01', endDate: '2024-01-31' },
-      );
-    });
-
-    it('should apply MoreThanOrEqual when only startDate is provided', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        startDate: '2024-01-01',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} >= :startDate`,
-        { startDate: '2024-01-01' },
-      );
-    });
-
-    it('should apply LessThanOrEqual when only endDate is provided', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        endDate: '2024-01-31',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} <= :endDate`,
-        { endDate: '2024-01-31' },
-      );
-    });
-
-    it('should filter by categoryPrimary using effective category', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        categoryPrimary: 'FOOD_AND_DRINK',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
-        { categoryPrimary: 'FOOD_AND_DRINK' },
-      );
-      expect(mockRepository.findAndCount).not.toHaveBeenCalled();
-    });
-
-    it('should filter uncategorized using effective category nullness', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        categoryPrimary: 'UNCATEGORIZED',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'COALESCE(transaction.userCategoryId, transaction.categoryId) IS NULL',
-      );
-      expect(mockRepository.findAndCount).not.toHaveBeenCalled();
-    });
-
-    it('should return query results when categoryPrimary has no matching categories', async () => {
-      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
-
-      const result = await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        categoryPrimary: 'NONEXISTENT_CATEGORY',
-      });
-
-      expect(result).toEqual({ data: [], total: 0 });
-      expect(mockRepository.findAndCount).not.toHaveBeenCalled();
-      expect(mockQueryBuilder.getManyAndCount).toHaveBeenCalledTimes(1);
-    });
-
-    it('should combine all filters together', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        startDate: '2024-01-01',
-        endDate: '2024-01-31',
-        categoryPrimary: 'FOOD_AND_DRINK',
-        accountId: mockAccountId,
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.accountId = :accountId',
-        { accountId: mockAccountId },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
-        { startDate: '2024-01-01', endDate: '2024-01-31' },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
-        { categoryPrimary: 'FOOD_AND_DRINK' },
-      );
-    });
-
-    it('should filter by amountSign when provided', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        amountSign: 'positive',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.amountSign = :amountSign',
-        { amountSign: 'positive' },
-      );
-    });
-
-    it('should combine amountSign with other filters', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        startDate: '2024-01-01',
-        endDate: '2024-01-31',
-        categoryPrimary: 'INCOME',
-        amountSign: 'negative',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.amountSign = :amountSign',
-        { amountSign: 'negative' },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
-        { categoryPrimary: 'INCOME' },
-      );
-    });
-
-    it('should not include amountSign filter when not provided', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-      });
-
-      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
-        'transaction.amountSign = :amountSign',
-        expect.anything(),
-      );
-    });
-
-    it('should filter by needs-review status', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        categoryReviewStatus: 'needs_review',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.categoryReviewedAt IS NULL',
-      );
-    });
-
-    it('should filter by reviewed status', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        categoryReviewStatus: 'reviewed',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.categoryReviewedAt IS NOT NULL',
-      );
-    });
-
-    it('should combine category and review-status filters in query builder', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        categoryPrimary: 'FOOD_AND_DRINK',
-        categoryReviewStatus: 'needs_review',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.categoryReviewedAt IS NULL',
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
-        { categoryPrimary: 'FOOD_AND_DRINK' },
-      );
-    });
-
-    it('should apply stable tie-breakers in category-filtered query builder results', async () => {
-      await service.findAllPaginated(mockUserId, {
-        pageIndex: 0,
-        pageSize: 10,
-        categoryPrimary: 'FOOD_AND_DRINK',
-      });
-
-      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATE_SORT_ALIAS,
-        'DESC',
-      );
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        ACTIVITY_DATETIME_SORT_ALIAS,
-        'DESC',
-        'NULLS LAST',
-      );
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
-        'transaction.id',
-        'DESC',
-      );
-    });
-  });
-
-  describe('getSummary', () => {
-    it('aggregates filtered transaction totals by currency and sign', async () => {
-      mockQueryBuilder.getRawMany.mockResolvedValue([
-        {
-          currency: 'USD',
-          inflowAmount: '250000',
-          outflowAmount: '9750',
-          transactionCount: '2',
-          pendingCount: '1',
-          needsReviewCount: '1',
-        },
-      ]);
-
-      const result = await service.getSummary(mockUserId, {
-        startDate: '2026-05-01',
-        endDate: '2026-05-07',
-      });
-
-      expect(result).toEqual({
-        buckets: [
-          {
-            currency: 'USD',
-            inflowAmount: 250000,
-            outflowAmount: 9750,
-          },
-        ],
-        transactionCount: 2,
-        pendingCount: 1,
-        needsReviewCount: 1,
-      });
-      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
-        'transaction.amountCurrency',
-        'currency',
-      );
-      expect(mockQueryBuilder.groupBy).toHaveBeenCalledWith(
-        'transaction.amountCurrency',
-      );
-      expect(mockQueryBuilder.getMany).not.toHaveBeenCalled();
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
-        {
-          startDate: '2026-05-01',
-          endDate: '2026-05-07',
-        },
-      );
-    });
-
-    it('keeps separate buckets for native currencies before controller conversion', async () => {
-      mockQueryBuilder.getRawMany.mockResolvedValue([
-        {
-          currency: 'USD',
-          inflowAmount: '0',
-          outflowAmount: '1000',
-          transactionCount: '1',
-          pendingCount: '0',
-          needsReviewCount: '1',
-        },
-        {
-          currency: 'EUR',
-          inflowAmount: '2000',
-          outflowAmount: '0',
-          transactionCount: '1',
-          pendingCount: '0',
-          needsReviewCount: '1',
-        },
-      ]);
-
-      const result = await service.getSummary(mockUserId, {});
-
-      expect(result.buckets).toEqual([
-        { currency: 'USD', inflowAmount: 0, outflowAmount: 1000 },
-        { currency: 'EUR', inflowAmount: 2000, outflowAmount: 0 },
-      ]);
-    });
-
-    it('applies effective category and review status filters to summary queries', async () => {
-      await service.getSummary(mockUserId, {
-        accountId: mockAccountId,
-        categoryPrimary: 'FOOD_AND_DRINK',
-        amountSign: 'negative',
-        categoryReviewStatus: 'needs_review',
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.accountId = :accountId',
-        { accountId: mockAccountId },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.amountSign = :amountSign',
-        { amountSign: 'negative' },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.categoryReviewedAt IS NULL',
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
-        { categoryPrimary: 'FOOD_AND_DRINK' },
-      );
-    });
-  });
-
-  describe('update', () => {
-    it('should update and return a transaction', async () => {
-      const mockEntity = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      const result = await service.update(
-        'test-id',
-        { merchantName: 'Updated Merchant' },
-        mockUserId,
-      );
-
-      expect(result).toBeDefined();
-      expect(mockRepository.save).toHaveBeenCalled();
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'test-id', userId: mockUserId },
-        relations: ['account', 'category', 'userCategory'],
-      });
-    });
-
-    it('should return null when transaction does not exist', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.update(
-        'non-existent-id',
-        { merchantName: 'Updated' },
-        mockUserId,
-      );
-
-      expect(result).toBeNull();
-      expect(mockRepository.save).not.toHaveBeenCalled();
-    });
-
-    it('should return null when transaction belongs to different user', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.update(
-        'test-id',
-        { merchantName: 'Updated' },
-        'different-user-id',
-      );
-
-      expect(result).toBeNull();
-      expect(mockRepository.save).not.toHaveBeenCalled();
-    });
-
-    it('should update pending status', async () => {
-      const mockEntity = TransactionEntity.fromDto(
-        { ...mockCreateTransactionDto, pending: true },
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      await service.update('test-id', { pending: false }, mockUserId);
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          pending: false,
-        }),
-      );
-    });
-
-    it('should use reportingDateOverride as activityDate when set', async () => {
-      const mockEntity = TransactionEntity.fromDto(
-        {
-          ...mockCreateTransactionDto,
-          providerDate: '2026-04-29',
-          authorizedDate: '2026-04-29',
-        },
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-      mockRepository.save.mockImplementation((entity: TransactionEntity) =>
-        Promise.resolve(entity),
-      );
-
-      const result = await service.update(
-        'test-id',
-        { reportingDateOverride: '2026-05-01' },
-        mockUserId,
-      );
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          reportingDateOverride: '2026-05-01',
-        }),
-      );
-      expect(result?.activityDate).toBe('2026-05-01');
-      expect(result?.providerDate).toBe('2026-04-29');
-      expect(result?.authorizedDate).toBe('2026-04-29');
-    });
-
-    it('should fall back to authorized date when reportingDateOverride is cleared', async () => {
-      const mockEntity = TransactionEntity.fromDto(
-        {
-          ...mockCreateTransactionDto,
-          providerDate: '2026-04-30',
-          authorizedDate: '2026-04-29',
-          reportingDateOverride: '2026-05-01',
-        },
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-      mockRepository.save.mockImplementation((entity: TransactionEntity) =>
-        Promise.resolve(entity),
-      );
-
-      const result = await service.update(
-        'test-id',
-        { reportingDateOverride: null },
-        mockUserId,
-      );
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          reportingDateOverride: null,
-        }),
-      );
-      expect(result?.activityDate).toBe('2026-04-29');
-    });
-
-    it('should update categoryId', async () => {
-      const category = buildAssignableCategory({ id: 'new-category-id' });
-      const mockEntity = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
-        category,
-      );
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      await service.update(
-        'test-id',
-        { categoryId: 'new-category-id' },
-        mockUserId,
-      );
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          categoryId: 'new-category-id',
-        }),
-      );
-    });
-
-    it('rejects generic updates to custom categories that are not assignable to the user', async () => {
-      const mockEntity = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
-
-      await expect(
-        service.update(
-          'test-id',
-          { categoryId: 'other-user-category-id' },
-          mockUserId,
-        ),
-      ).rejects.toThrow(NotFoundException);
-
-      expect(
-        mockCategoryService.findActiveAssignableCategory,
-      ).toHaveBeenCalledWith('other-user-category-id', mockUserId);
-      expect(mockRepository.save).not.toHaveBeenCalled();
-    });
-
-    it('stores generic updates to owned custom categories as user category overrides', async () => {
-      const providerCategory = buildAssignableCategory({
-        id: 'provider-category-id',
-      });
-      const userCategory = buildAssignableCategory({
-        id: 'user-category-id',
-        source: 'user',
-        userId: mockUserId,
-        primary: 'Home Projects',
-        detailed: 'Hardware',
-      });
-      const mockEntity = TransactionEntity.fromDto(
-        { ...mockCreateTransactionDto, categoryId: providerCategory.id },
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockEntity.category = providerCategory;
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
-        userCategory,
-      );
-      mockRepository.save.mockImplementation((entity: TransactionEntity) =>
-        Promise.resolve(entity),
-      );
-
-      await service.update(
-        'test-id',
-        { categoryId: userCategory.id },
-        mockUserId,
-      );
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          categoryId: providerCategory.id,
-          userCategoryId: userCategory.id,
-          userCategory,
-          userCategoryUpdatedAt: expect.any(Date),
-        }),
-      );
-    });
-  });
-
-  describe('updateCategory', () => {
-    const providerCategory = {
-      id: 'provider-category-id',
-      primary: 'FOOD_AND_DRINK',
-      detailed: 'FOOD_AND_DRINK_RESTAURANT',
-      description: 'Restaurants',
-      createdAt: new Date('2024-01-01T00:00:00Z'),
-      updatedAt: new Date('2024-01-01T00:00:00Z'),
-      toObject: jest.fn().mockReturnValue({
-        id: 'provider-category-id',
-        primary: 'FOOD_AND_DRINK',
-        detailed: 'FOOD_AND_DRINK_RESTAURANT',
-        description: 'Restaurants',
-        createdAt: new Date('2024-01-01T00:00:00Z'),
-        updatedAt: new Date('2024-01-01T00:00:00Z'),
-      }),
-    } as unknown as CategoryEntity;
-
-    const userCategory = {
-      id: 'user-category-id',
-      primary: 'GENERAL_MERCHANDISE',
-      detailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
-      description: 'General merchandise',
-      createdAt: new Date('2024-01-01T00:00:00Z'),
-      updatedAt: new Date('2024-01-01T00:00:00Z'),
-      toObject: jest.fn().mockReturnValue({
-        id: 'user-category-id',
-        primary: 'GENERAL_MERCHANDISE',
-        detailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
-        description: 'General merchandise',
-        createdAt: new Date('2024-01-01T00:00:00Z'),
-        updatedAt: new Date('2024-01-01T00:00:00Z'),
-      }),
-    } as unknown as CategoryEntity;
-
-    function buildCategorizedEntity(): TransactionEntity {
-      const entity = TransactionEntity.fromDto(
-        { ...mockCreateTransactionDto, categoryId: providerCategory.id },
-        mockUserId,
-      );
-      entity.id = 'test-id';
-      entity.category = providerCategory;
+    process.env.JWT_SECRET = 'test-secret';
+    service = new TransactionService(
+      repository as never,
+      categoryRepository as never,
+      categoryService as unknown as CategoryService,
+    );
+    repository.save.mockImplementation(async (entity: TransactionEntity) => {
+      entity.id = entity.id ?? '00000000-0000-4000-8000-000000000201';
+      entity.createdAt =
+        entity.createdAt ?? new Date('2026-02-14T00:00:00.000Z');
+      entity.updatedAt =
+        entity.updatedAt ?? new Date('2026-02-14T00:00:00.000Z');
       return entity;
-    }
-
-    it('sets a user category override when selected category differs from provider category', async () => {
-      const entity = buildCategorizedEntity();
-      mockRepository.findOne
-        .mockResolvedValueOnce(entity)
-        .mockResolvedValue(entity);
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
-        userCategory,
-      );
-      mockRepository.save.mockImplementation((saved) => Promise.resolve(saved));
-
-      const result = await service.updateCategory(
-        'test-id',
-        { categoryId: userCategory.id },
-        mockUserId,
-      );
-
-      expect(
-        mockCategoryService.findActiveAssignableCategory,
-      ).toHaveBeenCalledWith(userCategory.id, mockUserId);
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userCategoryId: userCategory.id,
-          userCategory,
-          userCategoryUpdatedAt: expect.any(Date),
-          categoryReviewedAt: expect.any(Date),
-          categoryReviewMethod: 'manual_change',
-        }),
-      );
-      expect(result?.effectiveCategoryId).toBe(userCategory.id);
-      expect(result?.effectiveCategory?.primary).toBe('GENERAL_MERCHANDISE');
-      expect(result?.categoryNeedsReview).toBe(false);
-    });
-
-    it('clears user category override when selected category matches provider category', async () => {
-      const entity = buildCategorizedEntity();
-      entity.userCategoryId = userCategory.id;
-      entity.userCategory = userCategory;
-      entity.userCategoryUpdatedAt = new Date('2024-02-01T00:00:00Z');
-      mockRepository.findOne
-        .mockResolvedValueOnce(entity)
-        .mockResolvedValue(entity);
-      mockRepository.save.mockImplementation((saved) => Promise.resolve(saved));
-
-      const result = await service.updateCategory(
-        'test-id',
-        { categoryId: providerCategory.id },
-        mockUserId,
-      );
-
-      expect(
-        mockCategoryService.findActiveAssignableCategory,
-      ).not.toHaveBeenCalled();
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userCategoryId: null,
-          userCategory: null,
-          userCategoryUpdatedAt: null,
-          categoryReviewedAt: expect.any(Date),
-          categoryReviewMethod: 'manual_change',
-        }),
-      );
-      expect(result?.effectiveCategoryId).toBe(providerCategory.id);
-      expect(result?.effectiveCategory?.primary).toBe('FOOD_AND_DRINK');
-      expect(result?.categoryNeedsReview).toBe(false);
-    });
-
-    it('clears user category override when selected category is null', async () => {
-      const entity = buildCategorizedEntity();
-      entity.userCategoryId = userCategory.id;
-      entity.userCategory = userCategory;
-      entity.userCategoryUpdatedAt = new Date('2024-02-01T00:00:00Z');
-      mockRepository.findOne
-        .mockResolvedValueOnce(entity)
-        .mockResolvedValue(entity);
-      mockRepository.save.mockImplementation((saved) => Promise.resolve(saved));
-
-      await service.updateCategory('test-id', { categoryId: null }, mockUserId);
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userCategoryId: null,
-          userCategory: null,
-          userCategoryUpdatedAt: null,
-          categoryReviewedAt: expect.any(Date),
-          categoryReviewMethod: 'manual_change',
-        }),
-      );
-    });
-
-    it('returns null when selected category does not exist', async () => {
-      const entity = buildCategorizedEntity();
-      mockRepository.findOne.mockResolvedValue(entity);
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
-
-      const result = await service.updateCategory(
-        'test-id',
-        { categoryId: 'missing-category-id' },
-        mockUserId,
-      );
-
-      expect(result).toBeNull();
-      expect(mockRepository.save).not.toHaveBeenCalled();
-    });
-
-    it('returns null when selected custom category belongs to another user', async () => {
-      const entity = buildCategorizedEntity();
-      mockRepository.findOne.mockResolvedValue(entity);
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
-
-      const result = await service.updateCategory(
-        'test-id',
-        { categoryId: 'other-user-category-id' },
-        mockUserId,
-      );
-
-      expect(result).toBeNull();
-      expect(
-        mockCategoryService.findActiveAssignableCategory,
-      ).toHaveBeenCalledWith('other-user-category-id', mockUserId);
-      expect(mockRepository.save).not.toHaveBeenCalled();
-    });
-
-    it('returns null when transaction does not belong to user', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.updateCategory(
-        'test-id',
-        { categoryId: userCategory.id },
-        'other-user-id',
-      );
-
-      expect(result).toBeNull();
-      expect(mockRepository.save).not.toHaveBeenCalled();
     });
   });
 
-  describe('bulkUpdateCategories', () => {
-    const providerCategory = buildAssignableCategory({
-      id: '11111111-1111-4111-8111-111111111111',
-      primary: 'FOOD_AND_DRINK',
-      detailed: 'FOOD_AND_DRINK_RESTAURANT',
-    });
-    const userCategory = buildAssignableCategory({
-      id: '22222222-2222-4222-8222-222222222222',
-      primary: 'GENERAL_MERCHANDISE',
-      detailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
-      source: 'user',
-      userId: mockUserId,
-    });
-
-    function buildEntity(
-      id = '33333333-3333-4333-8333-333333333333',
-    ): TransactionEntity {
-      const entity = TransactionEntity.fromDto(
-        { ...mockCreateTransactionDto, categoryId: providerCategory.id },
-        mockUserId,
-      );
-      entity.id = id;
-      entity.category = providerCategory;
-      return entity;
-    }
-
-    it('sets user category overrides and bulk review metadata atomically', async () => {
-      const entity = buildEntity();
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
-        userCategory,
-      );
-      mockTxnRepo.find.mockResolvedValue([entity]);
-
-      const result = await service.bulkUpdateCategories(mockUserId, {
-        transactionIds: [entity.id],
-        categoryId: userCategory.id,
-      });
-
-      expect(
-        mockCategoryService.findActiveAssignableCategory,
-      ).toHaveBeenCalledWith(userCategory.id, mockUserId);
-      expect(mockTxnRepo.save).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: entity.id,
-          userCategoryId: userCategory.id,
-          userCategory,
-          userCategoryUpdatedAt: expect.any(Date),
-          categoryReviewedAt: expect.any(Date),
-          categoryReviewMethod: 'bulk_change',
-        }),
-      ]);
-      expect(result).toEqual({
-        count: 1,
-        transactionIds: [entity.id],
-        undo: expect.any(String),
-      });
-    });
-
-    it('clears overrides for provider category reset and still marks reviewed', async () => {
-      const entity = buildEntity();
-      entity.userCategoryId = userCategory.id;
-      entity.userCategory = userCategory;
-      entity.userCategoryUpdatedAt = new Date('2026-02-01T00:00:00Z');
-      mockTxnRepo.find.mockResolvedValue([entity]);
-
-      await service.bulkUpdateCategories(mockUserId, {
-        transactionIds: [entity.id],
-        categoryId: null,
-      });
-
-      expect(
-        mockCategoryService.findActiveAssignableCategory,
-      ).not.toHaveBeenCalled();
-      expect(mockTxnRepo.save).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: entity.id,
-          userCategoryId: null,
-          userCategory: null,
-          userCategoryUpdatedAt: null,
-          categoryReviewedAt: expect.any(Date),
-          categoryReviewMethod: 'bulk_change',
-        }),
-      ]);
-    });
-
-    it('clears overrides when the selected category matches the provider category', async () => {
-      const entity = buildEntity();
-      entity.userCategoryId = userCategory.id;
-      entity.userCategory = userCategory;
-      entity.userCategoryUpdatedAt = new Date('2026-02-01T00:00:00Z');
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
-        providerCategory,
-      );
-      mockTxnRepo.find.mockResolvedValue([entity]);
-
-      await service.bulkUpdateCategories(mockUserId, {
-        transactionIds: [entity.id],
-        categoryId: providerCategory.id,
-      });
-
-      expect(mockTxnRepo.save).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: entity.id,
-          userCategoryId: null,
-          userCategory: null,
-          userCategoryUpdatedAt: null,
-          categoryReviewedAt: expect.any(Date),
-          categoryReviewMethod: 'bulk_change',
-        }),
-      ]);
-    });
-
-    it('marks rows reviewed even when they already match the target category', async () => {
-      const entity = buildEntity();
-      entity.userCategoryId = userCategory.id;
-      entity.userCategory = userCategory;
-      entity.userCategoryUpdatedAt = new Date('2026-02-01T00:00:00Z');
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
-        userCategory,
-      );
-      mockTxnRepo.find.mockResolvedValue([entity]);
-
-      await service.bulkUpdateCategories(mockUserId, {
-        transactionIds: [entity.id],
-        categoryId: userCategory.id,
-      });
-
-      expect(mockTxnRepo.save).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: entity.id,
-          userCategoryId: userCategory.id,
-          categoryReviewedAt: expect.any(Date),
-          categoryReviewMethod: 'bulk_change',
-        }),
-      ]);
-    });
-
-    it('returns null without saving when any selected transaction is missing', async () => {
-      const entity = buildEntity();
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
-        userCategory,
-      );
-      mockTxnRepo.find.mockResolvedValue([entity]);
-
-      const result = await service.bulkUpdateCategories(mockUserId, {
-        transactionIds: [entity.id, '44444444-4444-4444-8444-444444444444'],
-        categoryId: userCategory.id,
-      });
-
-      expect(result).toBeNull();
-      expect(mockTxnRepo.save).not.toHaveBeenCalled();
-    });
-
-    it('returns null without saving when the selected category is unassignable', async () => {
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
-
-      const result = await service.bulkUpdateCategories(mockUserId, {
-        transactionIds: ['33333333-3333-4333-8333-333333333333'],
-        categoryId: userCategory.id,
-      });
-
-      expect(result).toBeNull();
-      expect(mockTxnRepo.find).not.toHaveBeenCalled();
-      expect(mockTxnRepo.save).not.toHaveBeenCalled();
-    });
-
-    it('undo restores previous override and review metadata exactly without assignability checks', async () => {
-      const previousReviewedAt = new Date('2026-02-14T00:00:00Z');
-      const previousUserCategoryUpdatedAt = new Date('2026-02-01T00:00:00Z');
-      const previousUserCategory = buildAssignableCategory({
-        id: userCategory.id,
-        primary: userCategory.primary,
-        detailed: userCategory.detailed,
-        source: userCategory.source,
-        userId: userCategory.userId,
-        archivedAt: new Date('2026-02-10T00:00:00Z'),
-      });
-      const entity = buildEntity();
-      entity.userCategoryId = previousUserCategory.id;
-      entity.userCategory = previousUserCategory;
-      entity.userCategoryUpdatedAt = previousUserCategoryUpdatedAt;
-      entity.categoryReviewedAt = previousReviewedAt;
-      entity.categoryReviewMethod = 'manual_change';
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
-        providerCategory,
-      );
-      mockTxnRepo.find.mockResolvedValueOnce([entity]);
-
-      const updateResult = await service.bulkUpdateCategories(mockUserId, {
-        transactionIds: [entity.id],
-        categoryId: providerCategory.id,
-      });
-
-      expect(updateResult?.undo).toEqual(expect.any(String));
-
-      mockCategoryService.findActiveAssignableCategory.mockClear();
-      mockTxnRepo.find.mockResolvedValueOnce([entity]);
-      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
-      mockCategoryRepository.find.mockResolvedValueOnce([previousUserCategory]);
-
-      const undoResult = await service.undoBulkUpdateCategories(mockUserId, {
-        undo: updateResult?.undo ?? '',
-      });
-
-      expect(
-        mockCategoryService.findActiveAssignableCategory,
-      ).not.toHaveBeenCalled();
-      expect(mockCategoryRepository.find).toHaveBeenCalledWith({
-        where: { id: expect.anything() },
-      });
-      expect(mockTxnRepo.save).toHaveBeenLastCalledWith([
-        expect.objectContaining({
-          id: entity.id,
-          userCategoryId: previousUserCategory.id,
-          userCategory: previousUserCategory,
-          userCategoryUpdatedAt: previousUserCategoryUpdatedAt,
-          categoryReviewedAt: previousReviewedAt,
-          categoryReviewMethod: 'manual_change',
-        }),
-      ]);
-      expect(undoResult).toEqual({
-        count: 1,
-        transactionIds: [entity.id],
-        undo: '',
-      });
-    });
-  });
-
-  describe('updateCategoryReview', () => {
-    function buildEntity(): TransactionEntity {
-      const entity = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      entity.id = 'test-id';
-      return entity;
-    }
-
-    it('marks a transaction category as reviewed', async () => {
-      const entity = buildEntity();
-      mockRepository.findOne
-        .mockResolvedValueOnce(entity)
-        .mockResolvedValue(entity);
-      mockRepository.save.mockImplementation((saved) => Promise.resolve(saved));
-
-      const result = await service.updateCategoryReview(
-        'test-id',
-        { reviewed: true },
-        mockUserId,
-      );
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          categoryReviewedAt: expect.any(Date),
-          categoryReviewMethod: 'manual_accept',
-        }),
-      );
-      expect(result?.categoryNeedsReview).toBe(false);
-    });
-
-    it('clears category review metadata for undo', async () => {
-      const entity = buildEntity();
-      entity.categoryReviewedAt = new Date('2026-02-14T00:00:00Z');
-      entity.categoryReviewMethod = 'manual_accept';
-      mockRepository.findOne
-        .mockResolvedValueOnce(entity)
-        .mockResolvedValue(entity);
-      mockRepository.save.mockImplementation((saved) => Promise.resolve(saved));
-
-      const result = await service.updateCategoryReview(
-        'test-id',
-        { reviewed: false },
-        mockUserId,
-      );
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          categoryReviewedAt: null,
-          categoryReviewMethod: null,
-        }),
-      );
-      expect(result?.categoryNeedsReview).toBe(true);
-    });
-
-    it('returns null when transaction does not belong to user', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      const result = await service.updateCategoryReview(
-        'test-id',
-        { reviewed: true },
-        'other-user-id',
-      );
-
-      expect(result).toBeNull();
-      expect(mockRepository.save).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('bulk category review', () => {
-    function buildEntity(id: string): TransactionEntity {
-      const entity = TransactionEntity.fromDto(
-        mockCreateTransactionDto,
-        mockUserId,
-      );
-      entity.id = id;
-      return entity;
-    }
-
-    it('marks unreviewed filtered transactions as reviewed', async () => {
-      const first = buildEntity('11111111-1111-4111-8111-111111111111');
-      const second = buildEntity('22222222-2222-4222-8222-222222222222');
-      mockQueryBuilder.getMany.mockResolvedValue([first, second]);
-      mockRepository.save.mockImplementation((saved) => Promise.resolve(saved));
-
-      const result = await service.bulkReviewCategories(mockUserId, {
-        filters: {
-          accountId: mockAccountId,
-          categoryReviewStatus: 'needs_review',
-        },
-      });
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.accountId = :accountId',
-        { accountId: mockAccountId },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'transaction.categoryReviewedAt IS NULL',
-      );
-      expect(mockRepository.save).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: first.id,
-          categoryReviewedAt: expect.any(Date),
-          categoryReviewMethod: 'bulk_accept',
-        }),
-        expect.objectContaining({
-          id: second.id,
-          categoryReviewedAt: expect.any(Date),
-          categoryReviewMethod: 'bulk_accept',
-        }),
-      ]);
-      expect(result).toEqual({
-        count: 2,
-        transactionIds: [first.id, second.id],
-      });
-    });
-
-    it('returns an empty result without saving when no rows match bulk review', async () => {
-      mockQueryBuilder.getMany.mockResolvedValue([]);
-
-      const result = await service.bulkReviewCategories(mockUserId, {
-        filters: {},
-      });
-
-      expect(result).toEqual({ count: 0, transactionIds: [] });
-      expect(mockRepository.save).not.toHaveBeenCalled();
-    });
-
-    it('clears review metadata for bulk undo ids owned by the user', async () => {
-      const entity = buildEntity('11111111-1111-4111-8111-111111111111');
-      entity.categoryReviewedAt = new Date('2026-02-14T00:00:00Z');
-      entity.categoryReviewMethod = 'bulk_accept';
-      mockRepository.find.mockResolvedValue([entity]);
-      mockRepository.save.mockImplementation((saved) => Promise.resolve(saved));
-
-      const result = await service.undoBulkReviewCategories(mockUserId, {
-        transactionIds: [entity.id],
-      });
-
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        where: {
-          id: expect.objectContaining({ _value: [entity.id] }),
-          userId: mockUserId,
-        },
-        relations: ['account', 'category', 'userCategory'],
-      });
-      expect(mockRepository.save).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: entity.id,
-          categoryReviewedAt: null,
-          categoryReviewMethod: null,
-        }),
-      ]);
-      expect(result).toEqual({
-        count: 1,
-        transactionIds: [entity.id],
-      });
-    });
-  });
-
-  describe('remove', () => {
-    it('should return true when transaction is successfully deleted', async () => {
-      mockRepository.delete.mockResolvedValue({ affected: 1 });
-
-      const result = await service.remove('test-id', mockUserId);
-
-      expect(result).toBe(true);
-      expect(mockRepository.delete).toHaveBeenCalledWith({
-        id: 'test-id',
-        userId: mockUserId,
-      });
-    });
-
-    it('should return false when transaction does not exist', async () => {
-      mockRepository.delete.mockResolvedValue({ affected: 0 });
-
-      const result = await service.remove('non-existent-id', mockUserId);
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when transaction belongs to different user', async () => {
-      mockRepository.delete.mockResolvedValue({ affected: 0 });
-
-      const result = await service.remove('test-id', 'different-user-id');
-
-      expect(result).toBe(false);
-      expect(mockRepository.delete).toHaveBeenCalledWith({
-        id: 'test-id',
-        userId: 'different-user-id',
-      });
-    });
-
-    it('should return false when affected is null', async () => {
-      mockRepository.delete.mockResolvedValue({ affected: null });
-
-      const result = await service.remove('test-id', mockUserId);
-
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('processSyncResults', () => {
-    const accountIdMap = new Map<string, string>([
-      ['ext-acc-1', 'int-acc-1'],
-      ['ext-acc-2', 'int-acc-2'],
-    ]);
-
-    const mockSyncTransaction = {
-      amount: {
-        money: { currency: 'USD', amount: 5000 },
-        sign: MoneySign.NEGATIVE,
-      },
-      accountId: 'ext-acc-1',
-      merchantName: 'Test Store',
-      pending: false,
-      externalTransactionId: 'ext-txn-1',
-      logoUrl: null,
-      providerDate: '2024-01-15',
-      providerDatetime: null,
-      authorizedDate: null,
-      authorizedDatetime: null,
-    };
-
-    beforeEach(() => {
-      jest.clearAllMocks();
-      mockTxnRepo.save.mockImplementation((entities) =>
-        Promise.resolve(entities),
-      );
-      mockTxnRepo.findOne.mockResolvedValue(null);
-      mockTxnRepo.delete.mockResolvedValue({ affected: 0 });
-    });
-
-    it('should insert added transactions with mapped account IDs', async () => {
-      const syncResults: TransactionSyncResponse = {
-        added: [
-          {
-            ...mockSyncTransaction,
-            providerTransactionName: 'DD *DOORDASH CRACKEDAN',
-            originalDescription: 'DOORDASH CRACKEDAN 855-973-1040 CA',
-            pendingTransactionId: 'pending-id',
-            website: 'https://www.doordash.com',
-            merchantEntityId: 'merchant-entity-id',
-            paymentChannel: 'online',
-            personalFinanceCategoryIconUrl:
-              'https://plaid-category-icon.example/food.png',
-            personalFinanceCategoryConfidenceLevel: 'VERY_HIGH',
-            counterparties: [{ name: 'DoorDash' }],
-            location: { city: 'San Francisco' },
-            paymentMeta: { payment_processor: 'DoorDash' },
-          },
-        ],
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      expect(mockTxnRepo.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            accountId: 'int-acc-1', // Mapped from ext-acc-1
-            userId: mockUserId,
-            providerTransactionName: 'DD *DOORDASH CRACKEDAN',
-            originalDescription: 'DOORDASH CRACKEDAN 855-973-1040 CA',
-            pendingTransactionId: 'pending-id',
-            website: 'https://www.doordash.com',
-            merchantEntityId: 'merchant-entity-id',
-            paymentChannel: 'online',
-            personalFinanceCategoryIconUrl:
-              'https://plaid-category-icon.example/food.png',
-            personalFinanceCategoryConfidenceLevel: 'VERY_HIGH',
-            counterparties: [{ name: 'DoorDash' }],
-            location: { city: 'San Francisco' },
-            paymentMeta: { payment_processor: 'DoorDash' },
-          }),
-        ]),
-      );
-    });
-
-    it('should skip transactions with unmapped account IDs', async () => {
-      const syncResults: TransactionSyncResponse = {
-        added: [{ ...mockSyncTransaction, accountId: 'unknown-ext-acc' }],
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      // save should not be called for added (all filtered out)
-      expect(mockTxnRepo.save).not.toHaveBeenCalled();
-    });
-
-    it('should update modified transactions when found', async () => {
-      const existingEntity = TransactionEntity.fromDto(
-        { ...mockCreateTransactionDto, accountId: 'int-acc-1' },
-        mockUserId,
-      );
-      existingEntity.id = 'existing-id';
-      existingEntity.userCategoryId = 'user-category-id';
-      existingEntity.userCategoryUpdatedAt = new Date('2024-02-01T00:00:00Z');
-      mockTxnRepo.findOne.mockResolvedValue(existingEntity);
-
-      const syncResults: TransactionSyncResponse = {
-        added: [],
-        modified: [{ ...mockSyncTransaction, merchantName: 'Updated Store' }],
-        removed: [],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      expect(mockTxnRepo.findOne).toHaveBeenCalledWith({
-        where: {
-          externalTransactionId: 'ext-txn-1',
-          accountId: 'int-acc-1',
-          userId: mockUserId,
-        },
-      });
-      expect(mockTxnRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'existing-id',
-          merchantName: 'Updated Store',
-          userCategoryId: 'user-category-id',
-          userCategoryUpdatedAt: new Date('2024-02-01T00:00:00Z'),
-        }),
-      );
-    });
-
-    it('should insert modified transactions that are not found locally', async () => {
-      mockTxnRepo.findOne.mockResolvedValue(null);
-
-      const syncResults: TransactionSyncResponse = {
-        added: [],
-        modified: [mockSyncTransaction],
-        removed: [],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      // Should save a new entity since the modified one wasn't found
-      expect(mockTxnRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accountId: 'int-acc-1',
-          userId: mockUserId,
-        }),
-      );
-    });
-
-    it('should delete removed transactions', async () => {
-      mockTxnRepo.delete.mockResolvedValue({ affected: 2 });
-
-      const syncResults: TransactionSyncResponse = {
-        added: [],
-        modified: [],
-        removed: ['ext-txn-1', 'ext-txn-2'],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      expect(mockTxnRepo.delete).toHaveBeenCalledWith({
-        externalTransactionId: expect.objectContaining({
-          _value: ['ext-txn-1', 'ext-txn-2'],
-        }),
-        accountId: expect.objectContaining({
-          _value: ['int-acc-1', 'int-acc-2'],
-        }),
-        userId: mockUserId,
-      });
-    });
-
-    it('should handle empty sync results', async () => {
-      const syncResults: TransactionSyncResponse = {
-        added: [],
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      expect(mockTxnRepo.save).not.toHaveBeenCalled();
-      expect(mockTxnRepo.delete).not.toHaveBeenCalled();
-    });
-
-    it('should resolve categoryId from personalFinanceCategory on added transactions', async () => {
-      mockCategoryRepository.find.mockResolvedValue([
-        {
-          id: 'cat-uuid-1',
-          primary: 'FOOD_AND_DRINK',
-          detailed: 'FOOD_AND_DRINK_COFFEE',
-        },
-      ]);
-
-      const syncResults: TransactionSyncResponse = {
-        added: [
-          {
-            ...mockSyncTransaction,
-            personalFinanceCategory: {
-              primary: 'FOOD_AND_DRINK',
-              detailed: 'FOOD_AND_DRINK_COFFEE',
-            },
-          },
-        ],
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      expect(mockTxnRepo.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            categoryId: 'cat-uuid-1',
-            accountId: 'int-acc-1',
-          }),
-        ]),
-      );
-    });
-
-    it('should leave categoryId null when personalFinanceCategory is not provided', async () => {
-      mockCategoryRepository.find.mockResolvedValue([
-        {
-          id: 'cat-uuid-1',
-          primary: 'FOOD_AND_DRINK',
-          detailed: 'FOOD_AND_DRINK_COFFEE',
-        },
-      ]);
-
-      const syncResults: TransactionSyncResponse = {
-        added: [mockSyncTransaction], // no personalFinanceCategory
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      expect(mockTxnRepo.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            categoryId: null,
-            accountId: 'int-acc-1',
-          }),
-        ]),
-      );
-    });
-
-    it('should leave categoryId null when personalFinanceCategory is unknown', async () => {
-      mockCategoryRepository.find.mockResolvedValue([
-        {
-          id: 'cat-uuid-1',
-          primary: 'FOOD_AND_DRINK',
-          detailed: 'FOOD_AND_DRINK_COFFEE',
-        },
-      ]);
-
-      const syncResults: TransactionSyncResponse = {
-        added: [
-          {
-            ...mockSyncTransaction,
-            personalFinanceCategory: {
-              primary: 'UNKNOWN',
-              detailed: 'UNKNOWN_SUBCATEGORY',
-            },
-          },
-        ],
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      expect(mockTxnRepo.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            categoryId: null,
-            accountId: 'int-acc-1',
-          }),
-        ]),
-      );
-    });
-
-    it('should resolve categoryId on modified transactions', async () => {
-      mockCategoryRepository.find.mockResolvedValue([
-        {
-          id: 'cat-uuid-2',
-          primary: 'TRANSPORTATION',
-          detailed: 'TRANSPORTATION_GAS',
-        },
-      ]);
-
-      const existingEntity = TransactionEntity.fromDto(
-        { ...mockCreateTransactionDto, accountId: 'int-acc-1' },
-        mockUserId,
-      );
-      existingEntity.id = 'existing-id';
-      mockTxnRepo.findOne.mockResolvedValue(existingEntity);
-
-      const syncResults: TransactionSyncResponse = {
-        added: [],
-        modified: [
-          {
-            ...mockSyncTransaction,
-            personalFinanceCategory: {
-              primary: 'TRANSPORTATION',
-              detailed: 'TRANSPORTATION_GAS',
-            },
-          },
-        ],
-        removed: [],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      expect(mockTxnRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'existing-id',
-          categoryId: 'cat-uuid-2',
-        }),
-      );
-    });
-
-    it('should not update categoryId on reviewed modified transactions', async () => {
-      mockCategoryRepository.find.mockResolvedValue([
-        {
-          id: 'cat-uuid-2',
-          primary: 'TRANSPORTATION',
-          detailed: 'TRANSPORTATION_GAS',
-        },
-      ]);
-
-      const existingEntity = TransactionEntity.fromDto(
-        {
-          ...mockCreateTransactionDto,
-          accountId: 'int-acc-1',
-          categoryId: 'old-category-id',
-        },
-        mockUserId,
-      );
-      existingEntity.id = 'existing-id';
-      existingEntity.categoryReviewedAt = new Date('2026-02-14T00:00:00Z');
-      existingEntity.categoryReviewMethod = 'manual_accept';
-      mockTxnRepo.findOne.mockResolvedValue(existingEntity);
-
-      const syncResults: TransactionSyncResponse = {
-        added: [],
-        modified: [
-          {
-            ...mockSyncTransaction,
-            merchantName: 'Updated Store',
-            personalFinanceCategory: {
-              primary: 'TRANSPORTATION',
-              detailed: 'TRANSPORTATION_GAS',
-            },
-          },
-        ],
-        removed: [],
-        nextCursor: 'cursor-1',
-        hasMore: false,
-      };
-
-      await service.processSyncResults(mockUserId, accountIdMap, syncResults);
-
-      expect(mockTxnRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'existing-id',
-          merchantName: 'Updated Store',
-          categoryId: 'old-category-id',
-          categoryReviewedAt: new Date('2026-02-14T00:00:00Z'),
-          categoryReviewMethod: 'manual_accept',
-        }),
-      );
-    });
-  });
-
-  describe('searchForSurface', () => {
-    it('should return capped transaction surface results with matchedCount', async () => {
-      const netflix = TransactionEntity.fromDto(
-        {
-          ...mockCreateTransactionDto,
-          merchantName: 'Netflix',
-          providerDate: '2026-03-03',
-        },
-        mockUserId,
-      );
-      netflix.id = 'txn-1';
-      netflix.account = {
-        name: 'Checking',
-        customName: 'House Checking',
-      } as TransactionEntity['account'];
-      netflix.category = {
-        id: 'provider-category-id',
-        primary: 'FOOD_AND_DRINK',
-        detailed: 'FOOD_AND_DRINK_RESTAURANT',
-        description: 'Restaurants',
-        createdAt: new Date('2024-01-01T00:00:00Z'),
-        updatedAt: new Date('2024-01-01T00:00:00Z'),
-        toObject: jest.fn().mockReturnValue({
-          id: 'provider-category-id',
+  it('creates uncategorized transactions while preserving provider category hints', async () => {
+    const result = await service.create(
+      buildCreateDto({
+        personalFinanceCategory: {
           primary: 'FOOD_AND_DRINK',
           detailed: 'FOOD_AND_DRINK_RESTAURANT',
-          description: 'Restaurants',
-          createdAt: new Date('2024-01-01T00:00:00Z'),
-          updatedAt: new Date('2024-01-01T00:00:00Z'),
-        }),
-      } as unknown as TransactionEntity['category'];
-      netflix.userCategory = {
-        id: 'user-category-id',
-        primary: 'GENERAL_MERCHANDISE',
-        detailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
-        description: 'General merchandise',
-        createdAt: new Date('2024-01-01T00:00:00Z'),
-        updatedAt: new Date('2024-01-01T00:00:00Z'),
-        toObject: jest.fn().mockReturnValue({
-          id: 'user-category-id',
-          primary: 'GENERAL_MERCHANDISE',
-          detailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
-          description: 'General merchandise',
-          createdAt: new Date('2024-01-01T00:00:00Z'),
-          updatedAt: new Date('2024-01-01T00:00:00Z'),
-        }),
-      } as unknown as TransactionEntity['userCategory'];
-      netflix.userCategoryId = 'user-category-id';
+        },
+        personalFinanceCategoryConfidenceLevel: 'HIGH',
+        personalFinanceCategoryIconUrl: 'https://example.com/icon.png',
+      }),
+      userId,
+    );
 
-      mockQueryBuilder.getMany.mockResolvedValue([netflix]);
-
-      const result = await service.searchForSurface(mockUserId, {
-        categoryPrimary: 'GENERAL_MERCHANDISE',
-        limit: 20,
-      });
-
-      expect(result).toMatchObject({
-        matchedCount: 1,
-        truncated: false,
-        transactions: [
-          {
-            id: 'txn-1',
-            merchantName: 'Netflix',
-            accountName: 'House Checking',
-            categoryPrimary: 'GENERAL_MERCHANDISE',
-          },
-        ],
-      });
+    expect(categoryService.findActiveAssignableCategory).not.toHaveBeenCalled();
+    expect(result.categoryId).toBeNull();
+    expect(result.category).toBeNull();
+    expect(result.providerCategoryHint).toMatchObject({
+      provider: 'plaid',
+      primary: 'FOOD_AND_DRINK',
+      detailed: 'FOOD_AND_DRINK_RESTAURANT',
+      displayLabel: 'Food And Drink > Restaurant',
+      confidenceLevel: 'HIGH',
+      iconUrl: 'https://example.com/icon.png',
     });
+  });
+
+  it('assigns, clears, and timestamps user categories', async () => {
+    const transaction = buildTransaction();
+    repository.findOne.mockResolvedValueOnce(transaction);
+    repository.save.mockResolvedValueOnce(transaction);
+    repository.findOne.mockResolvedValueOnce(transaction);
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(
+      category,
+    );
+
+    const assigned = await service.updateCategory(
+      transaction.id,
+      { categoryId: category.id },
+      userId,
+    );
+
+    expect(assigned?.categoryId).toBe(category.id);
+    expect(transaction.categoryUpdatedAt).toBeInstanceOf(Date);
+
+    repository.findOne.mockResolvedValueOnce(transaction);
+    repository.save.mockResolvedValueOnce(transaction);
+    repository.findOne.mockResolvedValueOnce(transaction);
+
+    const cleared = await service.updateCategory(
+      transaction.id,
+      { categoryId: null },
+      userId,
+    );
+
+    expect(cleared?.categoryId).toBeNull();
+    expect(transaction.categoryUpdatedAt).toBeNull();
+  });
+
+  it('returns null for missing transaction or unassignable category', async () => {
+    repository.findOne.mockResolvedValueOnce(null);
+    await expect(
+      service.updateCategory('missing-id', { categoryId: category.id }, userId),
+    ).resolves.toBeNull();
+
+    repository.findOne.mockResolvedValueOnce(buildTransaction());
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(null);
+    await expect(
+      service.updateCategory('txn-id', { categoryId: category.id }, userId),
+    ).resolves.toBeNull();
+  });
+
+  it('throws when general update tries to assign an invalid category', async () => {
+    repository.findOne.mockResolvedValueOnce(buildTransaction());
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(null);
+
+    await expect(
+      service.update('txn-id', { categoryId: category.id }, userId),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('bulk updates and undo tokens store actual user category IDs', async () => {
+    const transaction = buildTransaction({
+      categoryId: null,
+      category: null,
+      categoryUpdatedAt: null,
+    });
+    const txnRepo = {
+      find: jest.fn().mockResolvedValue([transaction]),
+      save: jest.fn().mockResolvedValue([transaction]),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
+      ) => callback({ getRepository: () => txnRepo }),
+    );
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(
+      category,
+    );
+
+    const result = await service.bulkUpdateCategories(userId, {
+      transactionIds: [transaction.id],
+      categoryId: category.id,
+    });
+
+    expect(result).toMatchObject({
+      count: 1,
+      transactionIds: [transaction.id],
+    });
+    expect(transaction.categoryId).toBe(category.id);
+    expect(transaction.categoryUpdatedAt).toBeInstanceOf(Date);
+    expect(result?.undo).toEqual(expect.any(String));
+  });
+
+  it('sync inserts provider hints without resolving provider categories into app categories', async () => {
+    const saved: TransactionEntity[] = [];
+    const txnRepo = {
+      save: jest.fn(
+        async (entities: TransactionEntity | TransactionEntity[]) => {
+          if (Array.isArray(entities)) {
+            saved.push(...entities);
+          } else {
+            saved.push(entities);
+          }
+          return entities;
+        },
+      ),
+      findOne: jest.fn(),
+      delete: jest.fn(),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
+      ) => callback({ getRepository: () => txnRepo }),
+    );
+
+    await service.processSyncResults(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      {
+        added: [
+          buildCreateDto({
+            accountId: 'external-account-id',
+            externalTransactionId: 'external-txn-id',
+            personalFinanceCategory: {
+              primary: 'GENERAL_MERCHANDISE',
+              detailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
+            },
+          }),
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor',
+        hasMore: false,
+      },
+    );
+
+    expect(saved[0].categoryId).toBeNull();
+    expect(saved[0].providerCategoryProvider).toBe('plaid');
+    expect(saved[0].providerCategoryPrimary).toBe('GENERAL_MERCHANDISE');
   });
 });

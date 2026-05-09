@@ -3,13 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, In, IsNull, Not, Repository } from 'typeorm';
 import {
   cleanCategoryLabel,
-  formatCategoryDisplayPair,
+  formatCategoryPair,
   normalizeCategoryKey,
 } from './category-normalization';
-import { CategoryVisibilityPreferenceEntity } from './category-visibility-preference.entity';
 import {
   BulkCategoryActionResponse,
-  BulkCategoryVisibilityDto,
   BulkCustomCategoryActionDto,
   Category,
   CategoryConflict,
@@ -26,29 +24,18 @@ export class CategoryService {
   constructor(
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
-    @InjectRepository(CategoryVisibilityPreferenceEntity)
-    private readonly visibilityRepository: Repository<CategoryVisibilityPreferenceEntity>,
     @InjectRepository(TransactionEntity)
     private readonly transactionRepository: Repository<TransactionEntity>,
   ) {}
 
   async findAll(userId: string): Promise<Category[]> {
-    const categories = await this.findActiveVisibleCategoryEntities(userId);
+    const categories = await this.findActiveCategoryEntities(userId);
 
     return categories.map((category) => category.toObject());
   }
 
   async findFilterOptions(userId: string): Promise<Category[]> {
-    const categories = await this.findActiveCategoryEntities(userId);
-    const categoryIds = categories.map((category) => category.id);
-    const hiddenIds = await this.findHiddenCategoryIds(userId, categoryIds);
-    const usedIds = await this.findUsedCategoryIds(userId, categoryIds);
-
-    return categories
-      .filter(
-        (category) => !hiddenIds.has(category.id) || usedIds.has(category.id),
-      )
-      .map((category) => category.toObject());
+    return this.findAll(userId);
   }
 
   async findManagement(
@@ -56,32 +43,22 @@ export class CategoryService {
     options: { archivedMode?: boolean } = {},
   ): Promise<CategoryManagementItem[]> {
     const categories = await this.categoryRepository.find({
-      where: [
-        ...(options.archivedMode
-          ? []
-          : ([
-              { source: 'plaid', archivedAt: IsNull() },
-              { source: 'user', userId, archivedAt: IsNull() },
-            ] as const)),
-        ...(options.archivedMode
-          ? ([{ source: 'user', userId, archivedAt: Not(IsNull()) }] as const)
-          : []),
-      ],
+      where: options.archivedMode
+        ? { userId, archivedAt: Not(IsNull()) }
+        : { userId, archivedAt: IsNull() },
       order: { primary: 'ASC', detailed: 'ASC' },
     });
 
-    const categoryIds = categories.map((category) => category.id);
-    const hiddenIds = await this.findHiddenCategoryIds(userId, categoryIds);
-    const usage = await this.findEffectiveUsage(userId, categoryIds);
+    const usage = await this.findUsage(
+      userId,
+      categories.map((category) => category.id),
+    );
 
     return categories.map((category) => {
-      const isHidden = hiddenIds.has(category.id);
       const usageRow = usage.get(category.id);
 
       return {
         ...category.toObject(),
-        isHidden,
-        isSelectable: category.archivedAt === null && !isHidden,
         transactionCount: usageRow?.transactionCount ?? 0,
         lastUsedAt: usageRow?.lastUsedAt ?? null,
       };
@@ -94,7 +71,6 @@ export class CategoryService {
   ): Promise<Category[]> {
     const categories = await this.categoryRepository.find({
       where: {
-        source: 'user',
         userId,
         ...(options.includeArchived ? {} : { archivedAt: IsNull() }),
       },
@@ -113,19 +89,8 @@ export class CategoryService {
 
     const categories = await this.categoryRepository
       .createQueryBuilder('category')
-      .where('category."archivedAt" IS NULL')
-      .andWhere(
-        new Brackets((scope) => {
-          scope
-            .where('category.source = :plaidSource', {
-              plaidSource: 'plaid',
-            })
-            .orWhere(
-              'category.source = :userSource AND category."userId" = :userId',
-              { userSource: 'user', userId },
-            );
-        }),
-      )
+      .where('category."userId" = :userId', { userId })
+      .andWhere('category."archivedAt" IS NULL')
       .andWhere(
         new Brackets((search) => {
           search
@@ -141,14 +106,7 @@ export class CategoryService {
       .addOrderBy('category.detailed', 'ASC')
       .getMany();
 
-    const hiddenIds = await this.findHiddenCategoryIds(
-      userId,
-      categories.map((category) => category.id),
-    );
-
-    return categories
-      .filter((category) => !hiddenIds.has(category.id))
-      .map((category) => category.toObject());
+    return categories.map((category) => category.toObject());
   }
 
   async createCustom(
@@ -157,17 +115,16 @@ export class CategoryService {
   ): Promise<Category> {
     const primary = cleanCategoryLabel(dto.primary);
     const detailed = cleanCategoryLabel(dto.detailed);
-    const conflict = await this.findActiveConflict(userId, primary, detailed);
+    const conflict = await this.findConflict(userId, primary, detailed);
 
     if (conflict) {
-      throw await this.buildConflictException(conflict, userId);
+      throw this.buildConflictException(conflict);
     }
 
     const category = new CategoryEntity();
+    category.userId = userId;
     category.setLabels(primary, detailed);
     category.description = cleanCategoryLabel(dto.description ?? '');
-    category.source = 'user';
-    category.userId = userId;
     category.archivedAt = null;
 
     const saved = await this.saveWithConflictHandling(
@@ -185,7 +142,7 @@ export class CategoryService {
     dto: UpdateCustomCategoryDto,
   ): Promise<Category | null> {
     const category = await this.categoryRepository.findOne({
-      where: { id, source: 'user', userId },
+      where: { id, userId },
     });
 
     if (!category) {
@@ -206,18 +163,15 @@ export class CategoryService {
         : dto.archived
           ? (category.archivedAt ?? new Date())
           : null;
+    const conflict = await this.findConflict(
+      userId,
+      nextPrimary,
+      nextDetailed,
+      id,
+    );
 
-    if (nextArchivedAt === null) {
-      const conflict = await this.findActiveConflict(
-        userId,
-        nextPrimary,
-        nextDetailed,
-        id,
-      );
-
-      if (conflict) {
-        throw await this.buildConflictException(conflict, userId);
-      }
+    if (conflict) {
+      throw this.buildConflictException(conflict);
     }
 
     category.setLabels(nextPrimary, nextDetailed);
@@ -240,83 +194,9 @@ export class CategoryService {
     id: string,
     userId: string,
   ): Promise<CategoryEntity | null> {
-    const category = await this.categoryRepository
-      .createQueryBuilder('category')
-      .where('category.id = :id', { id })
-      .andWhere('category."archivedAt" IS NULL')
-      .andWhere(
-        new Brackets((scope) => {
-          scope
-            .where('category.source = :plaidSource', {
-              plaidSource: 'plaid',
-            })
-            .orWhere(
-              'category.source = :userSource AND category."userId" = :userId',
-              { userSource: 'user', userId },
-            );
-        }),
-      )
-      .getOne();
-
-    if (!category || (await this.isHidden(userId, id))) {
-      return null;
-    }
-
-    return category;
-  }
-
-  async bulkUpdateVisibility(
-    userId: string,
-    dto: BulkCategoryVisibilityDto,
-  ): Promise<BulkCategoryActionResponse> {
-    const requestedIds = Array.from(new Set(dto.categoryIds));
-    const categories = await this.categoryRepository.find({
-      where: { id: In(requestedIds) },
+    return this.categoryRepository.findOne({
+      where: { id, userId, archivedAt: IsNull() },
     });
-    const categoryById = new Map(
-      categories.map((category) => [category.id, category]),
-    );
-    const skipped: BulkCategoryActionResponse['skipped'] = [];
-    let updated = 0;
-
-    for (const categoryId of requestedIds) {
-      const category = categoryById.get(categoryId);
-      if (!category) {
-        skipped.push({ categoryId, reason: 'not_found' });
-        continue;
-      }
-      if (category.archivedAt !== null) {
-        skipped.push({ categoryId, reason: 'archived' });
-        continue;
-      }
-      if (category.source === 'user' && category.userId !== userId) {
-        skipped.push({ categoryId, reason: 'not_owned' });
-        continue;
-      }
-
-      let preference = await this.visibilityRepository.findOne({
-        where: { userId, categoryId },
-      });
-      if (!preference) {
-        preference = new CategoryVisibilityPreferenceEntity();
-        preference.userId = userId;
-        preference.categoryId = categoryId;
-        preference.hiddenAt = null;
-      }
-
-      const nextHiddenAt = dto.hidden
-        ? (preference.hiddenAt ?? new Date())
-        : null;
-      if ((preference.hiddenAt === null) === (nextHiddenAt === null)) {
-        continue;
-      }
-
-      preference.hiddenAt = nextHiddenAt;
-      await this.visibilityRepository.save(preference);
-      updated += 1;
-    }
-
-    return { requested: requestedIds.length, updated, skipped };
   }
 
   async bulkUpdateCustom(
@@ -339,10 +219,6 @@ export class CategoryService {
         skipped.push({ categoryId, reason: 'not_found' });
         continue;
       }
-      if (category.source !== 'user') {
-        skipped.push({ categoryId, reason: 'system_category' });
-        continue;
-      }
       if (category.userId !== userId) {
         skipped.push({ categoryId, reason: 'not_owned' });
         continue;
@@ -360,7 +236,7 @@ export class CategoryService {
           continue;
         }
 
-        const conflict = await this.findActiveConflict(
+        const conflict = await this.findConflict(
           userId,
           category.primary,
           category.detailed,
@@ -371,6 +247,28 @@ export class CategoryService {
           continue;
         }
         category.archivedAt = null;
+      } else if (dto.action === 'duplicate') {
+        if (category.archivedAt !== null) {
+          skipped.push({ categoryId, reason: 'archived' });
+          continue;
+        }
+
+        const duplicate = new CategoryEntity();
+        duplicate.userId = userId;
+        duplicate.setLabels(
+          category.primary,
+          await this.findNextDuplicateDetailedLabel(
+            userId,
+            category.primary,
+            category.detailed,
+          ),
+        );
+        duplicate.description = category.description;
+        duplicate.archivedAt = null;
+
+        await this.categoryRepository.save(duplicate);
+        updated += 1;
+        continue;
       } else {
         if (category.archivedAt !== null) {
           skipped.push({ categoryId, reason: 'archived' });
@@ -378,7 +276,7 @@ export class CategoryService {
         }
 
         const nextPrimary = cleanCategoryLabel(dto.primary);
-        const conflict = await this.findActiveConflict(
+        const conflict = await this.findConflict(
           userId,
           nextPrimary,
           category.detailed,
@@ -398,7 +296,30 @@ export class CategoryService {
     return { requested: requestedIds.length, updated, skipped };
   }
 
-  private async findActiveConflict(
+  private async findNextDuplicateDetailedLabel(
+    userId: string,
+    primary: string,
+    detailed: string,
+  ): Promise<string> {
+    let copyNumber = 1;
+
+    while (copyNumber <= 500) {
+      const candidate = `${detailed} - copy (${copyNumber})`;
+      const conflict = await this.findConflict(userId, primary, candidate);
+
+      if (!conflict) {
+        return candidate;
+      }
+
+      copyNumber += 1;
+    }
+
+    throw new ConflictException({
+      message: 'Unable to find an available duplicate category name',
+    });
+  }
+
+  private async findConflict(
     userId: string,
     primary: string,
     detailed: string,
@@ -406,24 +327,13 @@ export class CategoryService {
   ): Promise<CategoryEntity | null> {
     const query = this.categoryRepository
       .createQueryBuilder('category')
-      .where('category."normalizedPrimary" = :primary', {
+      .where('category."userId" = :userId', { userId })
+      .andWhere('category."normalizedPrimary" = :primary', {
         primary: normalizeCategoryKey(primary),
       })
       .andWhere('category."normalizedDetailed" = :detailed', {
         detailed: normalizeCategoryKey(detailed),
-      })
-      .andWhere(
-        new Brackets((scope) => {
-          scope
-            .where('category.source = :plaidSource', {
-              plaidSource: 'plaid',
-            })
-            .orWhere(
-              'category.source = :userSource AND category."userId" = :userId',
-              { userSource: 'user', userId },
-            );
-        }),
-      );
+      });
 
     if (excludeId) {
       query.andWhere('category.id != :excludeId', { excludeId });
@@ -432,22 +342,13 @@ export class CategoryService {
     return query.getOne();
   }
 
-  private async buildConflictException(
-    category: CategoryEntity,
-    userId: string,
-  ): Promise<ConflictException> {
+  private buildConflictException(category: CategoryEntity): ConflictException {
     const conflict: CategoryConflict = {
       categoryId: category.id,
-      label: formatCategoryDisplayPair(
-        category.source,
-        category.primary,
-        category.detailed,
-      ),
+      label: formatCategoryPair(category.primary, category.detailed),
       primary: category.primary,
       detailed: category.detailed,
-      source: category.source,
       archivedAt: category.archivedAt,
-      isHidden: await this.isHidden(userId, category.id),
     };
 
     return new ConflictException({
@@ -470,7 +371,7 @@ export class CategoryService {
         throw error;
       }
 
-      const conflict = await this.findActiveConflict(
+      const conflict = await this.findConflict(
         userId,
         primary,
         detailed,
@@ -478,7 +379,7 @@ export class CategoryService {
       );
 
       if (conflict) {
-        throw await this.buildConflictException(conflict, userId);
+        throw this.buildConflictException(conflict);
       }
 
       throw new ConflictException({
@@ -499,87 +400,21 @@ export class CategoryService {
 
     return (
       code === '23505' &&
-      (constraint === 'UQ_category_plaid_normalized_pair' ||
-        constraint === 'UQ_category_user_normalized_pair')
+      (constraint === 'UQ_category_user_normalized_pair' ||
+        constraint === 'UQ_category_user_normalized_pair_all')
     );
-  }
-
-  private async findActiveVisibleCategoryEntities(
-    userId: string,
-  ): Promise<CategoryEntity[]> {
-    const categories = await this.findActiveCategoryEntities(userId);
-    const hiddenIds = await this.findHiddenCategoryIds(
-      userId,
-      categories.map((category) => category.id),
-    );
-
-    return categories.filter((category) => !hiddenIds.has(category.id));
   }
 
   private async findActiveCategoryEntities(
     userId: string,
   ): Promise<CategoryEntity[]> {
     return this.categoryRepository.find({
-      where: [
-        { source: 'plaid', archivedAt: IsNull() },
-        { source: 'user', userId, archivedAt: IsNull() },
-      ],
+      where: { userId, archivedAt: IsNull() },
       order: { primary: 'ASC', detailed: 'ASC' },
     });
   }
 
-  private async findHiddenCategoryIds(
-    userId: string,
-    categoryIds: string[],
-  ): Promise<Set<string>> {
-    if (categoryIds.length === 0) {
-      return new Set();
-    }
-
-    const preferences = await this.visibilityRepository.find({
-      where: {
-        userId,
-        categoryId: In(categoryIds),
-        hiddenAt: Not(IsNull()),
-      },
-    });
-
-    return new Set(preferences.map((preference) => preference.categoryId));
-  }
-
-  private async isHidden(userId: string, categoryId: string): Promise<boolean> {
-    const preference = await this.visibilityRepository.findOne({
-      where: { userId, categoryId, hiddenAt: Not(IsNull()) },
-    });
-
-    return preference !== null;
-  }
-
-  private async findUsedCategoryIds(
-    userId: string,
-    categoryIds: Array<string>,
-  ): Promise<Set<string>> {
-    if (categoryIds.length === 0) {
-      return new Set();
-    }
-
-    const rows = await this.transactionRepository
-      .createQueryBuilder('transaction')
-      .select(
-        'DISTINCT COALESCE(transaction."userCategoryId", transaction."categoryId")',
-        'categoryId',
-      )
-      .where('transaction."userId" = :userId', { userId })
-      .andWhere(
-        'COALESCE(transaction."userCategoryId", transaction."categoryId") IN (:...categoryIds)',
-        { categoryIds },
-      )
-      .getRawMany<{ categoryId: string }>();
-
-    return new Set(rows.map((row) => row.categoryId));
-  }
-
-  private async findEffectiveUsage(
+  private async findUsage(
     userId: string,
     categoryIds: Array<string>,
   ): Promise<
@@ -591,20 +426,14 @@ export class CategoryService {
 
     const rows = await this.transactionRepository
       .createQueryBuilder('transaction')
-      .select(
-        'COALESCE(transaction."userCategoryId", transaction."categoryId")',
-        'categoryId',
-      )
+      .select('transaction."categoryId"', 'categoryId')
       .addSelect('COUNT(*)', 'transactionCount')
       .addSelect(`MAX(${TRANSACTION_ACTIVITY_DATE_EXPRESSION})`, 'lastUsedAt')
       .where('transaction."userId" = :userId', { userId })
-      .andWhere(
-        'COALESCE(transaction."userCategoryId", transaction."categoryId") IN (:...categoryIds)',
-        { categoryIds },
-      )
-      .groupBy(
-        'COALESCE(transaction."userCategoryId", transaction."categoryId")',
-      )
+      .andWhere('transaction."categoryId" IN (:...categoryIds)', {
+        categoryIds,
+      })
+      .groupBy('transaction."categoryId"')
       .getRawMany<{
         categoryId: string;
         transactionCount: string | number;

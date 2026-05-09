@@ -14,9 +14,4 @@ export type BulkCustomCategoryActionDtoOneOfFive = {
    */
   categoryIds: string[]
   action: BulkCustomCategoryActionDtoOneOfFiveAction
-  /**
-   * @minLength 1
-   * @maxLength 80
-   */
-  primary: string
 }

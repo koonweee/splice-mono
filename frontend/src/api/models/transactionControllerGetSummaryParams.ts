@@ -6,7 +6,6 @@
  * OpenAPI spec version: 1.0
  */
 import type { TransactionControllerGetSummaryAmountSign } from './transactionControllerGetSummaryAmountSign'
-import type { TransactionControllerGetSummaryCategoryReviewStatus } from './transactionControllerGetSummaryCategoryReviewStatus'
 
 export type TransactionControllerGetSummaryParams = {
   /**
@@ -30,11 +29,11 @@ export type TransactionControllerGetSummaryParams = {
    */
   amountSign?: TransactionControllerGetSummaryAmountSign
   /**
+   * Filter by exact category ID, or UNCATEGORIZED for transactions without a category
+   */
+  categoryId?: string
+  /**
    * When false, still returns preferred-currency totals for stable frontend display
    */
   convert?: boolean
-  /**
-   * Filter by category review status
-   */
-  categoryReviewStatus?: TransactionControllerGetSummaryCategoryReviewStatus
 }

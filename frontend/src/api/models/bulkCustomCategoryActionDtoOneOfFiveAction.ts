@@ -11,5 +11,5 @@ export type BulkCustomCategoryActionDtoOneOfFiveAction =
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const BulkCustomCategoryActionDtoOneOfFiveAction = {
-  setPrimary: 'setPrimary',
+  duplicate: 'duplicate',
 } as const

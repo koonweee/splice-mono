@@ -8,8 +8,10 @@
 import type { BulkCustomCategoryActionDtoOneOf } from './bulkCustomCategoryActionDtoOneOf'
 import type { BulkCustomCategoryActionDtoOneOfThree } from './bulkCustomCategoryActionDtoOneOfThree'
 import type { BulkCustomCategoryActionDtoOneOfFive } from './bulkCustomCategoryActionDtoOneOfFive'
+import type { BulkCustomCategoryActionDtoOneOfSeven } from './bulkCustomCategoryActionDtoOneOfSeven'
 
 export type BulkCustomCategoryActionDto =
   | BulkCustomCategoryActionDtoOneOf
   | BulkCustomCategoryActionDtoOneOfThree
   | BulkCustomCategoryActionDtoOneOfFive
+  | BulkCustomCategoryActionDtoOneOfSeven

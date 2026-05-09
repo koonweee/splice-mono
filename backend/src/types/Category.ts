@@ -4,7 +4,8 @@ import { TimestampsSchema } from './Timestamps';
 
 /**
  * Category schema for transaction categorization.
- * This is a reference entity - categories are global/shared across all users.
+ * Categories are user-owned; ownership is scoped by the authenticated user and
+ * is not exposed in API responses.
  */
 export const CategorySchema = registerSchema(
   'Category',
@@ -17,11 +18,7 @@ export const CategorySchema = registerSchema(
       detailed: z.string(),
       /** Description of the category */
       description: z.string(),
-      /** Category source: Plaid taxonomy or user-created */
-      source: z.enum(['plaid', 'user']).default('plaid'),
-      /** Owning user for custom categories */
-      userId: z.string().uuid().nullable().default(null),
-      /** Archive timestamp for user-created categories hidden from selectors */
+      /** Archive timestamp for categories hidden from future assignment */
       archivedAt: z.coerce.date().nullable().default(null),
     })
     .merge(TimestampsSchema),
@@ -63,9 +60,7 @@ export const CategoryConflictSchema = registerSchema(
     label: z.string(),
     primary: z.string(),
     detailed: z.string(),
-    source: z.enum(['plaid', 'user']),
     archivedAt: z.coerce.date().nullable().default(null),
-    isHidden: z.boolean().optional(),
   }),
 );
 
@@ -74,8 +69,6 @@ export type CategoryConflict = z.infer<typeof CategoryConflictSchema>;
 export const CategoryManagementItemSchema = registerSchema(
   'CategoryManagementItem',
   CategorySchema.extend({
-    isHidden: z.boolean(),
-    isSelectable: z.boolean(),
     transactionCount: z.number().int().nonnegative().optional(),
     lastUsedAt: z.string().nullable().optional(),
   }),
@@ -83,18 +76,6 @@ export const CategoryManagementItemSchema = registerSchema(
 
 export type CategoryManagementItem = z.infer<
   typeof CategoryManagementItemSchema
->;
-
-export const BulkCategoryVisibilityDtoSchema = registerSchema(
-  'BulkCategoryVisibilityDto',
-  z.object({
-    categoryIds: z.array(z.string().uuid()).min(1).max(500),
-    hidden: z.boolean(),
-  }),
-);
-
-export type BulkCategoryVisibilityDto = z.infer<
-  typeof BulkCategoryVisibilityDtoSchema
 >;
 
 export const BulkCustomCategoryActionDtoSchema = registerSchema(
@@ -107,6 +88,10 @@ export const BulkCustomCategoryActionDtoSchema = registerSchema(
     z.object({
       categoryIds: z.array(z.string().uuid()).min(1).max(500),
       action: z.literal('restore'),
+    }),
+    z.object({
+      categoryIds: z.array(z.string().uuid()).min(1).max(500),
+      action: z.literal('duplicate'),
     }),
     z.object({
       categoryIds: z.array(z.string().uuid()).min(1).max(500),
@@ -131,7 +116,6 @@ export const BulkCategoryActionResponseSchema = registerSchema(
         reason: z.enum([
           'not_found',
           'not_owned',
-          'system_category',
           'archived',
           'duplicate_conflict',
         ]),

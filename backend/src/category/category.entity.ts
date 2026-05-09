@@ -2,14 +2,13 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import {
   cleanCategoryLabel,
   normalizeCategoryKey,
-  normalizePlaidDetailedKey,
 } from './category-normalization';
 import { TimestampedEntity } from '../common/base.entity';
 import { Category } from '../types/Category';
 
 /**
  * Category entity for transaction categorization.
- * Plaid categories are global reference rows; user categories are scoped by userId.
+ * Categories are user-owned app categories scoped by userId.
  */
 @Entity()
 export class CategoryEntity extends TimestampedEntity {
@@ -36,11 +35,7 @@ export class CategoryEntity extends TimestampedEntity {
   @Column({ type: 'varchar' })
   description: string;
 
-  /** Category source: Plaid taxonomy or user-created */
-  @Column({ type: 'varchar', default: 'plaid' })
-  source: 'plaid' | 'user';
-
-  /** Owning user for user-created categories */
+  /** Owning user */
   @Column({ type: 'uuid', nullable: true })
   userId: string | null;
 
@@ -52,10 +47,7 @@ export class CategoryEntity extends TimestampedEntity {
     this.primary = cleanCategoryLabel(primary);
     this.detailed = cleanCategoryLabel(detailed);
     this.normalizedPrimary = normalizeCategoryKey(this.primary);
-    this.normalizedDetailed =
-      this.source === 'plaid'
-        ? normalizePlaidDetailedKey(this.primary, this.detailed)
-        : normalizeCategoryKey(this.detailed);
+    this.normalizedDetailed = normalizeCategoryKey(this.detailed);
   }
 
   /**
@@ -67,8 +59,6 @@ export class CategoryEntity extends TimestampedEntity {
       primary: this.primary,
       detailed: this.detailed,
       description: this.description,
-      source: this.source,
-      userId: this.userId,
       archivedAt: this.archivedAt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
