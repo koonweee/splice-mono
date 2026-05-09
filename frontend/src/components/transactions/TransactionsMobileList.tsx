@@ -185,6 +185,7 @@ export function TransactionsMobileList({
   const activeBankActivityDate = activeTransaction
     ? getBankActivityDate(activeTransaction)
     : null
+  const drawerReadOnly = bulkModeEnabled
 
   useEffect(() => {
     if (!activeTransaction) {
@@ -258,11 +259,7 @@ export function TransactionsMobileList({
 
               return (
                 <UnstyledButton
-                  aria-label={
-                    bulkModeEnabled
-                      ? `Select transaction ${merchantDisplay.primary}`
-                      : `Open transaction details for ${merchantDisplay.primary}`
-                  }
+                  aria-label={`Open transaction details for ${merchantDisplay.primary}`}
                   className={`${styles.row} ${
                     bulkModeEnabled &&
                     selectedTransactionIds.has(transaction.id)
@@ -270,14 +267,7 @@ export function TransactionsMobileList({
                       : ''
                   }`}
                   key={transaction.id}
-                  onClick={() => {
-                    if (bulkModeEnabled) {
-                      toggleBulkSelection(transaction)
-                      return
-                    }
-
-                    setActiveTransactionId(transaction.id)
-                  }}
+                  onClick={() => setActiveTransactionId(transaction.id)}
                 >
                   <div className={styles.rowMain}>
                     {bulkModeEnabled && (
@@ -394,84 +384,89 @@ export function TransactionsMobileList({
               </Text>
             </div>
 
-            <Stack gap={6}>
-              <TextInput
-                label="Reporting date"
-                type="date"
-                value={reportingDateDraft ?? ''}
-                onChange={(event) =>
-                  setReportingDateDraft(event.currentTarget.value || null)
-                }
-              />
-              <Group gap="xs" grow>
-                <Button
-                  disabled={!hasReportingDateDraftChange}
-                  leftSection={<Check size={16} />}
-                  loading={
-                    updateTransaction.isPending &&
-                    updateTransaction.variables.id === activeTransaction.id
-                  }
-                  onClick={() => {
-                    if (!reportingDateDraft) {
-                      return
+            {!drawerReadOnly && (
+              <>
+                <Stack gap={6}>
+                  <TextInput
+                    label="Reporting date"
+                    type="date"
+                    value={reportingDateDraft ?? ''}
+                    onChange={(event) =>
+                      setReportingDateDraft(event.currentTarget.value || null)
                     }
+                  />
+                  <Group gap="xs" grow>
+                    <Button
+                      disabled={!hasReportingDateDraftChange}
+                      leftSection={<Check size={16} />}
+                      loading={
+                        updateTransaction.isPending &&
+                        updateTransaction.variables.id === activeTransaction.id
+                      }
+                      onClick={() => {
+                        if (!reportingDateDraft) {
+                          return
+                        }
 
-                    updateTransaction.mutate({
-                      id: activeTransaction.id,
-                      data: { reportingDateOverride: reportingDateDraft },
-                    })
-                  }}
-                  variant="light"
-                >
-                  Apply date
-                </Button>
-                {activeTransaction.reportingDateOverride != null && (
-                  <Button
-                    color="gray"
-                    leftSection={<RotateCcw size={16} />}
-                    loading={
-                      updateTransaction.isPending &&
-                      updateTransaction.variables.id === activeTransaction.id
-                    }
-                    onClick={() =>
-                      updateTransaction.mutate({
+                        updateTransaction.mutate({
+                          id: activeTransaction.id,
+                          data: { reportingDateOverride: reportingDateDraft },
+                        })
+                      }}
+                      variant="light"
+                    >
+                      Apply date
+                    </Button>
+                    {activeTransaction.reportingDateOverride != null && (
+                      <Button
+                        color="gray"
+                        leftSection={<RotateCcw size={16} />}
+                        loading={
+                          updateTransaction.isPending &&
+                          updateTransaction.variables.id ===
+                            activeTransaction.id
+                        }
+                        onClick={() =>
+                          updateTransaction.mutate({
+                            id: activeTransaction.id,
+                            data: { reportingDateOverride: null },
+                          })
+                        }
+                        variant="light"
+                      >
+                        Use bank date
+                      </Button>
+                    )}
+                  </Group>
+                  {activeTransaction.reportingDateOverride != null && (
+                    <Text c="dimmed" size="xs">
+                      Bank date{' '}
+                      {activeBankActivityDate
+                        ? dayjs(activeBankActivityDate).format('MMM D, YYYY')
+                        : ''}
+                    </Text>
+                  )}
+                </Stack>
+
+                <Stack gap={6}>
+                  <CategorySelect
+                    aria-label="Category"
+                    data={categoryOptions}
+                    label="Category"
+                    onChange={(value) =>
+                      updateCategory.mutate({
                         id: activeTransaction.id,
-                        data: { reportingDateOverride: null },
+                        data: { categoryId: value },
                       })
                     }
-                    variant="light"
-                  >
-                    Use bank date
-                  </Button>
-                )}
-              </Group>
-              {activeTransaction.reportingDateOverride != null && (
-                <Text c="dimmed" size="xs">
-                  Bank date{' '}
-                  {activeBankActivityDate
-                    ? dayjs(activeBankActivityDate).format('MMM D, YYYY')
-                    : ''}
-                </Text>
-              )}
-            </Stack>
+                    placeholder={getCategoryLabel(activeTransaction)}
+                    value={activeTransaction.categoryId}
+                  />
+                </Stack>
+              </>
+            )}
 
-            <Stack gap={6}>
-              <CategorySelect
-                aria-label="Category"
-                data={categoryOptions}
-                label="Category"
-                onChange={(value) =>
-                  updateCategory.mutate({
-                    id: activeTransaction.id,
-                    data: { categoryId: value },
-                  })
-                }
-                placeholder={getCategoryLabel(activeTransaction)}
-                value={activeTransaction.categoryId}
-              />
-            </Stack>
-
-            <Divider />
+            {!drawerReadOnly && <Divider />}
 
             <Stack gap="xs">
               <MetadataItem label="Display" value={activeMerchant?.primary} />

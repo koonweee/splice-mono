@@ -140,7 +140,7 @@ describe('TransactionsMobileList', () => {
     expect(screen.queryByRole('button', { name: 'Mark reviewed' })).toBeNull()
   })
 
-  it('keeps bulk mode row selection behavior', () => {
+  it('uses checkboxes for bulk selection and opens read-only details from rows', async () => {
     const onToggle = vi.fn()
 
     renderMobileList(
@@ -158,9 +158,19 @@ describe('TransactionsMobileList', () => {
 
     expect((checkbox as HTMLInputElement).checked).toBe(true)
 
-    fireEvent.click(screen.getByRole('button', { name: /Select transaction/ }))
+    fireEvent.click(checkbox)
 
     expect(onToggle).toHaveBeenCalledWith('txn-1')
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Open transaction details for Store/,
+      }),
+    )
+
+    expect(await screen.findByText('Display')).toBeTruthy()
+    expect(screen.queryByLabelText('Reporting date')).toBeNull()
+    expect(screen.queryByLabelText('Category')).toBeNull()
   })
 
   it('updates reporting date overrides from the details drawer', async () => {
