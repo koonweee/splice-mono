@@ -6,7 +6,7 @@ import { OwnedSchema } from './Timestamps';
 
 export const TransactionCategoryReviewMethodSchema = registerSchema(
   'TransactionCategoryReviewMethod',
-  z.enum(['manual_accept', 'manual_change', 'bulk_accept']),
+  z.enum(['manual_accept', 'manual_change', 'bulk_accept', 'bulk_change']),
 );
 
 export type TransactionCategoryReviewMethod = z.infer<
@@ -236,6 +236,43 @@ export const BulkTransactionCategoryReviewResponseSchema = registerSchema(
 
 export type BulkTransactionCategoryReviewResponse = z.infer<
   typeof BulkTransactionCategoryReviewResponseSchema
+>;
+
+export const BulkTransactionCategoryUpdateDtoSchema = registerSchema(
+  'BulkTransactionCategoryUpdateDto',
+  z.object({
+    transactionIds: z.array(z.string().uuid()).min(1),
+    /** Selected category ID. Null clears user overrides back to provider category. */
+    categoryId: z.string().uuid().nullable(),
+  }),
+);
+
+export type BulkTransactionCategoryUpdateDto = z.infer<
+  typeof BulkTransactionCategoryUpdateDtoSchema
+>;
+
+export const BulkTransactionCategoryUpdateUndoDtoSchema = registerSchema(
+  'BulkTransactionCategoryUpdateUndoDto',
+  z.object({
+    undo: z.string().min(1),
+  }),
+);
+
+export type BulkTransactionCategoryUpdateUndoDto = z.infer<
+  typeof BulkTransactionCategoryUpdateUndoDtoSchema
+>;
+
+export const BulkTransactionCategoryUpdateResponseSchema = registerSchema(
+  'BulkTransactionCategoryUpdateResponse',
+  z.object({
+    count: z.number().int(),
+    transactionIds: z.array(z.string().uuid()),
+    undo: z.string(),
+  }),
+);
+
+export type BulkTransactionCategoryUpdateResponse = z.infer<
+  typeof BulkTransactionCategoryUpdateResponseSchema
 >;
 
 export const TransactionSummarySchema = registerSchema(

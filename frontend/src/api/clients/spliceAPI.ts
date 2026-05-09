@@ -35,6 +35,9 @@ import type {
   BulkTransactionCategoryReviewDto,
   BulkTransactionCategoryReviewResponse,
   BulkTransactionCategoryReviewUndoDto,
+  BulkTransactionCategoryUpdateDto,
+  BulkTransactionCategoryUpdateResponse,
+  BulkTransactionCategoryUpdateUndoDto,
   Category,
   CategoryControllerFindCustomParams,
   CategoryControllerFindManagementParams,
@@ -3834,6 +3837,178 @@ export const useTransactionControllerUpdateCategory = <
 > => {
   const mutationOptions =
     getTransactionControllerUpdateCategoryMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Bulk update transaction category overrides
+ */
+export const transactionControllerBulkUpdateCategories = (
+  bulkTransactionCategoryUpdateDto: BulkTransactionCategoryUpdateDto,
+  signal?: AbortSignal,
+) => {
+  return axios<BulkTransactionCategoryUpdateResponse>({
+    url: `/transaction/category/bulk`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: bulkTransactionCategoryUpdateDto,
+    signal,
+  })
+}
+
+export const getTransactionControllerBulkUpdateCategoriesMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerBulkUpdateCategories>>,
+    TError,
+    { data: BulkTransactionCategoryUpdateDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerBulkUpdateCategories>>,
+  TError,
+  { data: BulkTransactionCategoryUpdateDto },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerBulkUpdateCategories']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerBulkUpdateCategories>>,
+    { data: BulkTransactionCategoryUpdateDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return transactionControllerBulkUpdateCategories(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerBulkUpdateCategoriesMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof transactionControllerBulkUpdateCategories>>
+  >
+export type TransactionControllerBulkUpdateCategoriesMutationBody =
+  BulkTransactionCategoryUpdateDto
+export type TransactionControllerBulkUpdateCategoriesMutationError = void
+
+export const useTransactionControllerBulkUpdateCategories = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerBulkUpdateCategories>>,
+      TError,
+      { data: BulkTransactionCategoryUpdateDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerBulkUpdateCategories>>,
+  TError,
+  { data: BulkTransactionCategoryUpdateDto },
+  TContext
+> => {
+  const mutationOptions =
+    getTransactionControllerBulkUpdateCategoriesMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Undo a bulk transaction category update
+ */
+export const transactionControllerUndoBulkUpdateCategories = (
+  bulkTransactionCategoryUpdateUndoDto: BulkTransactionCategoryUpdateUndoDto,
+  signal?: AbortSignal,
+) => {
+  return axios<BulkTransactionCategoryUpdateResponse>({
+    url: `/transaction/category/bulk/undo`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: bulkTransactionCategoryUpdateUndoDto,
+    signal,
+  })
+}
+
+export const getTransactionControllerUndoBulkUpdateCategoriesMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerUndoBulkUpdateCategories>>,
+    TError,
+    { data: BulkTransactionCategoryUpdateUndoDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerUndoBulkUpdateCategories>>,
+  TError,
+  { data: BulkTransactionCategoryUpdateUndoDto },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerUndoBulkUpdateCategories']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerUndoBulkUpdateCategories>>,
+    { data: BulkTransactionCategoryUpdateUndoDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return transactionControllerUndoBulkUpdateCategories(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerUndoBulkUpdateCategoriesMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof transactionControllerUndoBulkUpdateCategories>>
+  >
+export type TransactionControllerUndoBulkUpdateCategoriesMutationBody =
+  BulkTransactionCategoryUpdateUndoDto
+export type TransactionControllerUndoBulkUpdateCategoriesMutationError = void
+
+export const useTransactionControllerUndoBulkUpdateCategories = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerUndoBulkUpdateCategories>>,
+      TError,
+      { data: BulkTransactionCategoryUpdateUndoDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerUndoBulkUpdateCategories>>,
+  TError,
+  { data: BulkTransactionCategoryUpdateUndoDto },
+  TContext
+> => {
+  const mutationOptions =
+    getTransactionControllerUndoBulkUpdateCategoriesMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }

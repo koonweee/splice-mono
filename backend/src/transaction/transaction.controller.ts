@@ -22,6 +22,9 @@ import type {
   BulkTransactionCategoryReviewDto,
   BulkTransactionCategoryReviewResponse,
   BulkTransactionCategoryReviewUndoDto,
+  BulkTransactionCategoryUpdateDto,
+  BulkTransactionCategoryUpdateResponse,
+  BulkTransactionCategoryUpdateUndoDto,
   CreateTransactionDto,
   PaginatedTransactionResponse,
   Transaction,
@@ -35,6 +38,9 @@ import {
   BulkTransactionCategoryReviewDtoSchema,
   BulkTransactionCategoryReviewResponseSchema,
   BulkTransactionCategoryReviewUndoDtoSchema,
+  BulkTransactionCategoryUpdateDtoSchema,
+  BulkTransactionCategoryUpdateResponseSchema,
+  BulkTransactionCategoryUpdateUndoDtoSchema,
   CreateTransactionDtoSchema,
   PaginatedTransactionResponseSchema,
   TransactionSchema,
@@ -430,6 +436,64 @@ export class TransactionController {
       );
     }
     return transaction;
+  }
+
+  @Post('category/bulk')
+  @ApiOperation({ description: 'Bulk update transaction category overrides' })
+  @ZodApiBody({ schema: BulkTransactionCategoryUpdateDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Transaction categories bulk updated successfully',
+    schema: BulkTransactionCategoryUpdateResponseSchema,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Transaction or category not found',
+  })
+  async bulkUpdateCategories(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(BulkTransactionCategoryUpdateDtoSchema))
+    bulkUpdateDto: BulkTransactionCategoryUpdateDto,
+  ): Promise<BulkTransactionCategoryUpdateResponse> {
+    const result = await this.transactionService.bulkUpdateCategories(
+      user.userId,
+      bulkUpdateDto,
+    );
+    if (!result) {
+      throw new NotFoundException(
+        'One or more transactions or the selected category were not found',
+      );
+    }
+
+    return result;
+  }
+
+  @Post('category/bulk/undo')
+  @ApiOperation({ description: 'Undo a bulk transaction category update' })
+  @ZodApiBody({ schema: BulkTransactionCategoryUpdateUndoDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Bulk transaction category update undone successfully',
+    schema: BulkTransactionCategoryUpdateResponseSchema,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Undo payload is invalid or expired',
+  })
+  async undoBulkUpdateCategories(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(BulkTransactionCategoryUpdateUndoDtoSchema))
+    undoDto: BulkTransactionCategoryUpdateUndoDto,
+  ): Promise<BulkTransactionCategoryUpdateResponse> {
+    const result = await this.transactionService.undoBulkUpdateCategories(
+      user.userId,
+      undoDto,
+    );
+    if (!result) {
+      throw new NotFoundException('Bulk category update undo is unavailable');
+    }
+
+    return result;
   }
 
   @Patch(':id/category-review')

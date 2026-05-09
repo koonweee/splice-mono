@@ -11,6 +11,7 @@ import {
   SegmentedControl,
   Select,
   Stack,
+  Switch,
   Text,
   Title,
 } from '@mantine/core'
@@ -20,17 +21,21 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { Filter } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   getTransactionControllerFindAllQueryKey,
   transactionControllerFindAll,
   useAccountControllerFindAll,
+  useCategoryControllerFindAll,
   useCategoryControllerFindFilterOptions,
   useTransactionControllerBulkReviewCategories,
+  useTransactionControllerBulkUpdateCategories,
   useTransactionControllerGetSummary,
   useTransactionControllerUndoBulkReviewCategories,
+  useTransactionControllerUndoBulkUpdateCategories,
 } from '../../api/clients/spliceAPI'
-import { formatPrimaryCategory } from '../../lib/format'
+import { formatCategoryName, formatPrimaryCategory } from '../../lib/format'
+import { isAssignableCategoryOption } from '../../lib/category-options'
 import type {
   BulkTransactionCategoryReviewDto,
   Category,
@@ -41,10 +46,12 @@ import type { DatesRangeValue } from '@mantine/dates'
 import type { MRT_SortingState } from 'mantine-react-table'
 import { DateRangeControl } from '@/components/DateRangeControl'
 import { TransactionsTable } from '@/components/TransactionsTable'
+import { TransactionBulkEditToolbar } from '@/components/transactions/TransactionBulkEditToolbar'
 import { TransactionSummaryStrip } from '@/components/transactions/TransactionSummaryStrip'
 import { TransactionsMobileList } from '@/components/transactions/TransactionsMobileList'
 
 const PAGE_SIZE = 50
+const PROVIDER_CATEGORY_VALUE = '__provider_category__'
 
 type CategoryReviewFilter = 'all' | 'needs_review' | 'reviewed'
 
@@ -91,6 +98,14 @@ function getPrimaryCategoryLabel(
   return category.source === 'user'
     ? category.primary
     : formatPrimaryCategory(category.primary)
+}
+
+function getAssignableCategoryLabel(
+  category: Pick<Category, 'primary' | 'detailed' | 'source'>,
+) {
+  return category.source === 'user'
+    ? category.detailed
+    : formatCategoryName(category)
 }
 
 function TransactionsFilterPanel({
@@ -209,6 +224,13 @@ function TransactionsPage() {
   const [sorting, setSorting] = useState<MRT_SortingState>([
     { id: 'activityDate', desc: true },
   ])
+  const [bulkModeEnabled, setBulkModeEnabled] = useState(false)
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<
+    Set<string>
+  >(() => new Set())
+  const [bulkCategoryValue, setBulkCategoryValue] = useState<string | null>(
+    null,
+  )
 
   // Filter state
   const [dateRange, setDateRange] = useState<DatesRangeValue>(() => [
@@ -226,16 +248,21 @@ function TransactionsPage() {
   // Account data for the select dropdown
   const { data: accounts } = useAccountControllerFindAll()
   const { data: categories } = useCategoryControllerFindFilterOptions()
+  const { data: assignableCategories = [] } = useCategoryControllerFindAll()
   const bulkReviewCategories = useTransactionControllerBulkReviewCategories()
   const undoBulkReviewCategories =
     useTransactionControllerUndoBulkReviewCategories()
+  const bulkUpdateCategories = useTransactionControllerBulkUpdateCategories()
+  const undoBulkUpdateCategories =
+    useTransactionControllerUndoBulkUpdateCategories()
 
   const invalidateTransactions = useCallback(() => {
     queryClient.invalidateQueries({
       predicate: (query) =>
         Array.isArray(query.queryKey) &&
         typeof query.queryKey[0] === 'string' &&
-        query.queryKey[0].includes('transaction'),
+        (query.queryKey[0].includes('transaction') ||
+          query.queryKey[0].includes('category')),
     })
   }, [queryClient])
 
@@ -261,6 +288,20 @@ function TransactionsPage() {
       .map(([value, label]) => ({ value, label }))
       .sort((left, right) => left.label.localeCompare(right.label))
   }, [categories])
+
+  const assignableCategoryOptions = useMemo(
+    () => [
+      { value: PROVIDER_CATEGORY_VALUE, label: 'Use provider category' },
+      ...assignableCategories
+        .filter(isAssignableCategoryOption)
+        .map((category) => ({
+          value: category.id,
+          label: getAssignableCategoryLabel(category),
+        }))
+        .sort((left, right) => left.label.localeCompare(right.label)),
+    ],
+    [assignableCategories],
+  )
 
   const queryParams = useMemo(() => {
     const params: TransactionControllerFindAllParams = {
@@ -379,6 +420,21 @@ function TransactionsPage() {
     [data],
   )
   const totalRows = data?.pages[0]?.total ?? 0
+  const loadedTransactionIds = useMemo(
+    () => flatData.map((transaction) => transaction.id),
+    [flatData],
+  )
+
+  useEffect(() => {
+    setSelectedTransactionIds(new Set())
+  }, [queryParams])
+
+  useEffect(() => {
+    if (!bulkModeEnabled) {
+      setSelectedTransactionIds(new Set())
+      setBulkCategoryValue(null)
+    }
+  }, [bulkModeEnabled])
 
   const fetchMoreOnScroll = useCallback(() => {
     if (!isFetching && hasNextPage) {
@@ -399,6 +455,106 @@ function TransactionsPage() {
     setCategoryPrimary(null)
     setAmountSign('all')
     setCategoryReviewStatus('all')
+  }
+
+  const selectedCount = selectedTransactionIds.size
+  const selectedLoadedCount = loadedTransactionIds.filter((id) =>
+    selectedTransactionIds.has(id),
+  ).length
+  const allLoadedSelected =
+    loadedTransactionIds.length > 0 &&
+    selectedLoadedCount === loadedTransactionIds.length
+  const someLoadedSelected = selectedLoadedCount > 0
+
+  const toggleTransactionSelection = useCallback((transactionId: string) => {
+    setSelectedTransactionIds((current) => {
+      const next = new Set(current)
+      if (next.has(transactionId)) {
+        next.delete(transactionId)
+      } else {
+        next.add(transactionId)
+      }
+
+      return next
+    })
+  }, [])
+
+  const toggleLoadedSelection = useCallback(() => {
+    setSelectedTransactionIds((current) => {
+      const next = new Set(current)
+
+      if (loadedTransactionIds.every((id) => next.has(id))) {
+        loadedTransactionIds.forEach((id) => next.delete(id))
+      } else {
+        loadedTransactionIds.forEach((id) => next.add(id))
+      }
+
+      return next
+    })
+  }, [loadedTransactionIds])
+
+  const saveBulkCategoryUpdate = () => {
+    if (bulkCategoryValue === null || selectedTransactionIds.size === 0) {
+      return
+    }
+
+    bulkUpdateCategories.mutate(
+      {
+        data: {
+          transactionIds: Array.from(selectedTransactionIds),
+          categoryId:
+            bulkCategoryValue === PROVIDER_CATEGORY_VALUE
+              ? null
+              : bulkCategoryValue,
+        },
+      },
+      {
+        onSuccess: (result) => {
+          invalidateTransactions()
+          setSelectedTransactionIds(new Set())
+          notifications.show({
+            title: 'Categories updated',
+            message: (
+              <Group gap="xs" wrap="nowrap">
+                <Text size="sm">
+                  Updated {result.count} transaction
+                  {result.count === 1 ? '' : 's'}.
+                </Text>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  onClick={() =>
+                    undoBulkUpdateCategories.mutate(
+                      { data: { undo: result.undo } },
+                      {
+                        onSuccess: invalidateTransactions,
+                        onError: () => {
+                          notifications.show({
+                            title: 'Undo failed',
+                            message: 'Category changes were not restored.',
+                            color: 'red',
+                          })
+                        },
+                      },
+                    )
+                  }
+                >
+                  Undo
+                </Button>
+              </Group>
+            ),
+            color: 'green',
+          })
+        },
+        onError: () => {
+          notifications.show({
+            title: 'Category update failed',
+            message: 'No transactions were updated.',
+            color: 'red',
+          })
+        },
+      },
+    )
   }
 
   const hiddenActiveFilterCount = [
@@ -486,8 +642,15 @@ function TransactionsPage() {
         height: 'calc(100vh - 60px - 2 * var(--mantine-spacing-md))',
       }}
     >
-      <Group justify="space-between" mb="md">
+      <Group align="baseline" justify="space-between" mb="md" wrap="nowrap">
         <Title order={1}>Transactions</Title>
+        <Switch
+          checked={bulkModeEnabled}
+          label="Bulk edit"
+          onChange={(event) =>
+            setBulkModeEnabled(event.currentTarget.checked)
+          }
+        />
       </Group>
 
       <Group mb={isMobile ? 'xs' : 'md'} gap="xs" wrap="wrap" align="center">
@@ -589,6 +752,9 @@ function TransactionsPage() {
           isError={isError}
           isFetchingNextPage={isFetchingNextPage}
           onScrollNearBottom={fetchMoreOnScroll}
+          bulkModeEnabled={bulkModeEnabled}
+          selectedTransactionIds={selectedTransactionIds}
+          onToggleTransactionSelection={toggleTransactionSelection}
         />
       ) : (
         <TransactionsTable
@@ -602,6 +768,10 @@ function TransactionsPage() {
           manualSorting
           sorting={sorting}
           onSortingChange={setSorting}
+          bulkModeEnabled={bulkModeEnabled}
+          selectedTransactionIds={selectedTransactionIds}
+          onToggleTransactionSelection={toggleTransactionSelection}
+          onToggleLoadedSelection={toggleLoadedSelection}
           mantinePaperProps={{
             style: { display: 'flex', flexDirection: 'column', flex: 1 },
           }}
@@ -609,6 +779,21 @@ function TransactionsPage() {
             ref: tableContainerRef,
             style: { flex: 1, overflow: 'auto' },
           }}
+        />
+      )}
+      {bulkModeEnabled && selectedCount > 0 && (
+        <TransactionBulkEditToolbar
+          categoryOptions={assignableCategoryOptions}
+          isSaving={bulkUpdateCategories.isPending}
+          loadedCount={loadedTransactionIds.length}
+          selectedCount={selectedCount}
+          selectLoadedChecked={allLoadedSelected}
+          selectLoadedIndeterminate={someLoadedSelected && !allLoadedSelected}
+          value={bulkCategoryValue}
+          onChange={setBulkCategoryValue}
+          onSave={saveBulkCategoryUpdate}
+          onToggleLoaded={toggleLoadedSelection}
+          showSelectLoaded={isMobile}
         />
       )}
     </Flex>

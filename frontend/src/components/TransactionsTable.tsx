@@ -4,6 +4,7 @@ import {
   Avatar,
   Badge,
   Button,
+  Checkbox,
   Divider,
   Group,
   Popover,
@@ -27,6 +28,7 @@ import {
   useTransactionControllerUpdateCategory,
   useTransactionControllerUpdateCategoryReview,
 } from '../api/clients/spliceAPI'
+import { isAssignableCategoryOption } from '../lib/category-options'
 import tableChrome from './MantineTableChrome.module.css'
 import styles from './TransactionsTable.module.css'
 import statusBadgeStyles from './transactions/TransactionStatusBadge.module.css'
@@ -62,6 +64,10 @@ interface TransactionsTableProps {
   ) => void
   mantinePaperProps?: Record<string, unknown>
   mantineTableContainerProps?: Record<string, unknown>
+  bulkModeEnabled?: boolean
+  selectedTransactionIds?: Set<string>
+  onToggleTransactionSelection?: (transactionId: string) => void
+  onToggleLoadedSelection?: () => void
 }
 
 function formatMetadataValue(value: string | null | undefined) {
@@ -280,7 +286,13 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
   )
 }
 
-function MerchantCell({ row }: { row: { original: Transaction } }) {
+function MerchantCell({
+  row,
+  bulkModeEnabled = false,
+}: {
+  row: { original: Transaction }
+  bulkModeEnabled?: boolean
+}) {
   const transaction = row.original
   const merchantDisplay = getMerchantDisplay(transaction)
   const avatarLabel = merchantDisplay.primary.trim().slice(0, 1).toUpperCase()
@@ -300,7 +312,9 @@ function MerchantCell({ row }: { row: { original: Transaction } }) {
           <Text className={styles.merchantPrimary} size="sm" span>
             {merchantDisplay.primary}
           </Text>
-          <TransactionInfoPopover transaction={transaction} />
+          {!bulkModeEnabled && (
+            <TransactionInfoPopover transaction={transaction} />
+          )}
           {transaction.pending && (
             <Badge
               classNames={{
@@ -455,6 +469,10 @@ export function TransactionsTable({
   onSortingChange,
   mantinePaperProps,
   mantineTableContainerProps,
+  bulkModeEnabled = false,
+  selectedTransactionIds = new Set<string>(),
+  onToggleTransactionSelection,
+  onToggleLoadedSelection,
 }: TransactionsTableProps) {
   const queryClient = useQueryClient()
   const [editingTransactionId, setEditingTransactionId] = useState<
@@ -468,6 +486,17 @@ export function TransactionsTable({
   const [reportingDateDraft, setReportingDateDraft] = useState<string | null>(
     null,
   )
+
+  useEffect(() => {
+    if (!bulkModeEnabled) {
+      return
+    }
+
+    setEditingTransactionId(null)
+    setEditingReportingDateTransactionId(null)
+    setCategorySearch('')
+    setReportingDateDraft(null)
+  }, [bulkModeEnabled])
   const { data: categories = [] } = useCategoryControllerFindAll()
   const updateTransaction = useTransactionControllerUpdate({
     mutation: {
@@ -559,9 +588,14 @@ export function TransactionsTable({
     )
   }
 
+  function toggleBulkSelection(transaction: Transaction) {
+    onToggleTransactionSelection?.(transaction.id)
+  }
+
   const categoryOptions = useMemo(
     () =>
       categories
+        .filter(isAssignableCategoryOption)
         .map((category) => ({
           value: category.id,
           label: getCategoryLabel(category),
@@ -575,9 +609,49 @@ export function TransactionsTable({
         ),
     [categories],
   )
+  const selectedLoadedCount = data.filter((transaction) =>
+    selectedTransactionIds.has(transaction.id),
+  ).length
+  const allLoadedSelected =
+    data.length > 0 && selectedLoadedCount === data.length
+  const someLoadedSelected = selectedLoadedCount > 0
 
   const allColumns = useMemo<Array<MRT_ColumnDef<Transaction>>>(
     () => [
+      ...(bulkModeEnabled
+        ? [
+            {
+              id: 'bulkSelect',
+              header: '',
+              Header: () => (
+                <Checkbox
+                  aria-label="Select all loaded transactions"
+                  checked={allLoadedSelected}
+                  disabled={data.length === 0}
+                  indeterminate={someLoadedSelected && !allLoadedSelected}
+                  onChange={() => onToggleLoadedSelection?.()}
+                  onClick={(event) => event.stopPropagation()}
+                />
+              ),
+              enableSorting: false,
+              size: 48,
+              minSize: 48,
+              maxSize: 48,
+              Cell: ({ row }) => {
+                const transaction = row.original
+
+                return (
+                  <Checkbox
+                    aria-label={`Select transaction ${getMerchantDisplay(transaction).primary}`}
+                    checked={selectedTransactionIds.has(transaction.id)}
+                    onChange={() => toggleBulkSelection(transaction)}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                )
+              },
+            } satisfies MRT_ColumnDef<Transaction>,
+          ]
+        : []),
       {
         accessorKey: 'activityDate',
         header: 'Date',
@@ -594,7 +668,7 @@ export function TransactionsTable({
           )
           const resetDateLabel = dayjs(bankActivityDate).format('MMM D, YYYY')
 
-          if (isEditing) {
+          if (isEditing && !bulkModeEnabled) {
             return (
               <Group className={styles.dateCell} gap={4} wrap="nowrap">
                 <Popover
@@ -674,34 +748,36 @@ export function TransactionsTable({
               >
                 {dateLabel}
               </Text>
-              <Group className={styles.dateActions} gap={2} wrap="nowrap">
-                <Tooltip label="Edit reporting date">
-                  <ActionIcon
-                    aria-label="Edit reporting date"
-                    onClick={() => openReportingDateEditor(transaction)}
-                    size="sm"
-                    variant="subtle"
-                  >
-                    <Pencil size={14} />
-                  </ActionIcon>
-                </Tooltip>
-                {hasOverride && (
-                  <Tooltip label={`Reset to bank date: ${resetDateLabel}`}>
+              {!bulkModeEnabled && (
+                <Group className={styles.dateActions} gap={2} wrap="nowrap">
+                  <Tooltip label="Edit reporting date">
                     <ActionIcon
-                      aria-label="Reset reporting date override"
-                      loading={
-                        updateTransaction.isPending &&
-                        updateTransaction.variables.id === transaction.id
-                      }
-                      onClick={() => resetReportingDateOverride(transaction)}
+                      aria-label="Edit reporting date"
+                      onClick={() => openReportingDateEditor(transaction)}
                       size="sm"
                       variant="subtle"
                     >
-                      <RotateCcw size={14} />
+                      <Pencil size={14} />
                     </ActionIcon>
                   </Tooltip>
-                )}
-              </Group>
+                  {hasOverride && (
+                    <Tooltip label={`Reset to bank date: ${resetDateLabel}`}>
+                      <ActionIcon
+                        aria-label="Reset reporting date override"
+                        loading={
+                          updateTransaction.isPending &&
+                          updateTransaction.variables.id === transaction.id
+                        }
+                        onClick={() => resetReportingDateOverride(transaction)}
+                        size="sm"
+                        variant="subtle"
+                      >
+                        <RotateCcw size={14} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </Group>
+              )}
             </Group>
           )
         },
@@ -712,7 +788,9 @@ export function TransactionsTable({
         size: 260,
         minSize: 180,
         maxSize: 420,
-        Cell: MerchantCell,
+        Cell: ({ row }) => (
+          <MerchantCell row={row} bulkModeEnabled={bulkModeEnabled} />
+        ),
       },
       {
         accessorKey: 'amount',
@@ -767,7 +845,7 @@ export function TransactionsTable({
               .includes(categorySearch.toLowerCase()),
           )
 
-          if (isEditing) {
+          if (isEditing && !bulkModeEnabled) {
             return (
               <Group className={styles.categoryCell} gap={4} wrap="nowrap">
                 <Popover
@@ -890,69 +968,78 @@ export function TransactionsTable({
               >
                 {categoryLabel}
               </Badge>
-              <Group className={styles.categoryActions} gap={2} wrap="nowrap">
-                {needsReview && (
-                  <Tooltip label="Mark category as reviewed">
+              {!bulkModeEnabled && (
+                <Group
+                  className={styles.categoryActions}
+                  gap={2}
+                  wrap="nowrap"
+                >
+                  {needsReview && (
+                    <Tooltip label="Mark category as reviewed">
+                      <ActionIcon
+                        aria-label="Mark category as reviewed"
+                        variant="subtle"
+                        size="sm"
+                        loading={
+                          updateCategoryReview.isPending &&
+                          updateCategoryReview.variables.id === transaction.id
+                        }
+                        onClick={() => markCategoryReviewed(transaction)}
+                      >
+                        <Check size={14} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                  <Tooltip label="Edit category">
                     <ActionIcon
-                      aria-label="Mark category as reviewed"
+                      aria-label="Edit category"
                       variant="subtle"
                       size="sm"
-                      loading={
-                        updateCategoryReview.isPending &&
-                        updateCategoryReview.variables.id === transaction.id
-                      }
-                      onClick={() => markCategoryReviewed(transaction)}
+                      onClick={() => {
+                        setEditingTransactionId(transaction.id)
+                        setCategorySearch('')
+                      }}
                     >
-                      <Check size={14} />
+                      <Pencil size={14} />
                     </ActionIcon>
                   </Tooltip>
-                )}
-                <Tooltip label="Edit category">
-                  <ActionIcon
-                    aria-label="Edit category"
-                    variant="subtle"
-                    size="sm"
-                    onClick={() => {
-                      setEditingTransactionId(transaction.id)
-                      setCategorySearch('')
-                    }}
-                  >
-                    <Pencil size={14} />
-                  </ActionIcon>
-                </Tooltip>
-                {hasOverride && (
-                  <Tooltip label={resetLabel}>
-                    <ActionIcon
-                      aria-label="Reset category override"
-                      variant="subtle"
-                      size="sm"
-                      loading={
-                        updateCategory.isPending &&
-                        updateCategory.variables.id === transaction.id
-                      }
-                      onClick={() =>
-                        updateCategory.mutate({
-                          id: transaction.id,
-                          data: { categoryId: null },
-                        })
-                      }
-                    >
-                      <RotateCcw size={14} />
-                    </ActionIcon>
-                  </Tooltip>
-                )}
-              </Group>
+                  {hasOverride && (
+                    <Tooltip label={resetLabel}>
+                      <ActionIcon
+                        aria-label="Reset category override"
+                        variant="subtle"
+                        size="sm"
+                        loading={
+                          updateCategory.isPending &&
+                          updateCategory.variables.id === transaction.id
+                        }
+                        onClick={() =>
+                          updateCategory.mutate({
+                            id: transaction.id,
+                            data: { categoryId: null },
+                          })
+                        }
+                      >
+                        <RotateCcw size={14} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </Group>
+              )}
             </Group>
           )
         },
       },
     ],
     [
+      bulkModeEnabled,
       categoryOptions,
       categorySearch,
       editingReportingDateTransactionId,
       editingTransactionId,
       reportingDateDraft,
+      selectedTransactionIds,
+      onToggleTransactionSelection,
       updateTransaction.isPending,
       updateTransaction.mutate,
       updateTransaction.variables?.id,
@@ -962,6 +1049,10 @@ export function TransactionsTable({
       updateCategoryReview.isPending,
       updateCategoryReview.mutate,
       updateCategoryReview.variables?.id,
+      allLoadedSelected,
+      data.length,
+      onToggleLoadedSelection,
+      someLoadedSelected,
     ],
   )
 
@@ -974,10 +1065,14 @@ export function TransactionsTable({
             ),
         )
       : allColumns
+  const columnOrder = visibleColumns.map((col) =>
+    String(col.id ?? col.accessorKey),
+  )
 
   const table = useMantineReactTable({
     columns: visibleColumns,
     data,
+    getRowId: (row) => row.id,
     rowCount: totalRows,
     enablePagination: false,
     manualSorting,
@@ -988,6 +1083,7 @@ export function TransactionsTable({
     enableRowVirtualization: enableVirtualization,
     state: {
       ...(sorting ? { sorting } : {}),
+      columnOrder,
       isLoading,
       showProgressBars: isFetchingNextPage,
       showAlertBanner: isError,
@@ -1005,6 +1101,16 @@ export function TransactionsTable({
     mantineTableProps: {
       className: tableChrome.table,
     },
+    mantineTableBodyRowProps: ({ row }) => ({
+      className:
+        bulkModeEnabled && selectedTransactionIds.has(row.original.id)
+          ? styles.bulkSelectedRow
+          : undefined,
+      onClick: bulkModeEnabled
+        ? () => toggleBulkSelection(row.original)
+        : undefined,
+      style: bulkModeEnabled ? { cursor: 'pointer' } : undefined,
+    }),
     mantineTableContainerProps: {
       ...mantineTableContainerProps,
       ...(onScrollNearBottom

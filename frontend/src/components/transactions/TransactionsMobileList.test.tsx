@@ -136,6 +136,27 @@ describe('TransactionsMobileList', () => {
     expect(screen.getByText('$2,150.00')).toBeTruthy()
   })
 
+  it('renders bulk checkboxes and toggles rows instead of opening details', () => {
+    const onToggle = vi.fn()
+
+    renderMobileList([makeTransaction({ id: 'txn-1' })], {
+      bulkModeEnabled: true,
+      selectedTransactionIds: new Set(['txn-1']),
+      onToggleTransactionSelection: onToggle,
+    })
+
+    const checkbox = screen.getByRole('checkbox', {
+      name: /Select transaction Store/,
+    })
+
+    expect((checkbox as HTMLInputElement).checked).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: /Select transaction/ }))
+
+    expect(onToggle).toHaveBeenCalledWith('txn-1')
+    expect(screen.queryByText('Transaction')).toBeNull()
+  })
+
   it('requests more rows when scrolled near the bottom', () => {
     const onScrollNearBottom = vi.fn()
     renderMobileList([makeTransaction({ id: 'txn-1' })], {
@@ -324,7 +345,12 @@ describe('TransactionsMobileList', () => {
 
 function renderMobileList(
   data: Array<Transaction>,
-  options: { onScrollNearBottom?: () => void } = {},
+  options: {
+    onScrollNearBottom?: () => void
+    bulkModeEnabled?: boolean
+    selectedTransactionIds?: Set<string>
+    onToggleTransactionSelection?: (transactionId: string) => void
+  } = {},
 ) {
   const queryClient = new QueryClient()
 
@@ -337,6 +363,9 @@ function renderMobileList(
           isLoading={false}
           isError={false}
           onScrollNearBottom={options.onScrollNearBottom}
+          bulkModeEnabled={options.bulkModeEnabled}
+          selectedTransactionIds={options.selectedTransactionIds}
+          onToggleTransactionSelection={options.onToggleTransactionSelection}
         />
       </QueryClientProvider>
     </MantineProvider>,

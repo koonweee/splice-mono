@@ -424,6 +424,66 @@ describe('TransactionController', () => {
     });
   });
 
+  describe('bulkUpdateCategories', () => {
+    const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
+
+    it('should bulk update category overrides', async () => {
+      const result = await controller.bulkUpdateCategories(mockUser, {
+        transactionIds: [mockTransaction.id],
+        categoryId: 'category-uuid-123',
+      });
+
+      expect(result).toEqual({
+        count: 1,
+        transactionIds: [mockTransaction.id],
+        undo: 'undo-token',
+      });
+      expect(mockTransactionService.bulkUpdateCategories).toHaveBeenCalledWith(
+        mockUser.userId,
+        {
+          transactionIds: [mockTransaction.id],
+          categoryId: 'category-uuid-123',
+        },
+      );
+    });
+
+    it('should throw NotFoundException when bulk category update cannot be applied', async () => {
+      mockTransactionService.bulkUpdateCategories.mockResolvedValue(null);
+
+      await expect(
+        controller.bulkUpdateCategories(mockUser, {
+          transactionIds: [mockTransaction.id],
+          categoryId: 'category-uuid-123',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should undo bulk category updates', async () => {
+      const result = await controller.undoBulkUpdateCategories(mockUser, {
+        undo: 'undo-token',
+      });
+
+      expect(result).toEqual({
+        count: 1,
+        transactionIds: [mockTransaction.id],
+        undo: '',
+      });
+      expect(
+        mockTransactionService.undoBulkUpdateCategories,
+      ).toHaveBeenCalledWith(mockUser.userId, { undo: 'undo-token' });
+    });
+
+    it('should throw NotFoundException when bulk category update undo is unavailable', async () => {
+      mockTransactionService.undoBulkUpdateCategories.mockResolvedValue(null);
+
+      await expect(
+        controller.undoBulkUpdateCategories(mockUser, {
+          undo: 'undo-token',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('updateCategoryReview', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
 
