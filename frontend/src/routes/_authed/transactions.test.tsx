@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountType, MoneyWithSignSign } from '../../api/models'
 import { Route } from './transactions'
@@ -11,8 +11,10 @@ import type * as SpliceAPI from '../../api/clients/spliceAPI'
 import type {
   Account,
   BulkTransactionCategoryReviewResponse,
+  BulkTransactionCategoryUpdateResponse,
   Category,
   PaginatedTransactionResponse,
+  Transaction,
 } from '../../api/models'
 
 type InfiniteQueryOptions = {
@@ -27,19 +29,49 @@ type UndoBulkReviewMutateOptions = {
   onSuccess?: () => void
 }
 
+type BulkUpdateMutateOptions = {
+  onSuccess?: (result: BulkTransactionCategoryUpdateResponse) => void
+  onError?: () => void
+}
+
+type UndoBulkUpdateMutateOptions = {
+  onSuccess?: () => void
+  onError?: () => void
+}
+
+type TransactionBulkEditToolbarMockProps = {
+  categoryOptions: Array<{ value: string; label: string }>
+  isSaving: boolean
+  loadedCount: number
+  selectedCount: number
+  selectLoadedChecked: boolean
+  selectLoadedIndeterminate: boolean
+  value: string | null
+  onChange: (value: string | null) => void
+  onSave: () => void
+  onToggleLoaded: () => void
+  showSelectLoaded?: boolean
+}
+
 const mockFns = vi.hoisted(() => ({
   useSearchMock: vi.fn(),
   useInfiniteQueryMock: vi.fn(),
   invalidateQueriesMock: vi.fn(),
   useAccountControllerFindAllMock: vi.fn(),
+  useCategoryControllerFindAllMock: vi.fn(),
   useCategoryControllerFindFilterOptionsMock: vi.fn(),
   useTransactionControllerGetSummaryMock: vi.fn(),
   useTransactionControllerBulkReviewCategoriesMock: vi.fn(),
   useTransactionControllerUndoBulkReviewCategoriesMock: vi.fn(),
+  useTransactionControllerBulkUpdateCategoriesMock: vi.fn(),
+  useTransactionControllerUndoBulkUpdateCategoriesMock: vi.fn(),
   bulkReviewMutateMock: vi.fn(),
   undoBulkReviewMutateMock: vi.fn(),
+  bulkUpdateMutateMock: vi.fn(),
+  undoBulkUpdateMutateMock: vi.fn(),
   transactionControllerFindAllMock: vi.fn(),
   transactionsTableMock: vi.fn(),
+  transactionBulkEditToolbarMock: vi.fn(),
   transactionsMobileListMock: vi.fn(),
   notificationsShowMock: vi.fn(),
 }))
@@ -167,6 +199,7 @@ vi.mock('../../api/clients/spliceAPI', async () => {
     ],
     transactionControllerFindAll: mockFns.transactionControllerFindAllMock,
     useAccountControllerFindAll: mockFns.useAccountControllerFindAllMock,
+    useCategoryControllerFindAll: mockFns.useCategoryControllerFindAllMock,
     useCategoryControllerFindFilterOptions:
       mockFns.useCategoryControllerFindFilterOptionsMock,
     useTransactionControllerGetSummary:
@@ -175,6 +208,10 @@ vi.mock('../../api/clients/spliceAPI', async () => {
       mockFns.useTransactionControllerBulkReviewCategoriesMock,
     useTransactionControllerUndoBulkReviewCategories:
       mockFns.useTransactionControllerUndoBulkReviewCategoriesMock,
+    useTransactionControllerBulkUpdateCategories:
+      mockFns.useTransactionControllerBulkUpdateCategoriesMock,
+    useTransactionControllerUndoBulkUpdateCategories:
+      mockFns.useTransactionControllerUndoBulkUpdateCategoriesMock,
   }
 })
 
@@ -183,6 +220,50 @@ vi.mock('@/components/TransactionsTable', () => ({
     mockFns.transactionsTableMock(props)
 
     return <div data-testid="transactions-table" />
+  },
+}))
+
+vi.mock('@/components/transactions/TransactionBulkEditToolbar', () => ({
+  TransactionBulkEditToolbar: (props: TransactionBulkEditToolbarMockProps) => {
+    mockFns.transactionBulkEditToolbarMock(props)
+
+    return (
+      <div data-testid="transaction-bulk-edit-toolbar">
+        <span>{props.selectedCount} selected</span>
+        {props.showSelectLoaded && (
+          <label>
+            <input
+              checked={props.selectLoadedChecked}
+              data-indeterminate={String(props.selectLoadedIndeterminate)}
+              onChange={props.onToggleLoaded}
+              type="checkbox"
+            />
+            Select loaded
+          </label>
+        )}
+        <select
+          aria-label="Category"
+          onChange={(event) =>
+            props.onChange(event.currentTarget.value || null)
+          }
+          value={props.value ?? ''}
+        >
+          <option value="">Category</option>
+          {props.categoryOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          disabled={props.selectedCount === 0 || props.value === null}
+          onClick={props.onSave}
+          type="button"
+        >
+          Save
+        </button>
+      </div>
+    )
   },
 }))
 
@@ -233,17 +314,79 @@ const category: Category = {
   updatedAt: '2026-02-14T00:00:00.000Z',
 }
 
-const hiddenCategory: Category = {
+const hiddenCategory = {
   ...category,
   id: 'category-2',
   primary: 'Hidden Primary',
   detailed: 'Hidden Detail',
   source: 'user',
   userId: 'user-1',
+  isHidden: true,
+} as Category
+
+const transaction: Transaction = {
+  id: '11111111-1111-4111-8111-111111111111',
+  userId: 'user-1',
+  accountId: account.id,
+  amount: {
+    money: { amount: 1200, currency: 'USD' },
+    sign: MoneyWithSignSign.negative,
+  },
+  merchantName: 'Whole Foods Market',
+  providerTransactionName: 'WHOLE FOODS',
+  originalDescription: 'WHOLE FOODS',
+  pending: false,
+  pendingTransactionId: null,
+  accountOwner: null,
+  externalTransactionId: 'external-1',
+  logoUrl: null,
+  website: null,
+  merchantEntityId: null,
+  paymentChannel: 'in store',
+  transactionCode: null,
+  personalFinanceCategoryIconUrl: null,
+  personalFinanceCategoryConfidenceLevel: null,
+  counterparties: null,
+  location: null,
+  paymentMeta: null,
+  activityDate: '2026-02-14',
+  reportingDateOverride: null,
+  providerDate: '2026-02-14',
+  providerDatetime: null,
+  authorizedDate: null,
+  authorizedDatetime: null,
+  categoryId: category.id,
+  category,
+  userCategoryId: null,
+  userCategory: null,
+  userCategoryUpdatedAt: null,
+  effectiveCategoryId: category.id,
+  effectiveCategory: category,
+  categoryReviewedAt: null,
+  categoryReviewMethod: null,
+  categoryNeedsReview: true,
+  accountName: account.customName,
+  convertedAmount: null,
+  createdAt: '2026-02-14T00:00:00.000Z',
+  updatedAt: '2026-02-14T00:00:00.000Z',
+}
+
+const secondTransaction: Transaction = {
+  ...transaction,
+  id: '22222222-2222-4222-8222-222222222222',
+  merchantName: 'Target',
+  externalTransactionId: 'external-2',
+}
+
+const thirdTransaction: Transaction = {
+  ...transaction,
+  id: '33333333-3333-4333-8333-333333333333',
+  merchantName: 'Coffee Shop',
+  externalTransactionId: 'external-3',
 }
 
 const transactionsPageData: PaginatedTransactionResponse = {
-  data: [],
+  data: [transaction],
   total: 125,
   pageIndex: 0,
   pageSize: 50,
@@ -288,6 +431,9 @@ beforeEach(() => {
   mockFns.useAccountControllerFindAllMock.mockReturnValue({
     data: [account],
   })
+  mockFns.useCategoryControllerFindAllMock.mockReturnValue({
+    data: [category, hiddenCategory],
+  })
   mockFns.useCategoryControllerFindFilterOptionsMock.mockReturnValue({
     data: [category, hiddenCategory],
   })
@@ -319,6 +465,14 @@ beforeEach(() => {
   })
   mockFns.useTransactionControllerUndoBulkReviewCategoriesMock.mockReturnValue({
     mutate: mockFns.undoBulkReviewMutateMock,
+    isPending: false,
+  })
+  mockFns.useTransactionControllerBulkUpdateCategoriesMock.mockReturnValue({
+    mutate: mockFns.bulkUpdateMutateMock,
+    isPending: false,
+  })
+  mockFns.useTransactionControllerUndoBulkUpdateCategoriesMock.mockReturnValue({
+    mutate: mockFns.undoBulkUpdateMutateMock,
     isPending: false,
   })
 
@@ -537,6 +691,366 @@ describe('TransactionsPage category review workflow', () => {
     expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
       predicate: expect.any(Function),
     })
+  })
+
+  it('bulk edits selected loaded transactions and exposes toast undo', () => {
+    renderTransactionsPage()
+
+    fireEvent.click(screen.getByLabelText('Bulk edit'))
+
+    const tableProps = mockFns.transactionsTableMock.mock.calls.at(-1)?.[0] as {
+      onToggleTransactionSelection: (transactionId: string) => void
+    }
+
+    act(() => {
+      tableProps.onToggleTransactionSelection(transaction.id)
+    })
+
+    expect(screen.queryByText('Hidden Detail')).toBeNull()
+
+    fireEvent.change(screen.getByLabelText('Category'), {
+      target: { value: category.id },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(mockFns.bulkUpdateMutateMock).toHaveBeenCalledWith(
+      {
+        data: {
+          transactionIds: [transaction.id],
+          categoryId: category.id,
+        },
+      },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    )
+
+    const updateOptions = mockFns.bulkUpdateMutateMock.mock.calls[0]?.[1] as
+      | BulkUpdateMutateOptions
+      | undefined
+    updateOptions?.onSuccess?.({
+      count: 1,
+      transactionIds: [transaction.id],
+      undo: 'undo-token',
+    })
+
+    expect(mockFns.notificationsShowMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Categories updated',
+        color: 'green',
+      }),
+    )
+
+    const notification = mockFns.notificationsShowMock.mock.calls[0]?.[0] as {
+      message: ReactNode
+    }
+
+    render(<MantineProvider>{notification.message}</MantineProvider>)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+
+    expect(mockFns.undoBulkUpdateMutateMock).toHaveBeenCalledWith(
+      { data: { undo: 'undo-token' } },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    )
+
+    const undoOptions = mockFns.undoBulkUpdateMutateMock.mock.calls[0]?.[1] as
+      | UndoBulkUpdateMutateOptions
+      | undefined
+    undoOptions?.onSuccess?.()
+
+    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
+      predicate: expect.any(Function),
+    })
+
+    undoOptions?.onError?.()
+
+    expect(mockFns.notificationsShowMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        title: 'Undo failed',
+        color: 'red',
+      }),
+    )
+  })
+
+  it('clears selected transaction IDs when bulk mode is disabled', () => {
+    renderTransactionsPage()
+
+    fireEvent.click(screen.getByLabelText('Bulk edit'))
+
+    const tableProps = mockFns.transactionsTableMock.mock.calls.at(-1)?.[0] as {
+      onToggleTransactionSelection: (transactionId: string) => void
+    }
+
+    act(() => {
+      tableProps.onToggleTransactionSelection(transaction.id)
+    })
+
+    const selectedTableProps = mockFns.transactionsTableMock.mock.calls.at(
+      -1,
+    )?.[0] as {
+      selectedTransactionIds: Set<string>
+    }
+
+    expect(selectedTableProps.selectedTransactionIds.has(transaction.id)).toBe(
+      true,
+    )
+
+    fireEvent.click(screen.getByLabelText('Bulk edit'))
+
+    const clearedTableProps = mockFns.transactionsTableMock.mock.calls.at(
+      -1,
+    )?.[0] as {
+      bulkModeEnabled: boolean
+      selectedTransactionIds: Set<string>
+    }
+
+    expect(clearedTableProps.bulkModeEnabled).toBe(false)
+    expect(clearedTableProps.selectedTransactionIds.size).toBe(0)
+    expect(screen.queryByTestId('transaction-bulk-edit-toolbar')).toBeNull()
+  })
+
+  it('clears selected transaction IDs when sorting changes', () => {
+    renderTransactionsPage()
+
+    fireEvent.click(screen.getByLabelText('Bulk edit'))
+
+    const tableProps = mockFns.transactionsTableMock.mock.calls.at(-1)?.[0] as {
+      onSortingChange: (
+        sorting: Array<{ id: string; desc: boolean }>,
+      ) => void
+      onToggleTransactionSelection: (transactionId: string) => void
+    }
+
+    act(() => {
+      tableProps.onToggleTransactionSelection(transaction.id)
+    })
+
+    const selectedTableProps = mockFns.transactionsTableMock.mock.calls.at(
+      -1,
+    )?.[0] as {
+      selectedTransactionIds: Set<string>
+    }
+
+    expect(selectedTableProps.selectedTransactionIds.has(transaction.id)).toBe(
+      true,
+    )
+
+    act(() => {
+      tableProps.onSortingChange([{ id: 'amount', desc: false }])
+    })
+
+    const sortedTableProps = mockFns.transactionsTableMock.mock.calls.at(
+      -1,
+    )?.[0] as {
+      selectedTransactionIds: Set<string>
+      sorting: Array<{ id: string; desc: boolean }>
+    }
+
+    expect(sortedTableProps.sorting).toEqual([
+      { id: 'amount', desc: false },
+    ])
+    expect(sortedTableProps.selectedTransactionIds.size).toBe(0)
+  })
+
+  it('selects the currently loaded transaction IDs from the desktop header control', () => {
+    mockFns.useInfiniteQueryMock.mockImplementation(
+      (options: InfiniteQueryOptions) => {
+        latestInfiniteQueryOptions = options
+
+        return {
+          data: {
+            pages: [
+              {
+                ...transactionsPageData,
+                data: [transaction, secondTransaction],
+                total: 2,
+              },
+            ],
+          },
+          fetchNextPage: vi.fn(),
+          hasNextPage: false,
+          isError: false,
+          isFetching: false,
+          isFetchingNextPage: false,
+          isLoading: false,
+        }
+      },
+    )
+
+    renderTransactionsPage()
+
+    fireEvent.click(screen.getByLabelText('Bulk edit'))
+
+    const tableProps = mockFns.transactionsTableMock.mock.calls.at(-1)?.[0] as {
+      onToggleLoadedSelection: () => void
+      onToggleTransactionSelection: (transactionId: string) => void
+    }
+
+    act(() => {
+      tableProps.onToggleTransactionSelection(transaction.id)
+    })
+
+    act(() => {
+      tableProps.onToggleLoadedSelection()
+    })
+
+    const selectedTableProps = mockFns.transactionsTableMock.mock.calls.at(
+      -1,
+    )?.[0] as {
+      selectedTransactionIds: Set<string>
+    }
+    const toolbarProps = mockFns.transactionBulkEditToolbarMock.mock.calls.at(
+      -1,
+    )?.[0] as TransactionBulkEditToolbarMockProps
+
+    expect(selectedTableProps.selectedTransactionIds.has(transaction.id)).toBe(
+      true,
+    )
+    expect(
+      selectedTableProps.selectedTransactionIds.has(secondTransaction.id),
+    ).toBe(true)
+    expect(toolbarProps.selectLoadedChecked).toBe(true)
+    expect(toolbarProps.selectLoadedIndeterminate).toBe(false)
+    expect(toolbarProps.showSelectLoaded).toBe(false)
+  })
+
+  it('keeps newly loaded rows unselected and makes select-loaded indeterminate', () => {
+    let pages: Array<PaginatedTransactionResponse> = [
+      {
+        ...transactionsPageData,
+        data: [transaction, secondTransaction],
+        total: 3,
+      },
+    ]
+    mockFns.useInfiniteQueryMock.mockImplementation(
+      (options: InfiniteQueryOptions) => {
+        latestInfiniteQueryOptions = options
+
+        return {
+          data: { pages },
+          fetchNextPage: vi.fn(),
+          hasNextPage: pages.length === 1,
+          isError: false,
+          isFetching: false,
+          isFetchingNextPage: false,
+          isLoading: false,
+        }
+      },
+    )
+    const TransactionsPage = transactionsPage
+    const view = renderTransactionsPage()
+
+    fireEvent.click(screen.getByLabelText('Bulk edit'))
+
+    const tableProps = mockFns.transactionsTableMock.mock.calls.at(-1)?.[0] as {
+      onToggleLoadedSelection: () => void
+      onToggleTransactionSelection: (transactionId: string) => void
+    }
+
+    act(() => {
+      tableProps.onToggleTransactionSelection(transaction.id)
+    })
+
+    act(() => {
+      tableProps.onToggleLoadedSelection()
+    })
+
+    pages = [
+      pages[0],
+      {
+        ...transactionsPageData,
+        data: [thirdTransaction],
+        pageIndex: 1,
+        total: 3,
+      },
+    ]
+
+    view.rerender(
+      <MantineProvider>
+        <TransactionsPage />
+      </MantineProvider>,
+    )
+
+    const selectedTableProps = mockFns.transactionsTableMock.mock.calls.at(
+      -1,
+    )?.[0] as {
+      selectedTransactionIds: Set<string>
+    }
+    const toolbarProps = mockFns.transactionBulkEditToolbarMock.mock.calls.at(
+      -1,
+    )?.[0] as TransactionBulkEditToolbarMockProps
+
+    expect(
+      selectedTableProps.selectedTransactionIds.has(thirdTransaction.id),
+    ).toBe(false)
+    expect(toolbarProps.loadedCount).toBe(3)
+    expect(toolbarProps.selectedCount).toBe(2)
+    expect(toolbarProps.selectLoadedChecked).toBe(false)
+    expect(toolbarProps.selectLoadedIndeterminate).toBe(true)
+  })
+
+  it('passes bulk selection props to mobile and clears selection when filters change', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(max-width: 48em)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+      configurable: true,
+    })
+
+    renderTransactionsPage()
+
+    fireEvent.click(screen.getByLabelText('Bulk edit'))
+
+    const mobileProps = mockFns.transactionsMobileListMock.mock.calls.at(-1)?.[0] as {
+      bulkModeEnabled: boolean
+      selectedTransactionIds: Set<string>
+      onToggleTransactionSelection: (transactionId: string) => void
+    }
+
+    expect(mobileProps.bulkModeEnabled).toBe(true)
+
+    act(() => {
+      mobileProps.onToggleTransactionSelection(transaction.id)
+    })
+
+    const selectedMobileProps = mockFns.transactionsMobileListMock.mock.calls.at(
+      -1,
+    )?.[0] as {
+      selectedTransactionIds: Set<string>
+    }
+
+    expect(selectedMobileProps.selectedTransactionIds.has(transaction.id)).toBe(
+      true,
+    )
+    expect(
+      (
+        mockFns.transactionBulkEditToolbarMock.mock.calls.at(
+          -1,
+        )?.[0] as TransactionBulkEditToolbarMockProps
+      ).showSelectLoaded,
+    ).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear date range' }))
+
+    const clearedMobileProps = mockFns.transactionsMobileListMock.mock.calls.at(
+      -1,
+    )?.[0] as {
+      selectedTransactionIds: Set<string>
+    }
+
+    expect(clearedMobileProps.selectedTransactionIds.size).toBe(0)
   })
 
   it('clears hidden filters and active filter indicators from the filter panel', async () => {

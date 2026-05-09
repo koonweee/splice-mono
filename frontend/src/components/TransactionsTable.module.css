@@ -7,6 +7,13 @@
   text-align: right;
 }
 
+.bulkSelectedRow {
+  background: light-dark(
+    var(--mantine-color-blue-0),
+    rgba(77, 171, 247, 0.12)
+  );
+}
+
 .dateCell {
   width: fit-content;
   min-height: 28px;

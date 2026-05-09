@@ -2,6 +2,7 @@ import {
   Avatar,
   Badge,
   Button,
+  Checkbox,
   Divider,
   Drawer,
   Group,
@@ -28,6 +29,7 @@ import {
   formatMoneyWithSign,
   formatPrimaryCategory,
 } from '../../lib/format'
+import { isAssignableCategoryOption } from '../../lib/category-options'
 import {
   formatCounterpartyLabel,
   getMerchantDisplay,
@@ -45,6 +47,9 @@ type TransactionsMobileListProps = {
   isLoading: boolean
   onScrollNearBottom?: () => void
   totalRows: number
+  bulkModeEnabled?: boolean
+  selectedTransactionIds?: Set<string>
+  onToggleTransactionSelection?: (transactionId: string) => void
 }
 
 function getCategoryLabel(transaction: Transaction) {
@@ -128,6 +133,9 @@ export function TransactionsMobileList({
   isLoading,
   onScrollNearBottom,
   totalRows,
+  bulkModeEnabled = false,
+  selectedTransactionIds = new Set<string>(),
+  onToggleTransactionSelection,
 }: TransactionsMobileListProps) {
   const queryClient = useQueryClient()
   const [activeTransactionId, setActiveTransactionId] = useState<string | null>(
@@ -172,6 +180,7 @@ export function TransactionsMobileList({
   const categoryOptions = useMemo(
     () =>
       categories
+        .filter(isAssignableCategoryOption)
         .map((category) => ({
           value: category.id,
           label: getAssignableCategoryLabel(category),
@@ -250,6 +259,10 @@ export function TransactionsMobileList({
     )
   }
 
+  function toggleBulkSelection(transaction: Transaction) {
+    onToggleTransactionSelection?.(transaction.id)
+  }
+
   if (isLoading) {
     return (
       <div className={styles.footer}>
@@ -296,12 +309,37 @@ export function TransactionsMobileList({
 
               return (
                 <UnstyledButton
-                  aria-label={`Open transaction details for ${merchantDisplay.primary}`}
-                  className={styles.row}
+                  aria-label={
+                    bulkModeEnabled
+                      ? `Select transaction ${merchantDisplay.primary}`
+                      : `Open transaction details for ${merchantDisplay.primary}`
+                  }
+                  className={`${styles.row} ${
+                    bulkModeEnabled &&
+                    selectedTransactionIds.has(transaction.id)
+                      ? styles.selectedRow
+                      : ''
+                  }`}
                   key={transaction.id}
-                  onClick={() => setActiveTransactionId(transaction.id)}
+                  onClick={() => {
+                    if (bulkModeEnabled) {
+                      toggleBulkSelection(transaction)
+                      return
+                    }
+
+                    setActiveTransactionId(transaction.id)
+                  }}
                 >
                   <div className={styles.rowMain}>
+                    {bulkModeEnabled && (
+                      <Checkbox
+                        aria-label={`Select transaction ${merchantDisplay.primary}`}
+                        checked={selectedTransactionIds.has(transaction.id)}
+                        onChange={() => toggleBulkSelection(transaction)}
+                        onClick={(event) => event.stopPropagation()}
+                        size="md"
+                      />
+                    )}
                     <Avatar
                       classNames={{ root: styles.merchantAvatar }}
                       radius="sm"

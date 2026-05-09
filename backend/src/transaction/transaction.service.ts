@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
@@ -9,6 +10,9 @@ import {
   BulkTransactionCategoryReviewDto,
   BulkTransactionCategoryReviewResponse,
   BulkTransactionCategoryReviewUndoDto,
+  BulkTransactionCategoryUpdateDto,
+  BulkTransactionCategoryUpdateResponse,
+  BulkTransactionCategoryUpdateUndoDto,
   CreateTransactionDto,
   Transaction,
   TransactionCategoryReviewMethod,
@@ -62,6 +66,21 @@ type TransactionSummaryRawRow = {
 
 const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
 const ACTIVITY_DATETIME_SORT_ALIAS = 'activity_datetime_sort';
+const BULK_CATEGORY_UNDO_TTL_MS = 5 * 60 * 1000;
+
+type BulkCategoryUndoSnapshot = {
+  id: string;
+  userCategoryId: string | null;
+  userCategoryUpdatedAt: string | null;
+  categoryReviewedAt: string | null;
+  categoryReviewMethod: TransactionCategoryReviewMethod | null;
+};
+
+type BulkCategoryUndoPayload = {
+  userId: string;
+  exp: number;
+  transactions: BulkCategoryUndoSnapshot[];
+};
 
 function parseRawInteger(value: string | number | null): number {
   if (typeof value === 'number') {
@@ -304,6 +323,87 @@ export class TransactionService extends OwnedCrudService<
   private clearCategoryReview(entity: TransactionEntity): void {
     entity.categoryReviewedAt = null;
     entity.categoryReviewMethod = null;
+  }
+
+  private getUndoSigningSecret(): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+
+    return secret;
+  }
+
+  private encodeUndoPayload(payload: BulkCategoryUndoPayload): string {
+    const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    const signature = createHmac('sha256', this.getUndoSigningSecret())
+      .update(body)
+      .digest('base64url');
+
+    return `${body}.${signature}`;
+  }
+
+  private decodeUndoPayload(token: string): BulkCategoryUndoPayload | null {
+    const [body, signature, extra] = token.split('.');
+    if (!body || !signature || extra !== undefined) {
+      return null;
+    }
+
+    const expectedSignature = createHmac('sha256', this.getUndoSigningSecret())
+      .update(body)
+      .digest('base64url');
+    const actualBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expectedSignature);
+
+    if (
+      actualBuffer.length !== expectedBuffer.length ||
+      !timingSafeEqual(actualBuffer, expectedBuffer)
+    ) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(
+        Buffer.from(body, 'base64url').toString('utf8'),
+      ) as BulkCategoryUndoPayload;
+    } catch {
+      return null;
+    }
+  }
+
+  private buildBulkCategoryUndoToken(
+    userId: string,
+    entities: TransactionEntity[],
+  ): string {
+    return this.encodeUndoPayload({
+      userId,
+      exp: Date.now() + BULK_CATEGORY_UNDO_TTL_MS,
+      transactions: entities.map((entity) => ({
+        id: entity.id,
+        userCategoryId: entity.userCategoryId,
+        userCategoryUpdatedAt:
+          entity.userCategoryUpdatedAt?.toISOString() ?? null,
+        categoryReviewedAt: entity.categoryReviewedAt?.toISOString() ?? null,
+        categoryReviewMethod: entity.categoryReviewMethod,
+      })),
+    });
+  }
+
+  private applyBulkCategorySelection(
+    entity: TransactionEntity,
+    category: CategoryEntity | null,
+  ): void {
+    if (category === null || category.id === entity.categoryId) {
+      entity.userCategoryId = null;
+      entity.userCategory = null;
+      entity.userCategoryUpdatedAt = null;
+    } else {
+      entity.userCategoryId = category.id;
+      entity.userCategory = category;
+      entity.userCategoryUpdatedAt = new Date();
+    }
+
+    this.markCategoryReviewed(entity, 'bulk_change');
   }
 
   private applyTransactionOrder(
@@ -619,6 +719,169 @@ export class TransactionService extends OwnedCrudService<
     });
 
     return (hydratedEntity ?? savedEntity).toObject();
+  }
+
+  async bulkUpdateCategories(
+    userId: string,
+    dto: BulkTransactionCategoryUpdateDto,
+  ): Promise<BulkTransactionCategoryUpdateResponse | null> {
+    const transactionIds = [...new Set(dto.transactionIds)];
+    this.logger.log(
+      { userId, count: transactionIds.length, categoryId: dto.categoryId },
+      'Bulk updating transaction category overrides',
+    );
+
+    if (transactionIds.length === 0) {
+      return null;
+    }
+
+    const category =
+      dto.categoryId === null
+        ? null
+        : await this.categoryService.findActiveAssignableCategory(
+            dto.categoryId,
+            userId,
+          );
+
+    if (dto.categoryId !== null && !category) {
+      this.logger.warn(
+        { userId, categoryId: dto.categoryId },
+        'Category not found for bulk transaction override',
+      );
+      return null;
+    }
+
+    return this.repository.manager.transaction(async (manager) => {
+      const txnRepo = manager.getRepository(TransactionEntity);
+      const entities = await txnRepo.find({
+        where: { id: In(transactionIds), userId },
+        relations: this.relations,
+      });
+
+      if (entities.length !== transactionIds.length) {
+        this.logger.warn(
+          {
+            userId,
+            requestedCount: transactionIds.length,
+            foundCount: entities.length,
+          },
+          'Transaction not found for bulk category update',
+        );
+        return null;
+      }
+
+      const undo = this.buildBulkCategoryUndoToken(userId, entities);
+      entities.forEach((entity) => {
+        this.applyBulkCategorySelection(entity, category);
+      });
+
+      await txnRepo.save(entities);
+
+      return {
+        count: entities.length,
+        transactionIds: entities.map((entity) => entity.id),
+        undo,
+      };
+    });
+  }
+
+  async undoBulkUpdateCategories(
+    userId: string,
+    dto: BulkTransactionCategoryUpdateUndoDto,
+  ): Promise<BulkTransactionCategoryUpdateResponse | null> {
+    const payload = this.decodeUndoPayload(dto.undo);
+    if (!payload || payload.userId !== userId || payload.exp < Date.now()) {
+      this.logger.warn({ userId }, 'Invalid bulk category update undo token');
+      return null;
+    }
+
+    const transactionIds = [
+      ...new Set(payload.transactions.map((transaction) => transaction.id)),
+    ];
+    if (transactionIds.length !== payload.transactions.length) {
+      this.logger.warn(
+        { userId },
+        'Duplicate transaction in bulk category update undo token',
+      );
+      return null;
+    }
+
+    return this.repository.manager.transaction(async (manager) => {
+      const txnRepo = manager.getRepository(TransactionEntity);
+      const entities = await txnRepo.find({
+        where: { id: In(transactionIds), userId },
+        relations: this.relations,
+      });
+
+      if (entities.length !== transactionIds.length) {
+        this.logger.warn(
+          {
+            userId,
+            requestedCount: transactionIds.length,
+            foundCount: entities.length,
+          },
+          'Transaction not found for bulk category update undo',
+        );
+        return null;
+      }
+
+      const entityById = new Map(
+        entities.map((entity) => [entity.id, entity] as const),
+      );
+      const userCategoryIds = [
+        ...new Set(
+          payload.transactions
+            .map((transaction) => transaction.userCategoryId)
+            .filter((categoryId): categoryId is string => categoryId !== null),
+        ),
+      ];
+      const userCategories =
+        userCategoryIds.length > 0
+          ? await this.categoryRepository.find({
+              where: { id: In(userCategoryIds) },
+            })
+          : [];
+      const categoryById = new Map(
+        userCategories
+          .filter((category): category is CategoryEntity => category !== null)
+          .map((category) => [category.id, category] as const),
+      );
+
+      if (categoryById.size !== userCategoryIds.length) {
+        this.logger.warn(
+          { userId },
+          'Category not found for bulk category update undo',
+        );
+        return null;
+      }
+
+      payload.transactions.forEach((snapshot) => {
+        const entity = entityById.get(snapshot.id);
+        if (!entity) {
+          return;
+        }
+
+        entity.userCategoryId = snapshot.userCategoryId;
+        entity.userCategory = snapshot.userCategoryId
+          ? (categoryById.get(snapshot.userCategoryId) ?? null)
+          : null;
+        entity.userCategoryUpdatedAt = snapshot.userCategoryUpdatedAt
+          ? new Date(snapshot.userCategoryUpdatedAt)
+          : null;
+        entity.categoryReviewedAt = snapshot.categoryReviewedAt
+          ? new Date(snapshot.categoryReviewedAt)
+          : null;
+        entity.categoryReviewMethod = snapshot.categoryReviewMethod;
+      });
+
+      await txnRepo.save(entities);
+
+      return {
+        count: entities.length,
+        transactionIds,
+        undo: '',
+      };
+    });
   }
 
   async updateCategoryReview(

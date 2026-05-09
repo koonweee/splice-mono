@@ -17,6 +17,7 @@ This directory tracks product and implementation plans for Splice.
 | [Transaction Reporting Date Override](./transaction-reporting-date-override.md) | Planned | Add optional user-controlled reporting dates while keeping `activityDate` as the effective date for UI, analysis, and MCP. |
 | [Transaction Category Review](./transaction-category-review.md) | Done | Add category review status, inline accept, review filters, bulk review, undo toasts, and sync lifecycle rules. |
 | [Transactions Toolbar Variant A](./transactions-toolbar-variant-a.md) | Planned | Simplify the transactions toolbar with date controls plus an icon-only filters trigger, moving account/category/flow/review filters into responsive panels. |
+| [Transaction Bulk Category Edit](./transaction-bulk-category-edit.md) | Done | Add selected-row bulk category editing with shared desktop/mobile toolbar, atomic save, and toast-only undo. |
 | [Transaction Category Overrides](./transaction-category-overrides.md) | Planned | Add user category overrides while preserving Plaid categories and enforcing effective category across UI, analysis, and MCP/surface callers. |
 | [User-Defined Categories](./user-defined-categories.md) | Planned | Let users create custom primary/secondary categories from Settings with autocomplete duplicate prevention and backend validation. |
 | [Settings Categories Manager](./settings-categories-manager.md) | Planned | Move categories to a dedicated Settings tab with system/custom inventory, dropdown visibility controls, and bulk category management. |

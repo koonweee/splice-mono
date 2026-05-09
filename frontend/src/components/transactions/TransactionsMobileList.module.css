@@ -57,6 +57,13 @@
   );
 }
 
+.selectedRow {
+  background: light-dark(
+    var(--mantine-color-blue-0),
+    rgba(77, 171, 247, 0.12)
+  );
+}
+
 .row:last-child {
   border-bottom: 0;
 }
