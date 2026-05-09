@@ -12,7 +12,6 @@ import {
   TextInput,
   UnstyledButton,
 } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Check, RotateCcw } from 'lucide-react'
@@ -21,15 +20,11 @@ import {
   useCategoryControllerFindAll,
   useTransactionControllerUpdate,
   useTransactionControllerUpdateCategory,
-  useTransactionControllerUpdateCategoryReview,
 } from '../../api/clients/spliceAPI'
 import { MoneyWithSignSign } from '../../api/models'
-import {
-  formatCategoryName,
-  formatMoneyWithSign,
-  formatPrimaryCategory,
-} from '../../lib/format'
+import { formatMoneyWithSign } from '../../lib/format'
 import { isAssignableCategoryOption } from '../../lib/category-options'
+import { CategorySelect } from '../categories/CategorySelect'
 import {
   formatCounterpartyLabel,
   getMerchantDisplay,
@@ -37,6 +32,7 @@ import {
 } from './transactionMetadata'
 import styles from './TransactionsMobileList.module.css'
 import statusBadgeStyles from './TransactionStatusBadge.module.css'
+import type { CategorySelectOption } from '../categories/CategorySelect'
 import type { UIEvent } from 'react'
 import type { Category, Transaction } from '../../api/models'
 
@@ -53,30 +49,24 @@ type TransactionsMobileListProps = {
 }
 
 function getCategoryLabel(transaction: Transaction) {
-  const category = transaction.effectiveCategory
+  const category = transaction.category
   if (!category) {
     return 'Uncategorized'
   }
 
-  return category.source === 'user'
-    ? category.detailed
-    : formatCategoryName(category)
+  return category.detailed
 }
 
 function getAssignableCategoryLabel(
-  category: Pick<Category, 'primary' | 'detailed' | 'source'>,
+  category: Pick<Category, 'primary' | 'detailed'>,
 ) {
-  return category.source === 'user'
-    ? category.detailed
-    : formatCategoryName(category)
+  return category.detailed
 }
 
 function getAssignableCategoryPrimaryLabel(
-  category: Pick<Category, 'primary' | 'source'>,
+  category: Pick<Category, 'primary'>,
 ) {
-  return category.source === 'user'
-    ? category.primary
-    : formatPrimaryCategory(category.primary)
+  return category.primary
 }
 
 function getAmountClass(transaction: Transaction) {
@@ -141,7 +131,6 @@ export function TransactionsMobileList({
   const [activeTransactionId, setActiveTransactionId] = useState<string | null>(
     null,
   )
-  const [categorySearch, setCategorySearch] = useState('')
   const [reportingDateDraft, setReportingDateDraft] = useState<string | null>(
     null,
   )
@@ -165,32 +154,23 @@ export function TransactionsMobileList({
     mutation: {
       onSuccess: () => {
         setActiveTransactionId(null)
-        setCategorySearch('')
-        invalidateTransactionQueries(queryClient)
-      },
-    },
-  })
-  const updateCategoryReview = useTransactionControllerUpdateCategoryReview({
-    mutation: {
-      onSuccess: () => {
         invalidateTransactionQueries(queryClient)
       },
     },
   })
   const categoryOptions = useMemo(
-    () =>
+    (): Array<CategorySelectOption> =>
       categories
         .filter(isAssignableCategoryOption)
         .map((category) => ({
           value: category.id,
-          label: getAssignableCategoryLabel(category),
-          primaryLabel: getAssignableCategoryPrimaryLabel(category),
-          source: category.source,
+          primary: getAssignableCategoryPrimaryLabel(category),
+          secondary: getAssignableCategoryLabel(category),
         }))
         .sort(
           (left, right) =>
-            left.label.localeCompare(right.label) ||
-            left.primaryLabel.localeCompare(right.primaryLabel),
+            left.primary.localeCompare(right.primary) ||
+            left.secondary.localeCompare(right.secondary),
         ),
     [categories],
   )
@@ -226,37 +206,6 @@ export function TransactionsMobileList({
     if (scrollHeight - scrollTop - clientHeight < 400) {
       onScrollNearBottom()
     }
-  }
-
-  function markCategoryReviewed(transaction: Transaction) {
-    updateCategoryReview.mutate(
-      { id: transaction.id, data: { reviewed: true } },
-      {
-        onSuccess: () => {
-          notifications.show({
-            title: 'Category reviewed',
-            message: (
-              <Group gap="xs" wrap="nowrap">
-                <Text size="sm">Category marked as reviewed.</Text>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  onClick={() =>
-                    updateCategoryReview.mutate({
-                      id: transaction.id,
-                      data: { reviewed: false },
-                    })
-                  }
-                >
-                  Undo
-                </Button>
-              </Group>
-            ),
-            color: 'green',
-          })
-        },
-      },
-    )
   }
 
   function toggleBulkSelection(transaction: Transaction) {
@@ -354,34 +303,18 @@ export function TransactionsMobileList({
                           {merchantDisplay.primary}
                         </span>
                       </div>
-                      {(transaction.pending ||
-                        transaction.categoryNeedsReview) && (
+                      {transaction.pending && (
                         <div className={styles.statusLine}>
-                          {transaction.pending && (
-                            <Badge
-                              classNames={{
-                                root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.pendingBadge}`,
-                              }}
-                              color="yellow"
-                              size="xs"
-                              variant="light"
-                            >
-                              Pending
-                            </Badge>
-                          )}
-                          {!transaction.pending &&
-                            transaction.categoryNeedsReview && (
-                              <Badge
-                                classNames={{
-                                  root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.reviewBadge}`,
-                                }}
-                                color="orange"
-                                size="xs"
-                                variant="light"
-                              >
-                                Needs review
-                              </Badge>
-                            )}
+                          <Badge
+                            classNames={{
+                              root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.pendingBadge}`,
+                            }}
+                            color="yellow"
+                            size="xs"
+                            variant="light"
+                          >
+                            Pending
+                          </Badge>
                         </div>
                       )}
                       <div className={styles.metaLine}>
@@ -427,7 +360,6 @@ export function TransactionsMobileList({
         opened={activeTransaction !== null}
         onClose={() => {
           setActiveTransactionId(null)
-          setCategorySearch('')
         }}
         position="bottom"
         size="auto"
@@ -524,103 +456,20 @@ export function TransactionsMobileList({
             </Stack>
 
             <Stack gap={6}>
-              <TextInput
-                aria-label="Search categories"
+              <CategorySelect
+                aria-label="Category"
+                data={categoryOptions}
                 label="Category"
-                onChange={(event) =>
-                  setCategorySearch(event.currentTarget.value)
+                onChange={(value) =>
+                  updateCategory.mutate({
+                    id: activeTransaction.id,
+                    data: { categoryId: value },
+                  })
                 }
                 placeholder={getCategoryLabel(activeTransaction)}
-                value={categorySearch}
+                value={activeTransaction.categoryId}
               />
-              <div
-                aria-label="Categories"
-                className={styles.categoryOptionsList}
-                role="listbox"
-              >
-                {categoryOptions
-                  .filter((option) =>
-                    `${option.label} ${option.primaryLabel}`
-                      .toLowerCase()
-                      .includes(categorySearch.toLowerCase()),
-                  )
-                  .map((option) => (
-                    <UnstyledButton
-                      aria-selected={
-                        option.value === activeTransaction.effectiveCategoryId
-                      }
-                      className={styles.categoryOption}
-                      key={option.value}
-                      onClick={() =>
-                        updateCategory.mutate({
-                          id: activeTransaction.id,
-                          data: { categoryId: option.value },
-                        })
-                      }
-                      role="option"
-                    >
-                      <Text c="inherit" component="div" size="sm">
-                        {option.label}
-                      </Text>
-                      <Group gap={6} wrap="nowrap">
-                        <Text
-                          c="inherit"
-                          className={styles.categoryOptionMeta}
-                          component="div"
-                          size="xs"
-                        >
-                          {option.primaryLabel}
-                        </Text>
-                        {option.source === 'user' && (
-                          <Badge size="xs" variant="light">
-                            User
-                          </Badge>
-                        )}
-                      </Group>
-                    </UnstyledButton>
-                  ))}
-                {categoryOptions.length === 0 && (
-                  <Text c="dimmed" px="xs" py={6} size="sm">
-                    No categories found
-                  </Text>
-                )}
-              </div>
             </Stack>
-
-            <Group gap="xs" grow>
-              {activeTransaction.categoryNeedsReview && (
-                <Button
-                  leftSection={<Check size={16} />}
-                  loading={
-                    updateCategoryReview.isPending &&
-                    updateCategoryReview.variables.id === activeTransaction.id
-                  }
-                  onClick={() => markCategoryReviewed(activeTransaction)}
-                  variant="light"
-                >
-                  Mark reviewed
-                </Button>
-              )}
-              {activeTransaction.userCategoryId !== null && (
-                <Button
-                  color="gray"
-                  leftSection={<RotateCcw size={16} />}
-                  loading={
-                    updateCategory.isPending &&
-                    updateCategory.variables.id === activeTransaction.id
-                  }
-                  onClick={() =>
-                    updateCategory.mutate({
-                      id: activeTransaction.id,
-                      data: { categoryId: null },
-                    })
-                  }
-                  variant="light"
-                >
-                  Reset override
-                </Button>
-              )}
-            </Group>
 
             <Divider />
 
@@ -654,9 +503,8 @@ export function TransactionsMobileList({
                 </Stack>
               )}
               <MetadataItem
-                label="Plaid category"
+                label="Provider category"
                 value={[
-                  activeDetails.categoryPrimaryLabel,
                   activeDetails.categoryLabel,
                   activeDetails.categoryConfidence &&
                     `${activeDetails.categoryConfidence.toLowerCase()} confidence`,

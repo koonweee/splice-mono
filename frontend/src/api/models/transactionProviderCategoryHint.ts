@@ -5,7 +5,6 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { ProviderCategoryHint } from './providerCategoryHint'
 
-export interface BulkTransactionCategoryReviewUndoDto {
-  transactionIds: string[]
-}
+export type TransactionProviderCategoryHint = ProviderCategoryHint | null

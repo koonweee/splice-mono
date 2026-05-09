@@ -14,5 +14,5 @@ export interface TransactionSummary {
   net: MoneyWithSign
   transactionCount: number
   pendingCount: number
-  needsReviewCount: number
+  uncategorizedCount: number
 }

@@ -99,45 +99,30 @@ function buildTransaction(params: {
       };
     },
   } as AccountEntity;
-  entity.category = params.primary
+  const categoryPrimary = params.userPrimary ?? params.primary;
+  const categoryDetailed =
+    params.userDetailed ?? params.detailed ?? `${categoryPrimary}_DETAIL`;
+  entity.category = categoryPrimary
     ? ({
-        id: `cat-${params.primary}`,
-        primary: params.primary,
-        detailed: params.detailed ?? `${params.primary}_DETAIL`,
-        description: `${params.primary} category`,
+        id: `cat-${categoryPrimary}`,
+        primary: categoryPrimary,
+        detailed: categoryDetailed,
+        description: `${categoryPrimary} category`,
         toObject() {
           return {
-            id: `cat-${params.primary}`,
-            primary: params.primary as string,
-            detailed: params.detailed ?? `${params.primary}_DETAIL`,
-            description: `${params.primary} category`,
+            id: `cat-${categoryPrimary}`,
+            primary: categoryPrimary,
+            detailed: categoryDetailed,
+            description: `${categoryPrimary} category`,
+            archivedAt: null,
             createdAt: entity.createdAt,
             updatedAt: entity.updatedAt,
           };
         },
       } as CategoryEntity)
     : null;
-  entity.userCategoryId = null;
-  entity.userCategory = params.userPrimary
-    ? ({
-        id: `user-cat-${params.userPrimary}`,
-        primary: params.userPrimary,
-        detailed: params.userDetailed ?? `${params.userPrimary}_DETAIL`,
-        description: `${params.userPrimary} category`,
-        toObject() {
-          return {
-            id: `user-cat-${params.userPrimary}`,
-            primary: params.userPrimary as string,
-            detailed: params.userDetailed ?? `${params.userPrimary}_DETAIL`,
-            description: `${params.userPrimary} category`,
-            createdAt: entity.createdAt,
-            updatedAt: entity.updatedAt,
-          };
-        },
-      } as CategoryEntity)
-    : null;
-  entity.userCategoryId = entity.userCategory?.id ?? null;
-  entity.userCategoryUpdatedAt = entity.userCategory
+  entity.categoryId = entity.category?.id ?? null;
+  entity.categoryUpdatedAt = params.userPrimary
     ? new Date('2024-01-02T00:00:00Z')
     : null;
 
@@ -733,7 +718,7 @@ describe('TransactionAnalysisService', () => {
               endDate: params.endDate,
             },
           },
-          relations: ['account', 'category', 'userCategory'],
+          relations: ['account', 'category'],
         }),
       ),
     };
@@ -815,7 +800,7 @@ describe('TransactionAnalysisService', () => {
             pending: false,
             providerDate: expect.anything(),
           }),
-          relations: ['account', 'category', 'userCategory'],
+          relations: ['account', 'category'],
         }),
       );
     });
@@ -1152,7 +1137,7 @@ describe('TransactionAnalysisService', () => {
             userId: mockUserId,
             pending: false,
           }),
-          relations: ['account', 'category', 'userCategory'],
+          relations: ['account', 'category'],
         }),
       );
       expect(mockTransactionRepository.find).toHaveBeenNthCalledWith(
@@ -1162,7 +1147,7 @@ describe('TransactionAnalysisService', () => {
             userId: mockUserId,
             pending: false,
           }),
-          relations: ['account', 'category', 'userCategory'],
+          relations: ['account', 'category'],
         }),
       );
     });
@@ -1860,7 +1845,7 @@ describe('TransactionAnalysisService', () => {
       expect(result.map((transaction) => transaction.id)).toEqual([
         'overridden',
       ]);
-      expect(result[0].effectiveCategory?.primary).toBe('GENERAL_MERCHANDISE');
+      expect(result[0].category?.primary).toBe('GENERAL_MERCHANDISE');
     });
 
     it('removes matched Bilt mirror rows from the LOAN_PAYMENTS outflow drilldown', async () => {
@@ -1999,7 +1984,7 @@ describe('TransactionAnalysisService', () => {
 
       expect(mockTransactionRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          relations: ['account', 'category', 'userCategory'],
+          relations: ['account', 'category'],
         }),
       );
       expect(result[0]?.accountName).toBe('Main Checking');

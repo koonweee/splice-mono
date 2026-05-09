@@ -347,7 +347,6 @@ export class TransactionAnalysisService {
       .createQueryBuilder('transaction')
       .leftJoinAndSelect('transaction.account', 'account')
       .leftJoinAndSelect('transaction.category', 'category')
-      .leftJoinAndSelect('transaction.userCategory', 'userCategory')
       .where('transaction.userId = :userId', { userId })
       .andWhere('transaction.pending = false')
       .andWhere(
@@ -752,11 +751,7 @@ export class TransactionAnalysisService {
   }
 
   private getEffectiveCategoryPrimary(transaction: TransactionEntity): string {
-    return (
-      transaction.userCategory?.primary ??
-      transaction.category?.primary ??
-      'UNCATEGORIZED'
-    );
+    return transaction.category?.primary ?? 'UNCATEGORIZED';
   }
 
   private getActivityDate(transaction: TransactionEntity): string {

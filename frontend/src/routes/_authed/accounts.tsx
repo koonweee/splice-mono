@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Loader, Stack, Text, Title } from '@mantine/core'
+import { Alert, Button, Group, Loader, Stack, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { showNotification } from '@mantine/notifications'
 import { IconPlus, IconRefresh, IconUpload } from '@tabler/icons-react'
@@ -14,10 +14,12 @@ import type { Account } from '../../api/models'
 import { InstitutionSection } from '@/components/accounts/InstitutionSection'
 import { AddAccountModal } from '@/components/accounts/AddAccountModal'
 import { BackfillModal } from '@/components/accounts/BackfillModal'
+import { PageHeader } from '@/components/PageHeader'
 
 export const Route = createFileRoute('/_authed/accounts')({
   validateSearch: (search: Record<string, unknown>) => ({
-    accountId: typeof search.accountId === 'string' ? search.accountId : undefined,
+    accountId:
+      typeof search.accountId === 'string' ? search.accountId : undefined,
   }),
   component: AccountsPage,
 })
@@ -58,9 +60,13 @@ function AccountsPage() {
 
     const groups = new Map<string, Array<Account>>()
     accounts
-      .filter((account) => !highlightedAccountId || account.id === highlightedAccountId)
+      .filter(
+        (account) =>
+          !highlightedAccountId || account.id === highlightedAccountId,
+      )
       .forEach((account) => {
-        const institution = account.bankLink?.institutionName ?? 'Manual Accounts'
+        const institution =
+          account.bankLink?.institutionName ?? 'Manual Accounts'
         const existing = groups.get(institution) ?? []
         groups.set(institution, [...existing, account])
       })
@@ -85,39 +91,41 @@ function AccountsPage() {
 
   return (
     <>
-      <Group justify="space-between" mb="xl">
-        <Title order={1}>Accounts</Title>
-        <Group gap="sm">
-          <Button
-            leftSection={
-              syncAll.isPending ? (
-                <Loader size={16} />
-              ) : (
-                <IconRefresh size={16} />
-              )
-            }
-            onClick={() => syncAll.mutate()}
-            variant="outline"
-            disabled={syncAll.isPending}
-          >
-            {syncAll.isPending ? 'Syncing...' : 'Sync All'}
-          </Button>
-          <Button
-            leftSection={<IconUpload size={16} />}
-            onClick={openBackfill}
-            variant="outline"
-          >
-            Backfill
-          </Button>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={openModal}
-            variant="outline"
-          >
-            Add Account
-          </Button>
-        </Group>
-      </Group>
+      <PageHeader
+        title="Accounts"
+        actions={
+          <Group gap="sm">
+            <Button
+              leftSection={
+                syncAll.isPending ? (
+                  <Loader size={16} />
+                ) : (
+                  <IconRefresh size={16} />
+                )
+              }
+              onClick={() => syncAll.mutate()}
+              variant="outline"
+              disabled={syncAll.isPending}
+            >
+              {syncAll.isPending ? 'Syncing...' : 'Sync All'}
+            </Button>
+            <Button
+              leftSection={<IconUpload size={16} />}
+              onClick={openBackfill}
+              variant="outline"
+            >
+              Backfill
+            </Button>
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={openModal}
+              variant="outline"
+            >
+              Add Account
+            </Button>
+          </Group>
+        }
+      />
       <Stack gap="lg">
         {Array.from(groupedAccounts.entries()).map(
           ([institution, groupAccount]) => (

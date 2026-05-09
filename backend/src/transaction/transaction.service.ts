@@ -7,18 +7,12 @@ import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
 import {
-  BulkTransactionCategoryReviewDto,
-  BulkTransactionCategoryReviewResponse,
-  BulkTransactionCategoryReviewUndoDto,
   BulkTransactionCategoryUpdateDto,
   BulkTransactionCategoryUpdateResponse,
   BulkTransactionCategoryUpdateUndoDto,
   CreateTransactionDto,
   Transaction,
-  TransactionCategoryReviewMethod,
-  TransactionCategoryReviewStatus,
   UpdateTransactionCategoryDto,
-  UpdateTransactionCategoryReviewDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
 import { MoneySign } from '../types/MoneyWithSign';
@@ -37,9 +31,9 @@ type TransactionFilterOptions = {
   accountId?: string;
   startDate?: string;
   endDate?: string;
+  categoryId?: string;
   categoryPrimary?: string;
   amountSign?: string;
-  categoryReviewStatus?: TransactionCategoryReviewStatus;
 };
 
 export type TransactionSummaryBucket = {
@@ -52,7 +46,7 @@ export type TransactionSummaryTotals = {
   buckets: TransactionSummaryBucket[];
   transactionCount: number;
   pendingCount: number;
-  needsReviewCount: number;
+  uncategorizedCount: number;
 };
 
 type TransactionSummaryRawRow = {
@@ -61,7 +55,7 @@ type TransactionSummaryRawRow = {
   outflowAmount: string | number | null;
   transactionCount: string | number;
   pendingCount: string | number | null;
-  needsReviewCount: string | number | null;
+  uncategorizedCount: string | number | null;
 };
 
 const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
@@ -70,10 +64,8 @@ const BULK_CATEGORY_UNDO_TTL_MS = 5 * 60 * 1000;
 
 type BulkCategoryUndoSnapshot = {
   id: string;
-  userCategoryId: string | null;
-  userCategoryUpdatedAt: string | null;
-  categoryReviewedAt: string | null;
-  categoryReviewMethod: TransactionCategoryReviewMethod | null;
+  categoryId: string | null;
+  categoryUpdatedAt: string | null;
 };
 
 type BulkCategoryUndoPayload = {
@@ -100,7 +92,7 @@ export class TransactionService extends OwnedCrudService<
   protected readonly logger = new Logger(TransactionService.name);
   protected readonly entityName = 'Transaction';
   protected readonly EntityClass = TransactionEntity;
-  protected readonly relations = ['account', 'category', 'userCategory'];
+  protected readonly relations = ['account', 'category'];
 
   constructor(
     @InjectRepository(TransactionEntity)
@@ -110,18 +102,6 @@ export class TransactionService extends OwnedCrudService<
     private readonly categoryService: CategoryService,
   ) {
     super(repository);
-  }
-
-  /**
-   * Build a lookup map of "primary:detailed" -> category UUID
-   */
-  private async buildCategoryLookup(): Promise<Map<string, string>> {
-    const categories = await this.categoryRepository.find();
-    const map = new Map<string, string>();
-    categories.forEach((cat) => {
-      map.set(`${cat.primary}:${cat.detailed}`, cat.id);
-    });
-    return map;
   }
 
   protected applyUpdate(
@@ -166,6 +146,9 @@ export class TransactionService extends OwnedCrudService<
       entity.personalFinanceCategoryConfidenceLevel =
         dto.personalFinanceCategoryConfidenceLevel;
     }
+    if (dto.personalFinanceCategory !== undefined) {
+      entity.applyProviderCategoryHint(dto);
+    }
     if (dto.counterparties !== undefined) {
       entity.counterparties = dto.counterparties;
     }
@@ -186,7 +169,6 @@ export class TransactionService extends OwnedCrudService<
     if (dto.reportingDateOverride !== undefined) {
       entity.reportingDateOverride = dto.reportingDateOverride;
     }
-    if (dto.categoryId !== undefined) entity.categoryId = dto.categoryId;
   }
 
   async create(
@@ -285,24 +267,13 @@ export class TransactionService extends OwnedCrudService<
     if (category === null) {
       entity.categoryId = null;
       entity.category = null;
-      entity.userCategoryId = null;
-      entity.userCategory = null;
-      entity.userCategoryUpdatedAt = null;
-      return;
-    }
-
-    if (category.source === 'user') {
-      entity.userCategoryId = category.id;
-      entity.userCategory = category;
-      entity.userCategoryUpdatedAt = new Date();
+      entity.categoryUpdatedAt = null;
       return;
     }
 
     entity.categoryId = category.id;
     entity.category = category;
-    entity.userCategoryId = null;
-    entity.userCategory = null;
-    entity.userCategoryUpdatedAt = null;
+    entity.categoryUpdatedAt = new Date();
   }
 
   private static readonly SORTABLE_COLUMNS = new Set([
@@ -311,19 +282,6 @@ export class TransactionService extends OwnedCrudService<
     'pending',
     'amount',
   ]);
-
-  private markCategoryReviewed(
-    entity: TransactionEntity,
-    method: TransactionCategoryReviewMethod,
-  ): void {
-    entity.categoryReviewedAt = new Date();
-    entity.categoryReviewMethod = method;
-  }
-
-  private clearCategoryReview(entity: TransactionEntity): void {
-    entity.categoryReviewedAt = null;
-    entity.categoryReviewMethod = null;
-  }
 
   private getUndoSigningSecret(): string {
     const secret = process.env.JWT_SECRET;
@@ -380,11 +338,8 @@ export class TransactionService extends OwnedCrudService<
       exp: Date.now() + BULK_CATEGORY_UNDO_TTL_MS,
       transactions: entities.map((entity) => ({
         id: entity.id,
-        userCategoryId: entity.userCategoryId,
-        userCategoryUpdatedAt:
-          entity.userCategoryUpdatedAt?.toISOString() ?? null,
-        categoryReviewedAt: entity.categoryReviewedAt?.toISOString() ?? null,
-        categoryReviewMethod: entity.categoryReviewMethod,
+        categoryId: entity.categoryId,
+        categoryUpdatedAt: entity.categoryUpdatedAt?.toISOString() ?? null,
       })),
     });
   }
@@ -393,17 +348,15 @@ export class TransactionService extends OwnedCrudService<
     entity: TransactionEntity,
     category: CategoryEntity | null,
   ): void {
-    if (category === null || category.id === entity.categoryId) {
-      entity.userCategoryId = null;
-      entity.userCategory = null;
-      entity.userCategoryUpdatedAt = null;
+    if (category === null) {
+      entity.categoryId = null;
+      entity.category = null;
+      entity.categoryUpdatedAt = null;
     } else {
-      entity.userCategoryId = category.id;
-      entity.userCategory = category;
-      entity.userCategoryUpdatedAt = new Date();
+      entity.categoryId = category.id;
+      entity.category = category;
+      entity.categoryUpdatedAt = new Date();
     }
-
-    this.markCategoryReviewed(entity, 'bulk_change');
   }
 
   private applyTransactionOrder(
@@ -471,9 +424,9 @@ export class TransactionService extends OwnedCrudService<
       accountId,
       startDate,
       endDate,
+      categoryId,
       categoryPrimary,
       amountSign,
-      categoryReviewStatus,
     } = options;
 
     if (accountId) {
@@ -483,21 +436,21 @@ export class TransactionService extends OwnedCrudService<
     if (amountSign === 'positive' || amountSign === 'negative') {
       query.andWhere('transaction.amountSign = :amountSign', { amountSign });
     }
-    if (categoryReviewStatus === 'needs_review') {
-      query.andWhere('transaction.categoryReviewedAt IS NULL');
-    } else if (categoryReviewStatus === 'reviewed') {
-      query.andWhere('transaction.categoryReviewedAt IS NOT NULL');
-    }
-    if (categoryPrimary) {
-      if (categoryPrimary === 'UNCATEGORIZED') {
-        query.andWhere(
-          'COALESCE(transaction.userCategoryId, transaction.categoryId) IS NULL',
-        );
+    if (categoryId) {
+      if (categoryId === 'UNCATEGORIZED') {
+        query.andWhere('transaction.categoryId IS NULL');
       } else {
-        query.andWhere(
-          'COALESCE(userCategory.primary, category.primary) = :categoryPrimary',
-          { categoryPrimary },
-        );
+        query.andWhere('transaction.categoryId = :categoryId', {
+          categoryId,
+        });
+      }
+    } else if (categoryPrimary) {
+      if (categoryPrimary === 'UNCATEGORIZED') {
+        query.andWhere('transaction.categoryId IS NULL');
+      } else {
+        query.andWhere('category.primary = :categoryPrimary', {
+          categoryPrimary,
+        });
       }
     }
   }
@@ -510,7 +463,6 @@ export class TransactionService extends OwnedCrudService<
       .createQueryBuilder('transaction')
       .leftJoinAndSelect('transaction.account', 'account')
       .leftJoinAndSelect('transaction.category', 'category')
-      .leftJoinAndSelect('transaction.userCategory', 'userCategory')
       .where('transaction.userId = :userId', { userId });
 
     this.applyQueryFilters(query, options);
@@ -531,9 +483,9 @@ export class TransactionService extends OwnedCrudService<
       accountId?: string;
       startDate?: string;
       endDate?: string;
+      categoryId?: string;
       categoryPrimary?: string;
       amountSign?: string;
-      categoryReviewStatus?: TransactionCategoryReviewStatus;
     },
   ): Promise<{ data: Transaction[]; total: number }> {
     const {
@@ -544,9 +496,9 @@ export class TransactionService extends OwnedCrudService<
       accountId,
       startDate,
       endDate,
+      categoryId,
       categoryPrimary,
       amountSign,
-      categoryReviewStatus,
     } = options;
 
     const sortColumn =
@@ -565,9 +517,9 @@ export class TransactionService extends OwnedCrudService<
         accountId,
         startDate,
         endDate,
+        categoryId,
         categoryPrimary,
         amountSign,
-        categoryReviewStatus,
       },
       'Finding paginated transactions',
     );
@@ -576,9 +528,9 @@ export class TransactionService extends OwnedCrudService<
       accountId,
       startDate,
       endDate,
+      categoryId,
       categoryPrimary,
       amountSign,
-      categoryReviewStatus,
     });
 
     const [entities, total] = await this.applyTransactionOrder(
@@ -621,8 +573,8 @@ export class TransactionService extends OwnedCrudService<
         'pendingCount',
       )
       .addSelect(
-        'SUM(CASE WHEN transaction.categoryReviewedAt IS NULL THEN 1 ELSE 0 END)',
-        'needsReviewCount',
+        'SUM(CASE WHEN transaction.categoryId IS NULL THEN 1 ELSE 0 END)',
+        'uncategorizedCount',
       )
       .groupBy('transaction.amountCurrency')
       .setParameters({
@@ -632,11 +584,11 @@ export class TransactionService extends OwnedCrudService<
       .getRawMany<TransactionSummaryRawRow>();
     let transactionCount = 0;
     let pendingCount = 0;
-    let needsReviewCount = 0;
+    let uncategorizedCount = 0;
     const buckets = rows.map((row) => {
       transactionCount += parseRawInteger(row.transactionCount);
       pendingCount += parseRawInteger(row.pendingCount);
-      needsReviewCount += parseRawInteger(row.needsReviewCount);
+      uncategorizedCount += parseRawInteger(row.uncategorizedCount);
 
       return {
         currency: row.currency,
@@ -649,7 +601,7 @@ export class TransactionService extends OwnedCrudService<
       buckets,
       transactionCount,
       pendingCount,
-      needsReviewCount,
+      uncategorizedCount,
     };
   }
 
@@ -672,7 +624,7 @@ export class TransactionService extends OwnedCrudService<
     dto: UpdateTransactionCategoryDto,
     userId: string,
   ): Promise<Transaction | null> {
-    this.logger.log({ id, userId }, 'Updating transaction category override');
+    this.logger.log({ id, userId }, 'Updating transaction category');
 
     const entity = await this.repository.findOne({
       where: { id, userId },
@@ -682,16 +634,15 @@ export class TransactionService extends OwnedCrudService<
     if (!entity) {
       this.logger.warn(
         { id, userId },
-        'Transaction not found for category override update',
+        'Transaction not found for category update',
       );
       return null;
     }
 
-    if (dto.categoryId === null || dto.categoryId === entity.categoryId) {
-      entity.userCategoryId = null;
-      entity.userCategory = null;
-      entity.userCategoryUpdatedAt = null;
-      this.markCategoryReviewed(entity, 'manual_change');
+    if (dto.categoryId === null) {
+      entity.categoryId = null;
+      entity.category = null;
+      entity.categoryUpdatedAt = null;
     } else {
       const category = await this.categoryService.findActiveAssignableCategory(
         dto.categoryId,
@@ -701,15 +652,14 @@ export class TransactionService extends OwnedCrudService<
       if (!category) {
         this.logger.warn(
           { id, userId, categoryId: dto.categoryId },
-          'Category not found for transaction override',
+          'Category not found for transaction category update',
         );
         return null;
       }
 
-      entity.userCategoryId = category.id;
-      entity.userCategory = category;
-      entity.userCategoryUpdatedAt = new Date();
-      this.markCategoryReviewed(entity, 'manual_change');
+      entity.categoryId = category.id;
+      entity.category = category;
+      entity.categoryUpdatedAt = new Date();
     }
 
     const savedEntity = await this.repository.save(entity);
@@ -828,26 +778,26 @@ export class TransactionService extends OwnedCrudService<
       const entityById = new Map(
         entities.map((entity) => [entity.id, entity] as const),
       );
-      const userCategoryIds = [
+      const categoryIds = [
         ...new Set(
           payload.transactions
-            .map((transaction) => transaction.userCategoryId)
+            .map((transaction) => transaction.categoryId)
             .filter((categoryId): categoryId is string => categoryId !== null),
         ),
       ];
-      const userCategories =
-        userCategoryIds.length > 0
+      const categories =
+        categoryIds.length > 0
           ? await this.categoryRepository.find({
-              where: { id: In(userCategoryIds) },
+              where: { id: In(categoryIds), userId },
             })
           : [];
       const categoryById = new Map(
-        userCategories
+        categories
           .filter((category): category is CategoryEntity => category !== null)
           .map((category) => [category.id, category] as const),
       );
 
-      if (categoryById.size !== userCategoryIds.length) {
+      if (categoryById.size !== categoryIds.length) {
         this.logger.warn(
           { userId },
           'Category not found for bulk category update undo',
@@ -861,17 +811,13 @@ export class TransactionService extends OwnedCrudService<
           return;
         }
 
-        entity.userCategoryId = snapshot.userCategoryId;
-        entity.userCategory = snapshot.userCategoryId
-          ? (categoryById.get(snapshot.userCategoryId) ?? null)
+        entity.categoryId = snapshot.categoryId;
+        entity.category = snapshot.categoryId
+          ? (categoryById.get(snapshot.categoryId) ?? null)
           : null;
-        entity.userCategoryUpdatedAt = snapshot.userCategoryUpdatedAt
-          ? new Date(snapshot.userCategoryUpdatedAt)
+        entity.categoryUpdatedAt = snapshot.categoryUpdatedAt
+          ? new Date(snapshot.categoryUpdatedAt)
           : null;
-        entity.categoryReviewedAt = snapshot.categoryReviewedAt
-          ? new Date(snapshot.categoryReviewedAt)
-          : null;
-        entity.categoryReviewMethod = snapshot.categoryReviewMethod;
       });
 
       await txnRepo.save(entities);
@@ -882,105 +828,6 @@ export class TransactionService extends OwnedCrudService<
         undo: '',
       };
     });
-  }
-
-  async updateCategoryReview(
-    id: string,
-    dto: UpdateTransactionCategoryReviewDto,
-    userId: string,
-  ): Promise<Transaction | null> {
-    this.logger.log({ id, userId }, 'Updating transaction category review');
-
-    const entity = await this.repository.findOne({
-      where: { id, userId },
-      relations: this.relations,
-    });
-
-    if (!entity) {
-      this.logger.warn(
-        { id, userId },
-        'Transaction not found for category review update',
-      );
-      return null;
-    }
-
-    if (dto.reviewed) {
-      this.markCategoryReviewed(entity, 'manual_accept');
-    } else {
-      this.clearCategoryReview(entity);
-    }
-
-    const savedEntity = await this.repository.save(entity);
-    const hydratedEntity = await this.repository.findOne({
-      where: { id: savedEntity.id, userId },
-      relations: this.relations,
-    });
-
-    return (hydratedEntity ?? savedEntity).toObject();
-  }
-
-  async bulkReviewCategories(
-    userId: string,
-    dto: BulkTransactionCategoryReviewDto,
-  ): Promise<BulkTransactionCategoryReviewResponse> {
-    this.logger.log(
-      { userId, filters: dto.filters },
-      'Bulk reviewing transaction categories',
-    );
-
-    const query = this.buildFilteredTransactionQuery(userId, dto.filters);
-    query.andWhere('transaction.categoryReviewedAt IS NULL');
-
-    const entities = await query.getMany();
-    if (entities.length === 0) {
-      return { count: 0, transactionIds: [] };
-    }
-
-    entities.forEach((entity) => {
-      this.markCategoryReviewed(entity, 'bulk_accept');
-    });
-
-    await this.repository.save(entities);
-
-    return {
-      count: entities.length,
-      transactionIds: entities.map((entity) => entity.id),
-    };
-  }
-
-  async undoBulkReviewCategories(
-    userId: string,
-    dto: BulkTransactionCategoryReviewUndoDto,
-  ): Promise<BulkTransactionCategoryReviewResponse> {
-    const transactionIds = [...new Set(dto.transactionIds)];
-    this.logger.log(
-      { userId, count: transactionIds.length },
-      'Undoing bulk transaction category review',
-    );
-
-    if (transactionIds.length === 0) {
-      return { count: 0, transactionIds: [] };
-    }
-
-    const entities = await this.repository.find({
-      where: { id: In(transactionIds), userId },
-      relations: this.relations,
-    });
-
-    if (entities.length === 0) {
-      return { count: 0, transactionIds: [] };
-    }
-
-    entities.forEach((entity) => {
-      this.clearCategoryReview(entity);
-    });
-
-    await this.repository.save(entities);
-
-    return {
-      count: entities.length,
-      transactionIds: entities.map((entity) => entity.id),
-    };
   }
 
   private async findMatchingTransactions(
@@ -1069,7 +916,7 @@ export class TransactionService extends OwnedCrudService<
         activityDate: transaction.activityDate,
         reportingDateOverride: transaction.reportingDateOverride,
         providerDate: transaction.providerDate,
-        categoryPrimary: transaction.effectiveCategory?.primary ?? null,
+        categoryPrimary: transaction.category?.primary ?? null,
         amount: transaction.amount,
       })),
     };
@@ -1100,9 +947,6 @@ export class TransactionService extends OwnedCrudService<
       'Processing transaction sync results',
     );
 
-    // Build category lookup once for the entire sync batch
-    const categoryLookup = await this.buildCategoryLookup();
-
     await this.repository.manager.transaction(async (manager) => {
       const txnRepo = manager.getRepository(TransactionEntity);
 
@@ -1118,9 +962,8 @@ export class TransactionService extends OwnedCrudService<
               );
               return null;
             }
-            const resolvedDto = this.resolveCategoryId(dto, categoryLookup);
             return TransactionEntity.fromDto(
-              { ...resolvedDto, accountId: internalAccountId },
+              { ...dto, accountId: internalAccountId, categoryId: null },
               userId,
             );
           })
@@ -1148,8 +991,6 @@ export class TransactionService extends OwnedCrudService<
               return;
             }
 
-            const resolvedDto = this.resolveCategoryId(dto, categoryLookup);
-
             const existing = await txnRepo.findOne({
               where: {
                 externalTransactionId: dto.externalTransactionId ?? undefined,
@@ -1165,20 +1006,20 @@ export class TransactionService extends OwnedCrudService<
               );
               await txnRepo.save(
                 TransactionEntity.fromDto(
-                  { ...resolvedDto, accountId: internalAccountId },
+                  { ...dto, accountId: internalAccountId, categoryId: null },
                   userId,
                 ),
               );
               return;
             }
 
-            const syncUpdateDto =
-              (existing.categoryReviewedAt ?? null) === null
-                ? resolvedDto
-                : { ...resolvedDto, categoryId: undefined };
-
             this.applyUpdate(existing, {
-              ...syncUpdateDto,
+              ...dto,
+              categoryId: undefined,
+              personalFinanceCategory: dto.personalFinanceCategory ?? {
+                primary: null,
+                detailed: null,
+              },
               accountId: internalAccountId,
             });
             await txnRepo.save(existing);
@@ -1218,31 +1059,5 @@ export class TransactionService extends OwnedCrudService<
     });
 
     this.logger.log({}, 'Transaction sync results processed successfully');
-  }
-
-  /**
-   * Resolve categoryId from personalFinanceCategory strings using the lookup map.
-   * Returns a new DTO with categoryId set if a match is found.
-   */
-  private resolveCategoryId(
-    dto: CreateTransactionDto,
-    categoryLookup: Map<string, string>,
-  ): CreateTransactionDto {
-    if (!dto.personalFinanceCategory) {
-      return dto;
-    }
-
-    const { primary, detailed } = dto.personalFinanceCategory;
-    const categoryId = categoryLookup.get(`${primary}:${detailed}`);
-
-    if (!categoryId) {
-      this.logger.warn(
-        { primary, detailed },
-        'No category found for personal finance category',
-      );
-      return dto;
-    }
-
-    return { ...dto, categoryId };
   }
 }

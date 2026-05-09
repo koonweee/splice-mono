@@ -11,11 +11,9 @@ const mockFns = vi.hoisted(() => ({
   useCategoryControllerFindManagementMock: vi.fn(),
   useCategoryControllerCreateCustomMock: vi.fn(),
   useCategoryControllerUpdateCustomMock: vi.fn(),
-  useCategoryControllerBulkUpdateVisibilityMock: vi.fn(),
   useCategoryControllerBulkUpdateCustomMock: vi.fn(),
   createMutateMock: vi.fn(),
   updateMutateMock: vi.fn(),
-  visibilityMutateMock: vi.fn(),
   bulkCustomMutateMock: vi.fn(),
 }))
 
@@ -43,36 +41,15 @@ vi.mock('../../api/clients/spliceAPI', async () => {
       mockFns.useCategoryControllerCreateCustomMock,
     useCategoryControllerUpdateCustom:
       mockFns.useCategoryControllerUpdateCustomMock,
-    useCategoryControllerBulkUpdateVisibility:
-      mockFns.useCategoryControllerBulkUpdateVisibilityMock,
     useCategoryControllerBulkUpdateCustom:
       mockFns.useCategoryControllerBulkUpdateCustomMock,
   }
 })
 
-const systemCategory = makeCategory({
-  id: 'system-category-id',
-  primary: 'FOOD_AND_DRINK',
-  detailed: 'FOOD_AND_DRINK_RESTAURANT',
-  source: 'plaid',
-  transactionCount: 4,
-  lastUsedAt: '2026-02-14T00:00:00.000Z',
-})
-
-const hiddenSystemCategory = makeCategory({
-  id: 'hidden-system-category-id',
-  primary: 'TRANSPORTATION',
-  detailed: 'TRANSPORTATION_TAXIS_AND_RIDE_SHARES',
-  source: 'plaid',
-  isHidden: true,
-})
-
-const customCategory = makeCategory({
-  id: 'custom-category-id',
+const activeCategory = makeCategory({
+  id: 'active-category-id',
   primary: 'Home Projects',
   detailed: 'Hardware',
-  source: 'user',
-  userId: 'user-1',
   transactionCount: 2,
 })
 
@@ -80,8 +57,6 @@ const archivedCategory = makeCategory({
   id: 'archived-category-id',
   primary: 'Pets',
   detailed: 'Grooming',
-  source: 'user',
-  userId: 'user-1',
   archivedAt: '2026-02-14T00:00:00.000Z',
 })
 
@@ -91,9 +66,7 @@ beforeEach(() => {
   })
   mockFns.useCategoryControllerFindManagementMock.mockImplementation(
     (params?: { archived?: boolean }) => ({
-      data: params?.archived
-        ? [archivedCategory]
-        : [systemCategory, hiddenSystemCategory, customCategory],
+      data: params?.archived ? [archivedCategory] : [activeCategory],
       isLoading: false,
       isError: false,
     }),
@@ -109,9 +82,6 @@ beforeEach(() => {
     isPending: false,
     isError: false,
     error: null,
-  })
-  mockFns.useCategoryControllerBulkUpdateVisibilityMock.mockReturnValue({
-    mutate: mockFns.visibilityMutateMock,
   })
   mockFns.useCategoryControllerBulkUpdateCustomMock.mockReturnValue({
     mutate: mockFns.bulkCustomMutateMock,
@@ -147,8 +117,12 @@ afterEach(() => {
 })
 
 describe('CustomCategoriesSection', () => {
-  it('creates a custom category without a visibility setting', () => {
+  it('creates and edits user categories without system or visibility controls', () => {
     renderSection()
+
+    expect(screen.queryByText('System')).toBeNull()
+    expect(screen.queryByText(/visibility/i)).toBeNull()
+    expect(screen.queryByText(/Hide from dropdowns/i)).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /new category/i }))
     fireEvent.change(screen.getByTestId('custom-category-primary-input'), {
@@ -169,131 +143,62 @@ describe('CustomCategoriesSection', () => {
         description: 'Weekend classes',
       },
     })
-  })
 
-  it('blocks duplicate labels from hidden system and archived custom categories', () => {
-    renderSection()
-
-    fireEvent.click(screen.getByRole('button', { name: /new category/i }))
+    fireEvent.click(screen.getByLabelText('Close category panel'))
+    fireEvent.click(screen.getByLabelText('View category details'))
     fireEvent.change(screen.getByTestId('custom-category-primary-input'), {
-      target: { value: ' transportation ' },
+      target: { value: 'House' },
     })
-    fireEvent.change(screen.getByTestId('custom-category-detailed-input'), {
-      target: { value: ' taxis and ride shares ' },
-    })
+    fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
-    expect(screen.getByText('Duplicate detected')).toBeTruthy()
-    expect(
-      screen.getByRole('button', { name: /create category/i }),
-    ).toHaveProperty('disabled', true)
-
-    fireEvent.change(screen.getByTestId('custom-category-primary-input'), {
-      target: { value: 'Pets' },
-    })
-    fireEvent.change(screen.getByTestId('custom-category-detailed-input'), {
-      target: { value: 'Grooming' },
-    })
-
-    expect(
-      screen.getByRole('button', { name: /restore existing category/i }),
-    ).toBeTruthy()
-    expect(
-      screen.getByRole('button', { name: /create category/i }),
-    ).toHaveProperty('disabled', true)
-    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
-  })
-
-  it('shows hidden system categories and can show them again', () => {
-    renderSection()
-
-    expect(screen.getAllByText('Transportation').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Hidden').length).toBeGreaterThan(0)
-
-    fireEvent.click(screen.getByLabelText('Show in dropdowns'))
-
-    expect(mockFns.visibilityMutateMock).toHaveBeenCalledWith({
+    expect(mockFns.updateMutateMock).toHaveBeenCalledWith({
+      id: activeCategory.id,
       data: {
-        categoryIds: [hiddenSystemCategory.id],
-        hidden: false,
+        primary: 'House',
+        detailed: 'Hardware',
+        description: '',
       },
     })
   })
 
-  it('bulk hides selected active categories but disables custom-only actions', () => {
+  it('archives, restores, and bulk duplicates selected categories', () => {
     renderSection()
 
-    fireEvent.click(screen.getByLabelText('Select Food And Drink > Restaurant'))
+    expect(screen.getByRole('button', { name: /new category/i })).toBeTruthy()
     fireEvent.click(screen.getByLabelText('Select Home Projects > Hardware'))
+    expect(
+      screen.queryByRole('button', { name: /new category/i }),
+    ).toBeNull()
+    expect(screen.queryByLabelText('Bulk primary category')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /^archive$/i }))
 
-    fireEvent.click(
-      screen.getByText('Hide from dropdowns').closest('button') as HTMLElement,
-    )
-
-    expect(mockFns.visibilityMutateMock).toHaveBeenCalledWith({
+    expect(mockFns.bulkCustomMutateMock).toHaveBeenCalledWith({
       data: {
-        categoryIds: [systemCategory.id, customCategory.id],
-        hidden: true,
+        categoryIds: [activeCategory.id],
+        action: 'archive',
       },
     })
-    expect(
-      screen.getByRole('button', { name: /archive custom/i }),
-    ).toHaveProperty('disabled', true)
-  })
 
-  it('shows inline details when a bulk action skips categories', () => {
-    mockFns.useCategoryControllerBulkUpdateVisibilityMock.mockImplementation(
-      (options?: {
-        mutation?: {
-          onSuccess?: (result: {
-            requested: number
-            updated: number
-            skipped: Array<{ categoryId: string; reason: 'not_found' }>
-          }) => void
-        }
-      }) => ({
-        mutate: (variables: unknown) => {
-          mockFns.visibilityMutateMock(variables)
-          options?.mutation?.onSuccess?.({
-            requested: 2,
-            updated: 1,
-            skipped: [
-              { categoryId: hiddenSystemCategory.id, reason: 'not_found' },
-            ],
-          })
-        },
-      }),
-    )
+    expect(screen.getByRole('button', { name: /^archive$/i })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^restore$/i })).toBeNull()
 
-    renderSection()
+    fireEvent.click(screen.getByRole('button', { name: /^duplicate$/i }))
 
-    fireEvent.click(screen.getByLabelText('Select Food And Drink > Restaurant'))
-    fireEvent.click(
-      screen.getByLabelText('Select Transportation > Taxis And Ride Shares'),
-    )
-    fireEvent.click(
-      screen.getByText('Hide from dropdowns').closest('button') as HTMLElement,
-    )
-
-    expect(screen.getByText('Some categories were skipped')).toBeTruthy()
-    expect(
-      screen.getByText(/Transportation > Taxis And Ride Shares: Not found/i),
-    ).toBeTruthy()
-  })
-
-  it('requests archived-only rows and restores archived custom categories', () => {
-    renderSection()
+    expect(mockFns.bulkCustomMutateMock).toHaveBeenLastCalledWith({
+      data: {
+        categoryIds: [activeCategory.id],
+        action: 'duplicate',
+      },
+    })
 
     fireEvent.click(screen.getByRole('checkbox', { name: /archived/i }))
-
-    expect(mockFns.useCategoryControllerFindManagementMock).toHaveBeenCalledWith(
-      { archived: true },
-    )
-    expect(screen.queryByText('Food And Drink')).toBeNull()
-    expect(screen.getAllByText('Pets').length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByLabelText('Select Pets > Grooming'))
+    expect(screen.getByRole('button', { name: /^restore$/i })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^archive$/i })).toBeNull()
 
     fireEvent.click(screen.getByLabelText('Restore category'))
 
-    expect(mockFns.bulkCustomMutateMock).toHaveBeenCalledWith({
+    expect(mockFns.bulkCustomMutateMock).toHaveBeenLastCalledWith({
       data: {
         categoryIds: [archivedCategory.id],
         action: 'restore',
@@ -301,30 +206,60 @@ describe('CustomCategoriesSection', () => {
     })
   })
 
-  it('edits a custom category and leaves system rows read-only', () => {
+  it('clears selected rows after a successful bulk update', () => {
+    mockFns.useCategoryControllerBulkUpdateCustomMock.mockImplementation(
+      (options?: {
+        mutation?: {
+          onSuccess?: (result: {
+            requested: number
+            updated: number
+            skipped: Array<never>
+          }) => void
+        }
+      }) => ({
+        mutate: (variables: unknown) => {
+          mockFns.bulkCustomMutateMock(variables)
+          options?.mutation?.onSuccess?.({
+            requested: 1,
+            updated: 1,
+            skipped: [],
+          })
+        },
+      }),
+    )
+
     renderSection()
 
-    fireEvent.click(screen.getAllByLabelText('View category details')[0])
-
-    expect(screen.getByText('Food And Drink > Restaurant')).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Select Home Projects > Hardware'))
     expect(
-      screen.queryByTestId('custom-category-primary-input'),
+      screen.queryByRole('button', { name: /new category/i }),
     ).toBeNull()
 
-    fireEvent.click(screen.getByLabelText('Close category panel'))
-    fireEvent.click(screen.getAllByLabelText('View category details')[1])
+    fireEvent.click(screen.getByRole('button', { name: /^archive$/i }))
+
+    expect(screen.queryByText('1 selected')).toBeNull()
+    expect(screen.getByRole('button', { name: /new category/i })).toBeTruthy()
+  })
+
+  it('offers restore for archived duplicate conflicts', () => {
+    renderSection()
+
+    fireEvent.click(screen.getByRole('button', { name: /new category/i }))
     fireEvent.change(screen.getByTestId('custom-category-primary-input'), {
-      target: { value: 'House' },
+      target: { value: 'Pets' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+    fireEvent.change(screen.getByTestId('custom-category-detailed-input'), {
+      target: { value: 'Grooming' },
+    })
+
+    expect(screen.getByText('Duplicate detected')).toBeTruthy()
+    fireEvent.click(
+      screen.getByRole('button', { name: /restore existing category/i }),
+    )
 
     expect(mockFns.updateMutateMock).toHaveBeenCalledWith({
-      id: customCategory.id,
-      data: {
-        primary: 'House',
-        detailed: 'Hardware',
-        description: '',
-      },
+      id: archivedCategory.id,
+      data: { archived: false },
     })
   })
 })
@@ -346,13 +281,9 @@ function makeCategory(
     primary: overrides.primary,
     detailed: overrides.detailed,
     description: overrides.description ?? '',
-    source: overrides.source,
-    userId: overrides.userId,
     archivedAt: overrides.archivedAt ?? null,
     createdAt: overrides.createdAt ?? '2026-02-14T00:00:00.000Z',
     updatedAt: overrides.updatedAt ?? '2026-02-14T00:00:00.000Z',
-    isHidden: overrides.isHidden ?? false,
-    isSelectable: overrides.isSelectable ?? true,
     transactionCount: overrides.transactionCount ?? 0,
     lastUsedAt: overrides.lastUsedAt ?? null,
   }

@@ -10,7 +10,6 @@ import {
   Progress,
   Stack,
   Text,
-  Title,
   UnstyledButton,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
@@ -20,6 +19,7 @@ import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { useTransactionAnalysisControllerGetAnalysis } from '../../api/clients/spliceAPI'
 import { CategoryTransactionsModal } from '../../components/CategoryTransactionsModal'
 import { DateRangeControl } from '../../components/DateRangeControl'
+import { PageHeader } from '../../components/PageHeader'
 import {
   formatMoneyNumber,
   formatPrimaryCategory,
@@ -303,16 +303,18 @@ function AnalysisPage() {
 
   return (
     <>
-      <Group justify="space-between" mb="xl" wrap="wrap">
-        <Title order={1}>Analysis</Title>
-        <Group gap="xs">
-          <DateRangeControl
-            value={dateRangeValue}
-            onChange={handleDateRangeChange}
-            clearable={false}
-          />
-        </Group>
-      </Group>
+      <PageHeader
+        title="Analysis"
+        actions={
+          <Group gap="xs">
+            <DateRangeControl
+              value={dateRangeValue}
+              onChange={handleDateRangeChange}
+              clearable={false}
+            />
+          </Group>
+        }
+      />
 
       {isPending && (
         <Group justify="center" py="xl">

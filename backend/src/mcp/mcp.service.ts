@@ -320,7 +320,7 @@ export class SpliceMcpService {
       {
         title: 'List Categories',
         description:
-          'List valid transaction category codes and friendly labels. Use this before category-filtered transaction queries instead of guessing category strings.',
+          'List the current user category codes and friendly labels. Provider category hints on transactions are guidance only and are not valid category filters.',
         inputSchema: {
           startDate: DateStringSchema.optional().describe(
             'Optional inclusive activity start date for transaction counts.',

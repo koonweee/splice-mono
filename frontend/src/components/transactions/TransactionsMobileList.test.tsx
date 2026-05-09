@@ -8,14 +8,11 @@ import type * as SpliceAPI from '../../api/clients/spliceAPI'
 import type { Category, Transaction } from '../../api/models'
 
 const mockFns = vi.hoisted(() => ({
-  notificationsShowMock: vi.fn(),
   updateTransactionMutateMock: vi.fn(),
   updateCategoryMutateMock: vi.fn(),
-  updateCategoryReviewMutateMock: vi.fn(),
   useCategoryControllerFindAllMock: vi.fn(),
   useTransactionControllerUpdateMock: vi.fn(),
   useTransactionControllerUpdateCategoryMock: vi.fn(),
-  useTransactionControllerUpdateCategoryReviewMock: vi.fn(),
 }))
 
 vi.mock('../../api/clients/spliceAPI', async () => {
@@ -29,32 +26,18 @@ vi.mock('../../api/clients/spliceAPI', async () => {
     useTransactionControllerUpdate: mockFns.useTransactionControllerUpdateMock,
     useTransactionControllerUpdateCategory:
       mockFns.useTransactionControllerUpdateCategoryMock,
-    useTransactionControllerUpdateCategoryReview:
-      mockFns.useTransactionControllerUpdateCategoryReviewMock,
   }
 })
 
-vi.mock('@mantine/notifications', () => ({
-  notifications: {
-    show: mockFns.notificationsShowMock,
-  },
-}))
-
-const category = makeCategory({
+const foodCategory = makeCategory({
   id: 'category-1',
-  primary: 'FOOD_AND_DRINK',
-  detailed: 'FOOD_AND_DRINK_RESTAURANT',
+  primary: 'Food',
+  detailed: 'Restaurants',
 })
-const overrideCategory = makeCategory({
+const hardwareCategory = makeCategory({
   id: 'category-2',
-  primary: 'GENERAL_MERCHANDISE',
-  detailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
-})
-const customCategory = makeCategory({
-  id: 'category-3',
   primary: 'Home Projects',
   detailed: 'Hardware',
-  source: 'user',
 })
 
 describe('TransactionsMobileList', () => {
@@ -69,9 +52,9 @@ describe('TransactionsMobileList', () => {
       configurable: true,
     })
     Object.defineProperty(window, 'matchMedia', {
-      value: vi.fn().mockImplementation((query: string) => ({
+      value: vi.fn().mockImplementation(() => ({
         matches: false,
-        media: query,
+        media: '',
         onchange: null,
         addListener: vi.fn(),
         removeListener: vi.fn(),
@@ -82,7 +65,7 @@ describe('TransactionsMobileList', () => {
       configurable: true,
     })
     mockFns.useCategoryControllerFindAllMock.mockReturnValue({
-      data: [category, overrideCategory, customCategory],
+      data: [foodCategory, hardwareCategory],
     })
     mockFns.useTransactionControllerUpdateMock.mockReturnValue({
       mutate: mockFns.updateTransactionMutateMock,
@@ -94,11 +77,6 @@ describe('TransactionsMobileList', () => {
       isPending: false,
       variables: undefined,
     })
-    mockFns.useTransactionControllerUpdateCategoryReviewMock.mockReturnValue({
-      mutate: mockFns.updateCategoryReviewMutateMock,
-      isPending: false,
-      variables: undefined,
-    })
   })
 
   afterEach(() => {
@@ -106,44 +84,73 @@ describe('TransactionsMobileList', () => {
     vi.clearAllMocks()
   })
 
-  it('groups transactions by date and renders compact row details', () => {
+  it('renders uncategorized rows with provider hint metadata and no review badge', () => {
     renderMobileList([
       makeTransaction({
         id: 'txn-1',
-        activityDate: '2026-05-07',
-        merchantName: 'Whole Foods Market',
-        amount: 6824,
-        sign: MoneyWithSignSign.negative,
-        pending: true,
-      }),
-      makeTransaction({
-        id: 'txn-2',
-        activityDate: '2026-05-06',
-        merchantName: 'Salary',
-        amount: 215000,
-        sign: MoneyWithSignSign.positive,
-        categoryNeedsReview: true,
+        category: null,
+        providerCategoryHint: {
+          provider: 'plaid',
+          primary: 'FOOD_AND_DRINK',
+          detailed: 'FOOD_AND_DRINK_RESTAURANT',
+          displayLabel: 'Restaurants',
+          confidenceLevel: 'HIGH',
+          iconUrl: null,
+        },
       }),
     ])
 
-    expect(screen.getByText('May 7, 2026')).toBeTruthy()
-    expect(screen.getByText('May 6, 2026')).toBeTruthy()
-    expect(screen.getByText('Whole Foods Market')).toBeTruthy()
-    expect(screen.getByText('Salary')).toBeTruthy()
-    expect(screen.getByText('Pending')).toBeTruthy()
-    expect(screen.getByText('Needs review')).toBeTruthy()
-    expect(screen.getByText('-$68.24')).toBeTruthy()
-    expect(screen.getByText('$2,150.00')).toBeTruthy()
+    expect(screen.getByText(/Checking .* Uncategorized/)).toBeTruthy()
+    expect(screen.queryByText(/Provider hint:/)).toBeNull()
+    expect(screen.queryByText('Needs review')).toBeNull()
   })
 
-  it('renders bulk checkboxes and toggles rows instead of opening details', () => {
+  it('updates and clears categories from the details drawer', async () => {
+    renderMobileList([
+      makeTransaction({
+        id: 'txn-1',
+        category: foodCategory,
+      }),
+    ])
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Open transaction details for Store/,
+      }),
+    )
+    fireEvent.click((await screen.findAllByLabelText('Category'))[0])
+    const hardwareOption = screen
+      .getByText('Hardware')
+      .closest('[role="option"]')
+    expect(hardwareOption).toBeTruthy()
+    fireEvent.click(hardwareOption as HTMLElement)
+
+    expect(mockFns.updateCategoryMutateMock).toHaveBeenCalledWith({
+      id: 'txn-1',
+      data: { categoryId: hardwareCategory.id },
+    })
+
+    fireEvent.click((await screen.findAllByLabelText('Category'))[0])
+    fireEvent.click(await screen.findByRole('button', { name: /clear/i }))
+
+    expect(mockFns.updateCategoryMutateMock).toHaveBeenLastCalledWith({
+      id: 'txn-1',
+      data: { categoryId: null },
+    })
+    expect(screen.queryByRole('button', { name: 'Mark reviewed' })).toBeNull()
+  })
+
+  it('keeps bulk mode row selection behavior', () => {
     const onToggle = vi.fn()
 
-    renderMobileList([makeTransaction({ id: 'txn-1' })], {
-      bulkModeEnabled: true,
-      selectedTransactionIds: new Set(['txn-1']),
-      onToggleTransactionSelection: onToggle,
-    })
+    renderMobileList(
+      [makeTransaction({ id: 'txn-1', category: foodCategory })],
+      {
+        bulkModeEnabled: true,
+        selectedTransactionIds: new Set(['txn-1']),
+        onToggleTransactionSelection: onToggle,
+      },
+    )
 
     const checkbox = screen.getByRole('checkbox', {
       name: /Select transaction Store/,
@@ -154,154 +161,20 @@ describe('TransactionsMobileList', () => {
     fireEvent.click(screen.getByRole('button', { name: /Select transaction/ }))
 
     expect(onToggle).toHaveBeenCalledWith('txn-1')
-    expect(screen.queryByText('Transaction')).toBeNull()
   })
 
-  it('requests more rows when scrolled near the bottom', () => {
-    const onScrollNearBottom = vi.fn()
-    renderMobileList([makeTransaction({ id: 'txn-1' })], {
-      onScrollNearBottom,
-    })
-
-    const list = screen.getByLabelText('Transactions list, 1 total')
-    Object.defineProperty(list, 'scrollHeight', {
-      configurable: true,
-      value: 1000,
-    })
-    Object.defineProperty(list, 'scrollTop', {
-      configurable: true,
-      value: 700,
-    })
-    Object.defineProperty(list, 'clientHeight', {
-      configurable: true,
-      value: 250,
-    })
-
-    fireEvent.scroll(list)
-
-    expect(onScrollNearBottom).toHaveBeenCalled()
-  })
-
-  it('opens transaction details from the full row', async () => {
+  it('updates reporting date overrides from the details drawer', async () => {
     renderMobileList([
       makeTransaction({
         id: 'txn-1',
-        merchantName: 'Whole Foods Market',
-        originalDescription: 'WHOLE FOODS #102',
-        paymentChannel: 'in store',
-        providerTransactionName: 'WHOLE FOODS MARKET',
-      }),
-    ])
-
-    expect(
-      screen.queryByLabelText(
-        'Open transaction actions for Whole Foods Market',
-      ),
-    ).toBeNull()
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: /Open transaction details for Whole Foods Market/,
-      }),
-    )
-
-    expect(await screen.findByLabelText('Search categories')).toBeTruthy()
-    expect(screen.getByText('Raw description')).toBeTruthy()
-    expect(screen.getByText('WHOLE FOODS #102')).toBeTruthy()
-    expect(screen.getByText('Provider name')).toBeTruthy()
-    expect(screen.getByText('WHOLE FOODS MARKET')).toBeTruthy()
-  })
-
-  it('marks an unreviewed category as reviewed from the actions drawer', async () => {
-    renderMobileList([
-      makeTransaction({
-        id: 'txn-1',
-        merchantName: 'Salary',
-        categoryNeedsReview: true,
-      }),
-    ])
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: /Open transaction details for Salary/,
-      }),
-    )
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Mark reviewed' }),
-    )
-
-    expect(mockFns.updateCategoryReviewMutateMock).toHaveBeenCalledWith(
-      {
-        id: 'txn-1',
-        data: { reviewed: true },
-      },
-      expect.objectContaining({
-        onSuccess: expect.any(Function),
-      }),
-    )
-  })
-
-  it('resets category overrides from the actions drawer', async () => {
-    renderMobileList([
-      makeTransaction({
-        id: 'txn-1',
-        merchantName: 'Store',
-        userCategory: overrideCategory,
-      }),
-    ])
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: /Open transaction details for Store/,
-      }),
-    )
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Reset override' }),
-    )
-
-    expect(mockFns.updateCategoryMutateMock).toHaveBeenCalledWith({
-      id: 'txn-1',
-      data: { categoryId: null },
-    })
-  })
-
-  it('updates the category from the actions drawer', async () => {
-    renderMobileList([
-      makeTransaction({
-        id: 'txn-1',
-        merchantName: 'Store',
-      }),
-    ])
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: /Open transaction details for Store/,
-      }),
-    )
-    fireEvent.click(
-      await screen.findByRole('option', {
-        name: 'Hardware Home Projects User',
-      }),
-    )
-
-    expect(mockFns.updateCategoryMutateMock).toHaveBeenCalledWith({
-      id: 'txn-1',
-      data: { categoryId: customCategory.id },
-    })
-  })
-
-  it('updates reporting date overrides from the transaction details drawer', async () => {
-    renderMobileList([
-      makeTransaction({
-        id: 'txn-1',
-        merchantName: 'Salary',
+        category: foodCategory,
         activityDate: '2026-04-29',
       }),
     ])
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: /Open transaction details for Salary/,
+        name: /Open transaction details for Store/,
       }),
     )
     const input = await screen.findByLabelText('Reporting date')
@@ -313,40 +186,11 @@ describe('TransactionsMobileList', () => {
       data: { reportingDateOverride: '2026-05-01' },
     })
   })
-
-  it('resets reporting date overrides from the transaction details drawer', async () => {
-    renderMobileList([
-      makeTransaction({
-        id: 'txn-1',
-        merchantName: 'Salary',
-        activityDate: '2026-05-01',
-        providerDate: '2026-04-29',
-        authorizedDate: '2026-04-28',
-        reportingDateOverride: '2026-05-01',
-      }),
-    ])
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: /Open transaction details for Salary/,
-      }),
-    )
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Use bank date' }),
-    )
-
-    expect(mockFns.updateTransactionMutateMock).toHaveBeenCalledWith({
-      id: 'txn-1',
-      data: { reportingDateOverride: null },
-    })
-    expect(screen.getByText(/Bank date Apr 28, 2026/)).toBeTruthy()
-  })
 })
 
 function renderMobileList(
   data: Array<Transaction>,
   options: {
-    onScrollNearBottom?: () => void
     bulkModeEnabled?: boolean
     selectedTransactionIds?: Set<string>
     onToggleTransactionSelection?: (transactionId: string) => void
@@ -362,7 +206,6 @@ function renderMobileList(
           totalRows={data.length}
           isLoading={false}
           isError={false}
-          onScrollNearBottom={options.onScrollNearBottom}
           bulkModeEnabled={options.bulkModeEnabled}
           selectedTransactionIds={options.selectedTransactionIds}
           onToggleTransactionSelection={options.onToggleTransactionSelection}
@@ -376,15 +219,12 @@ function makeCategory(overrides: {
   id: string
   primary: string
   detailed: string
-  source?: Category['source']
 }): Category {
   return {
     id: overrides.id,
     primary: overrides.primary,
     detailed: overrides.detailed,
     description: 'Category',
-    source: overrides.source ?? 'plaid',
-    userId: null,
     archivedAt: null,
     createdAt: '2026-02-14T00:00:00.000Z',
     updatedAt: '2026-02-14T00:00:00.000Z',
@@ -393,73 +233,57 @@ function makeCategory(overrides: {
 
 function makeTransaction(
   overrides: Partial<{
-    amount: number
     activityDate: string
-    categoryNeedsReview: boolean
+    category: Category | null
     id: string
-    merchantName: string
-    originalDescription: string | null
-    paymentChannel: string | null
-    pending: boolean
-    providerDate: string
-    authorizedDate: string | null
-    reportingDateOverride: string | null
-    providerTransactionName: string | null
-    sign: MoneyWithSignSign
-    userCategory: Category | null
+    providerCategoryHint: {
+      provider: 'plaid'
+      primary: string | null
+      detailed: string | null
+      displayLabel: string | null
+      confidenceLevel: string | null
+      iconUrl: string | null
+    } | null
   }> = {},
 ): Transaction {
-  const userCategory =
-    'userCategory' in overrides ? (overrides.userCategory ?? null) : null
+  const category =
+    'category' in overrides ? (overrides.category ?? null) : foodCategory
 
   return {
     id: overrides.id ?? 'txn-1',
     amount: {
-      money: { amount: overrides.amount ?? 1200, currency: 'USD' },
-      sign: overrides.sign ?? MoneyWithSignSign.negative,
+      money: { amount: 1200, currency: 'USD' },
+      sign: MoneyWithSignSign.negative,
     },
     accountId: 'account-1',
-    merchantName: overrides.merchantName ?? 'Store',
-    providerTransactionName: overrides.providerTransactionName ?? null,
-    originalDescription: overrides.originalDescription ?? null,
-    pending: overrides.pending ?? false,
+    merchantName: 'Store',
+    providerTransactionName: null,
+    originalDescription: null,
+    pending: false,
     pendingTransactionId: null,
     accountOwner: null,
     externalTransactionId: 'external-1',
     logoUrl: null,
     website: null,
     merchantEntityId: null,
-    paymentChannel: overrides.paymentChannel ?? null,
+    paymentChannel: null,
     transactionCode: null,
-    personalFinanceCategoryIconUrl: null,
-    personalFinanceCategoryConfidenceLevel: null,
     counterparties: null,
     location: null,
     paymentMeta: null,
     activityDate: overrides.activityDate ?? '2026-05-07',
-    reportingDateOverride: overrides.reportingDateOverride ?? null,
-    providerDate:
-      overrides.providerDate ?? overrides.activityDate ?? '2026-05-07',
+    reportingDateOverride: null,
+    providerDate: overrides.activityDate ?? '2026-05-07',
     providerDatetime: null,
-    authorizedDate: overrides.authorizedDate ?? null,
+    authorizedDate: null,
     authorizedDatetime: null,
-    categoryId: category.id,
+    categoryId: category?.id ?? null,
     category,
-    userCategoryId: userCategory?.id ?? null,
-    userCategory,
-    userCategoryUpdatedAt: userCategory ? '2026-02-14T00:00:00.000Z' : null,
-    effectiveCategoryId: userCategory?.id ?? category.id,
-    effectiveCategory: userCategory ?? category,
+    categoryUpdatedAt: null,
     accountName: 'Checking',
-    categoryReviewedAt: overrides.categoryNeedsReview
-      ? null
-      : '2026-02-14T00:00:00.000Z',
-    categoryReviewMethod: overrides.categoryNeedsReview
-      ? null
-      : 'manual_accept',
-    categoryNeedsReview: overrides.categoryNeedsReview ?? false,
     createdAt: '2026-02-14T00:00:00.000Z',
     updatedAt: '2026-02-14T00:00:00.000Z',
     userId: 'user-1',
+    providerCategoryHint: overrides.providerCategoryHint ?? null,
   }
 }

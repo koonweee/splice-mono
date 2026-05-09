@@ -38,6 +38,45 @@
   min-width: 104px;
 }
 
+.inlineToolbar {
+  width: 100%;
+  min-width: 0;
+}
+
+.inlineEditRow {
+  width: 100%;
+  min-width: 0;
+}
+
+.inlineToolbar .categorySelect {
+  flex: 1 1 auto;
+  max-width: calc(100vw - 88px);
+  min-width: 0;
+}
+
+.inlineToolbar .categorySelect input {
+  min-height: 48px;
+}
+
+.inlineSaveButton {
+  flex: 0 0 auto;
+}
+
+.summaryEdit {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.summaryEdit .categorySelect {
+  flex: 0 0 300px;
+  width: 300px;
+  min-width: 300px;
+}
+
+.summarySaveButton {
+  flex: 0 0 auto;
+}
+
 @media (max-width: 48em) {
   .toolbarWrap {
     right: var(--mantine-spacing-xs);

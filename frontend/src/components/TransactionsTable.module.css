@@ -161,11 +161,6 @@
   text-transform: none;
 }
 
-.categoryReviewBadge {
-  box-shadow: inset 0 -1px 0
-    light-dark(var(--mantine-color-orange-5), rgba(255, 146, 43, 0.52));
-}
-
 .categoryFoodBadge {
   border-color: light-dark(
     var(--mantine-color-green-5),

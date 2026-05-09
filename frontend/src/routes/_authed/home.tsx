@@ -1,4 +1,4 @@
-import { Alert, Grid, Group, Loader, Select, Title } from '@mantine/core'
+import { Alert, Grid, Group, Loader, Select } from '@mantine/core'
 import { useLocalStorage } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
@@ -6,6 +6,7 @@ import { useUserControllerMe } from '../../api/clients/spliceAPI'
 import { AccountModal } from '../../components/AccountModal'
 import { AccountSection } from '../../components/AccountSection'
 import { NetWorthCard } from '../../components/NetWorthCard'
+import { PageHeader } from '../../components/PageHeader'
 import { useBalanceData } from '../../hooks/useBalanceData'
 import { isZeroBalanceAccount } from '../../lib/balance-utils'
 import type { AccountSummaryData } from '../../lib/balance-utils'
@@ -113,16 +114,18 @@ export function HomePage() {
 
   return (
     <>
-      <Group justify="space-between" mb="xl">
-        <Title order={1}>Home</Title>
-        <Select
-          value={period}
-          onChange={handlePeriodChange}
-          data={PERIOD_OPTIONS}
-          w={120}
-          size="md"
-        />
-      </Group>
+      <PageHeader
+        title="Home"
+        actions={
+          <Select
+            value={period}
+            onChange={handlePeriodChange}
+            data={PERIOD_OPTIONS}
+            w={120}
+            size="md"
+          />
+        }
+      />
 
       {isLoading && (
         <Group justify="center" py="xl">

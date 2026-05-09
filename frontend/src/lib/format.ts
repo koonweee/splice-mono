@@ -204,7 +204,7 @@ export function formatRelativeTime(date: Date | string): string {
 }
 
 /**
- * Format a Plaid category into a readable name.
+ * Format a provider category hint into a readable name.
  * Strips the primary prefix from the detailed string and converts to Title Case.
  *
  * @example

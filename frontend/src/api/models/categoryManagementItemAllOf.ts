@@ -7,8 +7,6 @@
  */
 
 export type CategoryManagementItemAllOf = {
-  isHidden: boolean
-  isSelectable: boolean
   /** @minimum 0 */
   transactionCount?: number
   /** @nullable */

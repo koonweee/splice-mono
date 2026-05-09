@@ -63,12 +63,26 @@
   background-color: inherit !important;
   box-shadow: none !important;
   opacity: 1 !important;
+  z-index: 3 !important;
 }
 
 .actionsHeader::before,
 .actionsCell::before {
   background-color: inherit !important;
   box-shadow: none !important;
+}
+
+.table :global(.mrt-table-body-row[data-selected]) .actionsCell {
+  background-color: var(--mrt-pinned-column-background-color) !important;
+}
+
+.table :global(.mrt-table-body-row[data-selected]) .actionsCell::before {
+  background-color: var(--mrt-selected-row-background-color) !important;
+}
+
+.table :global(.mrt-table-body-row[data-hover]:hover[data-selected])
+  .actionsCell::before {
+  background-color: var(--mrt-selected-row-hover-background-color) !important;
 }
 
 .actionsHeader :global(.mrt-table-head-cell-content),

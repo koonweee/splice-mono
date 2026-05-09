@@ -26,6 +26,7 @@ import {
 } from '../../api/clients/spliceAPI'
 import { CustomCategoriesSection } from '../../components/settings/CustomCategoriesSection'
 import { McpConnectionSection } from '../../components/settings/McpConnectionSection'
+import { PageHeader } from '../../components/PageHeader'
 import { PersonalAccessTokenSection } from '../../components/settings/PersonalAccessTokenSection'
 import {
   THEME_PRESETS,
@@ -285,12 +286,16 @@ export function SettingsPage() {
   }
 
   return (
-    <>
-      <Title order={1} mb="xl">
-        Settings
-      </Title>
+    <Box className={styles.settingsPage}>
+      <PageHeader title="Settings" />
 
-      <Tabs value={selectedTab} onChange={handleTabChange} keepMounted={false}>
+      <Tabs
+        className={styles.settingsTabs}
+        classNames={{ panel: styles.settingsPanel }}
+        value={selectedTab}
+        onChange={handleTabChange}
+        keepMounted={false}
+      >
         <Tabs.List mb="lg">
           <Tabs.Tab value="general">General</Tabs.Tab>
           <Tabs.Tab value="access">Access</Tabs.Tab>
@@ -428,7 +433,7 @@ export function SettingsPage() {
           <PersonalAccessTokenSection />
         </Tabs.Panel>
 
-        <Tabs.Panel value="categories">
+        <Tabs.Panel className={styles.categoriesPanel} value="categories">
           <CustomCategoriesSection />
         </Tabs.Panel>
 
@@ -436,6 +441,6 @@ export function SettingsPage() {
           <McpConnectionSection />
         </Tabs.Panel>
       </Tabs>
-    </>
+    </Box>
   )
 }
