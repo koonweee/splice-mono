@@ -32,30 +32,56 @@ vi.mock('mantine-react-table', () => ({
     table: {
       columns: Array<MRT_ColumnDef<Transaction>>
       data: Array<Transaction>
+      mantineTableBodyRowProps?: (props: {
+        row: { original: Transaction }
+      }) => React.HTMLAttributes<HTMLTableRowElement>
     }
   }) => (
     <table>
-      <tbody>
-        {table.data.map((transaction) => (
-          <tr key={transaction.id}>
-            {table.columns.map((column) => {
-              const key = String(column.id ?? column.accessorKey)
-              const rendered = column.Cell
-                ? column.Cell({
-                    row: { original: transaction },
-                    cell: {
-                      getValue: () =>
-                        transaction[column.accessorKey as keyof Transaction],
-                    },
-                  } as never)
-                : column.accessorFn
-                  ? column.accessorFn(transaction)
-                  : null
+      <thead>
+        <tr>
+          {table.columns.map((column) => {
+            const key = String(column.id ?? column.accessorKey)
+            const Header = (
+              column as MRT_ColumnDef<Transaction> & {
+                Header?: () => React.ReactNode
+              }
+            ).Header
 
-              return <td key={key}>{rendered}</td>
-            })}
-          </tr>
-        ))}
+            return <th key={key}>{Header ? <Header /> : column.header}</th>
+          })}
+        </tr>
+      </thead>
+      <tbody>
+        {table.data.map((transaction) => {
+          const row = { original: transaction }
+
+          return (
+            <tr
+              key={transaction.id}
+              {...table.mantineTableBodyRowProps?.({ row })}
+            >
+              {table.columns.map((column) => {
+                const key = String(column.id ?? column.accessorKey)
+                const rendered = column.Cell
+                  ? column.Cell({
+                      row,
+                      cell: {
+                        getValue: () =>
+                          transaction[
+                            column.accessorKey as keyof Transaction
+                          ],
+                      },
+                    } as never)
+                  : column.accessorFn
+                    ? column.accessorFn(transaction)
+                    : null
+
+                return <td key={key}>{rendered}</td>
+              })}
+            </tr>
+          )
+        })}
       </tbody>
     </table>
   ),
@@ -99,6 +125,15 @@ const customCategory = makeCategory({
   detailed: 'Hardware',
   source: 'user',
 })
+const hiddenCategory = {
+  ...makeCategory({
+    id: 'hidden-category-id',
+    primary: 'Hidden Primary',
+    detailed: 'Hidden Detail',
+    source: 'user',
+  }),
+  isHidden: true,
+} as Category
 
 function mockMatchMedia(supportsFineHover = false) {
   Object.defineProperty(window, 'matchMedia', {
@@ -145,6 +180,92 @@ afterEach(() => {
 })
 
 describe('TransactionsTable', () => {
+  it('renders bulk selection checkboxes and toggles selected rows', () => {
+    const onToggle = vi.fn()
+    const onToggleLoaded = vi.fn()
+
+    renderTable(
+      [
+        makeTransaction({
+          category: providerCategory,
+          userCategory: null,
+        }),
+      ],
+      {
+        bulkModeEnabled: true,
+        selectedTransactionIds: new Set(['txn-1']),
+        onToggleTransactionSelection: onToggle,
+        onToggleLoadedSelection: onToggleLoaded,
+      },
+    )
+
+    const checkbox = screen.getByRole('checkbox', {
+      name: /Select transaction Store/,
+    })
+    const headerCheckbox = screen.getByRole('checkbox', {
+      name: 'Select all loaded transactions',
+    })
+
+    expect((checkbox as HTMLInputElement).checked).toBe(true)
+    expect((headerCheckbox as HTMLInputElement).checked).toBe(true)
+
+    fireEvent.click(checkbox)
+    fireEvent.click(headerCheckbox)
+
+    expect(onToggle).toHaveBeenCalledWith('txn-1')
+    expect(onToggleLoaded).toHaveBeenCalledOnce()
+    expect(screen.queryByLabelText('Edit category')).toBeNull()
+  })
+
+  it('toggles bulk selection when a desktop row is clicked', () => {
+    const onToggle = vi.fn()
+
+    renderTable(
+      [
+        makeTransaction({
+          category: providerCategory,
+          userCategory: null,
+        }),
+      ],
+      {
+        bulkModeEnabled: true,
+        selectedTransactionIds: new Set(),
+        onToggleTransactionSelection: onToggle,
+      },
+    )
+
+    const row = screen.getByText('Store').closest('tr')
+    expect(row).not.toBeNull()
+
+    fireEvent.click(row!)
+
+    expect(onToggle).toHaveBeenCalledWith('txn-1')
+    expect(screen.queryByLabelText('Edit category')).toBeNull()
+  })
+
+  it('hides desktop transaction details affordances in bulk mode', () => {
+    renderTable(
+      [
+        makeTransaction({
+          category: providerCategory,
+          userCategory: null,
+          merchantName: 'Shake Shack',
+          originalDescription: 'SQ *SHAKE SHACK',
+          paymentChannel: 'in store',
+        }),
+      ],
+      {
+        bulkModeEnabled: true,
+        selectedTransactionIds: new Set(),
+        onToggleTransactionSelection: vi.fn(),
+      },
+    )
+
+    expect(
+      screen.queryByLabelText('Show transaction details for Shake Shack'),
+    ).toBeNull()
+  })
+
   it('renders the effective category for user overrides', () => {
     renderTable([
       makeTransaction({
@@ -195,6 +316,26 @@ describe('TransactionsTable', () => {
       id: 'txn-1',
       data: { categoryId: providerCategory.id },
     })
+  })
+
+  it('filters hidden categories out of the assignment list', () => {
+    mockFns.useCategoryControllerFindAllMock.mockReturnValue({
+      data: [providerCategory, hiddenCategory],
+    })
+
+    renderTable([
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+      }),
+    ])
+
+    fireEvent.click(screen.getByLabelText('Edit category'))
+
+    expect(
+      screen.getByRole('option', { name: 'Restaurant Food And Drink' }),
+    ).toBeTruthy()
+    expect(screen.queryByText('Hidden Detail')).toBeNull()
   })
 
   it('shows a User badge for custom category selector options', () => {
@@ -406,6 +547,28 @@ describe('TransactionsTable', () => {
     expect(screen.queryByLabelText('Category')).toBeNull()
   })
 
+  it('closes an open category selector when bulk mode turns on', () => {
+    const data = [
+      makeTransaction({
+        category: providerCategory,
+        userCategory: overrideCategory,
+      }),
+    ]
+    const view = renderTable(data)
+
+    fireEvent.click(screen.getByLabelText('Edit category'))
+    expect(screen.getByLabelText('Search categories')).toBeTruthy()
+
+    view.rerenderTable({
+      bulkModeEnabled: true,
+      selectedTransactionIds: new Set(),
+      onToggleTransactionSelection: vi.fn(),
+    })
+
+    expect(screen.queryByLabelText('Search categories')).toBeNull()
+    expect(screen.queryByLabelText('Edit category')).toBeNull()
+  })
+
   it('updates reporting date overrides from the inline date editor', () => {
     renderTable([
       makeTransaction({
@@ -421,6 +584,28 @@ describe('TransactionsTable', () => {
       id: 'txn-1',
       data: { reportingDateOverride: '2026-02-14' },
     })
+  })
+
+  it('closes an open reporting date editor when bulk mode turns on', () => {
+    const data = [
+      makeTransaction({
+        category: providerCategory,
+        userCategory: null,
+      }),
+    ]
+    const view = renderTable(data)
+
+    fireEvent.click(screen.getByLabelText('Edit reporting date'))
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeTruthy()
+
+    view.rerenderTable({
+      bulkModeEnabled: true,
+      selectedTransactionIds: new Set(),
+      onToggleTransactionSelection: vi.fn(),
+    })
+
+    expect(screen.queryByRole('button', { name: 'Apply' })).toBeNull()
+    expect(screen.queryByLabelText('Edit reporting date')).toBeNull()
   })
 
   it('resets reporting date overrides from the date cell', async () => {
@@ -516,10 +701,27 @@ describe('transaction metadata helpers', () => {
   })
 })
 
-function renderTable(data: Array<Transaction>) {
+function renderTable(
+  data: Array<Transaction>,
+  props: Partial<React.ComponentProps<typeof TransactionsTable>> = {},
+) {
   const queryClient = new QueryClient()
+  const view = render(getTableElement(data, props, queryClient))
 
-  return render(
+  return {
+    ...view,
+    rerenderTable: (
+      nextProps: Partial<React.ComponentProps<typeof TransactionsTable>>,
+    ) => view.rerender(getTableElement(data, nextProps, queryClient)),
+  }
+}
+
+function getTableElement(
+  data: Array<Transaction>,
+  props: Partial<React.ComponentProps<typeof TransactionsTable>>,
+  queryClient: QueryClient,
+) {
+  return (
     <MantineProvider>
       <QueryClientProvider client={queryClient}>
         <TransactionsTable
@@ -527,9 +729,10 @@ function renderTable(data: Array<Transaction>) {
           totalRows={data.length}
           isLoading={false}
           isError={false}
+          {...props}
         />
       </QueryClientProvider>
-    </MantineProvider>,
+    </MantineProvider>
   )
 }
 

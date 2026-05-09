@@ -14,4 +14,5 @@ export const TransactionCategoryReviewMethod = {
   manual_accept: 'manual_accept',
   manual_change: 'manual_change',
   bulk_accept: 'bulk_accept',
+  bulk_change: 'bulk_change',
 } as const

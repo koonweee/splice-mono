@@ -44,6 +44,7 @@ describe('TransactionService', () => {
   // Mock transaction repository for manager.transaction
   const mockTxnRepo = {
     save: jest.fn().mockImplementation((entities) => Promise.resolve(entities)),
+    find: jest.fn(),
     findOne: jest.fn(),
     delete: jest.fn().mockResolvedValue({ affected: 0 }),
   };
@@ -116,6 +117,7 @@ describe('TransactionService', () => {
     service = module.get<TransactionService>(TransactionService);
     mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
     mockQueryBuilder.getRawMany.mockResolvedValue([]);
+    process.env.JWT_SECRET = 'test-secret';
   });
 
   afterEach(() => {
@@ -126,6 +128,9 @@ describe('TransactionService', () => {
     mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
     mockQueryBuilder.getRawMany.mockReset();
     mockQueryBuilder.getRawMany.mockResolvedValue([]);
+    mockTxnRepo.find.mockReset();
+    mockTxnRepo.find.mockResolvedValue([]);
+    mockTxnRepo.save.mockClear();
   });
 
   it('should be defined', () => {
@@ -1241,6 +1246,234 @@ describe('TransactionService', () => {
 
       expect(result).toBeNull();
       expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('bulkUpdateCategories', () => {
+    const providerCategory = buildAssignableCategory({
+      id: '11111111-1111-4111-8111-111111111111',
+      primary: 'FOOD_AND_DRINK',
+      detailed: 'FOOD_AND_DRINK_RESTAURANT',
+    });
+    const userCategory = buildAssignableCategory({
+      id: '22222222-2222-4222-8222-222222222222',
+      primary: 'GENERAL_MERCHANDISE',
+      detailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
+      source: 'user',
+      userId: mockUserId,
+    });
+
+    function buildEntity(
+      id = '33333333-3333-4333-8333-333333333333',
+    ): TransactionEntity {
+      const entity = TransactionEntity.fromDto(
+        { ...mockCreateTransactionDto, categoryId: providerCategory.id },
+        mockUserId,
+      );
+      entity.id = id;
+      entity.category = providerCategory;
+      return entity;
+    }
+
+    it('sets user category overrides and bulk review metadata atomically', async () => {
+      const entity = buildEntity();
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
+        userCategory,
+      );
+      mockTxnRepo.find.mockResolvedValue([entity]);
+
+      const result = await service.bulkUpdateCategories(mockUserId, {
+        transactionIds: [entity.id],
+        categoryId: userCategory.id,
+      });
+
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).toHaveBeenCalledWith(userCategory.id, mockUserId);
+      expect(mockTxnRepo.save).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: entity.id,
+          userCategoryId: userCategory.id,
+          userCategory,
+          userCategoryUpdatedAt: expect.any(Date),
+          categoryReviewedAt: expect.any(Date),
+          categoryReviewMethod: 'bulk_change',
+        }),
+      ]);
+      expect(result).toEqual({
+        count: 1,
+        transactionIds: [entity.id],
+        undo: expect.any(String),
+      });
+    });
+
+    it('clears overrides for provider category reset and still marks reviewed', async () => {
+      const entity = buildEntity();
+      entity.userCategoryId = userCategory.id;
+      entity.userCategory = userCategory;
+      entity.userCategoryUpdatedAt = new Date('2026-02-01T00:00:00Z');
+      mockTxnRepo.find.mockResolvedValue([entity]);
+
+      await service.bulkUpdateCategories(mockUserId, {
+        transactionIds: [entity.id],
+        categoryId: null,
+      });
+
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).not.toHaveBeenCalled();
+      expect(mockTxnRepo.save).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: entity.id,
+          userCategoryId: null,
+          userCategory: null,
+          userCategoryUpdatedAt: null,
+          categoryReviewedAt: expect.any(Date),
+          categoryReviewMethod: 'bulk_change',
+        }),
+      ]);
+    });
+
+    it('clears overrides when the selected category matches the provider category', async () => {
+      const entity = buildEntity();
+      entity.userCategoryId = userCategory.id;
+      entity.userCategory = userCategory;
+      entity.userCategoryUpdatedAt = new Date('2026-02-01T00:00:00Z');
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
+        providerCategory,
+      );
+      mockTxnRepo.find.mockResolvedValue([entity]);
+
+      await service.bulkUpdateCategories(mockUserId, {
+        transactionIds: [entity.id],
+        categoryId: providerCategory.id,
+      });
+
+      expect(mockTxnRepo.save).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: entity.id,
+          userCategoryId: null,
+          userCategory: null,
+          userCategoryUpdatedAt: null,
+          categoryReviewedAt: expect.any(Date),
+          categoryReviewMethod: 'bulk_change',
+        }),
+      ]);
+    });
+
+    it('marks rows reviewed even when they already match the target category', async () => {
+      const entity = buildEntity();
+      entity.userCategoryId = userCategory.id;
+      entity.userCategory = userCategory;
+      entity.userCategoryUpdatedAt = new Date('2026-02-01T00:00:00Z');
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
+        userCategory,
+      );
+      mockTxnRepo.find.mockResolvedValue([entity]);
+
+      await service.bulkUpdateCategories(mockUserId, {
+        transactionIds: [entity.id],
+        categoryId: userCategory.id,
+      });
+
+      expect(mockTxnRepo.save).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: entity.id,
+          userCategoryId: userCategory.id,
+          categoryReviewedAt: expect.any(Date),
+          categoryReviewMethod: 'bulk_change',
+        }),
+      ]);
+    });
+
+    it('returns null without saving when any selected transaction is missing', async () => {
+      const entity = buildEntity();
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
+        userCategory,
+      );
+      mockTxnRepo.find.mockResolvedValue([entity]);
+
+      const result = await service.bulkUpdateCategories(mockUserId, {
+        transactionIds: [entity.id, '44444444-4444-4444-8444-444444444444'],
+        categoryId: userCategory.id,
+      });
+
+      expect(result).toBeNull();
+      expect(mockTxnRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('returns null without saving when the selected category is unassignable', async () => {
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
+
+      const result = await service.bulkUpdateCategories(mockUserId, {
+        transactionIds: ['33333333-3333-4333-8333-333333333333'],
+        categoryId: userCategory.id,
+      });
+
+      expect(result).toBeNull();
+      expect(mockTxnRepo.find).not.toHaveBeenCalled();
+      expect(mockTxnRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('undo restores previous override and review metadata exactly without assignability checks', async () => {
+      const previousReviewedAt = new Date('2026-02-14T00:00:00Z');
+      const previousUserCategoryUpdatedAt = new Date('2026-02-01T00:00:00Z');
+      const previousUserCategory = buildAssignableCategory({
+        id: userCategory.id,
+        primary: userCategory.primary,
+        detailed: userCategory.detailed,
+        source: userCategory.source,
+        userId: userCategory.userId,
+        archivedAt: new Date('2026-02-10T00:00:00Z'),
+      });
+      const entity = buildEntity();
+      entity.userCategoryId = previousUserCategory.id;
+      entity.userCategory = previousUserCategory;
+      entity.userCategoryUpdatedAt = previousUserCategoryUpdatedAt;
+      entity.categoryReviewedAt = previousReviewedAt;
+      entity.categoryReviewMethod = 'manual_change';
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(
+        providerCategory,
+      );
+      mockTxnRepo.find.mockResolvedValueOnce([entity]);
+
+      const updateResult = await service.bulkUpdateCategories(mockUserId, {
+        transactionIds: [entity.id],
+        categoryId: providerCategory.id,
+      });
+
+      expect(updateResult?.undo).toEqual(expect.any(String));
+
+      mockCategoryService.findActiveAssignableCategory.mockClear();
+      mockTxnRepo.find.mockResolvedValueOnce([entity]);
+      mockCategoryService.findActiveAssignableCategory.mockResolvedValue(null);
+      mockCategoryRepository.find.mockResolvedValueOnce([previousUserCategory]);
+
+      const undoResult = await service.undoBulkUpdateCategories(mockUserId, {
+        undo: updateResult?.undo ?? '',
+      });
+
+      expect(
+        mockCategoryService.findActiveAssignableCategory,
+      ).not.toHaveBeenCalled();
+      expect(mockCategoryRepository.find).toHaveBeenCalledWith({
+        where: { id: expect.anything() },
+      });
+      expect(mockTxnRepo.save).toHaveBeenLastCalledWith([
+        expect.objectContaining({
+          id: entity.id,
+          userCategoryId: previousUserCategory.id,
+          userCategory: previousUserCategory,
+          userCategoryUpdatedAt: previousUserCategoryUpdatedAt,
+          categoryReviewedAt: previousReviewedAt,
+          categoryReviewMethod: 'manual_change',
+        }),
+      ]);
+      expect(undoResult).toEqual({
+        count: 1,
+        transactionIds: [entity.id],
+        undo: '',
+      });
     });
   });
 

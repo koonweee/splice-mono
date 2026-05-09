@@ -1,0 +1,61 @@
+.toolbarWrap {
+  position: fixed;
+  right: var(--mantine-spacing-md);
+  bottom: var(--mantine-spacing-md);
+  left: var(--mantine-spacing-md);
+  z-index: 250;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.toolbar {
+  width: min(100%, 880px);
+  pointer-events: auto;
+  box-shadow: var(--mantine-shadow-lg);
+}
+
+.toolbarContent {
+  flex-wrap: nowrap;
+}
+
+.selectedCount {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.categorySelect {
+  flex: 1 1 auto;
+  min-width: 260px;
+}
+
+.categorySelect input {
+  font-size: 16px;
+}
+
+.saveButton {
+  flex: 0 0 auto;
+  min-width: 104px;
+}
+
+@media (max-width: 48em) {
+  .toolbarWrap {
+    right: var(--mantine-spacing-xs);
+    bottom: var(--mantine-spacing-xs);
+    left: var(--mantine-spacing-xs);
+  }
+
+  .toolbarContent {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .categorySelect {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .saveButton {
+    flex: 1 1 140px;
+  }
+}

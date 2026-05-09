@@ -31,6 +31,16 @@ export const mockTransactionService = {
     count: 1,
     transactionIds: [mockTransaction.id],
   }),
+  bulkUpdateCategories: jest.fn().mockResolvedValue({
+    count: 1,
+    transactionIds: [mockTransaction.id],
+    undo: 'undo-token',
+  }),
+  undoBulkUpdateCategories: jest.fn().mockResolvedValue({
+    count: 1,
+    transactionIds: [mockTransaction.id],
+    undo: '',
+  }),
   remove: jest.fn().mockResolvedValue(true),
   findByAccountId: jest
     .fn()
