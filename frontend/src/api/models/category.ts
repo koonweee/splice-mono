@@ -11,6 +11,8 @@ export interface Category {
   primary: string
   detailed: string
   description: string
+  /** @pattern ^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$ */
+  color: string
   /** @nullable */
   archivedAt?: string | null
   createdAt: string

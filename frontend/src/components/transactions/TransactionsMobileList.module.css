@@ -58,10 +58,7 @@
 }
 
 .selectedRow {
-  background: light-dark(
-    var(--mantine-color-blue-0),
-    rgba(77, 171, 247, 0.12)
-  );
+  background: light-dark(var(--mantine-color-blue-0), rgba(77, 171, 247, 0.12));
 }
 
 .row:last-child {
@@ -113,6 +110,19 @@
   font-size: var(--mantine-font-size-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.metaSeparator {
+  flex: 0 0 auto;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+}
+
+.categorySwatch {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
 }
 
 .amount {

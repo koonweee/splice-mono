@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Checkbox,
+  ColorInput,
   Divider,
   Drawer,
   Group,
@@ -40,6 +41,11 @@ import {
   useCategoryControllerUpdateCustom,
 } from '../../api/clients/spliceAPI'
 import { CategorySelect } from '../categories/CategorySelect'
+import {
+  generateCategoryColor,
+  getCategoryColorStyles,
+  normalizeHexColor,
+} from '../../lib/category-colors'
 import tableChrome from '../MantineTableChrome.module.css'
 import type {
   MRT_ColumnDef,
@@ -60,6 +66,7 @@ type CategoryConflictView = {
   label: string
   primary: string
   detailed: string
+  color: string
   archivedAt?: string | null
 }
 
@@ -107,10 +114,17 @@ const tableClippedBodyCellStyle = {
 } satisfies CSSProperties
 
 const categoryCellContentStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
+  display: 'grid',
+  gridTemplateColumns: '16px minmax(0, 1fr)',
+  alignItems: 'center',
+  columnGap: 8,
   minWidth: 0,
+} satisfies CSSProperties
+
+const categoryColorSwatchStyle = {
+  width: 14,
+  height: 14,
+  borderRadius: '50%',
 } satisfies CSSProperties
 
 function cleanCategoryLabel(value: string): string {
@@ -149,6 +163,7 @@ function getCategoryConflictFromManagementItem(
     label: getCategoryPairLabel(category),
     primary: category.primary,
     detailed: category.detailed,
+    color: category.color,
     archivedAt: category.archivedAt,
   }
 }
@@ -250,6 +265,7 @@ export function CustomCategoriesSection() {
   const [primary, setPrimary] = useState('')
   const [detailed, setDetailed] = useState('')
   const [description, setDescription] = useState('')
+  const [color, setColor] = useState(generateCategoryColor)
   const [lastBulkResult, setLastBulkResult] =
     useState<BulkCategoryActionResponse | null>(null)
 
@@ -267,6 +283,7 @@ export function CustomCategoriesSection() {
         setPrimary('')
         setDetailed('')
         setDescription('')
+        setColor(generateCategoryColor())
         setPanel(null)
         invalidateCategoryConsumers(queryClient)
       },
@@ -279,6 +296,7 @@ export function CustomCategoriesSection() {
         setPrimary('')
         setDetailed('')
         setDescription('')
+        setColor(generateCategoryColor())
         invalidateCategoryConsumers(queryClient)
       },
     },
@@ -460,6 +478,7 @@ export function CustomCategoriesSection() {
     setPrimary('')
     setDetailed('')
     setDescription('')
+    setColor(generateCategoryColor())
   }
 
   function clearFilters() {
@@ -472,19 +491,25 @@ export function CustomCategoriesSection() {
     setPrimary(category.primary)
     setDetailed(category.detailed)
     setDescription(category.description)
+    setColor(category.color)
   }
 
   function submitCreateOrEdit() {
+    const normalizedColor = normalizeHexColor(color)
+    if (!normalizedColor) {
+      return
+    }
+
     if (panel?.mode === 'edit-custom' && panel.category) {
       updateCategory.mutate({
         id: panel.category.id,
-        data: { primary, detailed, description },
+        data: { primary, detailed, description, color: normalizedColor },
       })
       return
     }
 
     createCategory.mutate({
-      data: { primary, detailed, description },
+      data: { primary, detailed, description, color: normalizedColor },
     })
   }
 
@@ -632,9 +657,18 @@ export function CustomCategoriesSection() {
       <Stack gap="sm">
         {panel.category && (
           <>
-            <Text size="sm" fw={600}>
-              {getCategoryPairLabel(panel.category)}
-            </Text>
+            <Group gap="xs" wrap="nowrap">
+              <Box
+                aria-hidden="true"
+                style={{
+                  ...categoryColorSwatchStyle,
+                  ...getCategoryColorStyles(panel.category.color),
+                }}
+              />
+              <Text size="sm" fw={600}>
+                {getCategoryPairLabel(panel.category)}
+              </Text>
+            </Group>
             <Text size="sm" c="dimmed">
               {panel.category.description || 'No description.'}
             </Text>
@@ -675,6 +709,16 @@ export function CustomCategoriesSection() {
           minRows={3}
           size={isMobile ? 'md' : undefined}
         />
+        <ColorInput
+          label="Color"
+          value={color}
+          onChange={setColor}
+          format="hex"
+          data-testid="custom-category-color-input"
+          error={normalizeHexColor(color) ? null : 'Enter a valid hex color'}
+          size={isMobile ? 'md' : undefined}
+          withEyeDropper={false}
+        />
         {panel.mode === 'edit-custom' && (
           <Text size="xs" c="dimmed">
             Renaming a category updates existing transactions that use it.
@@ -713,6 +757,7 @@ export function CustomCategoriesSection() {
             disabled={
               !cleanCategoryLabel(primary) ||
               !cleanCategoryLabel(detailed) ||
+              !normalizeHexColor(color) ||
               Boolean(formDuplicateConflict)
             }
           >
@@ -777,12 +822,21 @@ export function CustomCategoriesSection() {
       grow: true,
       Cell: ({ row }) => (
         <div style={categoryCellContentStyle}>
-          <Text lh={1.25} size="sm" fw={600}>
-            {getPrimaryDisplay(row.original)}
-          </Text>
-          <Text lh={1.25} size="xs" c="dimmed">
-            {getDetailedDisplay(row.original)}
-          </Text>
+          <Box
+            aria-hidden="true"
+            style={{
+              ...categoryColorSwatchStyle,
+              ...getCategoryColorStyles(row.original.color),
+            }}
+          />
+          <Box style={{ minWidth: 0 }}>
+            <Text lh={1.25} size="sm" fw={600} truncate>
+              {getPrimaryDisplay(row.original)}
+            </Text>
+            <Text lh={1.25} size="xs" c="dimmed" truncate>
+              {getDetailedDisplay(row.original)}
+            </Text>
+          </Box>
         </div>
       ),
     },

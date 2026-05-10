@@ -1,6 +1,15 @@
 import { z } from 'zod';
+import { normalizeCategoryColor } from '../category/category-color';
 import { registerSchema } from '../common/zod-api-response';
 import { TimestampsSchema } from './Timestamps';
+
+export const CategoryColorSchema = z
+  .string()
+  .trim()
+  .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, {
+    message: 'Must be a valid hex color',
+  })
+  .transform((color) => normalizeCategoryColor(color));
 
 /**
  * Category schema for transaction categorization.
@@ -18,6 +27,8 @@ export const CategorySchema = registerSchema(
       detailed: z.string(),
       /** Description of the category */
       description: z.string(),
+      /** Display color as a normalized hex color */
+      color: CategoryColorSchema,
       /** Archive timestamp for categories hidden from future assignment */
       archivedAt: z.coerce.date().nullable().default(null),
     })
@@ -32,6 +43,7 @@ export const CreateCustomCategoryDtoSchema = registerSchema(
     primary: z.string().trim().min(1).max(80),
     detailed: z.string().trim().min(1).max(120),
     description: z.string().trim().max(500).nullable().optional(),
+    color: CategoryColorSchema.optional(),
   }),
 );
 
@@ -45,6 +57,7 @@ export const UpdateCustomCategoryDtoSchema = registerSchema(
     primary: z.string().trim().min(1).max(80).optional(),
     detailed: z.string().trim().min(1).max(120).optional(),
     description: z.string().trim().max(500).nullable().optional(),
+    color: CategoryColorSchema.optional(),
     archived: z.boolean().optional(),
   }),
 );
@@ -60,6 +73,7 @@ export const CategoryConflictSchema = registerSchema(
     label: z.string(),
     primary: z.string(),
     detailed: z.string(),
+    color: CategoryColorSchema,
     archivedAt: z.coerce.date().nullable().default(null),
   }),
 );

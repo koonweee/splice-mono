@@ -17,6 +17,19 @@
   flex-direction: column;
 }
 
+.settingsTabList {
+  max-width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.settingsTabList :global(.mantine-Tabs-tab) {
+  flex: 0 0 auto;
+}
+
 .settingsPanel {
   display: flex;
   min-height: 0;

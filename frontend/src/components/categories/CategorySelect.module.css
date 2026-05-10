@@ -2,6 +2,17 @@
   min-width: 0;
 }
 
+.optionText {
+  min-width: 0;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border-radius: 50%;
+}
+
 .label,
 .meta {
   overflow: hidden;

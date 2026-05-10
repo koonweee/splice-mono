@@ -9,6 +9,7 @@ const mockFns = vi.hoisted(() => ({
   useQueryClientMock: vi.fn(),
   useUserControllerMeMock: vi.fn(),
   useUserControllerUpdateSettingsMock: vi.fn(),
+  analysisRulesSectionMock: vi.fn(),
   customCategoriesSectionMock: vi.fn(),
   personalAccessTokenSectionMock: vi.fn(),
   mcpConnectionSectionMock: vi.fn(),
@@ -55,6 +56,14 @@ vi.mock('../../components/settings/CustomCategoriesSection', () => ({
     mockFns.customCategoriesSectionMock()
 
     return <div data-testid="custom-categories-section">Custom categories</div>
+  },
+}))
+
+vi.mock('../../components/settings/AnalysisRulesSection', () => ({
+  AnalysisRulesSection: () => {
+    mockFns.analysisRulesSectionMock()
+
+    return <div data-testid="analysis-rules-section">Analysis rules</div>
   },
 }))
 
@@ -201,17 +210,17 @@ describe('SettingsPage', () => {
       screen.getByRole('heading', { name: /^settings$/i, level: 1 }),
     ).toBeTruthy()
     expect(
-      screen.getByRole('tab', { name: /general/i }).getAttribute(
-        'aria-selected',
-      ),
+      screen
+        .getByRole('tab', { name: /general/i })
+        .getAttribute('aria-selected'),
     ).toBe('true')
     expect(screen.getByTestId('settings-card')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('tab', { name: /access/i }))
     expect(
-      screen.getByRole('tab', { name: /access/i }).getAttribute(
-        'aria-selected',
-      ),
+      screen
+        .getByRole('tab', { name: /access/i })
+        .getAttribute('aria-selected'),
     ).toBe('true')
     expect(
       screen.getByRole('heading', {
@@ -223,12 +232,21 @@ describe('SettingsPage', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /categories/i }))
     expect(
-      screen.getByRole('tab', { name: /categories/i }).getAttribute(
-        'aria-selected',
-      ),
+      screen
+        .getByRole('tab', { name: /categories/i })
+        .getAttribute('aria-selected'),
     ).toBe('true')
     expect(screen.getByTestId('custom-categories-section')).toBeTruthy()
     expect(window.location.search).toBe('?tab=categories')
+
+    fireEvent.click(screen.getByRole('tab', { name: /analysis/i }))
+    expect(
+      screen
+        .getByRole('tab', { name: /analysis/i })
+        .getAttribute('aria-selected'),
+    ).toBe('true')
+    expect(screen.getByTestId('analysis-rules-section')).toBeTruthy()
+    expect(window.location.search).toBe('?tab=analysis')
 
     fireEvent.click(screen.getByRole('tab', { name: /mcp/i }))
     expect(
@@ -312,8 +330,9 @@ describe('SettingsPage', () => {
     expect(
       dispatchEventSpy.mock.calls
         .map(([event]) => event)
-        .filter((event): event is CustomEvent<{ theme: string }> =>
-          event instanceof CustomEvent,
+        .filter(
+          (event): event is CustomEvent<{ theme: string }> =>
+            event instanceof CustomEvent,
         )
         .map((event) => event.detail.theme),
     ).toEqual(['dracula', 'splice-dark'])

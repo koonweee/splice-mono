@@ -19,6 +19,7 @@ function buildCategoryEntity(
     overrides.detailed ?? 'FOOD_AND_DRINK_RESTAURANTS',
   );
   entity.description = overrides.description ?? '';
+  entity.color = overrides.color ?? '#228be6';
   entity.archivedAt = overrides.archivedAt ?? null;
   entity.createdAt =
     overrides.createdAt ?? new Date('2024-01-01T00:00:00.000Z');
@@ -143,6 +144,29 @@ describe('CategoryService', () => {
     );
   });
 
+  it('creates user categories with provided or generated colors', async () => {
+    mockQueryBuilder.getOne.mockResolvedValue(null);
+    mockRepository.save.mockImplementation(async (entity: CategoryEntity) => {
+      entity.id = '00000000-0000-4000-8000-000000000103';
+      entity.createdAt = new Date('2024-01-01T00:00:00.000Z');
+      entity.updatedAt = new Date('2024-01-01T00:00:00.000Z');
+      return entity;
+    });
+
+    const provided = await service.createCustom(mockUserId, {
+      primary: 'Travel',
+      detailed: 'Flights',
+      color: '#ABC',
+    });
+    const generated = await service.createCustom(mockUserId, {
+      primary: 'Travel',
+      detailed: 'Hotels',
+    });
+
+    expect(provided.color).toBe('#aabbcc');
+    expect(generated.color).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
   it('updates only categories owned by the current user', async () => {
     mockRepository.findOne.mockResolvedValue(null);
 
@@ -153,6 +177,25 @@ describe('CategoryService', () => {
     expect(mockRepository.findOne).toHaveBeenCalledWith({
       where: { id: 'category-id', userId: otherUserId },
     });
+  });
+
+  it('updates custom category colors', async () => {
+    const category = buildCategoryEntity();
+    mockRepository.findOne.mockResolvedValue(category);
+    mockQueryBuilder.getOne.mockResolvedValue(null);
+    mockRepository.save.mockImplementation(async (entity: CategoryEntity) => {
+      entity.updatedAt = new Date('2024-02-01T00:00:00.000Z');
+      return entity;
+    });
+
+    const result = await service.updateCustom(category.id, mockUserId, {
+      color: '#DEF',
+    });
+
+    expect(result?.color).toBe('#ddeeff');
+    expect(mockRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ color: '#ddeeff' }),
+    );
   });
 
   it('finds active assignable categories by user ownership', async () => {
@@ -207,6 +250,7 @@ describe('CategoryService', () => {
         primary: 'Home Projects',
         detailed: 'Hardware - copy (2)',
         description: 'Tools and materials',
+        color: expect.stringMatching(/^#[0-9a-f]{6}$/),
         archivedAt: null,
       }),
     );

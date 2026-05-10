@@ -100,7 +100,7 @@ describe('TransactionsMobileList', () => {
       }),
     ])
 
-    expect(screen.getByText(/Checking .* Uncategorized/)).toBeTruthy()
+    expect(screen.getByLabelText('Checking · Uncategorized')).toBeTruthy()
     expect(screen.queryByText(/Provider hint:/)).toBeNull()
     expect(screen.queryByText('Needs review')).toBeNull()
   })
@@ -235,6 +235,7 @@ function makeCategory(overrides: {
     primary: overrides.primary,
     detailed: overrides.detailed,
     description: 'Category',
+    color: '#228be6',
     archivedAt: null,
     createdAt: '2026-02-14T00:00:00.000Z',
     updatedAt: '2026-02-14T00:00:00.000Z',
