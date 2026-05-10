@@ -15,19 +15,24 @@
   min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .settingsTabList {
   max-width: 100%;
+  min-height: 44px;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
 }
 
 .settingsTabList :global(.mantine-Tabs-tab) {
+  min-height: 44px;
   flex: 0 0 auto;
+  align-items: center;
 }
 
 .settingsPanel {
@@ -35,11 +40,14 @@
   min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .categoriesPanel {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-bottom: 1px;
 }
 
