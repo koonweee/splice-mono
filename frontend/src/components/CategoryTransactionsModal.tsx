@@ -69,6 +69,7 @@ export function CategoryTransactionsModal({
         totalRows={transactions.length}
         isLoading={false}
         isError={false}
+        variant="drilldown"
       />
     ) : (
       <TransactionsTable

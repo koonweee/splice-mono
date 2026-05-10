@@ -47,6 +47,7 @@ type TransactionsMobileListProps = {
   isLoading: boolean
   onScrollNearBottom?: () => void
   totalRows: number
+  variant?: 'default' | 'drilldown'
   bulkModeEnabled?: boolean
   selectedTransactionIds?: Set<string>
   onToggleTransactionSelection?: (transactionId: string) => void
@@ -133,6 +134,7 @@ export function TransactionsMobileList({
   isLoading,
   onScrollNearBottom,
   totalRows,
+  variant = 'default',
   bulkModeEnabled = false,
   selectedTransactionIds = new Set<string>(),
   onToggleTransactionSelection,
@@ -252,7 +254,9 @@ export function TransactionsMobileList({
     <>
       <div
         aria-label={`Transactions list, ${totalRows.toLocaleString()} total`}
-        className={styles.list}
+        className={`${styles.list} ${
+          variant === 'drilldown' ? styles.drilldownList : ''
+        }`}
         onScroll={handleScroll}
       >
         {groupTransactionsByDate(data).map(([date, transactions]) => (

@@ -11,6 +11,10 @@
   );
 }
 
+.drilldownList {
+  scrollbar-gutter: stable;
+}
+
 .dateGroup {
   border-bottom: 1px solid
     light-dark(var(--mantine-color-gray-2), rgba(255, 255, 255, 0.075));
@@ -191,7 +195,7 @@
   text-align: center;
 }
 
-@media (max-width: 48em) {
+@media (max-width: 50em) {
   .list {
     border-right: 0;
     border-left: 0;
@@ -218,5 +222,29 @@
 
   .footer {
     padding-bottom: 24px;
+  }
+}
+
+@media (max-width: 50em) {
+  .drilldownList {
+    padding-right: var(--mantine-spacing-md);
+    padding-left: var(--mantine-spacing-md);
+    scrollbar-width: none;
+  }
+
+  .drilldownList::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .drilldownList .dateHeader {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .drilldownList .row {
+    padding-right: 0;
+    padding-left: 0;
   }
 }
