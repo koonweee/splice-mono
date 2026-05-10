@@ -46,6 +46,7 @@ import {
   getCategoryColorStyles,
   normalizeHexColor,
 } from '../../lib/category-colors'
+import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
 import type {
   MRT_ColumnDef,
@@ -811,6 +812,90 @@ export function CustomCategoriesSection() {
     )
   }
 
+  function setCategorySelected(categoryId: string, selected: boolean) {
+    setRowSelection((current) => {
+      const next = { ...current }
+      if (selected) {
+        next[categoryId] = true
+      } else {
+        delete next[categoryId]
+      }
+      return next
+    })
+  }
+
+  function setAllVisibleCategoriesSelected(selected: boolean) {
+    setRowSelection((current) => {
+      const next = { ...current }
+
+      sortedCategories.forEach((category) => {
+        if (selected) {
+          next[category.id] = true
+        } else {
+          delete next[category.id]
+        }
+      })
+
+      return next
+    })
+  }
+
+  const allVisibleCategoriesSelected =
+    sortedCategories.length > 0 &&
+    sortedCategories.every((category) => selectedIds.has(category.id))
+  const someVisibleCategoriesSelected = sortedCategories.some((category) =>
+    selectedIds.has(category.id),
+  )
+
+  function renderMobileCategoryRow(category: CategoryManagementItem) {
+    const usedCount = category.transactionCount ?? 0
+
+    return (
+      <Box px="sm" py="sm">
+        <Group align="flex-start" gap="sm" wrap="nowrap">
+          <Checkbox
+            aria-label={`Select ${getCategoryPairLabel(category)}`}
+            checked={selectedIds.has(category.id)}
+            onChange={(event) =>
+              setCategorySelected(category.id, event.currentTarget.checked)
+            }
+            mt={4}
+          />
+          <Box
+            aria-hidden="true"
+            mt={6}
+            style={{
+              ...categoryColorSwatchStyle,
+              ...getCategoryColorStyles(category.color),
+              flex: '0 0 auto',
+            }}
+          />
+          <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <Group gap="xs" wrap="nowrap">
+              <Text fw={700} truncate>
+                {getPrimaryDisplay(category)}
+              </Text>
+              <Badge
+                color={getStatus(category) === 'Active' ? 'green' : 'orange'}
+                size="sm"
+                variant="light"
+              >
+                {getStatus(category)}
+              </Badge>
+            </Group>
+            <Text c="dimmed" size="sm" truncate>
+              {getDetailedDisplay(category)}
+            </Text>
+            <Text c="dimmed" size="xs">
+              {usedCount.toLocaleString()} used
+            </Text>
+          </Box>
+          {renderCategoryRowActions(category)}
+        </Group>
+      </Box>
+    )
+  }
+
   const categoryColumns: Array<MRT_ColumnDef<CategoryManagementItem>> = [
     {
       id: 'category',
@@ -1169,7 +1254,40 @@ export function CustomCategoriesSection() {
             width: '100%',
           }}
         >
-          <MantineReactTable table={categoryTable} />
+          {isMobile ? (
+            <Stack
+              gap="xs"
+              style={{
+                flex: '1 1 auto',
+                minHeight: 0,
+                minWidth: 0,
+                overflowY: 'auto',
+              }}
+            >
+              {sortedCategories.length > 0 && (
+                <Checkbox
+                  checked={allVisibleCategoriesSelected}
+                  indeterminate={
+                    someVisibleCategoriesSelected &&
+                    !allVisibleCategoriesSelected
+                  }
+                  label="Select all visible categories"
+                  onChange={(event) =>
+                    setAllVisibleCategoriesSelected(event.currentTarget.checked)
+                  }
+                />
+              )}
+              <MobileTableList
+                ariaLabel={`Categories list, ${filteredCategories.length.toLocaleString()} total`}
+                data={sortedCategories}
+                emptyMessage="No categories match the current filters."
+                getRowKey={(category) => category.id}
+                renderRow={renderMobileCategoryRow}
+              />
+            </Stack>
+          ) : (
+            <MantineReactTable table={categoryTable} />
+          )}
 
           {!isMobile && panel && (
             <Paper withBorder radius="md" p="md" w={340}>

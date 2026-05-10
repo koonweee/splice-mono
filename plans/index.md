@@ -24,6 +24,7 @@ This directory tracks product and implementation plans for Splice.
 | [User-Specified Category Colors](./user-specified-category-colors.md) | Done | Persist category colors, generate defaults for existing and new rows, and render arbitrary user colors with readable contrast. |
 | [User-Configurable Analysis Rules](./user-configurable-analysis-rules.md) | Planned | Add user-owned analysis exclusion and neutralization rules with Settings management and backend-applied analysis behavior. |
 | [Mantine Theme Cleanup](./mantine-theme-cleanup.md) | Planned | Centralize reusable Mantine component chrome while preserving feature-specific layout, behavior, and accessibility. |
+| [Mobile Table Variants](./mobile-table-variants.md) | Done | Replace remaining mobile table surfaces with purpose-built lists and add a shared mobile table-list shell. |
 
 ## Templates
 

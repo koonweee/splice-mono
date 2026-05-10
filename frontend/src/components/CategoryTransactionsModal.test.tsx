@@ -262,6 +262,7 @@ describe('CategoryTransactionsModal', () => {
       totalRows: 1,
       isLoading: false,
       isError: false,
+      variant: 'drilldown',
     })
     expect(mockFns.transactionsTableMock).not.toHaveBeenCalled()
   })

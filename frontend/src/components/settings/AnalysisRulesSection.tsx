@@ -16,7 +16,14 @@ import {
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
-import { Archive, CircleHelp, Pencil, Plus, RotateCcw, Save } from 'lucide-react'
+import {
+  Archive,
+  CircleHelp,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Save,
+} from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useMemo, useState } from 'react'
 import {
@@ -26,6 +33,7 @@ import {
   useCategoryControllerFindManagement,
 } from '../../api/clients/spliceAPI'
 import { CategoryScopeInput } from '../categories/CategoryScopeInput'
+import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
 import type { MRT_ColumnDef } from 'mantine-react-table'
 import type {
@@ -354,6 +362,82 @@ export function AnalysisRulesSection() {
     setArchivedMode(false)
   }
 
+  function renderRuleRowActions(rule: AnalysisRuleItem) {
+    return (
+      <Group gap={4} justify="flex-end" wrap="nowrap">
+        <Tooltip label="Edit rule">
+          <ActionIcon
+            aria-label="Edit rule"
+            variant="subtle"
+            onClick={() => openEditPanel(rule)}
+          >
+            <Pencil size={16} />
+          </ActionIcon>
+        </Tooltip>
+        {rule.archivedAt ? (
+          <Tooltip label="Restore rule">
+            <ActionIcon
+              aria-label="Restore rule"
+              variant="subtle"
+              onClick={() => archiveOrRestore(rule, false)}
+            >
+              <RotateCcw size={16} />
+            </ActionIcon>
+          </Tooltip>
+        ) : (
+          <Tooltip label="Archive rule">
+            <ActionIcon
+              aria-label="Archive rule"
+              variant="subtle"
+              onClick={() => archiveOrRestore(rule, true)}
+            >
+              <Archive size={16} />
+            </ActionIcon>
+          </Tooltip>
+        )}
+      </Group>
+    )
+  }
+
+  function renderMobileRuleRow(rule: AnalysisRuleItem) {
+    const status = getRuleStatus(rule)
+
+    return (
+      <Box px="sm" py="sm">
+        <Group
+          align="flex-start"
+          justify="space-between"
+          gap="sm"
+          wrap="nowrap"
+        >
+          <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <Text fw={700} truncate>
+              {rule.name}
+            </Text>
+            <Group gap="xs" mt={4}>
+              <Badge
+                variant="light"
+                color={rule.type === 'exclude' ? 'red' : 'blue'}
+              >
+                {getRuleTypeLabel(rule.type)}
+              </Badge>
+              <Badge
+                color={status === 'Active' ? 'green' : 'orange'}
+                variant="light"
+              >
+                {status}
+              </Badge>
+            </Group>
+            <Text c="dimmed" lineClamp={2} mt={6} size="sm">
+              {getRuleScopeSummary(rule)}
+            </Text>
+          </Box>
+          {renderRuleRowActions(rule)}
+        </Group>
+      </Box>
+    )
+  }
+
   const activeError = createRule.error ?? updateRule.error
   const conflict = getRuleConflict(activeError)
   const submitDisabled = buildSubmitDto() === null
@@ -442,40 +526,7 @@ export function AnalysisRulesSection() {
       withBorder: true,
       radius: 'md',
     },
-    renderRowActions: ({ row }) => (
-      <Group gap={4} justify="flex-end" wrap="nowrap">
-        <Tooltip label="Edit rule">
-          <ActionIcon
-            aria-label="Edit rule"
-            variant="subtle"
-            onClick={() => openEditPanel(row.original)}
-          >
-            <Pencil size={16} />
-          </ActionIcon>
-        </Tooltip>
-        {row.original.archivedAt ? (
-          <Tooltip label="Restore rule">
-            <ActionIcon
-              aria-label="Restore rule"
-              variant="subtle"
-              onClick={() => archiveOrRestore(row.original, false)}
-            >
-              <RotateCcw size={16} />
-            </ActionIcon>
-          </Tooltip>
-        ) : (
-          <Tooltip label="Archive rule">
-            <ActionIcon
-              aria-label="Archive rule"
-              variant="subtle"
-              onClick={() => archiveOrRestore(row.original, true)}
-            >
-              <Archive size={16} />
-            </ActionIcon>
-          </Tooltip>
-        )}
-      </Group>
-    ),
+    renderRowActions: ({ row }) => renderRuleRowActions(row.original),
     renderEmptyRowsFallback: () => (
       <Text c="dimmed" size="sm" ta="center" py="lg">
         No analysis rules match the current filters.
@@ -484,7 +535,15 @@ export function AnalysisRulesSection() {
   })
 
   return (
-    <Stack gap="md" data-testid="analysis-rules-section">
+    <Stack
+      gap="md"
+      data-testid="analysis-rules-section"
+      style={{
+        flex: '1 1 auto',
+        minHeight: 0,
+        overflowY: isMobile ? 'auto' : undefined,
+      }}
+    >
       <Group justify="space-between" align="flex-end" gap="sm" wrap="wrap">
         <Box style={{ flex: '1 1 260px' }}>
           <Text fw={700} size="lg">
@@ -537,7 +596,19 @@ export function AnalysisRulesSection() {
         </Alert>
       )}
 
-      {!isLoading && !isError && <MantineReactTable table={table} />}
+      {!isLoading &&
+        !isError &&
+        (isMobile ? (
+          <MobileTableList
+            ariaLabel={`Analysis rules list, ${filteredRules.length.toLocaleString()} total`}
+            data={filteredRules}
+            emptyMessage="No analysis rules match the current filters."
+            getRowKey={(rule) => rule.id}
+            renderRow={renderMobileRuleRow}
+          />
+        ) : (
+          <MantineReactTable table={table} />
+        ))}
 
       <Drawer
         opened={panel !== null}
