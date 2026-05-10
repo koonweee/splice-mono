@@ -209,6 +209,38 @@ describe('CustomCategoriesSection', () => {
     })
   })
 
+  it('renders categories as a mobile list on narrow screens', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      value: vi.fn().mockImplementation(() => ({
+        matches: true,
+        media: '',
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+      configurable: true,
+    })
+
+    renderSection()
+
+    expect(screen.getByLabelText('Categories list, 1 total')).toBeTruthy()
+    expect(screen.queryByText('Used')).toBeNull()
+    expect(screen.getByText('2 used')).toBeTruthy()
+
+    fireEvent.click(screen.getByLabelText('Select Home Projects > Hardware'))
+    fireEvent.click(screen.getByLabelText('Archive'))
+
+    expect(mockFns.bulkCustomMutateMock).toHaveBeenCalledWith({
+      data: {
+        categoryIds: [activeCategory.id],
+        action: 'archive',
+      },
+    })
+  })
+
   it('clears selected rows after a successful bulk update', () => {
     mockFns.useCategoryControllerBulkUpdateCustomMock.mockImplementation(
       (options?: {
