@@ -5,6 +5,8 @@ import type { BalanceAdjustment, Money } from '../api/models'
 
 interface BalanceAdjustmentsTableProps {
   data: Array<BalanceAdjustment>
+  mantinePaperProps?: Record<string, unknown>
+  mantineTableContainerProps?: Record<string, unknown>
 }
 
 function formatMoney(money: Money): string {
@@ -48,6 +50,8 @@ const columns: Array<MRT_ColumnDef<BalanceAdjustment>> = [
 
 export function BalanceAdjustmentsTable({
   data,
+  mantinePaperProps,
+  mantineTableContainerProps,
 }: BalanceAdjustmentsTableProps) {
   const table = useMantineReactTable({
     columns,
@@ -63,6 +67,8 @@ export function BalanceAdjustmentsTable({
     enableBottomToolbar: false,
     enableStickyHeader: true,
     initialState: { density: 'xs' },
+    mantinePaperProps,
+    mantineTableContainerProps,
   })
 
   return <MantineReactTable table={table} />
