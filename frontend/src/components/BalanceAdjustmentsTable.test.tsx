@@ -86,9 +86,32 @@ describe('BalanceAdjustmentsTable', () => {
   it('renders the balance headers as non-sortable labels', () => {
     renderTable([makeBalanceAdjustment()])
 
-    expect(
-      screen.queryByRole('button', { name: 'Start Balance' }),
-    ).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Start Balance' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'End Balance' })).toBeNull()
+  })
+
+  it('renders a mobile list instead of table columns on narrow screens', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      value: vi.fn().mockImplementation(() => ({
+        matches: true,
+        media: '',
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+      configurable: true,
+    })
+
+    renderTable([makeBalanceAdjustment()])
+
+    expect(
+      screen.getByLabelText('Balance adjustments list, 1 total'),
+    ).toBeTruthy()
+    expect(screen.queryByText('Start Balance')).toBeNull()
+    expect(screen.getByText('Start $100.00')).toBeTruthy()
+    expect(screen.getByText('End $175.00')).toBeTruthy()
   })
 })

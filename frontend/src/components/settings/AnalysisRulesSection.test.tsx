@@ -167,6 +167,34 @@ describe('AnalysisRulesSection', () => {
     })
   })
 
+  it('renders rules as a mobile list on narrow screens', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      value: vi.fn().mockImplementation(() => ({
+        matches: true,
+        media: '',
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+      configurable: true,
+    })
+
+    renderSection()
+
+    expect(screen.getByLabelText('Analysis rules list, 1 total')).toBeTruthy()
+    expect(screen.queryByText('Actions')).toBeNull()
+
+    fireEvent.click(screen.getByLabelText('Archive rule'))
+
+    expect(mockFns.updateMutateMock).toHaveBeenCalledWith({
+      id: activeRule.id,
+      data: { archived: true },
+    })
+  })
+
   it('creates an exclude rule with an all-categories scope', async () => {
     renderSection()
 
