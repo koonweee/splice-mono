@@ -2,6 +2,8 @@ import { AccountType } from 'plaid';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountEntity } from '../../src/account/account.entity';
+import { AnalysisRuleEntity } from '../../src/analysis-rule/analysis-rule.entity';
+import { AnalysisRuleService } from '../../src/analysis-rule/analysis-rule.service';
 import { CategoryEntity } from '../../src/category/category.entity';
 import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
@@ -11,6 +13,7 @@ import type { CreateAccountDto } from '../../src/types/Account';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionAnalysisService } from '../../src/transaction-analysis/transaction-analysis.service';
 import { MoneySign, getDecimalPlaces } from '../../src/types/MoneyWithSign';
+import type { AnalysisCategoryScope } from '../../src/types/AnalysisRule';
 
 const mockUserId = 'user-uuid-123';
 
@@ -43,6 +46,7 @@ function buildTransaction(params: {
   detailed?: string | null;
   userPrimary?: string | null;
   userDetailed?: string | null;
+  categoryColor?: string;
   accountName?: string | null;
   accountCustomName?: string | null;
 }): TransactionEntity {
@@ -108,12 +112,14 @@ function buildTransaction(params: {
         primary: categoryPrimary,
         detailed: categoryDetailed,
         description: `${categoryPrimary} category`,
+        color: params.categoryColor ?? '#228be6',
         toObject() {
           return {
             id: `cat-${categoryPrimary}`,
             primary: categoryPrimary,
             detailed: categoryDetailed,
             description: `${categoryPrimary} category`,
+            color: params.categoryColor ?? '#228be6',
             archivedAt: null,
             createdAt: entity.createdAt,
             updatedAt: entity.updatedAt,
@@ -208,6 +214,35 @@ function buildBalanceSnapshot(params: {
 
   return snapshot;
 }
+
+function buildAnalysisRule(params: {
+  id: string;
+  type: 'exclude' | 'neutralize';
+  excludeScope?: AnalysisCategoryScope | null;
+  inflowScope?: AnalysisCategoryScope | null;
+  outflowScope?: AnalysisCategoryScope | null;
+  createdAt?: Date;
+}): AnalysisRuleEntity {
+  return {
+    id: params.id,
+    userId: mockUserId,
+    name: params.id,
+    type: params.type,
+    excludeScope: params.excludeScope ?? null,
+    inflowScope: params.inflowScope ?? null,
+    outflowScope: params.outflowScope ?? null,
+    archivedAt: null,
+    createdAt: params.createdAt ?? new Date('2024-01-01T00:00:00Z'),
+    updatedAt: params.createdAt ?? new Date('2024-01-01T00:00:00Z'),
+  } as AnalysisRuleEntity;
+}
+
+const broadNeutralizationRule = buildAnalysisRule({
+  id: 'broad-neutralization',
+  type: 'neutralize',
+  inflowScope: { mode: 'all' },
+  outflowScope: { mode: 'all' },
+});
 
 type ComparisonOperator = '<=' | '<' | '>=' | '>';
 
@@ -693,6 +728,11 @@ describe('TransactionAnalysisService', () => {
     getRateMap: jest.Mock;
     convertAmount: jest.Mock;
   };
+  let mockAnalysisRuleService: {
+    findActiveForAnalysis: jest.Mock;
+    scopeMatchesTransactionCategory: jest.Mock;
+    compareNeutralizationRules: jest.Mock;
+  };
 
   const buildTransactionQueryBuilder = () => {
     const params: Record<string, unknown> = {};
@@ -742,6 +782,44 @@ describe('TransactionAnalysisService', () => {
       getRateMap: jest.fn().mockResolvedValue(new Map([['EUR', 1.1]])),
       convertAmount: jest.fn().mockImplementation(realConvertAmount),
     };
+    const scopeSpecificity = (scope: AnalysisCategoryScope | null) => {
+      if (!scope || scope.mode === 'all') {
+        return 1_000_000;
+      }
+
+      return scope.categoryIds.length + (scope.includeUncategorized ? 1 : 0);
+    };
+    mockAnalysisRuleService = {
+      findActiveForAnalysis: jest
+        .fn()
+        .mockResolvedValue([broadNeutralizationRule]),
+      scopeMatchesTransactionCategory: jest.fn(
+        (scope: AnalysisCategoryScope, categoryId: string | null) => {
+          if (scope.mode === 'all') {
+            return true;
+          }
+          if (categoryId === null) {
+            return scope.includeUncategorized;
+          }
+
+          return scope.categoryIds.includes(categoryId);
+        },
+      ),
+      compareNeutralizationRules: jest.fn(
+        (left: AnalysisRuleEntity, right: AnalysisRuleEntity) => {
+          const scoreComparison =
+            scopeSpecificity(left.inflowScope) +
+            scopeSpecificity(left.outflowScope) -
+            (scopeSpecificity(right.inflowScope) +
+              scopeSpecificity(right.outflowScope));
+          if (scoreComparison !== 0) {
+            return scoreComparison;
+          }
+
+          return left.id.localeCompare(right.id);
+        },
+      ),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -761,6 +839,10 @@ describe('TransactionAnalysisService', () => {
         {
           provide: CurrencyConversionService,
           useValue: mockCurrencyConversionService,
+        },
+        {
+          provide: AnalysisRuleService,
+          useValue: mockAnalysisRuleService,
         },
       ],
     }).compile();
@@ -899,6 +981,144 @@ describe('TransactionAnalysisService', () => {
       });
     });
 
+    it('does not neutralize equal and opposite transactions when no active neutralization rule exists', async () => {
+      mockAnalysisRuleService.findActiveForAnalysis.mockResolvedValueOnce([]);
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'expense',
+          amount: 10000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-28',
+          primary: 'LOAN_PAYMENTS',
+        }),
+        buildTransaction({
+          id: 'mirror-income',
+          amount: 10000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-01-28',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 10000,
+        totalOutflow: 10000,
+        inflows: [
+          expect.objectContaining({
+            primaryCategory: 'INCOME',
+            totalAmount: 10000,
+          }),
+        ],
+        outflows: [
+          expect.objectContaining({
+            primaryCategory: 'LOAN_PAYMENTS',
+            totalAmount: 10000,
+          }),
+        ],
+      });
+    });
+
+    it('applies exclusion rules before aggregation and neutralization', async () => {
+      mockAnalysisRuleService.findActiveForAnalysis.mockResolvedValueOnce([
+        buildAnalysisRule({
+          id: 'exclude-ignore',
+          type: 'exclude',
+          excludeScope: {
+            mode: 'selected',
+            categoryIds: ['cat-IGNORE'],
+            includeUncategorized: false,
+          },
+        }),
+      ]);
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'ignored',
+          amount: 10000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-28',
+          primary: 'IGNORE',
+        }),
+        buildTransaction({
+          id: 'kept',
+          amount: 20000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-28',
+          primary: 'FOOD_AND_DRINK',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalOutflow: 20000,
+        outflows: [
+          expect.objectContaining({
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 20000,
+          }),
+        ],
+      });
+    });
+
+    it('runs specific neutralization pools before broader pools', async () => {
+      mockAnalysisRuleService.findActiveForAnalysis.mockResolvedValueOnce([
+        broadNeutralizationRule,
+        buildAnalysisRule({
+          id: 'specific-rent-reimbursement',
+          type: 'neutralize',
+          inflowScope: {
+            mode: 'selected',
+            categoryIds: ['cat-REIMBURSEMENT'],
+            includeUncategorized: false,
+          },
+          outflowScope: {
+            mode: 'selected',
+            categoryIds: ['cat-RENT'],
+            includeUncategorized: false,
+          },
+          createdAt: new Date('2024-01-02T00:00:00Z'),
+        }),
+      ]);
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'rent',
+          amount: 10000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-01',
+          primary: 'RENT',
+        }),
+        buildTransaction({
+          id: 'groceries',
+          amount: 10000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-10',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'rent-reimbursement',
+          amount: 10000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-01-10',
+          primary: 'REIMBURSEMENT',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 10000,
+        outflows: [
+          expect.objectContaining({
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 10000,
+          }),
+        ],
+      });
+    });
+
     it('aggregates transactions under the user category override when present', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
@@ -922,6 +1142,7 @@ describe('TransactionAnalysisService', () => {
           primaryCategory: 'GENERAL_MERCHANDISE',
           totalAmount: 1200,
           transactionCount: 1,
+          color: '#228be6',
         }),
       ]);
       expect(
@@ -929,6 +1150,90 @@ describe('TransactionAnalysisService', () => {
           (aggregate) => aggregate.primaryCategory === 'FOOD_AND_DRINK',
         ),
       ).toBe(false);
+    });
+
+    it('uses the largest contributing category row color for primary aggregates', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'small-travel',
+          amount: 1200,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-15',
+          primary: 'Travel',
+          detailed: 'Taxi',
+          categoryColor: '#111111',
+        }),
+        buildTransaction({
+          id: 'large-travel',
+          amount: 4800,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-16',
+          primary: 'Travel',
+          detailed: 'Flights',
+          categoryColor: '#eeeeee',
+        }),
+      ]);
+
+      const result = await service.getAnalysis(
+        '2024-01-01',
+        '2024-01-31',
+        mockUserId,
+      );
+
+      expect(result.outflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'Travel',
+          totalAmount: 6000,
+          transactionCount: 2,
+          color: '#eeeeee',
+        }),
+      ]);
+    });
+
+    it('resolves aggregate colors separately for inflows and outflows', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'large-travel-outflow',
+          amount: 9000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-15',
+          primary: 'Travel',
+          detailed: 'Flights',
+          categoryColor: '#cc2222',
+        }),
+        buildTransaction({
+          id: 'small-travel-inflow',
+          amount: 1200,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-01-16',
+          primary: 'Travel',
+          detailed: 'Reimbursement',
+          categoryColor: '#22cc22',
+        }),
+      ]);
+
+      const result = await service.getAnalysis(
+        '2024-01-01',
+        '2024-01-31',
+        mockUserId,
+      );
+
+      expect(result.inflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'Travel',
+          totalAmount: 1200,
+          transactionCount: 1,
+          color: '#22cc22',
+        }),
+      ]);
+      expect(result.outflows).toEqual([
+        expect.objectContaining({
+          primaryCategory: 'Travel',
+          totalAmount: 9000,
+          transactionCount: 1,
+          color: '#cc2222',
+        }),
+      ]);
     });
 
     it('matches each negative to the nearest positive after deterministic negative ordering', async () => {

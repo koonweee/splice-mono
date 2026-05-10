@@ -24,6 +24,7 @@ import {
   useUserControllerMe,
   useUserControllerUpdateSettings,
 } from '../../api/clients/spliceAPI'
+import { AnalysisRulesSection } from '../../components/settings/AnalysisRulesSection'
 import { CustomCategoriesSection } from '../../components/settings/CustomCategoriesSection'
 import { McpConnectionSection } from '../../components/settings/McpConnectionSection'
 import { PageHeader } from '../../components/PageHeader'
@@ -37,7 +38,7 @@ import {
 import styles from './settings.module.css'
 import type { ThemePreset, ThemePresetId } from '../../lib/theme'
 
-type SettingsTab = 'general' | 'access' | 'categories' | 'mcp'
+type SettingsTab = 'general' | 'access' | 'categories' | 'analysis' | 'mcp'
 
 export const Route = createFileRoute('/_authed/settings')({
   validateSearch: (search: Record<string, unknown>): { tab?: SettingsTab } => {
@@ -45,6 +46,7 @@ export const Route = createFileRoute('/_authed/settings')({
     return tab === 'general' ||
       tab === 'access' ||
       tab === 'categories' ||
+      tab === 'analysis' ||
       tab === 'mcp'
       ? { tab }
       : {}
@@ -82,7 +84,10 @@ function getInitialSettingsTab(): SettingsTab {
   }
 
   const tab = new URLSearchParams(window.location.search).get('tab')
-  return tab === 'access' || tab === 'categories' || tab === 'mcp'
+  return tab === 'access' ||
+    tab === 'categories' ||
+    tab === 'analysis' ||
+    tab === 'mcp'
     ? tab
     : 'general'
 }
@@ -296,10 +301,11 @@ export function SettingsPage() {
         onChange={handleTabChange}
         keepMounted={false}
       >
-        <Tabs.List mb="lg">
+        <Tabs.List className={styles.settingsTabList} mb="lg">
           <Tabs.Tab value="general">General</Tabs.Tab>
           <Tabs.Tab value="access">Access</Tabs.Tab>
           <Tabs.Tab value="categories">Categories</Tabs.Tab>
+          <Tabs.Tab value="analysis">Analysis</Tabs.Tab>
           <Tabs.Tab value="mcp">MCP</Tabs.Tab>
         </Tabs.List>
 
@@ -435,6 +441,10 @@ export function SettingsPage() {
 
         <Tabs.Panel className={styles.categoriesPanel} value="categories">
           <CustomCategoriesSection />
+        </Tabs.Panel>
+
+        <Tabs.Panel className={styles.categoriesPanel} value="analysis">
+          <AnalysisRulesSection />
         </Tabs.Panel>
 
         <Tabs.Panel value="mcp">

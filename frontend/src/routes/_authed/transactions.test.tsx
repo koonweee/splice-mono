@@ -279,6 +279,7 @@ const category: Category = {
   primary: 'Food',
   detailed: 'Restaurants',
   description: 'Food category',
+  color: '#228be6',
   archivedAt: null,
   createdAt: '2026-02-14T00:00:00.000Z',
   updatedAt: '2026-02-14T00:00:00.000Z',

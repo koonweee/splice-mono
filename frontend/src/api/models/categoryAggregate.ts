@@ -11,4 +11,6 @@ export interface CategoryAggregate {
   totalAmount: number
   currency: string
   transactionCount: number
+  /** @pattern ^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$ */
+  color: string
 }

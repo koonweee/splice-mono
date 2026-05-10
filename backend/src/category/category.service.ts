@@ -2,6 +2,10 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, In, IsNull, Not, Repository } from 'typeorm';
 import {
+  generateCategoryColor,
+  normalizeCategoryColor,
+} from './category-color';
+import {
   cleanCategoryLabel,
   formatCategoryPair,
   normalizeCategoryKey,
@@ -125,6 +129,9 @@ export class CategoryService {
     category.userId = userId;
     category.setLabels(primary, detailed);
     category.description = cleanCategoryLabel(dto.description ?? '');
+    category.color = dto.color
+      ? normalizeCategoryColor(dto.color)
+      : generateCategoryColor();
     category.archivedAt = null;
 
     const saved = await this.saveWithConflictHandling(
@@ -177,6 +184,9 @@ export class CategoryService {
     category.setLabels(nextPrimary, nextDetailed);
     if (dto.description !== undefined) {
       category.description = cleanCategoryLabel(dto.description ?? '');
+    }
+    if (dto.color !== undefined) {
+      category.color = normalizeCategoryColor(dto.color);
     }
     category.archivedAt = nextArchivedAt;
 
@@ -264,6 +274,7 @@ export class CategoryService {
           ),
         );
         duplicate.description = category.description;
+        duplicate.color = generateCategoryColor();
         duplicate.archivedAt = null;
 
         await this.categoryRepository.save(duplicate);
@@ -348,6 +359,7 @@ export class CategoryService {
       label: formatCategoryPair(category.primary, category.detailed),
       primary: category.primary,
       detailed: category.detailed,
+      color: category.color,
       archivedAt: category.archivedAt,
     };
 

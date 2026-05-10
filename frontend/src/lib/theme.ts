@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Autocomplete,
   Badge,
   Button,
   Checkbox,
@@ -9,6 +10,7 @@ import {
   InputWrapper,
   Loader,
   Modal,
+  MultiSelect,
   NavLink,
   NumberInput,
   Paper,
@@ -255,6 +257,10 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
         defaultProps: { radius: 'md' },
         classNames: { root: 'splice-action-icon-root' },
       }),
+      Autocomplete: Autocomplete.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { input: 'splice-input-input' },
+      }),
       Badge: Badge.extend({
         defaultProps: { radius: 'sm' },
         classNames: { root: 'splice-badge-root' },
@@ -302,6 +308,10 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
           header: 'splice-overlay-header',
           title: 'splice-overlay-title',
         },
+      }),
+      MultiSelect: MultiSelect.extend({
+        defaultProps: { radius: 'md' },
+        classNames: { input: 'splice-input-input' },
       }),
       NavLink: NavLink.extend({
         classNames: {

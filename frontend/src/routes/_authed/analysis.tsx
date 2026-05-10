@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { DonutChart } from '@mantine/charts'
 import {
   Alert,
+  Badge,
   Box,
+  Button,
   Grid,
   Group,
   Loader,
@@ -16,7 +18,10 @@ import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
-import { useTransactionAnalysisControllerGetAnalysis } from '../../api/clients/spliceAPI'
+import {
+  useAnalysisRuleControllerFindAll,
+  useTransactionAnalysisControllerGetAnalysis,
+} from '../../api/clients/spliceAPI'
 import { CategoryTransactionsModal } from '../../components/CategoryTransactionsModal'
 import { DateRangeControl } from '../../components/DateRangeControl'
 import { PageHeader } from '../../components/PageHeader'
@@ -25,7 +30,7 @@ import {
   formatPrimaryCategory,
   getDecimalPlaces,
 } from '../../lib/format'
-import { getCategoryColor } from '../../lib/constants'
+import { getDisplayCategoryColor } from '../../lib/category-colors'
 import type { CategoryAggregate } from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
 
@@ -154,7 +159,7 @@ function FlowSection({
   const chartData = categories.map((cat, i) => ({
     name: formatPrimaryCategory(cat.primaryCategory),
     value: toMajorUnits(cat.totalAmount, currency),
-    color: getCategoryColor(cat.primaryCategory, i),
+    color: getDisplayCategoryColor(cat.color, cat.primaryCategory, i),
   }))
 
   return (
@@ -206,7 +211,8 @@ function FlowSection({
                         width: 10,
                         height: 10,
                         borderRadius: '50%',
-                        backgroundColor: getCategoryColor(
+                        backgroundColor: getDisplayCategoryColor(
+                          cat.color,
                           cat.primaryCategory,
                           i,
                         ),
@@ -228,7 +234,11 @@ function FlowSection({
                     >
                       <Progress
                         value={pct}
-                        color={getCategoryColor(cat.primaryCategory, i)}
+                        color={getDisplayCategoryColor(
+                          cat.color,
+                          cat.primaryCategory,
+                          i,
+                        )}
                         size="xs"
                         style={{ flex: 1 }}
                         radius="xl"
@@ -264,6 +274,9 @@ function AnalysisPage() {
     isPending,
     isError,
   } = useTransactionAnalysisControllerGetAnalysis({ startDate, endDate })
+  const { data: activeRules = [] } = useAnalysisRuleControllerFindAll({
+    archived: false,
+  })
 
   // Category drill-down modal
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure()
@@ -312,6 +325,20 @@ function AnalysisPage() {
               onChange={handleDateRangeChange}
               clearable={false}
             />
+            <Button
+              component="a"
+              href="/settings?tab=analysis"
+              variant="light"
+              rightSection={
+                <Badge size="sm" variant="filled">
+                  {activeRules.length === 0
+                    ? 'No rules'
+                    : `${activeRules.length} active`}
+                </Badge>
+              }
+            >
+              Rules
+            </Button>
           </Group>
         }
       />

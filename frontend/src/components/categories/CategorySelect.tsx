@@ -1,5 +1,6 @@
-import { ActionIcon, Select, Stack, Text } from '@mantine/core'
+import { ActionIcon, Box, Group, Select, Stack, Text } from '@mantine/core'
 import { X } from 'lucide-react'
+import { getCategoryColorStyles } from '../../lib/category-colors'
 import styles from './CategorySelect.module.css'
 import type { SelectProps } from '@mantine/core'
 import type { MouseEvent } from 'react'
@@ -8,6 +9,7 @@ export type CategorySelectOption = {
   value: string
   primary: string
   secondary: string
+  color?: string
   disabled?: boolean
 }
 
@@ -67,14 +69,21 @@ export function CategorySelect({
         }
 
         return (
-          <Stack className={styles.option} gap={2}>
-            <Text className={styles.label} size="sm">
-              {categoryOption.secondary}
-            </Text>
-            <Text className={styles.meta} size="xs">
-              {categoryOption.primary}
-            </Text>
-          </Stack>
+          <Group className={styles.option} gap="xs" wrap="nowrap">
+            <Box
+              aria-hidden="true"
+              className={styles.swatch}
+              style={getCategoryColorStyles(categoryOption.color ?? '')}
+            />
+            <Stack className={styles.optionText} gap={2}>
+              <Text className={styles.label} size="sm">
+                {categoryOption.secondary}
+              </Text>
+              <Text className={styles.meta} size="xs">
+                {categoryOption.primary}
+              </Text>
+            </Stack>
+          </Group>
         )
       }}
       rightSection={

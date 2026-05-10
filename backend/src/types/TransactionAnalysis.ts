@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
+import { CategoryColorSchema } from './Category';
 import { MoneySchema } from './MoneyWithSign';
 import { TransactionSchema } from './Transaction';
 
@@ -46,6 +47,8 @@ export const CategoryAggregateSchema = registerSchema(
     currency: z.string(),
     /** Number of transactions in this category */
     transactionCount: z.number().int(),
+    /** Display color as a normalized hex color */
+    color: CategoryColorSchema,
   }),
 );
 export type CategoryAggregate = z.infer<typeof CategoryAggregateSchema>;

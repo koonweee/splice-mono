@@ -35,6 +35,10 @@ export class CategoryEntity extends TimestampedEntity {
   @Column({ type: 'varchar' })
   description: string;
 
+  /** User-selected display color, stored as normalized hex */
+  @Column({ type: 'varchar' })
+  color: string;
+
   /** Owning user */
   @Column({ type: 'uuid', nullable: true })
   userId: string | null;
@@ -59,6 +63,7 @@ export class CategoryEntity extends TimestampedEntity {
       primary: this.primary,
       detailed: this.detailed,
       description: this.description,
+      color: this.color,
       archivedAt: this.archivedAt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,

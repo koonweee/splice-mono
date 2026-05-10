@@ -134,6 +134,9 @@ describe('CustomCategoriesSection', () => {
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Weekend classes' },
     })
+    fireEvent.change(screen.getByTestId('custom-category-color-input'), {
+      target: { value: '#112233' },
+    })
     fireEvent.click(screen.getByRole('button', { name: /create category/i }))
 
     expect(mockFns.createMutateMock).toHaveBeenCalledWith({
@@ -141,6 +144,7 @@ describe('CustomCategoriesSection', () => {
         primary: 'Kids',
         detailed: 'Activities',
         description: 'Weekend classes',
+        color: '#112233',
       },
     })
 
@@ -157,6 +161,7 @@ describe('CustomCategoriesSection', () => {
         primary: 'House',
         detailed: 'Hardware',
         description: '',
+        color: activeCategory.color,
       },
     })
   })
@@ -166,9 +171,7 @@ describe('CustomCategoriesSection', () => {
 
     expect(screen.getByRole('button', { name: /new category/i })).toBeTruthy()
     fireEvent.click(screen.getByLabelText('Select Home Projects > Hardware'))
-    expect(
-      screen.queryByRole('button', { name: /new category/i }),
-    ).toBeNull()
+    expect(screen.queryByRole('button', { name: /new category/i })).toBeNull()
     expect(screen.queryByLabelText('Bulk primary category')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /^archive$/i }))
 
@@ -231,9 +234,7 @@ describe('CustomCategoriesSection', () => {
     renderSection()
 
     fireEvent.click(screen.getByLabelText('Select Home Projects > Hardware'))
-    expect(
-      screen.queryByRole('button', { name: /new category/i }),
-    ).toBeNull()
+    expect(screen.queryByRole('button', { name: /new category/i })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /^archive$/i }))
 
@@ -284,6 +285,7 @@ function makeCategory(
     archivedAt: overrides.archivedAt ?? null,
     createdAt: overrides.createdAt ?? '2026-02-14T00:00:00.000Z',
     updatedAt: overrides.updatedAt ?? '2026-02-14T00:00:00.000Z',
+    color: overrides.color ?? '#228be6',
     transactionCount: overrides.transactionCount ?? 0,
     lastUsedAt: overrides.lastUsedAt ?? null,
   }

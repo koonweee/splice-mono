@@ -286,6 +286,7 @@ function makeCategory(overrides: {
     primary: overrides.primary,
     detailed: overrides.detailed,
     description: `${overrides.primary} category`,
+    color: '#228be6',
     createdAt: '2026-02-14T00:00:00.000Z',
     updatedAt: '2026-02-14T00:00:00.000Z',
   }
