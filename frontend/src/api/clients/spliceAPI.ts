@@ -24,6 +24,8 @@ import type {
 import type {
   Account,
   AccountControllerUpdateBalanceBody,
+  AnalysisRuleControllerFindAllParams,
+  AnalysisRuleView,
   BalanceQueryControllerGetAllBalancesParams,
   BalanceQueryControllerGetBalancesParams,
   BalanceQueryPerDateResult,
@@ -40,6 +42,7 @@ import type {
   CategoryControllerSearchParams,
   CategoryManagementItem,
   CreateAccountDto,
+  CreateAnalysisRuleDto,
   CreateCustomCategoryDto,
   CreatePersonalAccessTokenDto,
   CreatePersonalAccessTokenResponse,
@@ -61,6 +64,7 @@ import type {
   TransactionControllerGetSummaryParams,
   TransactionSummary,
   UpdateAccountDto,
+  UpdateAnalysisRuleDto,
   UpdateCustomCategoryDto,
   UpdateTransactionCategoryDto,
   UpdateTransactionDto,
@@ -1984,6 +1988,334 @@ export const useUserControllerRevokeToken = <TError = void, TContext = unknown>(
   TContext
 > => {
   const mutationOptions = getUserControllerRevokeTokenMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * List the current user's analysis rules. Active rules are returned by default; pass archived=true to list archived rules.
+ */
+export const analysisRuleControllerFindAll = (
+  params?: AnalysisRuleControllerFindAllParams,
+  signal?: AbortSignal,
+) => {
+  return axios<AnalysisRuleView[]>({
+    url: `/analysis-rules`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getAnalysisRuleControllerFindAllQueryKey = (
+  params?: AnalysisRuleControllerFindAllParams,
+) => {
+  return [`/analysis-rules`, ...(params ? [params] : [])] as const
+}
+
+export const getAnalysisRuleControllerFindAllQueryOptions = <
+  TData = Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+  TError = unknown,
+>(
+  params?: AnalysisRuleControllerFindAllParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAnalysisRuleControllerFindAllQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof analysisRuleControllerFindAll>>
+  > = ({ signal }) => analysisRuleControllerFindAll(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AnalysisRuleControllerFindAllQueryResult = NonNullable<
+  Awaited<ReturnType<typeof analysisRuleControllerFindAll>>
+>
+export type AnalysisRuleControllerFindAllQueryError = unknown
+
+export function useAnalysisRuleControllerFindAll<
+  TData = Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+  TError = unknown,
+>(
+  params: undefined | AnalysisRuleControllerFindAllParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof analysisRuleControllerFindAll>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useAnalysisRuleControllerFindAll<
+  TData = Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+  TError = unknown,
+>(
+  params?: AnalysisRuleControllerFindAllParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof analysisRuleControllerFindAll>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useAnalysisRuleControllerFindAll<
+  TData = Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+  TError = unknown,
+>(
+  params?: AnalysisRuleControllerFindAllParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useAnalysisRuleControllerFindAll<
+  TData = Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+  TError = unknown,
+>(
+  params?: AnalysisRuleControllerFindAllParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof analysisRuleControllerFindAll>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getAnalysisRuleControllerFindAllQueryOptions(
+    params,
+    options,
+  )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Create an analysis rule
+ */
+export const analysisRuleControllerCreate = (
+  createAnalysisRuleDto: CreateAnalysisRuleDto,
+  signal?: AbortSignal,
+) => {
+  return axios<AnalysisRuleView>({
+    url: `/analysis-rules`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createAnalysisRuleDto,
+    signal,
+  })
+}
+
+export const getAnalysisRuleControllerCreateMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analysisRuleControllerCreate>>,
+    TError,
+    { data: CreateAnalysisRuleDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof analysisRuleControllerCreate>>,
+  TError,
+  { data: CreateAnalysisRuleDto },
+  TContext
+> => {
+  const mutationKey = ['analysisRuleControllerCreate']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof analysisRuleControllerCreate>>,
+    { data: CreateAnalysisRuleDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return analysisRuleControllerCreate(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type AnalysisRuleControllerCreateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof analysisRuleControllerCreate>>
+>
+export type AnalysisRuleControllerCreateMutationBody = CreateAnalysisRuleDto
+export type AnalysisRuleControllerCreateMutationError = void
+
+export const useAnalysisRuleControllerCreate = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof analysisRuleControllerCreate>>,
+      TError,
+      { data: CreateAnalysisRuleDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof analysisRuleControllerCreate>>,
+  TError,
+  { data: CreateAnalysisRuleDto },
+  TContext
+> => {
+  const mutationOptions =
+    getAnalysisRuleControllerCreateMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Update, archive, or restore an analysis rule
+ */
+export const analysisRuleControllerUpdate = (
+  id: string,
+  updateAnalysisRuleDto: UpdateAnalysisRuleDto,
+) => {
+  return axios<AnalysisRuleView>({
+    url: `/analysis-rules/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateAnalysisRuleDto,
+  })
+}
+
+export const getAnalysisRuleControllerUpdateMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analysisRuleControllerUpdate>>,
+    TError,
+    { id: string; data: UpdateAnalysisRuleDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof analysisRuleControllerUpdate>>,
+  TError,
+  { id: string; data: UpdateAnalysisRuleDto },
+  TContext
+> => {
+  const mutationKey = ['analysisRuleControllerUpdate']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof analysisRuleControllerUpdate>>,
+    { id: string; data: UpdateAnalysisRuleDto }
+  > = (props) => {
+    const { id, data } = props ?? {}
+
+    return analysisRuleControllerUpdate(id, data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type AnalysisRuleControllerUpdateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof analysisRuleControllerUpdate>>
+>
+export type AnalysisRuleControllerUpdateMutationBody = UpdateAnalysisRuleDto
+export type AnalysisRuleControllerUpdateMutationError = void
+
+export const useAnalysisRuleControllerUpdate = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof analysisRuleControllerUpdate>>,
+      TError,
+      { id: string; data: UpdateAnalysisRuleDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof analysisRuleControllerUpdate>>,
+  TError,
+  { id: string; data: UpdateAnalysisRuleDto },
+  TContext
+> => {
+  const mutationOptions =
+    getAnalysisRuleControllerUpdateMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }

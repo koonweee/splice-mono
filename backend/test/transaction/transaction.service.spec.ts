@@ -20,6 +20,7 @@ function buildCategory(
     overrides.detailed ?? 'FOOD_AND_DRINK_RESTAURANT',
   );
   category.description = overrides.description ?? '';
+  category.color = overrides.color ?? '#228be6';
   category.archivedAt = overrides.archivedAt ?? null;
   category.createdAt =
     overrides.createdAt ?? new Date('2026-02-14T00:00:00.000Z');

@@ -33,6 +33,7 @@ import {
 } from '../../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../../lib/format'
 import { isAssignableCategoryOption } from '../../lib/category-options'
+import { getFallbackCategoryColor } from '../../lib/category-colors'
 import type {
   Category,
   TransactionControllerFindAllParams,
@@ -83,12 +84,13 @@ const isValidDateString = (value: unknown): value is string =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 
 function getCategorySelectOption(
-  category: Pick<Category, 'id' | 'primary' | 'detailed'>,
+  category: Pick<Category, 'id' | 'primary' | 'detailed' | 'color'>,
 ): CategorySelectOption {
   return {
     value: category.id,
     primary: category.primary,
     secondary: category.detailed,
+    color: category.color,
   }
 }
 
@@ -252,6 +254,7 @@ function TransactionsPage() {
         value: UNCATEGORIZED_CATEGORY_VALUE,
         primary: formatPrimaryCategory(UNCATEGORIZED_CATEGORY_VALUE),
         secondary: 'No assigned category',
+        color: getFallbackCategoryColor(UNCATEGORIZED_CATEGORY_VALUE),
       },
       ...(categories ?? [])
         .filter(isAssignableCategoryOption)
@@ -267,6 +270,7 @@ function TransactionsPage() {
         value: CLEAR_CATEGORY_VALUE,
         primary: 'Clear category',
         secondary: 'Remove category from selected transactions',
+        color: getFallbackCategoryColor(UNCATEGORIZED_CATEGORY_VALUE),
       },
       ...assignableCategories
         .filter(isAssignableCategoryOption)

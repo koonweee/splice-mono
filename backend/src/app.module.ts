@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import type { DestinationStream } from 'pino';
 import { AccountModule } from './account/account.module';
+import { AnalysisRuleModule } from './analysis-rule/analysis-rule.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { PersonalAccessTokenService } from './auth/personal-access-token.service';
@@ -92,6 +93,7 @@ import { UserModule } from './user/user.module';
     ScheduleModule.forRoot(),
     AuthModule,
     AccountModule,
+    AnalysisRuleModule,
     BalanceQueryModule,
     BalanceSnapshotModule,
     BankLinkModule,

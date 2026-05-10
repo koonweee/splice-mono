@@ -3,7 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AccountType } from 'plaid';
 import { Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
+import { AnalysisRuleService } from '../analysis-rule/analysis-rule.service';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
+import {
+  BALANCE_ADJUSTMENT_CATEGORY_COLOR,
+  UNCATEGORIZED_CATEGORY_COLOR,
+} from '../category/category-color';
 import { calculateEffectiveBalance } from '../common/effective-balance';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import {
@@ -18,11 +23,17 @@ import type {
   CategoryAggregate,
   TransactionAnalysisResponse,
 } from '../types/TransactionAnalysis';
+import { AnalysisRuleEntity } from '../analysis-rule/analysis-rule.entity';
 
 interface CategoryCurrencyAggregate {
   amount: number;
   count: number;
 }
+
+type CategoryColorContributionMap = Map<
+  string,
+  Map<string, Map<string, number>>
+>;
 
 interface NeutralizationBucket {
   currency: string;
@@ -60,6 +71,7 @@ export class TransactionAnalysisService {
     @InjectRepository(BalanceSnapshotEntity)
     private balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
     private currencyConversionService: CurrencyConversionService,
+    private analysisRuleService: AnalysisRuleService,
   ) {}
 
   /**
@@ -87,8 +99,10 @@ export class TransactionAnalysisService {
       endDate,
       userId,
     );
-    const unmatchedTransactions =
-      this.neutralizeTransactions(postedTransactions);
+    const unmatchedTransactions = await this.applyAnalysisRules(
+      postedTransactions,
+      userId,
+    );
     const { balanceAdjustmentRows, balanceAdjustments } =
       await this.getBalanceAdjustmentData(
         startDate,
@@ -132,12 +146,20 @@ export class TransactionAnalysisService {
         outflow: Map<string, CategoryCurrencyAggregate>;
       }
     >();
+    const colorContributions: Record<
+      'inflow' | 'outflow',
+      CategoryColorContributionMap
+    > = {
+      inflow: new Map(),
+      outflow: new Map(),
+    };
 
     unmatchedTransactions.forEach((transaction) => {
       const category = this.getEffectiveCategoryPrimary(transaction);
       const currency = transaction.amount.currency;
       const amount = this.getAmountInSmallestUnit(transaction);
       const isInflow = transaction.amount.sign === MoneySign.POSITIVE;
+      const flowDirection = isInflow ? 'inflow' : 'outflow';
       const entry = aggregates.get(category) ?? {
         inflow: new Map<string, CategoryCurrencyAggregate>(),
         outflow: new Map<string, CategoryCurrencyAggregate>(),
@@ -153,11 +175,28 @@ export class TransactionAnalysisService {
       }
 
       aggregates.set(category, entry);
+      this.appendCategoryColorContribution(
+        colorContributions[flowDirection],
+        category,
+        transaction.category?.color ?? this.getFallbackCategoryColor(category),
+        currency,
+        amount,
+      );
     });
 
     // 5. Convert aggregated totals to the preferred currency and group by category.
     const inflowMap = new Map<string, { amount: number; count: number }>();
     const outflowMap = new Map<string, { amount: number; count: number }>();
+    const inflowColorByPrimary = this.resolveCategoryColors(
+      colorContributions.inflow,
+      preferredCurrency,
+      rateMap,
+    );
+    const outflowColorByPrimary = this.resolveCategoryColors(
+      colorContributions.outflow,
+      preferredCurrency,
+      rateMap,
+    );
 
     aggregates.forEach(({ inflow, outflow }, category) => {
       this.appendConvertedCategoryTotals(
@@ -184,6 +223,9 @@ export class TransactionAnalysisService {
         totalAmount: amount,
         currency: preferredCurrency,
         transactionCount: count,
+        color:
+          inflowColorByPrimary.get(primaryCategory) ??
+          this.getFallbackCategoryColor(primaryCategory),
       }))
       .sort((a, b) => b.totalAmount - a.totalAmount);
 
@@ -193,6 +235,9 @@ export class TransactionAnalysisService {
         totalAmount: amount,
         currency: preferredCurrency,
         transactionCount: count,
+        color:
+          outflowColorByPrimary.get(primaryCategory) ??
+          this.getFallbackCategoryColor(primaryCategory),
       }))
       .sort((a, b) => b.totalAmount - a.totalAmount);
 
@@ -230,8 +275,10 @@ export class TransactionAnalysisService {
       endDate,
       userId,
     );
-    const unmatchedTransactions =
-      this.neutralizeTransactions(postedTransactions);
+    const unmatchedTransactions = await this.applyAnalysisRules(
+      postedTransactions,
+      userId,
+    );
     const preferredCurrency =
       await this.currencyConversionService.getPreferredCurrency(userId);
 
@@ -622,6 +669,83 @@ export class TransactionAnalysisService {
     return unmatchedTransactions;
   }
 
+  private async applyAnalysisRules(
+    transactions: TransactionEntity[],
+    userId: string,
+  ): Promise<TransactionEntity[]> {
+    const rules = await this.analysisRuleService.findActiveForAnalysis(userId);
+    if (rules.length === 0) {
+      return transactions;
+    }
+
+    const exclusionRules = rules.filter((rule) => rule.type === 'exclude');
+    const neutralizationRules = rules
+      .filter((rule) => rule.type === 'neutralize')
+      // Product semantics: run smaller, more specific cancellation pools before
+      // broad catch-all pools so narrow user intent cannot be consumed first.
+      .sort((left, right) =>
+        this.analysisRuleService.compareNeutralizationRules(left, right),
+      );
+    let availableTransactions = transactions.filter(
+      (transaction) => !this.isExcludedByRules(transaction, exclusionRules),
+    );
+
+    neutralizationRules.forEach((rule) => {
+      const pool = availableTransactions.filter((transaction) =>
+        this.isEligibleForNeutralizationRule(transaction, rule),
+      );
+      const unmatchedPoolIds = new Set(
+        this.neutralizeTransactions(pool).map((transaction) => transaction.id),
+      );
+      const matchedPoolIds = new Set(
+        pool
+          .filter((transaction) => !unmatchedPoolIds.has(transaction.id))
+          .map((transaction) => transaction.id),
+      );
+
+      if (matchedPoolIds.size === 0) {
+        return;
+      }
+
+      availableTransactions = availableTransactions.filter(
+        (transaction) => !matchedPoolIds.has(transaction.id),
+      );
+    });
+
+    return availableTransactions;
+  }
+
+  private isExcludedByRules(
+    transaction: TransactionEntity,
+    rules: AnalysisRuleEntity[],
+  ): boolean {
+    return rules.some(
+      (rule) =>
+        rule.excludeScope &&
+        this.analysisRuleService.scopeMatchesTransactionCategory(
+          rule.excludeScope,
+          this.getEffectiveCategoryId(transaction),
+        ),
+    );
+  }
+
+  private isEligibleForNeutralizationRule(
+    transaction: TransactionEntity,
+    rule: AnalysisRuleEntity,
+  ): boolean {
+    const scope =
+      transaction.amount.sign === MoneySign.POSITIVE
+        ? rule.inflowScope
+        : rule.outflowScope;
+
+    return scope
+      ? this.analysisRuleService.scopeMatchesTransactionCategory(
+          scope,
+          this.getEffectiveCategoryId(transaction),
+        )
+      : false;
+  }
+
   private appendConvertedCategoryTotals(
     category: string,
     totalsByCurrency: Map<string, CategoryCurrencyAggregate>,
@@ -647,6 +771,73 @@ export class TransactionAnalysisService {
     }
 
     targetMap.set(category, { amount: totalAmount, count: totalCount });
+  }
+
+  private appendCategoryColorContribution(
+    colorContributions: CategoryColorContributionMap,
+    category: string,
+    color: string,
+    currency: string,
+    amount: number,
+  ): void {
+    const colorTotals =
+      colorContributions.get(category) ??
+      new Map<string, Map<string, number>>();
+    const currencyTotals = colorTotals.get(color) ?? new Map<string, number>();
+
+    currencyTotals.set(currency, (currencyTotals.get(currency) ?? 0) + amount);
+    colorTotals.set(color, currencyTotals);
+    colorContributions.set(category, colorTotals);
+  }
+
+  private resolveCategoryColors(
+    colorContributions: CategoryColorContributionMap,
+    preferredCurrency: string,
+    rateMap: Map<string, number>,
+  ): Map<string, string> {
+    return new Map(
+      Array.from(colorContributions.entries()).map(
+        ([category, colorTotals]) => {
+          const rankedColors = Array.from(colorTotals.entries())
+            .map(([color, totalsByCurrency]) => ({
+              color,
+              amount: this.getConvertedColorContribution(
+                totalsByCurrency,
+                preferredCurrency,
+                rateMap,
+              ),
+            }))
+            .sort(
+              (left, right) =>
+                right.amount - left.amount ||
+                left.color.localeCompare(right.color),
+            );
+
+          return [
+            category,
+            rankedColors[0]?.color ?? this.getFallbackCategoryColor(category),
+          ] as const;
+        },
+      ),
+    );
+  }
+
+  private getConvertedColorContribution(
+    totalsByCurrency: Map<string, number>,
+    preferredCurrency: string,
+    rateMap: Map<string, number>,
+  ): number {
+    return Array.from(totalsByCurrency.entries()).reduce(
+      (total, [currency, amount]) =>
+        total +
+        this.convertAmountToPreferredCurrency(
+          amount,
+          currency,
+          preferredCurrency,
+          rateMap,
+        ),
+      0,
+    );
   }
 
   private convertAmountToPreferredCurrency(
@@ -752,6 +943,24 @@ export class TransactionAnalysisService {
 
   private getEffectiveCategoryPrimary(transaction: TransactionEntity): string {
     return transaction.category?.primary ?? 'UNCATEGORIZED';
+  }
+
+  private getEffectiveCategoryId(
+    transaction: TransactionEntity,
+  ): string | null {
+    return transaction.category?.id ?? transaction.categoryId ?? null;
+  }
+
+  private getFallbackCategoryColor(category: string): string {
+    if (category === 'UNCATEGORIZED') {
+      return UNCATEGORIZED_CATEGORY_COLOR;
+    }
+
+    if (category === BALANCE_ADJUSTMENT_CATEGORY) {
+      return BALANCE_ADJUSTMENT_CATEGORY_COLOR;
+    }
+
+    return BALANCE_ADJUSTMENT_CATEGORY_COLOR;
   }
 
   private getActivityDate(transaction: TransactionEntity): string {

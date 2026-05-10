@@ -135,6 +135,12 @@ paginated transaction listing, paginated balance snapshot listing, category
 discovery, and legacy transaction search. Cash flow analysis and mutations are
 not exposed through MCP.
 
+Analysis rules are persisted per user and are applied inside the backend
+transaction-analysis service before summary aggregation or real-transaction
+drilldowns are returned. Future callers of those HTTP analysis endpoints inherit
+the same rule behavior automatically; MCP does not expose cash-flow analysis in
+the current surface.
+
 Compatible clients can read `splice://mcp-guide` for tool-use guidance. In
 short: call `get_user_context` first, page through `list_transactions` until
 `pageInfo.hasMore` is false for spending-pattern analysis, use

@@ -26,6 +26,10 @@ import {
   useTransactionControllerUpdateCategory,
 } from '../api/clients/spliceAPI'
 import { isAssignableCategoryOption } from '../lib/category-options'
+import {
+  getCategoryColorStyles,
+  getFallbackCategoryColor,
+} from '../lib/category-colors'
 import { CategorySelect } from './categories/CategorySelect'
 import tableChrome from './MantineTableChrome.module.css'
 import styles from './TransactionsTable.module.css'
@@ -668,6 +672,7 @@ export function TransactionsTable({
           value: category.id,
           primary: getCategoryPrimaryLabel(category),
           secondary: getCategoryLabel(category),
+          color: category.color,
         }))
         .sort(
           (left, right) =>
@@ -941,6 +946,9 @@ export function TransactionsTable({
                 }}
                 radius="sm"
                 size="sm"
+                style={getCategoryColorStyles(
+                  category?.color ?? getFallbackCategoryColor('UNCATEGORIZED'),
+                )}
                 variant="outline"
               >
                 {categoryLabel}

@@ -22,6 +22,10 @@ import {
   useTransactionControllerUpdateCategory,
 } from '../../api/clients/spliceAPI'
 import { MoneyWithSignSign } from '../../api/models'
+import {
+  getCategoryColorStyles,
+  getFallbackCategoryColor,
+} from '../../lib/category-colors'
 import { formatMoneyWithSign } from '../../lib/format'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import { CategorySelect } from '../categories/CategorySelect'
@@ -55,6 +59,12 @@ function getCategoryLabel(transaction: Transaction) {
   }
 
   return category.detailed
+}
+
+function getTransactionCategoryColor(transaction: Transaction) {
+  return (
+    transaction.category?.color ?? getFallbackCategoryColor('UNCATEGORIZED')
+  )
 }
 
 function getAssignableCategoryLabel(
@@ -166,6 +176,7 @@ export function TransactionsMobileList({
           value: category.id,
           primary: getAssignableCategoryPrimaryLabel(category),
           secondary: getAssignableCategoryLabel(category),
+          color: category.color,
         }))
         .sort(
           (left, right) =>
@@ -307,14 +318,23 @@ export function TransactionsMobileList({
                           </Badge>
                         </div>
                       )}
-                      <div className={styles.metaLine}>
+                      <div
+                        aria-label={`${transaction.accountName ?? 'Account'} · ${getCategoryLabel(transaction)}`}
+                        className={styles.metaLine}
+                      >
                         <span className={styles.meta}>
-                          {[
-                            transaction.accountName,
-                            getCategoryLabel(transaction),
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
+                          {transaction.accountName}
+                        </span>
+                        <span className={styles.metaSeparator}>·</span>
+                        <span
+                          aria-hidden="true"
+                          className={styles.categorySwatch}
+                          style={getCategoryColorStyles(
+                            getTransactionCategoryColor(transaction),
+                          )}
+                        />
+                        <span className={styles.meta}>
+                          {getCategoryLabel(transaction)}
                         </span>
                       </div>
                       {formatPaymentChannel(transaction.paymentChannel) && (

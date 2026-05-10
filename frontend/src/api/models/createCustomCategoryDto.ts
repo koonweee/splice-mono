@@ -22,4 +22,6 @@ export interface CreateCustomCategoryDto {
    * @nullable
    */
   description?: string | null
+  /** @pattern ^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$ */
+  color?: string
 }

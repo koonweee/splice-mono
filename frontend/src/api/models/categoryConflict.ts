@@ -11,6 +11,8 @@ export interface CategoryConflict {
   label: string
   primary: string
   detailed: string
+  /** @pattern ^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$ */
+  color: string
   /** @nullable */
   archivedAt?: string | null
 }

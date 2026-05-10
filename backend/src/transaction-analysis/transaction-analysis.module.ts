@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountEntity } from '../account/account.entity';
+import { AnalysisRuleModule } from '../analysis-rule/analysis-rule.module';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { CurrencyExchangeModule } from '../currency-exchange/currency-exchange.module';
 import { TransactionEntity } from '../transaction/transaction.entity';
@@ -14,6 +15,7 @@ import { TransactionAnalysisService } from './transaction-analysis.service';
       AccountEntity,
       BalanceSnapshotEntity,
     ]),
+    AnalysisRuleModule,
     CurrencyExchangeModule,
   ],
   controllers: [TransactionAnalysisController],
