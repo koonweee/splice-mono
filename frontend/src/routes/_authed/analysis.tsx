@@ -328,6 +328,8 @@ function AnalysisPage() {
             <Button
               component="a"
               href="/settings?tab=analysis"
+              mih={{ base: 48, sm: undefined }}
+              size="md"
               variant="light"
               rightSection={
                 <Badge size="sm" variant="filled">

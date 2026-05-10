@@ -21,7 +21,9 @@ const mockFns = vi.hoisted(() => ({
   useTransactionAnalysisControllerGetTransactionsMock: vi.fn(),
   useTransactionAnalysisControllerGetBalanceAdjustmentsMock: vi.fn(),
   transactionsTableMock: vi.fn(),
+  transactionsMobileListMock: vi.fn(),
   balanceAdjustmentsTableMock: vi.fn(),
+  isMobile: false,
 }))
 
 vi.mock('@mantine/core', async () => {
@@ -48,7 +50,7 @@ vi.mock('../api/clients/spliceAPI', async () => {
 })
 
 vi.mock('../lib/hooks', () => ({
-  useIsMobile: () => false,
+  useIsMobile: () => mockFns.isMobile,
 }))
 
 vi.mock('./TransactionsTable', () => ({
@@ -56,6 +58,14 @@ vi.mock('./TransactionsTable', () => ({
     mockFns.transactionsTableMock(props)
 
     return <div data-testid="transactions-table" />
+  },
+}))
+
+vi.mock('./transactions/TransactionsMobileList', () => ({
+  TransactionsMobileList: (props: unknown) => {
+    mockFns.transactionsMobileListMock(props)
+
+    return <div data-testid="transactions-mobile-list" />
   },
 }))
 
@@ -143,6 +153,7 @@ beforeEach(() => {
     data: [],
     isPending: false,
   }
+  mockFns.isMobile = false
 
   mockFns.useTransactionAnalysisControllerGetTransactionsMock.mockImplementation(
     () => analysisHookState,
@@ -221,13 +232,38 @@ describe('CategoryTransactionsModal', () => {
     renderModal()
 
     expect(screen.getByTestId('transactions-table')).toBeTruthy()
-    expect(mockFns.transactionsTableMock).toHaveBeenCalledWith({
+    expect(mockFns.transactionsTableMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [transaction],
+        totalRows: 1,
+        isLoading: false,
+        isError: false,
+        mantinePaperProps: expect.objectContaining({
+          className: expect.any(String),
+        }),
+        mantineTableContainerProps: expect.objectContaining({
+          className: expect.any(String),
+        }),
+      }),
+    )
+    expect(screen.queryByText('No transactions found.')).toBeNull()
+  })
+
+  it('renders the shared mobile transaction list for transaction drilldowns on mobile', () => {
+    const transaction = makeTransaction({ id: 'txn-1' })
+    analysisHookState.data = [transaction]
+    mockFns.isMobile = true
+
+    renderModal()
+
+    expect(screen.getByTestId('transactions-mobile-list')).toBeTruthy()
+    expect(mockFns.transactionsMobileListMock).toHaveBeenCalledWith({
       data: [transaction],
       totalRows: 1,
       isLoading: false,
       isError: false,
     })
-    expect(screen.queryByText('No transactions found.')).toBeNull()
+    expect(mockFns.transactionsTableMock).not.toHaveBeenCalled()
   })
 
   it('switches to the balance-adjustment drilldown path and modal copy for BALANCE_ADJUSTMENT', () => {
@@ -272,9 +308,17 @@ describe('CategoryTransactionsModal', () => {
     ).not.toHaveBeenCalled()
     expect(screen.getByText('Balance Adjustments (Inflows)')).toBeTruthy()
     expect(screen.queryByText('No transactions found.')).toBeNull()
-    expect(mockFns.balanceAdjustmentsTableMock).toHaveBeenCalledWith({
-      data: [balanceAdjustment],
-    })
+    expect(mockFns.balanceAdjustmentsTableMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [balanceAdjustment],
+        mantinePaperProps: expect.objectContaining({
+          className: expect.any(String),
+        }),
+        mantineTableContainerProps: expect.objectContaining({
+          className: expect.any(String),
+        }),
+      }),
+    )
   })
 
   it('shows the existing loading state while the balance-adjustment drilldown is pending', () => {
