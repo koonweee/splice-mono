@@ -1,4 +1,4 @@
-import { Group, Loader, Modal, Text } from '@mantine/core'
+import { Box, Group, Loader, Modal, Text } from '@mantine/core'
 import {
   useTransactionAnalysisControllerGetBalanceAdjustments,
   useTransactionAnalysisControllerGetTransactions,
@@ -7,6 +7,8 @@ import { formatPrimaryCategory } from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
 import { BalanceAdjustmentsTable } from './BalanceAdjustmentsTable'
 import { TransactionsTable } from './TransactionsTable'
+import { TransactionsMobileList } from './transactions/TransactionsMobileList'
+import styles from './CategoryTransactionsModal.module.css'
 
 interface CategoryTransactionsModalProps {
   opened: boolean
@@ -61,12 +63,23 @@ export function CategoryTransactionsModal({
       )
     }
 
-    return (
+    return isMobile ? (
+      <TransactionsMobileList
+        data={transactions}
+        totalRows={transactions.length}
+        isLoading={false}
+        isError={false}
+      />
+    ) : (
       <TransactionsTable
         data={transactions}
         totalRows={transactions.length}
         isLoading={false}
         isError={false}
+        mantinePaperProps={{ className: styles.drilldownTablePaper }}
+        mantineTableContainerProps={{
+          className: styles.drilldownTableContainer,
+        }}
       />
     )
   }
@@ -101,7 +114,15 @@ export function CategoryTransactionsModal({
       )
     }
 
-    return <BalanceAdjustmentsTable data={balanceAdjustments} />
+    return (
+      <BalanceAdjustmentsTable
+        data={balanceAdjustments}
+        mantinePaperProps={{ className: styles.drilldownTablePaper }}
+        mantineTableContainerProps={{
+          className: styles.drilldownTableContainer,
+        }}
+      />
+    )
   }
 
   return (
@@ -111,13 +132,19 @@ export function CategoryTransactionsModal({
       title={title}
       size={1200}
       fullScreen={isMobile}
+      classNames={{
+        body: styles.drilldownModalBody,
+        content: styles.drilldownModalContent,
+      }}
       transitionProps={{ transition: 'fade', duration: 200 }}
     >
-      {isBalanceAdjustment ? (
-        <BalanceAdjustmentsDrilldown />
-      ) : (
-        <TransactionsDrilldown />
-      )}
+      <Box className={styles.drilldownBody}>
+        {isBalanceAdjustment ? (
+          <BalanceAdjustmentsDrilldown />
+        ) : (
+          <TransactionsDrilldown />
+        )}
+      </Box>
     </Modal>
   )
 }

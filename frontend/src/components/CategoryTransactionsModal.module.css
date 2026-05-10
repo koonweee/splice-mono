@@ -1,0 +1,32 @@
+.drilldownModalContent {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drilldownModalBody {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.drilldownBody {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.drilldownTablePaper {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.drilldownTableContainer {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
