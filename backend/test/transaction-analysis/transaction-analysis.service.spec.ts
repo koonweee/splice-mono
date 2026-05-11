@@ -14,6 +14,7 @@ import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionAnalysisService } from '../../src/transaction-analysis/transaction-analysis.service';
 import { MoneySign, getDecimalPlaces } from '../../src/types/MoneyWithSign';
 import type { AnalysisCategoryScope } from '../../src/types/AnalysisRule';
+import { UserService } from '../../src/user/user.service';
 
 const mockUserId = 'user-uuid-123';
 
@@ -133,6 +134,46 @@ function buildTransaction(params: {
     : null;
 
   return entity;
+}
+
+function mockActivityDateRangeQuery(
+  repository: { find: jest.Mock },
+  rows: TransactionEntity[],
+): void {
+  repository.find.mockImplementation(
+    (query: {
+      where: { providerDate: { startDate: string; endDate: string } };
+    }) =>
+      Promise.resolve(
+        rows.filter((transaction) => {
+          const activityDate =
+            transaction.reportingDateOverride ??
+            transaction.authorizedDate ??
+            transaction.providerDate;
+
+          return (
+            activityDate >= query.where.providerDate.startDate &&
+            activityDate <= query.where.providerDate.endDate
+          );
+        }),
+      ),
+  );
+}
+
+function mockNeutralizationLookaroundDays(
+  userService: { findOne: jest.Mock },
+  neutralizationLookaroundDays: number,
+): void {
+  userService.findOne.mockResolvedValue({
+    id: mockUserId,
+    settings: {
+      currency: 'USD',
+      timezone: 'UTC',
+      hideZeroBalanceAccounts: false,
+      theme: 'splice-dark',
+      neutralizationLookaroundDays,
+    },
+  });
 }
 
 function buildAccount(params: {
@@ -733,6 +774,9 @@ describe('TransactionAnalysisService', () => {
     scopeMatchesTransactionCategory: jest.Mock;
     compareNeutralizationRules: jest.Mock;
   };
+  let mockUserService: {
+    findOne: jest.Mock;
+  };
 
   const buildTransactionQueryBuilder = () => {
     const params: Record<string, unknown> = {};
@@ -752,7 +796,6 @@ describe('TransactionAnalysisService', () => {
         mockTransactionRepository.find({
           where: {
             userId: params.userId,
-            pending: false,
             providerDate: {
               startDate: params.startDate,
               endDate: params.endDate,
@@ -820,6 +863,18 @@ describe('TransactionAnalysisService', () => {
         },
       ),
     };
+    mockUserService = {
+      findOne: jest.fn().mockResolvedValue({
+        id: mockUserId,
+        settings: {
+          currency: 'USD',
+          timezone: 'UTC',
+          hideZeroBalanceAccounts: false,
+          theme: 'splice-dark',
+          neutralizationLookaroundDays: 60,
+        },
+      }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -844,6 +899,10 @@ describe('TransactionAnalysisService', () => {
           provide: AnalysisRuleService,
           useValue: mockAnalysisRuleService,
         },
+        {
+          provide: UserService,
+          useValue: mockUserService,
+        },
       ],
     }).compile();
 
@@ -863,23 +922,37 @@ describe('TransactionAnalysisService', () => {
   });
 
   describe('getAnalysis', () => {
-    it('excludes pending transactions from analysis entirely', async () => {
-      mockTransactionRepository.find.mockResolvedValue([]);
+    it('includes pending transactions in analysis', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'pending-purchase',
+          amount: 4200,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-15',
+          pending: true,
+          primary: 'FOOD_AND_DRINK',
+        }),
+      ]);
 
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
         totalInflow: 0,
-        totalOutflow: 0,
+        totalOutflow: 4200,
         inflows: [],
-        outflows: [],
+        outflows: [
+          expect.objectContaining({
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 4200,
+            transactionCount: 1,
+          }),
+        ],
       });
 
       expect(mockTransactionRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             userId: mockUserId,
-            pending: false,
             providerDate: expect.anything(),
           }),
           relations: ['account', 'category'],
@@ -953,7 +1026,7 @@ describe('TransactionAnalysisService', () => {
       expect(may.outflows).toEqual([]);
     });
 
-    it('cancels exact equal and opposite posted transactions in the same currency', async () => {
+    it('cancels exact equal and opposite transactions in the same currency', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'expense',
@@ -967,6 +1040,35 @@ describe('TransactionAnalysisService', () => {
           amount: 243360,
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-28',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 0,
+        inflows: [],
+        outflows: [],
+      });
+    });
+
+    it('neutralizes pending transactions like settled transactions', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'settled-purchase',
+          amount: 5000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-15',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'pending-refund',
+          amount: 5000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-01-16',
+          pending: true,
           primary: 'INCOME',
         }),
       ]);
@@ -1440,7 +1542,6 @@ describe('TransactionAnalysisService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             userId: mockUserId,
-            pending: false,
           }),
           relations: ['account', 'category'],
         }),
@@ -1450,7 +1551,6 @@ describe('TransactionAnalysisService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             userId: mockUserId,
-            pending: false,
           }),
           relations: ['account', 'category'],
         }),
@@ -1485,7 +1585,142 @@ describe('TransactionAnalysisService', () => {
       });
     });
 
-    it('keeps unmatched posted transactions in formerly excluded categories', async () => {
+    it('uses lookaround candidates while reporting only selected-range rows', async () => {
+      const rows = [
+        buildTransaction({
+          id: 'purchase',
+          amount: 5000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-28',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'refund',
+          amount: 5000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-02-03',
+          primary: 'INCOME',
+        }),
+      ];
+      mockActivityDateRangeQuery(mockTransactionRepository, rows);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 0,
+        inflows: [],
+        outflows: [],
+      });
+    });
+
+    it('does not use out-of-range candidates when lookaround is zero', async () => {
+      mockNeutralizationLookaroundDays(mockUserService, 0);
+      const rows = [
+        buildTransaction({
+          id: 'purchase',
+          amount: 5000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-28',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'refund',
+          amount: 5000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-02-03',
+          primary: 'INCOME',
+        }),
+      ];
+      mockActivityDateRangeQuery(mockTransactionRepository, rows);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 5000,
+        inflows: [],
+        outflows: [
+          expect.objectContaining({
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 5000,
+          }),
+        ],
+      });
+    });
+
+    it('does not neutralize an outflow with an earlier inflow', async () => {
+      const rows = [
+        buildTransaction({
+          id: 'refund-first',
+          amount: 5000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2023-12-28',
+          primary: 'INCOME',
+        }),
+        buildTransaction({
+          id: 'purchase-later',
+          amount: 5000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-05',
+          primary: 'FOOD_AND_DRINK',
+        }),
+      ];
+      mockActivityDateRangeQuery(mockTransactionRepository, rows);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 5000,
+        outflows: [
+          expect.objectContaining({
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: 5000,
+          }),
+        ],
+      });
+    });
+
+    it('matches each side once and chooses the closest earlier outflow', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'older-purchase',
+          amount: 5000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-01',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'closer-purchase',
+          amount: 5000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-09',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'refund',
+          amount: 5000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-01-10',
+          primary: 'INCOME',
+        }),
+      ]);
+
+      const result = await service.getCategoryTransactions(
+        '2024-01-01',
+        '2024-01-31',
+        'FOOD_AND_DRINK',
+        'outflow',
+        mockUserId,
+      );
+
+      expect(result.map((transaction) => transaction.id)).toEqual([
+        'older-purchase',
+      ]);
+    });
+
+    it('keeps unmatched transactions in formerly excluded categories', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'unmatched-transfer-in',
@@ -1540,7 +1775,7 @@ describe('TransactionAnalysisService', () => {
       });
     });
 
-    it('still aggregates unmatched posted transactions into their categories', async () => {
+    it('still aggregates unmatched transactions into their categories', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'paycheck',
@@ -1592,7 +1827,7 @@ describe('TransactionAnalysisService', () => {
       });
     });
 
-    it('adds an inflow BALANCE_ADJUSTMENT when no posted transactions exist and snapshots indicate growth', async () => {
+    it('adds an inflow BALANCE_ADJUSTMENT when no transactions exist and snapshots indicate growth', async () => {
       const checking = buildAccount({
         id: 'acct-inflow',
         accountName: 'Checking',
@@ -1661,7 +1896,51 @@ describe('TransactionAnalysisService', () => {
       });
     });
 
-    it('adds an outflow BALANCE_ADJUSTMENT when no posted transactions exist and snapshots indicate decline', async () => {
+    it('keeps balance adjustment account exclusions selected-range only', async () => {
+      const checking = buildAccount({
+        id: 'acct-candidate-only',
+        accountName: 'Checking',
+      });
+      const startSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-candidate-only',
+        snapshotDate: '2024-01-01',
+        amount: 10000,
+      });
+      const endSnapshot = buildBalanceSnapshot({
+        accountId: 'acct-candidate-only',
+        snapshotDate: '2024-01-31',
+        amount: 15000,
+      });
+      const rows = [
+        buildTransaction({
+          id: 'future-candidate',
+          accountId: 'acct-candidate-only',
+          amount: 5000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-02-05',
+          primary: 'INCOME',
+        }),
+      ];
+
+      mockActivityDateRangeQuery(mockTransactionRepository, rows);
+      mockAccountRepository.find.mockResolvedValue([checking]);
+      mockSnapshotRows([startSnapshot, endSnapshot]);
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 5000,
+        balanceAdjustments: [
+          expect.objectContaining({
+            accountId: 'acct-candidate-only',
+            flowDirection: 'inflow',
+            deltaAmount: 5000,
+          }),
+        ],
+      });
+    });
+
+    it('adds an outflow BALANCE_ADJUSTMENT when no transactions exist and snapshots indicate decline', async () => {
       const savings = buildAccount({
         id: 'acct-outflow',
         accountName: 'Savings',
@@ -1730,7 +2009,7 @@ describe('TransactionAnalysisService', () => {
       });
     });
 
-    it('does not create synthetic adjustments for accounts with in-range posted transactions', async () => {
+    it('does not create synthetic adjustments for accounts with in-range transactions', async () => {
       const accountWithPosted = buildAccount({
         id: 'acct-posted-excluded',
         accountName: 'Checking',
@@ -2090,7 +2369,212 @@ describe('TransactionAnalysisService', () => {
     });
   });
 
+  describe('getAnalysisAudit', () => {
+    it('returns in-range exclusion rows and neutralized pairs affecting the selected range', async () => {
+      mockAnalysisRuleService.findActiveForAnalysis.mockResolvedValueOnce([
+        buildAnalysisRule({
+          id: 'exclude-ignore',
+          type: 'exclude',
+          excludeScope: {
+            mode: 'selected',
+            categoryIds: ['cat-IGNORE'],
+            includeUncategorized: false,
+          },
+        }),
+        broadNeutralizationRule,
+      ]);
+      const rows = [
+        buildTransaction({
+          id: 'out-of-range-ignored',
+          amount: 1000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-03',
+          primary: 'IGNORE',
+        }),
+        buildTransaction({
+          id: 'ignored',
+          amount: 1000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-12',
+          primary: 'IGNORE',
+        }),
+        buildTransaction({
+          id: 'outside-outflow',
+          amount: 2500,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-04',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'outside-inflow',
+          amount: 2500,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-01-05',
+          primary: 'INCOME',
+        }),
+        buildTransaction({
+          id: 'purchase',
+          amount: 5000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-15',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'refund',
+          amount: 5000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-02-03',
+          primary: 'INCOME',
+        }),
+      ];
+      mockActivityDateRangeQuery(mockTransactionRepository, rows);
+
+      const result = await service.getAnalysisAudit(
+        '2024-01-10',
+        '2024-01-20',
+        mockUserId,
+      );
+
+      expect(result).toMatchObject({
+        startDate: '2024-01-10',
+        endDate: '2024-01-20',
+        neutralizationLookaroundDays: 60,
+      });
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0]).toMatchObject({
+        id: 'excluded:exclude-ignore:ignored',
+        type: 'excluded',
+        groupKey: 'exclude:exclude-ignore',
+        groupLabel: 'Excluded by "exclude-ignore"',
+        transaction: {
+          id: 'ignored',
+          activityDate: '2024-01-12',
+          accountName: 'Checking',
+          categoryPrimary: 'IGNORE',
+          amount: {
+            amount: 1000,
+            currency: 'USD',
+            sign: 'negative',
+          },
+        },
+      });
+      expect(result.rows[1]).toMatchObject({
+        id: 'neutralized:broad-neutralization:purchase:refund',
+        type: 'neutralized',
+        groupKey: 'neutralize:broad-neutralization',
+        groupLabel: 'Neutralized by "broad-neutralization"',
+        outflow: {
+          id: 'purchase',
+          activityDate: '2024-01-15',
+        },
+        inflow: {
+          id: 'refund',
+          activityDate: '2024-02-03',
+        },
+      });
+    });
+
+    it('keeps excluded candidates out of neutralization', async () => {
+      mockAnalysisRuleService.findActiveForAnalysis.mockResolvedValueOnce([
+        buildAnalysisRule({
+          id: 'exclude-income',
+          type: 'exclude',
+          excludeScope: {
+            mode: 'selected',
+            categoryIds: ['cat-INCOME'],
+            includeUncategorized: false,
+          },
+        }),
+        broadNeutralizationRule,
+      ]);
+      const rows = [
+        buildTransaction({
+          id: 'purchase',
+          amount: 5000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-15',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'excluded-refund',
+          amount: 5000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-01-16',
+          primary: 'INCOME',
+        }),
+      ];
+      mockTransactionRepository.find.mockResolvedValue(rows);
+
+      const result = await service.getAnalysis(
+        '2024-01-01',
+        '2024-01-31',
+        mockUserId,
+      );
+
+      expect(result.totalOutflow).toBe(5000);
+      expect(result.totalInflow).toBe(0);
+    });
+  });
+
   describe('getCategoryTransactions', () => {
+    it('includes pending transactions in category drilldowns', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'pending-purchase',
+          amount: 4200,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-15',
+          pending: true,
+          primary: 'FOOD_AND_DRINK',
+        }),
+      ]);
+
+      const result = await service.getCategoryTransactions(
+        '2024-01-01',
+        '2024-01-31',
+        'FOOD_AND_DRINK',
+        'outflow',
+        mockUserId,
+      );
+
+      expect(result).toMatchObject([
+        {
+          id: 'pending-purchase',
+          pending: true,
+        },
+      ]);
+    });
+
+    it('uses lookaround neutralization before category drilldown filtering', async () => {
+      const rows = [
+        buildTransaction({
+          id: 'purchase',
+          amount: 5000,
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-28',
+          primary: 'FOOD_AND_DRINK',
+        }),
+        buildTransaction({
+          id: 'refund',
+          amount: 5000,
+          sign: MoneySign.POSITIVE,
+          providerDate: '2024-02-03',
+          primary: 'INCOME',
+        }),
+      ];
+      mockActivityDateRangeQuery(mockTransactionRepository, rows);
+
+      const result = await service.getCategoryTransactions(
+        '2024-01-01',
+        '2024-01-31',
+        'FOOD_AND_DRINK',
+        'outflow',
+        mockUserId,
+      );
+
+      expect(result).toEqual([]);
+    });
+
     it('returns only unmatched positive transactions for an inflow category', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({

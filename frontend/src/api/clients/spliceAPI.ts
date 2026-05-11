@@ -54,8 +54,10 @@ import type {
   RefreshTokenDto,
   TokenResponse,
   Transaction,
+  TransactionAnalysisAuditResponse,
   TransactionAnalysisBalanceAdjustmentsResponse,
   TransactionAnalysisControllerGetAnalysisParams,
+  TransactionAnalysisControllerGetAuditParams,
   TransactionAnalysisControllerGetBalanceAdjustmentsParams,
   TransactionAnalysisControllerGetTransactionsParams,
   TransactionAnalysisResponse,
@@ -5704,7 +5706,7 @@ export function useMcpControllerHandleUnsupportedMethod<
 }
 
 /**
- * Get cash flow analysis grouped by category for an activity date range. Pending transactions are excluded. Exact equal-and-opposite posted transactions within the requested range are neutralized before aggregation. Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.
+ * Get cash flow analysis grouped by category for an activity date range. Pending transactions are excluded. Exact equal-and-opposite posted transactions can be neutralized using the user lookaround setting before aggregation. Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.
  */
 export const transactionAnalysisControllerGetAnalysis = (
   params: TransactionAnalysisControllerGetAnalysisParams,
@@ -6047,6 +6049,168 @@ export function useTransactionAnalysisControllerGetTransactions<
 } {
   const queryOptions =
     getTransactionAnalysisControllerGetTransactionsQueryOptions(params, options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Get analysis rule effects for an activity date range. Rows explain in-range exclusions and neutralized pairs where at least one side affects the selected report range.
+ */
+export const transactionAnalysisControllerGetAudit = (
+  params: TransactionAnalysisControllerGetAuditParams,
+  signal?: AbortSignal,
+) => {
+  return axios<TransactionAnalysisAuditResponse>({
+    url: `/transaction-analysis/audit`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getTransactionAnalysisControllerGetAuditQueryKey = (
+  params?: TransactionAnalysisControllerGetAuditParams,
+) => {
+  return [`/transaction-analysis/audit`, ...(params ? [params] : [])] as const
+}
+
+export const getTransactionAnalysisControllerGetAuditQueryOptions = <
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetAuditParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getTransactionAnalysisControllerGetAuditQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>
+  > = ({ signal }) => transactionAnalysisControllerGetAudit(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TransactionAnalysisControllerGetAuditQueryResult = NonNullable<
+  Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>
+>
+export type TransactionAnalysisControllerGetAuditQueryError = void
+
+export function useTransactionAnalysisControllerGetAudit<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetAuditParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+          TError,
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionAnalysisControllerGetAudit<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetAuditParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+          TError,
+          Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useTransactionAnalysisControllerGetAudit<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetAuditParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useTransactionAnalysisControllerGetAudit<
+  TData = Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+  TError = void,
+>(
+  params: TransactionAnalysisControllerGetAuditParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof transactionAnalysisControllerGetAudit>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getTransactionAnalysisControllerGetAuditQueryOptions(
+    params,
+    options,
+  )
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,

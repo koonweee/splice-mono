@@ -12,4 +12,9 @@ export interface UpdateUserSettingsDto {
   timezone?: string
   hideZeroBalanceAccounts?: boolean
   theme?: UpdateUserSettingsDtoTheme
+  /**
+   * @minimum 0
+   * @maximum 180
+   */
+  neutralizationLookaroundDays?: number
 }

@@ -10,6 +10,7 @@ describe('TransactionAnalysisController', () => {
   let service: {
     getAnalysis: jest.Mock;
     getCategoryTransactions: jest.Mock;
+    getAnalysisAudit: jest.Mock;
     getBalanceAdjustments: jest.Mock;
   };
   const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
@@ -18,6 +19,7 @@ describe('TransactionAnalysisController', () => {
     service = {
       getAnalysis: jest.fn(),
       getCategoryTransactions: jest.fn(),
+      getAnalysisAudit: jest.fn(),
       getBalanceAdjustments: jest.fn(),
     };
 
@@ -116,6 +118,44 @@ describe('TransactionAnalysisController', () => {
     );
     expect(service.getAnalysis).not.toHaveBeenCalled();
     expect(service.getCategoryTransactions).not.toHaveBeenCalled();
+  });
+
+  it('rejects startDate after endDate on the audit route', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/transaction-analysis/audit')
+      .query({
+        startDate: '2024-02-01',
+        endDate: '2024-01-31',
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      'startDate must be before or equal to endDate',
+    );
+    expect(service.getAnalysisAudit).not.toHaveBeenCalled();
+  });
+
+  it('delegates a valid audit request to the audit service method', async () => {
+    service.getAnalysisAudit.mockResolvedValue({
+      startDate: '2024-01-01',
+      endDate: '2024-01-31',
+      neutralizationLookaroundDays: 60,
+      rows: [],
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/transaction-analysis/audit')
+      .query({
+        startDate: '2024-01-01',
+        endDate: '2024-01-31',
+      });
+
+    expect(response.status).toBe(200);
+    expect(service.getAnalysisAudit).toHaveBeenCalledWith(
+      '2024-01-01',
+      '2024-01-31',
+      mockUser.userId,
+    );
   });
 
   it('documents categoryPrimary as the BALANCE_ADJUSTMENT literal on the balance adjustment route', async () => {

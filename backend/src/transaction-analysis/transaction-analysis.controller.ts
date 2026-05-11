@@ -7,6 +7,7 @@ import {
 import { ZodApiResponse } from '../common/zod-api-response';
 import {
   TransactionAnalysisQuerySchema,
+  TransactionAnalysisAuditResponseSchema,
   TransactionAnalysisBalanceAdjustmentsQuerySchema,
   TransactionAnalysisBalanceAdjustmentsResponseSchema,
   TransactionAnalysisResponseSchema,
@@ -32,7 +33,7 @@ export class TransactionAnalysisController {
   @ApiOperation({
     description:
       'Get cash flow analysis grouped by category for an activity date range. ' +
-      'Pending transactions are excluded. Exact equal-and-opposite posted transactions within the requested range are neutralized before aggregation. ' +
+      'Pending transactions are included and treated like settled transactions. Exact equal-and-opposite transactions can be neutralized using the user lookaround setting before aggregation. ' +
       'Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.',
   })
   @ApiQuery({
@@ -74,7 +75,7 @@ export class TransactionAnalysisController {
   @Get('transactions')
   @ApiOperation({
     description:
-      'Get unmatched posted transactions for a category drilldown within an activity date range. ' +
+      'Get unmatched transactions for a category drilldown within an activity date range. ' +
       'Transactions are neutralized using the same exact equal-and-opposite matching pipeline as the summary analysis before category and flow filtering. ' +
       'Returned rows include converted amounts using exchange rates anchored to the requested endDate.',
   })
@@ -127,6 +128,48 @@ export class TransactionAnalysisController {
       query.endDate,
       query.categoryPrimary,
       query.flowDirection,
+      user.userId,
+    );
+  }
+
+  @Get('audit')
+  @ApiOperation({
+    description:
+      'Get analysis rule effects for an activity date range. ' +
+      'Rows explain in-range exclusions and neutralized pairs where at least one side affects the selected report range.',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: true,
+    type: String,
+    description: 'Activity start date (YYYY-MM-DD, inclusive)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: true,
+    type: String,
+    description: 'Activity end date (YYYY-MM-DD, inclusive)',
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Returns analysis rule audit rows for the requested range',
+    schema: TransactionAnalysisAuditResponseSchema,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid request parameters' })
+  async getAudit(
+    @CurrentUser() user: JwtUser,
+    @Query(new ZodValidationPipe(TransactionAnalysisQuerySchema))
+    query: TransactionAnalysisQuery,
+  ): Promise<unknown> {
+    if (query.startDate > query.endDate) {
+      throw new BadRequestException(
+        'startDate must be before or equal to endDate',
+      );
+    }
+
+    return this.transactionAnalysisService.getAnalysisAudit(
+      query.startDate,
+      query.endDate,
       user.userId,
     );
   }

@@ -11,6 +11,7 @@ describe('UserSettings types', () => {
       timezone: 'UTC',
       hideZeroBalanceAccounts: false,
       theme: 'splice-dark',
+      neutralizationLookaroundDays: 60,
     });
   });
 
@@ -23,6 +24,30 @@ describe('UserSettings types', () => {
   it('rejects removed theme presets for settings updates', () => {
     expect(() =>
       UpdateUserSettingsDtoSchema.parse({ theme: 'nord' }),
+    ).toThrow();
+  });
+
+  it('accepts neutralization lookaround bounds for settings updates', () => {
+    expect(
+      UpdateUserSettingsDtoSchema.parse({ neutralizationLookaroundDays: 0 }),
+    ).toEqual({ neutralizationLookaroundDays: 0 });
+    expect(
+      UpdateUserSettingsDtoSchema.parse({ neutralizationLookaroundDays: 60 }),
+    ).toEqual({ neutralizationLookaroundDays: 60 });
+    expect(
+      UpdateUserSettingsDtoSchema.parse({ neutralizationLookaroundDays: 180 }),
+    ).toEqual({ neutralizationLookaroundDays: 180 });
+  });
+
+  it('rejects invalid neutralization lookaround values', () => {
+    expect(() =>
+      UpdateUserSettingsDtoSchema.parse({ neutralizationLookaroundDays: -1 }),
+    ).toThrow();
+    expect(() =>
+      UpdateUserSettingsDtoSchema.parse({ neutralizationLookaroundDays: 181 }),
+    ).toThrow();
+    expect(() =>
+      UpdateUserSettingsDtoSchema.parse({ neutralizationLookaroundDays: 1.5 }),
     ).toThrow();
   });
 
@@ -39,6 +64,24 @@ describe('UserSettings types', () => {
       timezone: 'UTC',
       hideZeroBalanceAccounts: false,
       theme: 'splice-dark',
+      neutralizationLookaroundDays: 60,
+    });
+  });
+
+  it('normalizes missing neutralizationLookaroundDays to the default', () => {
+    expect(
+      normalizeUserSettings({
+        currency: 'USD',
+        timezone: 'UTC',
+        hideZeroBalanceAccounts: false,
+        theme: 'splice-dark',
+      }),
+    ).toEqual({
+      currency: 'USD',
+      timezone: 'UTC',
+      hideZeroBalanceAccounts: false,
+      theme: 'splice-dark',
+      neutralizationLookaroundDays: 60,
     });
   });
 });

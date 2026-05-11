@@ -5,6 +5,7 @@ import { AnalysisRuleModule } from '../analysis-rule/analysis-rule.module';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { CurrencyExchangeModule } from '../currency-exchange/currency-exchange.module';
 import { TransactionEntity } from '../transaction/transaction.entity';
+import { UserModule } from '../user/user.module';
 import { TransactionAnalysisController } from './transaction-analysis.controller';
 import { TransactionAnalysisService } from './transaction-analysis.service';
 
@@ -17,6 +18,7 @@ import { TransactionAnalysisService } from './transaction-analysis.service';
     ]),
     AnalysisRuleModule,
     CurrencyExchangeModule,
+    UserModule,
   ],
   controllers: [TransactionAnalysisController],
   providers: [TransactionAnalysisService],

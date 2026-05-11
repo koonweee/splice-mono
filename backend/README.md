@@ -137,9 +137,15 @@ not exposed through MCP.
 
 Analysis rules are persisted per user and are applied inside the backend
 transaction-analysis service before summary aggregation or real-transaction
-drilldowns are returned. Future callers of those HTTP analysis endpoints inherit
-the same rule behavior automatically; MCP does not expose cash-flow analysis in
-the current surface.
+drilldowns are returned. Pending transactions are treated the same as settled
+transactions in these analysis flows. Neutralization uses the user's
+`neutralizationLookaroundDays` setting to find candidate matches around the
+selected range, while summaries, drilldowns, and balance adjustments still
+report only selected-range rows. The HTTP `GET /transaction-analysis/audit`
+endpoint returns compact rows explaining in-range exclusions and neutralized
+pairs that affect the selected report. Future callers of those HTTP analysis
+endpoints inherit the same rule behavior automatically; MCP does not expose
+cash-flow analysis in the current surface.
 
 Compatible clients can read `splice://mcp-guide` for tool-use guidance. In
 short: call `get_user_context` first, page through `list_transactions` until

@@ -10,6 +10,11 @@ export const USER_THEME_VALUES = [
 
 export const UserThemePreferenceSchema = z.enum(USER_THEME_VALUES);
 export const UserThemeSchema = UserThemePreferenceSchema.default('splice-dark');
+export const NeutralizationLookaroundDaysSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(180);
 
 /**
  * User settings schema - stored as JSONB in the database
@@ -26,6 +31,9 @@ export const UserSettingsSchema = registerSchema(
     hideZeroBalanceAccounts: z.boolean().default(false),
     /** User's preferred design theme preset */
     theme: UserThemeSchema,
+    /** Days before/after the selected analysis range to consider for neutralization candidates */
+    neutralizationLookaroundDays:
+      NeutralizationLookaroundDaysSchema.default(60),
     // Future settings can be added here:
     // locale: z.string().default('en-US'),
     // notifications: z.object({...}).optional(),
@@ -44,6 +52,7 @@ export const UpdateUserSettingsDtoSchema = registerSchema(
     timezone: z.string().optional(),
     hideZeroBalanceAccounts: z.boolean().optional(),
     theme: UserThemePreferenceSchema.optional(),
+    neutralizationLookaroundDays: NeutralizationLookaroundDaysSchema.optional(),
   }),
 );
 
@@ -57,16 +66,24 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   timezone: 'UTC',
   hideZeroBalanceAccounts: false,
   theme: 'splice-dark',
+  neutralizationLookaroundDays: 60,
 };
 
 export function normalizeUserSettings(
   settings?: Partial<UserSettings> | null,
 ): UserSettings {
   const theme = UserThemePreferenceSchema.safeParse(settings?.theme);
+  const neutralizationLookaroundDays =
+    NeutralizationLookaroundDaysSchema.safeParse(
+      settings?.neutralizationLookaroundDays,
+    );
 
   return {
     ...DEFAULT_USER_SETTINGS,
     ...settings,
     theme: theme.success ? theme.data : DEFAULT_USER_SETTINGS.theme,
+    neutralizationLookaroundDays: neutralizationLookaroundDays.success
+      ? neutralizationLookaroundDays.data
+      : DEFAULT_USER_SETTINGS.neutralizationLookaroundDays,
   };
 }

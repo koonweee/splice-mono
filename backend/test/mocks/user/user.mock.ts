@@ -17,6 +17,7 @@ export const mockUser: User = {
     timezone: 'UTC',
     hideZeroBalanceAccounts: false,
     theme: 'splice-dark',
+    neutralizationLookaroundDays: 60,
   },
   ...mockTimestamps,
 };
@@ -32,6 +33,7 @@ export const mockUser2: User = {
     timezone: 'UTC',
     hideZeroBalanceAccounts: false,
     theme: 'splice-dark',
+    neutralizationLookaroundDays: 60,
   },
   ...mockTimestamps,
 };

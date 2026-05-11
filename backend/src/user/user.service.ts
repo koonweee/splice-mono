@@ -165,6 +165,9 @@ export class UserService {
         settingsUpdate.hideZeroBalanceAccounts ??
         oldSettings.hideZeroBalanceAccounts,
       theme: settingsUpdate.theme ?? oldSettings.theme,
+      neutralizationLookaroundDays:
+        settingsUpdate.neutralizationLookaroundDays ??
+        oldSettings.neutralizationLookaroundDays,
     };
     entity.settings = newSettings;
 

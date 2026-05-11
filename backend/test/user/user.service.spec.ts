@@ -12,6 +12,7 @@ const defaultSettings: UserSettings = {
   timezone: 'UTC',
   hideZeroBalanceAccounts: false,
   theme: 'splice-dark',
+  neutralizationLookaroundDays: 60,
 };
 
 describe('UserService', () => {
@@ -566,6 +567,41 @@ describe('UserService', () => {
       expect(result).toEqual({
         ...defaultSettings,
         theme: 'dracula',
+      });
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should update neutralizationLookaroundDays without dropping existing settings', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = {
+        ...defaultSettings,
+        currency: 'EUR',
+        timezone: 'America/New_York',
+        hideZeroBalanceAccounts: true,
+        theme: 'dracula',
+      };
+      mockEntity.providerDetails = null;
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
+
+      const result = await service.updateSettings('user-uuid-123', {
+        neutralizationLookaroundDays: 120,
+      });
+
+      expect(result).toEqual({
+        currency: 'EUR',
+        timezone: 'America/New_York',
+        hideZeroBalanceAccounts: true,
+        theme: 'dracula',
+        neutralizationLookaroundDays: 120,
       });
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
