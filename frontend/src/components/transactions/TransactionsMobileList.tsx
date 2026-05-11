@@ -376,7 +376,7 @@ export function TransactionsMobileList({
           setActiveTransactionId(null)
         }}
         position="bottom"
-        size="auto"
+        size="85dvh"
         title={activeMerchant?.primary ?? 'Transaction'}
       >
         {activeTransaction && activeDetails && (
@@ -475,8 +475,19 @@ export function TransactionsMobileList({
                 <Stack gap={6}>
                   <CategorySelect
                     aria-label="Category"
+                    comboboxProps={{
+                      middlewares: {
+                        flip: true,
+                        inline: false,
+                        shift: { padding: 8 },
+                      },
+                      position: 'top-start',
+                      withinPortal: true,
+                      zIndex: 1100,
+                    }}
                     data={categoryOptions}
                     label="Category"
+                    maxDropdownHeight="min(260px, 45dvh)"
                     onChange={(value) =>
                       updateCategory.mutate({
                         id: activeTransaction.id,
