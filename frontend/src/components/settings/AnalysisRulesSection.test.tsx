@@ -1,7 +1,15 @@
 import { MantineProvider } from '@mantine/core'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AnalysisRulesSection } from './AnalysisRulesSection'
+import type { ComponentProps } from 'react'
 import type * as ReactQuery from '@tanstack/react-query'
 import type * as SpliceAPI from '../../api/clients/spliceAPI'
 import type { CategoryManagementItem } from '../../api/models'
@@ -14,6 +22,7 @@ const mockFns = vi.hoisted(() => ({
   useCategoryControllerFindManagementMock: vi.fn(),
   createMutateMock: vi.fn(),
   updateMutateMock: vi.fn(),
+  invalidateQueriesMock: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-query', async () => {
@@ -92,7 +101,7 @@ const archivedRule = {
 
 beforeEach(() => {
   mockFns.useQueryClientMock.mockReturnValue({
-    invalidateQueries: vi.fn(),
+    invalidateQueries: mockFns.invalidateQueriesMock,
   })
   mockFns.useAnalysisRuleControllerFindAllMock.mockImplementation(
     (params?: { archived?: boolean }) => ({
@@ -147,6 +156,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  document.body.innerHTML = ''
   vi.clearAllMocks()
 })
 
@@ -154,6 +164,10 @@ describe('AnalysisRulesSection', () => {
   it('renders rules and archives active rules', () => {
     renderSection()
 
+    expect(screen.getByText('Neutralization lookaround')).toBeTruthy()
+    expect(
+      screen.getAllByText('60 days before/after selected range'),
+    ).not.toHaveLength(0)
     expect(screen.getByText('Cancel reimbursements')).toBeTruthy()
     expect(
       screen.getAllByText(/Hardware \(Home Projects\) -> All categories/),
@@ -184,7 +198,7 @@ describe('AnalysisRulesSection', () => {
 
     renderSection()
 
-    expect(screen.getByLabelText('Analysis rules list, 1 total')).toBeTruthy()
+    expect(screen.getByLabelText('Analysis rules list, 2 total')).toBeTruthy()
     expect(screen.queryByText('Actions')).toBeNull()
 
     fireEvent.click(screen.getByLabelText('Archive rule'))
@@ -212,6 +226,52 @@ describe('AnalysisRulesSection', () => {
         excludeScope: { mode: 'all' },
       },
     })
+  })
+
+  it('hides the lookaround setting in archived mode', () => {
+    renderSection()
+
+    fireEvent.click(screen.getByRole('button', { name: /archived/i }))
+
+    expect(screen.queryByText('Neutralization lookaround')).toBeNull()
+    expect(screen.getByText('Ignore pets')).toBeTruthy()
+  })
+
+  it('saves lookaround days through the connector seam', async () => {
+    const onSave = vi.fn()
+
+    renderSection({ lookaroundSetting: { value: 45, onSave } })
+
+    fireEvent.click(screen.getByLabelText('Edit neutralization lookaround'))
+    const dialog = await screen.findByRole('dialog', {
+      name: /edit neutralization lookaround/i,
+    })
+    fireEvent.change(
+      within(dialog).getByRole('textbox', { name: /lookaround days/i }),
+      {
+        target: { value: '30' },
+      },
+    )
+    fireEvent.click(within(dialog).getByRole('button', { name: /^save$/i }))
+
+    expect(onSave).toHaveBeenCalledWith(30)
+    await waitFor(() => {
+      expect(mockFns.invalidateQueriesMock).toHaveBeenCalled()
+    })
+  })
+
+  it('shows the post-orval integration seam when lookaround is not connected', async () => {
+    renderSection()
+
+    fireEvent.click(screen.getByLabelText('Edit neutralization lookaround'))
+    const dialog = await screen.findByRole('dialog', {
+      name: /edit neutralization lookaround/i,
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: /^save$/i }))
+
+    expect(
+      await screen.findByText(/generated API client exposes/i),
+    ).toBeTruthy()
   })
 
   it('restores archived duplicate conflicts from the drawer', async () => {
@@ -249,10 +309,12 @@ describe('AnalysisRulesSection', () => {
   })
 })
 
-function renderSection() {
+function renderSection(
+  props: Partial<ComponentProps<typeof AnalysisRulesSection>> = {},
+) {
   return render(
     <MantineProvider>
-      <AnalysisRulesSection />
+      <AnalysisRulesSection {...props} />
     </MantineProvider>,
   )
 }

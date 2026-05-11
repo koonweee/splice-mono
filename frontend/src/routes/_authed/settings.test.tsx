@@ -60,8 +60,8 @@ vi.mock('../../components/settings/CustomCategoriesSection', () => ({
 }))
 
 vi.mock('../../components/settings/AnalysisRulesSection', () => ({
-  AnalysisRulesSection: () => {
-    mockFns.analysisRulesSectionMock()
+  AnalysisRulesSection: (props: unknown) => {
+    mockFns.analysisRulesSectionMock(props)
 
     return <div data-testid="analysis-rules-section">Analysis rules</div>
   },
@@ -90,6 +90,7 @@ let meState: {
       currency: string | null
       timezone: string | null
       hideZeroBalanceAccounts?: boolean | null
+      neutralizationLookaroundDays?: number | null
     }
   } | null
   isLoading: boolean
@@ -98,6 +99,7 @@ let meState: {
 
 let updateSettingsState: {
   mutate: ReturnType<typeof vi.fn>
+  mutateAsync: ReturnType<typeof vi.fn>
   isPending: boolean
   isError: boolean
   isSuccess: boolean
@@ -154,6 +156,7 @@ beforeEach(() => {
         currency: 'USD',
         timezone: 'UTC',
         hideZeroBalanceAccounts: false,
+        neutralizationLookaroundDays: 60,
       },
     },
     isLoading: false,
@@ -162,6 +165,7 @@ beforeEach(() => {
 
   updateSettingsState = {
     mutate: vi.fn(),
+    mutateAsync: vi.fn().mockResolvedValue({}),
     isPending: false,
     isError: false,
     isSuccess: false,
@@ -246,6 +250,14 @@ describe('SettingsPage', () => {
         .getAttribute('aria-selected'),
     ).toBe('true')
     expect(screen.getByTestId('analysis-rules-section')).toBeTruthy()
+    expect(mockFns.analysisRulesSectionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lookaroundSetting: expect.objectContaining({
+          value: 60,
+          onSave: expect.any(Function),
+        }),
+      }),
+    )
     expect(window.location.search).toBe('?tab=analysis')
 
     fireEvent.click(screen.getByRole('tab', { name: /mcp/i }))

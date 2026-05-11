@@ -19,11 +19,15 @@ import { TransactionEntity } from '../transaction/transaction.entity';
 import { MoneySign } from '../types/MoneyWithSign';
 import type { Transaction } from '../types/Transaction';
 import type {
+  AnalysisAuditRow,
+  AnalysisAuditTransaction,
   BalanceAdjustment,
   CategoryAggregate,
+  TransactionAnalysisAuditResponse,
   TransactionAnalysisResponse,
 } from '../types/TransactionAnalysis';
 import { AnalysisRuleEntity } from '../analysis-rule/analysis-rule.entity';
+import { UserService } from '../user/user.service';
 
 interface CategoryCurrencyAggregate {
   amount: number;
@@ -40,6 +44,16 @@ interface NeutralizationBucket {
   absoluteAmount: number;
   positives: TransactionEntity[];
   negatives: TransactionEntity[];
+}
+
+interface NeutralizedPair {
+  outflow: TransactionEntity;
+  inflow: TransactionEntity;
+}
+
+interface AnalysisRuleApplicationResult {
+  remainingReportTransactions: TransactionEntity[];
+  auditRows: AnalysisAuditRow[];
 }
 
 interface SignedBalanceAmount {
@@ -72,10 +86,11 @@ export class TransactionAnalysisService {
     private balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
     private currencyConversionService: CurrencyConversionService,
     private analysisRuleService: AnalysisRuleService,
+    private userService: UserService,
   ) {}
 
   /**
-   * Aggregate unmatched posted transactions by primary category and sign over
+   * Aggregate unmatched transactions by primary category and sign over
    * a date range, converting totals into the user's preferred currency.
    */
   async getAnalysis(
@@ -92,16 +107,29 @@ export class TransactionAnalysisService {
     const preferredCurrency =
       await this.currencyConversionService.getPreferredCurrency(userId);
 
-    // 2. Load posted transactions in the requested window and neutralize exact
-    // equal-opposite pairs before any category aggregation.
-    const postedTransactions = await this.getPostedTransactionsInRange(
+    // 2. Load candidate transactions in the user lookaround window.
+    // Out-of-range candidates can neutralize in-range rows, but never report
+    // directly or affect balance adjustment inputs.
+    const neutralizationLookaroundDays =
+      await this.getNeutralizationLookaroundDays(userId);
+    const { candidateStartDate, candidateEndDate } = this.getCandidateDateRange(
       startDate,
       endDate,
+      neutralizationLookaroundDays,
+    );
+    const candidateTransactions = await this.getAnalysisTransactionsInRange(
+      candidateStartDate,
+      candidateEndDate,
       userId,
     );
-    const unmatchedTransactions = await this.applyAnalysisRules(
-      postedTransactions,
+    const reportTransactions = candidateTransactions.filter((transaction) =>
+      this.isTransactionInDateRange(transaction, startDate, endDate),
+    );
+    const { remainingReportTransactions } = await this.applyAnalysisRules(
+      candidateTransactions,
       userId,
+      startDate,
+      endDate,
     );
     const { balanceAdjustmentRows, balanceAdjustments } =
       await this.getBalanceAdjustmentData(
@@ -109,24 +137,26 @@ export class TransactionAnalysisService {
         endDate,
         userId,
         preferredCurrency,
-        new Set(postedTransactions.map((transaction) => transaction.accountId)),
+        new Set(reportTransactions.map((transaction) => transaction.accountId)),
       );
 
     this.logger.log(
       {
-        postedTransactionCount: postedTransactions.length,
-        unmatchedTransactionCount: unmatchedTransactions.length,
+        candidateTransactionCount: candidateTransactions.length,
+        reportTransactionCount: reportTransactions.length,
+        unmatchedTransactionCount: remainingReportTransactions.length,
         rawBalanceAdjustmentCount: balanceAdjustmentRows.length,
         balanceAdjustmentCount: balanceAdjustments.length,
         preferredCurrency,
+        neutralizationLookaroundDays,
       },
-      'Posted transaction analysis rows loaded',
+      'Transaction analysis rows loaded',
     );
 
     // 3. Identify currencies that need conversion and fetch rates
     const foreignCurrencies = [
       ...new Set(
-        unmatchedTransactions
+        remainingReportTransactions
           .map((transaction) => transaction.amount.currency)
           .filter((c) => c !== preferredCurrency),
       ),
@@ -154,7 +184,7 @@ export class TransactionAnalysisService {
       outflow: new Map(),
     };
 
-    unmatchedTransactions.forEach((transaction) => {
+    remainingReportTransactions.forEach((transaction) => {
       const category = this.getEffectiveCategoryPrimary(transaction);
       const currency = transaction.amount.currency;
       const amount = this.getAmountInSmallestUnit(transaction);
@@ -270,27 +300,39 @@ export class TransactionAnalysisService {
     flowDirection: 'inflow' | 'outflow',
     userId: string,
   ): Promise<Transaction[]> {
-    const postedTransactions = await this.getPostedTransactionsInRange(
+    const neutralizationLookaroundDays =
+      await this.getNeutralizationLookaroundDays(userId);
+    const { candidateStartDate, candidateEndDate } = this.getCandidateDateRange(
       startDate,
       endDate,
+      neutralizationLookaroundDays,
+    );
+    const candidateTransactions = await this.getAnalysisTransactionsInRange(
+      candidateStartDate,
+      candidateEndDate,
       userId,
     );
-    const unmatchedTransactions = await this.applyAnalysisRules(
-      postedTransactions,
+    const { remainingReportTransactions } = await this.applyAnalysisRules(
+      candidateTransactions,
       userId,
+      startDate,
+      endDate,
     );
     const preferredCurrency =
       await this.currencyConversionService.getPreferredCurrency(userId);
 
-    const filteredTransactions = unmatchedTransactions.filter((transaction) => {
-      const transactionCategory = this.getEffectiveCategoryPrimary(transaction);
-      const matchesDirection =
-        flowDirection === 'inflow'
-          ? transaction.amount.sign === MoneySign.POSITIVE
-          : transaction.amount.sign === MoneySign.NEGATIVE;
+    const filteredTransactions = remainingReportTransactions.filter(
+      (transaction) => {
+        const transactionCategory =
+          this.getEffectiveCategoryPrimary(transaction);
+        const matchesDirection =
+          flowDirection === 'inflow'
+            ? transaction.amount.sign === MoneySign.POSITIVE
+            : transaction.amount.sign === MoneySign.NEGATIVE;
 
-      return matchesDirection && transactionCategory === categoryPrimary;
-    });
+        return matchesDirection && transactionCategory === categoryPrimary;
+      },
+    );
     filteredTransactions.sort((left, right) => {
       const dateComparison = this.getActivityDate(right).localeCompare(
         this.getActivityDate(left),
@@ -324,6 +366,38 @@ export class TransactionAnalysisService {
     );
   }
 
+  async getAnalysisAudit(
+    startDate: string,
+    endDate: string,
+    userId: string,
+  ): Promise<TransactionAnalysisAuditResponse> {
+    const neutralizationLookaroundDays =
+      await this.getNeutralizationLookaroundDays(userId);
+    const { candidateStartDate, candidateEndDate } = this.getCandidateDateRange(
+      startDate,
+      endDate,
+      neutralizationLookaroundDays,
+    );
+    const candidateTransactions = await this.getAnalysisTransactionsInRange(
+      candidateStartDate,
+      candidateEndDate,
+      userId,
+    );
+    const { auditRows } = await this.applyAnalysisRules(
+      candidateTransactions,
+      userId,
+      startDate,
+      endDate,
+    );
+
+    return {
+      startDate,
+      endDate,
+      neutralizationLookaroundDays,
+      rows: auditRows,
+    };
+  }
+
   async getBalanceAdjustments(
     startDate: string,
     endDate: string,
@@ -339,7 +413,7 @@ export class TransactionAnalysisService {
 
     const preferredCurrency =
       await this.currencyConversionService.getPreferredCurrency(userId);
-    const postedTransactions = await this.getPostedTransactionsInRange(
+    const reportTransactions = await this.getAnalysisTransactionsInRange(
       startDate,
       endDate,
       userId,
@@ -349,7 +423,7 @@ export class TransactionAnalysisService {
       endDate,
       userId,
       preferredCurrency,
-      new Set(postedTransactions.map((transaction) => transaction.accountId)),
+      new Set(reportTransactions.map((transaction) => transaction.accountId)),
     );
 
     return balanceAdjustments.filter(
@@ -385,7 +459,7 @@ export class TransactionAnalysisService {
     };
   }
 
-  private async getPostedTransactionsInRange(
+  private async getAnalysisTransactionsInRange(
     startDate: string,
     endDate: string,
     userId: string,
@@ -395,7 +469,6 @@ export class TransactionAnalysisService {
       .leftJoinAndSelect('transaction.account', 'account')
       .leftJoinAndSelect('transaction.category', 'category')
       .where('transaction.userId = :userId', { userId })
-      .andWhere('transaction.pending = false')
       .andWhere(
         `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
         {
@@ -604,9 +677,10 @@ export class TransactionAnalysisService {
     });
   }
 
-  private neutralizeTransactions(
-    transactions: TransactionEntity[],
-  ): TransactionEntity[] {
+  private neutralizeTransactions(transactions: TransactionEntity[]): {
+    unmatchedTransactions: TransactionEntity[];
+    pairs: NeutralizedPair[];
+  } {
     const buckets = new Map<string, NeutralizationBucket>();
 
     transactions.forEach((transaction) => {
@@ -628,30 +702,44 @@ export class TransactionAnalysisService {
     });
 
     const unmatchedTransactions: TransactionEntity[] = [];
+    const pairs: NeutralizedPair[] = [];
 
     Array.from(buckets.values())
       .sort((left, right) => this.compareBuckets(left, right))
       .forEach((bucket) => {
-        const positives = bucket.positives;
+        const positives = [...bucket.positives].sort((left, right) =>
+          this.compareTransactions(left, right),
+        );
         const negatives = [...bucket.negatives].sort((left, right) =>
           this.compareTransactions(left, right),
         );
         const matchedPositiveIds = new Set<string>();
         const matchedNegativeIds = new Set<string>();
 
-        negatives.forEach((negative) => {
-          const match = positives
-            .filter((positive) => !matchedPositiveIds.has(positive.id))
+        // Neutralization requires same currency and absolute amount by bucket,
+        // then each inflow takes the closest earlier unmatched outflow.
+        positives.forEach((positive) => {
+          const match = negatives
+            .filter(
+              (negative) =>
+                !matchedNegativeIds.has(negative.id) &&
+                this.getActivityDate(negative) <=
+                  this.getActivityDate(positive),
+            )
             .sort((left, right) =>
-              this.comparePositiveMatchCandidates(negative, left, right),
+              this.compareOutflowMatchCandidates(positive, left, right),
             )[0];
 
           if (!match) {
             return;
           }
 
-          matchedPositiveIds.add(match.id);
-          matchedNegativeIds.add(negative.id);
+          matchedPositiveIds.add(positive.id);
+          matchedNegativeIds.add(match.id);
+          pairs.push({
+            outflow: match,
+            inflow: positive,
+          });
         });
 
         positives.forEach((positive) => {
@@ -666,16 +754,30 @@ export class TransactionAnalysisService {
         });
       });
 
-    return unmatchedTransactions;
+    return {
+      unmatchedTransactions,
+      pairs,
+    };
   }
 
   private async applyAnalysisRules(
     transactions: TransactionEntity[],
     userId: string,
-  ): Promise<TransactionEntity[]> {
+    reportStartDate: string,
+    reportEndDate: string,
+  ): Promise<AnalysisRuleApplicationResult> {
     const rules = await this.analysisRuleService.findActiveForAnalysis(userId);
     if (rules.length === 0) {
-      return transactions;
+      return {
+        remainingReportTransactions: transactions.filter((transaction) =>
+          this.isTransactionInDateRange(
+            transaction,
+            reportStartDate,
+            reportEndDate,
+          ),
+        ),
+        auditRows: [],
+      };
     }
 
     const exclusionRules = rules.filter((rule) => rule.type === 'exclude');
@@ -686,16 +788,47 @@ export class TransactionAnalysisService {
       .sort((left, right) =>
         this.analysisRuleService.compareNeutralizationRules(left, right),
       );
-    let availableTransactions = transactions.filter(
-      (transaction) => !this.isExcludedByRules(transaction, exclusionRules),
-    );
+    const excludedTransactionsByRule = new Map<string, TransactionEntity[]>();
+    let availableTransactions = transactions.filter((transaction) => {
+      const rule = this.findExclusionRule(transaction, exclusionRules);
+      if (!rule) {
+        return true;
+      }
+
+      if (
+        this.isTransactionInDateRange(
+          transaction,
+          reportStartDate,
+          reportEndDate,
+        )
+      ) {
+        const rows = excludedTransactionsByRule.get(rule.id) ?? [];
+        rows.push(transaction);
+        excludedTransactionsByRule.set(rule.id, rows);
+      }
+
+      return false;
+    });
+    const auditRows: AnalysisAuditRow[] = [];
+
+    exclusionRules.forEach((rule) => {
+      const excludedTransactions =
+        excludedTransactionsByRule.get(rule.id) ?? [];
+      excludedTransactions
+        .sort((left, right) => this.compareTransactions(left, right))
+        .forEach((transaction) => {
+          auditRows.push(this.toExclusionAuditRow(rule, transaction));
+        });
+    });
 
     neutralizationRules.forEach((rule) => {
       const pool = availableTransactions.filter((transaction) =>
         this.isEligibleForNeutralizationRule(transaction, rule),
       );
+      const { unmatchedTransactions, pairs } =
+        this.neutralizeTransactions(pool);
       const unmatchedPoolIds = new Set(
-        this.neutralizeTransactions(pool).map((transaction) => transaction.id),
+        unmatchedTransactions.map((transaction) => transaction.id),
       );
       const matchedPoolIds = new Set(
         pool
@@ -710,16 +843,42 @@ export class TransactionAnalysisService {
       availableTransactions = availableTransactions.filter(
         (transaction) => !matchedPoolIds.has(transaction.id),
       );
+      pairs
+        .filter(
+          (pair) =>
+            this.isTransactionInDateRange(
+              pair.outflow,
+              reportStartDate,
+              reportEndDate,
+            ) ||
+            this.isTransactionInDateRange(
+              pair.inflow,
+              reportStartDate,
+              reportEndDate,
+            ),
+        )
+        .forEach((pair) => {
+          auditRows.push(this.toNeutralizationAuditRow(rule, pair));
+        });
     });
 
-    return availableTransactions;
+    return {
+      remainingReportTransactions: availableTransactions.filter((transaction) =>
+        this.isTransactionInDateRange(
+          transaction,
+          reportStartDate,
+          reportEndDate,
+        ),
+      ),
+      auditRows,
+    };
   }
 
-  private isExcludedByRules(
+  private findExclusionRule(
     transaction: TransactionEntity,
     rules: AnalysisRuleEntity[],
-  ): boolean {
-    return rules.some(
+  ): AnalysisRuleEntity | undefined {
+    return rules.find(
       (rule) =>
         rule.excludeScope &&
         this.analysisRuleService.scopeMatchesTransactionCategory(
@@ -923,6 +1082,89 @@ export class TransactionAnalysisService {
     );
   }
 
+  private async getNeutralizationLookaroundDays(
+    userId: string,
+  ): Promise<number> {
+    const user = await this.userService.findOne(userId);
+    return user?.settings.neutralizationLookaroundDays ?? 60;
+  }
+
+  private getCandidateDateRange(
+    startDate: string,
+    endDate: string,
+    lookaroundDays: number,
+  ): { candidateStartDate: string; candidateEndDate: string } {
+    return {
+      candidateStartDate: this.shiftDateByDays(startDate, -lookaroundDays),
+      candidateEndDate: this.shiftDateByDays(endDate, lookaroundDays),
+    };
+  }
+
+  private shiftDateByDays(date: string, days: number): string {
+    const shiftedDate = new Date(`${date}T00:00:00Z`);
+    shiftedDate.setUTCDate(shiftedDate.getUTCDate() + days);
+    return shiftedDate.toISOString().slice(0, 10);
+  }
+
+  private isTransactionInDateRange(
+    transaction: TransactionEntity,
+    startDate: string,
+    endDate: string,
+  ): boolean {
+    const activityDate = this.getActivityDate(transaction);
+    return activityDate >= startDate && activityDate <= endDate;
+  }
+
+  private toExclusionAuditRow(
+    rule: AnalysisRuleEntity,
+    transaction: TransactionEntity,
+  ): AnalysisAuditRow {
+    return {
+      id: `excluded:${rule.id}:${transaction.id}`,
+      type: 'excluded',
+      groupKey: `exclude:${rule.id}`,
+      groupLabel: `Excluded by "${rule.name}"`,
+      ruleId: rule.id,
+      ruleName: rule.name,
+      transaction: this.toAuditTransaction(transaction),
+    };
+  }
+
+  private toNeutralizationAuditRow(
+    rule: AnalysisRuleEntity,
+    pair: NeutralizedPair,
+  ): AnalysisAuditRow {
+    return {
+      id: `neutralized:${rule.id}:${pair.outflow.id}:${pair.inflow.id}`,
+      type: 'neutralized',
+      groupKey: `neutralize:${rule.id}`,
+      groupLabel: `Neutralized by "${rule.name}"`,
+      ruleId: rule.id,
+      ruleName: rule.name,
+      outflow: this.toAuditTransaction(pair.outflow),
+      inflow: this.toAuditTransaction(pair.inflow),
+    };
+  }
+
+  private toAuditTransaction(
+    transaction: TransactionEntity,
+  ): AnalysisAuditTransaction {
+    return {
+      id: transaction.id,
+      activityDate: this.getActivityDate(transaction),
+      merchantName: transaction.merchantName,
+      originalDescription: transaction.originalDescription,
+      accountName: this.getAccountName(transaction.account),
+      categoryPrimary: this.getEffectiveCategoryPrimary(transaction),
+      categoryDetailed: transaction.category?.detailed ?? null,
+      amount: {
+        amount: this.getAmountInSmallestUnit(transaction),
+        currency: transaction.amount.currency,
+        sign: transaction.amount.sign,
+      },
+    };
+  }
+
   private compareBalanceAdjustmentRows(
     left: BalanceAdjustmentRow,
     right: BalanceAdjustmentRow,
@@ -993,18 +1235,18 @@ export class TransactionAnalysisService {
     return left.id.localeCompare(right.id);
   }
 
-  private comparePositiveMatchCandidates(
-    negative: TransactionEntity,
+  private compareOutflowMatchCandidates(
+    positive: TransactionEntity,
     left: TransactionEntity,
     right: TransactionEntity,
   ): number {
     const differenceComparison =
-      this.getAbsoluteDateDifferenceInDays(
-        this.getActivityDate(negative),
+      this.getDateDifferenceInDays(
+        this.getActivityDate(positive),
         this.getActivityDate(left),
       ) -
-      this.getAbsoluteDateDifferenceInDays(
-        this.getActivityDate(negative),
+      this.getDateDifferenceInDays(
+        this.getActivityDate(positive),
         this.getActivityDate(right),
       );
     if (differenceComparison !== 0) {
@@ -1014,12 +1256,9 @@ export class TransactionAnalysisService {
     return this.compareTransactions(left, right);
   }
 
-  private getAbsoluteDateDifferenceInDays(
-    leftDate: string,
-    rightDate: string,
-  ): number {
+  private getDateDifferenceInDays(leftDate: string, rightDate: string): number {
     const leftTimestamp = Date.parse(`${leftDate}T00:00:00Z`);
     const rightTimestamp = Date.parse(`${rightDate}T00:00:00Z`);
-    return Math.abs(leftTimestamp - rightTimestamp);
+    return Math.floor((leftTimestamp - rightTimestamp) / 86_400_000);
   }
 }

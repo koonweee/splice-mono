@@ -7,6 +7,7 @@ import {
   Drawer,
   Group,
   Loader,
+  NumberInput,
   Paper,
   Select,
   Stack,
@@ -48,6 +49,7 @@ import type {
 type PanelState =
   | { mode: 'create'; rule?: undefined }
   | { mode: 'edit'; rule: AnalysisRuleItem }
+  | { mode: 'edit-lookaround'; rule?: undefined }
   | null
 
 type AnalysisRuleScopeView = AnalysisCategoryScopeView | null | undefined
@@ -69,10 +71,40 @@ type RuleConflict = {
   archivedAt?: string | null
 }
 
+export type AnalysisLookaroundSettingConnector = {
+  value?: number
+  isSaving?: boolean
+  onSave?: (days: number) => void | Promise<void>
+}
+
+type AnalysisRulesSectionProps = {
+  lookaroundSetting?: AnalysisLookaroundSettingConnector
+}
+
+type LookaroundRuleItem = {
+  itemType: 'lookaround'
+  id: 'neutralization-lookaround'
+  lookaroundDays: number
+}
+
+type AnalysisRuleTableItem =
+  | (AnalysisRuleItem & { itemType: 'rule' })
+  | LookaroundRuleItem
+
 const emptySelectedScope: AnalysisCategoryScope = {
   mode: 'selected',
   categoryIds: [],
   includeUncategorized: false,
+}
+
+const DEFAULT_LOOKAROUND_DAYS = 60
+const MIN_LOOKAROUND_DAYS = 0
+const MAX_LOOKAROUND_DAYS = 180
+
+function isLookaroundItem(
+  item: AnalysisRuleTableItem,
+): item is LookaroundRuleItem {
+  return item.itemType === 'lookaround'
 }
 
 function scopeFromView(
@@ -103,6 +135,10 @@ function getRuleStatus(rule: AnalysisRuleItem) {
 
 function getRuleTypeLabel(type: AnalysisRuleView['type']) {
   return type === 'exclude' ? 'Exclude' : 'Neutralize'
+}
+
+function getItemTypeLabel(item: AnalysisRuleTableItem) {
+  return isLookaroundItem(item) ? 'Setting' : getRuleTypeLabel(item.type)
 }
 
 function getScopeSummary(scope: AnalysisCategoryScopeView | null | undefined) {
@@ -143,6 +179,24 @@ function getRuleScopeSummary(rule: AnalysisRuleItem) {
   )}`
 }
 
+function getLookaroundScopeSummary(days: number) {
+  if (days === 1) {
+    return '1 day before/after selected range'
+  }
+
+  return `${days} days before/after selected range`
+}
+
+function getItemScopeSummary(item: AnalysisRuleTableItem) {
+  return isLookaroundItem(item)
+    ? getLookaroundScopeSummary(item.lookaroundDays)
+    : getRuleScopeSummary(item)
+}
+
+function getItemStatus(item: AnalysisRuleTableItem) {
+  return isLookaroundItem(item) ? 'Active' : getRuleStatus(item)
+}
+
 function getRuleConflict(error: unknown): RuleConflict | null {
   if (typeof error !== 'object' || error === null) {
     return null
@@ -179,6 +233,7 @@ function invalidateAnalysisRuleConsumers(
       Array.isArray(query.queryKey) &&
       typeof query.queryKey[0] === 'string' &&
       (query.queryKey[0].includes('/analysis-rules') ||
+        query.queryKey[0].includes('/user/me') ||
         query.queryKey[0].includes('/transaction-analysis')),
   })
 }
@@ -199,7 +254,9 @@ function collectRuleCategories(
   ]
 }
 
-export function AnalysisRulesSection() {
+export function AnalysisRulesSection({
+  lookaroundSetting,
+}: AnalysisRulesSectionProps = {}) {
   const queryClient = useQueryClient()
   const isMobile = useMediaQuery('(max-width: 48em)')
   const [archivedMode, setArchivedMode] = useState(false)
@@ -213,6 +270,10 @@ export function AnalysisRulesSection() {
     useState<AnalysisCategoryScope>(emptySelectedScope)
   const [outflowScope, setOutflowScope] =
     useState<AnalysisCategoryScope>(emptySelectedScope)
+  const [lookaroundDays, setLookaroundDays] = useState<string | number>(
+    DEFAULT_LOOKAROUND_DAYS,
+  )
+  const [lookaroundError, setLookaroundError] = useState<string | null>(null)
 
   const {
     data: rules = [],
@@ -226,6 +287,24 @@ export function AnalysisRulesSection() {
     { archived: true },
   )
   const ruleItems = useMemo(() => rules as Array<AnalysisRuleItem>, [rules])
+  const lookaroundItem = useMemo<LookaroundRuleItem>(
+    () => ({
+      itemType: 'lookaround',
+      id: 'neutralization-lookaround',
+      lookaroundDays:
+        lookaroundSetting?.value == null
+          ? DEFAULT_LOOKAROUND_DAYS
+          : lookaroundSetting.value,
+    }),
+    [lookaroundSetting?.value],
+  )
+  const tableItems = useMemo<Array<AnalysisRuleTableItem>>(
+    () => [
+      ...(archivedMode ? [] : [lookaroundItem]),
+      ...ruleItems.map((rule) => ({ ...rule, itemType: 'rule' as const })),
+    ],
+    [archivedMode, lookaroundItem, ruleItems],
+  )
 
   const createRule = useAnalysisRuleControllerCreate<unknown>({
     mutation: {
@@ -260,16 +339,21 @@ export function AnalysisRulesSection() {
   const filteredRules = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
     if (!normalizedSearch) {
-      return ruleItems
+      return tableItems
     }
 
-    return ruleItems.filter((rule) =>
-      [rule.name, getRuleTypeLabel(rule.type), getRuleScopeSummary(rule)]
+    return tableItems.filter((item) =>
+      [
+        isLookaroundItem(item) ? 'Neutralization lookaround' : item.name,
+        getItemTypeLabel(item),
+        getItemScopeSummary(item),
+        getItemStatus(item),
+      ]
         .join(' ')
         .toLowerCase()
         .includes(normalizedSearch),
     )
-  }, [ruleItems, search])
+  }, [tableItems, search])
 
   const panelCategories = useMemo(() => {
     if (!panel?.rule) {
@@ -295,6 +379,12 @@ export function AnalysisRulesSection() {
     setExcludeScope(emptySelectedScope)
     setInflowScope(emptySelectedScope)
     setOutflowScope(emptySelectedScope)
+  }
+
+  function openLookaroundPanel() {
+    setPanel({ mode: 'edit-lookaround' })
+    setLookaroundDays(lookaroundItem.lookaroundDays)
+    setLookaroundError(null)
   }
 
   function openEditPanel(rule: AnalysisRuleItem) {
@@ -362,24 +452,81 @@ export function AnalysisRulesSection() {
     setArchivedMode(false)
   }
 
-  function renderRuleRowActions(rule: AnalysisRuleItem) {
+  function getValidatedLookaroundDays() {
+    const parsed =
+      typeof lookaroundDays === 'number'
+        ? lookaroundDays
+        : Number(lookaroundDays)
+
+    if (
+      !Number.isInteger(parsed) ||
+      parsed < MIN_LOOKAROUND_DAYS ||
+      parsed > MAX_LOOKAROUND_DAYS
+    ) {
+      return null
+    }
+
+    return parsed
+  }
+
+  function submitLookaround() {
+    const nextDays = getValidatedLookaroundDays()
+    if (nextDays === null) {
+      setLookaroundError('Enter a whole number from 0 to 180.')
+      return
+    }
+
+    if (!lookaroundSetting?.onSave) {
+      setLookaroundError(
+        'Neutralization lookaround is ready to connect after the generated API client exposes neutralizationLookaroundDays.',
+      )
+      return
+    }
+
+    Promise.resolve(lookaroundSetting.onSave(nextDays))
+      .then(() => {
+        setPanel(null)
+        invalidateAnalysisRuleConsumers(queryClient)
+      })
+      .catch(() => {
+        setLookaroundError('Failed to save neutralization lookaround.')
+      })
+  }
+
+  function renderRuleRowActions(item: AnalysisRuleTableItem) {
+    if (isLookaroundItem(item)) {
+      return (
+        <Group gap={4} justify="flex-end" wrap="nowrap">
+          <Tooltip label="Edit setting">
+            <ActionIcon
+              aria-label="Edit neutralization lookaround"
+              variant="subtle"
+              onClick={openLookaroundPanel}
+            >
+              <Pencil size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      )
+    }
+
     return (
       <Group gap={4} justify="flex-end" wrap="nowrap">
         <Tooltip label="Edit rule">
           <ActionIcon
             aria-label="Edit rule"
             variant="subtle"
-            onClick={() => openEditPanel(rule)}
+            onClick={() => openEditPanel(item)}
           >
             <Pencil size={16} />
           </ActionIcon>
         </Tooltip>
-        {rule.archivedAt ? (
+        {item.archivedAt ? (
           <Tooltip label="Restore rule">
             <ActionIcon
               aria-label="Restore rule"
               variant="subtle"
-              onClick={() => archiveOrRestore(rule, false)}
+              onClick={() => archiveOrRestore(item, false)}
             >
               <RotateCcw size={16} />
             </ActionIcon>
@@ -389,7 +536,7 @@ export function AnalysisRulesSection() {
             <ActionIcon
               aria-label="Archive rule"
               variant="subtle"
-              onClick={() => archiveOrRestore(rule, true)}
+              onClick={() => archiveOrRestore(item, true)}
             >
               <Archive size={16} />
             </ActionIcon>
@@ -399,8 +546,8 @@ export function AnalysisRulesSection() {
     )
   }
 
-  function renderMobileRuleRow(rule: AnalysisRuleItem) {
-    const status = getRuleStatus(rule)
+  function renderMobileRuleRow(item: AnalysisRuleTableItem) {
+    const status = getItemStatus(item)
 
     return (
       <Box px="sm" py="sm">
@@ -412,14 +559,22 @@ export function AnalysisRulesSection() {
         >
           <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
             <Text fw={700} truncate>
-              {rule.name}
+              {isLookaroundItem(item)
+                ? 'Neutralization lookaround'
+                : item.name}
             </Text>
             <Group gap="xs" mt={4}>
               <Badge
                 variant="light"
-                color={rule.type === 'exclude' ? 'red' : 'blue'}
+                color={
+                  isLookaroundItem(item)
+                    ? 'gray'
+                    : item.type === 'exclude'
+                      ? 'red'
+                      : 'blue'
+                }
               >
-                {getRuleTypeLabel(rule.type)}
+                {getItemTypeLabel(item)}
               </Badge>
               <Badge
                 color={status === 'Active' ? 'green' : 'orange'}
@@ -429,10 +584,10 @@ export function AnalysisRulesSection() {
               </Badge>
             </Group>
             <Text c="dimmed" lineClamp={2} mt={6} size="sm">
-              {getRuleScopeSummary(rule)}
+              {getItemScopeSummary(item)}
             </Text>
           </Box>
-          {renderRuleRowActions(rule)}
+          {renderRuleRowActions(item)}
         </Group>
       </Box>
     )
@@ -442,8 +597,14 @@ export function AnalysisRulesSection() {
   const conflict = getRuleConflict(activeError)
   const submitDisabled = buildSubmitDto() === null
   const drawerControlSize = isMobile ? 'md' : undefined
+  const drawerTitle =
+    panel?.mode === 'edit-lookaround'
+      ? 'Edit neutralization lookaround'
+      : panel?.mode === 'edit'
+        ? 'Edit analysis rule'
+        : 'New analysis rule'
 
-  const columns: Array<MRT_ColumnDef<AnalysisRuleItem>> = [
+  const columns: Array<MRT_ColumnDef<AnalysisRuleTableItem>> = [
     {
       accessorKey: 'name',
       header: 'Name',
@@ -451,10 +612,12 @@ export function AnalysisRulesSection() {
       Cell: ({ row }) => (
         <Box>
           <Text fw={600} size="sm">
-            {row.original.name}
+            {isLookaroundItem(row.original)
+              ? 'Neutralization lookaround'
+              : row.original.name}
           </Text>
           <Text size="xs" c="dimmed" hiddenFrom="sm">
-            {getRuleScopeSummary(row.original)}
+            {getItemScopeSummary(row.original)}
           </Text>
         </Box>
       ),
@@ -462,35 +625,41 @@ export function AnalysisRulesSection() {
     {
       id: 'type',
       header: 'Type',
-      accessorFn: (rule) => getRuleTypeLabel(rule.type),
+      accessorFn: getItemTypeLabel,
       size: 120,
       Cell: ({ row }) => (
         <Badge
           variant="light"
-          color={row.original.type === 'exclude' ? 'red' : 'blue'}
+          color={
+            isLookaroundItem(row.original)
+              ? 'gray'
+              : row.original.type === 'exclude'
+                ? 'red'
+                : 'blue'
+          }
         >
-          {getRuleTypeLabel(row.original.type)}
+          {getItemTypeLabel(row.original)}
         </Badge>
       ),
     },
     {
       id: 'scope',
       header: 'Scope',
-      accessorFn: getRuleScopeSummary,
+      accessorFn: getItemScopeSummary,
       minSize: 260,
       Cell: ({ row }) => (
         <Text size="sm" lineClamp={2}>
-          {getRuleScopeSummary(row.original)}
+          {getItemScopeSummary(row.original)}
         </Text>
       ),
     },
     {
       id: 'status',
       header: 'Status',
-      accessorFn: getRuleStatus,
+      accessorFn: getItemStatus,
       size: 110,
       Cell: ({ row }) => {
-        const status = getRuleStatus(row.original)
+        const status = getItemStatus(row.original)
         return (
           <Badge
             color={status === 'Active' ? 'green' : 'orange'}
@@ -613,139 +782,192 @@ export function AnalysisRulesSection() {
       <Drawer
         opened={panel !== null}
         onClose={() => setPanel(null)}
-        title={
-          panel?.mode === 'edit' ? 'Edit analysis rule' : 'New analysis rule'
-        }
+        title={drawerTitle}
         position={isMobile ? 'bottom' : 'right'}
         size={isMobile ? 'min(92dvh, 720px)' : 520}
         padding="md"
       >
-        <Stack gap="md">
-          <TextInput
-            label="Name"
-            value={name}
-            onChange={(event) => setName(event.currentTarget.value)}
-            maxLength={80}
-            size={drawerControlSize}
-            required
-          />
-          <Select
-            label="Type"
-            value={type}
-            size={drawerControlSize}
-            onChange={(value) =>
-              value && setType(value as 'exclude' | 'neutralize')
-            }
-            data={[
-              { value: 'exclude', label: 'Exclude' },
-              { value: 'neutralize', label: 'Neutralize' },
-            ]}
-            allowDeselect={false}
-          />
-
-          {type === 'exclude' ? (
-            <CategoryScopeInput
-              label="Excluded categories"
-              value={excludeScope}
-              onChange={setExcludeScope}
-              categories={panelCategories}
+        {panel?.mode === 'edit-lookaround' ? (
+          <Stack gap="md">
+            <NumberInput
+              label="Lookaround days"
+              description="Neutralization can match transactions this many days before and after the selected analysis range."
+              value={lookaroundDays}
+              onChange={(value) => {
+                setLookaroundDays(value)
+                setLookaroundError(null)
+              }}
+              min={MIN_LOOKAROUND_DAYS}
+              max={MAX_LOOKAROUND_DAYS}
+              allowDecimal={false}
+              clampBehavior="strict"
               size={drawerControlSize}
+              required
             />
-          ) : (
-            <>
-              <CategoryScopeInput
-                label="Inflows"
-                value={inflowScope}
-                onChange={setInflowScope}
-                categories={panelCategories}
-                size={drawerControlSize}
-              />
-              <CategoryScopeInput
-                label="Outflows"
-                value={outflowScope}
-                onChange={setOutflowScope}
-                categories={panelCategories}
-                size={drawerControlSize}
-              />
-            </>
-          )}
 
-          {(createRule.isError || updateRule.isError) && (
-            <Alert color="yellow" title="Duplicate detected">
-              <Text size="sm">{getRuleErrorMessage(activeError)}</Text>
-              {conflict?.archivedAt && (
-                <Button
-                  size="xs"
-                  variant="light"
-                  mt="xs"
-                  onClick={() => restoreConflictRule(conflict.ruleId)}
-                >
-                  Restore existing rule
-                </Button>
-              )}
-            </Alert>
-          )}
-
-          <Paper withBorder p="sm" radius="md">
-            <Group gap={6} wrap="nowrap">
+            <Paper withBorder p="sm" radius="md">
               <Text size="sm" fw={600}>
                 Summary
               </Text>
-              {type === 'neutralize' && (
-                <Tooltip
-                  label="Exact same currency and smallest-unit amount. Outflows match oldest first; closest-date inflow wins, then oldest/id."
-                  multiline
-                  w={260}
-                >
-                  <ActionIcon
-                    aria-label="Neutralize tie breaking rules"
-                    size="xs"
-                    variant="subtle"
-                  >
-                    <CircleHelp size={14} />
-                  </ActionIcon>
-                </Tooltip>
-              )}
-            </Group>
-            <Text size="sm" c="dimmed">
-              {type === 'exclude'
-                ? getScopeSummary(
-                    excludeScope.mode === 'all'
-                      ? { mode: 'all' }
-                      : {
-                          mode: 'selected',
-                          includeUncategorized:
-                            excludeScope.includeUncategorized ?? false,
-                          categories: panelCategories.filter((category) =>
-                            (excludeScope.categoryIds ?? []).includes(
-                              category.id,
-                            ),
-                          ),
-                        },
-                  )
-                : 'Inflows matching the first scope may cancel outflows matching the second scope.'}
-            </Text>
-          </Paper>
+              <Text size="sm" c="dimmed">
+                {getLookaroundScopeSummary(
+                  getValidatedLookaroundDays() ?? lookaroundItem.lookaroundDays,
+                )}
+              </Text>
+            </Paper>
 
-          <Group justify="flex-end">
-            <Button
-              variant="subtle"
-              onClick={() => setPanel(null)}
+            {lookaroundError && (
+              <Alert color="yellow" title="Unable to save">
+                {lookaroundError}
+              </Alert>
+            )}
+
+            <Group justify="flex-end">
+              <Button
+                variant="subtle"
+                onClick={() => setPanel(null)}
+                size={drawerControlSize}
+              >
+                Cancel
+              </Button>
+              <Button
+                leftSection={<Save size={16} />}
+                onClick={submitLookaround}
+                loading={Boolean(lookaroundSetting?.isSaving)}
+                size={drawerControlSize}
+              >
+                Save
+              </Button>
+            </Group>
+          </Stack>
+        ) : (
+          <Stack gap="md">
+            <TextInput
+              label="Name"
+              value={name}
+              onChange={(event) => setName(event.currentTarget.value)}
+              maxLength={80}
               size={drawerControlSize}
-            >
-              Cancel
-            </Button>
-            <Button
-              leftSection={<Save size={16} />}
-              onClick={submitRule}
-              loading={createRule.isPending || updateRule.isPending}
-              disabled={submitDisabled}
+              required
+            />
+            <Select
+              label="Type"
+              value={type}
               size={drawerControlSize}
-            >
-              Save
-            </Button>
-          </Group>
-        </Stack>
+              onChange={(value) =>
+                value && setType(value as 'exclude' | 'neutralize')
+              }
+              data={[
+                { value: 'exclude', label: 'Exclude' },
+                { value: 'neutralize', label: 'Neutralize' },
+              ]}
+              allowDeselect={false}
+            />
+
+            {type === 'exclude' ? (
+              <CategoryScopeInput
+                label="Excluded categories"
+                value={excludeScope}
+                onChange={setExcludeScope}
+                categories={panelCategories}
+                size={drawerControlSize}
+              />
+            ) : (
+              <>
+                <CategoryScopeInput
+                  label="Inflows"
+                  value={inflowScope}
+                  onChange={setInflowScope}
+                  categories={panelCategories}
+                  size={drawerControlSize}
+                />
+                <CategoryScopeInput
+                  label="Outflows"
+                  value={outflowScope}
+                  onChange={setOutflowScope}
+                  categories={panelCategories}
+                  size={drawerControlSize}
+                />
+              </>
+            )}
+
+            {(createRule.isError || updateRule.isError) && (
+              <Alert color="yellow" title="Duplicate detected">
+                <Text size="sm">{getRuleErrorMessage(activeError)}</Text>
+                {conflict?.archivedAt && (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    mt="xs"
+                    onClick={() => restoreConflictRule(conflict.ruleId)}
+                  >
+                    Restore existing rule
+                  </Button>
+                )}
+              </Alert>
+            )}
+
+            <Paper withBorder p="sm" radius="md">
+              <Group gap={6} wrap="nowrap">
+                <Text size="sm" fw={600}>
+                  Summary
+                </Text>
+                {type === 'neutralize' && (
+                  <Tooltip
+                    label="Exact same currency and smallest-unit amount. Outflows match oldest first; closest-date inflow wins, then oldest/id."
+                    multiline
+                    w={260}
+                  >
+                    <ActionIcon
+                      aria-label="Neutralize tie breaking rules"
+                      size="xs"
+                      variant="subtle"
+                    >
+                      <CircleHelp size={14} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+              </Group>
+              <Text size="sm" c="dimmed">
+                {type === 'exclude'
+                  ? getScopeSummary(
+                      excludeScope.mode === 'all'
+                        ? { mode: 'all' }
+                        : {
+                            mode: 'selected',
+                            includeUncategorized:
+                              excludeScope.includeUncategorized ?? false,
+                            categories: panelCategories.filter((category) =>
+                              (excludeScope.categoryIds ?? []).includes(
+                                category.id,
+                              ),
+                            ),
+                          },
+                    )
+                  : 'Inflows matching the first scope may cancel outflows matching the second scope.'}
+              </Text>
+            </Paper>
+
+            <Group justify="flex-end">
+              <Button
+                variant="subtle"
+                onClick={() => setPanel(null)}
+                size={drawerControlSize}
+              >
+                Cancel
+              </Button>
+              <Button
+                leftSection={<Save size={16} />}
+                onClick={submitRule}
+                loading={createRule.isPending || updateRule.isPending}
+                disabled={submitDisabled}
+                size={drawerControlSize}
+              >
+                Save
+              </Button>
+            </Group>
+          </Stack>
+        )}
       </Drawer>
     </Stack>
   )

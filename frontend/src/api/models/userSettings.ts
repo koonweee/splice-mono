@@ -12,4 +12,9 @@ export interface UserSettings {
   timezone?: string
   hideZeroBalanceAccounts?: boolean
   theme?: UserSettingsTheme
+  /**
+   * @minimum 0
+   * @maximum 180
+   */
+  neutralizationLookaroundDays?: number
 }

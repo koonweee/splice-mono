@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { DonutChart } from '@mantine/charts'
 import {
   Alert,
-  Badge,
   Box,
   Button,
   Grid,
@@ -17,11 +16,12 @@ import {
 import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, ClipboardList } from 'lucide-react'
 import {
-  useAnalysisRuleControllerFindAll,
   useTransactionAnalysisControllerGetAnalysis,
+  useTransactionAnalysisControllerGetAudit,
 } from '../../api/clients/spliceAPI'
+import { AnalysisAuditDrawer } from '../../components/analysis/AnalysisAuditDrawer'
 import { CategoryTransactionsModal } from '../../components/CategoryTransactionsModal'
 import { DateRangeControl } from '../../components/DateRangeControl'
 import { PageHeader } from '../../components/PageHeader'
@@ -274,12 +274,14 @@ function AnalysisPage() {
     isPending,
     isError,
   } = useTransactionAnalysisControllerGetAnalysis({ startDate, endDate })
-  const { data: activeRules = [] } = useAnalysisRuleControllerFindAll({
-    archived: false,
-  })
 
   // Category drill-down modal
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure()
+  const [auditOpened, { open: openAudit, close: closeAudit }] = useDisclosure()
+  const auditQuery = useTransactionAnalysisControllerGetAudit(
+    { startDate, endDate },
+    { query: { enabled: auditOpened } },
+  )
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedFlowDirection, setSelectedFlowDirection] = useState<
     'inflow' | 'outflow'
@@ -326,20 +328,13 @@ function AnalysisPage() {
               clearable={false}
             />
             <Button
-              component="a"
-              href="/settings?tab=analysis"
-              mih={{ base: 48, sm: undefined }}
+              onClick={openAudit}
+              leftSection={<ClipboardList size={16} />}
+              h={{ base: 48, sm: 42 }}
               size="md"
               variant="light"
-              rightSection={
-                <Badge size="sm" variant="filled">
-                  {activeRules.length === 0
-                    ? 'No rules'
-                    : `${activeRules.length} active`}
-                </Badge>
-              }
             >
-              Rules
+              Audit
             </Button>
           </Group>
         }
@@ -408,6 +403,13 @@ function AnalysisPage() {
         startDate={startDate}
         endDate={endDate}
         flowDirection={selectedFlowDirection}
+      />
+      <AnalysisAuditDrawer
+        opened={auditOpened}
+        onClose={closeAudit}
+        startDate={startDate}
+        endDate={endDate}
+        auditQuery={auditQuery}
       />
     </>
   )

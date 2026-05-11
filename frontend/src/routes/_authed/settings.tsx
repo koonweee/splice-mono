@@ -258,6 +258,15 @@ export function SettingsPage() {
     previewThemePresetId(nextTheme)
   }
 
+  const handleSaveNeutralizationLookaround = async (days: number) => {
+    await updateSettingsMutation.mutateAsync({
+      data: { neutralizationLookaroundDays: days },
+    })
+    await queryClient.invalidateQueries({
+      queryKey: getUserControllerMeQueryOptions().queryKey,
+    })
+  }
+
   const handleTabChange = (value: string | null) => {
     const nextTab = (value ?? 'general') as SettingsTab
     setSelectedTab(nextTab)
@@ -444,7 +453,13 @@ export function SettingsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel className={styles.categoriesPanel} value="analysis">
-          <AnalysisRulesSection />
+          <AnalysisRulesSection
+            lookaroundSetting={{
+              value: user?.settings.neutralizationLookaroundDays ?? 60,
+              isSaving: updateSettingsMutation.isPending,
+              onSave: handleSaveNeutralizationLookaround,
+            }}
+          />
         </Tabs.Panel>
 
         <Tabs.Panel value="mcp">

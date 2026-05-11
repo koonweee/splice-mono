@@ -1,5 +1,11 @@
 import { MantineProvider } from '@mantine/core'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Route } from './analysis'
 import type { ComponentType, ReactNode } from 'react'
@@ -16,7 +22,7 @@ type DonutDatum = {
 const mockFns = vi.hoisted(() => ({
   useSearchMock: vi.fn(),
   navigateMock: vi.fn(),
-  useAnalysisRuleControllerFindAllMock: vi.fn(),
+  useTransactionAnalysisControllerGetAuditMock: vi.fn(),
   useTransactionAnalysisControllerGetAnalysisMock: vi.fn(),
 }))
 
@@ -61,8 +67,8 @@ vi.mock('../../api/clients/spliceAPI', async () => {
 
   return {
     ...actual,
-    useAnalysisRuleControllerFindAll:
-      mockFns.useAnalysisRuleControllerFindAllMock,
+    useTransactionAnalysisControllerGetAudit:
+      mockFns.useTransactionAnalysisControllerGetAuditMock,
     useTransactionAnalysisControllerGetAnalysis:
       mockFns.useTransactionAnalysisControllerGetAnalysisMock,
   }
@@ -163,8 +169,13 @@ beforeEach(() => {
     isPending: false,
     isError: false,
   })
-  mockFns.useAnalysisRuleControllerFindAllMock.mockReturnValue({
-    data: [],
+  mockFns.useTransactionAnalysisControllerGetAuditMock.mockReturnValue({
+    data: {
+      startDate: '2026-02-01',
+      endDate: '2026-02-28',
+      neutralizationLookaroundDays: 60,
+      rows: [],
+    },
     isPending: false,
     isError: false,
   })
@@ -172,6 +183,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  document.body.innerHTML = ''
   vi.clearAllMocks()
 })
 
@@ -198,30 +210,23 @@ describe('Analysis route', () => {
     expect(groceriesMarker.style.backgroundColor).toBe('rgb(171, 205, 239)')
   })
 
-  it('shows a rules link with the active rule count', () => {
-    mockFns.useAnalysisRuleControllerFindAllMock.mockReturnValue({
-      data: [
-        {
-          id: 'rule-1',
-          name: 'Ignore rent transfer',
-          type: 'exclude',
-          excludeScope: { mode: 'all' },
-          inflowScope: null,
-          outflowScope: null,
-          archivedAt: null,
-          createdAt: '2026-02-01T00:00:00.000Z',
-          updatedAt: '2026-02-01T00:00:00.000Z',
-        },
-      ],
-      isPending: false,
-      isError: false,
-    })
-
+  it('shows an audit button and keeps rules management inside the drawer', async () => {
     renderAnalysisPage()
 
+    expect(screen.queryByRole('link', { name: /rules/i })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /audit/i }))
+
+    expect(await screen.findByText('Analysis audit')).toBeTruthy()
+    expect(
+      mockFns.useTransactionAnalysisControllerGetAuditMock,
+    ).toHaveBeenCalledWith(
+      { startDate: '2026-02-01', endDate: '2026-02-28' },
+      { query: { enabled: true } },
+    )
     expect(
       screen
-        .getByRole('link', { name: /rules\s*1 active/i })
+        .getAllByRole('link', { name: /manage rules/i })[0]
         .getAttribute('href'),
     ).toBe('/settings?tab=analysis')
   })
