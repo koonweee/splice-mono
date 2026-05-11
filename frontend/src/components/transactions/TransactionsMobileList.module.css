@@ -150,6 +150,10 @@
   font-weight: 750;
 }
 
+.reportingDateInput {
+  text-align: left;
+}
+
 .categoryOptionsList {
   max-height: 196px;
   overflow-y: auto;
