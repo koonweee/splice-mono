@@ -412,6 +412,7 @@ export function TransactionsMobileList({
               <>
                 <Stack gap={6}>
                   <TextInput
+                    classNames={{ input: styles.reportingDateInput }}
                     label="Reporting date"
                     type="date"
                     value={reportingDateDraft ?? ''}
@@ -476,18 +477,29 @@ export function TransactionsMobileList({
                   <CategorySelect
                     aria-label="Category"
                     comboboxProps={{
+                      floatingStrategy: 'fixed',
                       middlewares: {
                         flip: true,
                         inline: false,
                         shift: { padding: 8 },
+                        size: {
+                          padding: 8,
+                          apply({ availableHeight, elements }) {
+                            elements.floating.style.setProperty(
+                              '--transaction-category-dropdown-max-height',
+                              `${Math.max(120, Math.floor(availableHeight))}px`,
+                            )
+                          },
+                        },
                       },
                       position: 'top-start',
+                      preventPositionChangeWhenVisible: false,
                       withinPortal: true,
                       zIndex: 1100,
                     }}
                     data={categoryOptions}
                     label="Category"
-                    maxDropdownHeight="min(260px, 45dvh)"
+                    maxDropdownHeight="min(260px, var(--transaction-category-dropdown-max-height, 45dvh))"
                     onChange={(value) =>
                       updateCategory.mutate({
                         id: activeTransaction.id,
