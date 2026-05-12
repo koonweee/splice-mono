@@ -8,6 +8,10 @@ import {
   Text,
 } from '@mantine/core'
 import { Save } from 'lucide-react'
+import {
+  getViewportAwareComboboxProps,
+  viewportAwareDropdownMaxHeight,
+} from '../../lib/mobile-combobox'
 import { CategorySelect } from '../categories/CategorySelect'
 import styles from './TransactionBulkEditToolbar.module.css'
 import type { CategorySelectOption } from '../categories/CategorySelect'
@@ -57,11 +61,18 @@ export function TransactionBulkEditToolbar({
       {selectedCount} selected
     </Text>
   )
+  const useViewportAwareDropdown = variant === 'inline'
   const categorySelect = (
     <CategorySelect
       aria-label="Bulk category"
       className={styles.categorySelect}
+      comboboxProps={
+        useViewportAwareDropdown ? getViewportAwareComboboxProps() : undefined
+      }
       data={categoryOptions}
+      maxDropdownHeight={
+        useViewportAwareDropdown ? viewportAwareDropdownMaxHeight : undefined
+      }
       onChange={onChange}
       placeholder="Category"
       searchable

@@ -28,6 +28,10 @@ import {
 } from '../../lib/category-colors'
 import { formatMoneyWithSign } from '../../lib/format'
 import { isAssignableCategoryOption } from '../../lib/category-options'
+import {
+  getViewportAwareComboboxProps,
+  viewportAwareDropdownMaxHeight,
+} from '../../lib/mobile-combobox'
 import { CategorySelect } from '../categories/CategorySelect'
 import {
   formatCounterpartyLabel,
@@ -476,30 +480,10 @@ export function TransactionsMobileList({
                 <Stack gap={6}>
                   <CategorySelect
                     aria-label="Category"
-                    comboboxProps={{
-                      floatingStrategy: 'fixed',
-                      middlewares: {
-                        flip: true,
-                        inline: false,
-                        shift: { padding: 8 },
-                        size: {
-                          padding: 8,
-                          apply({ availableHeight, elements }) {
-                            elements.floating.style.setProperty(
-                              '--transaction-category-dropdown-max-height',
-                              `${Math.max(120, Math.floor(availableHeight))}px`,
-                            )
-                          },
-                        },
-                      },
-                      position: 'top-start',
-                      preventPositionChangeWhenVisible: false,
-                      withinPortal: true,
-                      zIndex: 1100,
-                    }}
+                    comboboxProps={getViewportAwareComboboxProps()}
                     data={categoryOptions}
                     label="Category"
-                    maxDropdownHeight="min(260px, var(--transaction-category-dropdown-max-height, 45dvh))"
+                    maxDropdownHeight={viewportAwareDropdownMaxHeight}
                     onChange={(value) =>
                       updateCategory.mutate({
                         id: activeTransaction.id,
