@@ -871,6 +871,7 @@ export function AnalysisRulesSection({
                 onChange={setExcludeScope}
                 categories={panelCategories}
                 size={drawerControlSize}
+                viewportAwareDropdown={Boolean(isMobile)}
               />
             ) : (
               <>
@@ -880,6 +881,7 @@ export function AnalysisRulesSection({
                   onChange={setInflowScope}
                   categories={panelCategories}
                   size={drawerControlSize}
+                  viewportAwareDropdown={Boolean(isMobile)}
                 />
                 <CategoryScopeInput
                   label="Outflows"
@@ -887,6 +889,7 @@ export function AnalysisRulesSection({
                   onChange={setOutflowScope}
                   categories={panelCategories}
                   size={drawerControlSize}
+                  viewportAwareDropdown={Boolean(isMobile)}
                 />
               </>
             )}

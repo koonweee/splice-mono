@@ -46,6 +46,10 @@ import {
   getCategoryColorStyles,
   normalizeHexColor,
 } from '../../lib/category-colors'
+import {
+  getViewportAwareComboboxProps,
+  viewportAwareDropdownMaxHeight,
+} from '../../lib/mobile-combobox'
 import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
 import type {
@@ -619,7 +623,9 @@ export function CustomCategoriesSection() {
     <Stack gap="md">
       <CategorySelect
         aria-label="Primary category"
+        comboboxProps={getViewportAwareComboboxProps()}
         label="Primary category"
+        maxDropdownHeight={viewportAwareDropdownMaxHeight}
         value={primaryFilter}
         onChange={setPrimaryFilter}
         data={primaryFilterData}
@@ -682,7 +688,13 @@ export function CustomCategoriesSection() {
     ) : (
       <Stack gap="sm">
         <Autocomplete
+          comboboxProps={
+            isMobile ? getViewportAwareComboboxProps() : undefined
+          }
           label="Primary category"
+          maxDropdownHeight={
+            isMobile ? viewportAwareDropdownMaxHeight : undefined
+          }
           value={primary}
           onChange={setPrimary}
           data={primaryOptions}
@@ -693,7 +705,13 @@ export function CustomCategoriesSection() {
           size={isMobile ? 'md' : undefined}
         />
         <Autocomplete
+          comboboxProps={
+            isMobile ? getViewportAwareComboboxProps() : undefined
+          }
           label="Secondary category"
+          maxDropdownHeight={
+            isMobile ? viewportAwareDropdownMaxHeight : undefined
+          }
           value={detailed}
           onChange={setDetailed}
           data={detailedOptions}
@@ -1149,7 +1167,7 @@ export function CustomCategoriesSection() {
         onClose={closeFilters}
         title="Filters"
         position="bottom"
-        size="auto"
+        size="min(360px, 80dvh)"
         padding="md"
       >
         {filterPanel}
@@ -1311,7 +1329,7 @@ export function CustomCategoriesSection() {
         onClose={() => setPanel(null)}
         title={panelTitle}
         position="bottom"
-        size="auto"
+        size="min(620px, 92dvh)"
         padding="md"
       >
         {panelBody}

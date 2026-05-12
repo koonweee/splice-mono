@@ -34,6 +34,10 @@ import {
 import { formatPrimaryCategory } from '../../lib/format'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import { getFallbackCategoryColor } from '../../lib/category-colors'
+import {
+  getViewportAwareComboboxProps,
+  viewportAwareDropdownMaxHeight,
+} from '../../lib/mobile-combobox'
 import type {
   Category,
   TransactionControllerFindAllParams,
@@ -117,6 +121,13 @@ function TransactionsFilterPanel({
   onCategoryChange,
   onClearFilters,
 }: TransactionFiltersPanelProps) {
+  const comboboxProps = isMobile
+    ? getViewportAwareComboboxProps()
+    : { withinPortal: false }
+  const maxDropdownHeight = isMobile
+    ? viewportAwareDropdownMaxHeight
+    : undefined
+
   return (
     <Stack gap="md">
       <Stack gap="xs">
@@ -131,7 +142,8 @@ function TransactionsFilterPanel({
           clearable
           searchable
           size="md"
-          comboboxProps={{ withinPortal: false }}
+          comboboxProps={comboboxProps}
+          maxDropdownHeight={maxDropdownHeight}
         />
         <CategorySelect
           aria-label="Category"
@@ -140,7 +152,8 @@ function TransactionsFilterPanel({
           value={categoryId}
           onChange={onCategoryChange}
           size="md"
-          comboboxProps={{ withinPortal: false }}
+          comboboxProps={comboboxProps}
+          maxDropdownHeight={maxDropdownHeight}
         />
       </Stack>
 
@@ -594,7 +607,7 @@ function TransactionsPage() {
             onClose={closeFilters}
             title="Filters"
             position="bottom"
-            size="auto"
+            size="min(430px, 80dvh)"
             padding="md"
           >
             {filterPanel}

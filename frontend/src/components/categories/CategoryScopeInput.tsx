@@ -10,6 +10,10 @@ import {
   Text,
 } from '@mantine/core'
 import { getCategoryColorStyles } from '../../lib/category-colors'
+import {
+  getViewportAwareComboboxProps,
+  viewportAwareDropdownMaxHeight,
+} from '../../lib/mobile-combobox'
 import type {
   AnalysisCategoryScope,
   AnalysisRuleCategoryView,
@@ -28,6 +32,7 @@ interface CategoryScopeInputProps {
   categories: Array<CategoryScopeInputCategory | AnalysisRuleCategoryView>
   disabled?: boolean
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  viewportAwareDropdown?: boolean
 }
 
 const swatchStyle = {
@@ -60,6 +65,7 @@ export function CategoryScopeInput({
   categories,
   disabled,
   size,
+  viewportAwareDropdown = false,
 }: CategoryScopeInputProps) {
   const categoryById = new Map(
     categories.map((category) => [category.id, category]),
@@ -158,7 +164,14 @@ export function CategoryScopeInput({
             nothingFoundMessage="No categories found"
             disabled={disabled}
             hidePickedOptions
-            maxDropdownHeight={260}
+            comboboxProps={
+              viewportAwareDropdown
+                ? getViewportAwareComboboxProps()
+                : undefined
+            }
+            maxDropdownHeight={
+              viewportAwareDropdown ? viewportAwareDropdownMaxHeight : 260
+            }
             renderOption={({ option }) => {
               const category = categoryById.get(option.value)
               if (!category) {
