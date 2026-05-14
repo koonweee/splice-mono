@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { UpdateUserSettingsDtoTheme } from './updateUserSettingsDtoTheme'
+import type { UpdateUserSettingsDtoNotifications } from './updateUserSettingsDtoNotifications'
 
 export interface UpdateUserSettingsDto {
   currency?: string
@@ -18,4 +19,5 @@ export interface UpdateUserSettingsDto {
    */
   neutralizationLookaroundDays?: number
   analysisSankeyEnabled?: boolean
+  notifications?: UpdateUserSettingsDtoNotifications
 }

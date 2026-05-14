@@ -35,15 +35,29 @@ import {
   normalizeThemePresetId,
   previewThemePresetId,
 } from '../../lib/theme'
+import {
+  disableCurrentDeviceNotifications,
+  enableCurrentDeviceNotifications,
+  loadCurrentDeviceNotificationState,
+  updateNewSyncedTransactionsPreference,
+} from '../../lib/notifications/browser-push'
 import styles from './settings.module.css'
+import type { NotificationSupportStatus } from '../../lib/notifications/browser-push'
 import type { ThemePreset, ThemePresetId } from '../../lib/theme'
 
-type SettingsTab = 'general' | 'access' | 'categories' | 'analysis' | 'mcp'
+type SettingsTab =
+  | 'general'
+  | 'notifications'
+  | 'access'
+  | 'categories'
+  | 'analysis'
+  | 'mcp'
 
 export const Route = createFileRoute('/_authed/settings')({
   validateSearch: (search: Record<string, unknown>): { tab?: SettingsTab } => {
     const tab = search.tab
     return tab === 'general' ||
+      tab === 'notifications' ||
       tab === 'access' ||
       tab === 'categories' ||
       tab === 'analysis' ||
@@ -85,6 +99,7 @@ function getInitialSettingsTab(): SettingsTab {
 
   const tab = new URLSearchParams(window.location.search).get('tab')
   return tab === 'access' ||
+    tab === 'notifications' ||
     tab === 'categories' ||
     tab === 'analysis' ||
     tab === 'mcp'
@@ -181,6 +196,33 @@ function ThemePresetOption({
   )
 }
 
+type UserSettingsWithNotifications = {
+  notifications?: {
+    transactions?: {
+      newSyncedTransactions?: boolean | null
+    } | null
+  } | null
+}
+
+function getNewSyncedTransactionsEnabled(
+  settings: UserSettingsWithNotifications | null | undefined,
+): boolean {
+  return settings?.notifications?.transactions?.newSyncedTransactions ?? false
+}
+
+function getNotificationSupportMessage(status: NotificationSupportStatus) {
+  switch (status) {
+    case 'unsupported':
+      return 'This browser does not support push notifications.'
+    case 'denied':
+      return 'Notifications are blocked in this browser.'
+    case 'unconfigured':
+      return 'Push notifications are not configured for this environment.'
+    case 'supported':
+      return null
+  }
+}
+
 export function SettingsPage() {
   const queryClient = useQueryClient()
   const { data: user, isLoading, error } = useUserControllerMe()
@@ -201,6 +243,21 @@ export function SettingsPage() {
   const [analysisSankeyError, setAnalysisSankeyError] = useState<string | null>(
     null,
   )
+  const [notificationSupportStatus, setNotificationSupportStatus] =
+    useState<NotificationSupportStatus>('supported')
+  const [deviceNotificationsEnabled, setDeviceNotificationsEnabled] =
+    useState(false)
+  const [deviceNotificationsLoading, setDeviceNotificationsLoading] =
+    useState(true)
+  const [deviceNotificationsPending, setDeviceNotificationsPending] =
+    useState(false)
+  const [notificationError, setNotificationError] = useState<string | null>(
+    null,
+  )
+  const [newSyncedTransactionsEnabled, setNewSyncedTransactionsEnabled] =
+    useState(false)
+  const [newSyncedTransactionsPending, setNewSyncedTransactionsPending] =
+    useState(false)
   const [hasChanges, setHasChanges] = useState(false)
 
   // Initialize form values when user data loads
@@ -213,8 +270,45 @@ export function SettingsPage() {
       setTimezone(user.settings.timezone ?? 'UTC')
       setHideZeroBalanceAccounts(user.settings.hideZeroBalanceAccounts ?? false)
       setAnalysisSankeyEnabled(user.settings.analysisSankeyEnabled ?? false)
+      setNewSyncedTransactionsEnabled(
+        getNewSyncedTransactionsEnabled(
+          user.settings as UserSettingsWithNotifications,
+        ),
+      )
     }
   }, [user?.settings])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadNotificationState() {
+      setDeviceNotificationsLoading(true)
+      setNotificationError(null)
+
+      try {
+        const state = await loadCurrentDeviceNotificationState()
+        if (!cancelled) {
+          setNotificationSupportStatus(state.supported)
+          setDeviceNotificationsEnabled(state.subscribed)
+        }
+      } catch {
+        if (!cancelled) {
+          setNotificationError('Failed to load notification status')
+          setDeviceNotificationsEnabled(false)
+        }
+      } finally {
+        if (!cancelled) {
+          setDeviceNotificationsLoading(false)
+        }
+      }
+    }
+
+    void loadNotificationState()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Track if there are unsaved changes
   useEffect(() => {
@@ -291,6 +385,51 @@ export function SettingsPage() {
     }
   }
 
+  const handleDeviceNotificationsChange = async (checked: boolean) => {
+    setDeviceNotificationsPending(true)
+    setNotificationError(null)
+
+    try {
+      if (checked) {
+        await enableCurrentDeviceNotifications()
+        setDeviceNotificationsEnabled(true)
+        await queryClient.invalidateQueries({
+          queryKey: getUserControllerMeQueryOptions().queryKey,
+        })
+      } else {
+        await disableCurrentDeviceNotifications()
+        setDeviceNotificationsEnabled(false)
+      }
+    } catch (err) {
+      setNotificationError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to update notification status',
+      )
+    } finally {
+      setDeviceNotificationsPending(false)
+    }
+  }
+
+  const handleNewSyncedTransactionsChange = async (checked: boolean) => {
+    const previousValue = newSyncedTransactionsEnabled
+    setNewSyncedTransactionsEnabled(checked)
+    setNewSyncedTransactionsPending(true)
+    setNotificationError(null)
+
+    try {
+      await updateNewSyncedTransactionsPreference(checked)
+      await queryClient.invalidateQueries({
+        queryKey: getUserControllerMeQueryOptions().queryKey,
+      })
+    } catch {
+      setNewSyncedTransactionsEnabled(previousValue)
+      setNotificationError('Failed to save notification preference')
+    } finally {
+      setNewSyncedTransactionsPending(false)
+    }
+  }
+
   const handleTabChange = (value: string | null) => {
     const nextTab = (value ?? 'general') as SettingsTab
     setSelectedTab(nextTab)
@@ -336,6 +475,7 @@ export function SettingsPage() {
       >
         <Tabs.List className={styles.settingsTabList} mb="lg">
           <Tabs.Tab value="general">General</Tabs.Tab>
+          <Tabs.Tab value="notifications">Notifications</Tabs.Tab>
           <Tabs.Tab value="access">Access</Tabs.Tab>
           <Tabs.Tab value="categories">Categories</Tabs.Tab>
           <Tabs.Tab value="analysis">Analysis</Tabs.Tab>
@@ -466,6 +606,57 @@ export function SettingsPage() {
               )}
             </Stack>
           </Paper>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="notifications">
+          <Stack gap="lg" maw={720}>
+            <Paper withBorder p="lg" radius="md">
+              <Stack gap="sm">
+                <Title order={4}>Notifications</Title>
+                <Switch
+                  label="Enable notifications on this device"
+                  checked={deviceNotificationsEnabled}
+                  disabled={
+                    deviceNotificationsLoading ||
+                    deviceNotificationsPending ||
+                    notificationSupportStatus !== 'supported'
+                  }
+                  onChange={(event) => {
+                    void handleDeviceNotificationsChange(
+                      event.currentTarget.checked,
+                    )
+                  }}
+                />
+                {getNotificationSupportMessage(notificationSupportStatus) && (
+                  <Alert color="yellow" title="Unavailable">
+                    {getNotificationSupportMessage(notificationSupportStatus)}
+                  </Alert>
+                )}
+              </Stack>
+            </Paper>
+
+            <Paper withBorder p="lg" radius="md">
+              <Stack gap="sm">
+                <Title order={4}>Transactions</Title>
+                <Switch
+                  label="New transactions synced"
+                  checked={newSyncedTransactionsEnabled}
+                  disabled={newSyncedTransactionsPending || !user?.settings}
+                  onChange={(event) => {
+                    void handleNewSyncedTransactionsChange(
+                      event.currentTarget.checked,
+                    )
+                  }}
+                />
+              </Stack>
+            </Paper>
+
+            {notificationError && (
+              <Alert color="red" title="Error">
+                {notificationError}
+              </Alert>
+            )}
+          </Stack>
         </Tabs.Panel>
 
         <Tabs.Panel value="access">

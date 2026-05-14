@@ -3,12 +3,23 @@ import {
   authStorage,
   buildGoogleOAuthStartUrl,
   getSafeRelativeRedirect,
+  useLogout,
+  useLogoutAll,
   validateSession,
 } from './auth'
 
 const mocks = vi.hoisted(() => ({
   resolveApiBaseUrl: vi.fn(),
   fetch: vi.fn(),
+  revokeCurrentDevicePushSubscription: vi.fn(),
+  revokeAllPushSubscriptions: vi.fn(),
+  useNavigate: vi.fn(),
+  useUserControllerLogout: vi.fn(),
+  useUserControllerLogoutAll: vi.fn(),
+}))
+
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: mocks.useNavigate,
 }))
 
 vi.mock('../api/axios', () => ({
@@ -16,8 +27,14 @@ vi.mock('../api/axios', () => ({
 }))
 
 vi.mock('../api/clients/spliceAPI', () => ({
-  useUserControllerLogout: vi.fn(),
-  useUserControllerLogoutAll: vi.fn(),
+  useUserControllerLogout: mocks.useUserControllerLogout,
+  useUserControllerLogoutAll: mocks.useUserControllerLogoutAll,
+}))
+
+vi.mock('./notifications/browser-push', () => ({
+  revokeCurrentDevicePushSubscription:
+    mocks.revokeCurrentDevicePushSubscription,
+  revokeAllPushSubscriptions: mocks.revokeAllPushSubscriptions,
 }))
 function createLocalStorageMock() {
   let store: Record<string, string> = {}
@@ -46,6 +63,11 @@ describe('auth helpers', () => {
     vi.stubGlobal('fetch', mocks.fetch)
     mocks.resolveApiBaseUrl.mockReturnValue('http://localhost:3000')
     mocks.fetch.mockReset()
+    mocks.useNavigate.mockReturnValue(vi.fn())
+    mocks.useUserControllerLogout.mockReturnValue({ mutate: vi.fn() })
+    mocks.useUserControllerLogoutAll.mockReturnValue({ mutate: vi.fn() })
+    mocks.revokeCurrentDevicePushSubscription.mockResolvedValue(undefined)
+    mocks.revokeAllPushSubscriptions.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -88,5 +110,29 @@ describe('auth helpers', () => {
     await expect(validateSession()).resolves.toBe(false)
 
     expect(authStorage.isAuthenticated()).toBe(false)
+  })
+
+  it('attempts current-device notification cleanup before logout', async () => {
+    useLogout()
+
+    const options = mocks.useUserControllerLogout.mock.calls[0][0] as {
+      mutation: { onMutate: () => Promise<void> }
+    }
+
+    await options.mutation.onMutate()
+
+    expect(mocks.revokeCurrentDevicePushSubscription).toHaveBeenCalledTimes(1)
+  })
+
+  it('attempts all-device notification cleanup before logout-all', async () => {
+    useLogoutAll()
+
+    const options = mocks.useUserControllerLogoutAll.mock.calls[0][0] as {
+      mutation: { onMutate: () => Promise<void> }
+    }
+
+    await options.mutation.onMutate()
+
+    expect(mocks.revokeAllPushSubscriptions).toHaveBeenCalledTimes(1)
   })
 })

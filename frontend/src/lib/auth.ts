@@ -4,6 +4,10 @@ import {
   useUserControllerLogoutAll,
 } from '../api/clients/spliceAPI'
 import { resolveApiBaseUrl } from '../api/axios'
+import {
+  revokeAllPushSubscriptions,
+  revokeCurrentDevicePushSubscription,
+} from './notifications/browser-push'
 
 // Key used to track if user has logged in (for SSR auth check)
 // The actual tokens are stored in HTTP-only cookies by the backend
@@ -141,6 +145,9 @@ export function useLogout(options?: { redirectTo?: string }) {
 
   return useUserControllerLogout({
     mutation: {
+      onMutate: async () => {
+        await revokeCurrentDevicePushSubscription()
+      },
       onSuccess: () => {
         authStorage.clearAuthenticated()
         navigate({ to: redirectTo })
@@ -164,6 +171,9 @@ export function useLogoutAll(options?: { redirectTo?: string }) {
 
   return useUserControllerLogoutAll({
     mutation: {
+      onMutate: async () => {
+        await revokeAllPushSubscriptions()
+      },
       onSuccess: () => {
         authStorage.clearAuthenticated()
         navigate({ to: redirectTo })

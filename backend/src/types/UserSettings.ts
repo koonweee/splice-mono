@@ -16,6 +16,22 @@ export const NeutralizationLookaroundDaysSchema = z
   .min(0)
   .max(180);
 
+export const UserNotificationSettingsSchema = z
+  .object({
+    transactions: z
+      .object({
+        newSyncedTransactions: z.boolean().default(true),
+      })
+      .default({ newSyncedTransactions: true }),
+  })
+  .default({
+    transactions: { newSyncedTransactions: true },
+  });
+
+export type UserNotificationSettings = z.infer<
+  typeof UserNotificationSettingsSchema
+>;
+
 /**
  * User settings schema - stored as JSONB in the database
  * Add new user preferences here as the app evolves
@@ -36,9 +52,12 @@ export const UserSettingsSchema = registerSchema(
       NeutralizationLookaroundDaysSchema.default(60),
     /** Render the Analysis page using a Sankey cashflow diagram */
     analysisSankeyEnabled: z.boolean().default(false),
+    /** User-level notification type preferences */
+    notifications: UserNotificationSettingsSchema.default({
+      transactions: { newSyncedTransactions: true },
+    }),
     // Future settings can be added here:
     // locale: z.string().default('en-US'),
-    // notifications: z.object({...}).optional(),
   }),
 );
 
@@ -56,6 +75,15 @@ export const UpdateUserSettingsDtoSchema = registerSchema(
     theme: UserThemePreferenceSchema.optional(),
     neutralizationLookaroundDays: NeutralizationLookaroundDaysSchema.optional(),
     analysisSankeyEnabled: z.boolean().optional(),
+    notifications: z
+      .object({
+        transactions: z
+          .object({
+            newSyncedTransactions: z.boolean().optional(),
+          })
+          .optional(),
+      })
+      .optional(),
   }),
 );
 
@@ -71,6 +99,11 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   theme: 'splice-dark',
   neutralizationLookaroundDays: 60,
   analysisSankeyEnabled: false,
+  notifications: {
+    transactions: {
+      newSyncedTransactions: true,
+    },
+  },
 };
 
 export function normalizeUserSettings(
@@ -89,5 +122,8 @@ export function normalizeUserSettings(
     neutralizationLookaroundDays: neutralizationLookaroundDays.success
       ? neutralizationLookaroundDays.data
       : DEFAULT_USER_SETTINGS.neutralizationLookaroundDays,
+    notifications: UserNotificationSettingsSchema.parse(
+      settings?.notifications,
+    ),
   };
 }

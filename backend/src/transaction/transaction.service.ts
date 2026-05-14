@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { In, IsNull, Repository, SelectQueryBuilder } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
@@ -33,6 +34,10 @@ import {
   TRANSACTION_ACTIVITY_DATE_EXPRESSION,
   TRANSACTION_ACTIVITY_DATETIME_EXPRESSION,
 } from './transaction-date';
+import {
+  ProviderTransactionsSyncedEvent,
+  TransactionEvents,
+} from '../events/transaction.events';
 
 type TransactionFilterOptions = {
   accountId?: string;
@@ -79,6 +84,7 @@ export class TransactionService extends OwnedCrudService<
     @InjectRepository(AccountEntity)
     private readonly accountRepository: Repository<AccountEntity>,
     private readonly categoryService: CategoryService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     super(repository);
   }
@@ -1083,6 +1089,7 @@ export class TransactionService extends OwnedCrudService<
     syncResults: TransactionSyncResponse,
   ): Promise<void> {
     const { added, modified, removed } = syncResults;
+    const insertedTransactions: TransactionEntity[] = [];
 
     this.logger.log(
       {
@@ -1149,7 +1156,8 @@ export class TransactionService extends OwnedCrudService<
         }
 
         if (newEntities.length > 0) {
-          await txnRepo.save(newEntities);
+          const savedEntities = await txnRepo.save(newEntities);
+          insertedTransactions.push(...savedEntities);
           this.logger.log(
             { count: newEntities.length },
             'Inserted new transactions',
@@ -1183,12 +1191,13 @@ export class TransactionService extends OwnedCrudService<
                 { externalTransactionId: dto.externalTransactionId },
                 'Modified transaction not found locally, inserting as new',
               );
-              await txnRepo.save(
+              const savedEntity = await txnRepo.save(
                 TransactionEntity.fromDto(
                   { ...dto, accountId: internalAccountId, categoryId: null },
                   userId,
                 ),
               );
+              insertedTransactions.push(savedEntity);
               return;
             }
 
@@ -1233,6 +1242,28 @@ export class TransactionService extends OwnedCrudService<
         );
       }
     });
+
+    if (insertedTransactions.length > 0) {
+      const transactionIds = insertedTransactions.map(
+        (transaction) => transaction.id,
+      );
+      const accountIds = [
+        ...new Set(
+          insertedTransactions.map((transaction) => transaction.accountId),
+        ),
+      ];
+
+      this.eventEmitter.emit(
+        TransactionEvents.PROVIDER_TRANSACTIONS_SYNCED,
+        new ProviderTransactionsSyncedEvent(
+          userId,
+          transactionIds,
+          accountIds,
+          insertedTransactions.length,
+          new Date().toISOString(),
+        ),
+      );
+    }
 
     this.logger.log({}, 'Transaction sync results processed successfully');
   }

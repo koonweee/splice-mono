@@ -19,6 +19,10 @@ const mockFns = vi.hoisted(() => ({
   customCategoriesSectionMock: vi.fn(),
   personalAccessTokenSectionMock: vi.fn(),
   mcpConnectionSectionMock: vi.fn(),
+  loadCurrentDeviceNotificationStateMock: vi.fn(),
+  enableCurrentDeviceNotificationsMock: vi.fn(),
+  disableCurrentDeviceNotificationsMock: vi.fn(),
+  updateNewSyncedTransactionsPreferenceMock: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-query', async () => {
@@ -44,6 +48,17 @@ vi.mock('../../api/clients/spliceAPI', async () => {
       mockFns.useUserControllerUpdateSettingsMock,
   }
 })
+
+vi.mock('../../lib/notifications/browser-push', () => ({
+  loadCurrentDeviceNotificationState:
+    mockFns.loadCurrentDeviceNotificationStateMock,
+  enableCurrentDeviceNotifications:
+    mockFns.enableCurrentDeviceNotificationsMock,
+  disableCurrentDeviceNotifications:
+    mockFns.disableCurrentDeviceNotificationsMock,
+  updateNewSyncedTransactionsPreference:
+    mockFns.updateNewSyncedTransactionsPreferenceMock,
+}))
 
 vi.mock('../../components/settings/PersonalAccessTokenSection', () => ({
   PersonalAccessTokenSection: () => {
@@ -98,6 +113,11 @@ let meState: {
       hideZeroBalanceAccounts?: boolean | null
       neutralizationLookaroundDays?: number | null
       analysisSankeyEnabled?: boolean | null
+      notifications?: {
+        transactions?: {
+          newSyncedTransactions?: boolean | null
+        } | null
+      } | null
     }
   } | null
   isLoading: boolean
@@ -175,6 +195,11 @@ beforeEach(() => {
         hideZeroBalanceAccounts: false,
         neutralizationLookaroundDays: 60,
         analysisSankeyEnabled: false,
+        notifications: {
+          transactions: {
+            newSyncedTransactions: true,
+          },
+        },
       },
     },
     isLoading: false,
@@ -207,6 +232,13 @@ beforeEach(() => {
     updateSettingsHookCallCount += 1
     return mutation
   })
+  mockFns.loadCurrentDeviceNotificationStateMock.mockResolvedValue({
+    supported: 'supported',
+    subscribed: false,
+  })
+  mockFns.enableCurrentDeviceNotificationsMock.mockResolvedValue(undefined)
+  mockFns.disableCurrentDeviceNotificationsMock.mockResolvedValue(undefined)
+  mockFns.updateNewSyncedTransactionsPreferenceMock.mockResolvedValue(undefined)
 
   Object.defineProperty(window, 'matchMedia', {
     value: vi.fn().mockImplementation(() => ({
@@ -264,6 +296,22 @@ describe('SettingsPage', () => {
       }),
     ).toBeTruthy()
     expect(window.location.search).toBe('?tab=access')
+
+    fireEvent.click(screen.getByRole('tab', { name: /notifications/i }))
+    expect(
+      screen
+        .getByRole('tab', { name: /notifications/i })
+        .getAttribute('aria-selected'),
+    ).toBe('true')
+    expect(
+      screen.getByRole('switch', {
+        name: /enable notifications on this device/i,
+      }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('switch', { name: /new transactions synced/i }),
+    ).toBeTruthy()
+    expect(window.location.search).toBe('?tab=notifications')
 
     fireEvent.click(screen.getByRole('tab', { name: /categories/i }))
     expect(
@@ -411,6 +459,69 @@ describe('SettingsPage', () => {
 
     await screen.findByText('Failed to save Sankey diagram setting')
     expect((sankeySwitch as HTMLInputElement).checked).toBe(false)
+  })
+
+  it('enables notifications on the current device and refreshes user data', async () => {
+    renderSettingsPage()
+
+    fireEvent.click(screen.getByRole('tab', { name: /notifications/i }))
+    fireEvent.click(
+      screen.getByRole('switch', {
+        name: /enable notifications on this device/i,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        mockFns.enableCurrentDeviceNotificationsMock,
+      ).toHaveBeenCalledTimes(1)
+    })
+    expect(queryClientState.invalidateQueries).toHaveBeenCalled()
+  })
+
+  it('updates the new synced transactions notification preference', async () => {
+    meState.data = {
+      settings: {
+        ...meState.data!.settings,
+        notifications: {
+          transactions: {
+            newSyncedTransactions: false,
+          },
+        },
+      },
+    }
+    renderSettingsPage()
+
+    fireEvent.click(screen.getByRole('tab', { name: /notifications/i }))
+    fireEvent.click(
+      screen.getByRole('switch', { name: /new transactions synced/i }),
+    )
+
+    await waitFor(() => {
+      expect(
+        mockFns.updateNewSyncedTransactionsPreferenceMock,
+      ).toHaveBeenCalledWith(true)
+    })
+    expect(queryClientState.invalidateQueries).toHaveBeenCalled()
+  })
+
+  it('shows unsupported notification state without breaking settings', async () => {
+    mockFns.loadCurrentDeviceNotificationStateMock.mockResolvedValueOnce({
+      supported: 'unsupported',
+      subscribed: false,
+    })
+    renderSettingsPage()
+
+    fireEvent.click(screen.getByRole('tab', { name: /notifications/i }))
+
+    await screen.findByText('This browser does not support push notifications.')
+    expect(
+      screen
+        .getByRole('switch', {
+          name: /enable notifications on this device/i,
+        })
+        .hasAttribute('disabled'),
+    ).toBe(true)
   })
 
   it('persists the selected theme after save succeeds', () => {
