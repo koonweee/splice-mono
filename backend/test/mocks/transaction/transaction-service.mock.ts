@@ -16,18 +16,6 @@ export const mockTransactionService = {
     data: [mockTransaction, mockTransaction2],
     total: 2,
   }),
-  getSummary: jest.fn().mockResolvedValue({
-    buckets: [
-      {
-        currency: 'USD',
-        inflowAmount: 0,
-        outflowAmount: 7500,
-      },
-    ],
-    transactionCount: 2,
-    pendingCount: 1,
-    uncategorizedCount: 1,
-  }),
   update: jest.fn().mockResolvedValue(mockTransaction),
   updateManual: jest.fn().mockResolvedValue({
     ...mockTransaction,

@@ -64,6 +64,7 @@ vi.mock('@mantine/core', async () => {
       label,
       onChange,
       placeholder,
+      rightSection,
       value,
     }: {
       data?: Array<SelectOption>
@@ -71,6 +72,7 @@ vi.mock('@mantine/core', async () => {
       label?: string
       onChange?: (value: string | null) => void
       placeholder?: string
+      rightSection?: React.ReactNode
       value?: string | null
     }) => {
       const options = data.map((option) =>
@@ -92,6 +94,7 @@ vi.mock('@mantine/core', async () => {
               </option>
             ))}
           </select>
+          {rightSection}
           {error && <span>{error}</span>}
         </label>
       )
@@ -282,6 +285,28 @@ describe('ManualTransactionModal', () => {
 
     expect(screen.getByText('Enter a non-zero amount')).toBeTruthy()
     expect(screen.getByText('Category is required')).toBeTruthy()
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('allows clearing the account and errors on save', () => {
+    renderModal()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear account' }))
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '12.34' },
+    })
+    fireEvent.change(screen.getByLabelText('Date'), {
+      target: { value: '2026-05-07' },
+    })
+    fireEvent.change(screen.getByLabelText('Merchant'), {
+      target: { value: 'Coffee Shop' },
+    })
+    fireEvent.change(screen.getByLabelText('Category'), {
+      target: { value: 'category-1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByText('Account is required')).toBeTruthy()
     expect(mockFns.createMutateMock).not.toHaveBeenCalled()
   })
 })

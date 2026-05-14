@@ -4,7 +4,6 @@ import {
   Group,
   Modal,
   NumberInput,
-  Select,
   Stack,
   TextInput,
 } from '@mantine/core'
@@ -24,6 +23,7 @@ import {
   getViewportAwareComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
+import { AccountSelect } from '../accounts/AccountSelect'
 import { CategorySelect } from '../categories/CategorySelect'
 import type { CategorySelectOption } from '../categories/CategorySelect'
 import type { Account, Category, Transaction } from '../../api/models'
@@ -294,7 +294,7 @@ export function ManualTransactionModal({
     >
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
-          <Select
+          <AccountSelect
             allowDeselect={false}
             comboboxProps={comboboxProps}
             data={accountOptions}

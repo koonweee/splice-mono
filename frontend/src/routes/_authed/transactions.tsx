@@ -9,7 +9,6 @@ import {
   FocusTrap,
   Group,
   SegmentedControl,
-  Select,
   Stack,
   Switch,
   Text,
@@ -28,7 +27,6 @@ import {
   useCategoryControllerFindAll,
   useCategoryControllerFindFilterOptions,
   useTransactionControllerBulkUpdateCategories,
-  useTransactionControllerGetSummary,
   useTransactionControllerRemoveManual,
   useTransactionControllerUndoBulkUpdateCategories,
 } from '../../api/clients/spliceAPI'
@@ -44,7 +42,6 @@ import type {
   Category,
   Transaction,
   TransactionControllerFindAllParams,
-  TransactionControllerGetSummaryParams,
 } from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
 import type { MRT_SortingState } from 'mantine-react-table'
@@ -53,10 +50,10 @@ import { DateRangeControl } from '@/components/DateRangeControl'
 import { TransactionsTable } from '@/components/TransactionsTable'
 import { CategorySelect } from '@/components/categories/CategorySelect'
 import { TransactionBulkEditToolbar } from '@/components/transactions/TransactionBulkEditToolbar'
-import { TransactionSummaryStrip } from '@/components/transactions/TransactionSummaryStrip'
 import { TransactionsMobileList } from '@/components/transactions/TransactionsMobileList'
 import { PageHeader } from '@/components/PageHeader'
 import { ManualTransactionModal } from '@/components/transactions/ManualTransactionModal'
+import { AccountSelect } from '@/components/accounts/AccountSelect'
 
 const PAGE_SIZE = 50
 const CLEAR_CATEGORY_VALUE = '__clear_category__'
@@ -138,7 +135,7 @@ function TransactionsFilterPanel({
         <Text fw={600} size="sm">
           Filters
         </Text>
-        <Select
+        <AccountSelect
           placeholder="Account"
           data={accountOptions}
           value={accountId}
@@ -348,29 +345,6 @@ function TransactionsPage() {
     return params
   }, [sorting, dateRange, accountId, categoryId, amountSign])
 
-  const summaryParams = useMemo(() => {
-    const params: TransactionControllerGetSummaryParams & {
-      categoryId?: string
-    } = {
-      convert: true,
-    }
-    const [start, end] = dateRange
-    if (start && end) {
-      params.startDate = dayjs(start).format('YYYY-MM-DD')
-      params.endDate = dayjs(end).format('YYYY-MM-DD')
-    }
-    if (accountId) {
-      params.accountId = accountId
-    }
-    if (categoryId) {
-      params.categoryId = categoryId
-    }
-    if (amountSign === 'positive' || amountSign === 'negative') {
-      params.amountSign = amountSign
-    }
-    return params
-  }, [accountId, amountSign, categoryId, dateRange])
-
   const {
     data,
     fetchNextPage,
@@ -396,12 +370,6 @@ function TransactionsPage() {
       return totalFetched < lastPage.total ? allPages.length : undefined
     },
   })
-  const {
-    data: summary,
-    isError: isSummaryError,
-    isLoading: isSummaryLoading,
-  } = useTransactionControllerGetSummary(summaryParams)
-
   const flatData = useMemo(
     () => data?.pages.flatMap((page) => page.data) ?? [],
     [data],
@@ -590,14 +558,6 @@ function TransactionsPage() {
       ? `Open transaction filters, ${hiddenActiveFilterCount} active`
       : 'Open transaction filters'
 
-  const transactionSummaryStrip = (
-    <TransactionSummaryStrip
-      summary={summary}
-      isLoading={isSummaryLoading}
-      isError={isSummaryError}
-    />
-  )
-
   const filterPanel = (
     <TransactionsFilterPanel
       accountId={accountId}
@@ -624,29 +584,29 @@ function TransactionsPage() {
       <PageHeader
         title="Transactions"
         mb="md"
-	        wrap="nowrap"
-	        actions={
-	          <Group gap="sm" wrap="nowrap">
-	            {isMobile ? (
-	              <ActionIcon
-	                aria-label="Add transaction"
-	                onClick={openCreateManualTransaction}
-	                size={40}
-	                variant="filled"
-	              >
-	                <Plus aria-hidden size={18} />
-	              </ActionIcon>
-	            ) : (
-	              <Button
-	                leftSection={<Plus size={16} />}
-	                onClick={openCreateManualTransaction}
-	                size="md"
-	              >
-	                Add transaction
-	              </Button>
-	            )}
-	            <Switch
-	              checked={bulkModeEnabled}
+        wrap="nowrap"
+        actions={
+          <Group gap="sm" wrap="nowrap">
+            {isMobile ? (
+              <ActionIcon
+                aria-label="Add transaction"
+                onClick={openCreateManualTransaction}
+                size={40}
+                variant="filled"
+              >
+                <Plus aria-hidden size={18} />
+              </ActionIcon>
+            ) : (
+              <Button
+                leftSection={<Plus size={16} />}
+                onClick={openCreateManualTransaction}
+                size="md"
+              >
+                Add transaction
+              </Button>
+            )}
+            <Switch
+              checked={bulkModeEnabled}
               label="Bulk edit"
               onChange={(event) =>
                 setBulkModeEnabled(event.currentTarget.checked)
@@ -745,51 +705,40 @@ function TransactionsPage() {
             )}
           </Box>
         )}
-        {!isMobile &&
-          (bulkModeEnabled ? (
-            <TransactionBulkEditToolbar
-              categoryOptions={assignableCategoryOptions}
-              isSaving={bulkUpdateCategories.isPending}
-              loadedCount={loadedTransactionIds.length}
-              selectedCount={selectedCount}
-              selectLoadedChecked={allLoadedSelected}
-              selectLoadedIndeterminate={
-                someLoadedSelected && !allLoadedSelected
-              }
-              value={bulkCategoryValue}
-              onChange={setBulkCategoryValue}
-              onSave={saveBulkCategoryUpdate}
-              onToggleLoaded={toggleLoadedSelection}
-              showSelectLoaded={false}
-              variant="summary"
-            />
-          ) : (
-            transactionSummaryStrip
-          ))}
+        {!isMobile && bulkModeEnabled && (
+          <TransactionBulkEditToolbar
+            categoryOptions={assignableCategoryOptions}
+            isSaving={bulkUpdateCategories.isPending}
+            loadedCount={loadedTransactionIds.length}
+            selectedCount={selectedCount}
+            selectLoadedChecked={allLoadedSelected}
+            selectLoadedIndeterminate={someLoadedSelected && !allLoadedSelected}
+            value={bulkCategoryValue}
+            onChange={setBulkCategoryValue}
+            onSave={saveBulkCategoryUpdate}
+            onToggleLoaded={toggleLoadedSelection}
+            showSelectLoaded={false}
+            variant="summary"
+          />
+        )}
       </Group>
 
-      {isMobile && (
+      {isMobile && bulkModeEnabled && (
         <Box mb="md">
-          {bulkModeEnabled ? (
-            <TransactionBulkEditToolbar
-              categoryOptions={assignableCategoryOptions}
-              isSaving={bulkUpdateCategories.isPending}
-              loadedCount={loadedTransactionIds.length}
-              selectedCount={selectedCount}
-              selectLoadedChecked={allLoadedSelected}
-              selectLoadedIndeterminate={
-                someLoadedSelected && !allLoadedSelected
-              }
-              value={bulkCategoryValue}
-              onChange={setBulkCategoryValue}
-              onSave={saveBulkCategoryUpdate}
-              onToggleLoaded={toggleLoadedSelection}
-              showSelectLoaded
-              variant="inline"
-            />
-          ) : (
-            transactionSummaryStrip
-          )}
+          <TransactionBulkEditToolbar
+            categoryOptions={assignableCategoryOptions}
+            isSaving={bulkUpdateCategories.isPending}
+            loadedCount={loadedTransactionIds.length}
+            selectedCount={selectedCount}
+            selectLoadedChecked={allLoadedSelected}
+            selectLoadedIndeterminate={someLoadedSelected && !allLoadedSelected}
+            value={bulkCategoryValue}
+            onChange={setBulkCategoryValue}
+            onSave={saveBulkCategoryUpdate}
+            onToggleLoaded={toggleLoadedSelection}
+            showSelectLoaded
+            variant="inline"
+          />
         </Box>
       )}
 
