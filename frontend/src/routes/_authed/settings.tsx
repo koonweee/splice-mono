@@ -185,6 +185,7 @@ export function SettingsPage() {
   const queryClient = useQueryClient()
   const { data: user, isLoading, error } = useUserControllerMe()
   const updateSettingsMutation = useUserControllerUpdateSettings()
+  const updateAnalysisSankeyMutation = useUserControllerUpdateSettings()
   const [selectedTab, setSelectedTab] = useState<SettingsTab>(
     getInitialSettingsTab,
   )
@@ -196,6 +197,10 @@ export function SettingsPage() {
   const [currency, setCurrency] = useState<string>('')
   const [timezone, setTimezone] = useState<string>('')
   const [hideZeroBalanceAccounts, setHideZeroBalanceAccounts] = useState(false)
+  const [analysisSankeyEnabled, setAnalysisSankeyEnabled] = useState(false)
+  const [analysisSankeyError, setAnalysisSankeyError] = useState<string | null>(
+    null,
+  )
   const [hasChanges, setHasChanges] = useState(false)
 
   // Initialize form values when user data loads
@@ -207,6 +212,7 @@ export function SettingsPage() {
       setCurrency(user.settings.currency ?? 'USD')
       setTimezone(user.settings.timezone ?? 'UTC')
       setHideZeroBalanceAccounts(user.settings.hideZeroBalanceAccounts ?? false)
+      setAnalysisSankeyEnabled(user.settings.analysisSankeyEnabled ?? false)
     }
   }, [user?.settings])
 
@@ -265,6 +271,24 @@ export function SettingsPage() {
     await queryClient.invalidateQueries({
       queryKey: getUserControllerMeQueryOptions().queryKey,
     })
+  }
+
+  const handleAnalysisSankeyChange = async (checked: boolean) => {
+    const previousValue = analysisSankeyEnabled
+    setAnalysisSankeyEnabled(checked)
+    setAnalysisSankeyError(null)
+
+    try {
+      await updateAnalysisSankeyMutation.mutateAsync({
+        data: { analysisSankeyEnabled: checked },
+      })
+      await queryClient.invalidateQueries({
+        queryKey: getUserControllerMeQueryOptions().queryKey,
+      })
+    } catch {
+      setAnalysisSankeyEnabled(previousValue)
+      setAnalysisSankeyError('Failed to save Sankey diagram setting')
+    }
   }
 
   const handleTabChange = (value: string | null) => {
@@ -453,13 +477,34 @@ export function SettingsPage() {
         </Tabs.Panel>
 
         <Tabs.Panel className={styles.categoriesPanel} value="analysis">
-          <AnalysisRulesSection
-            lookaroundSetting={{
-              value: user?.settings.neutralizationLookaroundDays ?? 60,
-              isSaving: updateSettingsMutation.isPending,
-              onSave: handleSaveNeutralizationLookaround,
-            }}
-          />
+          <Stack gap="lg">
+            <Paper withBorder p="lg" radius="md">
+              <Stack gap="sm">
+                <Title order={4}>Analysis Display</Title>
+                <Switch
+                  label="Use Sankey diagram on Analysis"
+                  description="Replace separate inflow and outflow charts with one cashflow diagram."
+                  checked={analysisSankeyEnabled}
+                  disabled={updateAnalysisSankeyMutation.isPending}
+                  onChange={(event) => {
+                    void handleAnalysisSankeyChange(event.currentTarget.checked)
+                  }}
+                />
+                {analysisSankeyError && (
+                  <Alert color="red" title="Error">
+                    {analysisSankeyError}
+                  </Alert>
+                )}
+              </Stack>
+            </Paper>
+            <AnalysisRulesSection
+              lookaroundSetting={{
+                value: user?.settings.neutralizationLookaroundDays ?? 60,
+                isSaving: updateSettingsMutation.isPending,
+                onSave: handleSaveNeutralizationLookaround,
+              }}
+            />
+          </Stack>
         </Tabs.Panel>
 
         <Tabs.Panel value="mcp">

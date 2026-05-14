@@ -18,6 +18,7 @@ export const mockUser: User = {
     hideZeroBalanceAccounts: false,
     theme: 'splice-dark',
     neutralizationLookaroundDays: 60,
+    analysisSankeyEnabled: false,
   },
   ...mockTimestamps,
 };
@@ -34,6 +35,7 @@ export const mockUser2: User = {
     hideZeroBalanceAccounts: false,
     theme: 'splice-dark',
     neutralizationLookaroundDays: 60,
+    analysisSankeyEnabled: false,
   },
   ...mockTimestamps,
 };

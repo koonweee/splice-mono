@@ -172,6 +172,7 @@ function mockNeutralizationLookaroundDays(
       hideZeroBalanceAccounts: false,
       theme: 'splice-dark',
       neutralizationLookaroundDays,
+      analysisSankeyEnabled: false,
     },
   });
 }
@@ -872,6 +873,7 @@ describe('TransactionAnalysisService', () => {
           hideZeroBalanceAccounts: false,
           theme: 'splice-dark',
           neutralizationLookaroundDays: 60,
+          analysisSankeyEnabled: false,
         },
       }),
     };

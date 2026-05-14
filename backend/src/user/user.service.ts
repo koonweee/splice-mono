@@ -168,6 +168,9 @@ export class UserService {
       neutralizationLookaroundDays:
         settingsUpdate.neutralizationLookaroundDays ??
         oldSettings.neutralizationLookaroundDays,
+      analysisSankeyEnabled:
+        settingsUpdate.analysisSankeyEnabled ??
+        oldSettings.analysisSankeyEnabled,
     };
     entity.settings = newSettings;
 

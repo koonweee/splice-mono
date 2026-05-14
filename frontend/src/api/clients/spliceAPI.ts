@@ -5706,7 +5706,7 @@ export function useMcpControllerHandleUnsupportedMethod<
 }
 
 /**
- * Get cash flow analysis grouped by category for an activity date range. Pending transactions are excluded. Exact equal-and-opposite posted transactions can be neutralized using the user lookaround setting before aggregation. Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.
+ * Get cash flow analysis grouped by category for an activity date range. Pending transactions are included and treated like settled transactions. Exact equal-and-opposite transactions can be neutralized using the user lookaround setting before aggregation. Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.
  */
 export const transactionAnalysisControllerGetAnalysis = (
   params: TransactionAnalysisControllerGetAnalysisParams,
@@ -5868,7 +5868,7 @@ export function useTransactionAnalysisControllerGetAnalysis<
 }
 
 /**
- * Get unmatched posted transactions for a category drilldown within an activity date range. Transactions are neutralized using the same exact equal-and-opposite matching pipeline as the summary analysis before category and flow filtering. Returned rows include converted amounts using exchange rates anchored to the requested endDate.
+ * Get unmatched transactions for a category drilldown within an activity date range. Transactions are neutralized using the same exact equal-and-opposite matching pipeline as the summary analysis before category and flow filtering. Returned rows include converted amounts using exchange rates anchored to the requested endDate.
  */
 export const transactionAnalysisControllerGetTransactions = (
   params: TransactionAnalysisControllerGetTransactionsParams,

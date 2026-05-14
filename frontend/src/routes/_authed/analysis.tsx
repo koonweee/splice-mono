@@ -20,8 +20,10 @@ import { ArrowDownLeft, ArrowUpRight, ClipboardList } from 'lucide-react'
 import {
   useTransactionAnalysisControllerGetAnalysis,
   useTransactionAnalysisControllerGetAudit,
+  useUserControllerMe,
 } from '../../api/clients/spliceAPI'
 import { AnalysisAuditDrawer } from '../../components/analysis/AnalysisAuditDrawer'
+import { AnalysisSankeyChart } from '../../components/analysis/AnalysisSankeyChart'
 import { CategoryTransactionsModal } from '../../components/CategoryTransactionsModal'
 import { DateRangeControl } from '../../components/DateRangeControl'
 import { PageHeader } from '../../components/PageHeader'
@@ -274,6 +276,9 @@ function AnalysisPage() {
     isPending,
     isError,
   } = useTransactionAnalysisControllerGetAnalysis({ startDate, endDate })
+  const { data: user } = useUserControllerMe()
+  const analysisSankeyEnabled =
+    user?.settings.analysisSankeyEnabled ?? false
 
   // Category drill-down modal
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure()
@@ -368,30 +373,43 @@ function AnalysisPage() {
               </Text>
             </Paper>
           ) : (
-            <Grid>
-              <Grid.Col span={{ base: 12, md: 6 }}>
-                <FlowSection
-                  title="Inflows"
-                  icon={ArrowDownLeft}
-                  iconColor="var(--mantine-color-teal-6)"
-                  categories={analysis.inflows}
-                  total={analysis.totalInflow}
-                  currency={analysis.currency}
-                  onCategoryClick={(cat) => handleCategoryClick(cat, 'inflow')}
+            <>
+              {analysisSankeyEnabled ? (
+                <AnalysisSankeyChart
+                  analysis={analysis}
+                  onCategoryClick={handleCategoryClick}
                 />
-              </Grid.Col>
-              <Grid.Col span={{ base: 12, md: 6 }}>
-                <FlowSection
-                  title="Outflows"
-                  icon={ArrowUpRight}
-                  iconColor="var(--mantine-color-red-6)"
-                  categories={analysis.outflows}
-                  total={analysis.totalOutflow}
-                  currency={analysis.currency}
-                  onCategoryClick={(cat) => handleCategoryClick(cat, 'outflow')}
-                />
-              </Grid.Col>
-            </Grid>
+              ) : (
+                <Grid>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <FlowSection
+                      title="Inflows"
+                      icon={ArrowDownLeft}
+                      iconColor="var(--mantine-color-teal-6)"
+                      categories={analysis.inflows}
+                      total={analysis.totalInflow}
+                      currency={analysis.currency}
+                      onCategoryClick={(cat) =>
+                        handleCategoryClick(cat, 'inflow')
+                      }
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <FlowSection
+                      title="Outflows"
+                      icon={ArrowUpRight}
+                      iconColor="var(--mantine-color-red-6)"
+                      categories={analysis.outflows}
+                      total={analysis.totalOutflow}
+                      currency={analysis.currency}
+                      onCategoryClick={(cat) =>
+                        handleCategoryClick(cat, 'outflow')
+                      }
+                    />
+                  </Grid.Col>
+                </Grid>
+              )}
+            </>
           )}
         </Stack>
       )}

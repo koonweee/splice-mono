@@ -17,4 +17,5 @@ export interface UserSettings {
    * @maximum 180
    */
   neutralizationLookaroundDays?: number
+  analysisSankeyEnabled?: boolean
 }
