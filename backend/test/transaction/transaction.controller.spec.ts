@@ -6,6 +6,7 @@ import { TransactionService } from '../../src/transaction/transaction.service';
 import { mockTransactionService } from '../mocks/transaction/transaction-service.mock';
 import {
   mockAccountId,
+  mockCreateManualTransactionDto,
   mockCreateTransactionDto,
   mockTransaction,
   mockTransaction2,
@@ -145,13 +146,77 @@ describe('TransactionController', () => {
     });
   });
 
+  it('converts manual transaction amounts from their account currency when requested', async () => {
+    const manualEurTransaction = {
+      ...mockTransaction,
+      source: 'manual' as const,
+      externalTransactionId: null,
+      amount: {
+        money: { currency: 'EUR', amount: 4500 },
+        sign: mockTransaction.amount.sign,
+      },
+    };
+    mockTransactionService.findAllPaginated.mockResolvedValueOnce({
+      data: [manualEurTransaction],
+      total: 1,
+    });
+    mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue('USD');
+    mockCurrencyConversionService.getRateMap.mockResolvedValue(
+      new Map([['EUR', 1.2]]),
+    );
+    mockCurrencyConversionService.convertAmount.mockReturnValue(5400);
+
+    const result = await controller.findAll(
+      mockUser,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'true',
+    );
+
+    expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
+      ['EUR'],
+      'USD',
+      expect.any(String),
+    );
+    expect(mockCurrencyConversionService.convertAmount).toHaveBeenCalledWith(
+      4500,
+      'EUR',
+      'USD',
+      1.2,
+    );
+    expect(result.data[0]).toMatchObject({
+      source: 'manual',
+      convertedAmount: {
+        money: { currency: 'USD', amount: 5400 },
+        sign: mockTransaction.amount.sign,
+      },
+    });
+  });
+
   it('delegates create, update, category update, undo, and delete flows', async () => {
     await expect(
       controller.create(mockUser, mockCreateTransactionDto),
     ).resolves.toBe(mockTransaction);
     await expect(
+      controller.createManual(mockUser, mockCreateManualTransactionDto),
+    ).resolves.toMatchObject({ source: 'manual' });
+    await expect(
       controller.update(mockTransaction.id, mockUser, mockUpdateTransactionDto),
     ).resolves.toBe(mockTransaction);
+    await expect(
+      controller.updateManual(
+        mockTransaction.id,
+        mockUser,
+        mockCreateManualTransactionDto,
+      ),
+    ).resolves.toMatchObject({ source: 'manual' });
     await expect(
       controller.updateCategory(mockTransaction.id, mockUser, {
         categoryId: null,
@@ -169,11 +234,31 @@ describe('TransactionController', () => {
     await expect(
       controller.remove(mockTransaction.id, mockUser),
     ).resolves.toBeUndefined();
+    await expect(
+      controller.removeManual(mockTransaction.id, mockUser),
+    ).resolves.toBeUndefined();
+
+    expect(mockTransactionService.createManual).toHaveBeenCalledWith(
+      mockUser.userId,
+      mockCreateManualTransactionDto,
+    );
+    expect(mockTransactionService.updateManual).toHaveBeenCalledWith(
+      mockTransaction.id,
+      mockUser.userId,
+      mockCreateManualTransactionDto,
+    );
+    expect(mockTransactionService.removeManual).toHaveBeenCalledWith(
+      mockTransaction.id,
+      mockUser.userId,
+    );
   });
 
   it('throws NotFoundException when service returns null', async () => {
     mockTransactionService.findOne.mockResolvedValueOnce(null);
     mockTransactionService.updateCategory.mockResolvedValueOnce(null);
+    mockTransactionService.createManual.mockResolvedValueOnce(null);
+    mockTransactionService.updateManual.mockResolvedValueOnce(null);
+    mockTransactionService.removeManual.mockResolvedValueOnce(false);
 
     await expect(
       controller.findOne(mockTransaction.id, mockUser),
@@ -182,6 +267,19 @@ describe('TransactionController', () => {
       controller.updateCategory(mockTransaction.id, mockUser, {
         categoryId: null,
       }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      controller.createManual(mockUser, mockCreateManualTransactionDto),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      controller.updateManual(
+        mockTransaction.id,
+        mockUser,
+        mockCreateManualTransactionDto,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      controller.removeManual(mockTransaction.id, mockUser),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

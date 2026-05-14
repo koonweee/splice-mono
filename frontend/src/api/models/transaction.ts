@@ -5,6 +5,7 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { TransactionSource } from './transactionSource'
 import type { MoneyWithSign } from './moneyWithSign'
 import type { TransactionCounterpartiesItem } from './transactionCounterpartiesItem'
 import type { TransactionLocation } from './transactionLocation'
@@ -15,6 +16,7 @@ import type { TransactionConvertedAmount } from './transactionConvertedAmount'
 
 export interface Transaction {
   id: string
+  source: TransactionSource
   amount: MoneyWithSign
   accountId: string
   /** @nullable */

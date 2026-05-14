@@ -1,10 +1,15 @@
 import { NotFoundException } from '@nestjs/common';
+import { AccountEntity } from '../../src/account/account.entity';
 import { CategoryEntity } from '../../src/category/category.entity';
 import { CategoryService } from '../../src/category/category.service';
+import { BalanceColumns } from '../../src/common/balance.columns';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import { MoneySign } from '../../src/types/MoneyWithSign';
-import type { CreateTransactionDto } from '../../src/types/Transaction';
+import type {
+  CreateManualTransactionDto,
+  CreateTransactionDto,
+} from '../../src/types/Transaction';
 
 const userId = '00000000-0000-4000-8000-000000000001';
 const accountId = '00000000-0000-4000-8000-000000000010';
@@ -45,6 +50,56 @@ function buildCreateDto(
   };
 }
 
+function buildManualDto(
+  overrides: Partial<CreateManualTransactionDto> = {},
+): CreateManualTransactionDto {
+  return {
+    accountId,
+    amount: {
+      money: { amount: 3400, currency: 'USD' },
+      sign: MoneySign.NEGATIVE,
+    },
+    merchantName: 'Manual Store',
+    providerDate: '2026-03-01',
+    categoryId: '00000000-0000-4000-8000-000000000100',
+    ...overrides,
+  };
+}
+
+function buildAccount(overrides: Partial<AccountEntity> = {}): AccountEntity {
+  const account = new AccountEntity();
+  account.id = overrides.id ?? accountId;
+  account.userId = overrides.userId ?? userId;
+  account.name = overrides.name ?? 'Checking';
+  account.customName = overrides.customName ?? null;
+  account.notes = overrides.notes ?? null;
+  account.mask = overrides.mask ?? null;
+  account.availableBalance =
+    overrides.availableBalance ??
+    BalanceColumns.fromMoneyWithSign({
+      money: { amount: 100000, currency: 'USD' },
+      sign: MoneySign.POSITIVE,
+    });
+  account.currentBalance =
+    overrides.currentBalance ??
+    BalanceColumns.fromMoneyWithSign({
+      money: { amount: 100000, currency: 'USD' },
+      sign: MoneySign.POSITIVE,
+    });
+  account.type = overrides.type ?? 'depository';
+  account.subType = overrides.subType ?? 'checking';
+  account.externalAccountId = overrides.externalAccountId ?? null;
+  account.rawApiAccount = overrides.rawApiAccount ?? null;
+  account.archivedAt = overrides.archivedAt ?? null;
+  account.bankLinkId = overrides.bankLinkId ?? null;
+  account.bankLink = overrides.bankLink ?? null;
+  account.createdAt =
+    overrides.createdAt ?? new Date('2026-02-14T00:00:00.000Z');
+  account.updatedAt =
+    overrides.updatedAt ?? new Date('2026-02-14T00:00:00.000Z');
+  return account;
+}
+
 function buildTransaction(
   overrides: Partial<TransactionEntity> = {},
 ): TransactionEntity {
@@ -73,6 +128,9 @@ describe('TransactionService', () => {
   const categoryRepository = {
     find: jest.fn(),
   };
+  const accountRepository = {
+    findOne: jest.fn(),
+  };
   const categoryService = {
     findActiveAssignableCategory: jest.fn(),
   };
@@ -85,6 +143,7 @@ describe('TransactionService', () => {
     service = new TransactionService(
       repository as never,
       categoryRepository as never,
+      accountRepository as never,
       categoryService as unknown as CategoryService,
     );
     repository.save.mockImplementation(async (entity: TransactionEntity) => {
@@ -113,6 +172,7 @@ describe('TransactionService', () => {
     expect(categoryService.findActiveAssignableCategory).not.toHaveBeenCalled();
     expect(result.categoryId).toBeNull();
     expect(result.category).toBeNull();
+    expect(result.source).toBe('provider');
     expect(result.providerCategoryHint).toMatchObject({
       provider: 'plaid',
       primary: 'FOOD_AND_DRINK',
@@ -121,6 +181,180 @@ describe('TransactionService', () => {
       confidenceLevel: 'HIGH',
       iconUrl: 'https://example.com/icon.png',
     });
+  });
+
+  it('creates manual transactions with account-derived currency and null provider metadata', async () => {
+    const account = buildAccount();
+    accountRepository.findOne.mockResolvedValueOnce(account);
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(
+      category,
+    );
+
+    const result = await service.createManual(userId, buildManualDto());
+
+    const saved = repository.save.mock.calls[0][0] as TransactionEntity;
+    expect(accountRepository.findOne).toHaveBeenCalledWith({
+      where: { id: accountId, userId, archivedAt: expect.any(Object) },
+    });
+    expect(result?.source).toBe('manual');
+    expect(result?.amount.money.currency).toBe('USD');
+    expect(result?.amount.money.amount).toBe(3400);
+    expect(result?.categoryId).toBe(category.id);
+    expect(saved.source).toBe('manual');
+    expect(saved.pending).toBe(false);
+    expect(saved.externalTransactionId).toBeNull();
+    expect(saved.providerTransactionName).toBeNull();
+    expect(saved.originalDescription).toBeNull();
+    expect(saved.reportingDateOverride).toBeNull();
+    expect(saved.authorizedDate).toBeNull();
+    expect(saved.authorizedDatetime).toBeNull();
+    expect(saved.providerDatetime).toBeNull();
+  });
+
+  it('rejects manual create for inactive accounts, non-positive amounts, mismatched currencies, and unassignable categories', async () => {
+    accountRepository.findOne.mockResolvedValueOnce(null);
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(
+      category,
+    );
+
+    await expect(
+      service.createManual(userId, buildManualDto()),
+    ).resolves.toBeNull();
+    expect(repository.save).not.toHaveBeenCalled();
+
+    accountRepository.findOne.mockResolvedValueOnce(buildAccount());
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(null);
+
+    await expect(
+      service.createManual(userId, buildManualDto()),
+    ).resolves.toBeNull();
+    expect(repository.save).not.toHaveBeenCalled();
+
+    accountRepository.findOne.mockResolvedValueOnce(buildAccount());
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(
+      category,
+    );
+
+    await expect(
+      service.createManual(
+        userId,
+        buildManualDto({
+          amount: {
+            money: { amount: 0, currency: 'USD' },
+            sign: MoneySign.NEGATIVE,
+          },
+        }),
+      ),
+    ).rejects.toThrow('Manual transaction amount must be positive');
+
+    accountRepository.findOne.mockResolvedValueOnce(buildAccount());
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(
+      category,
+    );
+
+    await expect(
+      service.createManual(
+        userId,
+        buildManualDto({
+          amount: {
+            money: { amount: -1200, currency: 'USD' },
+            sign: MoneySign.NEGATIVE,
+          },
+        }),
+      ),
+    ).rejects.toThrow('Manual transaction amount must be positive');
+
+    accountRepository.findOne.mockResolvedValueOnce(buildAccount());
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(
+      category,
+    );
+
+    await expect(
+      service.createManual(
+        userId,
+        buildManualDto({
+          amount: {
+            money: { amount: 1200, currency: 'EUR' },
+            sign: MoneySign.NEGATIVE,
+          },
+        }),
+      ),
+    ).rejects.toThrow(
+      'Manual transaction currency must match the selected account currency',
+    );
+  });
+
+  it('updates manual transactions and returns null for provider transactions', async () => {
+    const manualTransaction = buildTransaction({ source: 'manual' });
+    const newAccount = buildAccount({
+      id: '00000000-0000-4000-8000-000000000011',
+      currentBalance: BalanceColumns.fromMoneyWithSign({
+        money: { amount: 200000, currency: 'EUR' },
+        sign: MoneySign.POSITIVE,
+      }),
+    });
+    const updateDto = buildManualDto({
+      accountId: newAccount.id,
+      amount: {
+        money: { amount: 9900, currency: 'EUR' },
+        sign: MoneySign.POSITIVE,
+      },
+      merchantName: 'Updated Manual Store',
+      providerDate: '2026-04-02',
+    });
+    repository.findOne.mockResolvedValueOnce(manualTransaction);
+    accountRepository.findOne.mockResolvedValueOnce(newAccount);
+    categoryService.findActiveAssignableCategory.mockResolvedValueOnce(
+      category,
+    );
+    repository.save.mockResolvedValueOnce(manualTransaction);
+
+    const updated = await service.updateManual(
+      manualTransaction.id,
+      userId,
+      updateDto,
+    );
+
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: { id: manualTransaction.id, userId, source: 'manual' },
+      relations: ['account', 'category'],
+    });
+    expect(updated?.source).toBe('manual');
+    expect(manualTransaction.accountId).toBe(newAccount.id);
+    expect(manualTransaction.amount.toMoneyWithSign()).toEqual({
+      money: { amount: 9900, currency: 'EUR' },
+      sign: MoneySign.POSITIVE,
+    });
+    expect(manualTransaction.merchantName).toBe('Updated Manual Store');
+    expect(manualTransaction.providerDate).toBe('2026-04-02');
+    expect(manualTransaction.categoryId).toBe(category.id);
+    expect(manualTransaction.reportingDateOverride).toBeNull();
+    expect(manualTransaction.externalTransactionId).toBeNull();
+
+    repository.findOne.mockResolvedValueOnce(null);
+
+    await expect(
+      service.updateManual('provider-id', userId, buildManualDto()),
+    ).resolves.toBeNull();
+  });
+
+  it('deletes only manual transactions', async () => {
+    repository.delete.mockResolvedValueOnce({ affected: 1 });
+
+    await expect(
+      service.removeManual('00000000-0000-4000-8000-000000000200', userId),
+    ).resolves.toBe(true);
+    expect(repository.delete).toHaveBeenCalledWith({
+      id: '00000000-0000-4000-8000-000000000200',
+      userId,
+      source: 'manual',
+    });
+
+    repository.delete.mockResolvedValueOnce({ affected: 0 });
+
+    await expect(
+      service.removeManual('00000000-0000-4000-8000-000000000201', userId),
+    ).resolves.toBe(false);
   });
 
   it('assigns, clears, and timestamps user categories', async () => {
@@ -168,6 +402,27 @@ describe('TransactionService', () => {
     ).resolves.toBeNull();
   });
 
+  it('does not apply provider category overrides to manual transactions', async () => {
+    const manualTransaction = buildTransaction({
+      source: 'manual',
+      categoryId: category.id,
+      category,
+    });
+    repository.findOne.mockResolvedValueOnce(manualTransaction);
+
+    await expect(
+      service.updateCategory(
+        manualTransaction.id,
+        { categoryId: null },
+        userId,
+      ),
+    ).resolves.toBeNull();
+
+    expect(manualTransaction.categoryId).toBe(category.id);
+    expect(categoryService.findActiveAssignableCategory).not.toHaveBeenCalled();
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
   it('throws when general update tries to assign an invalid category', async () => {
     repository.findOne.mockResolvedValueOnce(buildTransaction());
     categoryService.findActiveAssignableCategory.mockResolvedValueOnce(null);
@@ -175,6 +430,44 @@ describe('TransactionService', () => {
     await expect(
       service.update('txn-id', { categoryId: category.id }, userId),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('does not update manual transactions through the generic provider update path', async () => {
+    repository.findOne.mockResolvedValueOnce(null);
+
+    await expect(
+      service.update(
+        '00000000-0000-4000-8000-000000000200',
+        { categoryId: category.id },
+        userId,
+      ),
+    ).resolves.toBeNull();
+
+    expect(repository.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: '00000000-0000-4000-8000-000000000200',
+          userId,
+          source: 'provider',
+        },
+      }),
+    );
+    expect(categoryService.findActiveAssignableCategory).not.toHaveBeenCalled();
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it('does not remove manual transactions through the generic provider remove path', async () => {
+    repository.delete.mockResolvedValueOnce({ affected: 0 });
+
+    await expect(
+      service.remove('00000000-0000-4000-8000-000000000200', userId),
+    ).resolves.toBe(false);
+
+    expect(repository.delete).toHaveBeenCalledWith({
+      id: '00000000-0000-4000-8000-000000000200',
+      userId,
+      source: 'provider',
+    });
   });
 
   it('bulk updates and undo tokens store actual user category IDs', async () => {
@@ -208,6 +501,47 @@ describe('TransactionService', () => {
     expect(transaction.categoryId).toBe(category.id);
     expect(transaction.categoryUpdatedAt).toBeInstanceOf(Date);
     expect(result?.undo).toEqual(expect.any(String));
+  });
+
+  it('bulk category updates ignore manual transactions', async () => {
+    const providerTransaction = buildTransaction({
+      id: '00000000-0000-4000-8000-000000000201',
+      categoryId: category.id,
+      category,
+      categoryUpdatedAt: new Date('2026-03-01T00:00:00.000Z'),
+      source: 'provider',
+    });
+    const manualTransaction = buildTransaction({
+      id: '00000000-0000-4000-8000-000000000202',
+      categoryId: category.id,
+      category,
+      categoryUpdatedAt: new Date('2026-03-01T00:00:00.000Z'),
+      source: 'manual',
+    });
+    const txnRepo = {
+      find: jest
+        .fn()
+        .mockResolvedValue([providerTransaction, manualTransaction]),
+      save: jest.fn().mockResolvedValue([providerTransaction]),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
+      ) => callback({ getRepository: () => txnRepo }),
+    );
+
+    const result = await service.bulkUpdateCategories(userId, {
+      transactionIds: [providerTransaction.id, manualTransaction.id],
+      categoryId: null,
+    });
+
+    expect(result).toMatchObject({
+      count: 1,
+      transactionIds: [providerTransaction.id],
+    });
+    expect(providerTransaction.categoryId).toBeNull();
+    expect(manualTransaction.categoryId).toBe(category.id);
+    expect(txnRepo.save).toHaveBeenCalledWith([providerTransaction]);
   });
 
   it('sync inserts provider hints without resolving provider categories into app categories', async () => {
@@ -254,6 +588,7 @@ describe('TransactionService', () => {
     );
 
     expect(saved[0].categoryId).toBeNull();
+    expect(saved[0].source).toBe('provider');
     expect(saved[0].providerCategoryProvider).toBe('plaid');
     expect(saved[0].providerCategoryPrimary).toBe('GENERAL_MERCHANDISE');
   });
@@ -327,6 +662,7 @@ describe('TransactionService', () => {
     expect(saved).toHaveLength(1);
     expect(saved[0]).toBe(pendingTransaction);
     expect(pendingTransaction.id).toBe('00000000-0000-4000-8000-000000000300');
+    expect(pendingTransaction.source).toBe('provider');
     expect(pendingTransaction.externalTransactionId).toBe('posted-external-id');
     expect(pendingTransaction.pending).toBe(false);
     expect(pendingTransaction.pendingTransactionId).toBe('pending-external-id');
@@ -339,6 +675,11 @@ describe('TransactionService', () => {
     expect(pendingTransaction.providerCategoryProvider).toBeNull();
     expect(pendingTransaction.providerCategoryPrimary).toBeNull();
     expect(pendingTransaction.providerCategoryDetailed).toBeNull();
-    expect(txnRepo.delete).toHaveBeenCalledTimes(1);
+    expect(txnRepo.delete).toHaveBeenCalledWith({
+      externalTransactionId: expect.any(Object),
+      accountId: expect.any(Object),
+      userId,
+      source: 'provider',
+    });
   });
 });

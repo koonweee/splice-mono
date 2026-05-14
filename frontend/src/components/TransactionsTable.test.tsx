@@ -267,15 +267,32 @@ describe('TransactionsTable', () => {
     const onToggle = vi.fn()
     const onToggleLoaded = vi.fn()
 
-    renderTable([makeTransaction({ category: foodCategory })], {
-      bulkModeEnabled: true,
-      selectedTransactionIds: new Set(['txn-1']),
-      onToggleTransactionSelection: onToggle,
-      onToggleLoadedSelection: onToggleLoaded,
-    })
+    renderTable(
+      [
+        makeTransaction({
+          category: foodCategory,
+          merchantName: 'Provider Store',
+          source: 'provider',
+        }),
+        makeTransaction({
+          category: foodCategory,
+          id: 'manual-txn',
+          merchantName: 'Manual Store',
+          source: 'manual',
+        }),
+	      ],
+	      {
+	        bulkModeEnabled: true,
+	        selectedTransactionIds: new Set(['txn-1']),
+	        onToggleTransactionSelection: onToggle,
+	        onToggleLoadedSelection: onToggleLoaded,
+	      },
+	    )
 
     fireEvent.click(
-      screen.getByRole('checkbox', { name: /Select transaction Store/ }),
+      screen.getByRole('checkbox', {
+        name: /Select transaction Provider Store/,
+      }),
     )
     fireEvent.click(
       screen.getByRole('checkbox', { name: 'Select all loaded transactions' }),
@@ -283,7 +300,49 @@ describe('TransactionsTable', () => {
 
     expect(onToggle).toHaveBeenCalledWith('txn-1')
     expect(onToggleLoaded).toHaveBeenCalledOnce()
+    expect(
+      screen.queryByRole('checkbox', {
+        name: /Select transaction Manual Store/,
+      }),
+    ).toBeNull()
     expect(screen.queryByLabelText('Edit category')).toBeNull()
+  })
+
+  it('shows manual edit and delete actions only for manual transactions', () => {
+    const onEditManualTransaction = vi.fn()
+    const onDeleteManualTransaction = vi.fn()
+    const manualTransaction = makeTransaction({
+      id: 'manual-txn',
+      category: foodCategory,
+      source: 'manual',
+    })
+    const providerTransaction = makeTransaction({
+      id: 'provider-txn',
+      category: foodCategory,
+      source: 'provider',
+    })
+
+    renderTable([manualTransaction], {
+      onEditManualTransaction,
+      onDeleteManualTransaction,
+    })
+
+    fireEvent.click(screen.getByLabelText('Edit manual transaction'))
+    fireEvent.click(screen.getByLabelText('Delete manual transaction'))
+
+    expect(onEditManualTransaction).toHaveBeenCalledWith(manualTransaction)
+    expect(onDeleteManualTransaction).toHaveBeenCalledWith(manualTransaction)
+    expect(screen.queryByLabelText('Edit category')).toBeNull()
+
+    cleanup()
+
+    renderTable([providerTransaction], {
+      onEditManualTransaction,
+      onDeleteManualTransaction,
+    })
+
+    expect(screen.queryByLabelText('Edit manual transaction')).toBeNull()
+    expect(screen.queryByLabelText('Delete manual transaction')).toBeNull()
   })
 
   it('shows original currency amounts in transaction details', async () => {
@@ -360,8 +419,9 @@ function makeTransaction(
     amount?: Transaction['amount']
     id?: string
     category: Category | null
-    convertedAmount?: Transaction['convertedAmount']
-    providerCategoryHint?: {
+	    convertedAmount?: Transaction['convertedAmount']
+	    merchantName?: string
+	    providerCategoryHint?: {
       provider: 'plaid'
       primary: string | null
       detailed: string | null
@@ -369,6 +429,7 @@ function makeTransaction(
       confidenceLevel: string | null
       iconUrl: string | null
     } | null
+    source?: 'manual' | 'provider'
   } = { category: foodCategory },
 ): Transaction {
   const category = params.category
@@ -379,8 +440,8 @@ function makeTransaction(
       money: { amount: 1200, currency: 'USD' },
       sign: 'negative',
     },
-    accountId: 'account-1',
-    merchantName: 'Store',
+	    accountId: 'account-1',
+	    merchantName: params.merchantName ?? 'Store',
     providerTransactionName: null,
     originalDescription: null,
     pending: false,
@@ -410,5 +471,6 @@ function makeTransaction(
     userId: 'user-1',
     providerCategoryHint: params.providerCategoryHint ?? null,
     convertedAmount: params.convertedAmount,
-  }
+    ...(params.source ? { source: params.source } : {}),
+  } as Transaction
 }

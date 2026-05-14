@@ -1,4 +1,5 @@
 import {
+  CreateManualTransactionDto,
   CreateTransactionDto,
   Transaction,
   UpdateTransactionDto,
@@ -40,6 +41,7 @@ const mockProviderMetadata = {
 export const mockTransaction: Transaction = {
   id: 'transaction-uuid-123',
   userId: mockUserId,
+  source: 'provider',
   amount: {
     money: { currency: 'USD', amount: 5000 }, // $50.00 in cents
     sign: MoneySign.NEGATIVE,
@@ -69,6 +71,7 @@ export const mockTransaction: Transaction = {
 export const mockTransaction2: Transaction = {
   id: 'transaction-uuid-456',
   userId: mockUserId,
+  source: 'provider',
   amount: {
     money: { currency: 'USD', amount: 2500 }, // $25.00 in cents
     sign: MoneySign.NEGATIVE,
@@ -110,6 +113,17 @@ export const mockCreateTransactionDto: CreateTransactionDto = {
   authorizedDate: '2024-01-17',
   authorizedDatetime: null,
   categoryId: null,
+};
+
+export const mockCreateManualTransactionDto: CreateManualTransactionDto = {
+  amount: {
+    money: { currency: 'USD', amount: 7500 },
+    sign: MoneySign.NEGATIVE,
+  },
+  accountId: mockAccountId,
+  merchantName: 'Manual Target',
+  providerDate: '2024-01-17',
+  categoryId: mockCategoryId,
 };
 
 /**

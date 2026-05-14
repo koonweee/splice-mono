@@ -1,6 +1,7 @@
 import { MantineProvider } from '@mantine/core'
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { TransactionSource } from '../api/models'
 import { CategoryTransactionsModal } from './CategoryTransactionsModal'
 import type React from 'react'
 import type * as Mantine from '@mantine/core'
@@ -85,6 +86,7 @@ function makeTransaction(
 ): Transaction {
   return {
     id: overrides.id,
+    source: overrides.source ?? TransactionSource.provider,
     amount: overrides.amount ?? {
       money: {
         amount: 1250,

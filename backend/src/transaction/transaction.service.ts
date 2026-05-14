@@ -1,7 +1,13 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { In, Repository, SelectQueryBuilder } from 'typeorm';
+import { In, IsNull, Repository, SelectQueryBuilder } from 'typeorm';
+import { AccountEntity } from '../account/account.entity';
 import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
@@ -10,8 +16,10 @@ import {
   BulkTransactionCategoryUpdateDto,
   BulkTransactionCategoryUpdateResponse,
   BulkTransactionCategoryUpdateUndoDto,
+  CreateManualTransactionDto,
   CreateTransactionDto,
   Transaction,
+  UpdateManualTransactionDto,
   UpdateTransactionCategoryDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
@@ -99,6 +107,8 @@ export class TransactionService extends OwnedCrudService<
     repository: Repository<TransactionEntity>,
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
+    @InjectRepository(AccountEntity)
+    private readonly accountRepository: Repository<AccountEntity>,
     private readonly categoryService: CategoryService,
   ) {
     super(repository);
@@ -203,7 +213,7 @@ export class TransactionService extends OwnedCrudService<
     this.logger.log({ id, userId }, `Updating ${this.entityName}`);
 
     const entity = await this.repository.findOne({
-      where: { id, userId },
+      where: { id, userId, source: 'provider' },
       relations: this.relations,
     });
 
@@ -274,6 +284,198 @@ export class TransactionService extends OwnedCrudService<
     entity.categoryId = category.id;
     entity.category = category;
     entity.categoryUpdatedAt = new Date();
+  }
+
+  private async findActiveUserAccount(
+    accountId: string,
+    userId: string,
+  ): Promise<AccountEntity | null> {
+    return this.accountRepository.findOne({
+      where: { id: accountId, userId, archivedAt: IsNull() },
+    });
+  }
+
+  private buildManualAmount(
+    dto: CreateManualTransactionDto,
+    account: AccountEntity,
+  ): BalanceColumns {
+    if (dto.amount.money.amount <= 0) {
+      throw new BadRequestException(
+        'Manual transaction amount must be positive',
+      );
+    }
+
+    const accountCurrency = account.currentBalance.currency;
+    if (dto.amount.money.currency !== accountCurrency) {
+      throw new BadRequestException(
+        'Manual transaction currency must match the selected account currency',
+      );
+    }
+
+    return BalanceColumns.fromMoneyWithSign({
+      money: {
+        amount: dto.amount.money.amount,
+        currency: accountCurrency,
+      },
+      sign: dto.amount.sign,
+    });
+  }
+
+  private applyManualTransactionFields(
+    entity: TransactionEntity,
+    dto: CreateManualTransactionDto,
+    account: AccountEntity,
+    category: CategoryEntity,
+  ): void {
+    entity.source = 'manual';
+    entity.accountId = account.id;
+    entity.account = account;
+    entity.amount = this.buildManualAmount(dto, account);
+    entity.merchantName = dto.merchantName;
+    entity.providerTransactionName = null;
+    entity.originalDescription = null;
+    entity.pending = false;
+    entity.pendingTransactionId = null;
+    entity.accountOwner = null;
+    entity.externalTransactionId = null;
+    entity.logoUrl = null;
+    entity.website = null;
+    entity.merchantEntityId = null;
+    entity.paymentChannel = null;
+    entity.transactionCode = null;
+    entity.personalFinanceCategoryIconUrl = null;
+    entity.personalFinanceCategoryConfidenceLevel = null;
+    entity.providerCategoryProvider = null;
+    entity.providerCategoryPrimary = null;
+    entity.providerCategoryDetailed = null;
+    entity.counterparties = null;
+    entity.location = null;
+    entity.paymentMeta = null;
+    entity.providerDate = dto.providerDate;
+    entity.providerDatetime = null;
+    entity.authorizedDate = null;
+    entity.authorizedDatetime = null;
+    entity.reportingDateOverride = null;
+    this.applyCategorySelection(entity, category);
+  }
+
+  async createManual(
+    userId: string,
+    dto: CreateManualTransactionDto,
+  ): Promise<Transaction | null> {
+    this.logger.log(
+      { userId, accountId: dto.accountId },
+      'Creating manual transaction',
+    );
+
+    const [account, category] = await Promise.all([
+      this.findActiveUserAccount(dto.accountId, userId),
+      this.categoryService.findActiveAssignableCategory(dto.categoryId, userId),
+    ]);
+
+    if (!account || !category) {
+      this.logger.warn(
+        { userId, accountId: dto.accountId, categoryId: dto.categoryId },
+        'Manual transaction account or category not found',
+      );
+      return null;
+    }
+
+    const entity = new TransactionEntity();
+    entity.userId = userId;
+    this.applyManualTransactionFields(entity, dto, account, category);
+
+    const savedEntity = await this.repository.save(entity);
+    this.logger.log({ id: savedEntity.id }, 'Manual transaction created');
+    return savedEntity.toObject();
+  }
+
+  async updateManual(
+    id: string,
+    userId: string,
+    dto: UpdateManualTransactionDto,
+  ): Promise<Transaction | null> {
+    this.logger.log({ id, userId }, 'Updating manual transaction');
+
+    const entity = await this.repository.findOne({
+      where: { id, userId, source: 'manual' },
+      relations: this.relations,
+    });
+
+    if (!entity) {
+      this.logger.warn(
+        { id, userId },
+        'Manual transaction not found for update',
+      );
+      return null;
+    }
+
+    const [account, category] = await Promise.all([
+      this.findActiveUserAccount(dto.accountId, userId),
+      this.categoryService.findActiveAssignableCategory(dto.categoryId, userId),
+    ]);
+
+    if (!account || !category) {
+      this.logger.warn(
+        { id, userId, accountId: dto.accountId, categoryId: dto.categoryId },
+        'Manual transaction account or category not found for update',
+      );
+      return null;
+    }
+
+    this.applyManualTransactionFields(entity, dto, account, category);
+
+    const savedEntity = await this.repository.save(entity);
+    this.logger.log({ id }, 'Manual transaction updated');
+    return savedEntity.toObject();
+  }
+
+  async removeManual(id: string, userId: string): Promise<boolean> {
+    this.logger.log({ id, userId }, 'Removing manual transaction');
+
+    const result = await this.repository.delete({
+      id,
+      userId,
+      source: 'manual',
+    });
+    const success =
+      result.affected !== null &&
+      result.affected !== undefined &&
+      result.affected > 0;
+
+    if (!success) {
+      this.logger.warn(
+        { id, userId },
+        'Manual transaction not found for removal',
+      );
+    }
+
+    return success;
+  }
+
+  async remove(id: string, userId: string): Promise<boolean> {
+    this.logger.log({ id, userId }, 'Removing provider transaction');
+
+    const result = await this.repository.delete({
+      id,
+      userId,
+      source: 'provider',
+    });
+    const success =
+      result.affected !== null &&
+      result.affected !== undefined &&
+      result.affected > 0;
+
+    if (success) {
+      this.logger.log({ id }, 'Provider transaction removed');
+    } else {
+      this.logger.warn(
+        { id, userId },
+        'Provider transaction not found for removal',
+      );
+    }
+
+    return success;
   }
 
   private buildProviderSyncUpdateDto(
@@ -654,6 +856,14 @@ export class TransactionService extends OwnedCrudService<
       return null;
     }
 
+    if (entity.source === 'manual') {
+      this.logger.warn(
+        { id, userId },
+        'Manual transaction cannot use provider category override update',
+      );
+      return null;
+    }
+
     if (dto.categoryId === null) {
       entity.categoryId = null;
       entity.category = null;
@@ -735,16 +945,21 @@ export class TransactionService extends OwnedCrudService<
         return null;
       }
 
-      const undo = this.buildBulkCategoryUndoToken(userId, entities);
-      entities.forEach((entity) => {
+      const providerEntities = entities.filter(
+        (entity) => entity.source !== 'manual',
+      );
+      const undo = this.buildBulkCategoryUndoToken(userId, providerEntities);
+      providerEntities.forEach((entity) => {
         this.applyBulkCategorySelection(entity, category);
       });
 
-      await txnRepo.save(entities);
+      if (providerEntities.length > 0) {
+        await txnRepo.save(providerEntities);
+      }
 
       return {
-        count: entities.length,
-        transactionIds: entities.map((entity) => entity.id),
+        count: providerEntities.length,
+        transactionIds: providerEntities.map((entity) => entity.id),
         undo,
       };
     });
@@ -992,6 +1207,7 @@ export class TransactionService extends OwnedCrudService<
           }
 
           if (matchedPending) {
+            matchedPending.source = 'provider';
             this.applyUpdate(
               matchedPending,
               this.buildProviderSyncUpdateDto(dto, internalAccountId),
@@ -1059,6 +1275,7 @@ export class TransactionService extends OwnedCrudService<
               return;
             }
 
+            existing.source = 'provider';
             this.applyUpdate(
               existing,
               this.buildProviderSyncUpdateDto(dto, internalAccountId),
@@ -1087,6 +1304,7 @@ export class TransactionService extends OwnedCrudService<
           externalTransactionId: In(removed),
           accountId: In(internalAccountIds),
           userId,
+          source: 'provider',
         });
 
         this.logger.log(

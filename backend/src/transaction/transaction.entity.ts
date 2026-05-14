@@ -12,6 +12,7 @@ import { BalanceColumns } from '../common/balance.columns';
 import { OwnedEntity } from '../common/owned.entity';
 import { formatProviderCategoryDisplayLabel } from '../category/category-normalization';
 import { CreateTransactionDto, Transaction } from '../types/Transaction';
+import type { TransactionSource } from '../types/Transaction';
 import { getTransactionActivityDate } from './transaction-date';
 
 @Entity()
@@ -19,6 +20,10 @@ import { getTransactionActivityDate } from './transaction-date';
 export class TransactionEntity extends OwnedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  /** Transaction origin: provider sync or user-created manual entry */
+  @Column({ type: 'varchar', default: 'provider' })
+  source: TransactionSource;
 
   /** Amount with sign and currency */
   @Column(() => BalanceColumns)
@@ -152,6 +157,7 @@ export class TransactionEntity extends OwnedEntity {
   static fromDto(dto: CreateTransactionDto, userId: string): TransactionEntity {
     const entity = new TransactionEntity();
     entity.userId = userId;
+    entity.source = 'provider';
     entity.amount = BalanceColumns.fromMoneyWithSign(dto.amount);
     entity.accountId = dto.accountId;
     entity.merchantName = dto.merchantName ?? null;
@@ -216,6 +222,7 @@ export class TransactionEntity extends OwnedEntity {
     return {
       id: this.id,
       userId: this.userId,
+      source: this.source ?? 'provider',
       amount: this.amount.toMoneyWithSign(),
       accountId: this.accountId,
       merchantName: this.merchantName,

@@ -6,6 +6,13 @@ import { OwnedSchema } from './Timestamps';
 
 const ProviderJsonObjectSchema = z.record(z.string(), z.unknown());
 
+export const TransactionSourceSchema = registerSchema(
+  'TransactionSource',
+  z.enum(['provider', 'manual']),
+);
+
+export type TransactionSource = z.infer<typeof TransactionSourceSchema>;
+
 export const ProviderCategoryHintSchema = registerSchema(
   'ProviderCategoryHint',
   z.object({
@@ -34,6 +41,8 @@ export const TransactionSchema = registerSchema(
   z
     .object({
       id: z.string().uuid(),
+      /** Transaction origin: provider-synced or user-created manual entry */
+      source: TransactionSourceSchema,
       /** Amount with sign (positive/negative) and currency */
       amount: MoneyWithSignSchema,
       /** Account this transaction belongs to */
@@ -140,6 +149,40 @@ export const CreateTransactionDtoSchema = registerSchema(
 );
 
 export type CreateTransactionDto = z.infer<typeof CreateTransactionDtoSchema>;
+
+const ManualTransactionAmountSchema = MoneyWithSignSchema.refine(
+  (amount) => amount.money.amount > 0,
+  {
+    message: 'Manual transaction amount must be positive',
+    path: ['money', 'amount'],
+  },
+);
+
+const ManualTransactionDtoShape = {
+  accountId: z.string().uuid(),
+  amount: ManualTransactionAmountSchema,
+  merchantName: z.string().trim().min(1),
+  providerDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  categoryId: z.string().uuid(),
+};
+
+export const CreateManualTransactionDtoSchema = registerSchema(
+  'CreateManualTransactionDto',
+  z.object(ManualTransactionDtoShape),
+);
+
+export type CreateManualTransactionDto = z.infer<
+  typeof CreateManualTransactionDtoSchema
+>;
+
+export const UpdateManualTransactionDtoSchema = registerSchema(
+  'UpdateManualTransactionDto',
+  z.object(ManualTransactionDtoShape),
+);
+
+export type UpdateManualTransactionDto = z.infer<
+  typeof UpdateManualTransactionDtoSchema
+>;
 
 /**
  * DTO for updating an existing Transaction

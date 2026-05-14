@@ -44,6 +44,7 @@ import type {
   CreateAccountDto,
   CreateAnalysisRuleDto,
   CreateCustomCategoryDto,
+  CreateManualTransactionDto,
   CreatePersonalAccessTokenDto,
   CreatePersonalAccessTokenResponse,
   CreateTransactionDto,
@@ -68,6 +69,7 @@ import type {
   UpdateAccountDto,
   UpdateAnalysisRuleDto,
   UpdateCustomCategoryDto,
+  UpdateManualTransactionDto,
   UpdateTransactionCategoryDto,
   UpdateTransactionDto,
   UpdateUserSettingsDto,
@@ -3771,6 +3773,91 @@ export function useTransactionControllerGetSummary<
 }
 
 /**
+ * Create a manual transaction
+ */
+export const transactionControllerCreateManual = (
+  createManualTransactionDto: CreateManualTransactionDto,
+  signal?: AbortSignal,
+) => {
+  return axios<Transaction>({
+    url: `/transaction/manual`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createManualTransactionDto,
+    signal,
+  })
+}
+
+export const getTransactionControllerCreateManualMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerCreateManual>>,
+    TError,
+    { data: CreateManualTransactionDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerCreateManual>>,
+  TError,
+  { data: CreateManualTransactionDto },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerCreateManual']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerCreateManual>>,
+    { data: CreateManualTransactionDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return transactionControllerCreateManual(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerCreateManualMutationResult = NonNullable<
+  Awaited<ReturnType<typeof transactionControllerCreateManual>>
+>
+export type TransactionControllerCreateManualMutationBody =
+  CreateManualTransactionDto
+export type TransactionControllerCreateManualMutationError = void
+
+export const useTransactionControllerCreateManual = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerCreateManual>>,
+      TError,
+      { data: CreateManualTransactionDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerCreateManual>>,
+  TError,
+  { data: CreateManualTransactionDto },
+  TContext
+> => {
+  const mutationOptions =
+    getTransactionControllerCreateManualMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
  * Get a transaction by ID
  */
 export const transactionControllerFindOne = (
@@ -4338,6 +4425,165 @@ export const useTransactionControllerUndoBulkUpdateCategories = <
 > => {
   const mutationOptions =
     getTransactionControllerUndoBulkUpdateCategoriesMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Update a manual transaction
+ */
+export const transactionControllerUpdateManual = (
+  id: string,
+  updateManualTransactionDto: UpdateManualTransactionDto,
+) => {
+  return axios<Transaction>({
+    url: `/transaction/${id}/manual`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateManualTransactionDto,
+  })
+}
+
+export const getTransactionControllerUpdateManualMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerUpdateManual>>,
+    TError,
+    { id: string; data: UpdateManualTransactionDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerUpdateManual>>,
+  TError,
+  { id: string; data: UpdateManualTransactionDto },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerUpdateManual']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerUpdateManual>>,
+    { id: string; data: UpdateManualTransactionDto }
+  > = (props) => {
+    const { id, data } = props ?? {}
+
+    return transactionControllerUpdateManual(id, data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerUpdateManualMutationResult = NonNullable<
+  Awaited<ReturnType<typeof transactionControllerUpdateManual>>
+>
+export type TransactionControllerUpdateManualMutationBody =
+  UpdateManualTransactionDto
+export type TransactionControllerUpdateManualMutationError = void
+
+export const useTransactionControllerUpdateManual = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerUpdateManual>>,
+      TError,
+      { id: string; data: UpdateManualTransactionDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerUpdateManual>>,
+  TError,
+  { id: string; data: UpdateManualTransactionDto },
+  TContext
+> => {
+  const mutationOptions =
+    getTransactionControllerUpdateManualMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Delete a manual transaction
+ */
+export const transactionControllerRemoveManual = (id: string) => {
+  return axios<void>({ url: `/transaction/${id}/manual`, method: 'DELETE' })
+}
+
+export const getTransactionControllerRemoveManualMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transactionControllerRemoveManual>>,
+    TError,
+    { id: string },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transactionControllerRemoveManual>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['transactionControllerRemoveManual']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transactionControllerRemoveManual>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {}
+
+    return transactionControllerRemoveManual(id)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type TransactionControllerRemoveManualMutationResult = NonNullable<
+  Awaited<ReturnType<typeof transactionControllerRemoveManual>>
+>
+
+export type TransactionControllerRemoveManualMutationError = void
+
+export const useTransactionControllerRemoveManual = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof transactionControllerRemoveManual>>,
+      TError,
+      { id: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof transactionControllerRemoveManual>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions =
+    getTransactionControllerRemoveManualMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }
