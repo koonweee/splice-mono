@@ -91,6 +91,21 @@ function getAmountClass(transaction: Transaction) {
     : styles.negative
 }
 
+function hasDifferentOriginalCurrency(transaction: Transaction) {
+  return (
+    transaction.convertedAmount !== null &&
+    transaction.convertedAmount !== undefined &&
+    transaction.convertedAmount.money.currency !==
+      transaction.amount.money.currency
+  )
+}
+
+function formatOriginalCurrencyAmount(transaction: Transaction) {
+  return `${transaction.amount.money.currency} ${formatMoneyWithSign({
+    value: transaction.amount,
+  })}`
+}
+
 function groupTransactionsByDate(data: Array<Transaction>) {
   const groups = new Map<string, Array<Transaction>>()
 
@@ -390,17 +405,24 @@ export function TransactionsMobileList({
                 <Text c="dimmed" size="sm">
                   {dayjs(activeTransaction.activityDate).format('MMM D, YYYY')}
                 </Text>
-                <Text
-                  className={`${styles.drawerAmount} ${getAmountClass(
-                    activeTransaction,
-                  )}`}
-                >
-                  {formatMoneyWithSign({
-                    value:
-                      activeTransaction.convertedAmount ??
-                      activeTransaction.amount,
-                  })}
-                </Text>
+                <Stack align="flex-end" gap={0}>
+                  <Text
+                    className={`${styles.drawerAmount} ${getAmountClass(
+                      activeTransaction,
+                    )}`}
+                  >
+                    {formatMoneyWithSign({
+                      value:
+                        activeTransaction.convertedAmount ??
+                        activeTransaction.amount,
+                    })}
+                  </Text>
+                  {hasDifferentOriginalCurrency(activeTransaction) && (
+                    <Text c="dimmed" size="xs">
+                      Original {formatOriginalCurrencyAmount(activeTransaction)}
+                    </Text>
+                  )}
+                </Stack>
               </Group>
               <Text c="dimmed" size="sm">
                 {[

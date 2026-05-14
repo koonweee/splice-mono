@@ -196,6 +196,31 @@ describe('TransactionsMobileList', () => {
       data: { reportingDateOverride: '2026-05-01' },
     })
   })
+
+  it('shows original currency amounts in the details drawer', async () => {
+    renderMobileList([
+      makeTransaction({
+        id: 'txn-1',
+        category: foodCategory,
+        amount: {
+          money: { amount: 1200, currency: 'EUR' },
+          sign: MoneyWithSignSign.negative,
+        },
+        convertedAmount: {
+          money: { amount: 1300, currency: 'USD' },
+          sign: MoneyWithSignSign.negative,
+        },
+      }),
+    ])
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Open transaction details for Store/,
+      }),
+    )
+
+    expect(await screen.findByText('Original EUR -€12.00')).toBeTruthy()
+  })
 })
 
 function renderMobileList(
@@ -244,8 +269,10 @@ function makeCategory(overrides: {
 
 function makeTransaction(
   overrides: Partial<{
+    amount: Transaction['amount']
     activityDate: string
     category: Category | null
+    convertedAmount: Transaction['convertedAmount']
     id: string
     providerCategoryHint: {
       provider: 'plaid'
@@ -262,7 +289,7 @@ function makeTransaction(
 
   return {
     id: overrides.id ?? 'txn-1',
-    amount: {
+    amount: overrides.amount ?? {
       money: { amount: 1200, currency: 'USD' },
       sign: MoneyWithSignSign.negative,
     },
@@ -296,5 +323,6 @@ function makeTransaction(
     updatedAt: '2026-02-14T00:00:00.000Z',
     userId: 'user-1',
     providerCategoryHint: overrides.providerCategoryHint ?? null,
+    convertedAmount: overrides.convertedAmount,
   }
 }

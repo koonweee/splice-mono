@@ -93,6 +93,21 @@ function MetadataRow({
   )
 }
 
+function hasDifferentOriginalCurrency(transaction: Transaction) {
+  return (
+    transaction.convertedAmount !== null &&
+    transaction.convertedAmount !== undefined &&
+    transaction.convertedAmount.money.currency !==
+      transaction.amount.money.currency
+  )
+}
+
+function formatOriginalCurrencyAmount(transaction: Transaction) {
+  return `${transaction.amount.money.currency} ${formatMoneyWithSign({
+    value: transaction.amount,
+  })}`
+}
+
 function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
   const [opened, setOpened] = useState(false)
   const closeTimeoutRef = useRef<number | null>(null)
@@ -111,7 +126,9 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
     details.categoryPrimaryLabel && details.categoryLabel
       ? `${details.categoryPrimaryLabel} > ${details.categoryLabel}`
       : details.categoryLabel
+  const hasOriginalCurrencyAmount = hasDifferentOriginalCurrency(transaction)
   const hasPopoverContent =
+    hasOriginalCurrencyAmount ||
     rawDescription ||
     providerName ||
     details.counterparties.length > 0 ||
@@ -217,6 +234,11 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
           <MetadataRow label="Display">
             {details.merchantDisplay.primary}
           </MetadataRow>
+          {hasOriginalCurrencyAmount && (
+            <MetadataRow label="Original amount">
+              {formatOriginalCurrencyAmount(transaction)}
+            </MetadataRow>
+          )}
           {rawDescription && (
             <MetadataRow label="Raw description">{rawDescription}</MetadataRow>
           )}
@@ -342,8 +364,7 @@ function AmountCell({ row }: { row: { original: Transaction } }) {
   const { amount, convertedAmount } = row.original
   const displayAmount = convertedAmount ?? amount
 
-  const hasDifferentCurrency =
-    convertedAmount && convertedAmount.money.currency !== amount.money.currency
+  const hasDifferentCurrency = hasDifferentOriginalCurrency(row.original)
 
   const formatted = formatMoneyWithSign({ value: displayAmount })
   const amountNode = (
@@ -387,12 +408,10 @@ function ProviderCategoryHintPopover({
   )
   const providerCategoryHint = getProviderCategoryHint(transaction)
   const displayLabel = formatMetadataValue(providerCategoryHint?.displayLabel)
-
-  if (transaction.category || !providerCategoryHint || !displayLabel) {
-    return null
-  }
-
-  const confidence = formatMetadataValue(providerCategoryHint.confidenceLevel)
+  const confidence = formatMetadataValue(providerCategoryHint?.confidenceLevel)
+  const hasVisibleHint = Boolean(
+    !transaction.category && providerCategoryHint && displayLabel,
+  )
 
   function clearCloseTimeout() {
     if (closeTimeoutRef.current === null) {
@@ -429,6 +448,10 @@ function ProviderCategoryHintPopover({
     },
     [],
   )
+
+  if (!hasVisibleHint || !providerCategoryHint || !displayLabel) {
+    return null
+  }
 
   return (
     <Popover

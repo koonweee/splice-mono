@@ -5,6 +5,7 @@ import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.enti
 import { BalanceQueryModule } from '../balance-query/balance-query.module';
 import { CategoryEntity } from '../category/category.entity';
 import { CurrencyExchangeModule } from '../currency-exchange/currency-exchange.module';
+import { TransactionAnalysisModule } from '../transaction-analysis/transaction-analysis.module';
 import { TransactionModule } from '../transaction/transaction.module';
 import { TransactionEntity } from '../transaction/transaction.entity';
 import { UserModule } from '../user/user.module';
@@ -22,6 +23,7 @@ import { SpliceMcpService } from './mcp.service';
     AccountModule,
     BalanceQueryModule,
     CurrencyExchangeModule,
+    TransactionAnalysisModule,
     TransactionModule,
     UserModule,
   ],
