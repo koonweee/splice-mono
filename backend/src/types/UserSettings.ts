@@ -34,6 +34,8 @@ export const UserSettingsSchema = registerSchema(
     /** Days before/after the selected analysis range to consider for neutralization candidates */
     neutralizationLookaroundDays:
       NeutralizationLookaroundDaysSchema.default(60),
+    /** Render the Analysis page using a Sankey cashflow diagram */
+    analysisSankeyEnabled: z.boolean().default(false),
     // Future settings can be added here:
     // locale: z.string().default('en-US'),
     // notifications: z.object({...}).optional(),
@@ -53,6 +55,7 @@ export const UpdateUserSettingsDtoSchema = registerSchema(
     hideZeroBalanceAccounts: z.boolean().optional(),
     theme: UserThemePreferenceSchema.optional(),
     neutralizationLookaroundDays: NeutralizationLookaroundDaysSchema.optional(),
+    analysisSankeyEnabled: z.boolean().optional(),
   }),
 );
 
@@ -67,6 +70,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   hideZeroBalanceAccounts: false,
   theme: 'splice-dark',
   neutralizationLookaroundDays: 60,
+  analysisSankeyEnabled: false,
 };
 
 export function normalizeUserSettings(

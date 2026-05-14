@@ -24,6 +24,8 @@ const mockFns = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   useTransactionAnalysisControllerGetAuditMock: vi.fn(),
   useTransactionAnalysisControllerGetAnalysisMock: vi.fn(),
+  useUserControllerMeMock: vi.fn(),
+  categoryModalMock: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', async () => {
@@ -71,11 +73,37 @@ vi.mock('../../api/clients/spliceAPI', async () => {
       mockFns.useTransactionAnalysisControllerGetAuditMock,
     useTransactionAnalysisControllerGetAnalysis:
       mockFns.useTransactionAnalysisControllerGetAnalysisMock,
+    useUserControllerMe: mockFns.useUserControllerMeMock,
   }
 })
 
 vi.mock('../../components/CategoryTransactionsModal', () => ({
-  CategoryTransactionsModal: () => <div data-testid="category-modal" />,
+  CategoryTransactionsModal: (props: Record<string, unknown>) => {
+    mockFns.categoryModalMock(props)
+
+    return <div data-testid="category-modal" />
+  },
+}))
+
+vi.mock('../../components/analysis/AnalysisSankeyChart', () => ({
+  AnalysisSankeyChart: ({
+    onCategoryClick,
+  }: {
+    onCategoryClick: (
+      categoryPrimary: string,
+      flowDirection: 'inflow' | 'outflow',
+    ) => void
+  }) => (
+    <div data-testid="analysis-sankey-chart">
+      <button onClick={() => onCategoryClick('Salary', 'inflow')}>
+        Salary Sankey node
+      </button>
+      <button onClick={() => onCategoryClick('Groceries', 'outflow')}>
+        Groceries Sankey node
+      </button>
+      <button>Available</button>
+    </div>
+  ),
 }))
 
 vi.mock('../../components/DateRangeControl', () => ({
@@ -179,6 +207,13 @@ beforeEach(() => {
     isPending: false,
     isError: false,
   })
+  mockFns.useUserControllerMeMock.mockReturnValue({
+    data: {
+      settings: {
+        analysisSankeyEnabled: false,
+      },
+    },
+  })
 })
 
 afterEach(() => {
@@ -229,5 +264,59 @@ describe('Analysis route', () => {
         .getAllByRole('link', { name: /manage rules/i })[0]
         .getAttribute('href'),
     ).toBe('/settings?tab=analysis')
+  })
+
+  it('renders the Sankey chart instead of donut sections when enabled', () => {
+    mockFns.useUserControllerMeMock.mockReturnValue({
+      data: {
+        settings: {
+          analysisSankeyEnabled: true,
+        },
+      },
+    })
+
+    renderAnalysisPage()
+
+    expect(screen.getByTestId('analysis-sankey-chart')).toBeTruthy()
+    expect(screen.queryByTestId('donut-chart')).toBeNull()
+  })
+
+  it('opens drilldown for Sankey category clicks and ignores the central hub', () => {
+    mockFns.useUserControllerMeMock.mockReturnValue({
+      data: {
+        settings: {
+          analysisSankeyEnabled: true,
+        },
+      },
+    })
+
+    renderAnalysisPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /salary sankey/i }))
+    expect(mockFns.categoryModalMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        opened: true,
+        categoryPrimary: 'Salary',
+        flowDirection: 'inflow',
+      }),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /^available$/i }))
+    expect(mockFns.categoryModalMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        opened: true,
+        categoryPrimary: 'Salary',
+        flowDirection: 'inflow',
+      }),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /groceries sankey/i }))
+    expect(mockFns.categoryModalMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        opened: true,
+        categoryPrimary: 'Groceries',
+        flowDirection: 'outflow',
+      }),
+    )
   })
 })

@@ -17,4 +17,5 @@ export interface UpdateUserSettingsDto {
    * @maximum 180
    */
   neutralizationLookaroundDays?: number
+  analysisSankeyEnabled?: boolean
 }

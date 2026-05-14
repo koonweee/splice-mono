@@ -12,6 +12,7 @@ describe('UserSettings types', () => {
       hideZeroBalanceAccounts: false,
       theme: 'splice-dark',
       neutralizationLookaroundDays: 60,
+      analysisSankeyEnabled: false,
     });
   });
 
@@ -37,6 +38,15 @@ describe('UserSettings types', () => {
     expect(
       UpdateUserSettingsDtoSchema.parse({ neutralizationLookaroundDays: 180 }),
     ).toEqual({ neutralizationLookaroundDays: 180 });
+  });
+
+  it('accepts analysis Sankey setting updates', () => {
+    expect(
+      UpdateUserSettingsDtoSchema.parse({ analysisSankeyEnabled: true }),
+    ).toEqual({ analysisSankeyEnabled: true });
+    expect(
+      UpdateUserSettingsDtoSchema.parse({ analysisSankeyEnabled: false }),
+    ).toEqual({ analysisSankeyEnabled: false });
   });
 
   it('rejects invalid neutralization lookaround values', () => {
@@ -65,6 +75,7 @@ describe('UserSettings types', () => {
       hideZeroBalanceAccounts: false,
       theme: 'splice-dark',
       neutralizationLookaroundDays: 60,
+      analysisSankeyEnabled: false,
     });
   });
 
@@ -82,6 +93,26 @@ describe('UserSettings types', () => {
       hideZeroBalanceAccounts: false,
       theme: 'splice-dark',
       neutralizationLookaroundDays: 60,
+      analysisSankeyEnabled: false,
+    });
+  });
+
+  it('normalizes missing analysisSankeyEnabled to the default', () => {
+    expect(
+      normalizeUserSettings({
+        currency: 'USD',
+        timezone: 'UTC',
+        hideZeroBalanceAccounts: false,
+        theme: 'splice-dark',
+        neutralizationLookaroundDays: 60,
+      }),
+    ).toEqual({
+      currency: 'USD',
+      timezone: 'UTC',
+      hideZeroBalanceAccounts: false,
+      theme: 'splice-dark',
+      neutralizationLookaroundDays: 60,
+      analysisSankeyEnabled: false,
     });
   });
 });

@@ -13,6 +13,7 @@ const defaultSettings: UserSettings = {
   hideZeroBalanceAccounts: false,
   theme: 'splice-dark',
   neutralizationLookaroundDays: 60,
+  analysisSankeyEnabled: false,
 };
 
 describe('UserService', () => {
@@ -582,6 +583,7 @@ describe('UserService', () => {
         timezone: 'America/New_York',
         hideZeroBalanceAccounts: true,
         theme: 'dracula',
+        analysisSankeyEnabled: true,
       };
       mockEntity.providerDetails = null;
       mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
@@ -602,6 +604,33 @@ describe('UserService', () => {
         hideZeroBalanceAccounts: true,
         theme: 'dracula',
         neutralizationLookaroundDays: 120,
+        analysisSankeyEnabled: true,
+      });
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should update analysisSankeyEnabled without affecting currency or timezone events', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = defaultSettings;
+      mockEntity.providerDetails = null;
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
+
+      const result = await service.updateSettings('user-uuid-123', {
+        analysisSankeyEnabled: true,
+      });
+
+      expect(result).toEqual({
+        ...defaultSettings,
+        analysisSankeyEnabled: true,
       });
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });

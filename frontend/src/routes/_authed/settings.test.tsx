@@ -1,5 +1,11 @@
 import { MantineProvider, Title } from '@mantine/core'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SettingsPage } from './settings'
 import type * as ReactQuery from '@tanstack/react-query'
@@ -91,6 +97,7 @@ let meState: {
       timezone: string | null
       hideZeroBalanceAccounts?: boolean | null
       neutralizationLookaroundDays?: number | null
+      analysisSankeyEnabled?: boolean | null
     }
   } | null
   isLoading: boolean
@@ -104,6 +111,16 @@ let updateSettingsState: {
   isError: boolean
   isSuccess: boolean
 }
+
+let updateAnalysisSankeyState: {
+  mutate: ReturnType<typeof vi.fn>
+  mutateAsync: ReturnType<typeof vi.fn>
+  isPending: boolean
+  isError: boolean
+  isSuccess: boolean
+}
+
+let updateSettingsHookCallCount = 0
 
 let localStorageState: {
   getItem: ReturnType<typeof vi.fn>
@@ -157,6 +174,7 @@ beforeEach(() => {
         timezone: 'UTC',
         hideZeroBalanceAccounts: false,
         neutralizationLookaroundDays: 60,
+        analysisSankeyEnabled: false,
       },
     },
     isLoading: false,
@@ -170,12 +188,25 @@ beforeEach(() => {
     isError: false,
     isSuccess: false,
   }
+  updateAnalysisSankeyState = {
+    mutate: vi.fn(),
+    mutateAsync: vi.fn().mockResolvedValue({}),
+    isPending: false,
+    isError: false,
+    isSuccess: false,
+  }
+  updateSettingsHookCallCount = 0
 
   mockFns.useQueryClientMock.mockImplementation(() => queryClientState)
   mockFns.useUserControllerMeMock.mockImplementation(() => meState)
-  mockFns.useUserControllerUpdateSettingsMock.mockImplementation(
-    () => updateSettingsState,
-  )
+  mockFns.useUserControllerUpdateSettingsMock.mockImplementation(() => {
+    const mutation =
+      updateSettingsHookCallCount % 2 === 0
+        ? updateSettingsState
+        : updateAnalysisSankeyState
+    updateSettingsHookCallCount += 1
+    return mutation
+  })
 
   Object.defineProperty(window, 'matchMedia', {
     value: vi.fn().mockImplementation(() => ({
@@ -250,6 +281,11 @@ describe('SettingsPage', () => {
         .getAttribute('aria-selected'),
     ).toBe('true')
     expect(screen.getByTestId('analysis-rules-section')).toBeTruthy()
+    expect(
+      screen.getByRole('switch', {
+        name: /use sankey diagram on analysis/i,
+      }),
+    ).toBeTruthy()
     expect(mockFns.analysisRulesSectionMock).toHaveBeenCalledWith(
       expect.objectContaining({
         lookaroundSetting: expect.objectContaining({
@@ -308,6 +344,73 @@ describe('SettingsPage', () => {
         hideZeroBalanceAccounts: false,
       },
     })
+  })
+
+  it('saves the analysis Sankey setting immediately and invalidates user data', async () => {
+    renderSettingsPage()
+
+    fireEvent.click(screen.getByRole('tab', { name: /analysis/i }))
+    fireEvent.click(
+      screen.getByRole('switch', {
+        name: /use sankey diagram on analysis/i,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(updateAnalysisSankeyState.mutateAsync).toHaveBeenCalledWith({
+        data: { analysisSankeyEnabled: true },
+      })
+    })
+    expect(queryClientState.invalidateQueries).toHaveBeenCalledTimes(1)
+  })
+
+  it('initializes the analysis Sankey switch from user settings', async () => {
+    meState.data = {
+      settings: {
+        ...meState.data!.settings,
+        analysisSankeyEnabled: true,
+      },
+    }
+    renderSettingsPage()
+
+    fireEvent.click(screen.getByRole('tab', { name: /analysis/i }))
+    const sankeySwitch = screen.getByRole('switch', {
+      name: /use sankey diagram on analysis/i,
+    })
+
+    await waitFor(() => {
+      expect((sankeySwitch as HTMLInputElement).checked).toBe(true)
+    })
+  })
+
+  it('disables the analysis Sankey switch while its save is pending', () => {
+    updateAnalysisSankeyState.isPending = true
+    renderSettingsPage()
+
+    fireEvent.click(screen.getByRole('tab', { name: /analysis/i }))
+
+    const sankeySwitch = screen.getByRole('switch', {
+      name: /use sankey diagram on analysis/i,
+    })
+
+    expect((sankeySwitch as HTMLInputElement).disabled).toBe(true)
+  })
+
+  it('rolls back the analysis Sankey switch when save fails', async () => {
+    updateAnalysisSankeyState.mutateAsync.mockRejectedValue(
+      new Error('Save failed'),
+    )
+    renderSettingsPage()
+
+    fireEvent.click(screen.getByRole('tab', { name: /analysis/i }))
+    const sankeySwitch = screen.getByRole('switch', {
+      name: /use sankey diagram on analysis/i,
+    })
+
+    fireEvent.click(sankeySwitch)
+
+    await screen.findByText('Failed to save Sankey diagram setting')
+    expect((sankeySwitch as HTMLInputElement).checked).toBe(false)
   })
 
   it('persists the selected theme after save succeeds', () => {

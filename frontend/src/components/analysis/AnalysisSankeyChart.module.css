@@ -1,0 +1,51 @@
+.sankeyCard {
+  overflow: hidden;
+}
+
+.chartViewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+}
+
+.chartCanvas {
+  min-width: 720px;
+}
+
+.nodeGroup {
+  outline: none;
+}
+
+.clickableNode {
+  cursor: pointer;
+}
+
+.clickableNode:focus-visible rect {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
+.link {
+  transition:
+    opacity 120ms ease,
+    stroke-opacity 120ms ease;
+}
+
+.clickableLink {
+  cursor: pointer;
+}
+
+.clickableLink:hover {
+  stroke-opacity: 0.74;
+}
+
+.drilldownList {
+  border-top: 1px solid var(--mantine-color-default-border);
+  padding-top: var(--mantine-spacing-sm);
+}
+
+@media (max-width: 50em) {
+  .chartCanvas {
+    min-width: 640px;
+  }
+}
