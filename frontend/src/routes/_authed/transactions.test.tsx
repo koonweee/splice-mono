@@ -1,7 +1,11 @@
 import { MantineProvider } from '@mantine/core'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AccountType, MoneyWithSignSign } from '../../api/models'
+import {
+  AccountType,
+  MoneyWithSignSign,
+  TransactionSource,
+} from '../../api/models'
 import { Route } from './transactions'
 import type { ComponentType, ReactNode } from 'react'
 import type * as Mantine from '@mantine/core'
@@ -48,6 +52,16 @@ type TransactionBulkEditToolbarMockProps = {
   showSelectLoaded?: boolean
 }
 
+type ManualTransactionModalMockProps = {
+  accounts: Array<Account>
+  categories: Array<Category>
+  defaultAccountId: string | null
+  opened: boolean
+  transaction?: Transaction | null
+  onClose: () => void
+  onSaved?: () => void
+}
+
 const mockFns = vi.hoisted(() => ({
   useSearchMock: vi.fn(),
   useInfiniteQueryMock: vi.fn(),
@@ -64,6 +78,8 @@ const mockFns = vi.hoisted(() => ({
   transactionsTableMock: vi.fn(),
   transactionBulkEditToolbarMock: vi.fn(),
   transactionsMobileListMock: vi.fn(),
+  manualTransactionModalMock: vi.fn(),
+  removeManualMutateMock: vi.fn(),
   notificationsShowMock: vi.fn(),
 }))
 
@@ -193,6 +209,10 @@ vi.mock('../../api/clients/spliceAPI', async () => {
       mockFns.useTransactionControllerGetSummaryMock,
     useTransactionControllerBulkUpdateCategories:
       mockFns.useTransactionControllerBulkUpdateCategoriesMock,
+    useTransactionControllerRemoveManual: () => ({
+      mutate: mockFns.removeManualMutateMock,
+      isPending: false,
+    }),
     useTransactionControllerUndoBulkUpdateCategories:
       mockFns.useTransactionControllerUndoBulkUpdateCategoriesMock,
   }
@@ -244,6 +264,28 @@ vi.mock('@/components/transactions/TransactionsMobileList', () => ({
     mockFns.transactionsMobileListMock(props)
 
     return <div data-testid="transactions-mobile-list" />
+  },
+}))
+
+vi.mock('@/components/transactions/ManualTransactionModal', () => ({
+  ManualTransactionModal: (props: ManualTransactionModalMockProps) => {
+    mockFns.manualTransactionModalMock(props)
+
+    if (!props.opened) {
+      return null
+    }
+
+    return (
+      <div data-testid="manual-transaction-modal">
+        <span>
+          {props.transaction ? 'Edit transaction' : 'Add transaction'}
+        </span>
+        <span>Default account {props.defaultAccountId}</span>
+        <button onClick={props.onSaved} type="button">
+          Mock save
+        </button>
+      </div>
+    )
   },
 }))
 
@@ -464,7 +506,89 @@ describe('TransactionsPage category assignment workflow', () => {
     expect(screen.getByText('$1,483.00')).toBeTruthy()
   })
 
+  it('opens the add transaction modal with the filtered account selected', () => {
+    renderTransactionsPage()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add transaction' }))
+
+    const modal = screen.getByTestId('manual-transaction-modal')
+    expect(modal).toBeTruthy()
+    expect(modal.textContent).toContain('Add transaction')
+    expect(modal.textContent).toContain('Default account account-1')
+    expect(mockFns.manualTransactionModalMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        accounts: [account],
+        defaultAccountId: 'account-1',
+        transaction: null,
+      }),
+    )
+  })
+
+  it('wires manual edit and delete handlers through list components', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const manualTransaction = {
+      ...transaction,
+      source: TransactionSource.manual,
+    }
+
+    renderTransactionsPage()
+
+    const tableProps = mockFns.transactionsTableMock.mock.calls.at(-1)?.[0] as {
+      onDeleteManualTransaction: (transaction: Transaction) => void
+      onEditManualTransaction: (transaction: Transaction) => void
+    }
+
+    act(() => {
+      tableProps.onEditManualTransaction(manualTransaction)
+    })
+
+    expect(mockFns.manualTransactionModalMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        opened: true,
+        transaction: manualTransaction,
+      }),
+    )
+
+    act(() => {
+      tableProps.onDeleteManualTransaction(manualTransaction)
+    })
+
+    expect(mockFns.removeManualMutateMock).toHaveBeenCalledWith({
+      id: manualTransaction.id,
+    })
+    confirmSpy.mockRestore()
+  })
+
   it('bulk clears selected transaction categories and exposes undo', () => {
+    const manualTransaction = {
+      ...transaction,
+      id: '22222222-2222-4222-8222-222222222222',
+      source: TransactionSource.manual,
+    }
+    mockFns.useInfiniteQueryMock.mockImplementation(
+      (options: InfiniteQueryOptions) => {
+        latestInfiniteQueryOptions = options
+
+        return {
+          data: {
+            pages: [
+              {
+                ...transactionsPageData,
+                data: [transaction, manualTransaction],
+                total: 2,
+              },
+            ],
+          },
+          fetchNextPage: vi.fn(),
+          hasNextPage: false,
+          isError: false,
+          isFetching: false,
+          isFetchingNextPage: false,
+          isLoading: false,
+        }
+      },
+    )
+
     renderTransactionsPage()
 
     fireEvent.click(screen.getByLabelText('Bulk edit'))
@@ -475,7 +599,15 @@ describe('TransactionsPage category assignment workflow', () => {
 
     act(() => {
       tableProps.onToggleTransactionSelection(transaction.id)
+      tableProps.onToggleTransactionSelection(manualTransaction.id)
     })
+
+    expect(mockFns.transactionBulkEditToolbarMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        loadedCount: 1,
+        selectedCount: 1,
+      }),
+    )
 
     fireEvent.change(screen.getByLabelText('Category'), {
       target: { value: '__clear_category__' },
@@ -556,6 +688,7 @@ describe('TransactionsPage category assignment workflow', () => {
 function makeTransaction(id: string): Transaction {
   return {
     id,
+    source: TransactionSource.provider,
     userId: 'user-1',
     accountId: account.id,
     amount: {

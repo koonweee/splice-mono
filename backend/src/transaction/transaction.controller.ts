@@ -22,10 +22,12 @@ import type {
   BulkTransactionCategoryUpdateDto,
   BulkTransactionCategoryUpdateResponse,
   BulkTransactionCategoryUpdateUndoDto,
+  CreateManualTransactionDto,
   CreateTransactionDto,
   PaginatedTransactionResponse,
   Transaction,
   TransactionSummary,
+  UpdateManualTransactionDto,
   UpdateTransactionCategoryDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
@@ -33,10 +35,12 @@ import {
   BulkTransactionCategoryUpdateDtoSchema,
   BulkTransactionCategoryUpdateResponseSchema,
   BulkTransactionCategoryUpdateUndoDtoSchema,
+  CreateManualTransactionDtoSchema,
   CreateTransactionDtoSchema,
   PaginatedTransactionResponseSchema,
   TransactionSchema,
   TransactionSummarySchema,
+  UpdateManualTransactionDtoSchema,
   UpdateTransactionCategoryDtoSchema,
   UpdateTransactionDtoSchema,
 } from '../types/Transaction';
@@ -364,6 +368,35 @@ export class TransactionController {
     return this.transactionService.create(createTransactionDto, user.userId);
   }
 
+  @Post('manual')
+  @ApiOperation({ description: 'Create a manual transaction' })
+  @ZodApiBody({ schema: CreateManualTransactionDtoSchema })
+  @ZodApiResponse({
+    status: 201,
+    description: 'Manual transaction created successfully',
+    schema: TransactionSchema,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Account or category not found',
+  })
+  async createManual(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(CreateManualTransactionDtoSchema))
+    createManualTransactionDto: CreateManualTransactionDto,
+  ): Promise<Transaction> {
+    const transaction = await this.transactionService.createManual(
+      user.userId,
+      createManualTransactionDto,
+    );
+    if (!transaction) {
+      throw new NotFoundException(
+        'Manual transaction account or category not found',
+      );
+    }
+    return transaction;
+  }
+
   @Get(':id')
   @ApiOperation({ description: 'Get a transaction by ID' })
   @ZodApiResponse({
@@ -472,6 +505,32 @@ export class TransactionController {
     return result;
   }
 
+  @Patch(':id/manual')
+  @ApiOperation({ description: 'Update a manual transaction' })
+  @ZodApiBody({ schema: UpdateManualTransactionDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Manual transaction updated successfully',
+    schema: TransactionSchema,
+  })
+  @ApiResponse({ status: 404, description: 'Manual transaction not found' })
+  async updateManual(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(UpdateManualTransactionDtoSchema))
+    updateManualTransactionDto: UpdateManualTransactionDto,
+  ): Promise<Transaction> {
+    const transaction = await this.transactionService.updateManual(
+      id,
+      user.userId,
+      updateManualTransactionDto,
+    );
+    if (!transaction) {
+      throw new NotFoundException(`Manual transaction with id ${id} not found`);
+    }
+    return transaction;
+  }
+
   @Patch(':id')
   @ApiOperation({ description: 'Update a transaction' })
   @ZodApiBody({ schema: UpdateTransactionDtoSchema })
@@ -496,6 +555,23 @@ export class TransactionController {
       throw new NotFoundException(`Transaction with id ${id} not found`);
     }
     return transaction;
+  }
+
+  @Delete(':id/manual')
+  @ApiOperation({ description: 'Delete a manual transaction' })
+  @ApiResponse({
+    status: 204,
+    description: 'Manual transaction deleted successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Manual transaction not found' })
+  async removeManual(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+  ): Promise<void> {
+    const deleted = await this.transactionService.removeManual(id, user.userId);
+    if (!deleted) {
+      throw new NotFoundException(`Manual transaction with id ${id} not found`);
+    }
   }
 
   @Delete(':id')

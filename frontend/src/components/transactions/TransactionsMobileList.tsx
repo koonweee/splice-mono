@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Avatar,
   Badge,
   Button,
@@ -10,11 +11,12 @@ import {
   Stack,
   Text,
   TextInput,
+  Tooltip,
   UnstyledButton,
 } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { Check, RotateCcw } from 'lucide-react'
+import { Check, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   useCategoryControllerFindAll,
@@ -28,6 +30,7 @@ import {
 } from '../../lib/category-colors'
 import { formatMoneyWithSign } from '../../lib/format'
 import { isAssignableCategoryOption } from '../../lib/category-options'
+import { isManualTransaction } from '../../lib/manual-transactions'
 import {
   getViewportAwareComboboxProps,
   viewportAwareDropdownMaxHeight,
@@ -55,6 +58,8 @@ type TransactionsMobileListProps = {
   bulkModeEnabled?: boolean
   selectedTransactionIds?: Set<string>
   onToggleTransactionSelection?: (transactionId: string) => void
+  onEditManualTransaction?: (transaction: Transaction) => void
+  onDeleteManualTransaction?: (transaction: Transaction) => void
 }
 
 function getCategoryLabel(transaction: Transaction) {
@@ -126,7 +131,8 @@ function invalidateTransactionQueries(
       Array.isArray(query.queryKey) &&
       typeof query.queryKey[0] === 'string' &&
       (query.queryKey[0].includes('transaction') ||
-        query.queryKey[0].includes('category')),
+        query.queryKey[0].includes('category') ||
+        query.queryKey[0].includes('analysis')),
   })
 }
 
@@ -157,6 +163,8 @@ export function TransactionsMobileList({
   bulkModeEnabled = false,
   selectedTransactionIds = new Set<string>(),
   onToggleTransactionSelection,
+  onEditManualTransaction,
+  onDeleteManualTransaction,
 }: TransactionsMobileListProps) {
   const queryClient = useQueryClient()
   const [activeTransactionId, setActiveTransactionId] = useState<string | null>(
@@ -218,6 +226,14 @@ export function TransactionsMobileList({
     ? getBankActivityDate(activeTransaction)
     : null
   const drawerReadOnly = bulkModeEnabled
+  const showManualActions =
+    activeTransaction !== null &&
+    !drawerReadOnly &&
+    isManualTransaction(activeTransaction)
+  const showProviderEditControls =
+    activeTransaction !== null &&
+    !drawerReadOnly &&
+    !isManualTransaction(activeTransaction)
 
   useEffect(() => {
     if (!activeTransaction) {
@@ -283,10 +299,11 @@ export function TransactionsMobileList({
             <div className={styles.dateHeader}>
               {dayjs(date).format('MMMM D, YYYY')}
             </div>
-            {transactions.map((transaction) => {
-              const merchantDisplay = getMerchantDisplay(transaction)
-              const avatarLabel = merchantDisplay.primary
-                .trim()
+	            {transactions.map((transaction) => {
+	              const merchantDisplay = getMerchantDisplay(transaction)
+	              const isManual = isManualTransaction(transaction)
+	              const avatarLabel = merchantDisplay.primary
+	                .trim()
                 .slice(0, 1)
                 .toUpperCase()
               const amount = transaction.convertedAmount ?? transaction.amount
@@ -303,10 +320,10 @@ export function TransactionsMobileList({
                   key={transaction.id}
                   onClick={() => setActiveTransactionId(transaction.id)}
                 >
-                  <div className={styles.rowMain}>
-                    {bulkModeEnabled && (
-                      <Checkbox
-                        aria-label={`Select transaction ${merchantDisplay.primary}`}
+	                  <div className={styles.rowMain}>
+	                    {bulkModeEnabled && !isManual && (
+	                      <Checkbox
+	                        aria-label={`Select transaction ${merchantDisplay.primary}`}
                         checked={selectedTransactionIds.has(transaction.id)}
                         onChange={() => toggleBulkSelection(transaction)}
                         onClick={(event) => event.stopPropagation()}
@@ -432,9 +449,40 @@ export function TransactionsMobileList({
                   .filter(Boolean)
                   .join(' · ')}
               </Text>
+              {showManualActions && (
+                <Group gap="xs" mt="sm">
+                  <Tooltip label="Edit manual transaction">
+                    <ActionIcon
+                      aria-label="Edit manual transaction"
+                      onClick={() => {
+                        setActiveTransactionId(null)
+                        onEditManualTransaction?.(activeTransaction)
+                      }}
+                      size="lg"
+                      variant="light"
+                    >
+                      <Pencil size={18} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Delete manual transaction">
+                    <ActionIcon
+                      aria-label="Delete manual transaction"
+                      color="red"
+                      onClick={() => {
+                        setActiveTransactionId(null)
+                        onDeleteManualTransaction?.(activeTransaction)
+                      }}
+                      size="lg"
+                      variant="light"
+                    >
+                      <Trash2 size={18} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+              )}
             </div>
 
-            {!drawerReadOnly && (
+            {showProviderEditControls && (
               <>
                 <Stack gap={6}>
                   <TextInput

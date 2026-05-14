@@ -19,7 +19,7 @@ import { notifications } from '@mantine/notifications'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { Filter } from 'lucide-react'
+import { Filter, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   getTransactionControllerFindAllQueryKey,
@@ -29,17 +29,20 @@ import {
   useCategoryControllerFindFilterOptions,
   useTransactionControllerBulkUpdateCategories,
   useTransactionControllerGetSummary,
+  useTransactionControllerRemoveManual,
   useTransactionControllerUndoBulkUpdateCategories,
 } from '../../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../../lib/format'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import { getFallbackCategoryColor } from '../../lib/category-colors'
+import { isManualTransaction } from '../../lib/manual-transactions'
 import {
   getViewportAwareComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
 import type {
   Category,
+  Transaction,
   TransactionControllerFindAllParams,
   TransactionControllerGetSummaryParams,
 } from '../../api/models'
@@ -53,6 +56,7 @@ import { TransactionBulkEditToolbar } from '@/components/transactions/Transactio
 import { TransactionSummaryStrip } from '@/components/transactions/TransactionSummaryStrip'
 import { TransactionsMobileList } from '@/components/transactions/TransactionsMobileList'
 import { PageHeader } from '@/components/PageHeader'
+import { ManualTransactionModal } from '@/components/transactions/ManualTransactionModal'
 
 const PAGE_SIZE = 50
 const CLEAR_CATEGORY_VALUE = '__clear_category__'
@@ -222,6 +226,9 @@ function TransactionsPage() {
   const [bulkCategoryValue, setBulkCategoryValue] = useState<string | null>(
     null,
   )
+  const [manualModalOpened, setManualModalOpened] = useState(false)
+  const [editingManualTransaction, setEditingManualTransaction] =
+    useState<Transaction | null>(null)
 
   // Filter state
   const [dateRange, setDateRange] = useState<DatesRangeValue>(() => [
@@ -248,9 +255,29 @@ function TransactionsPage() {
         Array.isArray(query.queryKey) &&
         typeof query.queryKey[0] === 'string' &&
         (query.queryKey[0].includes('transaction') ||
-          query.queryKey[0].includes('category')),
+          query.queryKey[0].includes('category') ||
+          query.queryKey[0].includes('analysis')),
     })
   }, [queryClient])
+  const removeManualTransaction = useTransactionControllerRemoveManual({
+    mutation: {
+      onSuccess: () => {
+        invalidateTransactions()
+        notifications.show({
+          title: 'Transaction deleted',
+          message: 'The manual transaction was deleted.',
+          color: 'green',
+        })
+      },
+      onError: () => {
+        notifications.show({
+          title: 'Delete failed',
+          message: 'The manual transaction was not deleted.',
+          color: 'red',
+        })
+      },
+    },
+  })
 
   const accountOptions = useMemo(
     () =>
@@ -381,7 +408,10 @@ function TransactionsPage() {
   )
   const totalRows = data?.pages[0]?.total ?? 0
   const loadedTransactionIds = useMemo(
-    () => flatData.map((transaction) => transaction.id),
+    () =>
+      flatData
+        .filter((transaction) => !isManualTransaction(transaction))
+        .map((transaction) => transaction.id),
     [flatData],
   )
 
@@ -415,10 +445,37 @@ function TransactionsPage() {
     setAmountSign('all')
   }
 
-  const selectedCount = selectedTransactionIds.size
+  const openCreateManualTransaction = () => {
+    setEditingManualTransaction(null)
+    setManualModalOpened(true)
+  }
+
+  const openEditManualTransaction = (transaction: Transaction) => {
+    setEditingManualTransaction(transaction)
+    setManualModalOpened(true)
+  }
+
+  const closeManualTransactionModal = () => {
+    setManualModalOpened(false)
+    setEditingManualTransaction(null)
+  }
+
+  const deleteManualTransaction = (transaction: Transaction) => {
+    const confirmed = window.confirm(
+      `Delete "${transaction.merchantName ?? 'this transaction'}"?`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    removeManualTransaction.mutate({ id: transaction.id })
+  }
+
   const selectedLoadedCount = loadedTransactionIds.filter((id) =>
     selectedTransactionIds.has(id),
   ).length
+  const selectedCount = selectedLoadedCount
   const allLoadedSelected =
     loadedTransactionIds.length > 0 &&
     selectedLoadedCount === loadedTransactionIds.length
@@ -452,14 +509,21 @@ function TransactionsPage() {
   }, [loadedTransactionIds])
 
   const saveBulkCategoryUpdate = () => {
-    if (bulkCategoryValue === null || selectedTransactionIds.size === 0) {
+    const selectedLoadedTransactionIds = loadedTransactionIds.filter((id) =>
+      selectedTransactionIds.has(id),
+    )
+
+    if (
+      bulkCategoryValue === null ||
+      selectedLoadedTransactionIds.length === 0
+    ) {
       return
     }
 
     bulkUpdateCategories.mutate(
       {
         data: {
-          transactionIds: Array.from(selectedTransactionIds),
+          transactionIds: selectedLoadedTransactionIds,
           categoryId:
             bulkCategoryValue === CLEAR_CATEGORY_VALUE
               ? null
@@ -562,14 +626,32 @@ function TransactionsPage() {
         mb="md"
         wrap="nowrap"
         actions={
-          <Switch
-            checked={bulkModeEnabled}
-            label="Bulk edit"
-            onChange={(event) =>
-              setBulkModeEnabled(event.currentTarget.checked)
-            }
-          />
+          <Group gap="sm" wrap="nowrap">
+            <Button
+              leftSection={<Plus size={16} />}
+              onClick={openCreateManualTransaction}
+              size={isMobile ? 'sm' : 'md'}
+            >
+              Add transaction
+            </Button>
+            <Switch
+              checked={bulkModeEnabled}
+              label="Bulk edit"
+              onChange={(event) =>
+                setBulkModeEnabled(event.currentTarget.checked)
+              }
+            />
+          </Group>
         }
+      />
+      <ManualTransactionModal
+        accounts={accounts ?? []}
+        categories={assignableCategories}
+        defaultAccountId={accountId}
+        opened={manualModalOpened}
+        transaction={editingManualTransaction}
+        onClose={closeManualTransactionModal}
+        onSaved={invalidateTransactions}
       />
 
       <Group
@@ -711,6 +793,8 @@ function TransactionsPage() {
           bulkModeEnabled={bulkModeEnabled}
           selectedTransactionIds={selectedTransactionIds}
           onToggleTransactionSelection={toggleTransactionSelection}
+          onEditManualTransaction={openEditManualTransaction}
+          onDeleteManualTransaction={deleteManualTransaction}
         />
       ) : (
         <TransactionsTable
@@ -728,6 +812,8 @@ function TransactionsPage() {
           selectedTransactionIds={selectedTransactionIds}
           onToggleTransactionSelection={toggleTransactionSelection}
           onToggleLoadedSelection={toggleLoadedSelection}
+          onEditManualTransaction={openEditManualTransaction}
+          onDeleteManualTransaction={deleteManualTransaction}
           mantinePaperProps={{
             style: { display: 'flex', flexDirection: 'column', flex: 1 },
           }}

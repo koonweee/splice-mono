@@ -144,7 +144,20 @@ describe('TransactionsMobileList', () => {
     const onToggle = vi.fn()
 
     renderMobileList(
-      [makeTransaction({ id: 'txn-1', category: foodCategory })],
+      [
+        makeTransaction({
+          id: 'txn-1',
+          category: foodCategory,
+          merchantName: 'Provider Store',
+          source: 'provider',
+        }),
+        makeTransaction({
+          id: 'manual-txn',
+          category: foodCategory,
+          merchantName: 'Manual Store',
+          source: 'manual',
+        }),
+      ],
       {
         bulkModeEnabled: true,
         selectedTransactionIds: new Set(['txn-1']),
@@ -153,24 +166,89 @@ describe('TransactionsMobileList', () => {
     )
 
     const checkbox = screen.getByRole('checkbox', {
-      name: /Select transaction Store/,
+      name: /Select transaction Provider Store/,
     })
 
     expect((checkbox as HTMLInputElement).checked).toBe(true)
+    expect(
+      screen.queryByRole('checkbox', {
+        name: /Select transaction Manual Store/,
+      }),
+    ).toBeNull()
 
     fireEvent.click(checkbox)
 
     expect(onToggle).toHaveBeenCalledWith('txn-1')
+
+	    fireEvent.click(
+	      screen.getByRole('button', {
+	        name: /Open transaction details for Provider Store/,
+	      }),
+	    )
+
+    expect(await screen.findByText('Display')).toBeTruthy()
+    expect(screen.queryByLabelText('Reporting date')).toBeNull()
+    expect(screen.queryByLabelText('Category')).toBeNull()
+  })
+
+  it('shows manual edit and delete actions only in manual transaction details', async () => {
+    const onEditManualTransaction = vi.fn()
+    const onDeleteManualTransaction = vi.fn()
+    const manualTransaction = makeTransaction({
+      id: 'manual-txn',
+      category: foodCategory,
+      source: 'manual',
+    })
+    const providerTransaction = makeTransaction({
+      id: 'provider-txn',
+      category: foodCategory,
+      source: 'provider',
+    })
+
+    renderMobileList([manualTransaction], {
+      onEditManualTransaction,
+      onDeleteManualTransaction,
+    })
 
     fireEvent.click(
       screen.getByRole('button', {
         name: /Open transaction details for Store/,
       }),
     )
+    fireEvent.click(await screen.findByLabelText('Edit manual transaction'))
 
-    expect(await screen.findByText('Display')).toBeTruthy()
-    expect(screen.queryByLabelText('Reporting date')).toBeNull()
+    expect(onEditManualTransaction).toHaveBeenCalledWith(manualTransaction)
     expect(screen.queryByLabelText('Category')).toBeNull()
+
+    cleanup()
+
+    renderMobileList([manualTransaction], {
+      onEditManualTransaction,
+      onDeleteManualTransaction,
+    })
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Open transaction details for Store/,
+      }),
+    )
+    fireEvent.click(await screen.findByLabelText('Delete manual transaction'))
+
+    expect(onDeleteManualTransaction).toHaveBeenCalledWith(manualTransaction)
+
+    cleanup()
+
+    renderMobileList([providerTransaction], {
+      onEditManualTransaction,
+      onDeleteManualTransaction,
+    })
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Open transaction details for Store/,
+      }),
+    )
+
+    expect(screen.queryByLabelText('Edit manual transaction')).toBeNull()
+    expect(screen.queryByLabelText('Delete manual transaction')).toBeNull()
   })
 
   it('updates reporting date overrides from the details drawer', async () => {
@@ -229,6 +307,8 @@ function renderMobileList(
     bulkModeEnabled?: boolean
     selectedTransactionIds?: Set<string>
     onToggleTransactionSelection?: (transactionId: string) => void
+    onEditManualTransaction?: (transaction: Transaction) => void
+    onDeleteManualTransaction?: (transaction: Transaction) => void
   } = {},
 ) {
   const queryClient = new QueryClient()
@@ -244,6 +324,8 @@ function renderMobileList(
           bulkModeEnabled={options.bulkModeEnabled}
           selectedTransactionIds={options.selectedTransactionIds}
           onToggleTransactionSelection={options.onToggleTransactionSelection}
+          onEditManualTransaction={options.onEditManualTransaction}
+          onDeleteManualTransaction={options.onDeleteManualTransaction}
         />
       </QueryClientProvider>
     </MantineProvider>,
@@ -271,10 +353,11 @@ function makeTransaction(
   overrides: Partial<{
     amount: Transaction['amount']
     activityDate: string
-    category: Category | null
-    convertedAmount: Transaction['convertedAmount']
-    id: string
-    providerCategoryHint: {
+	    category: Category | null
+	    convertedAmount: Transaction['convertedAmount']
+	    id: string
+	    merchantName: string
+	    providerCategoryHint: {
       provider: 'plaid'
       primary: string | null
       detailed: string | null
@@ -282,6 +365,7 @@ function makeTransaction(
       confidenceLevel: string | null
       iconUrl: string | null
     } | null
+    source: 'manual' | 'provider'
   }> = {},
 ): Transaction {
   const category =
@@ -293,8 +377,8 @@ function makeTransaction(
       money: { amount: 1200, currency: 'USD' },
       sign: MoneyWithSignSign.negative,
     },
-    accountId: 'account-1',
-    merchantName: 'Store',
+	    accountId: 'account-1',
+	    merchantName: overrides.merchantName ?? 'Store',
     providerTransactionName: null,
     originalDescription: null,
     pending: false,
@@ -324,5 +408,6 @@ function makeTransaction(
     userId: 'user-1',
     providerCategoryHint: overrides.providerCategoryHint ?? null,
     convertedAmount: overrides.convertedAmount,
-  }
+    ...(overrides.source ? { source: overrides.source } : {}),
+  } as Transaction
 }

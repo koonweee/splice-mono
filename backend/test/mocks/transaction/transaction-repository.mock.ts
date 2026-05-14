@@ -9,6 +9,7 @@ import {
 const mockTransactionEntity = {
   id: 'transaction-uuid-123',
   userId: 'user-uuid-123',
+  source: 'provider',
   accountId: mockAccountId,
   merchantName: 'Starbucks',
   pending: false,
@@ -38,6 +39,7 @@ const mockTransactionEntity = {
 const mockTransactionEntity2 = {
   id: 'transaction-uuid-456',
   userId: 'user-uuid-123',
+  source: 'provider',
   accountId: mockAccountId,
   merchantName: 'Amazon',
   pending: true,

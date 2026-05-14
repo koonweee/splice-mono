@@ -17,7 +17,7 @@ import { DatePicker } from '@mantine/dates'
 import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { Check, Info, Pencil, RotateCcw, X } from 'lucide-react'
+import { Check, Info, Pencil, RotateCcw, Trash2, X } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -30,6 +30,7 @@ import {
   getCategoryColorStyles,
   getFallbackCategoryColor,
 } from '../lib/category-colors'
+import { isManualTransaction } from '../lib/manual-transactions'
 import { CategorySelect } from './categories/CategorySelect'
 import tableChrome from './MantineTableChrome.module.css'
 import styles from './TransactionsTable.module.css'
@@ -68,6 +69,8 @@ interface TransactionsTableProps {
   selectedTransactionIds?: Set<string>
   onToggleTransactionSelection?: (transactionId: string) => void
   onToggleLoadedSelection?: () => void
+  onEditManualTransaction?: (transaction: Transaction) => void
+  onDeleteManualTransaction?: (transaction: Transaction) => void
 }
 
 function formatMetadataValue(value: string | null | undefined) {
@@ -311,13 +314,18 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
 function MerchantCell({
   row,
   bulkModeEnabled = false,
+  onDeleteManualTransaction,
+  onEditManualTransaction,
 }: {
   row: { original: Transaction }
   bulkModeEnabled?: boolean
+  onDeleteManualTransaction?: (transaction: Transaction) => void
+  onEditManualTransaction?: (transaction: Transaction) => void
 }) {
   const transaction = row.original
   const merchantDisplay = getMerchantDisplay(transaction)
   const avatarLabel = merchantDisplay.primary.trim().slice(0, 1).toUpperCase()
+  const showManualActions = !bulkModeEnabled && isManualTransaction(transaction)
 
   return (
     <Group className={styles.merchantCell} gap="xs" wrap="nowrap">
@@ -336,6 +344,37 @@ function MerchantCell({
           </Text>
           {!bulkModeEnabled && (
             <TransactionInfoPopover transaction={transaction} />
+          )}
+          {showManualActions && (
+            <Group gap={2} wrap="nowrap">
+              <Tooltip label="Edit manual transaction">
+                <ActionIcon
+                  aria-label="Edit manual transaction"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onEditManualTransaction?.(transaction)
+                  }}
+                  size="sm"
+                  variant="subtle"
+                >
+                  <Pencil size={14} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Delete manual transaction">
+                <ActionIcon
+                  aria-label="Delete manual transaction"
+                  color="red"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onDeleteManualTransaction?.(transaction)
+                  }}
+                  size="sm"
+                  variant="subtle"
+                >
+                  <Trash2 size={14} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
           )}
           {transaction.pending && (
             <Badge
@@ -575,7 +614,8 @@ function invalidateTransactionQueries(
       Array.isArray(query.queryKey) &&
       typeof query.queryKey[0] === 'string' &&
       (query.queryKey[0].includes('transaction') ||
-        query.queryKey[0].includes('category')),
+        query.queryKey[0].includes('category') ||
+        query.queryKey[0].includes('analysis')),
   })
 }
 
@@ -609,6 +649,8 @@ export function TransactionsTable({
   selectedTransactionIds = new Set<string>(),
   onToggleTransactionSelection,
   onToggleLoadedSelection,
+  onEditManualTransaction,
+  onDeleteManualTransaction,
 }: TransactionsTableProps) {
   const queryClient = useQueryClient()
   const [editingTransactionId, setEditingTransactionId] = useState<
@@ -684,6 +726,10 @@ export function TransactionsTable({
   }
 
   function toggleBulkSelection(transaction: Transaction) {
+    if (isManualTransaction(transaction)) {
+      return
+    }
+
     onToggleTransactionSelection?.(transaction.id)
   }
 
@@ -704,11 +750,15 @@ export function TransactionsTable({
         ),
     [categories],
   )
-  const selectedLoadedCount = data.filter((transaction) =>
+  const bulkSelectableData = data.filter(
+    (transaction) => !isManualTransaction(transaction),
+  )
+  const selectedLoadedCount = bulkSelectableData.filter((transaction) =>
     selectedTransactionIds.has(transaction.id),
   ).length
   const allLoadedSelected =
-    data.length > 0 && selectedLoadedCount === data.length
+    bulkSelectableData.length > 0 &&
+    selectedLoadedCount === bulkSelectableData.length
   const someLoadedSelected = selectedLoadedCount > 0
 
   const allColumns = useMemo<Array<MRT_ColumnDef<Transaction>>>(
@@ -719,12 +769,12 @@ export function TransactionsTable({
               id: 'bulkSelect',
               header: '',
               Header: () => (
-                <Checkbox
-                  aria-label="Select all loaded transactions"
-                  checked={allLoadedSelected}
-                  disabled={data.length === 0}
-                  indeterminate={someLoadedSelected && !allLoadedSelected}
-                  onChange={() => onToggleLoadedSelection?.()}
+	                <Checkbox
+	                  aria-label="Select all loaded transactions"
+	                  checked={allLoadedSelected}
+	                  disabled={bulkSelectableData.length === 0}
+	                  indeterminate={someLoadedSelected && !allLoadedSelected}
+	                  onChange={() => onToggleLoadedSelection?.()}
                   onClick={(event) => event.stopPropagation()}
                 />
               ),
@@ -732,10 +782,15 @@ export function TransactionsTable({
               size: 48,
               minSize: 48,
               maxSize: 48,
-              Cell: ({ row }) => {
-                const transaction = row.original
+	              Cell: ({ row }) => {
+	                const transaction = row.original
+	                const isManual = isManualTransaction(transaction)
 
-                return (
+	                if (isManual) {
+	                  return null
+	                }
+
+	                return (
                   <Checkbox
                     aria-label={`Select transaction ${getMerchantDisplay(transaction).primary}`}
                     checked={selectedTransactionIds.has(transaction.id)}
@@ -756,6 +811,7 @@ export function TransactionsTable({
         Cell: ({ row }) => {
           const transaction = row.original
           const isEditing = editingReportingDateTransactionId === transaction.id
+          const isManual = isManualTransaction(transaction)
           const hasOverride = transaction.reportingDateOverride != null
           const bankActivityDate = getBankActivityDate(transaction)
           const dateLabel = dayjs(transaction.activityDate).format(
@@ -763,7 +819,7 @@ export function TransactionsTable({
           )
           const resetDateLabel = dayjs(bankActivityDate).format('MMM D, YYYY')
 
-          if (isEditing && !bulkModeEnabled) {
+          if (isEditing && !bulkModeEnabled && !isManual) {
             return (
               <Group className={styles.dateCell} gap={4} wrap="nowrap">
                 <Popover
@@ -843,7 +899,7 @@ export function TransactionsTable({
               >
                 {dateLabel}
               </Text>
-              {!bulkModeEnabled && (
+              {!bulkModeEnabled && !isManual && (
                 <Group className={styles.dateActions} gap={2} wrap="nowrap">
                   <Tooltip label="Edit reporting date">
                     <ActionIcon
@@ -884,7 +940,12 @@ export function TransactionsTable({
         minSize: 180,
         maxSize: 420,
         Cell: ({ row }) => (
-          <MerchantCell row={row} bulkModeEnabled={bulkModeEnabled} />
+          <MerchantCell
+            row={row}
+            bulkModeEnabled={bulkModeEnabled}
+            onDeleteManualTransaction={onDeleteManualTransaction}
+            onEditManualTransaction={onEditManualTransaction}
+          />
         ),
       },
       {
@@ -926,10 +987,11 @@ export function TransactionsTable({
           const transaction = row.original
           const category = transaction.category ?? null
           const isEditing = editingTransactionId === transaction.id
+          const isManual = isManualTransaction(transaction)
           const categoryLabel = category
             ? getCategoryLabel(category)
             : 'Uncategorized'
-          if (isEditing && !bulkModeEnabled) {
+          if (isEditing && !bulkModeEnabled && !isManual) {
             return (
               <Group className={styles.categoryCell} gap={4} wrap="nowrap">
                 <CategorySelect
@@ -977,7 +1039,7 @@ export function TransactionsTable({
                 {categoryLabel}
               </Badge>
               <ProviderCategoryHintPopover transaction={transaction} />
-              {!bulkModeEnabled && (
+              {!bulkModeEnabled && !isManual && (
                 <Group className={styles.categoryActions} gap={2} wrap="nowrap">
                   <Tooltip label="Edit category">
                     <ActionIcon
@@ -1027,17 +1089,19 @@ export function TransactionsTable({
       reportingDateDraft,
       selectedTransactionIds,
       onToggleTransactionSelection,
+      onDeleteManualTransaction,
+      onEditManualTransaction,
       updateTransaction.isPending,
       updateTransaction.mutate,
       updateTransaction.variables?.id,
       updateCategory.isPending,
       updateCategory.mutate,
-      updateCategory.variables?.id,
-      allLoadedSelected,
-      data.length,
-      onToggleLoadedSelection,
-      someLoadedSelected,
-    ],
+	      updateCategory.variables?.id,
+	      allLoadedSelected,
+	      bulkSelectableData.length,
+	      onToggleLoadedSelection,
+	      someLoadedSelected,
+	    ],
   )
 
   const visibleColumns =
