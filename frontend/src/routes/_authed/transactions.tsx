@@ -624,18 +624,29 @@ function TransactionsPage() {
       <PageHeader
         title="Transactions"
         mb="md"
-        wrap="nowrap"
-        actions={
-          <Group gap="sm" wrap="nowrap">
-            <Button
-              leftSection={<Plus size={16} />}
-              onClick={openCreateManualTransaction}
-              size={isMobile ? 'sm' : 'md'}
-            >
-              Add transaction
-            </Button>
-            <Switch
-              checked={bulkModeEnabled}
+	        wrap="nowrap"
+	        actions={
+	          <Group gap="sm" wrap="nowrap">
+	            {isMobile ? (
+	              <ActionIcon
+	                aria-label="Add transaction"
+	                onClick={openCreateManualTransaction}
+	                size={40}
+	                variant="filled"
+	              >
+	                <Plus aria-hidden size={18} />
+	              </ActionIcon>
+	            ) : (
+	              <Button
+	                leftSection={<Plus size={16} />}
+	                onClick={openCreateManualTransaction}
+	                size="md"
+	              >
+	                Add transaction
+	              </Button>
+	            )}
+	            <Switch
+	              checked={bulkModeEnabled}
               label="Bulk edit"
               onChange={(event) =>
                 setBulkModeEnabled(event.currentTarget.checked)

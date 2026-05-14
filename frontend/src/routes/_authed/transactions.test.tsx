@@ -662,9 +662,9 @@ describe('TransactionsPage category assignment workflow', () => {
     })
   })
 
-  it('uses the mobile transaction list at narrow viewports', () => {
-    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
-      matches: query === '(max-width: 48em)',
+	  it('uses the mobile transaction list at narrow viewports', () => {
+	    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+	      matches: query === '(max-width: 48em)',
       media: query,
       onchange: null,
       addListener: vi.fn(),
@@ -676,9 +676,11 @@ describe('TransactionsPage category assignment workflow', () => {
 
     renderTransactionsPage()
 
-    expect(screen.getByTestId('transactions-mobile-list')).toBeTruthy()
-    expect(mockFns.transactionsMobileListMock).toHaveBeenCalledWith(
-      expect.objectContaining({
+	    expect(screen.getByTestId('transactions-mobile-list')).toBeTruthy()
+	    expect(screen.getByRole('button', { name: 'Add transaction' })).toBeTruthy()
+	    expect(screen.queryByText('Add transaction')).toBeNull()
+	    expect(mockFns.transactionsMobileListMock).toHaveBeenCalledWith(
+	      expect.objectContaining({
         totalRows: 125,
       }),
     )
