@@ -1,15 +1,16 @@
 import {
+  ActionIcon,
   Button,
   Group,
   Modal,
   NumberInput,
-  Select,
   Stack,
   TextInput,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import dayjs from 'dayjs'
+import { Minus, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   useTransactionControllerCreateManual,
@@ -22,6 +23,7 @@ import {
   getViewportAwareComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
+import { AccountSelect } from '../accounts/AccountSelect'
 import { CategorySelect } from '../categories/CategorySelect'
 import type { CategorySelectOption } from '../categories/CategorySelect'
 import type { Account, Category, Transaction } from '../../api/models'
@@ -114,6 +116,20 @@ function getNumericAmount(value: NumberInputProps['value']) {
   return Number.NaN
 }
 
+function toggleAmountSign(value: NumberInputProps['value']) {
+  const numericAmount = getNumericAmount(value)
+
+  if (!Number.isFinite(numericAmount)) {
+    return '-'
+  }
+
+  if (numericAmount === 0) {
+    return value
+  }
+
+  return -numericAmount
+}
+
 export function ManualTransactionModal({
   opened,
   onClose,
@@ -165,6 +181,10 @@ export function ManualTransactionModal({
     : undefined
   const isSaving =
     createManualTransaction.isPending || updateManualTransaction.isPending
+  const displayedNumericAmount = getNumericAmount(amount)
+  const amountIsNegative =
+    (Number.isFinite(displayedNumericAmount) && displayedNumericAmount < 0) ||
+    (typeof amount === 'string' && amount.trim().startsWith('-'))
 
   useEffect(() => {
     if (!opened) {
@@ -274,7 +294,7 @@ export function ManualTransactionModal({
     >
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
-          <Select
+          <AccountSelect
             allowDeselect={false}
             comboboxProps={comboboxProps}
             data={accountOptions}
@@ -302,6 +322,30 @@ export function ManualTransactionModal({
               }}
               placeholder="0.00"
               required
+              rightSection={
+                <ActionIcon
+                  aria-label={
+                    amountIsNegative
+                      ? 'Make amount positive'
+                      : 'Make amount negative'
+                  }
+                  onClick={() => {
+                    setAmount((current) => toggleAmountSign(current))
+                    setErrors((current) => ({ ...current, amount: undefined }))
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="subtle"
+                >
+                  {amountIsNegative ? (
+                    <Plus aria-hidden size={16} />
+                  ) : (
+                    <Minus aria-hidden size={16} />
+                  )}
+                </ActionIcon>
+              }
+              rightSectionPointerEvents="auto"
+              rightSectionWidth={40}
               value={amount}
             />
             <TextInput label="Currency" readOnly value={currency} />

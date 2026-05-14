@@ -243,21 +243,6 @@ export type BulkTransactionCategoryUpdateResponse = z.infer<
   typeof BulkTransactionCategoryUpdateResponseSchema
 >;
 
-export const TransactionSummarySchema = registerSchema(
-  'TransactionSummary',
-  z.object({
-    currency: z.string(),
-    inflow: MoneyWithSignSchema,
-    outflow: MoneyWithSignSchema,
-    net: MoneyWithSignSchema,
-    transactionCount: z.number().int(),
-    pendingCount: z.number().int(),
-    uncategorizedCount: z.number().int(),
-  }),
-);
-
-export type TransactionSummary = z.infer<typeof TransactionSummarySchema>;
-
 /**
  * Paginated transaction response with metadata for table rendering
  */

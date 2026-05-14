@@ -85,40 +85,6 @@ describe('TransactionController', () => {
     );
   });
 
-  it('returns preferred-currency summary totals with uncategorized count', async () => {
-    const result = await controller.getSummary(mockUser);
-
-    expect(result).toEqual({
-      currency: 'USD',
-      inflow: {
-        money: { currency: 'USD', amount: 0 },
-        sign: 'positive',
-      },
-      outflow: {
-        money: { currency: 'USD', amount: 7500 },
-        sign: 'negative',
-      },
-      net: {
-        money: { currency: 'USD', amount: 7500 },
-        sign: 'negative',
-      },
-      transactionCount: 2,
-      pendingCount: 1,
-      uncategorizedCount: 1,
-    });
-    expect(mockTransactionService.getSummary).toHaveBeenCalledWith(
-      mockUser.userId,
-      {
-        accountId: undefined,
-        startDate: undefined,
-        endDate: undefined,
-        categoryId: undefined,
-        categoryPrimary: undefined,
-        amountSign: undefined,
-      },
-    );
-  });
-
   it('converts transaction amounts when requested', async () => {
     mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue('EUR');
     mockCurrencyConversionService.getRateMap.mockResolvedValue(

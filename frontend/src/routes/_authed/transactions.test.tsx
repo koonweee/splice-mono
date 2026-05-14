@@ -69,7 +69,6 @@ const mockFns = vi.hoisted(() => ({
   useAccountControllerFindAllMock: vi.fn(),
   useCategoryControllerFindAllMock: vi.fn(),
   useCategoryControllerFindFilterOptionsMock: vi.fn(),
-  useTransactionControllerGetSummaryMock: vi.fn(),
   useTransactionControllerBulkUpdateCategoriesMock: vi.fn(),
   useTransactionControllerUndoBulkUpdateCategoriesMock: vi.fn(),
   bulkUpdateMutateMock: vi.fn(),
@@ -119,6 +118,7 @@ vi.mock('@mantine/core', async () => {
     data?: Array<SelectOption>
     onChange?: (value: string | null) => void
     placeholder?: string
+    rightSection?: ReactNode
     value?: string | null
   }
   type SegmentedControlOption = string | { value: string; label: ReactNode }
@@ -134,6 +134,7 @@ vi.mock('@mantine/core', async () => {
       data = [],
       onChange,
       placeholder = 'Select',
+      rightSection,
       value,
     }: SelectMockProps) => {
       const options = data.map((option) =>
@@ -141,18 +142,21 @@ vi.mock('@mantine/core', async () => {
       )
 
       return (
-        <select
-          aria-label={placeholder}
-          onChange={(event) => onChange?.(event.currentTarget.value || null)}
-          value={value ?? ''}
-        >
-          <option value="">{placeholder}</option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <>
+          <select
+            aria-label={placeholder}
+            onChange={(event) => onChange?.(event.currentTarget.value || null)}
+            value={value ?? ''}
+          >
+            <option value="">{placeholder}</option>
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {rightSection}
+        </>
       )
     },
     SegmentedControl: ({
@@ -205,8 +209,6 @@ vi.mock('../../api/clients/spliceAPI', async () => {
     useCategoryControllerFindAll: mockFns.useCategoryControllerFindAllMock,
     useCategoryControllerFindFilterOptions:
       mockFns.useCategoryControllerFindFilterOptionsMock,
-    useTransactionControllerGetSummary:
-      mockFns.useTransactionControllerGetSummaryMock,
     useTransactionControllerBulkUpdateCategories:
       mockFns.useTransactionControllerBulkUpdateCategoriesMock,
     useTransactionControllerRemoveManual: () => ({
@@ -380,28 +382,6 @@ beforeEach(() => {
   mockFns.useCategoryControllerFindFilterOptionsMock.mockReturnValue({
     data: [category],
   })
-  mockFns.useTransactionControllerGetSummaryMock.mockReturnValue({
-    data: {
-      currency: 'USD',
-      inflow: {
-        money: { amount: 250000, currency: 'USD' },
-        sign: MoneyWithSignSign.positive,
-      },
-      outflow: {
-        money: { amount: 101700, currency: 'USD' },
-        sign: MoneyWithSignSign.negative,
-      },
-      net: {
-        money: { amount: 148300, currency: 'USD' },
-        sign: MoneyWithSignSign.positive,
-      },
-      transactionCount: 125,
-      pendingCount: 4,
-      uncategorizedCount: 12,
-    },
-    isError: false,
-    isLoading: false,
-  })
   mockFns.useTransactionControllerBulkUpdateCategoriesMock.mockReturnValue({
     mutate: mockFns.bulkUpdateMutateMock,
     isPending: false,
@@ -451,6 +431,7 @@ describe('TransactionsPage category assignment workflow', () => {
     expect(
       screen.getByRole('option', { name: 'Restaurants - Food' }),
     ).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Clear account' })).toBeTruthy()
     expect(
       screen.getByRole('option', {
         name: 'No assigned category - Uncategorized',
@@ -489,21 +470,6 @@ describe('TransactionsPage category assignment workflow', () => {
     expect(Object.keys(lastParams)).not.toContain(
       ['category', 'Review', 'Status'].join(''),
     )
-  })
-
-  it('requests summary params and renders summary totals', () => {
-    renderTransactionsPage()
-
-    expect(mockFns.useTransactionControllerGetSummaryMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        accountId: 'account-1',
-        startDate: '2026-02-01',
-        endDate: '2026-02-28',
-        convert: true,
-      }),
-    )
-    expect(screen.getByLabelText('Transaction summary')).toBeTruthy()
-    expect(screen.getByText('$1,483.00')).toBeTruthy()
   })
 
   it('opens the add transaction modal with the filtered account selected', () => {
@@ -677,6 +643,8 @@ describe('TransactionsPage category assignment workflow', () => {
     renderTransactionsPage()
 
     expect(screen.getByTestId('transactions-mobile-list')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add transaction' })).toBeTruthy()
+    expect(screen.queryByText('Add transaction')).toBeNull()
     expect(mockFns.transactionsMobileListMock).toHaveBeenCalledWith(
       expect.objectContaining({
         totalRows: 125,

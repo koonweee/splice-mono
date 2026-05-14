@@ -38,11 +38,13 @@ vi.mock('@mantine/core', async () => {
       error,
       label,
       onChange,
+      rightSection,
       value,
     }: {
       error?: React.ReactNode
       label?: string
       onChange?: (value: number | string) => void
+      rightSection?: React.ReactNode
       value?: number | string
     }) => (
       <label>
@@ -52,6 +54,7 @@ vi.mock('@mantine/core', async () => {
           onChange={(event) => onChange?.(Number(event.currentTarget.value))}
           value={value ?? ''}
         />
+        {rightSection}
         {error && <span>{error}</span>}
       </label>
     ),
@@ -61,6 +64,7 @@ vi.mock('@mantine/core', async () => {
       label,
       onChange,
       placeholder,
+      rightSection,
       value,
     }: {
       data?: Array<SelectOption>
@@ -68,6 +72,7 @@ vi.mock('@mantine/core', async () => {
       label?: string
       onChange?: (value: string | null) => void
       placeholder?: string
+      rightSection?: React.ReactNode
       value?: string | null
     }) => {
       const options = data.map((option) =>
@@ -79,9 +84,7 @@ vi.mock('@mantine/core', async () => {
           {label ?? placeholder}
           <select
             aria-label={label ?? placeholder}
-            onChange={(event) =>
-              onChange?.(event.currentTarget.value || null)
-            }
+            onChange={(event) => onChange?.(event.currentTarget.value || null)}
             value={value ?? ''}
           >
             <option value="">{placeholder ?? label}</option>
@@ -91,6 +94,7 @@ vi.mock('@mantine/core', async () => {
               </option>
             ))}
           </select>
+          {rightSection}
           {error && <span>{error}</span>}
         </label>
       )
@@ -232,6 +236,39 @@ describe('ManualTransactionModal', () => {
     )
   })
 
+  it('can make a typed amount negative without entering a minus character', () => {
+    renderModal()
+
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '12.34' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Make amount negative' }),
+    )
+    fireEvent.change(screen.getByLabelText('Date'), {
+      target: { value: '2026-05-07' },
+    })
+    fireEvent.change(screen.getByLabelText('Merchant'), {
+      target: { value: 'Coffee Shop' },
+    })
+    fireEvent.change(screen.getByLabelText('Category'), {
+      target: { value: 'category-1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(mockFns.createMutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          amount: {
+            money: { amount: 1234, currency: 'USD' },
+            sign: MoneyWithSignSign.negative,
+          },
+        }),
+      }),
+      expect.any(Object),
+    )
+  })
+
   it('blocks zero amount and missing category before submit', () => {
     renderModal()
 
@@ -250,6 +287,28 @@ describe('ManualTransactionModal', () => {
     expect(screen.getByText('Category is required')).toBeTruthy()
     expect(mockFns.createMutateMock).not.toHaveBeenCalled()
   })
+
+  it('allows clearing the account and errors on save', () => {
+    renderModal()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear account' }))
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '12.34' },
+    })
+    fireEvent.change(screen.getByLabelText('Date'), {
+      target: { value: '2026-05-07' },
+    })
+    fireEvent.change(screen.getByLabelText('Merchant'), {
+      target: { value: 'Coffee Shop' },
+    })
+    fireEvent.change(screen.getByLabelText('Category'), {
+      target: { value: 'category-1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByText('Account is required')).toBeTruthy()
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
+  })
 })
 
 function renderModal() {
@@ -257,7 +316,10 @@ function renderModal() {
     <MantineProvider>
       <ManualTransactionModal
         opened
-        accounts={[makeAccount('account-1', 'Checking', 'USD'), makeAccount('account-jpy', 'Travel', 'JPY')]}
+        accounts={[
+          makeAccount('account-1', 'Checking', 'USD'),
+          makeAccount('account-jpy', 'Travel', 'JPY'),
+        ]}
         categories={[category]}
         defaultAccountId="account-1"
         onClose={vi.fn()}

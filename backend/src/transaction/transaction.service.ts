@@ -23,7 +23,6 @@ import {
   UpdateTransactionCategoryDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
-import { MoneySign } from '../types/MoneyWithSign';
 import { TransactionEntity } from './transaction.entity';
 import { CategoryService } from '../category/category.service';
 import type {
@@ -44,28 +43,6 @@ type TransactionFilterOptions = {
   amountSign?: string;
 };
 
-export type TransactionSummaryBucket = {
-  currency: string;
-  inflowAmount: number;
-  outflowAmount: number;
-};
-
-export type TransactionSummaryTotals = {
-  buckets: TransactionSummaryBucket[];
-  transactionCount: number;
-  pendingCount: number;
-  uncategorizedCount: number;
-};
-
-type TransactionSummaryRawRow = {
-  currency: string;
-  inflowAmount: string | number | null;
-  outflowAmount: string | number | null;
-  transactionCount: string | number;
-  pendingCount: string | number | null;
-  uncategorizedCount: string | number | null;
-};
-
 const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
 const ACTIVITY_DATETIME_SORT_ALIAS = 'activity_datetime_sort';
 const BULK_CATEGORY_UNDO_TTL_MS = 5 * 60 * 1000;
@@ -81,14 +58,6 @@ type BulkCategoryUndoPayload = {
   exp: number;
   transactions: BulkCategoryUndoSnapshot[];
 };
-
-function parseRawInteger(value: string | number | null): number {
-  if (typeof value === 'number') {
-    return value;
-  }
-
-  return value ? parseInt(value, 10) : 0;
-}
 
 @Injectable()
 export class TransactionService extends OwnedCrudService<
@@ -767,58 +736,6 @@ export class TransactionService extends OwnedCrudService<
     return {
       data: entities.map((entity) => entity.toObject()),
       total,
-    };
-  }
-
-  async getSummary(
-    userId: string,
-    options: TransactionFilterOptions,
-  ): Promise<TransactionSummaryTotals> {
-    const rows = await this.buildFilteredTransactionQuery(userId, options)
-      .select('transaction.amountCurrency', 'currency')
-      .addSelect(
-        `SUM(CASE WHEN transaction.amountSign = :positiveSign THEN transaction.amountAmount ELSE 0 END)`,
-        'inflowAmount',
-      )
-      .addSelect(
-        `SUM(CASE WHEN transaction.amountSign = :negativeSign THEN transaction.amountAmount ELSE 0 END)`,
-        'outflowAmount',
-      )
-      .addSelect('COUNT(transaction.id)', 'transactionCount')
-      .addSelect(
-        'SUM(CASE WHEN transaction.pending = true THEN 1 ELSE 0 END)',
-        'pendingCount',
-      )
-      .addSelect(
-        'SUM(CASE WHEN transaction.categoryId IS NULL THEN 1 ELSE 0 END)',
-        'uncategorizedCount',
-      )
-      .groupBy('transaction.amountCurrency')
-      .setParameters({
-        positiveSign: MoneySign.POSITIVE,
-        negativeSign: MoneySign.NEGATIVE,
-      })
-      .getRawMany<TransactionSummaryRawRow>();
-    let transactionCount = 0;
-    let pendingCount = 0;
-    let uncategorizedCount = 0;
-    const buckets = rows.map((row) => {
-      transactionCount += parseRawInteger(row.transactionCount);
-      pendingCount += parseRawInteger(row.pendingCount);
-      uncategorizedCount += parseRawInteger(row.uncategorizedCount);
-
-      return {
-        currency: row.currency,
-        inflowAmount: parseRawInteger(row.inflowAmount),
-        outflowAmount: parseRawInteger(row.outflowAmount),
-      };
-    });
-
-    return {
-      buckets,
-      transactionCount,
-      pendingCount,
-      uncategorizedCount,
     };
   }
 
