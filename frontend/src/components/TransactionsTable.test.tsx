@@ -195,6 +195,38 @@ describe('TransactionsTable', () => {
     ).toBeNull()
   })
 
+  it('keeps hook order stable when a provider hint disappears after categorization', () => {
+    const uncategorizedTransaction = makeTransaction({
+      id: 'txn-with-provider-hint',
+      category: null,
+      providerCategoryHint: {
+        provider: 'plaid',
+        primary: 'FOOD_AND_DRINK',
+        detailed: 'FOOD_AND_DRINK_RESTAURANT',
+        displayLabel: 'Restaurants',
+        confidenceLevel: 'HIGH',
+        iconUrl: null,
+      },
+    })
+    const categorizedTransaction = {
+      ...uncategorizedTransaction,
+      category: foodCategory,
+      categoryId: foodCategory.id,
+    }
+    const { rerender } = renderTable([uncategorizedTransaction])
+
+    expect(
+      screen.getByLabelText('Provider category hint: Restaurants'),
+    ).toBeTruthy()
+
+    expect(() =>
+      rerender(createTableElement([categorizedTransaction])),
+    ).not.toThrow()
+    expect(
+      screen.queryByLabelText('Provider category hint: Restaurants'),
+    ).toBeNull()
+  })
+
   it('edits assigned categories from user category options', () => {
     renderTable([makeTransaction({ category: foodCategory })])
 
@@ -253,15 +285,46 @@ describe('TransactionsTable', () => {
     expect(onToggleLoaded).toHaveBeenCalledOnce()
     expect(screen.queryByLabelText('Edit category')).toBeNull()
   })
+
+  it('shows original currency amounts in transaction details', async () => {
+    renderTable([
+      makeTransaction({
+        amount: {
+          money: { amount: 1200, currency: 'EUR' },
+          sign: 'negative',
+        },
+        category: foodCategory,
+        convertedAmount: {
+          money: { amount: 1300, currency: 'USD' },
+          sign: 'negative',
+        },
+      }),
+    ])
+
+    fireEvent.click(
+      screen.getByLabelText('Show transaction details for Store'),
+    )
+
+    expect(screen.queryByText('Displayed amount')).toBeNull()
+    expect(await screen.findByText('Original amount')).toBeTruthy()
+    expect(screen.getByText('EUR -€12.00')).toBeTruthy()
+  })
 })
 
 function renderTable(
   data: Array<Transaction>,
   props: Partial<React.ComponentProps<typeof TransactionsTable>> = {},
 ) {
+  return render(createTableElement(data, props))
+}
+
+function createTableElement(
+  data: Array<Transaction>,
+  props: Partial<React.ComponentProps<typeof TransactionsTable>> = {},
+) {
   const queryClient = new QueryClient()
 
-  return render(
+  return (
     <MantineProvider>
       <QueryClientProvider client={queryClient}>
         <TransactionsTable
@@ -272,7 +335,7 @@ function renderTable(
           {...props}
         />
       </QueryClientProvider>
-    </MantineProvider>,
+    </MantineProvider>
   )
 }
 
@@ -294,8 +357,10 @@ function makeCategory(overrides: {
 
 function makeTransaction(
   params: {
+    amount?: Transaction['amount']
     id?: string
     category: Category | null
+    convertedAmount?: Transaction['convertedAmount']
     providerCategoryHint?: {
       provider: 'plaid'
       primary: string | null
@@ -310,7 +375,7 @@ function makeTransaction(
 
   return {
     id: params.id ?? 'txn-1',
-    amount: {
+    amount: params.amount ?? {
       money: { amount: 1200, currency: 'USD' },
       sign: 'negative',
     },
@@ -344,5 +409,6 @@ function makeTransaction(
     updatedAt: '2026-02-14T00:00:00.000Z',
     userId: 'user-1',
     providerCategoryHint: params.providerCategoryHint ?? null,
+    convertedAmount: params.convertedAmount,
   }
 }

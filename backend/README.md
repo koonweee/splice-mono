@@ -132,8 +132,9 @@ Authorization: Bearer splice_pat_...
 
 The MCP surface includes user context, account snapshots, balance history,
 paginated transaction listing, paginated balance snapshot listing, category
-discovery, and legacy transaction search. Cash flow analysis and mutations are
-not exposed through MCP.
+discovery, legacy transaction search, cash-flow analysis, cash-flow category
+transaction drilldowns, analysis audits, and balance adjustment drilldowns.
+Mutations are not exposed through MCP.
 
 Analysis rules are persisted per user and are applied inside the backend
 transaction-analysis service before summary aggregation or real-transaction
@@ -143,13 +144,14 @@ transactions in these analysis flows. Neutralization uses the user's
 selected range, while summaries, drilldowns, and balance adjustments still
 report only selected-range rows. The HTTP `GET /transaction-analysis/audit`
 endpoint returns compact rows explaining in-range exclusions and neutralized
-pairs that affect the selected report. Future callers of those HTTP analysis
-endpoints inherit the same rule behavior automatically; MCP does not expose
-cash-flow analysis in the current surface.
+pairs that affect the selected report. MCP cash-flow tools delegate to the same
+backend analysis service and return money in major units with explicit signs.
 
 Compatible clients can read `splice://mcp-guide` for tool-use guidance. In
-short: call `get_user_context` first, page through `list_transactions` until
-`pageInfo.hasMore` is false for spending-pattern analysis, use
+short: call `get_user_context` first, use `get_cashflow_analysis` for
+balance-adjustment-aware totals and category breakdowns, page through
+`list_transactions` until `pageInfo.hasMore` is false for custom
+spending-pattern analysis, use
 `get_accounts_snapshot` plus `list_balance_snapshots` for projection baselines,
 and compare transaction amounts with `convertedAmount` in the requested
 `reportingCurrency`.

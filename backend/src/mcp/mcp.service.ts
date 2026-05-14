@@ -1,12 +1,23 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { z } from 'zod';
 import { AccountsSurfaceService } from '../account/accounts-surface.service';
 import { BalanceHistorySurfaceService } from '../balance-query/balance-history-surface.service';
+import { TransactionAnalysisService } from '../transaction-analysis/transaction-analysis.service';
 import { TransactionsSurfaceService } from '../transaction/transactions-surface.service';
+import { getDecimalPlaces, MoneySign } from '../types/MoneyWithSign';
+import type {
+  BalanceAdjustment,
+  CategoryAggregate,
+  TransactionAnalysisResponse,
+} from '../types/TransactionAnalysis';
 import { UserService } from '../user/user.service';
-import { normalizeMcpMoney } from './mcp-money';
+import { normalizeMcpMoney, type McpMoney } from './mcp-money';
 import { McpReadService } from './mcp-read.service';
 
 const DateStringSchema = z
@@ -27,7 +38,9 @@ const MCP_GUIDE = `# Splice MCP Guide
 
 Use get_user_context first to get today, timezone, and the user's preferred currency.
 
-For spending totals or patterns, call list_transactions for the full date range and keep paging until pageInfo.hasMore is false. Do not infer totals from a partial page unless you clearly say it is a sample.
+For cash-flow totals, category breakdowns, and balance-adjustment-aware summaries, call get_cashflow_analysis. The summary applies the user's analysis rules, neutralization lookaround setting, and synthetic balance adjustments.
+
+For custom spending patterns not covered by get_cashflow_analysis, call list_transactions for the full date range and keep paging until pageInfo.hasMore is false. Do not infer totals from a partial page unless you clearly say it is a sample.
 
 For projections, use get_accounts_snapshot for current state and list_balance_snapshots for historical account-level baselines. Ask the user for future income, expense, return, allocation, or one-time-event assumptions; do not invent them.
 
@@ -37,7 +50,128 @@ All MCP money amounts are major units and always include currency and sign. Amou
 
 Transaction date ranges use activityDate (reportingDateOverride when set, otherwise authorizedDate when available, otherwise providerDate). Dates are inclusive YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone. Raw provider and authorized dates remain available for audit.
 
-Pending transactions are excluded by default unless includePending is true. State whether pending transactions were included.`;
+Pending transactions are included in cash-flow analysis and excluded from list_transactions by default unless includePending is true. State whether pending transactions were included.`;
+
+function majorUnitAmount(amount: number, currency: string): number {
+  const decimals = getDecimalPlaces(currency);
+
+  return Number((Math.abs(amount) / Math.pow(10, decimals)).toFixed(decimals));
+}
+
+function mcpMoneyFromSmallestUnit(
+  amount: number,
+  currency: string,
+  sign: MoneySign,
+): McpMoney {
+  return {
+    amount: majorUnitAmount(amount, currency),
+    currency,
+    sign,
+  };
+}
+
+function mcpMoneyFromSignedSmallestUnit(
+  amount: number,
+  currency: string,
+): McpMoney {
+  return mcpMoneyFromSmallestUnit(
+    amount,
+    currency,
+    amount < 0 ? MoneySign.NEGATIVE : MoneySign.POSITIVE,
+  );
+}
+
+function mcpCategoryAggregate(
+  category: CategoryAggregate,
+  sign: MoneySign,
+): Omit<CategoryAggregate, 'totalAmount'> & { totalAmount: McpMoney } {
+  return {
+    ...category,
+    totalAmount: mcpMoneyFromSmallestUnit(
+      category.totalAmount,
+      category.currency,
+      sign,
+    ),
+  };
+}
+
+function mcpBalanceAdjustment(adjustment: BalanceAdjustment): Omit<
+  BalanceAdjustment,
+  'deltaAmount' | 'startBalance' | 'endBalance'
+> & {
+  deltaAmount: McpMoney;
+  startBalance: McpMoney;
+  endBalance: McpMoney;
+} {
+  return {
+    ...adjustment,
+    deltaAmount: mcpMoneyFromSmallestUnit(
+      adjustment.deltaAmount,
+      adjustment.currency,
+      adjustment.flowDirection === 'inflow'
+        ? MoneySign.POSITIVE
+        : MoneySign.NEGATIVE,
+    ),
+    startBalance: mcpMoneyFromSignedSmallestUnit(
+      adjustment.startBalance.amount,
+      adjustment.startBalance.currency,
+    ),
+    endBalance: mcpMoneyFromSignedSmallestUnit(
+      adjustment.endBalance.amount,
+      adjustment.endBalance.currency,
+    ),
+  };
+}
+
+function mcpCashflowAnalysis(analysis: TransactionAnalysisResponse) {
+  return {
+    startDate: analysis.startDate,
+    endDate: analysis.endDate,
+    currency: analysis.currency,
+    summaryIncludesBalanceAdjustments: true,
+    totals: {
+      totalInflow: mcpMoneyFromSmallestUnit(
+        analysis.totalInflow,
+        analysis.currency,
+        MoneySign.POSITIVE,
+      ),
+      totalOutflow: mcpMoneyFromSmallestUnit(
+        analysis.totalOutflow,
+        analysis.currency,
+        MoneySign.NEGATIVE,
+      ),
+      netFlow: mcpMoneyFromSignedSmallestUnit(
+        analysis.netFlow,
+        analysis.currency,
+      ),
+      uncategorizedInflow: mcpMoneyFromSmallestUnit(
+        analysis.uncategorizedInflow,
+        analysis.currency,
+        MoneySign.POSITIVE,
+      ),
+      uncategorizedOutflow: mcpMoneyFromSmallestUnit(
+        analysis.uncategorizedOutflow,
+        analysis.currency,
+        MoneySign.NEGATIVE,
+      ),
+    },
+    inflows: analysis.inflows.map((category) =>
+      mcpCategoryAggregate(category, MoneySign.POSITIVE),
+    ),
+    outflows: analysis.outflows.map((category) =>
+      mcpCategoryAggregate(category, MoneySign.NEGATIVE),
+    ),
+    balanceAdjustments: analysis.balanceAdjustments.map(mcpBalanceAdjustment),
+  };
+}
+
+function assertDateRange(startDate: string, endDate: string): void {
+  if (startDate > endDate) {
+    throw new BadRequestException(
+      'startDate must be before or equal to endDate',
+    );
+  }
+}
 
 function toolResult(data: unknown): CallToolResult {
   const structuredContent = normalizeMcpMoney(data) as Record<string, unknown>;
@@ -85,6 +219,10 @@ export class SpliceMcpService {
     'list_transactions',
     'list_balance_snapshots',
     'list_categories',
+    'get_cashflow_analysis',
+    'list_cashflow_category_transactions',
+    'get_cashflow_analysis_audit',
+    'list_cashflow_balance_adjustments',
   ] as const;
 
   constructor(
@@ -93,6 +231,7 @@ export class SpliceMcpService {
     private readonly balanceHistorySurfaceService: BalanceHistorySurfaceService,
     private readonly transactionsSurfaceService: TransactionsSurfaceService,
     private readonly mcpReadService: McpReadService,
+    private readonly transactionAnalysisService: TransactionAnalysisService,
   ) {}
 
   getToolNames(): readonly string[] {
@@ -332,6 +471,138 @@ export class SpliceMcpService {
       },
       async (input) =>
         toolResult(await this.mcpReadService.listCategories(userId, input)),
+    );
+
+    server.registerTool(
+      'get_cashflow_analysis',
+      {
+        title: 'Get Cash Flow Analysis',
+        description:
+          'Get cash-flow analysis grouped by category for an inclusive activity date range. Applies analysis rules, neutralization, pending transactions, currency conversion, and synthetic balance adjustments. All returned money amounts are major units.',
+        inputSchema: {
+          startDate: DateStringSchema.describe(
+            'Inclusive activity start date in YYYY-MM-DD.',
+          ),
+          endDate: DateStringSchema.describe(
+            'Inclusive activity end date in YYYY-MM-DD.',
+          ),
+        },
+      },
+      async (input) => {
+        assertDateRange(input.startDate, input.endDate);
+
+        return toolResult(
+          mcpCashflowAnalysis(
+            await this.transactionAnalysisService.getAnalysis(
+              input.startDate,
+              input.endDate,
+              userId,
+            ),
+          ),
+        );
+      },
+    );
+
+    server.registerTool(
+      'list_cashflow_category_transactions',
+      {
+        title: 'List Cash Flow Category Transactions',
+        description:
+          'List unmatched real transactions behind a cash-flow category drilldown. Uses the same analysis rules and neutralization pipeline as get_cashflow_analysis. For BALANCE_ADJUSTMENT, use list_cashflow_balance_adjustments instead.',
+        inputSchema: {
+          startDate: DateStringSchema.describe(
+            'Inclusive activity start date in YYYY-MM-DD.',
+          ),
+          endDate: DateStringSchema.describe(
+            'Inclusive activity end date in YYYY-MM-DD.',
+          ),
+          categoryPrimary: z
+            .string()
+            .describe(
+              'Primary category to drill into, for example FOOD_AND_DRINK or UNCATEGORIZED.',
+            ),
+          flowDirection: z.enum(['inflow', 'outflow']),
+        },
+      },
+      async (input) => {
+        assertDateRange(input.startDate, input.endDate);
+
+        return toolResult({
+          data: await this.transactionAnalysisService.getCategoryTransactions(
+            input.startDate,
+            input.endDate,
+            input.categoryPrimary,
+            input.flowDirection,
+            userId,
+          ),
+          query: input,
+        });
+      },
+    );
+
+    server.registerTool(
+      'get_cashflow_analysis_audit',
+      {
+        title: 'Get Cash Flow Analysis Audit',
+        description:
+          'Get analysis rule audit rows for an inclusive activity date range, including exclusions and neutralized pairs that affect the report range.',
+        inputSchema: {
+          startDate: DateStringSchema.describe(
+            'Inclusive activity start date in YYYY-MM-DD.',
+          ),
+          endDate: DateStringSchema.describe(
+            'Inclusive activity end date in YYYY-MM-DD.',
+          ),
+        },
+      },
+      async (input) => {
+        assertDateRange(input.startDate, input.endDate);
+
+        return toolResult(
+          await this.transactionAnalysisService.getAnalysisAudit(
+            input.startDate,
+            input.endDate,
+            userId,
+          ),
+        );
+      },
+    );
+
+    server.registerTool(
+      'list_cashflow_balance_adjustments',
+      {
+        title: 'List Cash Flow Balance Adjustments',
+        description:
+          'List synthetic balance adjustment drilldown rows for the BALANCE_ADJUSTMENT cash-flow category. Uses the same snapshot-based adjustment pipeline as get_cashflow_analysis.',
+        inputSchema: {
+          startDate: DateStringSchema.describe(
+            'Inclusive activity start date in YYYY-MM-DD.',
+          ),
+          endDate: DateStringSchema.describe(
+            'Inclusive activity end date in YYYY-MM-DD.',
+          ),
+          flowDirection: z.enum(['inflow', 'outflow']),
+        },
+      },
+      async (input) => {
+        assertDateRange(input.startDate, input.endDate);
+
+        return toolResult({
+          data: (
+            await this.transactionAnalysisService.getBalanceAdjustments(
+              input.startDate,
+              input.endDate,
+              'BALANCE_ADJUSTMENT',
+              input.flowDirection,
+              userId,
+            )
+          ).map(mcpBalanceAdjustment),
+          query: {
+            ...input,
+            categoryPrimary: 'BALANCE_ADJUSTMENT',
+          },
+        });
+      },
     );
 
     return server;

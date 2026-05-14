@@ -26,6 +26,12 @@ describe('SpliceMcpService', () => {
     listBalanceSnapshots: jest.fn(),
     listCategories: jest.fn(),
   };
+  const transactionAnalysisService = {
+    getAnalysis: jest.fn(),
+    getCategoryTransactions: jest.fn(),
+    getAnalysisAudit: jest.fn(),
+    getBalanceAdjustments: jest.fn(),
+  };
 
   let service: SpliceMcpService;
 
@@ -36,6 +42,7 @@ describe('SpliceMcpService', () => {
       balanceHistorySurfaceService as never,
       transactionsSurfaceService as never,
       mcpReadService as never,
+      transactionAnalysisService as never,
     );
   });
 
@@ -63,7 +70,7 @@ describe('SpliceMcpService', () => {
     };
   }
 
-  it('registers read-only MCP tools without cashflow analysis', async () => {
+  it('registers read-only MCP tools including cashflow analysis', async () => {
     const { client, close } = await connect(service.createServer(mockUserId));
 
     try {
@@ -72,15 +79,16 @@ describe('SpliceMcpService', () => {
       expect(result.tools.map((tool) => tool.name).sort()).toEqual([
         'get_accounts_snapshot',
         'get_balance_history',
+        'get_cashflow_analysis',
+        'get_cashflow_analysis_audit',
         'get_user_context',
         'list_balance_snapshots',
+        'list_cashflow_balance_adjustments',
+        'list_cashflow_category_transactions',
         'list_categories',
         'list_transactions',
         'search_transactions',
       ]);
-      expect(result.tools.map((tool) => tool.name)).not.toContain(
-        'get_cashflow_analysis',
-      );
     } finally {
       await close();
     }
@@ -107,7 +115,7 @@ describe('SpliceMcpService', () => {
       });
       expect(
         'text' in guide.contents[0] ? guide.contents[0].text : '',
-      ).toContain('keep paging until pageInfo.hasMore is false');
+      ).toContain('call get_cashflow_analysis');
     } finally {
       await close();
     }
@@ -349,6 +357,256 @@ describe('SpliceMcpService', () => {
       expect(mcpReadService.listCategories).toHaveBeenCalledWith(mockUserId, {
         startDate: '2026-03-01',
         endDate: '2026-03-31',
+      });
+    } finally {
+      await close();
+    }
+  });
+
+  it('returns cashflow analysis with MCP major-unit money', async () => {
+    transactionAnalysisService.getAnalysis.mockResolvedValue({
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+      currency: 'USD',
+      inflows: [
+        {
+          primaryCategory: 'INCOME',
+          totalAmount: 250000,
+          currency: 'USD',
+          transactionCount: 2,
+          color: '#2f9e44',
+        },
+      ],
+      outflows: [
+        {
+          primaryCategory: 'FOOD_AND_DRINK',
+          totalAmount: 4200,
+          currency: 'USD',
+          transactionCount: 3,
+          color: '#f59f00',
+        },
+      ],
+      totalInflow: 250000,
+      totalOutflow: 4200,
+      netFlow: 245800,
+      uncategorizedInflow: 0,
+      uncategorizedOutflow: 1200,
+      balanceAdjustments: [
+        {
+          accountId: mockAccountId,
+          accountName: 'Checking',
+          flowDirection: 'outflow',
+          currency: 'USD',
+          deltaAmount: 5000,
+          startBalance: { amount: 100000, currency: 'USD' },
+          endBalance: { amount: 95000, currency: 'USD' },
+        },
+      ],
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      const result = (await client.callTool({
+        name: 'get_cashflow_analysis',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+        },
+      })) as CallToolResult;
+
+      expect(transactionAnalysisService.getAnalysis).toHaveBeenCalledWith(
+        '2026-03-01',
+        '2026-03-31',
+        mockUserId,
+      );
+      expect(result.structuredContent).toMatchObject({
+        summaryIncludesBalanceAdjustments: true,
+        totals: {
+          totalInflow: {
+            amount: 2500,
+            currency: 'USD',
+            sign: MoneySign.POSITIVE,
+          },
+          totalOutflow: {
+            amount: 42,
+            currency: 'USD',
+            sign: MoneySign.NEGATIVE,
+          },
+          netFlow: {
+            amount: 2458,
+            currency: 'USD',
+            sign: MoneySign.POSITIVE,
+          },
+          uncategorizedOutflow: {
+            amount: 12,
+            currency: 'USD',
+            sign: MoneySign.NEGATIVE,
+          },
+        },
+        inflows: [
+          {
+            primaryCategory: 'INCOME',
+            totalAmount: {
+              amount: 2500,
+              currency: 'USD',
+              sign: MoneySign.POSITIVE,
+            },
+          },
+        ],
+        outflows: [
+          {
+            primaryCategory: 'FOOD_AND_DRINK',
+            totalAmount: {
+              amount: 42,
+              currency: 'USD',
+              sign: MoneySign.NEGATIVE,
+            },
+          },
+        ],
+        balanceAdjustments: [
+          {
+            accountId: mockAccountId,
+            deltaAmount: {
+              amount: 50,
+              currency: 'USD',
+              sign: MoneySign.NEGATIVE,
+            },
+            startBalance: {
+              amount: 1000,
+              currency: 'USD',
+              sign: MoneySign.POSITIVE,
+            },
+            endBalance: {
+              amount: 950,
+              currency: 'USD',
+              sign: MoneySign.POSITIVE,
+            },
+          },
+        ],
+      });
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates cashflow category transaction drilldowns to the analysis service', async () => {
+    transactionAnalysisService.getCategoryTransactions.mockResolvedValue([]);
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      await client.callTool({
+        name: 'list_cashflow_category_transactions',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          categoryPrimary: 'FOOD_AND_DRINK',
+          flowDirection: 'outflow',
+        },
+      });
+
+      expect(
+        transactionAnalysisService.getCategoryTransactions,
+      ).toHaveBeenCalledWith(
+        '2026-03-01',
+        '2026-03-31',
+        'FOOD_AND_DRINK',
+        'outflow',
+        mockUserId,
+      );
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates cashflow audit requests to the analysis service', async () => {
+    transactionAnalysisService.getAnalysisAudit.mockResolvedValue({
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+      neutralizationLookaroundDays: 3,
+      rows: [],
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      await client.callTool({
+        name: 'get_cashflow_analysis_audit',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+        },
+      });
+
+      expect(transactionAnalysisService.getAnalysisAudit).toHaveBeenCalledWith(
+        '2026-03-01',
+        '2026-03-31',
+        mockUserId,
+      );
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates balance adjustment drilldowns and converts money for MCP', async () => {
+    transactionAnalysisService.getBalanceAdjustments.mockResolvedValue([
+      {
+        accountId: mockAccountId,
+        accountName: 'Checking',
+        flowDirection: 'inflow',
+        currency: 'USD',
+        deltaAmount: 7500,
+        startBalance: { amount: 10000, currency: 'USD' },
+        endBalance: { amount: 17500, currency: 'USD' },
+      },
+    ]);
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      const result = (await client.callTool({
+        name: 'list_cashflow_balance_adjustments',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          flowDirection: 'inflow',
+        },
+      })) as CallToolResult;
+
+      expect(
+        transactionAnalysisService.getBalanceAdjustments,
+      ).toHaveBeenCalledWith(
+        '2026-03-01',
+        '2026-03-31',
+        'BALANCE_ADJUSTMENT',
+        'inflow',
+        mockUserId,
+      );
+      expect(result.structuredContent).toMatchObject({
+        data: [
+          {
+            deltaAmount: {
+              amount: 75,
+              currency: 'USD',
+              sign: MoneySign.POSITIVE,
+            },
+            startBalance: {
+              amount: 100,
+              currency: 'USD',
+              sign: MoneySign.POSITIVE,
+            },
+            endBalance: {
+              amount: 175,
+              currency: 'USD',
+              sign: MoneySign.POSITIVE,
+            },
+          },
+        ],
+        query: {
+          categoryPrimary: 'BALANCE_ADJUSTMENT',
+          flowDirection: 'inflow',
+        },
       });
     } finally {
       await close();
