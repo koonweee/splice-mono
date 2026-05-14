@@ -171,6 +171,13 @@ export class UserService {
       analysisSankeyEnabled:
         settingsUpdate.analysisSankeyEnabled ??
         oldSettings.analysisSankeyEnabled,
+      notifications: {
+        transactions: {
+          newSyncedTransactions:
+            settingsUpdate.notifications?.transactions?.newSyncedTransactions ??
+            oldSettings.notifications.transactions.newSyncedTransactions,
+        },
+      },
     };
     entity.settings = newSettings;
 
@@ -189,6 +196,39 @@ export class UserService {
     }
 
     return newSettings;
+  }
+
+  async enableDefaultNotificationsIfUnset(
+    userId: string,
+  ): Promise<UserSettings | null> {
+    const entity = await this.repository.findOne({
+      where: { id: userId },
+    });
+
+    if (!entity) {
+      this.logger.warn(
+        { userId },
+        'Cannot initialize notification settings: user not found',
+      );
+      return null;
+    }
+
+    const rawSettings = entity.settings as Partial<UserSettings> | null;
+    if (rawSettings?.notifications !== undefined) {
+      return normalizeUserSettings(entity.settings);
+    }
+
+    const settings = normalizeUserSettings(entity.settings);
+    settings.notifications.transactions.newSyncedTransactions = true;
+    entity.settings = settings;
+    await this.repository.save(entity);
+
+    this.logger.log(
+      { userId },
+      'Initialized default notification settings for user',
+    );
+
+    return settings;
   }
 
   /**

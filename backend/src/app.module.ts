@@ -20,6 +20,7 @@ import { dataSourceOptions } from './data-source';
 import { HealthModule } from './health/health.module';
 import { createSeqStream } from './logging/create-seq-stream';
 import { McpModule } from './mcp/mcp.module';
+import { NotificationModule } from './notification/notification.module';
 import { TransactionAnalysisModule } from './transaction-analysis/transaction-analysis.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { UserModule } from './user/user.module';
@@ -101,6 +102,7 @@ import { UserModule } from './user/user.module';
     CurrencyExchangeModule,
     HealthModule,
     McpModule,
+    NotificationModule,
     TransactionAnalysisModule,
     TransactionModule,
     UserModule,

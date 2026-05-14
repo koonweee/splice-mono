@@ -19,6 +19,11 @@ export const mockUser: User = {
     theme: 'splice-dark',
     neutralizationLookaroundDays: 60,
     analysisSankeyEnabled: false,
+    notifications: {
+      transactions: {
+        newSyncedTransactions: true,
+      },
+    },
   },
   ...mockTimestamps,
 };
@@ -36,6 +41,11 @@ export const mockUser2: User = {
     theme: 'splice-dark',
     neutralizationLookaroundDays: 60,
     analysisSankeyEnabled: false,
+    notifications: {
+      transactions: {
+        newSyncedTransactions: true,
+      },
+    },
   },
   ...mockTimestamps,
 };

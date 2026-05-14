@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 import type { UserSettingsTheme } from './userSettingsTheme'
+import type { UserSettingsNotifications } from './userSettingsNotifications'
 
 export interface UserSettings {
   currency?: string
@@ -18,4 +19,5 @@ export interface UserSettings {
    */
   neutralizationLookaroundDays?: number
   analysisSankeyEnabled?: boolean
+  notifications?: UserSettingsNotifications
 }

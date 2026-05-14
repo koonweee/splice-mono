@@ -1,10 +1,12 @@
 import { NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AccountEntity } from '../../src/account/account.entity';
 import { CategoryEntity } from '../../src/category/category.entity';
 import { CategoryService } from '../../src/category/category.service';
 import { BalanceColumns } from '../../src/common/balance.columns';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
+import { TransactionEvents } from '../../src/events/transaction.events';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import type {
   CreateManualTransactionDto,
@@ -134,6 +136,9 @@ describe('TransactionService', () => {
   const categoryService = {
     findActiveAssignableCategory: jest.fn(),
   };
+  const eventEmitter = {
+    emit: jest.fn(),
+  };
 
   let service: TransactionService;
 
@@ -145,6 +150,7 @@ describe('TransactionService', () => {
       categoryRepository as never,
       accountRepository as never,
       categoryService as unknown as CategoryService,
+      eventEmitter as unknown as EventEmitter2,
     );
     repository.save.mockImplementation(async (entity: TransactionEntity) => {
       entity.id = entity.id ?? '00000000-0000-4000-8000-000000000201';
@@ -550,6 +556,9 @@ describe('TransactionService', () => {
       save: jest.fn(
         async (entities: TransactionEntity | TransactionEntity[]) => {
           if (Array.isArray(entities)) {
+            entities.forEach((entity, index) => {
+              entity.id = `00000000-0000-4000-8000-00000000030${index}`;
+            });
             saved.push(...entities);
           } else {
             saved.push(entities);
@@ -591,6 +600,15 @@ describe('TransactionService', () => {
     expect(saved[0].source).toBe('provider');
     expect(saved[0].providerCategoryProvider).toBe('plaid');
     expect(saved[0].providerCategoryPrimary).toBe('GENERAL_MERCHANDISE');
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      TransactionEvents.PROVIDER_TRANSACTIONS_SYNCED,
+      expect.objectContaining({
+        userId,
+        transactionIds: [saved[0].id],
+        accountIds: [accountId],
+        count: 1,
+      }),
+    );
   });
 
   it('sync updates matched pending transactions to posted while preserving user metadata', async () => {
@@ -675,11 +693,62 @@ describe('TransactionService', () => {
     expect(pendingTransaction.providerCategoryProvider).toBeNull();
     expect(pendingTransaction.providerCategoryPrimary).toBeNull();
     expect(pendingTransaction.providerCategoryDetailed).toBeNull();
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
     expect(txnRepo.delete).toHaveBeenCalledWith({
       externalTransactionId: expect.any(Object),
       accountId: expect.any(Object),
       userId,
       source: 'provider',
     });
+  });
+
+  it('sync emits one event for provider rows inserted from missing modified transactions', async () => {
+    const saved: TransactionEntity[] = [];
+    const txnRepo = {
+      save: jest.fn(async (entity: TransactionEntity | TransactionEntity[]) => {
+        if (Array.isArray(entity)) {
+          saved.push(...entity);
+        } else {
+          entity.id = '00000000-0000-4000-8000-000000000333';
+          saved.push(entity);
+        }
+        return entity;
+      }),
+      findOne: jest.fn().mockResolvedValue(null),
+      delete: jest.fn(),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
+      ) => callback({ getRepository: () => txnRepo }),
+    );
+
+    await service.processSyncResults(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      {
+        added: [],
+        modified: [
+          buildCreateDto({
+            accountId: 'external-account-id',
+            externalTransactionId: 'modified-external-id',
+          }),
+        ],
+        removed: [],
+        nextCursor: 'cursor',
+        hasMore: false,
+      },
+    );
+
+    expect(saved).toHaveLength(1);
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      TransactionEvents.PROVIDER_TRANSACTIONS_SYNCED,
+      expect.objectContaining({
+        userId,
+        transactionIds: ['00000000-0000-4000-8000-000000000333'],
+        accountIds: [accountId],
+        count: 1,
+      }),
+    );
   });
 });

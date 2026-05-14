@@ -4,6 +4,14 @@ import {
   UserSettingsSchema,
 } from '../../src/types/UserSettings';
 
+const defaultNotificationSettings = {
+  notifications: {
+    transactions: {
+      newSyncedTransactions: true,
+    },
+  },
+};
+
 describe('UserSettings types', () => {
   it('defaults full user settings', () => {
     expect(UserSettingsSchema.parse({})).toEqual({
@@ -13,6 +21,7 @@ describe('UserSettings types', () => {
       theme: 'splice-dark',
       neutralizationLookaroundDays: 60,
       analysisSankeyEnabled: false,
+      ...defaultNotificationSettings,
     });
   });
 
@@ -76,6 +85,7 @@ describe('UserSettings types', () => {
       theme: 'splice-dark',
       neutralizationLookaroundDays: 60,
       analysisSankeyEnabled: false,
+      ...defaultNotificationSettings,
     });
   });
 
@@ -94,6 +104,7 @@ describe('UserSettings types', () => {
       theme: 'splice-dark',
       neutralizationLookaroundDays: 60,
       analysisSankeyEnabled: false,
+      ...defaultNotificationSettings,
     });
   });
 
@@ -113,6 +124,7 @@ describe('UserSettings types', () => {
       theme: 'splice-dark',
       neutralizationLookaroundDays: 60,
       analysisSankeyEnabled: false,
+      ...defaultNotificationSettings,
     });
   });
 });

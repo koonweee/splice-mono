@@ -54,6 +54,7 @@
     "@nestjs/schedule": "^6.0.1",
     "@nestjs/swagger": "^11.2.3",
     "@nestjs/typeorm": "^11.0.0",
+    "@types/web-push": "^3.6.4",
     "alchemy-sdk": "^3.6.5",
     "cookie-parser": "^1.4.7",
     "csv-parse": "^6.1.0",
@@ -73,6 +74,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.27",
+    "web-push": "^3.6.7",
     "zod": "^4.1.13"
   },
   "devDependencies": {

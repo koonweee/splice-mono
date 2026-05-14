@@ -14,6 +14,11 @@ const defaultSettings: UserSettings = {
   theme: 'splice-dark',
   neutralizationLookaroundDays: 60,
   analysisSankeyEnabled: false,
+  notifications: {
+    transactions: {
+      newSyncedTransactions: true,
+    },
+  },
 };
 
 describe('UserService', () => {
@@ -605,8 +610,83 @@ describe('UserService', () => {
         theme: 'dracula',
         neutralizationLookaroundDays: 120,
         analysisSankeyEnabled: true,
+        notifications: defaultSettings.notifications,
       });
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('updates notification settings without dropping existing settings', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = {
+        ...defaultSettings,
+        currency: 'EUR',
+        timezone: 'America/New_York',
+      };
+      mockEntity.providerDetails = null;
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
+
+      const result = await service.updateSettings('user-uuid-123', {
+        notifications: {
+          transactions: {
+            newSyncedTransactions: true,
+          },
+        },
+      });
+
+      expect(result).toEqual({
+        ...defaultSettings,
+        currency: 'EUR',
+        timezone: 'America/New_York',
+        notifications: {
+          transactions: {
+            newSyncedTransactions: true,
+          },
+        },
+      });
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('initializes notification defaults to enabled only when missing', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'user-uuid-123';
+      mockEntity.email = 'test@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = { currency: 'USD', timezone: 'UTC' } as any;
+      mockEntity.providerDetails = null;
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+
+      mockRepository.findOne.mockResolvedValue(mockEntity);
+      mockRepository.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
+
+      const result =
+        await service.enableDefaultNotificationsIfUnset('user-uuid-123');
+
+      expect(result?.notifications.transactions.newSyncedTransactions).toBe(
+        true,
+      );
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          settings: expect.objectContaining({
+            notifications: {
+              transactions: {
+                newSyncedTransactions: true,
+              },
+            },
+          }),
+        }),
+      );
     });
 
     it('should update analysisSankeyEnabled without affecting currency or timezone events', async () => {

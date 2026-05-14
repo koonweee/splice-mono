@@ -50,9 +50,16 @@ import type {
   CreateTransactionDto,
   InitiateLinkRequest,
   InitiateLinkResponse,
+  NotificationControllerGetCurrentSubscriptionStatusParams,
   PaginatedTransactionResponse,
   PersonalAccessToken,
+  PushConfigResponse,
+  PushSubscriptionEndpointDto,
+  PushSubscriptionResponse,
+  PushSubscriptionStatusResponse,
   RefreshTokenDto,
+  RegisterPushSubscriptionDto,
+  TestNotificationResponse,
   TokenResponse,
   Transaction,
   TransactionAnalysisAuditResponse,
@@ -6516,4 +6523,716 @@ export function useTransactionAnalysisControllerGetBalanceAdjustments<
   query.queryKey = queryOptions.queryKey
 
   return query
+}
+
+/**
+ * Get browser push notification configuration
+ */
+export const notificationControllerGetPushConfig = (signal?: AbortSignal) => {
+  return axios<PushConfigResponse>({
+    url: `/notification/push/config`,
+    method: 'GET',
+    signal,
+  })
+}
+
+export const getNotificationControllerGetPushConfigQueryKey = () => {
+  return [`/notification/push/config`] as const
+}
+
+export const getNotificationControllerGetPushConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+      TError,
+      TData
+    >
+  >
+}) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ?? getNotificationControllerGetPushConfigQueryKey()
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof notificationControllerGetPushConfig>>
+  > = ({ signal }) => notificationControllerGetPushConfig(signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type NotificationControllerGetPushConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof notificationControllerGetPushConfig>>
+>
+export type NotificationControllerGetPushConfigQueryError = unknown
+
+export function useNotificationControllerGetPushConfig<
+  TData = Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+          TError,
+          Awaited<ReturnType<typeof notificationControllerGetPushConfig>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useNotificationControllerGetPushConfig<
+  TData = Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+          TError,
+          Awaited<ReturnType<typeof notificationControllerGetPushConfig>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useNotificationControllerGetPushConfig<
+  TData = Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useNotificationControllerGetPushConfig<
+  TData = Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof notificationControllerGetPushConfig>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getNotificationControllerGetPushConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Get current browser push subscription status by endpoint
+ */
+export const notificationControllerGetCurrentSubscriptionStatus = (
+  params: NotificationControllerGetCurrentSubscriptionStatusParams,
+  signal?: AbortSignal,
+) => {
+  return axios<PushSubscriptionStatusResponse>({
+    url: `/notification/push/subscription/current`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getNotificationControllerGetCurrentSubscriptionStatusQueryKey = (
+  params?: NotificationControllerGetCurrentSubscriptionStatusParams,
+) => {
+  return [
+    `/notification/push/subscription/current`,
+    ...(params ? [params] : []),
+  ] as const
+}
+
+export const getNotificationControllerGetCurrentSubscriptionStatusQueryOptions =
+  <
+    TData = Awaited<
+      ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+    >,
+    TError = unknown,
+  >(
+    params: NotificationControllerGetCurrentSubscriptionStatusParams,
+    options?: {
+      query?: Partial<
+        UseQueryOptions<
+          Awaited<
+            ReturnType<
+              typeof notificationControllerGetCurrentSubscriptionStatus
+            >
+          >,
+          TError,
+          TData
+        >
+      >
+    },
+  ) => {
+    const { query: queryOptions } = options ?? {}
+
+    const queryKey =
+      queryOptions?.queryKey ??
+      getNotificationControllerGetCurrentSubscriptionStatusQueryKey(params)
+
+    const queryFn: QueryFunction<
+      Awaited<
+        ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+      >
+    > = ({ signal }) =>
+      notificationControllerGetCurrentSubscriptionStatus(params, signal)
+
+    return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+      Awaited<
+        ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+      >,
+      TError,
+      TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> }
+  }
+
+export type NotificationControllerGetCurrentSubscriptionStatusQueryResult =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+    >
+  >
+export type NotificationControllerGetCurrentSubscriptionStatusQueryError =
+  unknown
+
+export function useNotificationControllerGetCurrentSubscriptionStatus<
+  TData = Awaited<
+    ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+  >,
+  TError = unknown,
+>(
+  params: NotificationControllerGetCurrentSubscriptionStatusParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<
+            ReturnType<
+              typeof notificationControllerGetCurrentSubscriptionStatus
+            >
+          >,
+          TError,
+          Awaited<
+            ReturnType<
+              typeof notificationControllerGetCurrentSubscriptionStatus
+            >
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useNotificationControllerGetCurrentSubscriptionStatus<
+  TData = Awaited<
+    ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+  >,
+  TError = unknown,
+>(
+  params: NotificationControllerGetCurrentSubscriptionStatusParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<
+            ReturnType<
+              typeof notificationControllerGetCurrentSubscriptionStatus
+            >
+          >,
+          TError,
+          Awaited<
+            ReturnType<
+              typeof notificationControllerGetCurrentSubscriptionStatus
+            >
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useNotificationControllerGetCurrentSubscriptionStatus<
+  TData = Awaited<
+    ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+  >,
+  TError = unknown,
+>(
+  params: NotificationControllerGetCurrentSubscriptionStatusParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useNotificationControllerGetCurrentSubscriptionStatus<
+  TData = Awaited<
+    ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+  >,
+  TError = unknown,
+>(
+  params: NotificationControllerGetCurrentSubscriptionStatusParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof notificationControllerGetCurrentSubscriptionStatus>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getNotificationControllerGetCurrentSubscriptionStatusQueryOptions(
+      params,
+      options,
+    )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Register or refresh current push subscription
+ */
+export const notificationControllerRegisterPushSubscription = (
+  registerPushSubscriptionDto: RegisterPushSubscriptionDto,
+  signal?: AbortSignal,
+) => {
+  return axios<PushSubscriptionResponse>({
+    url: `/notification/push/subscriptions`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: registerPushSubscriptionDto,
+    signal,
+  })
+}
+
+export const getNotificationControllerRegisterPushSubscriptionMutationOptions =
+  <TError = unknown, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof notificationControllerRegisterPushSubscription>
+      >,
+      TError,
+      { data: RegisterPushSubscriptionDto },
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<ReturnType<typeof notificationControllerRegisterPushSubscription>>,
+    TError,
+    { data: RegisterPushSubscriptionDto },
+    TContext
+  > => {
+    const mutationKey = ['notificationControllerRegisterPushSubscription']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof notificationControllerRegisterPushSubscription>
+      >,
+      { data: RegisterPushSubscriptionDto }
+    > = (props) => {
+      const { data } = props ?? {}
+
+      return notificationControllerRegisterPushSubscription(data)
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type NotificationControllerRegisterPushSubscriptionMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof notificationControllerRegisterPushSubscription>>
+  >
+export type NotificationControllerRegisterPushSubscriptionMutationBody =
+  RegisterPushSubscriptionDto
+export type NotificationControllerRegisterPushSubscriptionMutationError =
+  unknown
+
+export const useNotificationControllerRegisterPushSubscription = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof notificationControllerRegisterPushSubscription>
+      >,
+      TError,
+      { data: RegisterPushSubscriptionDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof notificationControllerRegisterPushSubscription>>,
+  TError,
+  { data: RegisterPushSubscriptionDto },
+  TContext
+> => {
+  const mutationOptions =
+    getNotificationControllerRegisterPushSubscriptionMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Revoke all push subscriptions for current user
+ */
+export const notificationControllerRevokeAllPushSubscriptions = () => {
+  return axios<void>({
+    url: `/notification/push/subscriptions`,
+    method: 'DELETE',
+  })
+}
+
+export const getNotificationControllerRevokeAllPushSubscriptionsMutationOptions =
+  <TError = unknown, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof notificationControllerRevokeAllPushSubscriptions>
+      >,
+      TError,
+      void,
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<
+      ReturnType<typeof notificationControllerRevokeAllPushSubscriptions>
+    >,
+    TError,
+    void,
+    TContext
+  > => {
+    const mutationKey = ['notificationControllerRevokeAllPushSubscriptions']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof notificationControllerRevokeAllPushSubscriptions>
+      >,
+      void
+    > = () => {
+      return notificationControllerRevokeAllPushSubscriptions()
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type NotificationControllerRevokeAllPushSubscriptionsMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof notificationControllerRevokeAllPushSubscriptions>>
+  >
+
+export type NotificationControllerRevokeAllPushSubscriptionsMutationError =
+  unknown
+
+export const useNotificationControllerRevokeAllPushSubscriptions = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof notificationControllerRevokeAllPushSubscriptions>
+      >,
+      TError,
+      void,
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof notificationControllerRevokeAllPushSubscriptions>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions =
+    getNotificationControllerRevokeAllPushSubscriptionsMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Create a test notification and enqueue push deliveries for active subscriptions
+ */
+export const notificationControllerSendTestNotification = (
+  signal?: AbortSignal,
+) => {
+  return axios<TestNotificationResponse>({
+    url: `/notification/test`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getNotificationControllerSendTestNotificationMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof notificationControllerSendTestNotification>>,
+    TError,
+    void,
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof notificationControllerSendTestNotification>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ['notificationControllerSendTestNotification']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof notificationControllerSendTestNotification>>,
+    void
+  > = () => {
+    return notificationControllerSendTestNotification()
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type NotificationControllerSendTestNotificationMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof notificationControllerSendTestNotification>>
+  >
+
+export type NotificationControllerSendTestNotificationMutationError = unknown
+
+export const useNotificationControllerSendTestNotification = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof notificationControllerSendTestNotification>>,
+      TError,
+      void,
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof notificationControllerSendTestNotification>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions =
+    getNotificationControllerSendTestNotificationMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Revoke current browser push subscription
+ */
+export const notificationControllerRevokeCurrentPushSubscription = (
+  pushSubscriptionEndpointDto: PushSubscriptionEndpointDto,
+) => {
+  return axios<void>({
+    url: `/notification/push/subscriptions/current`,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    data: pushSubscriptionEndpointDto,
+  })
+}
+
+export const getNotificationControllerRevokeCurrentPushSubscriptionMutationOptions =
+  <TError = unknown, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof notificationControllerRevokeCurrentPushSubscription>
+      >,
+      TError,
+      { data: PushSubscriptionEndpointDto },
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<
+      ReturnType<typeof notificationControllerRevokeCurrentPushSubscription>
+    >,
+    TError,
+    { data: PushSubscriptionEndpointDto },
+    TContext
+  > => {
+    const mutationKey = ['notificationControllerRevokeCurrentPushSubscription']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof notificationControllerRevokeCurrentPushSubscription>
+      >,
+      { data: PushSubscriptionEndpointDto }
+    > = (props) => {
+      const { data } = props ?? {}
+
+      return notificationControllerRevokeCurrentPushSubscription(data)
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type NotificationControllerRevokeCurrentPushSubscriptionMutationResult =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof notificationControllerRevokeCurrentPushSubscription>
+    >
+  >
+export type NotificationControllerRevokeCurrentPushSubscriptionMutationBody =
+  PushSubscriptionEndpointDto
+export type NotificationControllerRevokeCurrentPushSubscriptionMutationError =
+  unknown
+
+export const useNotificationControllerRevokeCurrentPushSubscription = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof notificationControllerRevokeCurrentPushSubscription>
+      >,
+      TError,
+      { data: PushSubscriptionEndpointDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<
+    ReturnType<typeof notificationControllerRevokeCurrentPushSubscription>
+  >,
+  TError,
+  { data: PushSubscriptionEndpointDto },
+  TContext
+> => {
+  const mutationOptions =
+    getNotificationControllerRevokeCurrentPushSubscriptionMutationOptions(
+      options,
+    )
+
+  return useMutation(mutationOptions, queryClient)
 }
