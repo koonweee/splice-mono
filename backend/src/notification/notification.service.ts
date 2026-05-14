@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'crypto';
-import { Brackets, IsNull, LessThan, Repository } from 'typeorm';
+import { Brackets, In, IsNull, LessThan, Repository } from 'typeorm';
 import type {
   Notification,
   NotificationPayload,
@@ -208,16 +208,17 @@ export class NotificationService {
       const deliveryRepo = manager.getRepository(
         NotificationPushDeliveryEntity,
       );
+      const now = new Date();
+      const staleBefore = new Date(now.getTime() - PUSH_PROCESSING_STALE_MS);
       const deliveries = await deliveryRepo
         .createQueryBuilder('delivery')
-        .leftJoinAndSelect('delivery.notification', 'notification')
-        .leftJoinAndSelect('delivery.subscription', 'subscription')
+        .innerJoin('delivery.subscription', 'subscription')
         .where(
           new Brackets((qb) => {
             qb.where('delivery.status = :pendingStatus', {
               pendingStatus: 'pending',
             })
-              .andWhere('delivery.availableAt <= :now', { now: new Date() })
+              .andWhere('delivery.availableAt <= :now', { now })
               .orWhere(
                 new Brackets((staleQb) => {
                   staleQb
@@ -225,9 +226,7 @@ export class NotificationService {
                       processingStatus: 'processing',
                     })
                     .andWhere('delivery.processingStartedAt <= :staleBefore', {
-                      staleBefore: new Date(
-                        Date.now() - PUSH_PROCESSING_STALE_MS,
-                      ),
+                      staleBefore,
                     });
                 }),
               );
@@ -235,19 +234,39 @@ export class NotificationService {
         )
         .andWhere('subscription.revokedAt IS NULL')
         .orderBy('delivery.createdAt', 'ASC')
-        .setLock('pessimistic_write')
+        .setLock('pessimistic_write', undefined, ['delivery'])
         .setOnLocked('skip_locked')
         .take(limit)
         .getMany();
 
-      const now = new Date();
+      if (deliveries.length === 0) {
+        return [];
+      }
+
       deliveries.forEach((delivery) => {
         delivery.status = 'processing';
         delivery.processingStartedAt = now;
         delivery.attemptCount += 1;
       });
 
-      return deliveryRepo.save(deliveries);
+      await deliveryRepo.save(deliveries);
+
+      const claimedIds = deliveries.map((delivery) => delivery.id);
+      const claimedDeliveries = await deliveryRepo.find({
+        where: { id: In(claimedIds) },
+        relations: {
+          notification: true,
+          subscription: true,
+        },
+      });
+
+      const deliveryById = new Map(
+        claimedDeliveries.map((delivery) => [delivery.id, delivery]),
+      );
+      return claimedIds.flatMap((id) => {
+        const delivery = deliveryById.get(id);
+        return delivery ? [delivery] : [];
+      });
     });
   }
 
