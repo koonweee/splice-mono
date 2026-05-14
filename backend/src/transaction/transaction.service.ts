@@ -276,6 +276,21 @@ export class TransactionService extends OwnedCrudService<
     entity.categoryUpdatedAt = new Date();
   }
 
+  private buildProviderSyncUpdateDto(
+    dto: CreateTransactionDto,
+    accountId: string,
+  ): UpdateTransactionDto {
+    return {
+      ...dto,
+      categoryId: undefined,
+      personalFinanceCategory: dto.personalFinanceCategory ?? {
+        primary: null,
+        detailed: null,
+      },
+      accountId,
+    };
+  }
+
   private static readonly SORTABLE_COLUMNS = new Set([
     'activityDate',
     'merchantName',
@@ -952,22 +967,53 @@ export class TransactionService extends OwnedCrudService<
 
       // Process added transactions
       if (added.length > 0) {
-        const newEntities = added
-          .map((dto) => {
-            const internalAccountId = accountIdMap.get(dto.accountId);
-            if (!internalAccountId) {
-              this.logger.warn(
-                { externalAccountId: dto.accountId },
-                'No internal account found for external account ID, skipping transaction',
-              );
-              return null;
-            }
-            return TransactionEntity.fromDto(
+        const newEntities: TransactionEntity[] = [];
+
+        for (const dto of added) {
+          const internalAccountId = accountIdMap.get(dto.accountId);
+          if (!internalAccountId) {
+            this.logger.warn(
+              { externalAccountId: dto.accountId },
+              'No internal account found for external account ID, skipping transaction',
+            );
+            continue;
+          }
+
+          let matchedPending: TransactionEntity | null = null;
+          if (dto.pendingTransactionId) {
+            matchedPending = await txnRepo.findOne({
+              where: {
+                externalTransactionId: dto.pendingTransactionId,
+                accountId: internalAccountId,
+                userId,
+                pending: true,
+              },
+            });
+          }
+
+          if (matchedPending) {
+            this.applyUpdate(
+              matchedPending,
+              this.buildProviderSyncUpdateDto(dto, internalAccountId),
+            );
+            await txnRepo.save(matchedPending);
+            this.logger.log(
+              {
+                pendingExternalTransactionId: dto.pendingTransactionId,
+                postedExternalTransactionId: dto.externalTransactionId,
+              },
+              'Updated pending transaction from posted sync addition',
+            );
+            continue;
+          }
+
+          newEntities.push(
+            TransactionEntity.fromDto(
               { ...dto, accountId: internalAccountId, categoryId: null },
               userId,
-            );
-          })
-          .filter((e): e is TransactionEntity => e !== null);
+            ),
+          );
+        }
 
         if (newEntities.length > 0) {
           await txnRepo.save(newEntities);
@@ -1013,15 +1059,10 @@ export class TransactionService extends OwnedCrudService<
               return;
             }
 
-            this.applyUpdate(existing, {
-              ...dto,
-              categoryId: undefined,
-              personalFinanceCategory: dto.personalFinanceCategory ?? {
-                primary: null,
-                detailed: null,
-              },
-              accountId: internalAccountId,
-            });
+            this.applyUpdate(
+              existing,
+              this.buildProviderSyncUpdateDto(dto, internalAccountId),
+            );
             await txnRepo.save(existing);
           }),
         );

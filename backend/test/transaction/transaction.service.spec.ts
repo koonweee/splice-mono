@@ -257,4 +257,88 @@ describe('TransactionService', () => {
     expect(saved[0].providerCategoryProvider).toBe('plaid');
     expect(saved[0].providerCategoryPrimary).toBe('GENERAL_MERCHANDISE');
   });
+
+  it('sync updates matched pending transactions to posted while preserving user metadata', async () => {
+    const categoryUpdatedAt = new Date('2026-02-14T12:00:00.000Z');
+    const pendingTransaction = buildTransaction({
+      id: '00000000-0000-4000-8000-000000000300',
+      accountId,
+      externalTransactionId: 'pending-external-id',
+      pending: true,
+      categoryId: category.id,
+      category,
+      categoryUpdatedAt,
+      reportingDateOverride: '2026-02-13',
+      providerCategoryProvider: 'plaid',
+      providerCategoryPrimary: 'GENERAL_MERCHANDISE',
+      providerCategoryDetailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
+    });
+    const saved: TransactionEntity[] = [];
+    const txnRepo = {
+      save: jest.fn(
+        async (entities: TransactionEntity | TransactionEntity[]) => {
+          if (Array.isArray(entities)) {
+            saved.push(...entities);
+          } else {
+            saved.push(entities);
+          }
+          return entities;
+        },
+      ),
+      findOne: jest.fn().mockResolvedValue(pendingTransaction),
+      delete: jest.fn().mockResolvedValue({ affected: 0 }),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
+      ) => callback({ getRepository: () => txnRepo }),
+    );
+
+    await service.processSyncResults(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      {
+        added: [
+          buildCreateDto({
+            accountId: 'external-account-id',
+            externalTransactionId: 'posted-external-id',
+            pending: false,
+            pendingTransactionId: 'pending-external-id',
+            merchantName: 'Posted Store',
+            providerDate: '2026-02-15',
+            personalFinanceCategory: undefined,
+          }),
+        ],
+        modified: [],
+        removed: ['pending-external-id'],
+        nextCursor: 'cursor',
+        hasMore: false,
+      },
+    );
+
+    expect(txnRepo.findOne).toHaveBeenCalledWith({
+      where: {
+        externalTransactionId: 'pending-external-id',
+        accountId,
+        userId,
+        pending: true,
+      },
+    });
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toBe(pendingTransaction);
+    expect(pendingTransaction.id).toBe('00000000-0000-4000-8000-000000000300');
+    expect(pendingTransaction.externalTransactionId).toBe('posted-external-id');
+    expect(pendingTransaction.pending).toBe(false);
+    expect(pendingTransaction.pendingTransactionId).toBe('pending-external-id');
+    expect(pendingTransaction.merchantName).toBe('Posted Store');
+    expect(pendingTransaction.providerDate).toBe('2026-02-15');
+    expect(pendingTransaction.categoryId).toBe(category.id);
+    expect(pendingTransaction.category).toBe(category);
+    expect(pendingTransaction.categoryUpdatedAt).toBe(categoryUpdatedAt);
+    expect(pendingTransaction.reportingDateOverride).toBe('2026-02-13');
+    expect(pendingTransaction.providerCategoryProvider).toBeNull();
+    expect(pendingTransaction.providerCategoryPrimary).toBeNull();
+    expect(pendingTransaction.providerCategoryDetailed).toBeNull();
+    expect(txnRepo.delete).toHaveBeenCalledTimes(1);
+  });
 });
