@@ -435,7 +435,7 @@ describe('NotificationService', () => {
     );
 
     const queryBuilder = {
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      innerJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
@@ -453,6 +453,9 @@ describe('NotificationService', () => {
         .mockImplementation(
           (deliveries: NotificationPushDeliveryEntity[]) => deliveries,
         ),
+      find: jest
+        .fn()
+        .mockResolvedValue([pendingDelivery, staleProcessingDelivery]),
     };
     pushDeliveryRepository.manager.transaction.mockImplementationOnce(
       async (
@@ -467,14 +470,83 @@ describe('NotificationService', () => {
 
     const result = await service.claimPendingPushDeliveries(25);
 
+    expect(queryBuilder.innerJoin).toHaveBeenCalledWith(
+      'delivery.subscription',
+      'subscription',
+    );
     expect(queryBuilder.where).toHaveBeenCalledWith(expect.any(Object));
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'subscription.revokedAt IS NULL',
+    );
+    expect(queryBuilder.setLock).toHaveBeenCalledWith(
+      'pessimistic_write',
+      undefined,
+      ['delivery'],
+    );
     expect(queryBuilder.setOnLocked).toHaveBeenCalledWith('skip_locked');
+    expect(deliveryRepo.save).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: pendingDelivery.id,
+        status: 'processing',
+        attemptCount: 1,
+      }),
+      expect.objectContaining({
+        id: staleProcessingDelivery.id,
+        status: 'processing',
+        attemptCount: 2,
+      }),
+    ]);
+    expect(deliveryRepo.find).toHaveBeenCalledWith({
+      where: { id: expect.any(Object) },
+      relations: {
+        notification: true,
+        subscription: true,
+      },
+    });
     expect(result).toHaveLength(2);
     expect(result.map((delivery) => delivery.status)).toEqual([
       'processing',
       'processing',
     ]);
     expect(result.map((delivery) => delivery.attemptCount)).toEqual([1, 2]);
+  });
+
+  it('does not save or reload push deliveries when no rows are claimed', async () => {
+    const queryBuilder = {
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      setOnLocked: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    };
+    const deliveryRepo = {
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      save: jest.fn(),
+      find: jest.fn(),
+    };
+    pushDeliveryRepository.manager.transaction.mockImplementationOnce(
+      async (
+        callback: (manager: {
+          getRepository: (entity: unknown) => unknown;
+        }) => unknown,
+      ) =>
+        callback({
+          getRepository: () => deliveryRepo,
+        }),
+    );
+
+    await expect(service.claimPendingPushDeliveries(25)).resolves.toEqual([]);
+
+    expect(queryBuilder.setLock).toHaveBeenCalledWith(
+      'pessimistic_write',
+      undefined,
+      ['delivery'],
+    );
+    expect(deliveryRepo.save).not.toHaveBeenCalled();
+    expect(deliveryRepo.find).not.toHaveBeenCalled();
   });
 
   it('cleans up push delivery rows older than thirty days', async () => {
