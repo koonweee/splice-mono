@@ -472,6 +472,24 @@ describe('TransactionsPage category assignment workflow', () => {
     )
   })
 
+  it('initializes the category filter from the URL search params', async () => {
+    mockFns.useSearchMock.mockReturnValue({
+      categoryId: 'UNCATEGORIZED',
+    })
+
+    renderTransactionsPage()
+
+    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+
+    expect(mockFns.transactionControllerFindAllMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        categoryId: 'UNCATEGORIZED',
+        pageIndex: '0',
+        pageSize: '50',
+      }),
+    )
+  })
+
   it('opens the add transaction modal with the filtered account selected', () => {
     renderTransactionsPage()
 
