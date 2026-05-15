@@ -5,7 +5,7 @@ import {
   ConfirmedLoggedOutError,
   TransientAuthError,
 } from '../lib/session-refresh'
-import { LandingPage } from './index'
+import { LandingPage, validateIndexSearch } from './index'
 import type { ReactNode } from 'react'
 
 const mocks = vi.hoisted(() => ({
@@ -42,6 +42,22 @@ vi.mock('../components/LoginCard', () => ({
     <div data-testid="login-card">{redirect}</div>
   ),
 }))
+
+describe('index route search params', () => {
+  it('omits the login param unless it is explicitly true', () => {
+    expect(validateIndexSearch({})).toEqual({})
+    expect(validateIndexSearch({ login: false })).toEqual({})
+    expect(validateIndexSearch({ login: 'false' })).toEqual({})
+    expect(validateIndexSearch({ login: true })).toEqual({ login: true })
+    expect(validateIndexSearch({ login: 'true' })).toEqual({ login: true })
+  })
+
+  it('preserves string redirect params', () => {
+    expect(
+      validateIndexSearch({ login: 'true', redirect: '/transactions' }),
+    ).toEqual({ login: true, redirect: '/transactions' })
+  })
+})
 
 describe('LandingPage', () => {
   beforeEach(() => {

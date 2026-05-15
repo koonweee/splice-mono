@@ -10,11 +10,26 @@ import { LoginCard } from '../components/LoginCard'
 import { isConfirmedLoggedOutError } from '../lib/session-refresh'
 import { useSession } from '../lib/session'
 
+export type IndexSearch = { login?: true; redirect?: string }
+
+export function validateIndexSearch(
+  search: Record<string, unknown>,
+): IndexSearch {
+  const parsedSearch: IndexSearch = {}
+
+  if (search.login === true || search.login === 'true') {
+    parsedSearch.login = true
+  }
+
+  if (typeof search.redirect === 'string') {
+    parsedSearch.redirect = search.redirect
+  }
+
+  return parsedSearch
+}
+
 export const Route = createFileRoute('/')({
-  validateSearch: (search): { login?: boolean; redirect?: string } => ({
-    login: search.login === true || search.login === 'true',
-    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
-  }),
+  validateSearch: validateIndexSearch,
   component: LandingPage,
 })
 
