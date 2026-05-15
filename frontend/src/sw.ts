@@ -1,5 +1,20 @@
+/// <reference lib="webworker" />
+
+import { precacheAndRoute } from 'workbox-precaching'
+
+declare const self: ServiceWorkerGlobalScope
+
+type PushPayload = {
+  title: string
+  body: string
+  url: string
+  tag: string
+}
+
+precacheAndRoute(self.__WB_MANIFEST)
+
 self.addEventListener('push', (event) => {
-  let payload = {
+  let payload: PushPayload = {
     title: 'Splice',
     body: '',
     url: '/',
@@ -10,7 +25,7 @@ self.addEventListener('push', (event) => {
     try {
       payload = {
         ...payload,
-        ...event.data.json(),
+        ...(event.data.json() as Partial<PushPayload>),
       }
     } catch {
       payload.body = event.data.text()
@@ -52,9 +67,7 @@ self.addEventListener('notificationclick', (event) => {
           }
         }
 
-        if (self.clients.openWindow) {
-          return self.clients.openWindow(targetUrl)
-        }
+        return self.clients.openWindow(targetUrl)
       }),
   )
 })

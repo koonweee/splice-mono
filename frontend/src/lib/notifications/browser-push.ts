@@ -1,6 +1,5 @@
 import { axios } from '../../api/axios'
-
-const SERVICE_WORKER_PATH = '/sw.js'
+import { getServiceWorkerRegistration } from '../pwa/service-worker'
 
 type PushConfigResponse = {
   configured: boolean
@@ -22,8 +21,8 @@ export function isPushSupported(): boolean {
   return (
     typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
-    'PushManager' in window &&
-    'Notification' in window
+    typeof PushManager !== 'undefined' &&
+    typeof Notification !== 'undefined'
   )
 }
 
@@ -74,7 +73,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     throw new Error('Browser push notifications are not supported')
   }
 
-  return navigator.serviceWorker.register(SERVICE_WORKER_PATH)
+  return getServiceWorkerRegistration()
 }
 
 export async function getExistingPushSubscription(): Promise<PushSubscription | null> {
