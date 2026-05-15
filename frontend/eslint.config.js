@@ -21,7 +21,6 @@ export default [
     ignores: [
       '*.config.js',
       '.output/**',
-      'public/sw.js',
       'src/api/**',
       'src/routeTree.gen.ts',
     ],

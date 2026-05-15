@@ -1,0 +1,25 @@
+.container {
+  position: fixed;
+  right: var(--mantine-spacing-md);
+  bottom: var(--mantine-spacing-md);
+  left: var(--mantine-spacing-md);
+  z-index: 300;
+  display: grid;
+  justify-items: center;
+  gap: var(--mantine-spacing-xs);
+  pointer-events: none;
+}
+
+.alert {
+  width: min(560px, 100%);
+  pointer-events: auto;
+  box-shadow: var(--mantine-shadow-md);
+}
+
+@media (max-width: 48em) {
+  .container {
+    right: var(--mantine-spacing-sm);
+    bottom: var(--mantine-spacing-sm);
+    left: var(--mantine-spacing-sm);
+  }
+}

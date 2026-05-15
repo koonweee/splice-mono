@@ -23,6 +23,7 @@ import {
 } from '../lib/theme'
 import type { RouterContext } from '../router'
 import { AppThemeProvider } from '@/components/AppThemeProvider'
+import { PwaLifecycle } from '@/components/PwaLifecycle'
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
@@ -106,6 +107,7 @@ try {
       <body>
         <AppThemeProvider>
           <Notifications />
+          <PwaLifecycle />
           <Outlet />
         </AppThemeProvider>
         <Scripts />
