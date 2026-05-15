@@ -287,6 +287,7 @@ export class NotificationService {
               : `${transactionsPayload.count} new transactions were added`,
           url: '/transactions?categoryId=UNCATEGORIZED',
           tag: notification.id,
+          badgeCount: transactionsPayload.count,
         };
       }
       case 'system.test':

@@ -63,6 +63,8 @@ type PushPayload = {
   body: string
   url: string
   tag: string
+  count?: number
+  badgeCount?: number
 }
 
 precacheAndRoute(self.__WB_MANIFEST)
@@ -99,13 +101,16 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      tag: payload.tag,
-      data: {
-        url: payload.url || '/',
-      },
-    }),
+    Promise.all([
+      self.registration.showNotification(payload.title, {
+        body: payload.body,
+        tag: payload.tag,
+        data: {
+          url: payload.url || '/',
+        },
+      }),
+      updateAppBadgeFromPushPayload(payload),
+    ]),
   )
 })
 
@@ -155,6 +160,28 @@ function isRootNavigation(request: Request): boolean {
   const url = new URL(request.url)
 
   return url.origin === self.location.origin && url.pathname === '/'
+}
+
+async function updateAppBadgeFromPushPayload(
+  payload: PushPayload,
+): Promise<void> {
+  const badgingNavigator = self.navigator as WorkerNavigator & {
+    setAppBadge?: (contents?: number) => Promise<void>
+  }
+
+  if (typeof badgingNavigator.setAppBadge !== 'function') {
+    return
+  }
+
+  const badgeCount =
+    typeof payload.badgeCount === 'number' ? payload.badgeCount : payload.count
+
+  if (typeof badgeCount === 'number' && badgeCount > 0) {
+    await badgingNavigator.setAppBadge(badgeCount)
+    return
+  }
+
+  await badgingNavigator.setAppBadge()
 }
 
 self.addEventListener('notificationclick', (event) => {

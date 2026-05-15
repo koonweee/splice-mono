@@ -7,6 +7,7 @@ export type RenderedPushPayload = {
   body: string;
   url: string;
   tag: string;
+  badgeCount?: number;
 };
 
 @Injectable()

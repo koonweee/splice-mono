@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   },
   revokeCurrentDevicePushSubscription: vi.fn(),
   revokeAllPushSubscriptions: vi.fn(),
+  clearAppBadge: vi.fn(),
   useNavigate: vi.fn(),
   useUserControllerLogout: vi.fn(),
   useUserControllerLogoutAll: vi.fn(),
@@ -44,6 +45,10 @@ vi.mock('./notifications/browser-push', () => ({
   revokeAllPushSubscriptions: mocks.revokeAllPushSubscriptions,
 }))
 
+vi.mock('./pwa/app-badge', () => ({
+  clearAppBadge: mocks.clearAppBadge,
+}))
+
 describe('auth helpers', () => {
   beforeEach(() => {
     mocks.resolveApiBaseUrl.mockReturnValue('http://localhost:3000')
@@ -52,6 +57,7 @@ describe('auth helpers', () => {
     mocks.useUserControllerLogoutAll.mockReturnValue({ mutate: vi.fn() })
     mocks.revokeCurrentDevicePushSubscription.mockResolvedValue(undefined)
     mocks.revokeAllPushSubscriptions.mockResolvedValue(undefined)
+    mocks.clearAppBadge.mockResolvedValue(undefined)
     mocks.queryClient.removeQueries.mockReset()
     mocks.queryClient.invalidateQueries.mockReset()
   })
@@ -93,6 +99,7 @@ describe('auth helpers', () => {
     await options.mutation.onMutate()
 
     expect(mocks.revokeCurrentDevicePushSubscription).toHaveBeenCalledTimes(1)
+    expect(mocks.clearAppBadge).toHaveBeenCalledTimes(1)
   })
 
   it('clears cached session after logout succeeds', () => {
@@ -123,5 +130,6 @@ describe('auth helpers', () => {
     await options.mutation.onMutate()
 
     expect(mocks.revokeAllPushSubscriptions).toHaveBeenCalledTimes(1)
+    expect(mocks.clearAppBadge).toHaveBeenCalledTimes(1)
   })
 })

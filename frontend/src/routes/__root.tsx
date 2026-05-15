@@ -25,6 +25,53 @@ import type { RouterContext } from '../router'
 import { AppThemeProvider } from '@/components/AppThemeProvider'
 import { PwaLifecycle } from '@/components/PwaLifecycle'
 
+const APPLE_STARTUP_IMAGE_LINKS = [
+  {
+    href: '/splash/apple-splash-1290-2796.png',
+    media:
+      '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/splash/apple-splash-1170-2532.png',
+    media:
+      '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/splash/apple-splash-1284-2778.png',
+    media:
+      '(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/splash/apple-splash-1242-2688.png',
+    media:
+      '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/splash/apple-splash-828-1792.png',
+    media:
+      '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)',
+  },
+  {
+    href: '/splash/apple-splash-1125-2436.png',
+    media:
+      '(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/splash/apple-splash-1242-2208.png',
+    media:
+      '(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+  },
+  {
+    href: '/splash/apple-splash-750-1334.png',
+    media:
+      '(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)',
+  },
+].map(({ href, media }) => ({
+  rel: 'apple-touch-startup-image',
+  href,
+  media,
+}))
+
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
@@ -37,6 +84,26 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
       {
         title: 'Splice',
+      },
+      {
+        name: 'theme-color',
+        content: '#282a36',
+      },
+      {
+        name: 'apple-mobile-web-app-capable',
+        content: 'yes',
+      },
+      {
+        name: 'apple-mobile-web-app-title',
+        content: 'Splice',
+      },
+      {
+        name: 'apple-mobile-web-app-status-bar-style',
+        content: 'black-translucent',
+      },
+      {
+        name: 'format-detection',
+        content: 'telephone=no',
       },
     ],
     links: [
@@ -54,6 +121,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         rel: 'manifest',
         href: '/manifest.json',
       },
+      ...APPLE_STARTUP_IMAGE_LINKS,
       {
         rel: 'stylesheet',
         href: mantineCss,

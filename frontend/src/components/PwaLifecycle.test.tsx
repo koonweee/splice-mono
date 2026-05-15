@@ -12,6 +12,9 @@ import type { PwaUpdateState } from '../lib/pwa/service-worker'
 
 const mocks = vi.hoisted(() => ({
   registerPwaServiceWorker: vi.fn(),
+  isAppBadgeSupported: vi.fn(),
+  refreshUncategorizedTransactionBadge: vi.fn(),
+  useSession: vi.fn(),
   listeners: new Set<(state: PwaUpdateState) => void>(),
   state: {
     needRefresh: false,
@@ -29,6 +32,16 @@ vi.mock('../lib/pwa/service-worker', () => ({
       mocks.listeners.delete(listener)
     }
   },
+}))
+
+vi.mock('../lib/pwa/app-badge', () => ({
+  isAppBadgeSupported: mocks.isAppBadgeSupported,
+  refreshUncategorizedTransactionBadge:
+    mocks.refreshUncategorizedTransactionBadge,
+}))
+
+vi.mock('../lib/session', () => ({
+  useSession: () => mocks.useSession(),
 }))
 
 function renderPwaLifecycle() {
@@ -75,6 +88,13 @@ describe('PwaLifecycle', () => {
     }
     mocks.listeners.clear()
     mocks.registerPwaServiceWorker.mockResolvedValue(undefined)
+    mocks.isAppBadgeSupported.mockReturnValue(false)
+    mocks.refreshUncategorizedTransactionBadge.mockResolvedValue(0)
+    mocks.useSession.mockReturnValue({
+      data: undefined,
+      isPending: false,
+      error: null,
+    })
   })
 
   afterEach(() => {
@@ -114,5 +134,18 @@ describe('PwaLifecycle', () => {
     fireEvent.click(screen.getByRole('button', { name: /update/i }))
 
     expect(updateServiceWorker).toHaveBeenCalledTimes(1)
+  })
+
+  it('refreshes app badge count for authenticated online users', () => {
+    mocks.useSession.mockReturnValue({
+      data: { user: { id: 'user-1' } },
+      isPending: false,
+      error: null,
+    })
+    mocks.isAppBadgeSupported.mockReturnValue(true)
+
+    renderPwaLifecycle()
+
+    expect(mocks.refreshUncategorizedTransactionBadge).toHaveBeenCalledTimes(1)
   })
 })
