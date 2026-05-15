@@ -20,7 +20,7 @@ import { MoneyWithSignSign } from '../../api/models'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import { getDecimalPlaces } from '../../lib/format'
 import {
-  getViewportAwareComboboxProps,
+  getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
 import { AccountSelect } from '../accounts/AccountSelect'
@@ -174,7 +174,7 @@ export function ManualTransactionModal({
     [categories],
   )
   const comboboxProps = isMobile
-    ? getViewportAwareComboboxProps()
+    ? getViewportAwareOverlayComboboxProps()
     : { withinPortal: true }
   const maxDropdownHeight = isMobile
     ? viewportAwareDropdownMaxHeight

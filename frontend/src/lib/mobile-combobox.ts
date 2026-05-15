@@ -33,3 +33,13 @@ export function getViewportAwareComboboxProps(
     ...rest,
   }
 }
+
+export function getViewportAwareOverlayComboboxProps(
+  overrides: Partial<ComboboxProps> = {},
+): ComboboxProps {
+  return getViewportAwareComboboxProps({
+    hideDetached: false,
+    withinPortal: false,
+    ...overrides,
+  })
+}

@@ -32,7 +32,7 @@ import { formatMoneyWithSign } from '../../lib/format'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import { isManualTransaction } from '../../lib/manual-transactions'
 import {
-  getViewportAwareComboboxProps,
+  getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
 import { CategorySelect } from '../categories/CategorySelect'
@@ -299,11 +299,11 @@ export function TransactionsMobileList({
             <div className={styles.dateHeader}>
               {dayjs(date).format('MMMM D, YYYY')}
             </div>
-	            {transactions.map((transaction) => {
-	              const merchantDisplay = getMerchantDisplay(transaction)
-	              const isManual = isManualTransaction(transaction)
-	              const avatarLabel = merchantDisplay.primary
-	                .trim()
+            {transactions.map((transaction) => {
+              const merchantDisplay = getMerchantDisplay(transaction)
+              const isManual = isManualTransaction(transaction)
+              const avatarLabel = merchantDisplay.primary
+                .trim()
                 .slice(0, 1)
                 .toUpperCase()
               const amount = transaction.convertedAmount ?? transaction.amount
@@ -320,10 +320,10 @@ export function TransactionsMobileList({
                   key={transaction.id}
                   onClick={() => setActiveTransactionId(transaction.id)}
                 >
-	                  <div className={styles.rowMain}>
-	                    {bulkModeEnabled && !isManual && (
-	                      <Checkbox
-	                        aria-label={`Select transaction ${merchantDisplay.primary}`}
+                  <div className={styles.rowMain}>
+                    {bulkModeEnabled && !isManual && (
+                      <Checkbox
+                        aria-label={`Select transaction ${merchantDisplay.primary}`}
                         checked={selectedTransactionIds.has(transaction.id)}
                         onChange={() => toggleBulkSelection(transaction)}
                         onClick={(event) => event.stopPropagation()}
@@ -550,7 +550,7 @@ export function TransactionsMobileList({
                 <Stack gap={6}>
                   <CategorySelect
                     aria-label="Category"
-                    comboboxProps={getViewportAwareComboboxProps()}
+                    comboboxProps={getViewportAwareOverlayComboboxProps()}
                     data={categoryOptions}
                     label="Category"
                     maxDropdownHeight={viewportAwareDropdownMaxHeight}

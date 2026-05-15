@@ -35,7 +35,7 @@ import { isAssignableCategoryOption } from '../../lib/category-options'
 import { getFallbackCategoryColor } from '../../lib/category-colors'
 import { isManualTransaction } from '../../lib/manual-transactions'
 import {
-  getViewportAwareComboboxProps,
+  getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
 import type {
@@ -124,7 +124,7 @@ function TransactionsFilterPanel({
   onClearFilters,
 }: TransactionFiltersPanelProps) {
   const comboboxProps = isMobile
-    ? getViewportAwareComboboxProps()
+    ? getViewportAwareOverlayComboboxProps()
     : { withinPortal: false }
   const maxDropdownHeight = isMobile
     ? viewportAwareDropdownMaxHeight
