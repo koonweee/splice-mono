@@ -54,7 +54,7 @@ describe('DateRangeControl', () => {
     expect(onChange).toHaveBeenCalledWith(['2026-05-03', null])
   })
 
-  it('offers recent month and MTD presets', () => {
+  it('offers recent month, MTD, and YTD presets', () => {
     const onChange = vi.fn()
 
     render(
@@ -69,6 +69,9 @@ describe('DateRangeControl', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Choose date range' }))
     act(() => vi.runAllTimers())
     fireEvent.click(screen.getByRole('button', { name: 'MTD' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Choose date range' }))
+    act(() => vi.runAllTimers())
+    fireEvent.click(screen.getByRole('button', { name: 'YTD' }))
 
     expect(onChange).toHaveBeenNthCalledWith(1, [
       '2026-04-01',
@@ -76,6 +79,10 @@ describe('DateRangeControl', () => {
     ])
     expect(onChange).toHaveBeenNthCalledWith(2, [
       '2026-05-01',
+      '2026-05-12',
+    ])
+    expect(onChange).toHaveBeenNthCalledWith(3, [
+      '2026-01-01',
       '2026-05-12',
     ])
   })
