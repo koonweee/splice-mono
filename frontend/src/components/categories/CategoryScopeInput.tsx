@@ -11,7 +11,7 @@ import {
 } from '@mantine/core'
 import { getCategoryColorStyles } from '../../lib/category-colors'
 import {
-  getViewportAwareComboboxProps,
+  getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
 import type {
@@ -166,7 +166,7 @@ export function CategoryScopeInput({
             hidePickedOptions
             comboboxProps={
               viewportAwareDropdown
-                ? getViewportAwareComboboxProps()
+                ? getViewportAwareOverlayComboboxProps()
                 : undefined
             }
             maxDropdownHeight={

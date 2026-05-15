@@ -47,7 +47,7 @@ import {
   normalizeHexColor,
 } from '../../lib/category-colors'
 import {
-  getViewportAwareComboboxProps,
+  getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
 import { MobileTableList } from '../MobileTableList'
@@ -623,7 +623,7 @@ export function CustomCategoriesSection() {
     <Stack gap="md">
       <CategorySelect
         aria-label="Primary category"
-        comboboxProps={getViewportAwareComboboxProps()}
+        comboboxProps={getViewportAwareOverlayComboboxProps()}
         label="Primary category"
         maxDropdownHeight={viewportAwareDropdownMaxHeight}
         value={primaryFilter}
@@ -689,7 +689,7 @@ export function CustomCategoriesSection() {
       <Stack gap="sm">
         <Autocomplete
           comboboxProps={
-            isMobile ? getViewportAwareComboboxProps() : undefined
+            isMobile ? getViewportAwareOverlayComboboxProps() : undefined
           }
           label="Primary category"
           maxDropdownHeight={
@@ -706,7 +706,7 @@ export function CustomCategoriesSection() {
         />
         <Autocomplete
           comboboxProps={
-            isMobile ? getViewportAwareComboboxProps() : undefined
+            isMobile ? getViewportAwareOverlayComboboxProps() : undefined
           }
           label="Secondary category"
           maxDropdownHeight={
