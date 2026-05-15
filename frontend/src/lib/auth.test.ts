@@ -1,16 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  authStorage,
   buildGoogleOAuthStartUrl,
+  clearSessionCache,
   getSafeRelativeRedirect,
   useLogout,
   useLogoutAll,
-  validateSession,
 } from './auth'
+import { sessionQueryKey } from './session'
 
 const mocks = vi.hoisted(() => ({
   resolveApiBaseUrl: vi.fn(),
-  fetch: vi.fn(),
+  queryClient: {
+    removeQueries: vi.fn(),
+    invalidateQueries: vi.fn(),
+  },
   revokeCurrentDevicePushSubscription: vi.fn(),
   revokeAllPushSubscriptions: vi.fn(),
   useNavigate: vi.fn(),
@@ -22,7 +25,11 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: mocks.useNavigate,
 }))
 
-vi.mock('../api/axios', () => ({
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => mocks.queryClient,
+}))
+
+vi.mock('./api-base-url', () => ({
   resolveApiBaseUrl: mocks.resolveApiBaseUrl,
 }))
 
@@ -36,43 +43,20 @@ vi.mock('./notifications/browser-push', () => ({
     mocks.revokeCurrentDevicePushSubscription,
   revokeAllPushSubscriptions: mocks.revokeAllPushSubscriptions,
 }))
-function createLocalStorageMock() {
-  let store: Record<string, string> = {}
-
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => {
-      store[key] = value
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete store[key]
-    }),
-    clear: vi.fn(() => {
-      store = {}
-    }),
-  }
-}
 
 describe('auth helpers', () => {
   beforeEach(() => {
-    Object.defineProperty(window, 'localStorage', {
-      value: createLocalStorageMock(),
-      writable: true,
-    })
-    window.localStorage.clear()
-    vi.stubGlobal('fetch', mocks.fetch)
     mocks.resolveApiBaseUrl.mockReturnValue('http://localhost:3000')
-    mocks.fetch.mockReset()
     mocks.useNavigate.mockReturnValue(vi.fn())
     mocks.useUserControllerLogout.mockReturnValue({ mutate: vi.fn() })
     mocks.useUserControllerLogoutAll.mockReturnValue({ mutate: vi.fn() })
     mocks.revokeCurrentDevicePushSubscription.mockResolvedValue(undefined)
     mocks.revokeAllPushSubscriptions.mockResolvedValue(undefined)
+    mocks.queryClient.removeQueries.mockReset()
+    mocks.queryClient.invalidateQueries.mockReset()
   })
 
   afterEach(() => {
-    window.localStorage.clear()
-    vi.unstubAllGlobals()
     vi.clearAllMocks()
   })
 
@@ -91,25 +75,12 @@ describe('auth helpers', () => {
     expect(getSafeRelativeRedirect('accounts')).toBe('/home')
   })
 
-  it('marks auth only after session validation succeeds', async () => {
-    mocks.fetch.mockResolvedValue({ ok: true })
+  it('removes the session query from cache', () => {
+    clearSessionCache(mocks.queryClient)
 
-    await expect(validateSession()).resolves.toBe(true)
-
-    expect(mocks.fetch).toHaveBeenCalledWith(
-      new URL('/user/me', 'http://localhost:3000'),
-      { credentials: 'include' },
-    )
-    expect(authStorage.isAuthenticated()).toBe(true)
-  })
-
-  it('clears auth when session validation fails', async () => {
-    authStorage.setAuthenticated()
-    mocks.fetch.mockResolvedValue({ ok: false })
-
-    await expect(validateSession()).resolves.toBe(false)
-
-    expect(authStorage.isAuthenticated()).toBe(false)
+    expect(mocks.queryClient.removeQueries).toHaveBeenCalledWith({
+      queryKey: sessionQueryKey,
+    })
   })
 
   it('attempts current-device notification cleanup before logout', async () => {
@@ -122,6 +93,24 @@ describe('auth helpers', () => {
     await options.mutation.onMutate()
 
     expect(mocks.revokeCurrentDevicePushSubscription).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears cached session after logout succeeds', () => {
+    useLogout()
+
+    const navigate = mocks.useNavigate.mock.results[0].value as ReturnType<
+      typeof vi.fn
+    >
+    const options = mocks.useUserControllerLogout.mock.calls[0][0] as {
+      mutation: { onSuccess: () => void }
+    }
+
+    options.mutation.onSuccess()
+
+    expect(mocks.queryClient.removeQueries).toHaveBeenCalledWith({
+      queryKey: sessionQueryKey,
+    })
+    expect(navigate).toHaveBeenCalledWith({ to: '/' })
   })
 
   it('attempts all-device notification cleanup before logout-all', async () => {

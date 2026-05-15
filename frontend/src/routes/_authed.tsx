@@ -25,8 +25,9 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useEffect } from 'react'
-import { useUserControllerMe } from '../api/clients/spliceAPI'
-import { useLogout, validateSession } from '../lib/auth'
+import { useLogout } from '../lib/auth'
+import { isConfirmedLoggedOutError } from '../lib/session-refresh'
+import { sessionQueryOptions, useSession } from '../lib/session'
 import { applyThemePresetId, normalizeThemePresetId } from '../lib/theme'
 import styles from './_authed.module.css'
 
@@ -38,30 +39,48 @@ export const Route = createFileRoute('/_authed')({
       return
     }
 
-    if (context.auth.isAuthenticated()) {
-      return
-    }
-
-    const hasValidSession = await validateSession()
-
-    if (!hasValidSession) {
-      throw redirect({
-        to: '/',
-        search: {
-          login: true,
-          redirect: `${location.pathname}${location.search}${location.hash}`,
-        },
-      })
-    }
+    await requireAuthedSession({
+      location,
+      queryClient: context.queryClient,
+    })
   },
   component: AuthedLayout,
 })
+
+export async function requireAuthedSession({
+  location,
+  queryClient,
+}: {
+  location: { pathname: string; href?: string }
+  queryClient: {
+    ensureQueryData: (
+      options: ReturnType<typeof sessionQueryOptions>,
+    ) => Promise<unknown>
+  }
+}) {
+  try {
+    await queryClient.ensureQueryData(sessionQueryOptions())
+  } catch (error) {
+    if (!isConfirmedLoggedOutError(error)) {
+      throw error
+    }
+
+    throw redirect({
+        to: '/',
+        search: {
+          login: true,
+          redirect: location.href ?? location.pathname,
+        },
+      })
+  }
+}
 
 function AuthedLayout() {
   const [opened, { toggle }] = useDisclosure()
   const location = useLocation()
   const logoutMutation = useLogout()
-  const { data: user } = useUserControllerMe()
+  const { data: session } = useSession()
+  const user = session?.user
 
   useEffect(() => {
     if (user?.settings) {

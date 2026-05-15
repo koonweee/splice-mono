@@ -7,7 +7,8 @@ import {
 } from '@tanstack/react-router'
 import { ArrowRight, LogIn } from 'lucide-react'
 import { LoginCard } from '../components/LoginCard'
-import { authStorage } from '../lib/auth'
+import { isConfirmedLoggedOutError } from '../lib/session-refresh'
+import { useSession } from '../lib/session'
 
 export const Route = createFileRoute('/')({
   validateSearch: (search): { login?: boolean; redirect?: string } => ({
@@ -17,13 +18,22 @@ export const Route = createFileRoute('/')({
   component: LandingPage,
 })
 
-function LandingPage() {
-  const isAuthenticated = authStorage.isAuthenticated()
+export function LandingPage() {
   const { login: showLogin, redirect } = useSearch({ from: '/' })
   const navigate = useNavigate()
+  const session = useSession()
+  const isAuthenticated = Boolean(session.data)
+  const isConfirmedLoggedOut = isConfirmedLoggedOutError(session.error)
+  const hasTransientSessionError = Boolean(
+    session.error && !isConfirmedLoggedOut,
+  )
 
   const handleLoginClick = () => {
     navigate({ to: '/', search: { login: true } })
+  }
+
+  const handleRetryClick = () => {
+    void session.refetch()
   }
 
   return (
@@ -43,9 +53,7 @@ function LandingPage() {
         <Text c="dimmed" size="lg">
           Your personal finance dashboard
         </Text>
-        {showLogin && !isAuthenticated ? (
-          <LoginCard redirect={redirect} />
-        ) : isAuthenticated ? (
+        {isAuthenticated ? (
           <Button
             component={Link}
             to="/home"
@@ -54,6 +62,16 @@ function LandingPage() {
           >
             Enter Splice
           </Button>
+        ) : session.isPending ? (
+          <Button size="lg" loading>
+            Checking session
+          </Button>
+        ) : hasTransientSessionError ? (
+          <Button onClick={handleRetryClick} size="lg">
+            Retry
+          </Button>
+        ) : showLogin || isConfirmedLoggedOut ? (
+          <LoginCard redirect={redirect} />
         ) : (
           <Button
             onClick={handleLoginClick}

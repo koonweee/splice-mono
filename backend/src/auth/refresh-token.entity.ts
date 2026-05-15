@@ -2,6 +2,12 @@ import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { TimestampedEntity } from '../common/base.entity';
 import { UserEntity } from '../user/user.entity';
 
+export type RefreshTokenRevocationReason =
+  | 'rotated'
+  | 'logout'
+  | 'logout_all'
+  | 'legacy';
+
 @Entity('refresh_token')
 export class RefreshTokenEntity extends TimestampedEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -21,4 +27,16 @@ export class RefreshTokenEntity extends TimestampedEntity {
 
   @Column({ type: 'boolean', default: false })
   revoked: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  revokedAt: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  revocationReason: RefreshTokenRevocationReason | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  rotationGraceExpiresAt: Date | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  replacedByTokenId: string | null;
 }
