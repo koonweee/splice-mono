@@ -57,6 +57,14 @@ function getMonthPresetOptions() {
         today.format('YYYY-MM-DD'),
       ] satisfies DatesRangeValue,
     },
+    {
+      label: 'YTD',
+      value: 'ytd',
+      range: [
+        today.startOf('year').format('YYYY-MM-DD'),
+        today.format('YYYY-MM-DD'),
+      ] satisfies DatesRangeValue,
+    },
   ]
 }
 
