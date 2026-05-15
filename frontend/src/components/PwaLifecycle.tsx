@@ -1,6 +1,11 @@
 import { Alert, Button, Group, Text } from '@mantine/core'
 import { IconCloudOff, IconRefresh } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
+import { useSession } from '../lib/session'
+import {
+  isAppBadgeSupported,
+  refreshUncategorizedTransactionBadge,
+} from '../lib/pwa/app-badge'
 import {
   getPwaUpdateState,
   registerPwaServiceWorker,
@@ -24,6 +29,7 @@ export function PwaLifecycle() {
   const [isOnline, setIsOnline] = useState(getInitialOnlineStatus)
   const [updateState, setUpdateState] =
     useState<PwaUpdateState>(getPwaUpdateState)
+  const session = useSession()
 
   useEffect(() => {
     if (activeLifecycleMounted) {
@@ -48,6 +54,35 @@ export function PwaLifecycle() {
       activeLifecycleMounted = false
     }
   }, [])
+
+  useEffect(() => {
+    if (
+      !isActiveInstance ||
+      !isOnline ||
+      !session.data?.user ||
+      !isAppBadgeSupported()
+    ) {
+      return
+    }
+
+    const refreshBadge = () => {
+      void refreshUncategorizedTransactionBadge().catch(() => undefined)
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        refreshBadge()
+      }
+    }
+
+    refreshBadge()
+    window.addEventListener('focus', refreshBadge)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', refreshBadge)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isActiveInstance, isOnline, session.data?.user])
 
   if (!isActiveInstance) {
     return null

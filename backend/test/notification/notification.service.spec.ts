@@ -269,6 +269,7 @@ describe('NotificationService', () => {
       body: '3 new transactions were added',
       url: '/transactions?categoryId=UNCATEGORIZED',
       tag: notification.id,
+      badgeCount: 3,
     });
   });
 

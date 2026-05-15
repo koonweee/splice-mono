@@ -8,6 +8,7 @@ import {
   revokeAllPushSubscriptions,
   revokeCurrentDevicePushSubscription,
 } from './notifications/browser-push'
+import { clearAppBadge } from './pwa/app-badge'
 import { resolveApiBaseUrl } from './api-base-url'
 import { sessionQueryKey } from './session'
 
@@ -86,6 +87,7 @@ export function useLogout(options?: { redirectTo?: string }) {
     mutation: {
       onMutate: async () => {
         await revokeCurrentDevicePushSubscription()
+        await clearAppBadge()
       },
       onSuccess: () => {
         clearSessionCache(queryClient)
@@ -112,6 +114,7 @@ export function useLogoutAll(options?: { redirectTo?: string }) {
     mutation: {
       onMutate: async () => {
         await revokeAllPushSubscriptions()
+        await clearAppBadge()
       },
       onSuccess: () => {
         clearSessionCache(queryClient)
