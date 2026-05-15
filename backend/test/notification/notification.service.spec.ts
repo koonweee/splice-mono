@@ -267,7 +267,7 @@ describe('NotificationService', () => {
     expect(service.renderPushPayload(notification)).toEqual({
       title: 'New transactions synced',
       body: '3 new transactions were added',
-      url: '/transactions',
+      url: '/transactions?categoryId=UNCATEGORIZED',
       tag: notification.id,
     });
   });

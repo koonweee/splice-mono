@@ -1,33 +1,12 @@
 import Axios from 'axios'
 import type { AxiosError, AxiosRequestConfig } from 'axios'
+import { resolveApiBaseUrl } from '../lib/api-base-url'
+import {
+  isConfirmedLoggedOutError,
+  refreshSession,
+} from '../lib/session-refresh'
 
-const AUTH_FLAG_KEY = 'splice_authenticated'
-
-export function resolveApiBaseUrl(): string | undefined {
-  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
-  if (configuredBaseUrl) {
-    return configuredBaseUrl
-  }
-
-  if (typeof window === 'undefined') {
-    return undefined
-  }
-
-  const currentUrl = new URL(window.location.origin)
-
-  if (currentUrl.hostname === 'localhost') {
-    return `${currentUrl.protocol}//localhost:3000`
-  }
-
-  const hostParts = currentUrl.hostname.split('.')
-  if (hostParts.length >= 2 && !hostParts[0].endsWith('-api')) {
-    hostParts[0] = `${hostParts[0]}-api`
-    currentUrl.hostname = hostParts.join('.')
-    return currentUrl.origin
-  }
-
-  return currentUrl.origin
-}
+export { resolveApiBaseUrl } from '../lib/api-base-url'
 
 const axiosInstance = Axios.create({
   baseURL: resolveApiBaseUrl(),
@@ -54,19 +33,27 @@ const processQueue = (error: Error | null) => {
   failedQueue = []
 }
 
-const clearAuthAndRedirect = () => {
-  // Clear the auth flag so routing doesn't get stuck in a loop
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(AUTH_FLAG_KEY)
-    const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
-    const params = new URLSearchParams({ login: 'true' })
+export function buildLoginRedirectUrl(
+  currentPath =
+    typeof window === 'undefined'
+      ? '/'
+      : `${window.location.pathname}${window.location.search}${window.location.hash}`,
+): string {
+  const params = new URLSearchParams({ login: 'true' })
 
-    if (currentPath && currentPath !== '/') {
-      params.set('redirect', currentPath)
-    }
-
-    window.location.href = `/?${params.toString()}`
+  if (currentPath && currentPath !== '/') {
+    params.set('redirect', currentPath)
   }
+
+  return `/?${params.toString()}`
+}
+
+export const authRedirect = {
+  toLogin: () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = buildLoginRedirectUrl()
+    }
+  },
 }
 
 // Response interceptor - handle 401 and refresh token via cookies
@@ -108,13 +95,13 @@ axiosInstance.interceptors.response.use(
       // Create a single refresh promise that all queued requests will wait for
       refreshPromise = (async () => {
         try {
-          // Make refresh request - cookies will be sent automatically
-          // The backend will set new cookies in the response
-          await axiosInstance.post('/user/refresh', {})
+          await refreshSession()
           processQueue(null)
         } catch (refreshError) {
           processQueue(refreshError as Error)
-          clearAuthAndRedirect()
+          if (isConfirmedLoggedOutError(refreshError)) {
+            authRedirect.toLogin()
+          }
           throw refreshError
         } finally {
           isRefreshing = false

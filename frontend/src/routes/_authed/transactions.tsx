@@ -61,6 +61,7 @@ const UNCATEGORIZED_CATEGORY_VALUE = 'UNCATEGORIZED'
 
 type TransactionsSearch = {
   accountId?: string
+  categoryId?: string
   startDate?: string
   endDate?: string
 }
@@ -193,6 +194,8 @@ export const Route = createFileRoute('/_authed/transactions')({
   validateSearch: (search: Record<string, unknown>): TransactionsSearch => ({
     accountId:
       typeof search.accountId === 'string' ? search.accountId : undefined,
+    categoryId:
+      typeof search.categoryId === 'string' ? search.categoryId : undefined,
     startDate: isValidDateString(search.startDate)
       ? search.startDate
       : undefined,
@@ -235,7 +238,9 @@ function TransactionsPage() {
   const [accountId, setAccountId] = useState<string | null>(
     search.accountId ?? null,
   )
-  const [categoryId, setCategoryId] = useState<string | null>(null)
+  const [categoryId, setCategoryId] = useState<string | null>(
+    search.categoryId ?? null,
+  )
   const [amountSign, setAmountSign] = useState('all')
 
   // Account data for the select dropdown

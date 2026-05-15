@@ -285,7 +285,7 @@ export class NotificationService {
             transactionsPayload.count === 1
               ? '1 new transaction was added'
               : `${transactionsPayload.count} new transactions were added`,
-          url: '/transactions',
+          url: '/transactions?categoryId=UNCATEGORIZED',
           tag: notification.id,
         };
       }
