@@ -55,11 +55,9 @@ describe('axios auth refresh interceptor', () => {
     ])
     axiosInstance.defaults.adapter = adapter
 
-    await expect(axiosInstance.post('/user/refresh', {})).rejects.toMatchObject(
-      {
-        response: { status: 401 },
-      },
-    )
+    await expect(axiosInstance.post('/user/refresh', {})).rejects.toMatchObject({
+      response: { status: 401 },
+    })
 
     expect(mocks.refreshSession).not.toHaveBeenCalled()
   })

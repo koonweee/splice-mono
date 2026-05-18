@@ -13,7 +13,6 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedTransactionsRouteImport } from './routes/_authed/transactions'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
-import { Route as AuthedProjectionsRouteImport } from './routes/_authed/projections'
 import { Route as AuthedHomeRouteImport } from './routes/_authed/home'
 import { Route as AuthedAnalysisRouteImport } from './routes/_authed/analysis'
 import { Route as AuthedAccountsRouteImport } from './routes/_authed/accounts'
@@ -36,11 +35,6 @@ const AuthedTransactionsRoute = AuthedTransactionsRouteImport.update({
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedProjectionsRoute = AuthedProjectionsRouteImport.update({
-  id: '/projections',
-  path: '/projections',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedHomeRoute = AuthedHomeRouteImport.update({
@@ -70,7 +64,6 @@ export interface FileRoutesByFullPath {
   '/accounts': typeof AuthedAccountsRoute
   '/analysis': typeof AuthedAnalysisRoute
   '/home': typeof AuthedHomeRoute
-  '/projections': typeof AuthedProjectionsRoute
   '/settings': typeof AuthedSettingsRoute
   '/transactions': typeof AuthedTransactionsRoute
 }
@@ -80,7 +73,6 @@ export interface FileRoutesByTo {
   '/accounts': typeof AuthedAccountsRoute
   '/analysis': typeof AuthedAnalysisRoute
   '/home': typeof AuthedHomeRoute
-  '/projections': typeof AuthedProjectionsRoute
   '/settings': typeof AuthedSettingsRoute
   '/transactions': typeof AuthedTransactionsRoute
 }
@@ -92,7 +84,6 @@ export interface FileRoutesById {
   '/_authed/accounts': typeof AuthedAccountsRoute
   '/_authed/analysis': typeof AuthedAnalysisRoute
   '/_authed/home': typeof AuthedHomeRoute
-  '/_authed/projections': typeof AuthedProjectionsRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/_authed/transactions': typeof AuthedTransactionsRoute
 }
@@ -104,7 +95,6 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/analysis'
     | '/home'
-    | '/projections'
     | '/settings'
     | '/transactions'
   fileRoutesByTo: FileRoutesByTo
@@ -114,7 +104,6 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/analysis'
     | '/home'
-    | '/projections'
     | '/settings'
     | '/transactions'
   id:
@@ -125,7 +114,6 @@ export interface FileRouteTypes {
     | '/_authed/accounts'
     | '/_authed/analysis'
     | '/_authed/home'
-    | '/_authed/projections'
     | '/_authed/settings'
     | '/_authed/transactions'
   fileRoutesById: FileRoutesById
@@ -165,13 +153,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/projections': {
-      id: '/_authed/projections'
-      path: '/projections'
-      fullPath: '/projections'
-      preLoaderRoute: typeof AuthedProjectionsRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/home': {
       id: '/_authed/home'
       path: '/home'
@@ -208,7 +189,6 @@ interface AuthedRouteChildren {
   AuthedAccountsRoute: typeof AuthedAccountsRoute
   AuthedAnalysisRoute: typeof AuthedAnalysisRoute
   AuthedHomeRoute: typeof AuthedHomeRoute
-  AuthedProjectionsRoute: typeof AuthedProjectionsRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedTransactionsRoute: typeof AuthedTransactionsRoute
 }
@@ -218,7 +198,6 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAccountsRoute: AuthedAccountsRoute,
   AuthedAnalysisRoute: AuthedAnalysisRoute,
   AuthedHomeRoute: AuthedHomeRoute,
-  AuthedProjectionsRoute: AuthedProjectionsRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedTransactionsRoute: AuthedTransactionsRoute,
 }
