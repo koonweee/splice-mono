@@ -67,10 +67,26 @@ type PushPayload = {
   badgeCount?: number
 }
 
+type ServiceWorkerMessage = {
+  type?: string
+}
+
 precacheAndRoute(self.__WB_MANIFEST)
 
 self.addEventListener('install', (event) => {
   event.waitUntil(cacheAppShell())
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
+self.addEventListener('message', (event) => {
+  if (
+    (event.data as ServiceWorkerMessage | undefined)?.type === 'SKIP_WAITING'
+  ) {
+    void self.skipWaiting()
+  }
 })
 
 self.addEventListener('fetch', (event) => {
