@@ -19,7 +19,6 @@ import {
 import {
   CreditCard,
   Home,
-  LineChart,
   LogOut,
   PieChart,
   Settings,
@@ -93,7 +92,6 @@ function AuthedLayout() {
     { to: '/home', label: 'Home', icon: Home },
     { to: '/transactions', label: 'Transactions', icon: TrendingUp },
     { to: '/analysis', label: 'Analysis', icon: PieChart },
-    { to: '/projections', label: 'Projections', icon: LineChart },
     { to: '/accounts', label: 'Accounts', icon: CreditCard },
     { to: '/settings', label: 'Settings', icon: Settings },
   ]

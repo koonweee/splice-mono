@@ -34,9 +34,10 @@ const processQueue = (error: Error | null) => {
 }
 
 export function buildLoginRedirectUrl(
-  currentPath = typeof window === 'undefined'
-    ? '/'
-    : `${window.location.pathname}${window.location.search}${window.location.hash}`,
+  currentPath =
+    typeof window === 'undefined'
+      ? '/'
+      : `${window.location.pathname}${window.location.search}${window.location.hash}`,
 ): string {
   const params = new URLSearchParams({ login: 'true' })
 

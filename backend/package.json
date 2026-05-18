@@ -63,7 +63,6 @@
     "eventemitter2": "^6.4.9",
     "jose": "^6.1.2",
     "nestjs-pino": "^4.5.0",
-    "openai": "^6.38.0",
     "openapi3-ts": "^4.1.2",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
