@@ -53,6 +53,10 @@ import type {
   NotificationControllerGetCurrentSubscriptionStatusParams,
   PaginatedTransactionResponse,
   PersonalAccessToken,
+  ProjectionComputeRequest,
+  ProjectionPlanRequest,
+  ProjectionPlanResponse,
+  ProjectionResult,
   PushConfigResponse,
   PushSubscriptionEndpointDto,
   PushSubscriptionResponse,
@@ -7233,6 +7237,169 @@ export const useNotificationControllerRevokeCurrentPushSubscription = <
     getNotificationControllerRevokeCurrentPushSubscriptionMutationOptions(
       options,
     )
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Compute deterministic projection points, metrics, ranges, and milestones for a validated scenario.
+ */
+export const projectionControllerCompute = (
+  projectionComputeRequest: ProjectionComputeRequest,
+  signal?: AbortSignal,
+) => {
+  return axios<ProjectionResult>({
+    url: `/projection/compute`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: projectionComputeRequest,
+    signal,
+  })
+}
+
+export const getProjectionControllerComputeMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof projectionControllerCompute>>,
+    TError,
+    { data: ProjectionComputeRequest },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof projectionControllerCompute>>,
+  TError,
+  { data: ProjectionComputeRequest },
+  TContext
+> => {
+  const mutationKey = ['projectionControllerCompute']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof projectionControllerCompute>>,
+    { data: ProjectionComputeRequest }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return projectionControllerCompute(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type ProjectionControllerComputeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof projectionControllerCompute>>
+>
+export type ProjectionControllerComputeMutationBody = ProjectionComputeRequest
+export type ProjectionControllerComputeMutationError = void
+
+export const useProjectionControllerCompute = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof projectionControllerCompute>>,
+      TError,
+      { data: ProjectionComputeRequest },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof projectionControllerCompute>>,
+  TError,
+  { data: ProjectionComputeRequest },
+  TContext
+> => {
+  const mutationOptions = getProjectionControllerComputeMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Generate a typed projection plan from a natural-language prompt, then compute deterministic projection results.
+ */
+export const projectionControllerPlan = (
+  projectionPlanRequest: ProjectionPlanRequest,
+  signal?: AbortSignal,
+) => {
+  return axios<ProjectionPlanResponse>({
+    url: `/projection/plan`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: projectionPlanRequest,
+    signal,
+  })
+}
+
+export const getProjectionControllerPlanMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof projectionControllerPlan>>,
+    TError,
+    { data: ProjectionPlanRequest },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof projectionControllerPlan>>,
+  TError,
+  { data: ProjectionPlanRequest },
+  TContext
+> => {
+  const mutationKey = ['projectionControllerPlan']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof projectionControllerPlan>>,
+    { data: ProjectionPlanRequest }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return projectionControllerPlan(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type ProjectionControllerPlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof projectionControllerPlan>>
+>
+export type ProjectionControllerPlanMutationBody = ProjectionPlanRequest
+export type ProjectionControllerPlanMutationError = void
+
+export const useProjectionControllerPlan = <TError = void, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof projectionControllerPlan>>,
+      TError,
+      { data: ProjectionPlanRequest },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof projectionControllerPlan>>,
+  TError,
+  { data: ProjectionPlanRequest },
+  TContext
+> => {
+  const mutationOptions = getProjectionControllerPlanMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }
