@@ -50,9 +50,12 @@ import type {
   CreateTransactionDto,
   InitiateLinkRequest,
   InitiateLinkResponse,
+  InvestmentControllerFindActivityForAccountParams,
+  InvestmentControllerFindActivityParams,
   InvestmentControllerFindHoldingsForAccountOnDateParams,
   InvestmentHoldingsResponse,
   NotificationControllerGetCurrentSubscriptionStatusParams,
+  PaginatedInvestmentActivityResponse,
   PaginatedTransactionResponse,
   PersonalAccessToken,
   PushConfigResponse,
@@ -65,10 +68,8 @@ import type {
   TokenResponse,
   Transaction,
   TransactionAnalysisAuditResponse,
-  TransactionAnalysisBalanceAdjustmentsResponse,
   TransactionAnalysisControllerGetAnalysisParams,
   TransactionAnalysisControllerGetAuditParams,
-  TransactionAnalysisControllerGetBalanceAdjustmentsParams,
   TransactionAnalysisControllerGetTransactionsParams,
   TransactionAnalysisResponse,
   TransactionAnalysisTransactionsResponse,
@@ -3378,6 +3379,91 @@ export const useBankLinkControllerSyncAllInvestmentHoldings = <
 }
 
 /**
+ * Sync investment transactions for all bank links that support investment activity. Use this to backfill best-effort investment transaction history for existing Plaid links.
+ */
+export const bankLinkControllerSyncAllInvestmentTransactions = (
+  signal?: AbortSignal,
+) => {
+  return axios<void>({
+    url: `/bank-link/sync-all-investment-transactions`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getBankLinkControllerSyncAllInvestmentTransactionsMutationOptions =
+  <TError = unknown, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof bankLinkControllerSyncAllInvestmentTransactions>
+      >,
+      TError,
+      void,
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<ReturnType<typeof bankLinkControllerSyncAllInvestmentTransactions>>,
+    TError,
+    void,
+    TContext
+  > => {
+    const mutationKey = ['bankLinkControllerSyncAllInvestmentTransactions']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof bankLinkControllerSyncAllInvestmentTransactions>
+      >,
+      void
+    > = () => {
+      return bankLinkControllerSyncAllInvestmentTransactions()
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type BankLinkControllerSyncAllInvestmentTransactionsMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof bankLinkControllerSyncAllInvestmentTransactions>>
+  >
+
+export type BankLinkControllerSyncAllInvestmentTransactionsMutationError =
+  unknown
+
+export const useBankLinkControllerSyncAllInvestmentTransactions = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof bankLinkControllerSyncAllInvestmentTransactions>
+      >,
+      TError,
+      void,
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof bankLinkControllerSyncAllInvestmentTransactions>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions =
+    getBankLinkControllerSyncAllInvestmentTransactionsMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
  * Update webhook URLs for all bank links to use current API_DOMAIN
  */
 export const bankLinkControllerUpdateWebhookUrls = (signal?: AbortSignal) => {
@@ -3452,6 +3538,362 @@ export const useBankLinkControllerUpdateWebhookUrls = <
     getBankLinkControllerUpdateWebhookUrlsMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Get investment activity for an account
+ */
+export const investmentControllerFindActivityForAccount = (
+  accountId: string,
+  params?: InvestmentControllerFindActivityForAccountParams,
+  signal?: AbortSignal,
+) => {
+  return axios<PaginatedInvestmentActivityResponse>({
+    url: `/investment/account/${accountId}/activity`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getInvestmentControllerFindActivityForAccountQueryKey = (
+  accountId?: string,
+  params?: InvestmentControllerFindActivityForAccountParams,
+) => {
+  return [
+    `/investment/account/${accountId}/activity`,
+    ...(params ? [params] : []),
+  ] as const
+}
+
+export const getInvestmentControllerFindActivityForAccountQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindActivityForAccount>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  params?: InvestmentControllerFindActivityForAccountParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerFindActivityForAccount>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getInvestmentControllerFindActivityForAccountQueryKey(accountId, params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof investmentControllerFindActivityForAccount>>
+  > = ({ signal }) =>
+    investmentControllerFindActivityForAccount(accountId, params, signal)
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!accountId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof investmentControllerFindActivityForAccount>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type InvestmentControllerFindActivityForAccountQueryResult = NonNullable<
+  Awaited<ReturnType<typeof investmentControllerFindActivityForAccount>>
+>
+export type InvestmentControllerFindActivityForAccountQueryError = unknown
+
+export function useInvestmentControllerFindActivityForAccount<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindActivityForAccount>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  params: undefined | InvestmentControllerFindActivityForAccountParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerFindActivityForAccount>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof investmentControllerFindActivityForAccount>
+          >,
+          TError,
+          Awaited<ReturnType<typeof investmentControllerFindActivityForAccount>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useInvestmentControllerFindActivityForAccount<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindActivityForAccount>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  params?: InvestmentControllerFindActivityForAccountParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerFindActivityForAccount>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof investmentControllerFindActivityForAccount>
+          >,
+          TError,
+          Awaited<ReturnType<typeof investmentControllerFindActivityForAccount>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useInvestmentControllerFindActivityForAccount<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindActivityForAccount>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  params?: InvestmentControllerFindActivityForAccountParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerFindActivityForAccount>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useInvestmentControllerFindActivityForAccount<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindActivityForAccount>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  params?: InvestmentControllerFindActivityForAccountParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerFindActivityForAccount>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getInvestmentControllerFindActivityForAccountQueryOptions(
+      accountId,
+      params,
+      options,
+    )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Get investment activity across investment accounts
+ */
+export const investmentControllerFindActivity = (
+  params?: InvestmentControllerFindActivityParams,
+  signal?: AbortSignal,
+) => {
+  return axios<PaginatedInvestmentActivityResponse>({
+    url: `/investment/activity`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getInvestmentControllerFindActivityQueryKey = (
+  params?: InvestmentControllerFindActivityParams,
+) => {
+  return [`/investment/activity`, ...(params ? [params] : [])] as const
+}
+
+export const getInvestmentControllerFindActivityQueryOptions = <
+  TData = Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+  TError = unknown,
+>(
+  params?: InvestmentControllerFindActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getInvestmentControllerFindActivityQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof investmentControllerFindActivity>>
+  > = ({ signal }) => investmentControllerFindActivity(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type InvestmentControllerFindActivityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof investmentControllerFindActivity>>
+>
+export type InvestmentControllerFindActivityQueryError = unknown
+
+export function useInvestmentControllerFindActivity<
+  TData = Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+  TError = unknown,
+>(
+  params: undefined | InvestmentControllerFindActivityParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+          TError,
+          Awaited<ReturnType<typeof investmentControllerFindActivity>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useInvestmentControllerFindActivity<
+  TData = Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+  TError = unknown,
+>(
+  params?: InvestmentControllerFindActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+          TError,
+          Awaited<ReturnType<typeof investmentControllerFindActivity>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useInvestmentControllerFindActivity<
+  TData = Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+  TError = unknown,
+>(
+  params?: InvestmentControllerFindActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useInvestmentControllerFindActivity<
+  TData = Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+  TError = unknown,
+>(
+  params?: InvestmentControllerFindActivityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerFindActivity>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getInvestmentControllerFindActivityQueryOptions(
+    params,
+    options,
+  )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
 }
 
 /**
@@ -6796,219 +7238,6 @@ export function useTransactionAnalysisControllerGetAudit<
     params,
     options,
   )
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> }
-
-  query.queryKey = queryOptions.queryKey
-
-  return query
-}
-
-/**
- * Get synthetic balance adjustment drilldown rows for an activity date range. The route only accepts BALANCE_ADJUSTMENT as the category filter and reuses the same snapshot-based adjustment pipeline as the summary endpoint.
- */
-export const transactionAnalysisControllerGetBalanceAdjustments = (
-  params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
-  signal?: AbortSignal,
-) => {
-  return axios<TransactionAnalysisBalanceAdjustmentsResponse>({
-    url: `/transaction-analysis/balance-adjustments`,
-    method: 'GET',
-    params,
-    signal,
-  })
-}
-
-export const getTransactionAnalysisControllerGetBalanceAdjustmentsQueryKey = (
-  params?: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
-) => {
-  return [
-    `/transaction-analysis/balance-adjustments`,
-    ...(params ? [params] : []),
-  ] as const
-}
-
-export const getTransactionAnalysisControllerGetBalanceAdjustmentsQueryOptions =
-  <
-    TData = Awaited<
-      ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-    >,
-    TError = void,
-  >(
-    params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
-    options?: {
-      query?: Partial<
-        UseQueryOptions<
-          Awaited<
-            ReturnType<
-              typeof transactionAnalysisControllerGetBalanceAdjustments
-            >
-          >,
-          TError,
-          TData
-        >
-      >
-    },
-  ) => {
-    const { query: queryOptions } = options ?? {}
-
-    const queryKey =
-      queryOptions?.queryKey ??
-      getTransactionAnalysisControllerGetBalanceAdjustmentsQueryKey(params)
-
-    const queryFn: QueryFunction<
-      Awaited<
-        ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-      >
-    > = ({ signal }) =>
-      transactionAnalysisControllerGetBalanceAdjustments(params, signal)
-
-    return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-      Awaited<
-        ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-      >,
-      TError,
-      TData
-    > & { queryKey: DataTag<QueryKey, TData, TError> }
-  }
-
-export type TransactionAnalysisControllerGetBalanceAdjustmentsQueryResult =
-  NonNullable<
-    Awaited<
-      ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-    >
-  >
-export type TransactionAnalysisControllerGetBalanceAdjustmentsQueryError = void
-
-export function useTransactionAnalysisControllerGetBalanceAdjustments<
-  TData = Awaited<
-    ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-  >,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof transactionAnalysisControllerGetBalanceAdjustments
-            >
-          >,
-          TError,
-          Awaited<
-            ReturnType<
-              typeof transactionAnalysisControllerGetBalanceAdjustments
-            >
-          >
-        >,
-        'initialData'
-      >
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-export function useTransactionAnalysisControllerGetBalanceAdjustments<
-  TData = Awaited<
-    ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-  >,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof transactionAnalysisControllerGetBalanceAdjustments
-            >
-          >,
-          TError,
-          Awaited<
-            ReturnType<
-              typeof transactionAnalysisControllerGetBalanceAdjustments
-            >
-          >
-        >,
-        'initialData'
-      >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-export function useTransactionAnalysisControllerGetBalanceAdjustments<
-  TData = Awaited<
-    ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-  >,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-        >,
-        TError,
-        TData
-      >
-    >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-
-export function useTransactionAnalysisControllerGetBalanceAdjustments<
-  TData = Awaited<
-    ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-  >,
-  TError = void,
->(
-  params: TransactionAnalysisControllerGetBalanceAdjustmentsParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof transactionAnalysisControllerGetBalanceAdjustments>
-        >,
-        TError,
-        TData
-      >
-    >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-} {
-  const queryOptions =
-    getTransactionAnalysisControllerGetBalanceAdjustmentsQueryOptions(
-      params,
-      options,
-    )
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,

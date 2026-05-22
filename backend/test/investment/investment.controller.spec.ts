@@ -18,11 +18,20 @@ const holdingsResponse = {
   holdings: [],
 };
 
+const activityResponse = {
+  data: [],
+  total: 0,
+  pageIndex: 0,
+  pageSize: 20,
+};
+
 describe('InvestmentController', () => {
   let controller: InvestmentController;
   const investmentService = {
     findLatestHoldingsForAccount: jest.fn(),
     findHoldingsForAccountOnDate: jest.fn(),
+    findActivityForAccount: jest.fn(),
+    findActivity: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -33,6 +42,10 @@ describe('InvestmentController', () => {
     investmentService.findHoldingsForAccountOnDate.mockResolvedValue(
       holdingsResponse,
     );
+    investmentService.findActivityForAccount.mockResolvedValue(
+      activityResponse,
+    );
+    investmentService.findActivity.mockResolvedValue(activityResponse);
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [InvestmentController],
@@ -75,6 +88,43 @@ describe('InvestmentController', () => {
     expect(result).toEqual(holdingsResponse);
   });
 
+  it('gets investment activity for the current user account with filters and pagination', async () => {
+    const query = {
+      startDate: '2026-05-01',
+      endDate: '2026-05-20',
+      type: 'buy',
+      subtype: 'buy',
+      pageIndex: 1,
+      pageSize: 10,
+    };
+
+    const result = await controller.findActivityForAccount(
+      currentUser,
+      accountId,
+      query,
+    );
+
+    expect(investmentService.findActivityForAccount).toHaveBeenCalledWith(
+      userId,
+      accountId,
+      query,
+    );
+    expect(result).toEqual(activityResponse);
+  });
+
+  it('gets investment activity across accounts', async () => {
+    const query = {
+      accountId,
+      pageIndex: 0,
+      pageSize: 20,
+    };
+
+    const result = await controller.findActivity(currentUser, query);
+
+    expect(investmentService.findActivity).toHaveBeenCalledWith(userId, query);
+    expect(result).toEqual(activityResponse);
+  });
+
   it('propagates cross-user account access denial from the service', async () => {
     investmentService.findLatestHoldingsForAccount.mockRejectedValueOnce(
       new NotFoundException(`Account with id ${accountId} not found`),
@@ -96,6 +146,18 @@ describe('InvestmentController', () => {
       Reflect.getMetadata(
         IS_PUBLIC_KEY,
         InvestmentController.prototype.findHoldingsForAccountOnDate,
+      ),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(
+        IS_PUBLIC_KEY,
+        InvestmentController.prototype.findActivityForAccount,
+      ),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(
+        IS_PUBLIC_KEY,
+        InvestmentController.prototype.findActivity,
       ),
     ).toBeUndefined();
   });

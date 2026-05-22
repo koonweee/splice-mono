@@ -160,6 +160,21 @@ export class BankLinkController {
     return this.bankLinkService.syncAllInvestmentHoldings(user.userId);
   }
 
+  @Post('sync-all-investment-transactions')
+  @ApiOperation({
+    description:
+      'Sync investment transactions for all bank links that support investment activity. Use this to backfill best-effort investment transaction history for existing Plaid links.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Returns counts of synced, skipped, and failed bank links',
+  })
+  async syncAllInvestmentTransactions(
+    @CurrentUser() user: JwtUser,
+  ): Promise<{ synced: number; failed: number; skipped: number }> {
+    return this.bankLinkService.syncAllInvestmentTransactions(user.userId);
+  }
+
   @Post('update-webhook-urls')
   @ApiOperation({
     description:

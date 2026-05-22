@@ -21,6 +21,7 @@ import {
   useAccountControllerUpdate,
 } from '../api/clients/spliceAPI'
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
+import { useInvestmentActivity } from '../hooks/useInvestmentActivity'
 import { useInvestmentHoldings } from '../hooks/useInvestmentHoldings'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
 import {
@@ -33,6 +34,7 @@ import { useIsMobile } from '../lib/hooks'
 import styles from './AccountModal.module.css'
 import { UpdateBalanceModal } from './accounts/UpdateBalanceModal'
 import { Chart } from './Chart'
+import { InvestmentActivityTable } from './investments/InvestmentActivityTable'
 import { InvestmentHoldingsTable } from './investments/InvestmentHoldingsTable'
 import type { TimePeriod } from '../lib/types'
 import type { AccountSummaryData } from '../lib/balance-utils'
@@ -76,6 +78,11 @@ export function AccountModal({
     isLoading: holdingsLoading,
     isError: holdingsError,
   } = useInvestmentHoldings(account?.id, opened && isInvestmentAccount)
+  const {
+    activity: investmentActivity,
+    isLoading: activityLoading,
+    isError: activityError,
+  } = useInvestmentActivity(account?.id, opened && isInvestmentAccount)
 
   // Get account from balance history if available
   const fullAccount = balanceHistory.latestBalance?.account
@@ -246,30 +253,52 @@ export function AccountModal({
                 </Box>
 
                 {isInvestmentAccount && (
-                  <Box mt="md">
-                    <Group justify="space-between" mb="sm">
-                      <Text fw={500}>Holdings</Text>
-                      {snapshotDate && (
-                        <Text size="xs" c="dimmed">
-                          {snapshotDate}
-                        </Text>
-                      )}
-                    </Group>
-                    {holdingsLoading ? (
-                      <Group justify="center" py="md">
-                        <Loader size="sm" />
+                  <Stack gap="md" mt="md">
+                    <Box>
+                      <Group justify="space-between" mb="sm">
+                        <Text fw={500}>Holdings</Text>
+                        {snapshotDate && (
+                          <Text size="xs" c="dimmed">
+                            {snapshotDate}
+                          </Text>
+                        )}
                       </Group>
-                    ) : holdingsError ? (
-                      <Text c="dimmed" size="sm">
-                        Holdings unavailable.
+                      {holdingsLoading ? (
+                        <Group justify="center" py="md">
+                          <Loader size="sm" />
+                        </Group>
+                      ) : holdingsError ? (
+                        <Text c="dimmed" size="sm">
+                          Holdings unavailable.
+                        </Text>
+                      ) : (
+                        <InvestmentHoldingsTable
+                          holdings={holdings}
+                          balancesHidden={balancesHidden}
+                        />
+                      )}
+                    </Box>
+
+                    <Box>
+                      <Text fw={500} mb="sm">
+                        Activity
                       </Text>
-                    ) : (
-                      <InvestmentHoldingsTable
-                        holdings={holdings}
-                        balancesHidden={balancesHidden}
-                      />
-                    )}
-                  </Box>
+                      {activityLoading ? (
+                        <Group justify="center" py="md">
+                          <Loader size="sm" />
+                        </Group>
+                      ) : activityError ? (
+                        <Text c="dimmed" size="sm">
+                          Provider activity is unavailable or incomplete.
+                        </Text>
+                      ) : (
+                        <InvestmentActivityTable
+                          activity={investmentActivity}
+                          balancesHidden={balancesHidden}
+                        />
+                      )}
+                    </Box>
+                  </Stack>
                 )}
               </>
             )}

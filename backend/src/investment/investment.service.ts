@@ -1,14 +1,22 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Not, Repository } from 'typeorm';
+import { AccountActivityService } from '../account-activity/account-activity.service';
 import { AccountEntity } from '../account/account.entity';
 import type {
+  InvestmentActivity,
+  InvestmentActivityQuery,
   InvestmentHoldingsResponse,
   InvestmentHoldingsSyncResult,
+  InvestmentTransactionsSyncResult,
+  PaginatedInvestmentActivityResponse,
   ProviderInvestmentHoldingsResponse,
+  ProviderInvestmentSecurity,
+  ProviderInvestmentTransactionsResponse,
 } from '../types/Investment';
 import { InvestmentHoldingSnapshotEntity } from './investment-holding-snapshot.entity';
 import { InvestmentSecurityEntity } from './investment-security.entity';
+import { InvestmentTransactionEntity } from './investment-transaction.entity';
 
 @Injectable()
 export class InvestmentService {
@@ -19,8 +27,11 @@ export class InvestmentService {
     private readonly securityRepository: Repository<InvestmentSecurityEntity>,
     @InjectRepository(InvestmentHoldingSnapshotEntity)
     private readonly holdingRepository: Repository<InvestmentHoldingSnapshotEntity>,
+    @InjectRepository(InvestmentTransactionEntity)
+    private readonly transactionRepository: Repository<InvestmentTransactionEntity>,
     @InjectRepository(AccountEntity)
     private readonly accountRepository: Repository<AccountEntity>,
+    private readonly accountActivityService: AccountActivityService,
   ) {}
 
   async upsertPlaidHoldings(
@@ -146,9 +157,165 @@ export class InvestmentService {
     };
   }
 
+  async upsertPlaidInvestmentTransactions(
+    userId: string,
+    accountIdMap: Map<string, string>,
+    response: ProviderInvestmentTransactionsResponse,
+  ): Promise<InvestmentTransactionsSyncResult> {
+    const securityMap = await this.upsertSecurities(userId, response);
+    const mappedAccountIds = response.externalAccountIds
+      .map((externalAccountId) => accountIdMap.get(externalAccountId))
+      .filter((accountId): accountId is string => !!accountId);
+
+    let transactionCount = 0;
+    let skippedMissingAccount = 0;
+
+    for (const providerTransaction of response.transactions) {
+      const accountId = accountIdMap.get(providerTransaction.externalAccountId);
+      if (!accountId) {
+        skippedMissingAccount++;
+        this.logger.warn(
+          {
+            externalAccountId: providerTransaction.externalAccountId,
+            externalActivityId: providerTransaction.externalActivityId,
+          },
+          'Skipping investment transaction without account mapping',
+        );
+        continue;
+      }
+
+      const securityId = providerTransaction.externalSecurityId
+        ? (securityMap.get(providerTransaction.externalSecurityId)?.id ?? null)
+        : null;
+
+      const activity = await this.accountActivityService.upsertExternal({
+        userId,
+        accountId,
+        provider: 'plaid',
+        externalActivityId: providerTransaction.externalActivityId,
+        activityKind: 'investment_transaction',
+        activityDate: providerTransaction.providerDate,
+        providerDate: providerTransaction.providerDate,
+        providerDatetime: providerTransaction.providerDatetime,
+        amount: providerTransaction.amount,
+      });
+
+      const existing = await this.transactionRepository.findOne({
+        where: {
+          userId,
+          activityId: activity.id,
+        },
+      });
+      const transaction =
+        existing ??
+        InvestmentTransactionEntity.fromProvider(
+          providerTransaction,
+          userId,
+          activity.id,
+          securityId,
+        );
+      if (existing) {
+        existing.applyProviderTransaction(providerTransaction, securityId);
+      }
+
+      await this.transactionRepository.save(transaction);
+      transactionCount++;
+    }
+
+    this.logger.log(
+      {
+        accountCount: mappedAccountIds.length,
+        securityCount: securityMap.size,
+        transactionCount,
+        skippedMissingAccount,
+      },
+      'Upserted investment transactions',
+    );
+
+    return {
+      accounts: mappedAccountIds.length,
+      securities: securityMap.size,
+      transactions: transactionCount,
+      skippedMissingAccount,
+    };
+  }
+
+  async findActivityForAccount(
+    userId: string,
+    accountId: string,
+    query: Omit<InvestmentActivityQuery, 'accountId'>,
+  ): Promise<PaginatedInvestmentActivityResponse> {
+    await this.ensureAccountOwned(userId, accountId);
+    return this.findActivity(userId, {
+      ...query,
+      accountId,
+    });
+  }
+
+  async findActivity(
+    userId: string,
+    query: InvestmentActivityQuery,
+  ): Promise<PaginatedInvestmentActivityResponse> {
+    if (query.accountId) {
+      await this.ensureAccountOwned(userId, query.accountId);
+    }
+
+    const queryBuilder = this.transactionRepository
+      .createQueryBuilder('investmentTransaction')
+      .leftJoinAndSelect('investmentTransaction.activity', 'activity')
+      .leftJoinAndSelect('activity.account', 'account')
+      .leftJoinAndSelect('investmentTransaction.security', 'security')
+      .where('investmentTransaction.userId = :userId', { userId })
+      .andWhere('activity.activityKind = :activityKind', {
+        activityKind: 'investment_transaction',
+      });
+
+    if (query.accountId) {
+      queryBuilder.andWhere('activity.accountId = :accountId', {
+        accountId: query.accountId,
+      });
+    }
+    if (query.startDate) {
+      queryBuilder.andWhere('activity.activityDate >= :startDate', {
+        startDate: query.startDate,
+      });
+    }
+    if (query.endDate) {
+      queryBuilder.andWhere('activity.activityDate <= :endDate', {
+        endDate: query.endDate,
+      });
+    }
+    if (query.type) {
+      queryBuilder.andWhere(
+        'investmentTransaction.investmentType = :investmentType',
+        { investmentType: query.type },
+      );
+    }
+    if (query.subtype) {
+      queryBuilder.andWhere(
+        'investmentTransaction.investmentSubtype = :investmentSubtype',
+        { investmentSubtype: query.subtype },
+      );
+    }
+
+    const [entities, total] = await queryBuilder
+      .orderBy('activity.activityDate', 'DESC')
+      .addOrderBy('activity.id', 'DESC')
+      .skip(query.pageIndex * query.pageSize)
+      .take(query.pageSize)
+      .getManyAndCount();
+
+    return {
+      data: entities.map((entity) => this.toInvestmentActivity(entity)),
+      total,
+      pageIndex: query.pageIndex,
+      pageSize: query.pageSize,
+    };
+  }
+
   private async upsertSecurities(
     userId: string,
-    response: ProviderInvestmentHoldingsResponse,
+    response: { securities: ProviderInvestmentSecurity[] },
   ): Promise<Map<string, InvestmentSecurityEntity>> {
     const uniqueSecurities = new Map(
       response.securities.map((security) => [
@@ -224,5 +391,33 @@ export class InvestmentService {
       throw new NotFoundException(`Account with id ${accountId} not found`);
     }
     return account;
+  }
+
+  private toInvestmentActivity(
+    entity: InvestmentTransactionEntity,
+  ): InvestmentActivity {
+    const account = entity.activity.account;
+    return {
+      id: entity.id,
+      activityId: entity.activityId,
+      accountId: entity.activity.accountId,
+      accountName: account?.customName ?? account?.name ?? null,
+      provider: entity.activity.provider as 'plaid',
+      externalActivityId: entity.activity.externalActivityId,
+      activityDate: entity.activity.activityDate,
+      providerDate: entity.activity.providerDate,
+      providerDatetime: entity.activity.providerDatetime,
+      amount: entity.activity.amount.toMoneyWithSign(),
+      security: entity.security?.toObject() ?? null,
+      externalSecurityId: entity.externalSecurityId,
+      name: entity.name,
+      providerDescription: entity.name,
+      quantity: entity.quantity,
+      price: entity.price,
+      fees: entity.fees,
+      investmentType: entity.investmentType,
+      investmentSubtype: entity.investmentSubtype,
+      cancelExternalActivityId: entity.cancelExternalActivityId,
+    };
   }
 }

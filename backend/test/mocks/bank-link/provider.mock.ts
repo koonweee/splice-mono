@@ -93,6 +93,36 @@ export const mockInvestmentHoldingsResponse = {
   ],
 };
 
+export const mockInvestmentTransactionsResponse = {
+  externalAccountIds: ['plaid-acc-123'],
+  startDate: '2024-05-20',
+  endDate: '2026-05-20',
+  securities: mockInvestmentHoldingsResponse.securities,
+  transactions: [
+    {
+      externalActivityId: 'investment-transaction-123',
+      externalAccountId: 'plaid-acc-123',
+      externalSecurityId: 'sec-123',
+      providerDate: '2026-05-20',
+      providerDatetime: null,
+      name: 'Buy VWRA',
+      quantity: '2',
+      amount: {
+        money: { currency: 'USD', amount: 12345 },
+        sign: MoneySign.NEGATIVE,
+      },
+      price: '61.725',
+      fees: '1.25',
+      investmentType: 'buy',
+      investmentSubtype: 'buy',
+      cancelExternalActivityId: null,
+      providerPayload: {
+        investment_transaction_id: 'investment-transaction-123',
+      },
+    },
+  ],
+};
+
 export const mockPlaidProvider: IBankLinkProvider = {
   providerName: 'plaid',
   initiateLinking: jest.fn(function (this: void) {
@@ -124,5 +154,8 @@ export const mockPlaidProvider: IBankLinkProvider = {
   }),
   syncInvestmentHoldings: jest.fn(function (this: void) {
     return Promise.resolve(mockInvestmentHoldingsResponse);
+  }),
+  syncInvestmentTransactions: jest.fn(function (this: void) {
+    return Promise.resolve(mockInvestmentTransactionsResponse);
   }),
 };

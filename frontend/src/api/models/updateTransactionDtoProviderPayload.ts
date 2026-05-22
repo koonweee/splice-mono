@@ -5,6 +5,10 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { BalanceAdjustment } from './balanceAdjustment'
 
-export type TransactionAnalysisBalanceAdjustmentsResponse = BalanceAdjustment[]
+/**
+ * @nullable
+ */
+export type UpdateTransactionDtoProviderPayload = {
+  [key: string]: unknown | null
+} | null

@@ -3,7 +3,6 @@ import type { CSSProperties } from 'react'
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
 export const UNCATEGORIZED_CATEGORY_COLOR = '#868e96'
-export const BALANCE_ADJUSTMENT_CATEGORY_COLOR = '#4c6ef5'
 
 const FALLBACK_COLORS = [
   '#845ef7',
@@ -44,10 +43,6 @@ export function generateCategoryColor(): string {
 export function getFallbackCategoryColor(category: string, index = 0): string {
   if (category === 'UNCATEGORIZED') {
     return UNCATEGORIZED_CATEGORY_COLOR
-  }
-
-  if (category === 'BALANCE_ADJUSTMENT') {
-    return BALANCE_ADJUSTMENT_CATEGORY_COLOR
   }
 
   return FALLBACK_COLORS[index % FALLBACK_COLORS.length]

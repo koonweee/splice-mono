@@ -1,15 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AccountType } from 'plaid';
 import { Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { AnalysisRuleService } from '../analysis-rule/analysis-rule.service';
-import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
-import {
-  BALANCE_ADJUSTMENT_CATEGORY_COLOR,
-  UNCATEGORIZED_CATEGORY_COLOR,
-} from '../category/category-color';
-import { calculateEffectiveBalance } from '../common/effective-balance';
+import { UNCATEGORIZED_CATEGORY_COLOR } from '../category/category-color';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import {
   getTransactionActivityDate,
@@ -21,7 +15,6 @@ import type { Transaction } from '../types/Transaction';
 import type {
   AnalysisAuditRow,
   AnalysisAuditTransaction,
-  BalanceAdjustment,
   CategoryAggregate,
   TransactionAnalysisAuditResponse,
   TransactionAnalysisResponse,
@@ -56,23 +49,6 @@ interface AnalysisRuleApplicationResult {
   auditRows: AnalysisAuditRow[];
 }
 
-interface SignedBalanceAmount {
-  amount: number;
-  currency: string;
-}
-
-interface BalanceAdjustmentRow {
-  accountId: string;
-  accountName: string;
-  flowDirection: 'inflow' | 'outflow';
-  sourceCurrency: string;
-  rawDeltaAmount: number;
-  startBalance: SignedBalanceAmount;
-  endBalance: SignedBalanceAmount;
-}
-
-const BALANCE_ADJUSTMENT_CATEGORY = 'BALANCE_ADJUSTMENT';
-
 @Injectable()
 export class TransactionAnalysisService {
   private readonly logger = new Logger(TransactionAnalysisService.name);
@@ -80,10 +56,6 @@ export class TransactionAnalysisService {
   constructor(
     @InjectRepository(TransactionEntity)
     private transactionRepository: Repository<TransactionEntity>,
-    @InjectRepository(AccountEntity)
-    private accountRepository: Repository<AccountEntity>,
-    @InjectRepository(BalanceSnapshotEntity)
-    private balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
     private currencyConversionService: CurrencyConversionService,
     private analysisRuleService: AnalysisRuleService,
     private userService: UserService,
@@ -109,7 +81,7 @@ export class TransactionAnalysisService {
 
     // 2. Load candidate transactions in the user lookaround window.
     // Out-of-range candidates can neutralize in-range rows, but never report
-    // directly or affect balance adjustment inputs.
+    // directly.
     const neutralizationLookaroundDays =
       await this.getNeutralizationLookaroundDays(userId);
     const { candidateStartDate, candidateEndDate } = this.getCandidateDateRange(
@@ -131,22 +103,12 @@ export class TransactionAnalysisService {
       startDate,
       endDate,
     );
-    const { balanceAdjustmentRows, balanceAdjustments } =
-      await this.getBalanceAdjustmentData(
-        startDate,
-        endDate,
-        userId,
-        preferredCurrency,
-        new Set(reportTransactions.map((transaction) => transaction.accountId)),
-      );
 
     this.logger.log(
       {
         candidateTransactionCount: candidateTransactions.length,
         reportTransactionCount: reportTransactions.length,
         unmatchedTransactionCount: remainingReportTransactions.length,
-        rawBalanceAdjustmentCount: balanceAdjustmentRows.length,
-        balanceAdjustmentCount: balanceAdjustments.length,
         preferredCurrency,
         neutralizationLookaroundDays,
       },
@@ -244,7 +206,6 @@ export class TransactionAnalysisService {
         rateMap,
       );
     });
-    this.appendBalanceAdjustments(balanceAdjustments, inflowMap, outflowMap);
 
     // 6. Build response arrays, sorted by totalAmount descending
     const inflows: CategoryAggregate[] = Array.from(inflowMap.entries())
@@ -289,7 +250,6 @@ export class TransactionAnalysisService {
       netFlow: totalInflow - totalOutflow,
       uncategorizedInflow,
       uncategorizedOutflow,
-      balanceAdjustments,
     };
   }
 
@@ -398,67 +358,6 @@ export class TransactionAnalysisService {
     };
   }
 
-  async getBalanceAdjustments(
-    startDate: string,
-    endDate: string,
-    categoryPrimary: string,
-    flowDirection: 'inflow' | 'outflow',
-    userId: string,
-  ): Promise<BalanceAdjustment[]> {
-    if (categoryPrimary !== BALANCE_ADJUSTMENT_CATEGORY) {
-      throw new BadRequestException(
-        `Unsupported categoryPrimary: ${categoryPrimary}`,
-      );
-    }
-
-    const preferredCurrency =
-      await this.currencyConversionService.getPreferredCurrency(userId);
-    const reportTransactions = await this.getAnalysisTransactionsInRange(
-      startDate,
-      endDate,
-      userId,
-    );
-    const { balanceAdjustments } = await this.getBalanceAdjustmentData(
-      startDate,
-      endDate,
-      userId,
-      preferredCurrency,
-      new Set(reportTransactions.map((transaction) => transaction.accountId)),
-    );
-
-    return balanceAdjustments.filter(
-      (adjustment) => adjustment.flowDirection === flowDirection,
-    );
-  }
-
-  private async getBalanceAdjustmentData(
-    startDate: string,
-    endDate: string,
-    userId: string,
-    preferredCurrency: string,
-    excludedAccountIds: Set<string>,
-  ): Promise<{
-    balanceAdjustmentRows: BalanceAdjustmentRow[];
-    balanceAdjustments: BalanceAdjustment[];
-  }> {
-    const balanceAdjustmentRows = await this.getBalanceAdjustmentRows(
-      startDate,
-      endDate,
-      userId,
-      excludedAccountIds,
-    );
-    const balanceAdjustments = await this.buildBalanceAdjustments(
-      balanceAdjustmentRows,
-      preferredCurrency,
-      endDate,
-    );
-
-    return {
-      balanceAdjustmentRows,
-      balanceAdjustments,
-    };
-  }
-
   private async getAnalysisTransactionsInRange(
     startDate: string,
     endDate: string,
@@ -466,9 +365,10 @@ export class TransactionAnalysisService {
   ): Promise<TransactionEntity[]> {
     return this.transactionRepository
       .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.account', 'account')
+      .leftJoinAndSelect('transaction.activity', 'activity')
+      .leftJoinAndSelect('activity.account', 'account')
       .leftJoinAndSelect('transaction.category', 'category')
-      .where('transaction.userId = :userId', { userId })
+      .where('activity.userId = :userId', { userId })
       .andWhere(
         `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
         {
@@ -477,204 +377,6 @@ export class TransactionAnalysisService {
         },
       )
       .getMany();
-  }
-
-  private async getBalanceAdjustmentRows(
-    startDate: string,
-    endDate: string,
-    userId: string,
-    excludedAccountIds: Set<string>,
-  ): Promise<BalanceAdjustmentRow[]> {
-    const accounts = await this.accountRepository.find({
-      where: { userId },
-    });
-    const eligibleAccounts = accounts.filter(
-      (account) =>
-        !excludedAccountIds.has(account.id) &&
-        account.type === String(AccountType.Depository),
-    );
-
-    if (eligibleAccounts.length === 0) {
-      return [];
-    }
-
-    const eligibleAccountIds = eligibleAccounts.map((account) => account.id);
-    const startSnapshots = await this.findLatestSnapshotsAtOrBefore(
-      eligibleAccountIds,
-      startDate,
-      userId,
-    );
-    const endSnapshots = await this.findLatestSnapshotsAtOrBefore(
-      eligibleAccountIds,
-      endDate,
-      userId,
-    );
-
-    const rawAdjustments: BalanceAdjustmentRow[] = [];
-    eligibleAccounts.forEach((account) => {
-      const startSnapshot = startSnapshots.get(account.id);
-      const endSnapshot = endSnapshots.get(account.id);
-
-      if (!startSnapshot || !endSnapshot) {
-        return;
-      }
-
-      const startBalance = this.getEffectiveBalanceAmount(
-        account,
-        startSnapshot,
-      );
-      const endBalance = this.getEffectiveBalanceAmount(account, endSnapshot);
-      if (startBalance.currency !== endBalance.currency) {
-        return;
-      }
-
-      const delta = endBalance.amount - startBalance.amount;
-      if (delta === 0) {
-        return;
-      }
-
-      rawAdjustments.push({
-        accountId: account.id,
-        accountName: this.getAccountName(account),
-        flowDirection: delta > 0 ? 'inflow' : 'outflow',
-        sourceCurrency: endBalance.currency,
-        rawDeltaAmount: Math.abs(delta),
-        startBalance,
-        endBalance,
-      });
-    });
-
-    return rawAdjustments
-      .sort((left, right) => this.compareBalanceAdjustmentRows(left, right))
-      .map((adjustment) => ({
-        accountId: adjustment.accountId,
-        accountName: adjustment.accountName,
-        flowDirection: adjustment.flowDirection,
-        sourceCurrency: adjustment.sourceCurrency,
-        rawDeltaAmount: adjustment.rawDeltaAmount,
-        startBalance: adjustment.startBalance,
-        endBalance: adjustment.endBalance,
-      }));
-  }
-
-  private async buildBalanceAdjustments(
-    balanceAdjustmentRows: BalanceAdjustmentRow[],
-    preferredCurrency: string,
-    endDate: string,
-  ): Promise<BalanceAdjustment[]> {
-    if (balanceAdjustmentRows.length === 0) {
-      return [];
-    }
-
-    const foreignCurrencies = [
-      ...new Set(
-        balanceAdjustmentRows
-          .map((adjustment) => adjustment.sourceCurrency)
-          .filter((currency) => currency !== preferredCurrency),
-      ),
-    ];
-    const rateMap = await this.currencyConversionService.getRateMap(
-      foreignCurrencies,
-      preferredCurrency,
-      endDate,
-    );
-
-    return balanceAdjustmentRows.flatMap((adjustment) => {
-      if (
-        adjustment.sourceCurrency !== preferredCurrency &&
-        !rateMap.has(adjustment.sourceCurrency)
-      ) {
-        return [];
-      }
-
-      return [
-        {
-          accountId: adjustment.accountId,
-          accountName: adjustment.accountName,
-          flowDirection: adjustment.flowDirection,
-          currency: preferredCurrency,
-          deltaAmount: this.convertAmountToPreferredCurrency(
-            adjustment.rawDeltaAmount,
-            adjustment.sourceCurrency,
-            preferredCurrency,
-            rateMap,
-          ),
-          startBalance: this.convertBalanceToPreferredCurrency(
-            adjustment.startBalance,
-            preferredCurrency,
-            rateMap,
-          ),
-          endBalance: this.convertBalanceToPreferredCurrency(
-            adjustment.endBalance,
-            preferredCurrency,
-            rateMap,
-          ),
-        },
-      ];
-    });
-  }
-
-  private async findLatestSnapshotsAtOrBefore(
-    accountIds: string[],
-    boundaryDate: string,
-    userId: string,
-  ): Promise<Map<string, BalanceSnapshotEntity>> {
-    if (accountIds.length === 0) {
-      return new Map();
-    }
-
-    const snapshots = await this.balanceSnapshotRepository
-      .createQueryBuilder('snapshot')
-      .distinctOn(['snapshot.accountId'])
-      .where('snapshot.accountId IN (:...accountIds)', { accountIds })
-      .andWhere('snapshot.userId = :userId', { userId })
-      .andWhere('snapshot.snapshotDate <= :boundaryDate', { boundaryDate })
-      .orderBy('snapshot.accountId')
-      .addOrderBy('snapshot.snapshotDate', 'DESC')
-      .getMany();
-
-    return new Map(
-      snapshots.map((snapshot) => [snapshot.accountId, snapshot] as const),
-    );
-  }
-
-  private getEffectiveBalanceAmount(
-    account: AccountEntity,
-    snapshot: BalanceSnapshotEntity,
-  ): SignedBalanceAmount {
-    const currentBalance = snapshot.currentBalance.toMoneyWithSign();
-    const effectiveBalance = calculateEffectiveBalance(currentBalance);
-
-    return {
-      amount:
-        effectiveBalance.sign === MoneySign.POSITIVE
-          ? effectiveBalance.money.amount
-          : -effectiveBalance.money.amount,
-      currency: effectiveBalance.money.currency,
-    };
-  }
-
-  private appendBalanceAdjustments(
-    balanceAdjustments: BalanceAdjustment[],
-    inflowMap: Map<string, { amount: number; count: number }>,
-    outflowMap: Map<string, { amount: number; count: number }>,
-  ): void {
-    balanceAdjustments.forEach((adjustment) => {
-      const targetMap =
-        adjustment.flowDirection === 'inflow' ? inflowMap : outflowMap;
-      const existing = targetMap.get(BALANCE_ADJUSTMENT_CATEGORY);
-
-      if (existing) {
-        existing.amount += adjustment.deltaAmount;
-        existing.count += 1;
-        return;
-      }
-
-      targetMap.set(BALANCE_ADJUSTMENT_CATEGORY, {
-        amount: adjustment.deltaAmount,
-        count: 1,
-      });
-    });
   }
 
   private neutralizeTransactions(transactions: TransactionEntity[]): {
@@ -1022,22 +724,6 @@ export class TransactionAnalysisService {
     );
   }
 
-  private convertBalanceToPreferredCurrency(
-    balance: SignedBalanceAmount,
-    preferredCurrency: string,
-    rateMap: Map<string, number>,
-  ): SignedBalanceAmount {
-    return {
-      amount: this.convertAmountToPreferredCurrency(
-        balance.amount,
-        balance.currency,
-        preferredCurrency,
-        rateMap,
-      ),
-      currency: preferredCurrency,
-    };
-  }
-
   private toTransactionWithConvertedAmount(
     transaction: TransactionEntity,
     preferredCurrency: string,
@@ -1165,18 +851,6 @@ export class TransactionAnalysisService {
     };
   }
 
-  private compareBalanceAdjustmentRows(
-    left: BalanceAdjustmentRow,
-    right: BalanceAdjustmentRow,
-  ): number {
-    const nameComparison = left.accountName.localeCompare(right.accountName);
-    if (nameComparison !== 0) {
-      return nameComparison;
-    }
-
-    return left.accountId.localeCompare(right.accountId);
-  }
-
   private getAmountInSmallestUnit(transaction: TransactionEntity): number {
     return typeof transaction.amount.amount === 'string'
       ? parseInt(transaction.amount.amount, 10)
@@ -1198,11 +872,7 @@ export class TransactionAnalysisService {
       return UNCATEGORIZED_CATEGORY_COLOR;
     }
 
-    if (category === BALANCE_ADJUSTMENT_CATEGORY) {
-      return BALANCE_ADJUSTMENT_CATEGORY_COLOR;
-    }
-
-    return BALANCE_ADJUSTMENT_CATEGORY_COLOR;
+    return UNCATEGORIZED_CATEGORY_COLOR;
   }
 
   private getActivityDate(transaction: TransactionEntity): string {

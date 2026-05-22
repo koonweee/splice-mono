@@ -41,6 +41,7 @@ describe('CategoryService', () => {
   };
 
   const mockTransactionQueryBuilder = {
+    leftJoin: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
     addSelect: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
@@ -119,6 +120,14 @@ describe('CategoryService', () => {
       transactionCount: 3,
       lastUsedAt: '2026-02-14',
     });
+    expect(mockTransactionQueryBuilder.leftJoin).toHaveBeenCalledWith(
+      'transaction.activity',
+      'activity',
+    );
+    expect(mockTransactionQueryBuilder.where).toHaveBeenCalledWith(
+      'activity."userId" = :userId',
+      { userId: mockUserId },
+    );
     expect(mockTransactionQueryBuilder.select).toHaveBeenCalledWith(
       'transaction."categoryId"',
       'categoryId',

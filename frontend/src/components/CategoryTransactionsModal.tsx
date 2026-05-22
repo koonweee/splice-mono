@@ -1,11 +1,7 @@
 import { Box, Group, Loader, Modal, Text } from '@mantine/core'
-import {
-  useTransactionAnalysisControllerGetBalanceAdjustments,
-  useTransactionAnalysisControllerGetTransactions,
-} from '../api/clients/spliceAPI'
+import { useTransactionAnalysisControllerGetTransactions } from '../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
-import { BalanceAdjustmentsTable } from './BalanceAdjustmentsTable'
 import { TransactionsTable } from './TransactionsTable'
 import { TransactionsMobileList } from './transactions/TransactionsMobileList'
 import styles from './CategoryTransactionsModal.module.css'
@@ -28,11 +24,8 @@ export function CategoryTransactionsModal({
   flowDirection,
 }: CategoryTransactionsModalProps) {
   const isMobile = useIsMobile()
-  const isBalanceAdjustment = categoryPrimary === 'BALANCE_ADJUSTMENT'
   const directionLabel = flowDirection === 'inflow' ? 'Inflows' : 'Outflows'
-  const title = isBalanceAdjustment
-    ? `Balance Adjustments (${directionLabel})`
-    : `${categoryPrimary ? formatPrimaryCategory(categoryPrimary) : 'Transactions'} Transactions (${directionLabel})`
+  const title = `${categoryPrimary ? formatPrimaryCategory(categoryPrimary) : 'Transactions'} Transactions (${directionLabel})`
 
   function TransactionsDrilldown() {
     const { data, isPending } = useTransactionAnalysisControllerGetTransactions(
@@ -85,47 +78,6 @@ export function CategoryTransactionsModal({
     )
   }
 
-  function BalanceAdjustmentsDrilldown() {
-    const { data, isPending } =
-      useTransactionAnalysisControllerGetBalanceAdjustments(
-        {
-          startDate,
-          endDate,
-          categoryPrimary: 'BALANCE_ADJUSTMENT',
-          flowDirection,
-        },
-        { query: { enabled: opened && isBalanceAdjustment } },
-      )
-
-    const balanceAdjustments = data ?? []
-
-    if (isPending) {
-      return (
-        <Group justify="center" py="xl">
-          <Loader />
-        </Group>
-      )
-    }
-
-    if (balanceAdjustments.length === 0) {
-      return (
-        <Text c="dimmed" ta="center" py="xl">
-          No transactions found.
-        </Text>
-      )
-    }
-
-    return (
-      <BalanceAdjustmentsTable
-        data={balanceAdjustments}
-        mantinePaperProps={{ className: styles.drilldownTablePaper }}
-        mantineTableContainerProps={{
-          className: styles.drilldownTableContainer,
-        }}
-      />
-    )
-  }
-
   return (
     <Modal
       opened={opened}
@@ -140,11 +92,7 @@ export function CategoryTransactionsModal({
       transitionProps={{ transition: 'fade', duration: 200 }}
     >
       <Box className={styles.drilldownBody}>
-        {isBalanceAdjustment ? (
-          <BalanceAdjustmentsDrilldown />
-        ) : (
-          <TransactionsDrilldown />
-        )}
+        <TransactionsDrilldown />
       </Box>
     </Modal>
   )

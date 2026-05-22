@@ -4,7 +4,10 @@ import type {
   LinkInitiationResponse,
   TransactionSyncResponse,
 } from '../../types/BankLink';
-import type { ProviderInvestmentHoldingsResponse } from '../../types/Investment';
+import type {
+  ProviderInvestmentHoldingsResponse,
+  ProviderInvestmentTransactionsResponse,
+} from '../../types/Investment';
 
 /**
  * Interface that all bank link providers must implement
@@ -149,4 +152,20 @@ export interface IBankLinkProvider {
   syncInvestmentHoldings?(
     authentication: Record<string, any>,
   ): Promise<ProviderInvestmentHoldingsResponse>;
+
+  /**
+   * Sync investment transactions from the provider.
+   * Optional - only implemented by providers that support investment
+   * transaction date-range history (e.g., Plaid /investments/transactions/get)
+   *
+   * @param authentication - Provider-specific authentication data
+   * @param startDate - Inclusive start date in YYYY-MM-DD format
+   * @param endDate - Inclusive end date in YYYY-MM-DD format
+   * @returns Normalized investment transactions and securities
+   */
+  syncInvestmentTransactions?(
+    authentication: Record<string, any>,
+    startDate: string,
+    endDate: string,
+  ): Promise<ProviderInvestmentTransactionsResponse>;
 }

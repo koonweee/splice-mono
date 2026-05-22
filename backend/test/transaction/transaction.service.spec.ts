@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AccountEntity } from '../../src/account/account.entity';
+import { AccountActivityEntity } from '../../src/account-activity/account-activity.entity';
 import { CategoryEntity } from '../../src/category/category.entity';
 import { CategoryService } from '../../src/category/category.service';
 import { BalanceColumns } from '../../src/common/balance.columns';
@@ -123,9 +124,13 @@ describe('TransactionService', () => {
     find: jest.fn(),
     createQueryBuilder: jest.fn(),
     delete: jest.fn(),
+    remove: jest.fn(),
     manager: {
       transaction: jest.fn(),
     },
+  };
+  const accountActivityRepository = {
+    delete: jest.fn().mockResolvedValue({ affected: 1 }),
   };
   const categoryRepository = {
     find: jest.fn(),
@@ -151,6 +156,14 @@ describe('TransactionService', () => {
       accountRepository as never,
       categoryService as unknown as CategoryService,
       eventEmitter as unknown as EventEmitter2,
+    );
+    repository.manager.transaction.mockImplementation(async (callback) =>
+      callback({
+        getRepository: (entity: unknown) =>
+          entity === AccountActivityEntity
+            ? accountActivityRepository
+            : repository,
+      }),
     );
     repository.save.mockImplementation(async (entity: TransactionEntity) => {
       entity.id = entity.id ?? '00000000-0000-4000-8000-000000000201';
@@ -322,8 +335,12 @@ describe('TransactionService', () => {
     );
 
     expect(repository.findOne).toHaveBeenCalledWith({
-      where: { id: manualTransaction.id, userId, source: 'manual' },
-      relations: ['account', 'category'],
+      where: {
+        id: manualTransaction.id,
+        source: 'manual',
+        activity: { userId },
+      },
+      relations: ['activity', 'activity.account', 'category'],
     });
     expect(updated?.source).toBe('manual');
     expect(manualTransaction.accountId).toBe(newAccount.id);
@@ -345,18 +362,25 @@ describe('TransactionService', () => {
   });
 
   it('deletes only manual transactions', async () => {
-    repository.delete.mockResolvedValueOnce({ affected: 1 });
+    const manualTransaction = buildTransaction({ source: 'manual' });
+    repository.findOne.mockResolvedValueOnce(manualTransaction);
 
     await expect(
       service.removeManual('00000000-0000-4000-8000-000000000200', userId),
     ).resolves.toBe(true);
-    expect(repository.delete).toHaveBeenCalledWith({
-      id: '00000000-0000-4000-8000-000000000200',
-      userId,
-      source: 'manual',
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: {
+        id: '00000000-0000-4000-8000-000000000200',
+        source: 'manual',
+        activity: { userId },
+      },
+      relations: ['activity', 'activity.account', 'category'],
+    });
+    expect(accountActivityRepository.delete).toHaveBeenCalledWith({
+      id: manualTransaction.activityId,
     });
 
-    repository.delete.mockResolvedValueOnce({ affected: 0 });
+    repository.findOne.mockResolvedValueOnce(null);
 
     await expect(
       service.removeManual('00000000-0000-4000-8000-000000000201', userId),
@@ -453,8 +477,8 @@ describe('TransactionService', () => {
       expect.objectContaining({
         where: {
           id: '00000000-0000-4000-8000-000000000200',
-          userId,
           source: 'provider',
+          activity: { userId },
         },
       }),
     );
@@ -463,16 +487,19 @@ describe('TransactionService', () => {
   });
 
   it('does not remove manual transactions through the generic provider remove path', async () => {
-    repository.delete.mockResolvedValueOnce({ affected: 0 });
+    repository.findOne.mockResolvedValueOnce(null);
 
     await expect(
       service.remove('00000000-0000-4000-8000-000000000200', userId),
     ).resolves.toBe(false);
 
-    expect(repository.delete).toHaveBeenCalledWith({
-      id: '00000000-0000-4000-8000-000000000200',
-      userId,
-      source: 'provider',
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: {
+        id: '00000000-0000-4000-8000-000000000200',
+        source: 'provider',
+        activity: { userId },
+      },
+      relations: ['activity', 'activity.account', 'category'],
     });
   });
 
@@ -567,7 +594,8 @@ describe('TransactionService', () => {
         },
       ),
       findOne: jest.fn(),
-      delete: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+      remove: jest.fn(),
     };
     repository.manager.transaction.mockImplementation(
       async (
@@ -639,7 +667,8 @@ describe('TransactionService', () => {
         },
       ),
       findOne: jest.fn().mockResolvedValue(pendingTransaction),
-      delete: jest.fn().mockResolvedValue({ affected: 0 }),
+      find: jest.fn().mockResolvedValue([]),
+      remove: jest.fn(),
     };
     repository.manager.transaction.mockImplementation(
       async (
@@ -671,11 +700,14 @@ describe('TransactionService', () => {
 
     expect(txnRepo.findOne).toHaveBeenCalledWith({
       where: {
-        externalTransactionId: 'pending-external-id',
-        accountId,
-        userId,
+        activity: {
+          externalActivityId: 'pending-external-id',
+          accountId,
+          userId,
+        },
         pending: true,
       },
+      relations: ['activity', 'activity.account', 'category'],
     });
     expect(saved).toHaveLength(1);
     expect(saved[0]).toBe(pendingTransaction);
@@ -694,12 +726,75 @@ describe('TransactionService', () => {
     expect(pendingTransaction.providerCategoryPrimary).toBeNull();
     expect(pendingTransaction.providerCategoryDetailed).toBeNull();
     expect(eventEmitter.emit).not.toHaveBeenCalled();
-    expect(txnRepo.delete).toHaveBeenCalledWith({
-      externalTransactionId: expect.any(Object),
-      accountId: expect.any(Object),
-      userId,
-      source: 'provider',
+    expect(txnRepo.find).toHaveBeenCalledWith({
+      where: {
+        activity: {
+          externalActivityId: expect.any(Object),
+          accountId: expect.any(Object),
+          userId,
+        },
+        source: 'provider',
+      },
+      relations: ['activity', 'activity.account', 'category'],
     });
+    expect(txnRepo.remove).not.toHaveBeenCalled();
+  });
+
+  it('sync removes account activity parents for provider removals', async () => {
+    const providerTransaction = buildTransaction({
+      source: 'provider',
+      externalTransactionId: 'removed-external-id',
+    });
+    const txnRepo = {
+      save: jest.fn(),
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([providerTransaction]),
+      remove: jest.fn(),
+    };
+    const activityRepo = {
+      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: {
+          getRepository: (
+            entity: unknown,
+          ) => typeof txnRepo | typeof activityRepo;
+        }) => unknown,
+      ) =>
+        callback({
+          getRepository: (entity: unknown) =>
+            entity === AccountActivityEntity ? activityRepo : txnRepo,
+        }),
+    );
+
+    await service.processSyncResults(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      {
+        added: [],
+        modified: [],
+        removed: ['removed-external-id'],
+        nextCursor: 'cursor',
+        hasMore: false,
+      },
+    );
+
+    expect(txnRepo.find).toHaveBeenCalledWith({
+      where: {
+        activity: {
+          externalActivityId: expect.any(Object),
+          accountId: expect.any(Object),
+          userId,
+        },
+        source: 'provider',
+      },
+      relations: ['activity', 'activity.account', 'category'],
+    });
+    expect(activityRepo.delete).toHaveBeenCalledWith({
+      id: expect.any(Object),
+    });
+    expect(txnRepo.remove).not.toHaveBeenCalled();
   });
 
   it('sync emits one event for provider rows inserted from missing modified transactions', async () => {
@@ -715,7 +810,8 @@ describe('TransactionService', () => {
         return entity;
       }),
       findOne: jest.fn().mockResolvedValue(null),
-      delete: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+      remove: jest.fn(),
     };
     repository.manager.transaction.mockImplementation(
       async (

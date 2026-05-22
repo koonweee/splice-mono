@@ -516,11 +516,12 @@ export class McpReadService {
   ): SelectQueryBuilder<TransactionEntity> {
     const query = this.transactionRepository
       .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.account', 'account')
+      .leftJoinAndSelect('transaction.activity', 'activity')
+      .leftJoinAndSelect('activity.account', 'account')
       .leftJoinAndSelect('account.bankLink', 'bankLink')
       .leftJoinAndSelect('transaction.category', 'category')
       .addSelect(TRANSACTION_ACTIVITY_DATE_EXPRESSION, ACTIVITY_DATE_SORT_ALIAS)
-      .where('transaction.userId = :userId', { userId })
+      .where('activity.userId = :userId', { userId })
       .orderBy(ACTIVITY_DATE_SORT_ALIAS, 'DESC')
       .addOrderBy('transaction.id', 'DESC');
 
@@ -535,7 +536,7 @@ export class McpReadService {
       });
     }
     if (options.accountIds?.length) {
-      query.andWhere('transaction.accountId IN (:...accountIds)', {
+      query.andWhere('activity.accountId IN (:...accountIds)', {
         accountIds: options.accountIds,
       });
     }
@@ -723,10 +724,11 @@ export class McpReadService {
   ): Promise<Map<string, number>> {
     const query = this.transactionRepository
       .createQueryBuilder('transaction')
+      .leftJoin('transaction.activity', 'activity')
       .leftJoin('transaction.category', 'category')
       .select('COALESCE(category.primary, :uncategorized)', 'primary')
       .addSelect('COUNT(transaction.id)', 'count')
-      .where('transaction.userId = :userId', { userId })
+      .where('activity.userId = :userId', { userId })
       .setParameter('uncategorized', 'UNCATEGORIZED')
       .groupBy('COALESCE(category.primary, :uncategorized)');
 

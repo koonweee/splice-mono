@@ -24,9 +24,7 @@ describe('category color helpers', () => {
 
   it('returns stable fallback colors for invalid or missing values', () => {
     expect(getDisplayCategoryColor(null, 'UNCATEGORIZED')).toBe('#868e96')
-    expect(getDisplayCategoryColor('nope', 'BALANCE_ADJUSTMENT')).toBe(
-      '#4c6ef5',
-    )
+    expect(getDisplayCategoryColor('nope', 'Travel', 1)).toBe('#339af0')
   })
 
   it('builds contrast-aware styles and generated colors', () => {

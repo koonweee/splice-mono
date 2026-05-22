@@ -9,6 +9,7 @@ import type { MoneyWithSign } from './moneyWithSign'
 import type { UpdateTransactionDtoCounterpartiesItem } from './updateTransactionDtoCounterpartiesItem'
 import type { UpdateTransactionDtoLocation } from './updateTransactionDtoLocation'
 import type { UpdateTransactionDtoPaymentMeta } from './updateTransactionDtoPaymentMeta'
+import type { UpdateTransactionDtoProviderPayload } from './updateTransactionDtoProviderPayload'
 import type { UpdateTransactionDtoPersonalFinanceCategory } from './updateTransactionDtoPersonalFinanceCategory'
 
 export interface UpdateTransactionDto {
@@ -47,6 +48,8 @@ export interface UpdateTransactionDto {
   location?: UpdateTransactionDtoLocation
   /** @nullable */
   paymentMeta?: UpdateTransactionDtoPaymentMeta
+  /** @nullable */
+  providerPayload?: UpdateTransactionDtoProviderPayload
   providerDate?: string
   /** @nullable */
   providerDatetime?: string | null

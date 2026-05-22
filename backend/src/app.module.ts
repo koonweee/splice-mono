@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import type { DestinationStream } from 'pino';
+import { AccountActivityModule } from './account-activity/account-activity.module';
 import { AccountModule } from './account/account.module';
 import { AnalysisRuleModule } from './analysis-rule/analysis-rule.module';
 import { AuthModule } from './auth/auth.module';
@@ -93,6 +94,7 @@ import { UserModule } from './user/user.module';
     }),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
+    AccountActivityModule,
     AuthModule,
     AccountModule,
     AnalysisRuleModule,

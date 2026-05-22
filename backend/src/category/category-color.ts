@@ -3,7 +3,6 @@ import { randomInt } from 'crypto';
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 export const UNCATEGORIZED_CATEGORY_COLOR = '#868e96';
-export const BALANCE_ADJUSTMENT_CATEGORY_COLOR = '#4c6ef5';
 
 export function isCategoryColor(value: string): boolean {
   return HEX_COLOR_PATTERN.test(value.trim());

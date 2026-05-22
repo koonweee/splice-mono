@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { CategoryColorSchema } from './Category';
-import { MoneySignSchema, MoneySchema } from './MoneyWithSign';
+import { MoneySignSchema } from './MoneyWithSign';
 import { TransactionSchema } from './Transaction';
 
 /**
@@ -53,50 +53,6 @@ export const CategoryAggregateSchema = registerSchema(
 );
 export type CategoryAggregate = z.infer<typeof CategoryAggregateSchema>;
 
-export const BalanceAdjustmentFlowDirectionSchema = registerSchema(
-  'BalanceAdjustmentFlowDirection',
-  z.enum(['inflow', 'outflow']),
-);
-export type BalanceAdjustmentFlowDirection = z.infer<
-  typeof BalanceAdjustmentFlowDirectionSchema
->;
-
-export const BalanceAdjustmentSchema = registerSchema(
-  'BalanceAdjustment',
-  z.object({
-    accountId: z.string(),
-    accountName: z.string(),
-    flowDirection: BalanceAdjustmentFlowDirectionSchema,
-    currency: z.string(),
-    deltaAmount: z.number(),
-    startBalance: MoneySchema,
-    endBalance: MoneySchema,
-  }),
-);
-export type BalanceAdjustment = z.infer<typeof BalanceAdjustmentSchema>;
-
-export const TransactionAnalysisBalanceAdjustmentsQuerySchema = registerSchema(
-  'TransactionAnalysisBalanceAdjustmentsQuery',
-  z.object({
-    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
-    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
-    categoryPrimary: z.literal('BALANCE_ADJUSTMENT'),
-    flowDirection: BalanceAdjustmentFlowDirectionSchema,
-  }),
-);
-export type TransactionAnalysisBalanceAdjustmentsQuery = z.infer<
-  typeof TransactionAnalysisBalanceAdjustmentsQuerySchema
->;
-
-export const TransactionAnalysisBalanceAdjustmentsResponseSchema =
-  registerSchema(
-    'TransactionAnalysisBalanceAdjustmentsResponse',
-    z.array(BalanceAdjustmentSchema),
-  );
-export type TransactionAnalysisBalanceAdjustmentsResponse = z.infer<
-  typeof TransactionAnalysisBalanceAdjustmentsResponseSchema
->;
-
 /**
  * Full response for the transaction analysis endpoint
  */
@@ -123,8 +79,6 @@ export const TransactionAnalysisResponseSchema = registerSchema(
     uncategorizedInflow: z.number(),
     /** Uncategorized outflow amount (in smallest unit) */
     uncategorizedOutflow: z.number(),
-    /** Synthetic balance-based adjustments that contributed to the summary */
-    balanceAdjustments: z.array(BalanceAdjustmentSchema),
   }),
 );
 export type TransactionAnalysisResponse = z.infer<

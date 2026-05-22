@@ -6,6 +6,7 @@ import {
   CountryCode,
   DefaultUpdateWebhook,
   HoldingsDefaultUpdateWebhook,
+  InvestmentTransaction as PlaidInvestmentTransaction,
   ItemErrorWebhook,
   ItemLoginRepairedWebhook,
   ItemPublicTokenExchangeRequest,
@@ -33,6 +34,8 @@ import {
 import type {
   ProviderInvestmentHoldingsResponse,
   ProviderInvestmentSecurity,
+  ProviderInvestmentTransaction,
+  ProviderInvestmentTransactionsResponse,
 } from '../../../types/Investment';
 import { MoneySign, MoneyWithSign } from '../../../types/MoneyWithSign';
 import type { CreateTransactionDto } from '../../../types/Transaction';
@@ -635,6 +638,103 @@ export class PlaidProvider implements IBankLinkProvider {
     }
   }
 
+  async syncInvestmentTransactions(
+    authentication: Record<string, any>,
+    startDate: string,
+    endDate: string,
+  ): Promise<ProviderInvestmentTransactionsResponse> {
+    if (!isPlaidAuthentication(authentication)) {
+      throw new Error('Missing or invalid accessToken in authentication data');
+    }
+    const { accessToken } = authentication;
+
+    const count = 500;
+    let offset = 0;
+    let total = 0;
+    const securities = new Map<string, ProviderInvestmentSecurity>();
+    const externalAccountIds = new Set<string>();
+    const transactions: ProviderInvestmentTransaction[] = [];
+
+    const startTime = Date.now();
+    this.logger.log(
+      { startDate, endDate },
+      'Fetching investment transactions from Plaid',
+    );
+
+    try {
+      do {
+        const response = await this.client.investmentsTransactionsGet({
+          access_token: accessToken,
+          start_date: startDate,
+          end_date: endDate,
+          options: {
+            count,
+            offset,
+          },
+        });
+
+        const {
+          accounts,
+          securities: pageSecurities,
+          investment_transactions,
+          total_investment_transactions,
+        } = response.data;
+
+        accounts.forEach((account) =>
+          externalAccountIds.add(account.account_id),
+        );
+        pageSecurities.forEach((security) => {
+          const mapped = this.mapPlaidSecurity(security);
+          securities.set(mapped.externalSecurityId, mapped);
+        });
+        transactions.push(
+          ...investment_transactions.map((transaction) =>
+            this.mapPlaidInvestmentTransactionToProvider(transaction),
+          ),
+        );
+
+        total = total_investment_transactions;
+        offset += investment_transactions.length;
+
+        this.logger.log(
+          {
+            pageCount: investment_transactions.length,
+            offset,
+            total,
+          },
+          'Fetched investment transaction page',
+        );
+        if (investment_transactions.length === 0) {
+          break;
+        }
+      } while (offset < total);
+
+      this.logger.log(
+        {
+          transactionCount: transactions.length,
+          securityCount: securities.size,
+          accountCount: externalAccountIds.size,
+          durationMs: Date.now() - startTime,
+        },
+        'Received investment transactions from Plaid',
+      );
+
+      return {
+        externalAccountIds: Array.from(externalAccountIds),
+        securities: Array.from(securities.values()),
+        transactions,
+        startDate,
+        endDate,
+      };
+    } catch (error) {
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        'Error fetching investment transactions from Plaid',
+      );
+      throw error;
+    }
+  }
+
   /**
    * Verify that a webhook is genuine and from Plaid
    *
@@ -1125,6 +1225,7 @@ export class PlaidProvider implements IBankLinkProvider {
         counterparties?.map((counterparty) => ({ ...counterparty })) ?? null,
       location: location ? { ...location } : null,
       paymentMeta: payment_meta ? { ...payment_meta } : null,
+      providerPayload: plaidTransaction as unknown as Record<string, unknown>,
       providerDate: date,
       providerDatetime: datetime ?? null,
       authorizedDate: authorized_date ?? null,
@@ -1159,6 +1260,38 @@ export class PlaidProvider implements IBankLinkProvider {
       marketIdentifierCode: security.market_identifier_code,
       sector: security.sector,
       industry: security.industry,
+    };
+  }
+
+  private mapPlaidInvestmentTransactionToProvider(
+    transaction: PlaidInvestmentTransaction,
+  ): ProviderInvestmentTransaction {
+    const currency =
+      transaction.iso_currency_code ??
+      transaction.unofficial_currency_code ??
+      'USD';
+    const invertedAmount = -transaction.amount;
+    const sign = invertedAmount >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
+
+    return {
+      externalActivityId: transaction.investment_transaction_id,
+      externalAccountId: transaction.account_id,
+      externalSecurityId: transaction.security_id,
+      providerDate: transaction.date,
+      providerDatetime: null,
+      name: transaction.name,
+      quantity: transaction.quantity.toString(),
+      amount: MoneyWithSign.fromFloat(
+        currency,
+        invertedAmount,
+        sign,
+      ).toSerialized(),
+      price: transaction.price.toString(),
+      fees: this.toDecimalString(transaction.fees),
+      investmentType: transaction.type,
+      investmentSubtype: transaction.subtype,
+      cancelExternalActivityId: transaction.cancel_transaction_id ?? null,
+      providerPayload: transaction as unknown as Record<string, unknown>,
     };
   }
 

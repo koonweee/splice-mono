@@ -9,6 +9,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { In, IsNull, Repository, SelectQueryBuilder } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
+import { AccountActivityEntity } from '../account-activity/account-activity.entity';
 import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
@@ -74,7 +75,7 @@ export class TransactionService extends OwnedCrudService<
   protected readonly logger = new Logger(TransactionService.name);
   protected readonly entityName = 'Transaction';
   protected readonly EntityClass = TransactionEntity;
-  protected readonly relations = ['account', 'category'];
+  protected readonly relations = ['activity', 'activity.account', 'category'];
 
   constructor(
     @InjectRepository(TransactionEntity)
@@ -154,6 +155,14 @@ export class TransactionService extends OwnedCrudService<
     if (dto.reportingDateOverride !== undefined) {
       entity.reportingDateOverride = dto.reportingDateOverride;
     }
+    this.syncActivityDate(entity);
+  }
+
+  private syncActivityDate(entity: TransactionEntity): void {
+    entity.activity.activityDate =
+      entity.reportingDateOverride ??
+      entity.authorizedDate ??
+      entity.providerDate;
   }
 
   async create(
@@ -188,7 +197,7 @@ export class TransactionService extends OwnedCrudService<
     this.logger.log({ id, userId }, `Updating ${this.entityName}`);
 
     const entity = await this.repository.findOne({
-      where: { id, userId, source: 'provider' },
+      where: { id, source: 'provider', activity: { userId } },
       relations: this.relations,
     });
 
@@ -303,6 +312,9 @@ export class TransactionService extends OwnedCrudService<
     category: CategoryEntity,
   ): void {
     entity.source = 'manual';
+    entity.activity.provider = 'manual';
+    entity.activity.activityKind = 'banking_transaction';
+    entity.activity.externalActivityId = null;
     entity.accountId = account.id;
     entity.account = account;
     entity.amount = this.buildManualAmount(dto, account);
@@ -331,6 +343,7 @@ export class TransactionService extends OwnedCrudService<
     entity.authorizedDate = null;
     entity.authorizedDatetime = null;
     entity.reportingDateOverride = null;
+    this.syncActivityDate(entity);
     this.applyCategorySelection(entity, category);
   }
 
@@ -373,7 +386,7 @@ export class TransactionService extends OwnedCrudService<
     this.logger.log({ id, userId }, 'Updating manual transaction');
 
     const entity = await this.repository.findOne({
-      where: { id, userId, source: 'manual' },
+      where: { id, source: 'manual', activity: { userId } },
       relations: this.relations,
     });
 
@@ -408,49 +421,51 @@ export class TransactionService extends OwnedCrudService<
   async removeManual(id: string, userId: string): Promise<boolean> {
     this.logger.log({ id, userId }, 'Removing manual transaction');
 
-    const result = await this.repository.delete({
-      id,
-      userId,
-      source: 'manual',
+    const entity = await this.repository.findOne({
+      where: { id, source: 'manual', activity: { userId } },
+      relations: this.relations,
     });
-    const success =
-      result.affected !== null &&
-      result.affected !== undefined &&
-      result.affected > 0;
-
-    if (!success) {
+    if (!entity) {
       this.logger.warn(
         { id, userId },
         'Manual transaction not found for removal',
       );
+      return false;
     }
 
-    return success;
+    await this.removeActivityCascade(entity);
+    return true;
   }
 
   async remove(id: string, userId: string): Promise<boolean> {
     this.logger.log({ id, userId }, 'Removing provider transaction');
 
-    const result = await this.repository.delete({
-      id,
-      userId,
-      source: 'provider',
+    const entity = await this.repository.findOne({
+      where: { id, source: 'provider', activity: { userId } },
+      relations: this.relations,
     });
-    const success =
-      result.affected !== null &&
-      result.affected !== undefined &&
-      result.affected > 0;
-
-    if (success) {
-      this.logger.log({ id }, 'Provider transaction removed');
-    } else {
+    if (!entity) {
       this.logger.warn(
         { id, userId },
         'Provider transaction not found for removal',
       );
+      return false;
     }
 
-    return success;
+    await this.removeActivityCascade(entity);
+    this.logger.log({ id }, 'Provider transaction removed');
+    return true;
+  }
+
+  async findOne(id: string, userId: string): Promise<Transaction | null> {
+    const entity = await this.repository.findOne({
+      where: {
+        id,
+        activity: { userId },
+      },
+      relations: this.relations,
+    });
+    return entity?.toObject() ?? null;
   }
 
   private buildProviderSyncUpdateDto(
@@ -565,7 +580,7 @@ export class TransactionService extends OwnedCrudService<
 
     let sortExpression = `transaction.${sortColumn}`;
     if (sortColumn === 'amount') {
-      sortExpression = 'transaction.amountAmount';
+      sortExpression = 'activity.amountAmount';
     } else if (sortColumn === 'activityDate') {
       sortExpression = ACTIVITY_DATE_SORT_ALIAS;
     }
@@ -622,11 +637,11 @@ export class TransactionService extends OwnedCrudService<
     } = options;
 
     if (accountId) {
-      query.andWhere('transaction.accountId = :accountId', { accountId });
+      query.andWhere('activity.accountId = :accountId', { accountId });
     }
     this.applyActivityDateFilters(query, startDate, endDate);
     if (amountSign === 'positive' || amountSign === 'negative') {
-      query.andWhere('transaction.amountSign = :amountSign', { amountSign });
+      query.andWhere('activity.amountSign = :amountSign', { amountSign });
     }
     if (categoryId) {
       if (categoryId === 'UNCATEGORIZED') {
@@ -653,9 +668,10 @@ export class TransactionService extends OwnedCrudService<
   ): SelectQueryBuilder<TransactionEntity> {
     const query = this.repository
       .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.account', 'account')
+      .leftJoinAndSelect('transaction.activity', 'activity')
+      .leftJoinAndSelect('activity.account', 'account')
       .leftJoinAndSelect('transaction.category', 'category')
-      .where('transaction.userId = :userId', { userId });
+      .where('activity.userId = :userId', { userId });
 
     this.applyQueryFilters(query, options);
 
@@ -753,7 +769,7 @@ export class TransactionService extends OwnedCrudService<
     userId: string,
   ): Promise<Transaction[]> {
     const entities = await this.repository.find({
-      where: { accountId, userId },
+      where: { activity: { accountId, userId } },
       relations: this.relations,
     });
     return entities.map((entity) => entity.toObject());
@@ -767,7 +783,7 @@ export class TransactionService extends OwnedCrudService<
     this.logger.log({ id, userId }, 'Updating transaction category');
 
     const entity = await this.repository.findOne({
-      where: { id, userId },
+      where: { id, activity: { userId } },
       relations: this.relations,
     });
 
@@ -812,7 +828,7 @@ export class TransactionService extends OwnedCrudService<
 
     const savedEntity = await this.repository.save(entity);
     const hydratedEntity = await this.repository.findOne({
-      where: { id: savedEntity.id, userId },
+      where: { id: savedEntity.id, activity: { userId } },
       relations: this.relations,
     });
 
@@ -852,7 +868,7 @@ export class TransactionService extends OwnedCrudService<
     return this.repository.manager.transaction(async (manager) => {
       const txnRepo = manager.getRepository(TransactionEntity);
       const entities = await txnRepo.find({
-        where: { id: In(transactionIds), userId },
+        where: { id: In(transactionIds), activity: { userId } },
         relations: this.relations,
       });
 
@@ -912,7 +928,7 @@ export class TransactionService extends OwnedCrudService<
     return this.repository.manager.transaction(async (manager) => {
       const txnRepo = manager.getRepository(TransactionEntity);
       const entities = await txnRepo.find({
-        where: { id: In(transactionIds), userId },
+        where: { id: In(transactionIds), activity: { userId } },
         relations: this.relations,
       });
 
@@ -1002,11 +1018,11 @@ export class TransactionService extends OwnedCrudService<
     });
 
     if (options.accountIds?.length === 1) {
-      query.andWhere('transaction.accountId = :accountId', {
+      query.andWhere('activity.accountId = :accountId', {
         accountId: options.accountIds[0],
       });
     } else if (options.accountIds && options.accountIds.length > 1) {
-      query.andWhere('transaction.accountId IN (:...accountIds)', {
+      query.andWhere('activity.accountId IN (:...accountIds)', {
         accountIds: options.accountIds,
       });
     }
@@ -1018,7 +1034,7 @@ export class TransactionService extends OwnedCrudService<
     }
 
     if (options.sign === 'positive' || options.sign === 'negative') {
-      query.andWhere('transaction.amountSign = :amountSign', {
+      query.andWhere('activity.amountSign = :amountSign', {
         amountSign: options.sign,
       });
     }
@@ -1122,11 +1138,14 @@ export class TransactionService extends OwnedCrudService<
           if (dto.pendingTransactionId) {
             matchedPending = await txnRepo.findOne({
               where: {
-                externalTransactionId: dto.pendingTransactionId,
-                accountId: internalAccountId,
-                userId,
+                activity: {
+                  externalActivityId: dto.pendingTransactionId,
+                  accountId: internalAccountId,
+                  userId,
+                },
                 pending: true,
               },
+              relations: this.relations,
             });
           }
 
@@ -1180,10 +1199,13 @@ export class TransactionService extends OwnedCrudService<
 
             const existing = await txnRepo.findOne({
               where: {
-                externalTransactionId: dto.externalTransactionId ?? undefined,
-                accountId: internalAccountId,
-                userId,
+                activity: {
+                  externalActivityId: dto.externalTransactionId ?? undefined,
+                  accountId: internalAccountId,
+                  userId,
+                },
               },
+              relations: this.relations,
             });
 
             if (!existing) {
@@ -1226,17 +1248,30 @@ export class TransactionService extends OwnedCrudService<
         // Get all internal account IDs for the removal query
         const internalAccountIds = [...accountIdMap.values()];
 
-        const deleteResult = await txnRepo.delete({
-          externalTransactionId: In(removed),
-          accountId: In(internalAccountIds),
-          userId,
-          source: 'provider',
+        const entitiesToRemove = await txnRepo.find({
+          where: {
+            activity: {
+              externalActivityId: In(removed),
+              accountId: In(internalAccountIds),
+              userId,
+            },
+            source: 'provider',
+          },
+          relations: this.relations,
         });
+        const activityIdsToRemove = entitiesToRemove.map(
+          (entity) => entity.activityId,
+        );
+        const activityRepo = manager.getRepository(AccountActivityEntity);
+        const deleteResult =
+          activityIdsToRemove.length > 0
+            ? await activityRepo.delete({ id: In(activityIdsToRemove) })
+            : { affected: 0 };
 
         this.logger.log(
           {
             requestedCount: removed.length,
-            deletedCount: deleteResult.affected,
+            deletedCount: deleteResult.affected ?? 0,
           },
           'Removed transactions',
         );
@@ -1266,5 +1301,15 @@ export class TransactionService extends OwnedCrudService<
     }
 
     this.logger.log({}, 'Transaction sync results processed successfully');
+  }
+
+  private async removeActivityCascade(
+    entity: TransactionEntity,
+  ): Promise<void> {
+    await this.repository.manager.transaction(async (manager) => {
+      await manager
+        .getRepository(AccountActivityEntity)
+        .delete({ id: entity.activityId });
+    });
   }
 }

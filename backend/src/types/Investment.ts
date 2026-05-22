@@ -1,5 +1,9 @@
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
+import {
+  MoneyWithSignSchema,
+  type SerializedMoneyWithSign,
+} from './MoneyWithSign';
 import { OwnedSchema } from './Timestamps';
 
 export const InvestmentProviderSchema = z.enum(['plaid']);
@@ -10,6 +14,7 @@ export const DateStringSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD');
 
 const NullableDecimalStringSchema = z.string().nullable();
+const ProviderJsonObjectSchema = z.record(z.string(), z.unknown());
 
 export const InvestmentSecuritySchema = registerSchema(
   'InvestmentSecurity',
@@ -68,6 +73,70 @@ export const InvestmentHoldingSnapshotSchema = registerSchema(
 
 export type InvestmentHoldingSnapshot = z.infer<
   typeof InvestmentHoldingSnapshotSchema
+>;
+
+export const InvestmentTransactionSchema = registerSchema(
+  'InvestmentTransaction',
+  z
+    .object({
+      id: z.string().uuid(),
+      activityId: z.string().uuid(),
+      securityId: z.string().uuid().nullable(),
+      externalSecurityId: z.string().nullable(),
+      name: z.string(),
+      quantity: z.string(),
+      price: z.string(),
+      fees: NullableDecimalStringSchema,
+      investmentType: z.string(),
+      investmentSubtype: z.string(),
+      cancelExternalActivityId: z.string().nullable(),
+      providerPayload: ProviderJsonObjectSchema.nullable(),
+    })
+    .merge(OwnedSchema),
+);
+
+export type InvestmentTransaction = z.infer<typeof InvestmentTransactionSchema>;
+
+export const InvestmentActivitySchema = registerSchema(
+  'InvestmentActivity',
+  z.object({
+    id: z.string().uuid(),
+    activityId: z.string().uuid(),
+    accountId: z.string().uuid(),
+    accountName: z.string().nullable(),
+    provider: InvestmentProviderSchema,
+    externalActivityId: z.string().nullable(),
+    activityDate: DateStringSchema,
+    providerDate: DateStringSchema,
+    providerDatetime: z.string().datetime().nullable(),
+    amount: MoneyWithSignSchema,
+    security: InvestmentSecuritySchema.nullable(),
+    externalSecurityId: z.string().nullable(),
+    name: z.string(),
+    providerDescription: z.string(),
+    quantity: z.string(),
+    price: z.string(),
+    fees: NullableDecimalStringSchema,
+    investmentType: z.string(),
+    investmentSubtype: z.string(),
+    cancelExternalActivityId: z.string().nullable(),
+  }),
+);
+
+export type InvestmentActivity = z.infer<typeof InvestmentActivitySchema>;
+
+export const PaginatedInvestmentActivityResponseSchema = registerSchema(
+  'PaginatedInvestmentActivityResponse',
+  z.object({
+    data: z.array(InvestmentActivitySchema),
+    total: z.number().int(),
+    pageIndex: z.number().int(),
+    pageSize: z.number().int(),
+  }),
+);
+
+export type PaginatedInvestmentActivityResponse = z.infer<
+  typeof PaginatedInvestmentActivityResponseSchema
 >;
 
 export const InvestmentHoldingsResponseSchema = registerSchema(
@@ -143,3 +212,52 @@ export type InvestmentHoldingsSyncResult = {
   holdings: number;
   deletedStaleHoldings: number;
 };
+
+export type ProviderInvestmentTransaction = {
+  externalActivityId: string;
+  externalAccountId: string;
+  externalSecurityId: string | null;
+  providerDate: string;
+  providerDatetime: string | null;
+  name: string;
+  quantity: string;
+  amount: SerializedMoneyWithSign;
+  price: string;
+  fees: string | null;
+  investmentType: string;
+  investmentSubtype: string;
+  cancelExternalActivityId: string | null;
+  providerPayload: Record<string, unknown>;
+};
+
+export type ProviderInvestmentTransactionsResponse = {
+  externalAccountIds: string[];
+  securities: ProviderInvestmentSecurity[];
+  transactions: ProviderInvestmentTransaction[];
+  startDate: string;
+  endDate: string;
+};
+
+export type InvestmentTransactionsSyncResult = {
+  accounts: number;
+  securities: number;
+  transactions: number;
+  skippedMissingAccount: number;
+};
+
+export const InvestmentActivityQuerySchema = registerSchema(
+  'InvestmentActivityQuery',
+  z.object({
+    accountId: z.string().uuid().optional(),
+    startDate: DateStringSchema.optional(),
+    endDate: DateStringSchema.optional(),
+    type: z.string().optional(),
+    subtype: z.string().optional(),
+    pageIndex: z.coerce.number().int().min(0).default(0),
+    pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  }),
+);
+
+export type InvestmentActivityQuery = z.infer<
+  typeof InvestmentActivityQuerySchema
+>;
