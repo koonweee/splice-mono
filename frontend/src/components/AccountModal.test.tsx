@@ -2,17 +2,28 @@ import { MantineProvider } from '@mantine/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AccountType, MoneyWithSignSign } from '../api/models'
+import {
+  AccountType,
+  InvestmentHoldingSnapshotProvider,
+  InvestmentSecurityProvider,
+  MoneyWithSignSign,
+} from '../api/models'
 import { TimePeriod } from '../lib/types'
 import { AccountModal } from './AccountModal'
-import type { Account, AccountBalanceResult } from '../api/models'
+import type {
+  Account,
+  AccountBalanceResult,
+  InvestmentHoldingSnapshot,
+} from '../api/models'
 import type { AccountSummaryData } from '../lib/balance-utils'
 import type * as BalanceDataHook from '../hooks/useBalanceData'
+import type * as InvestmentHoldingsHook from '../hooks/useInvestmentHoldings'
 import type * as SpliceAPI from '../api/clients/spliceAPI'
 
 const mockFns = vi.hoisted(() => ({
   mutateMock: vi.fn(),
   useAccountBalanceHistoryMock: vi.fn(),
+  useInvestmentHoldingsMock: vi.fn(),
   useAccountControllerUpdateMock: vi.fn(),
   notificationsShowMock: vi.fn(),
 }))
@@ -25,6 +36,17 @@ vi.mock('../hooks/useBalanceData', async () => {
   return {
     ...actual,
     useAccountBalanceHistory: mockFns.useAccountBalanceHistoryMock,
+  }
+})
+
+vi.mock('../hooks/useInvestmentHoldings', async () => {
+  const actual: typeof InvestmentHoldingsHook = await vi.importActual(
+    '../hooks/useInvestmentHoldings',
+  )
+
+  return {
+    ...actual,
+    useInvestmentHoldings: mockFns.useInvestmentHoldingsMock,
   }
 })
 
@@ -67,7 +89,59 @@ const accountSummary: AccountSummaryData = {
   effectiveBalance: createMoney(10000),
 }
 
-function createAccount(notes: string | null): Account {
+type AccountTypeValue = (typeof AccountType)[keyof typeof AccountType]
+
+const investmentHolding: InvestmentHoldingSnapshot = {
+  id: 'holding-id',
+  userId: 'user-id',
+  accountId: 'account-id',
+  securityId: 'security-id',
+  provider: InvestmentHoldingSnapshotProvider.plaid,
+  snapshotDate: '2026-05-20',
+  quantity: '10',
+  costBasis: '1000',
+  institutionPrice: '120.25',
+  institutionPriceAsOf: '2026-05-20',
+  institutionPriceDatetime: '2026-05-20T21:00:00Z',
+  institutionValue: '1202.5',
+  isoCurrencyCode: 'USD',
+  unofficialCurrencyCode: null,
+  vestedQuantity: null,
+  vestedValue: null,
+  createdAt: '2026-05-20T00:00:00.000Z',
+  updatedAt: '2026-05-20T00:00:00.000Z',
+  security: {
+    id: 'security-id',
+    userId: 'user-id',
+    provider: InvestmentSecurityProvider.plaid,
+    externalSecurityId: 'external-security-id',
+    institutionId: 'ins_123',
+    institutionSecurityId: null,
+    name: 'Vanguard FTSE All-World UCITS ETF',
+    tickerSymbol: 'VWRA',
+    isin: null,
+    cusip: null,
+    sedol: null,
+    type: 'etf',
+    subtype: 'etf',
+    isCashEquivalent: false,
+    closePrice: '120.25',
+    closePriceAsOf: '2026-05-20',
+    updateDatetime: '2026-05-20T21:00:00Z',
+    isoCurrencyCode: 'USD',
+    unofficialCurrencyCode: null,
+    marketIdentifierCode: null,
+    sector: null,
+    industry: null,
+    createdAt: '2026-05-20T00:00:00.000Z',
+    updatedAt: '2026-05-20T00:00:00.000Z',
+  },
+}
+
+function createAccount(
+  notes: string | null,
+  type: AccountTypeValue = AccountType.depository,
+): Account {
   return {
     id: 'account-id',
     userId: 'user-id',
@@ -77,7 +151,7 @@ function createAccount(notes: string | null): Account {
     mask: null,
     availableBalance: createMoney(10000),
     currentBalance: createMoney(10000),
-    type: AccountType.depository,
+    type,
     subType: null,
     externalAccountId: null,
     bankLinkId: 'bank-link-id',
@@ -98,8 +172,21 @@ function createLatestBalance(account: Account): AccountBalanceResult {
   }
 }
 
-function renderAccountModal(notes: string | null) {
-  const account = createAccount(notes)
+function renderAccountModal(
+  notes: string | null,
+  options: {
+    type?: AccountTypeValue
+    balancesHidden?: boolean
+    holdings?: Array<InvestmentHoldingSnapshot>
+    holdingsLoading?: boolean
+    holdingsError?: boolean
+  } = {},
+) {
+  const account = createAccount(notes, options.type)
+  const summary = {
+    ...accountSummary,
+    type: options.type ?? AccountType.depository,
+  }
 
   mockFns.useAccountBalanceHistoryMock.mockReturnValue({
     data: {
@@ -111,6 +198,12 @@ function renderAccountModal(notes: string | null) {
     isLoading: false,
     error: null,
   })
+  mockFns.useInvestmentHoldingsMock.mockReturnValue({
+    holdings: options.holdings ?? [],
+    snapshotDate: options.holdings?.length ? '2026-05-20' : null,
+    isLoading: options.holdingsLoading ?? false,
+    isError: options.holdingsError ?? false,
+  })
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -120,10 +213,11 @@ function renderAccountModal(notes: string | null) {
     <QueryClientProvider client={queryClient}>
       <MantineProvider>
         <AccountModal
-          account={accountSummary}
+          account={summary}
           opened
           onClose={vi.fn()}
           period={TimePeriod.month}
+          balancesHidden={options.balancesHidden ?? false}
         />
       </MantineProvider>
     </QueryClientProvider>,
@@ -143,6 +237,12 @@ beforeEach(() => {
     mutate: mockFns.mutateMock,
     isPending: false,
   })
+  mockFns.useInvestmentHoldingsMock.mockReturnValue({
+    holdings: [],
+    snapshotDate: null,
+    isLoading: false,
+    isError: false,
+  })
   mockFns.mutateMock.mockImplementation(({ data }, options) => {
     options?.onSuccess?.({
       ...createAccount(data.notes ?? null),
@@ -160,6 +260,15 @@ beforeEach(() => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
+    })),
+    configurable: true,
+  })
+
+  Object.defineProperty(window, 'ResizeObserver', {
+    value: vi.fn().mockImplementation(() => ({
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
     })),
     configurable: true,
   })
@@ -234,5 +343,56 @@ describe('AccountModal notes', () => {
       { id: 'account-id', data: { notes: null } },
       expect.any(Object),
     )
+  })
+})
+
+describe('AccountModal holdings', () => {
+  it('fetches and renders holdings for investment accounts', () => {
+    renderAccountModal(null, {
+      type: AccountType.investment,
+      holdings: [investmentHolding],
+    })
+
+    expect(mockFns.useInvestmentHoldingsMock).toHaveBeenCalledWith(
+      'account-id',
+      true,
+    )
+    expect(screen.getByText('Holdings')).toBeTruthy()
+    expect(
+      screen.getByText('Vanguard FTSE All-World UCITS ETF'),
+    ).toBeTruthy()
+    expect(screen.getByText('VWRA')).toBeTruthy()
+  })
+
+  it('does not enable holdings fetch for depository accounts', () => {
+    renderAccountModal(null)
+
+    expect(mockFns.useInvestmentHoldingsMock).toHaveBeenCalledWith(
+      'account-id',
+      false,
+    )
+    expect(screen.queryByText('Holdings')).toBeNull()
+  })
+
+  it('masks account and holding money values when balances are hidden', () => {
+    renderAccountModal(null, {
+      type: AccountType.investment,
+      balancesHidden: true,
+      holdings: [investmentHolding],
+    })
+
+    expect(screen.getByText('VWRA')).toBeTruthy()
+    expect(screen.getByText('10')).toBeTruthy()
+    expect(screen.getAllByText('****').length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('keeps balance history visible when holdings fail to load', () => {
+    renderAccountModal(null, {
+      type: AccountType.investment,
+      holdingsError: true,
+    })
+
+    expect(screen.getByText('Holdings unavailable.')).toBeTruthy()
+    expect(screen.getByText('Current Balance')).toBeTruthy()
   })
 })

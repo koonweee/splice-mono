@@ -14,6 +14,7 @@ const mockFns = vi.hoisted(() => ({
   useSearchMock: vi.fn(),
   useUserControllerMeMock: vi.fn(),
   useBalanceDataMock: vi.fn(),
+  accountModalMock: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', async () => {
@@ -54,7 +55,10 @@ vi.mock('../../hooks/useBalanceData', async () => {
 })
 
 vi.mock('../../components/AccountModal', () => ({
-  AccountModal: () => null,
+  AccountModal: (props: unknown) => {
+    mockFns.accountModalMock(props)
+    return null
+  },
 }))
 
 function createMoney(amount: number, currency = 'USD') {
@@ -236,6 +240,18 @@ describe('HomePage balance visibility', () => {
     expect(screen.getByText('$1,000.00')).toBeTruthy()
     expect(screen.getByText('$600.00')).toBeTruthy()
     expect(screen.getByText('$500.00')).toBeTruthy()
+  })
+
+  it('passes hidden balance preference into the account modal', () => {
+    window.localStorage.setItem(HOME_BALANCES_HIDDEN_STORAGE_KEY, 'true')
+
+    renderHomePage()
+
+    expect(mockFns.accountModalMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        balancesHidden: true,
+      }),
+    )
   })
 
   it('does not show archived accounts in dashboard account sections', () => {

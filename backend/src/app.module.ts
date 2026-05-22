@@ -18,6 +18,7 @@ import { CategoryModule } from './category/category.module';
 import { CurrencyExchangeModule } from './currency-exchange/currency-exchange.module';
 import { dataSourceOptions } from './data-source';
 import { HealthModule } from './health/health.module';
+import { InvestmentModule } from './investment/investment.module';
 import { createSeqStream } from './logging/create-seq-stream';
 import { McpModule } from './mcp/mcp.module';
 import { NotificationModule } from './notification/notification.module';
@@ -101,6 +102,7 @@ import { UserModule } from './user/user.module';
     CategoryModule,
     CurrencyExchangeModule,
     HealthModule,
+    InvestmentModule,
     McpModule,
     NotificationModule,
     TransactionAnalysisModule,

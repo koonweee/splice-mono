@@ -5,6 +5,7 @@ import { AccountEntity } from '../../src/account/account.entity';
 import { BankLinkEntity } from '../../src/bank-link/bank-link.entity';
 import { BankLinkService } from '../../src/bank-link/bank-link.service';
 import { ProviderRegistry } from '../../src/bank-link/providers/provider.registry';
+import { InvestmentService } from '../../src/investment/investment.service';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import { UserService } from '../../src/user/user.service';
 import { WebhookEventService } from '../../src/webhook-event/webhook-event.service';
@@ -25,6 +26,15 @@ const mockEventEmitter = {
 
 const mockTransactionService = {
   processSyncResults: jest.fn().mockResolvedValue(undefined),
+};
+
+const mockInvestmentService = {
+  upsertPlaidHoldings: jest.fn().mockResolvedValue({
+    accounts: 1,
+    securities: 1,
+    holdings: 1,
+    deletedStaleHoldings: 0,
+  }),
 };
 
 const mockUserId = 'user-uuid-123';
@@ -190,6 +200,10 @@ describe('BankLinkService', () => {
         {
           provide: TransactionService,
           useValue: mockTransactionService,
+        },
+        {
+          provide: InvestmentService,
+          useValue: mockInvestmentService,
         },
       ],
     }).compile();
@@ -945,6 +959,107 @@ describe('BankLinkService', () => {
       expect(mockPlaidProvider.getAccounts).not.toHaveBeenCalled();
     });
 
+    it('should sync investment holdings for HOLDINGS update webhook', async () => {
+      const providerName = 'plaid';
+      const updatePayload = {
+        webhook_type: 'HOLDINGS',
+        webhook_code: 'DEFAULT_UPDATE',
+        item_id: 'item-mock-123',
+      };
+
+      (mockPlaidProvider.parseUpdateWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'item-mock-123',
+        type: 'HOLDINGS',
+      });
+      mockAccountRepository.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 'account-id-0',
+            externalAccountId: 'plaid-acc-123',
+            userId: mockUserId,
+            bankLinkId: mockBankLinkEntity.id,
+          },
+        ]);
+      mockAccountRepository.findOne.mockResolvedValueOnce({
+        id: 'account-id-0',
+        type: 'investment',
+        userId: mockUserId,
+        bankLinkId: mockBankLinkEntity.id,
+      });
+
+      await service.handleWebhook(
+        providerName,
+        JSON.stringify(updatePayload),
+        mockHeaders,
+        updatePayload,
+      );
+
+      expect(mockPlaidProvider.syncInvestmentHoldings).toHaveBeenCalledWith(
+        mockBankLinkEntity.authentication,
+      );
+      expect(mockInvestmentService.upsertPlaidHoldings).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Map),
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        expect.objectContaining({
+          holdings: expect.any(Array) as unknown[],
+          securities: expect.any(Array) as unknown[],
+        }),
+      );
+    });
+
+    it('should skip investment holdings sync for HOLDINGS webhook when the item has no investment accounts', async () => {
+      const providerName = 'plaid';
+      const updatePayload = {
+        webhook_type: 'HOLDINGS',
+        webhook_code: 'DEFAULT_UPDATE',
+        item_id: 'item-mock-123',
+      };
+
+      (mockPlaidProvider.parseUpdateWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'item-mock-123',
+        type: 'HOLDINGS',
+      });
+      mockAccountRepository.find.mockResolvedValueOnce([]);
+      mockAccountRepository.findOne.mockResolvedValueOnce(null);
+
+      await service.handleWebhook(
+        providerName,
+        JSON.stringify(updatePayload),
+        mockHeaders,
+        updatePayload,
+      );
+
+      expect(mockPlaidProvider.syncInvestmentHoldings).not.toHaveBeenCalled();
+      expect(mockInvestmentService.upsertPlaidHoldings).not.toHaveBeenCalled();
+    });
+
+    it('should treat investment transaction webhooks as known no-ops', async () => {
+      const providerName = 'plaid';
+      const updatePayload = {
+        webhook_type: 'INVESTMENTS_TRANSACTIONS',
+        webhook_code: 'DEFAULT_UPDATE',
+        item_id: 'item-mock-123',
+      };
+
+      (mockPlaidProvider.parseUpdateWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'item-mock-123',
+        type: 'INVESTMENTS_TRANSACTIONS',
+      });
+
+      await service.handleWebhook(
+        providerName,
+        JSON.stringify(updatePayload),
+        mockHeaders,
+        updatePayload,
+      );
+
+      expect(mockPlaidProvider.getAccounts).not.toHaveBeenCalled();
+      expect(mockPlaidProvider.syncInvestmentHoldings).not.toHaveBeenCalled();
+      expect(mockTransactionService.processSyncResults).not.toHaveBeenCalled();
+    });
+
     it('should handle ERROR status webhook and update bank link status', async () => {
       const providerName = 'plaid';
       const errorPayload = {
@@ -1354,6 +1469,58 @@ describe('BankLinkService', () => {
 
       // Should still have results from the second successful sync
       expect(result).toBeDefined();
+    });
+  });
+
+  describe('syncAllInvestmentHoldings', () => {
+    beforeEach(() => {
+      mockBankLinkRepository.find.mockResolvedValue([mockBankLinkEntity]);
+      mockBankLinkRepository.findOne.mockResolvedValue(mockBankLinkEntity);
+      mockAccountRepository.findOne.mockResolvedValue({
+        id: 'account-id-0',
+        type: 'investment',
+        userId: mockUserId,
+        bankLinkId: mockBankLinkEntity.id,
+      });
+      mockAccountRepository.find.mockResolvedValue([
+        {
+          id: 'account-id-0',
+          externalAccountId: 'plaid-acc-123',
+          userId: mockUserId,
+          bankLinkId: mockBankLinkEntity.id,
+        },
+      ]);
+    });
+
+    it('should sync holdings for providers that support investments', async () => {
+      const result = await service.syncAllInvestmentHoldings(mockUserId);
+
+      expect(mockPlaidProvider.syncInvestmentHoldings).toHaveBeenCalledWith(
+        mockBankLinkEntity.authentication,
+      );
+      expect(mockInvestmentService.upsertPlaidHoldings).toHaveBeenCalled();
+      expect(result).toEqual({ synced: 1, failed: 0, skipped: 0 });
+    });
+
+    it('should skip providers without holdings support', async () => {
+      const originalSyncInvestmentHoldings =
+        mockPlaidProvider.syncInvestmentHoldings;
+      delete mockPlaidProvider.syncInvestmentHoldings;
+
+      const result = await service.syncAllInvestmentHoldings(mockUserId);
+
+      expect(result).toEqual({ synced: 0, failed: 0, skipped: 1 });
+      mockPlaidProvider.syncInvestmentHoldings = originalSyncInvestmentHoldings;
+    });
+
+    it('should skip provider calls when the bank link has no investment accounts', async () => {
+      mockAccountRepository.findOne.mockResolvedValueOnce(null);
+
+      const result = await service.syncAllInvestmentHoldings(mockUserId);
+
+      expect(mockPlaidProvider.syncInvestmentHoldings).not.toHaveBeenCalled();
+      expect(mockInvestmentService.upsertPlaidHoldings).not.toHaveBeenCalled();
+      expect(result).toEqual({ synced: 0, failed: 0, skipped: 1 });
     });
   });
 

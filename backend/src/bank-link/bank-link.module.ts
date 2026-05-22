@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountEntity } from 'src/account/account.entity';
 import { CryptoModule } from '../crypto/crypto.module';
+import { InvestmentModule } from '../investment/investment.module';
 import { TransactionModule } from '../transaction/transaction.module';
 import { UserModule } from '../user/user.module';
 import { WebhookEventModule } from '../webhook-event/webhook-event.module';
@@ -21,6 +22,7 @@ import { ProviderRegistry } from './providers/provider.registry';
   imports: [
     TypeOrmModule.forFeature([BankLinkEntity, AccountEntity]),
     WebhookEventModule,
+    InvestmentModule,
     UserModule, // For accessing user provider details
     TransactionModule, // For transaction sync processing
     CryptoModule.forRoot({

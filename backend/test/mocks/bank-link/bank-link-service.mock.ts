@@ -46,4 +46,7 @@ export const mockBankLinkService = {
   syncAllAccounts: jest.fn(function (this: void) {
     return Promise.resolve([]);
   }),
+  syncAllInvestmentHoldings: jest.fn(function (this: void) {
+    return Promise.resolve({ synced: 1, failed: 0, skipped: 0 });
+  }),
 };
