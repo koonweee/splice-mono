@@ -185,6 +185,36 @@ describe('InvestmentService', () => {
     expect(holdingRepository.save).toHaveBeenCalledWith(existingHolding);
   });
 
+  it('deduplicates repeated Plaid securities in the same response before upsert', async () => {
+    const duplicateResponse: ProviderInvestmentHoldingsResponse = {
+      ...providerResponse,
+      securities: [
+        providerResponse.securities[0],
+        {
+          ...providerResponse.securities[0],
+          closePrice: '121.000000000001',
+        },
+      ],
+    };
+
+    const result = await service.upsertPlaidHoldings(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      '2026-05-20',
+      duplicateResponse,
+    );
+
+    expect(securityRepository.save).toHaveBeenCalledTimes(1);
+    expect(securityRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        externalSecurityId: 'security-id',
+        closePrice: '121.000000000001',
+      }),
+    );
+    expect(result.securities).toBe(1);
+    expect(result.holdings).toBe(1);
+  });
+
   it('returns latest holdings scoped by user account ownership', async () => {
     const holding = buildHolding();
     holdingRepository.findOne.mockResolvedValueOnce(holding);
