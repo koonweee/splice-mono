@@ -438,10 +438,11 @@ export class CategoryService {
 
     const rows = await this.transactionRepository
       .createQueryBuilder('transaction')
+      .leftJoin('transaction.activity', 'activity')
       .select('transaction."categoryId"', 'categoryId')
       .addSelect('COUNT(*)', 'transactionCount')
       .addSelect(`MAX(${TRANSACTION_ACTIVITY_DATE_EXPRESSION})`, 'lastUsedAt')
-      .where('transaction."userId" = :userId', { userId })
+      .where('activity."userId" = :userId', { userId })
       .andWhere('transaction."categoryId" IN (:...categoryIds)', {
         categoryIds,
       })

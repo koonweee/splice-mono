@@ -1,15 +1,22 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { AccountActivityService } from '../../src/account-activity/account-activity.service';
 import { AccountEntity } from '../../src/account/account.entity';
 import { InvestmentHoldingSnapshotEntity } from '../../src/investment/investment-holding-snapshot.entity';
 import { InvestmentSecurityEntity } from '../../src/investment/investment-security.entity';
 import { InvestmentService } from '../../src/investment/investment.service';
-import type { ProviderInvestmentHoldingsResponse } from '../../src/types/Investment';
+import { InvestmentTransactionEntity } from '../../src/investment/investment-transaction.entity';
+import type {
+  ProviderInvestmentHoldingsResponse,
+  ProviderInvestmentTransactionsResponse,
+} from '../../src/types/Investment';
+import { MoneySign } from '../../src/types/MoneyWithSign';
 
 const userId = '11111111-1111-1111-1111-111111111111';
 const accountId = '22222222-2222-2222-2222-222222222222';
 const securityId = '33333333-3333-3333-3333-333333333333';
+const activityId = '55555555-5555-5555-5555-555555555555';
 
 const providerResponse: ProviderInvestmentHoldingsResponse = {
   externalAccountIds: ['external-account-id'],
@@ -54,6 +61,36 @@ const providerResponse: ProviderInvestmentHoldingsResponse = {
   ],
 };
 
+const providerTransactionResponse: ProviderInvestmentTransactionsResponse = {
+  externalAccountIds: ['external-account-id'],
+  startDate: '2026-01-01',
+  endDate: '2026-05-20',
+  securities: providerResponse.securities,
+  transactions: [
+    {
+      externalActivityId: 'investment-transaction-id',
+      externalAccountId: 'external-account-id',
+      externalSecurityId: 'security-id',
+      providerDate: '2026-05-20',
+      providerDatetime: null,
+      name: 'Buy VWRA',
+      quantity: '2',
+      amount: {
+        money: { currency: 'USD', amount: 12345 },
+        sign: MoneySign.NEGATIVE,
+      },
+      price: '61.725',
+      fees: '1.25',
+      investmentType: 'buy',
+      investmentSubtype: 'buy',
+      cancelExternalActivityId: null,
+      providerPayload: {
+        investment_transaction_id: 'investment-transaction-id',
+      },
+    },
+  ],
+};
+
 function buildSecurity(): InvestmentSecurityEntity {
   const security = InvestmentSecurityEntity.fromProvider(
     providerResponse.securities[0],
@@ -92,8 +129,16 @@ describe('InvestmentService', () => {
     save: jest.fn(),
     delete: jest.fn(),
   };
+  const transactionRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+    createQueryBuilder: jest.fn(),
+  };
   const accountRepository = {
     findOne: jest.fn(),
+  };
+  const accountActivityService = {
+    upsertExternal: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -118,7 +163,32 @@ describe('InvestmentService', () => {
       }),
     );
     holdingRepository.delete.mockResolvedValue({ affected: 0 });
+    transactionRepository.findOne.mockResolvedValue(null);
+    transactionRepository.save.mockImplementation(
+      async (transaction: InvestmentTransactionEntity) => ({
+        ...transaction,
+        id: transaction.id ?? '66666666-6666-6666-6666-666666666666',
+        createdAt: new Date('2026-05-20T00:00:00Z'),
+        updatedAt: new Date('2026-05-20T00:00:00Z'),
+      }),
+    );
     accountRepository.findOne.mockResolvedValue({ id: accountId, userId });
+    accountActivityService.upsertExternal.mockResolvedValue({
+      id: activityId,
+      accountId,
+      provider: 'plaid',
+      externalActivityId: 'investment-transaction-id',
+      activityKind: 'investment_transaction',
+      activityDate: '2026-05-20',
+      providerDate: '2026-05-20',
+      providerDatetime: null,
+      amount: {
+        toMoneyWithSign: () => ({
+          money: { currency: 'USD', amount: 12345 },
+          sign: MoneySign.NEGATIVE,
+        }),
+      },
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -132,8 +202,16 @@ describe('InvestmentService', () => {
           useValue: holdingRepository,
         },
         {
+          provide: getRepositoryToken(InvestmentTransactionEntity),
+          useValue: transactionRepository,
+        },
+        {
           provide: getRepositoryToken(AccountEntity),
           useValue: accountRepository,
+        },
+        {
+          provide: AccountActivityService,
+          useValue: accountActivityService,
         },
       ],
     }).compile();
@@ -238,5 +316,121 @@ describe('InvestmentService', () => {
     await expect(
       service.findLatestHoldingsForAccount(userId, accountId),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('upserts investment transactions through account activity', async () => {
+    const result = await service.upsertPlaidInvestmentTransactions(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      providerTransactionResponse,
+    );
+
+    expect(accountActivityService.upsertExternal).toHaveBeenCalledWith({
+      userId,
+      accountId,
+      provider: 'plaid',
+      externalActivityId: 'investment-transaction-id',
+      activityKind: 'investment_transaction',
+      activityDate: '2026-05-20',
+      providerDate: '2026-05-20',
+      providerDatetime: null,
+      amount: {
+        money: { currency: 'USD', amount: 12345 },
+        sign: MoneySign.NEGATIVE,
+      },
+    });
+    expect(transactionRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId,
+        activityId,
+        securityId,
+        externalSecurityId: 'security-id',
+        name: 'Buy VWRA',
+        quantity: '2',
+        price: '61.725',
+        fees: '1.25',
+        investmentType: 'buy',
+        investmentSubtype: 'buy',
+        providerPayload: {
+          investment_transaction_id: 'investment-transaction-id',
+        },
+      }),
+    );
+    expect(result).toEqual({
+      accounts: 1,
+      securities: 1,
+      transactions: 1,
+      skippedMissingAccount: 0,
+    });
+  });
+
+  it('updates an existing investment transaction detail for the same activity', async () => {
+    const existing = InvestmentTransactionEntity.fromProvider(
+      {
+        ...providerTransactionResponse.transactions[0],
+        name: 'Old Name',
+      },
+      userId,
+      activityId,
+      securityId,
+    );
+    existing.id = '66666666-6666-6666-6666-666666666666';
+    transactionRepository.findOne.mockResolvedValueOnce(existing);
+
+    await service.upsertPlaidInvestmentTransactions(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      providerTransactionResponse,
+    );
+
+    expect(transactionRepository.save).toHaveBeenCalledWith(existing);
+    expect(existing.name).toBe('Buy VWRA');
+  });
+
+  it('stores cash-only investment transactions without a security mapping', async () => {
+    const cashOnlyResponse: ProviderInvestmentTransactionsResponse = {
+      ...providerTransactionResponse,
+      securities: [],
+      transactions: [
+        {
+          ...providerTransactionResponse.transactions[0],
+          externalSecurityId: null,
+          investmentType: 'cash',
+          investmentSubtype: 'interest',
+        },
+      ],
+    };
+
+    await service.upsertPlaidInvestmentTransactions(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      cashOnlyResponse,
+    );
+
+    expect(transactionRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        securityId: null,
+        externalSecurityId: null,
+        investmentType: 'cash',
+        investmentSubtype: 'interest',
+      }),
+    );
+  });
+
+  it('skips investment transactions when provider account mapping is missing', async () => {
+    const result = await service.upsertPlaidInvestmentTransactions(
+      userId,
+      new Map(),
+      providerTransactionResponse,
+    );
+
+    expect(accountActivityService.upsertExternal).not.toHaveBeenCalled();
+    expect(transactionRepository.save).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      accounts: 0,
+      securities: 1,
+      transactions: 0,
+      skippedMissingAccount: 1,
+    });
   });
 });

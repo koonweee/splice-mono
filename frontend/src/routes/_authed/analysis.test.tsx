@@ -183,7 +183,6 @@ const analysisResponse: TransactionAnalysisResponse = {
   netFlow: 238000,
   uncategorizedInflow: 0,
   uncategorizedOutflow: 0,
-  balanceAdjustments: [],
 }
 
 beforeEach(() => {

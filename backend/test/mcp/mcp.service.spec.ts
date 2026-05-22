@@ -30,7 +30,6 @@ describe('SpliceMcpService', () => {
     getAnalysis: jest.fn(),
     getCategoryTransactions: jest.fn(),
     getAnalysisAudit: jest.fn(),
-    getBalanceAdjustments: jest.fn(),
   };
 
   let service: SpliceMcpService;
@@ -83,7 +82,6 @@ describe('SpliceMcpService', () => {
         'get_cashflow_analysis_audit',
         'get_user_context',
         'list_balance_snapshots',
-        'list_cashflow_balance_adjustments',
         'list_cashflow_category_transactions',
         'list_categories',
         'list_transactions',
@@ -391,17 +389,6 @@ describe('SpliceMcpService', () => {
       netFlow: 245800,
       uncategorizedInflow: 0,
       uncategorizedOutflow: 1200,
-      balanceAdjustments: [
-        {
-          accountId: mockAccountId,
-          accountName: 'Checking',
-          flowDirection: 'outflow',
-          currency: 'USD',
-          deltaAmount: 5000,
-          startBalance: { amount: 100000, currency: 'USD' },
-          endBalance: { amount: 95000, currency: 'USD' },
-        },
-      ],
     });
 
     const { client, close } = await connect(service.createServer(mockUserId));
@@ -421,7 +408,6 @@ describe('SpliceMcpService', () => {
         mockUserId,
       );
       expect(result.structuredContent).toMatchObject({
-        summaryIncludesBalanceAdjustments: true,
         totals: {
           totalInflow: {
             amount: 2500,
@@ -461,26 +447,6 @@ describe('SpliceMcpService', () => {
               amount: 42,
               currency: 'USD',
               sign: MoneySign.NEGATIVE,
-            },
-          },
-        ],
-        balanceAdjustments: [
-          {
-            accountId: mockAccountId,
-            deltaAmount: {
-              amount: 50,
-              currency: 'USD',
-              sign: MoneySign.NEGATIVE,
-            },
-            startBalance: {
-              amount: 1000,
-              currency: 'USD',
-              sign: MoneySign.POSITIVE,
-            },
-            endBalance: {
-              amount: 950,
-              currency: 'USD',
-              sign: MoneySign.POSITIVE,
             },
           },
         ],
@@ -544,70 +510,6 @@ describe('SpliceMcpService', () => {
         '2026-03-31',
         mockUserId,
       );
-    } finally {
-      await close();
-    }
-  });
-
-  it('delegates balance adjustment drilldowns and converts money for MCP', async () => {
-    transactionAnalysisService.getBalanceAdjustments.mockResolvedValue([
-      {
-        accountId: mockAccountId,
-        accountName: 'Checking',
-        flowDirection: 'inflow',
-        currency: 'USD',
-        deltaAmount: 7500,
-        startBalance: { amount: 10000, currency: 'USD' },
-        endBalance: { amount: 17500, currency: 'USD' },
-      },
-    ]);
-
-    const { client, close } = await connect(service.createServer(mockUserId));
-
-    try {
-      const result = (await client.callTool({
-        name: 'list_cashflow_balance_adjustments',
-        arguments: {
-          startDate: '2026-03-01',
-          endDate: '2026-03-31',
-          flowDirection: 'inflow',
-        },
-      })) as CallToolResult;
-
-      expect(
-        transactionAnalysisService.getBalanceAdjustments,
-      ).toHaveBeenCalledWith(
-        '2026-03-01',
-        '2026-03-31',
-        'BALANCE_ADJUSTMENT',
-        'inflow',
-        mockUserId,
-      );
-      expect(result.structuredContent).toMatchObject({
-        data: [
-          {
-            deltaAmount: {
-              amount: 75,
-              currency: 'USD',
-              sign: MoneySign.POSITIVE,
-            },
-            startBalance: {
-              amount: 100,
-              currency: 'USD',
-              sign: MoneySign.POSITIVE,
-            },
-            endBalance: {
-              amount: 175,
-              currency: 'USD',
-              sign: MoneySign.POSITIVE,
-            },
-          },
-        ],
-        query: {
-          categoryPrimary: 'BALANCE_ADJUSTMENT',
-          flowDirection: 'inflow',
-        },
-      });
     } finally {
       await close();
     }

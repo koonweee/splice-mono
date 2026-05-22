@@ -12,7 +12,6 @@ import { TransactionAnalysisService } from '../transaction-analysis/transaction-
 import { TransactionsSurfaceService } from '../transaction/transactions-surface.service';
 import { getDecimalPlaces, MoneySign } from '../types/MoneyWithSign';
 import type {
-  BalanceAdjustment,
   CategoryAggregate,
   TransactionAnalysisResponse,
 } from '../types/TransactionAnalysis';
@@ -38,7 +37,7 @@ const MCP_GUIDE = `# Splice MCP Guide
 
 Use get_user_context first to get today, timezone, and the user's preferred currency.
 
-For cash-flow totals, category breakdowns, and balance-adjustment-aware summaries, call get_cashflow_analysis. The summary applies the user's analysis rules, neutralization lookaround setting, and synthetic balance adjustments.
+For cash-flow totals and category breakdowns, call get_cashflow_analysis. The summary applies the user's analysis rules and neutralization lookaround setting.
 
 For custom spending patterns not covered by get_cashflow_analysis, call list_transactions for the full date range and keep paging until pageInfo.hasMore is false. Do not infer totals from a partial page unless you clearly say it is a sample.
 
@@ -95,40 +94,11 @@ function mcpCategoryAggregate(
   };
 }
 
-function mcpBalanceAdjustment(adjustment: BalanceAdjustment): Omit<
-  BalanceAdjustment,
-  'deltaAmount' | 'startBalance' | 'endBalance'
-> & {
-  deltaAmount: McpMoney;
-  startBalance: McpMoney;
-  endBalance: McpMoney;
-} {
-  return {
-    ...adjustment,
-    deltaAmount: mcpMoneyFromSmallestUnit(
-      adjustment.deltaAmount,
-      adjustment.currency,
-      adjustment.flowDirection === 'inflow'
-        ? MoneySign.POSITIVE
-        : MoneySign.NEGATIVE,
-    ),
-    startBalance: mcpMoneyFromSignedSmallestUnit(
-      adjustment.startBalance.amount,
-      adjustment.startBalance.currency,
-    ),
-    endBalance: mcpMoneyFromSignedSmallestUnit(
-      adjustment.endBalance.amount,
-      adjustment.endBalance.currency,
-    ),
-  };
-}
-
 function mcpCashflowAnalysis(analysis: TransactionAnalysisResponse) {
   return {
     startDate: analysis.startDate,
     endDate: analysis.endDate,
     currency: analysis.currency,
-    summaryIncludesBalanceAdjustments: true,
     totals: {
       totalInflow: mcpMoneyFromSmallestUnit(
         analysis.totalInflow,
@@ -161,7 +131,6 @@ function mcpCashflowAnalysis(analysis: TransactionAnalysisResponse) {
     outflows: analysis.outflows.map((category) =>
       mcpCategoryAggregate(category, MoneySign.NEGATIVE),
     ),
-    balanceAdjustments: analysis.balanceAdjustments.map(mcpBalanceAdjustment),
   };
 }
 
@@ -222,7 +191,6 @@ export class SpliceMcpService {
     'get_cashflow_analysis',
     'list_cashflow_category_transactions',
     'get_cashflow_analysis_audit',
-    'list_cashflow_balance_adjustments',
   ] as const;
 
   constructor(
@@ -478,7 +446,7 @@ export class SpliceMcpService {
       {
         title: 'Get Cash Flow Analysis',
         description:
-          'Get cash-flow analysis grouped by category for an inclusive activity date range. Applies analysis rules, neutralization, pending transactions, currency conversion, and synthetic balance adjustments. All returned money amounts are major units.',
+          'Get cash-flow analysis grouped by category for an inclusive activity date range. Applies analysis rules, neutralization, pending transactions, and currency conversion. All returned money amounts are major units.',
         inputSchema: {
           startDate: DateStringSchema.describe(
             'Inclusive activity start date in YYYY-MM-DD.',
@@ -508,7 +476,7 @@ export class SpliceMcpService {
       {
         title: 'List Cash Flow Category Transactions',
         description:
-          'List unmatched real transactions behind a cash-flow category drilldown. Uses the same analysis rules and neutralization pipeline as get_cashflow_analysis. For BALANCE_ADJUSTMENT, use list_cashflow_balance_adjustments instead.',
+          'List unmatched real transactions behind a cash-flow category drilldown. Uses the same analysis rules and neutralization pipeline as get_cashflow_analysis.',
         inputSchema: {
           startDate: DateStringSchema.describe(
             'Inclusive activity start date in YYYY-MM-DD.',
@@ -565,43 +533,6 @@ export class SpliceMcpService {
             userId,
           ),
         );
-      },
-    );
-
-    server.registerTool(
-      'list_cashflow_balance_adjustments',
-      {
-        title: 'List Cash Flow Balance Adjustments',
-        description:
-          'List synthetic balance adjustment drilldown rows for the BALANCE_ADJUSTMENT cash-flow category. Uses the same snapshot-based adjustment pipeline as get_cashflow_analysis.',
-        inputSchema: {
-          startDate: DateStringSchema.describe(
-            'Inclusive activity start date in YYYY-MM-DD.',
-          ),
-          endDate: DateStringSchema.describe(
-            'Inclusive activity end date in YYYY-MM-DD.',
-          ),
-          flowDirection: z.enum(['inflow', 'outflow']),
-        },
-      },
-      async (input) => {
-        assertDateRange(input.startDate, input.endDate);
-
-        return toolResult({
-          data: (
-            await this.transactionAnalysisService.getBalanceAdjustments(
-              input.startDate,
-              input.endDate,
-              'BALANCE_ADJUSTMENT',
-              input.flowDirection,
-              userId,
-            )
-          ).map(mcpBalanceAdjustment),
-          query: {
-            ...input,
-            categoryPrimary: 'BALANCE_ADJUSTMENT',
-          },
-        });
       },
     );
 

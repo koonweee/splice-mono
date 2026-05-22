@@ -1,42 +1,42 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
-  Unique,
 } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
+import { AccountActivityEntity } from '../account-activity/account-activity.entity';
 import { CategoryEntity } from '../category/category.entity';
-import { BalanceColumns } from '../common/balance.columns';
-import { OwnedEntity } from '../common/owned.entity';
 import { formatProviderCategoryDisplayLabel } from '../category/category-normalization';
+import { BalanceColumns } from '../common/balance.columns';
+import { TimestampedEntity } from '../common/base.entity';
 import { CreateTransactionDto, Transaction } from '../types/Transaction';
 import type { TransactionSource } from '../types/Transaction';
 import { getTransactionActivityDate } from './transaction-date';
 
 @Entity()
-@Unique(['accountId', 'externalTransactionId']) // Prevent duplicate imports from providers
-export class TransactionEntity extends OwnedEntity {
+@Index('UQ_banking_transaction_activity', ['activityId'], { unique: true })
+export class BankingTransactionEntity extends TimestampedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'uuid' })
+  activityId: string;
+
+  @OneToOne(() => AccountActivityEntity, {
+    nullable: false,
+    cascade: ['insert', 'update'],
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'activityId' })
+  activity: AccountActivityEntity;
 
   /** Transaction origin: provider sync or user-created manual entry */
   @Column({ type: 'varchar', default: 'provider' })
   source: TransactionSource;
-
-  /** Amount with sign and currency */
-  @Column(() => BalanceColumns)
-  amount: BalanceColumns;
-
-  /** Foreign key for Account */
-  @Column({ type: 'uuid' })
-  accountId: string;
-
-  /** Many transactions belong to one Account */
-  @ManyToOne(() => AccountEntity, { nullable: false })
-  @JoinColumn({ name: 'accountId' })
-  account: AccountEntity;
 
   /** Merchant name (e.g., "Starbucks") */
   @Column({ type: 'varchar', nullable: true })
@@ -61,10 +61,6 @@ export class TransactionEntity extends OwnedEntity {
   /** Account owner supplied by the provider, when available */
   @Column({ type: 'varchar', nullable: true })
   accountOwner: string | null;
-
-  /** External transaction ID from provider (e.g., Plaid transaction_id) */
-  @Column({ type: 'varchar', nullable: true })
-  externalTransactionId: string | null;
 
   /** Logo URL for the merchant */
   @Column({ type: 'varchar', nullable: true })
@@ -118,13 +114,9 @@ export class TransactionEntity extends OwnedEntity {
   @Column({ type: 'jsonb', nullable: true })
   paymentMeta: Record<string, unknown> | null;
 
-  /** Provider transaction date - occurrence date for pending, posted date for posted */
-  @Column({ type: 'date' })
-  providerDate: string;
-
-  /** Provider transaction datetime with time info */
-  @Column({ type: 'timestamptz', nullable: true })
-  providerDatetime: string | null;
+  /** Raw provider payload for this banking transaction */
+  @Column({ type: 'jsonb', nullable: true })
+  providerPayload: Record<string, unknown> | null;
 
   /** Date the transaction was authorized (yyyy-mm-dd) */
   @Column({ type: 'date', nullable: true })
@@ -151,43 +143,120 @@ export class TransactionEntity extends OwnedEntity {
   @Column({ type: 'timestamptz', nullable: true })
   categoryUpdatedAt: Date | null;
 
-  /**
-   * Create entity from DTO
-   */
-  static fromDto(dto: CreateTransactionDto, userId: string): TransactionEntity {
-    const entity = new TransactionEntity();
-    entity.userId = userId;
+  get userId(): string {
+    return this.activity.userId;
+  }
+
+  set userId(value: string) {
+    this.ensureActivity().userId = value;
+  }
+
+  get amount(): BalanceColumns {
+    return this.activity.amount;
+  }
+
+  set amount(value: BalanceColumns) {
+    this.ensureActivity().amount = value;
+  }
+
+  get accountId(): string {
+    return this.activity.accountId;
+  }
+
+  set accountId(value: string) {
+    this.ensureActivity().accountId = value;
+  }
+
+  get account(): AccountEntity {
+    return this.activity.account;
+  }
+
+  set account(value: AccountEntity) {
+    this.ensureActivity().account = value;
+  }
+
+  get externalTransactionId(): string | null {
+    return this.activity.externalActivityId;
+  }
+
+  set externalTransactionId(value: string | null) {
+    this.ensureActivity().externalActivityId = value;
+  }
+
+  get providerDate(): string {
+    return this.activity.providerDate;
+  }
+
+  set providerDate(value: string) {
+    this.ensureActivity().providerDate = value;
+  }
+
+  get providerDatetime(): string | null {
+    return this.activity.providerDatetime;
+  }
+
+  set providerDatetime(value: string | null) {
+    this.ensureActivity().providerDatetime = value;
+  }
+
+  private ensureActivity(): AccountActivityEntity {
+    if (!this.activity) {
+      this.activity = new AccountActivityEntity();
+      this.activity.activityKind = 'banking_transaction';
+      this.activity.provider = 'plaid';
+      this.activity.externalActivityId = null;
+    }
+    return this.activity;
+  }
+
+  static fromDto(
+    dto: CreateTransactionDto,
+    userId: string,
+  ): BankingTransactionEntity {
+    const entity = new BankingTransactionEntity();
+    entity.activity = AccountActivityEntity.create({
+      userId,
+      accountId: dto.accountId,
+      provider: 'plaid',
+      externalActivityId: dto.externalTransactionId ?? null,
+      activityKind: 'banking_transaction',
+      activityDate:
+        dto.reportingDateOverride ?? dto.authorizedDate ?? dto.providerDate,
+      providerDate: dto.providerDate,
+      providerDatetime: dto.providerDatetime ?? null,
+      amount: dto.amount,
+    });
     entity.source = 'provider';
-    entity.amount = BalanceColumns.fromMoneyWithSign(dto.amount);
-    entity.accountId = dto.accountId;
-    entity.merchantName = dto.merchantName ?? null;
-    entity.providerTransactionName = dto.providerTransactionName ?? null;
-    entity.originalDescription = dto.originalDescription ?? null;
-    entity.pending = dto.pending;
-    entity.pendingTransactionId = dto.pendingTransactionId ?? null;
-    entity.accountOwner = dto.accountOwner ?? null;
-    entity.externalTransactionId = dto.externalTransactionId ?? null;
-    entity.logoUrl = dto.logoUrl ?? null;
-    entity.website = dto.website ?? null;
-    entity.merchantEntityId = dto.merchantEntityId ?? null;
-    entity.paymentChannel = dto.paymentChannel ?? null;
-    entity.transactionCode = dto.transactionCode ?? null;
-    entity.personalFinanceCategoryIconUrl =
-      dto.personalFinanceCategoryIconUrl ?? null;
-    entity.personalFinanceCategoryConfidenceLevel =
-      dto.personalFinanceCategoryConfidenceLevel ?? null;
-    entity.applyProviderCategoryHint(dto);
-    entity.counterparties = dto.counterparties ?? null;
-    entity.location = dto.location ?? null;
-    entity.paymentMeta = dto.paymentMeta ?? null;
-    entity.providerDate = dto.providerDate;
-    entity.providerDatetime = dto.providerDatetime ?? null;
-    entity.authorizedDate = dto.authorizedDate ?? null;
-    entity.authorizedDatetime = dto.authorizedDatetime ?? null;
-    entity.reportingDateOverride = dto.reportingDateOverride ?? null;
+    entity.applyBankingDto(dto);
     entity.categoryId = dto.categoryId ?? null;
     entity.categoryUpdatedAt = null;
     return entity;
+  }
+
+  applyBankingDto(dto: CreateTransactionDto): void {
+    this.merchantName = dto.merchantName ?? null;
+    this.providerTransactionName = dto.providerTransactionName ?? null;
+    this.originalDescription = dto.originalDescription ?? null;
+    this.pending = dto.pending;
+    this.pendingTransactionId = dto.pendingTransactionId ?? null;
+    this.accountOwner = dto.accountOwner ?? null;
+    this.logoUrl = dto.logoUrl ?? null;
+    this.website = dto.website ?? null;
+    this.merchantEntityId = dto.merchantEntityId ?? null;
+    this.paymentChannel = dto.paymentChannel ?? null;
+    this.transactionCode = dto.transactionCode ?? null;
+    this.personalFinanceCategoryIconUrl =
+      dto.personalFinanceCategoryIconUrl ?? null;
+    this.personalFinanceCategoryConfidenceLevel =
+      dto.personalFinanceCategoryConfidenceLevel ?? null;
+    this.applyProviderCategoryHint(dto);
+    this.counterparties = dto.counterparties ?? null;
+    this.location = dto.location ?? null;
+    this.paymentMeta = dto.paymentMeta ?? null;
+    this.providerPayload = dto.providerPayload ?? null;
+    this.authorizedDate = dto.authorizedDate ?? null;
+    this.authorizedDatetime = dto.authorizedDatetime ?? null;
+    this.reportingDateOverride = dto.reportingDateOverride ?? null;
   }
 
   applyProviderCategoryHint(
@@ -200,9 +269,6 @@ export class TransactionEntity extends OwnedEntity {
     this.providerCategoryDetailed = hint?.detailed ?? null;
   }
 
-  /**
-   * Convert entity to domain object
-   */
   toObject(): Transaction {
     const category = this.category ? this.category.toObject() : null;
     const providerCategoryHint = this.providerCategoryProvider
@@ -253,8 +319,10 @@ export class TransactionEntity extends OwnedEntity {
       accountName: this.account
         ? (this.account.customName ?? this.account.name)
         : null,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
+      createdAt: this.activity.createdAt ?? this.createdAt,
+      updatedAt: this.activity.updatedAt ?? this.updatedAt,
     };
   }
 }
+
+export { BankingTransactionEntity as TransactionEntity };

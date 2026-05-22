@@ -32,7 +32,6 @@ function makeAnalysis(
     netFlow: 238000,
     uncategorizedInflow: 0,
     uncategorizedOutflow: 0,
-    balanceAdjustments: [],
     ...overrides,
   }
 }
@@ -178,34 +177,5 @@ describe('buildAnalysisSankeyData', () => {
       }),
     ])
     expect(data.nodes.some((node) => node.kind === 'outflow')).toBe(false)
-  })
-
-  it('preserves balance adjustment categories as clickable flow categories', () => {
-    const data = buildAnalysisSankeyData(
-      makeAnalysis({
-        inflows: [
-          {
-            primaryCategory: 'BALANCE_ADJUSTMENT',
-            totalAmount: 5000,
-            currency: 'USD',
-            transactionCount: 1,
-            color: '#4c6ef5',
-          },
-        ],
-        totalInflow: 5000,
-        totalOutflow: 12000,
-        netFlow: -7000,
-      }),
-    )
-
-    expect(data.links).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          categoryPrimary: 'BALANCE_ADJUSTMENT',
-          flowDirection: 'inflow',
-          color: '#4c6ef5',
-        }),
-      ]),
-    )
   })
 })

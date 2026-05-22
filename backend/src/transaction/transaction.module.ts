@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AccountActivityModule } from '../account-activity/account-activity.module';
 import { AccountEntity } from '../account/account.entity';
 import { CategoryModule } from '../category/category.module';
 import { CategoryEntity } from '../category/category.entity';
@@ -11,6 +12,7 @@ import { TransactionService } from './transaction.service';
 
 @Module({
   imports: [
+    AccountActivityModule,
     CategoryModule,
     TypeOrmModule.forFeature([
       TransactionEntity,

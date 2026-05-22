@@ -132,6 +132,7 @@ export const CreateTransactionDtoSchema = registerSchema(
     counterparties: z.array(ProviderJsonObjectSchema).nullable().optional(),
     location: ProviderJsonObjectSchema.nullable().optional(),
     paymentMeta: ProviderJsonObjectSchema.nullable().optional(),
+    providerPayload: ProviderJsonObjectSchema.nullable().optional(),
     providerDate: z.string(),
     providerDatetime: z.string().datetime().nullable().optional(),
     authorizedDate: z.string().nullable().optional(),

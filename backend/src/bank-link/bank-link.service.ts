@@ -31,7 +31,10 @@ import type {
   SanitizedBankLink,
   UpdateBankLinkDto,
 } from '../types/BankLink';
-import type { InvestmentHoldingsSyncResult } from '../types/Investment';
+import type {
+  InvestmentHoldingsSyncResult,
+  InvestmentTransactionsSyncResult,
+} from '../types/Investment';
 import { UserService } from '../user/user.service';
 import { WebhookEventService } from '../webhook-event/webhook-event.service';
 import { BankLinkEntity } from './bank-link.entity';
@@ -44,6 +47,7 @@ type LinkConversionContext = {
 };
 
 const INVESTMENT_ACCOUNT_TYPES = ['investment', 'brokerage'];
+const INVESTMENT_TRANSACTION_LOOKBACK_DAYS = 730;
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -329,6 +333,25 @@ export class BankLinkService extends OwnedCrudService<
         }
       });
     }
+
+    if (provider.syncInvestmentTransactions) {
+      const investmentTransactionResults = await Promise.allSettled(
+        savedBankLinks.map((bankLink) =>
+          this.syncInvestmentTransactions(bankLink.id, userId),
+        ),
+      );
+      investmentTransactionResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          this.logger.error(
+            {
+              bankLinkId: savedBankLinks[index].id,
+              error: String(result.reason),
+            },
+            'Failed initial investment transaction sync for new bank link',
+          );
+        }
+      });
+    }
   }
 
   /**
@@ -456,14 +479,6 @@ export class BankLinkService extends OwnedCrudService<
       return;
     }
 
-    if (updateInfo.type === 'INVESTMENTS_TRANSACTIONS') {
-      this.logger.log(
-        { bankLinkId: bankLink.id },
-        'Investment transaction webhook recognized but not synced',
-      );
-      return;
-    }
-
     await this.syncAccounts(bankLink.id, bankLink.userId);
     this.logger.log(
       { bankLinkId: bankLink.id },
@@ -484,6 +499,24 @@ export class BankLinkService extends OwnedCrudService<
             error: error instanceof Error ? error.message : String(error),
           },
           'Failed to sync investment holdings for bank link',
+        );
+      }
+    }
+
+    if (updateInfo.type === 'INVESTMENTS_TRANSACTIONS') {
+      try {
+        await this.syncInvestmentTransactions(bankLink.id, bankLink.userId);
+        this.logger.log(
+          { bankLinkId: bankLink.id },
+          'Synced investment transactions for bank link',
+        );
+      } catch (error) {
+        this.logger.error(
+          {
+            bankLinkId: bankLink.id,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Failed to sync investment transactions for bank link',
         );
       }
     }
@@ -801,6 +834,75 @@ export class BankLinkService extends OwnedCrudService<
     return { synced, failed, skipped };
   }
 
+  async syncAllInvestmentTransactions(
+    userId: string,
+  ): Promise<{ synced: number; failed: number; skipped: number }> {
+    this.logger.log(
+      { userId },
+      'Syncing investment transactions for all bank links',
+    );
+
+    const bankLinks = await this.repository.find({
+      where: { userId },
+    });
+
+    let synced = 0;
+    let failed = 0;
+    let skipped = 0;
+
+    const results = await Promise.allSettled(
+      bankLinks.map(async (bankLink) => {
+        const provider = this.providerRegistry.getProvider(
+          bankLink.providerName,
+        );
+        if (!provider.syncInvestmentTransactions) {
+          return { skipped: true };
+        }
+
+        const hasInvestmentAccounts = await this.hasInvestmentAccounts(
+          userId,
+          bankLink.id,
+        );
+        if (!hasInvestmentAccounts) {
+          this.logger.log(
+            { bankLinkId: bankLink.id },
+            'Bank link has no investment accounts, skipping investment transaction sync',
+          );
+          return { skipped: true };
+        }
+
+        await this.syncInvestmentTransactions(bankLink.id, userId);
+        return { skipped: false };
+      }),
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        if (result.value.skipped) {
+          skipped++;
+        } else {
+          synced++;
+        }
+      } else {
+        failed++;
+        this.logger.error(
+          {
+            bankLinkId: bankLinks[index].id,
+            error: String(result.reason),
+          },
+          'Failed to sync investment transactions for bank link',
+        );
+      }
+    });
+
+    this.logger.log(
+      { synced, failed, skipped, total: bankLinks.length },
+      'Investment transaction sync complete for all bank links',
+    );
+
+    return { synced, failed, skipped };
+  }
+
   /**
    * Sync accounts for a bank link by fetching latest data from the provider
    *
@@ -1040,6 +1142,97 @@ export class BankLinkService extends OwnedCrudService<
     return result;
   }
 
+  async syncInvestmentTransactions(
+    bankLinkId: string,
+    userId: string,
+  ): Promise<InvestmentTransactionsSyncResult> {
+    const bankLink = await this.repository.findOne({
+      where: { id: bankLinkId, userId },
+    });
+    if (!bankLink) {
+      throw new Error(`Bank link not found: ${bankLinkId}`);
+    }
+
+    const provider = this.providerRegistry.getProvider(bankLink.providerName);
+    if (!provider.syncInvestmentTransactions) {
+      this.logger.log(
+        { providerName: bankLink.providerName },
+        'Provider does not support investment transaction sync, skipping',
+      );
+      return {
+        accounts: 0,
+        securities: 0,
+        transactions: 0,
+        skippedMissingAccount: 0,
+      };
+    }
+
+    const hasInvestmentAccounts = await this.hasInvestmentAccounts(
+      userId,
+      bankLink.id,
+    );
+    if (!hasInvestmentAccounts) {
+      this.logger.log(
+        { bankLinkId },
+        'Bank link has no investment accounts, skipping investment transaction sync',
+      );
+      return {
+        accounts: 0,
+        securities: 0,
+        transactions: 0,
+        skippedMissingAccount: 0,
+      };
+    }
+
+    const { startDate, endDate } =
+      await this.getInvestmentTransactionSyncWindow(userId);
+
+    this.logger.log(
+      { bankLinkId, providerName: bankLink.providerName, startDate, endDate },
+      'Starting investment transaction sync for bank link',
+    );
+
+    const response = await provider.syncInvestmentTransactions(
+      bankLink.authentication,
+      startDate,
+      endDate,
+    );
+    const accountIdMap = await this.buildExternalAccountIdMap(
+      userId,
+      bankLink.id,
+      response.externalAccountIds,
+    );
+    const result =
+      await this.investmentService.upsertPlaidInvestmentTransactions(
+        userId,
+        accountIdMap,
+        response,
+      );
+
+    bankLink.authentication = {
+      ...bankLink.authentication,
+      investmentTransactionsSync: {
+        lastSyncedAt: new Date().toISOString(),
+        lastStartDate: startDate,
+        lastEndDate: endDate,
+      },
+    };
+    await this.repository.save(bankLink);
+
+    this.logger.log(
+      {
+        bankLinkId,
+        accountCount: result.accounts,
+        securityCount: result.securities,
+        transactionCount: result.transactions,
+        skippedMissingAccount: result.skippedMissingAccount,
+      },
+      'Investment transaction sync completed',
+    );
+
+    return result;
+  }
+
   /**
    * Upsert accounts from API responses - updates existing accounts or creates new ones
    *
@@ -1230,6 +1423,19 @@ export class BankLinkService extends OwnedCrudService<
   private async getSnapshotDate(userId: string): Promise<string> {
     const userTimezone = await this.userService.getTimezone(userId);
     return dayjs().tz(userTimezone).format('YYYY-MM-DD');
+  }
+
+  private async getInvestmentTransactionSyncWindow(
+    userId: string,
+  ): Promise<{ startDate: string; endDate: string }> {
+    const userTimezone = await this.userService.getTimezone(userId);
+    const end = dayjs().tz(userTimezone);
+    return {
+      startDate: end
+        .subtract(INVESTMENT_TRANSACTION_LOOKBACK_DAYS, 'day')
+        .format('YYYY-MM-DD'),
+      endDate: end.format('YYYY-MM-DD'),
+    };
   }
 
   /**

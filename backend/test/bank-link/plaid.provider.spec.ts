@@ -388,4 +388,179 @@ describe('PlaidProvider', () => {
       });
     });
   });
+
+  describe('syncInvestmentTransactions', () => {
+    const security = {
+      security_id: 'security-id',
+      institution_id: 'ins_123',
+      institution_security_id: 'institution-security-id',
+      name: 'Vanguard FTSE All-World UCITS ETF',
+      ticker_symbol: 'VWRA',
+      isin: 'IE00BK5BQT80',
+      cusip: null,
+      sedol: null,
+      type: 'etf',
+      subtype: 'etf',
+      is_cash_equivalent: false,
+      close_price: 120.25,
+      close_price_as_of: '2026-05-20',
+      update_datetime: '2026-05-20T21:00:00Z',
+      iso_currency_code: 'USD',
+      unofficial_currency_code: null,
+      market_identifier_code: 'XLON',
+      sector: null,
+      industry: null,
+      option_contract: null,
+      fixed_income: null,
+    };
+
+    it('should reject invalid authentication', async () => {
+      await expect(
+        provider.syncInvestmentTransactions(
+          { invalid: true },
+          '2026-01-01',
+          '2026-05-20',
+        ),
+      ).rejects.toThrow('Missing or invalid accessToken');
+    });
+
+    it('should page through and map investment transactions with inverted cash impact', async () => {
+      provider['client'] = {
+        investmentsTransactionsGet: jest
+          .fn()
+          .mockResolvedValueOnce({
+            data: {
+              accounts: [{ account_id: 'external-account-id' }],
+              securities: [security],
+              investment_transactions: [
+                {
+                  investment_transaction_id: 'investment-transaction-buy',
+                  cancel_transaction_id: null,
+                  account_id: 'external-account-id',
+                  security_id: 'security-id',
+                  date: '2026-05-19',
+                  name: 'Buy VWRA',
+                  quantity: 2,
+                  amount: 123.45,
+                  price: 61.725,
+                  fees: 1.25,
+                  type: 'buy',
+                  subtype: 'buy',
+                  iso_currency_code: 'USD',
+                  unofficial_currency_code: null,
+                },
+                {
+                  investment_transaction_id: 'investment-transaction-cash',
+                  cancel_transaction_id: 'cancel-id',
+                  account_id: 'external-account-id',
+                  security_id: null,
+                  date: '2026-05-20',
+                  name: 'Interest',
+                  quantity: 0,
+                  amount: -4.56,
+                  price: 0,
+                  fees: null,
+                  type: 'cash',
+                  subtype: 'interest',
+                  iso_currency_code: 'USD',
+                  unofficial_currency_code: null,
+                },
+              ],
+              total_investment_transactions: 3,
+            },
+          })
+          .mockResolvedValueOnce({
+            data: {
+              accounts: [{ account_id: 'external-account-id' }],
+              securities: [security],
+              investment_transactions: [
+                {
+                  investment_transaction_id: 'investment-transaction-sell',
+                  cancel_transaction_id: null,
+                  account_id: 'external-account-id',
+                  security_id: 'security-id',
+                  date: '2026-05-21',
+                  name: 'Sell VWRA',
+                  quantity: -1,
+                  amount: -70,
+                  price: 70,
+                  fees: 0,
+                  type: 'sell',
+                  subtype: 'sell',
+                  iso_currency_code: 'USD',
+                  unofficial_currency_code: null,
+                },
+              ],
+              total_investment_transactions: 3,
+            },
+          }),
+      } as any;
+
+      const result = await provider.syncInvestmentTransactions(
+        { accessToken: 'access-token' },
+        '2026-01-01',
+        '2026-05-21',
+      );
+
+      expect(
+        provider['client'].investmentsTransactionsGet,
+      ).toHaveBeenCalledWith({
+        access_token: 'access-token',
+        start_date: '2026-01-01',
+        end_date: '2026-05-21',
+        options: {
+          count: 500,
+          offset: 0,
+        },
+      });
+      expect(
+        provider['client'].investmentsTransactionsGet,
+      ).toHaveBeenCalledWith({
+        access_token: 'access-token',
+        start_date: '2026-01-01',
+        end_date: '2026-05-21',
+        options: {
+          count: 500,
+          offset: 2,
+        },
+      });
+      expect(result.externalAccountIds).toEqual(['external-account-id']);
+      expect(result.securities).toEqual([
+        expect.objectContaining({
+          externalSecurityId: 'security-id',
+          tickerSymbol: 'VWRA',
+        }),
+      ]);
+      expect(result.transactions).toHaveLength(3);
+      expect(result.transactions[0]).toEqual(
+        expect.objectContaining({
+          externalActivityId: 'investment-transaction-buy',
+          externalSecurityId: 'security-id',
+          quantity: '2',
+          price: '61.725',
+          fees: '1.25',
+          investmentType: 'buy',
+          investmentSubtype: 'buy',
+          providerPayload: expect.objectContaining({
+            investment_transaction_id: 'investment-transaction-buy',
+          }),
+          amount: {
+            money: { currency: 'USD', amount: 12345 },
+            sign: 'negative',
+          },
+        }),
+      );
+      expect(result.transactions[1]).toEqual(
+        expect.objectContaining({
+          externalActivityId: 'investment-transaction-cash',
+          externalSecurityId: null,
+          cancelExternalActivityId: 'cancel-id',
+          amount: {
+            money: { currency: 'USD', amount: 456 },
+            sign: 'positive',
+          },
+        }),
+      );
+    });
+  });
 });

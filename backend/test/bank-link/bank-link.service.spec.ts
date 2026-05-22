@@ -35,6 +35,12 @@ const mockInvestmentService = {
     holdings: 1,
     deletedStaleHoldings: 0,
   }),
+  upsertPlaidInvestmentTransactions: jest.fn().mockResolvedValue({
+    accounts: 1,
+    securities: 1,
+    transactions: 1,
+    skippedMissingAccount: 0,
+  }),
 };
 
 const mockUserId = 'user-uuid-123';
@@ -1035,7 +1041,7 @@ describe('BankLinkService', () => {
       expect(mockInvestmentService.upsertPlaidHoldings).not.toHaveBeenCalled();
     });
 
-    it('should treat investment transaction webhooks as known no-ops', async () => {
+    it('should sync investment transactions for INVESTMENTS_TRANSACTIONS webhook', async () => {
       const providerName = 'plaid';
       const updatePayload = {
         webhook_type: 'INVESTMENTS_TRANSACTIONS',
@@ -1047,6 +1053,22 @@ describe('BankLinkService', () => {
         itemId: 'item-mock-123',
         type: 'INVESTMENTS_TRANSACTIONS',
       });
+      mockAccountRepository.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 'account-id-0',
+            externalAccountId: 'plaid-acc-123',
+            userId: mockUserId,
+            bankLinkId: mockBankLinkEntity.id,
+          },
+        ]);
+      mockAccountRepository.findOne.mockResolvedValueOnce({
+        id: 'account-id-0',
+        type: 'investment',
+        userId: mockUserId,
+        bankLinkId: mockBankLinkEntity.id,
+      });
 
       await service.handleWebhook(
         providerName,
@@ -1055,9 +1077,21 @@ describe('BankLinkService', () => {
         updatePayload,
       );
 
-      expect(mockPlaidProvider.getAccounts).not.toHaveBeenCalled();
-      expect(mockPlaidProvider.syncInvestmentHoldings).not.toHaveBeenCalled();
-      expect(mockTransactionService.processSyncResults).not.toHaveBeenCalled();
+      expect(mockPlaidProvider.syncInvestmentTransactions).toHaveBeenCalledWith(
+        expect.objectContaining({ accessToken: 'test-token' }),
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      );
+      expect(
+        mockInvestmentService.upsertPlaidInvestmentTransactions,
+      ).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Map),
+        expect.objectContaining({
+          transactions: expect.any(Array) as unknown[],
+          securities: expect.any(Array) as unknown[],
+        }),
+      );
     });
 
     it('should handle ERROR status webhook and update bank link status', async () => {
@@ -1520,6 +1554,78 @@ describe('BankLinkService', () => {
 
       expect(mockPlaidProvider.syncInvestmentHoldings).not.toHaveBeenCalled();
       expect(mockInvestmentService.upsertPlaidHoldings).not.toHaveBeenCalled();
+      expect(result).toEqual({ synced: 0, failed: 0, skipped: 1 });
+    });
+  });
+
+  describe('syncAllInvestmentTransactions', () => {
+    beforeEach(() => {
+      mockBankLinkRepository.find.mockResolvedValue([mockBankLinkEntity]);
+      mockBankLinkRepository.findOne.mockResolvedValue(mockBankLinkEntity);
+      mockAccountRepository.findOne.mockResolvedValue({
+        id: 'account-id-0',
+        type: 'investment',
+        userId: mockUserId,
+        bankLinkId: mockBankLinkEntity.id,
+      });
+      mockAccountRepository.find.mockResolvedValue([
+        {
+          id: 'account-id-0',
+          externalAccountId: 'plaid-acc-123',
+          userId: mockUserId,
+          bankLinkId: mockBankLinkEntity.id,
+        },
+      ]);
+    });
+
+    it('should sync investment transactions for providers that support them', async () => {
+      const result = await service.syncAllInvestmentTransactions(mockUserId);
+
+      expect(mockPlaidProvider.syncInvestmentTransactions).toHaveBeenCalledWith(
+        expect.objectContaining({ accessToken: 'test-token' }),
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      );
+      expect(
+        mockInvestmentService.upsertPlaidInvestmentTransactions,
+      ).toHaveBeenCalled();
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authentication: expect.objectContaining({
+            investmentTransactionsSync: expect.objectContaining({
+              lastSyncedAt: expect.any(String),
+              lastStartDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+              lastEndDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+            }),
+          }),
+        }),
+      );
+      expect(result).toEqual({ synced: 1, failed: 0, skipped: 0 });
+    });
+
+    it('should skip providers without investment transaction support', async () => {
+      const originalSyncInvestmentTransactions =
+        mockPlaidProvider.syncInvestmentTransactions;
+      delete mockPlaidProvider.syncInvestmentTransactions;
+
+      const result = await service.syncAllInvestmentTransactions(mockUserId);
+
+      expect(result).toEqual({ synced: 0, failed: 0, skipped: 1 });
+      mockPlaidProvider.syncInvestmentTransactions =
+        originalSyncInvestmentTransactions;
+    });
+
+    it('should skip provider calls when the bank link has no investment accounts', async () => {
+      mockAccountRepository.findOne.mockResolvedValueOnce(null);
+
+      const result = await service.syncAllInvestmentTransactions(mockUserId);
+
+      expect(
+        mockPlaidProvider.syncInvestmentTransactions,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockInvestmentService.upsertPlaidInvestmentTransactions,
+      ).not.toHaveBeenCalled();
       expect(result).toEqual({ synced: 0, failed: 0, skipped: 1 });
     });
   });

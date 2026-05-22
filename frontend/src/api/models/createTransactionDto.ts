@@ -9,6 +9,7 @@ import type { MoneyWithSign } from './moneyWithSign'
 import type { CreateTransactionDtoCounterpartiesItem } from './createTransactionDtoCounterpartiesItem'
 import type { CreateTransactionDtoLocation } from './createTransactionDtoLocation'
 import type { CreateTransactionDtoPaymentMeta } from './createTransactionDtoPaymentMeta'
+import type { CreateTransactionDtoProviderPayload } from './createTransactionDtoProviderPayload'
 import type { CreateTransactionDtoPersonalFinanceCategory } from './createTransactionDtoPersonalFinanceCategory'
 
 export interface CreateTransactionDto {
@@ -47,6 +48,8 @@ export interface CreateTransactionDto {
   location?: CreateTransactionDtoLocation
   /** @nullable */
   paymentMeta?: CreateTransactionDtoPaymentMeta
+  /** @nullable */
+  providerPayload?: CreateTransactionDtoProviderPayload
   providerDate: string
   /** @nullable */
   providerDatetime?: string | null
