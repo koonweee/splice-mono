@@ -50,6 +50,8 @@ import type {
   CreateTransactionDto,
   InitiateLinkRequest,
   InitiateLinkResponse,
+  InvestmentControllerFindHoldingsForAccountOnDateParams,
+  InvestmentHoldingsResponse,
   NotificationControllerGetCurrentSubscriptionStatusParams,
   PaginatedTransactionResponse,
   PersonalAccessToken,
@@ -3296,6 +3298,86 @@ export const useBankLinkControllerSyncAllTransactions = <
 }
 
 /**
+ * Sync investment holdings for all bank links that support holdings. Use this to backfill latest holdings for existing Plaid links.
+ */
+export const bankLinkControllerSyncAllInvestmentHoldings = (
+  signal?: AbortSignal,
+) => {
+  return axios<void>({
+    url: `/bank-link/sync-all-investment-holdings`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getBankLinkControllerSyncAllInvestmentHoldingsMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bankLinkControllerSyncAllInvestmentHoldings>>,
+    TError,
+    void,
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bankLinkControllerSyncAllInvestmentHoldings>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ['bankLinkControllerSyncAllInvestmentHoldings']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bankLinkControllerSyncAllInvestmentHoldings>>,
+    void
+  > = () => {
+    return bankLinkControllerSyncAllInvestmentHoldings()
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type BankLinkControllerSyncAllInvestmentHoldingsMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof bankLinkControllerSyncAllInvestmentHoldings>>
+  >
+
+export type BankLinkControllerSyncAllInvestmentHoldingsMutationError = unknown
+
+export const useBankLinkControllerSyncAllInvestmentHoldings = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof bankLinkControllerSyncAllInvestmentHoldings>>,
+      TError,
+      void,
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof bankLinkControllerSyncAllInvestmentHoldings>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions =
+    getBankLinkControllerSyncAllInvestmentHoldingsMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
  * Update webhook URLs for all bank links to use current API_DOMAIN
  */
 export const bankLinkControllerUpdateWebhookUrls = (signal?: AbortSignal) => {
@@ -3370,6 +3452,419 @@ export const useBankLinkControllerUpdateWebhookUrls = <
     getBankLinkControllerUpdateWebhookUrlsMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Get latest investment holdings for an account
+ */
+export const investmentControllerFindLatestHoldingsForAccount = (
+  accountId: string,
+  signal?: AbortSignal,
+) => {
+  return axios<InvestmentHoldingsResponse>({
+    url: `/investment/account/${accountId}/holdings/latest`,
+    method: 'GET',
+    signal,
+  })
+}
+
+export const getInvestmentControllerFindLatestHoldingsForAccountQueryKey = (
+  accountId?: string,
+) => {
+  return [`/investment/account/${accountId}/holdings/latest`] as const
+}
+
+export const getInvestmentControllerFindLatestHoldingsForAccountQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getInvestmentControllerFindLatestHoldingsForAccountQueryKey(accountId)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>>
+  > = ({ signal }) =>
+    investmentControllerFindLatestHoldingsForAccount(accountId, signal)
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!accountId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<
+      ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+    >,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type InvestmentControllerFindLatestHoldingsForAccountQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>>
+  >
+export type InvestmentControllerFindLatestHoldingsForAccountQueryError = unknown
+
+export function useInvestmentControllerFindLatestHoldingsForAccount<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useInvestmentControllerFindLatestHoldingsForAccount<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useInvestmentControllerFindLatestHoldingsForAccount<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useInvestmentControllerFindLatestHoldingsForAccount<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof investmentControllerFindLatestHoldingsForAccount>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getInvestmentControllerFindLatestHoldingsForAccountQueryOptions(
+      accountId,
+      options,
+    )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Get investment holdings for an account on a snapshot date
+ */
+export const investmentControllerFindHoldingsForAccountOnDate = (
+  accountId: string,
+  params: InvestmentControllerFindHoldingsForAccountOnDateParams,
+  signal?: AbortSignal,
+) => {
+  return axios<InvestmentHoldingsResponse>({
+    url: `/investment/account/${accountId}/holdings`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getInvestmentControllerFindHoldingsForAccountOnDateQueryKey = (
+  accountId?: string,
+  params?: InvestmentControllerFindHoldingsForAccountOnDateParams,
+) => {
+  return [
+    `/investment/account/${accountId}/holdings`,
+    ...(params ? [params] : []),
+  ] as const
+}
+
+export const getInvestmentControllerFindHoldingsForAccountOnDateQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  params: InvestmentControllerFindHoldingsForAccountOnDateParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getInvestmentControllerFindHoldingsForAccountOnDateQueryKey(
+      accountId,
+      params,
+    )
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>>
+  > = ({ signal }) =>
+    investmentControllerFindHoldingsForAccountOnDate(accountId, params, signal)
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!accountId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<
+      ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+    >,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type InvestmentControllerFindHoldingsForAccountOnDateQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>>
+  >
+export type InvestmentControllerFindHoldingsForAccountOnDateQueryError = unknown
+
+export function useInvestmentControllerFindHoldingsForAccountOnDate<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  params: InvestmentControllerFindHoldingsForAccountOnDateParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useInvestmentControllerFindHoldingsForAccountOnDate<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  params: InvestmentControllerFindHoldingsForAccountOnDateParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useInvestmentControllerFindHoldingsForAccountOnDate<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  params: InvestmentControllerFindHoldingsForAccountOnDateParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useInvestmentControllerFindHoldingsForAccountOnDate<
+  TData = Awaited<
+    ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+  >,
+  TError = unknown,
+>(
+  accountId: string,
+  params: InvestmentControllerFindHoldingsForAccountOnDateParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof investmentControllerFindHoldingsForAccountOnDate>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getInvestmentControllerFindHoldingsForAccountOnDateQueryOptions(
+      accountId,
+      params,
+      options,
+    )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
 }
 
 /**

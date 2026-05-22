@@ -166,4 +166,16 @@ describe('BankLinkController', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('syncAllInvestmentHoldings', () => {
+    it('should sync investment holdings for user and return counts', async () => {
+      const result =
+        await controller.syncAllInvestmentHoldings(mockCurrentUser);
+
+      expect(service.syncAllInvestmentHoldings).toHaveBeenCalledWith(
+        mockUserId,
+      );
+      expect(result).toEqual({ synced: 1, failed: 0, skipped: 0 });
+    });
+  });
 });

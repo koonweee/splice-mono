@@ -181,6 +181,7 @@ export function HomePage() {
         opened={!!selectedAccount}
         onClose={handleCloseModal}
         period={period}
+        balancesHidden={balancesHidden}
       />
     </>
   )

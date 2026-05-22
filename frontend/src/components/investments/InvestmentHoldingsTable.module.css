@@ -1,0 +1,16 @@
+.table {
+  min-width: 620px;
+}
+
+.securityCell {
+  min-width: 0;
+  max-width: 260px;
+}
+
+.mobileRow {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.mobileRow:last-child {
+  border-bottom: 0;
+}

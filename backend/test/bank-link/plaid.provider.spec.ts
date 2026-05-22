@@ -136,6 +136,21 @@ describe('PlaidProvider', () => {
       });
     });
 
+    it('should parse INVESTMENTS_TRANSACTIONS webhook as known no-op type', () => {
+      const payload = {
+        webhook_type: 'INVESTMENTS_TRANSACTIONS',
+        webhook_code: 'DEFAULT_UPDATE',
+        item_id: 'item-123',
+      };
+
+      const result = provider.parseUpdateWebhook(payload);
+
+      expect(result).toEqual({
+        itemId: 'item-123',
+        type: 'INVESTMENTS_TRANSACTIONS',
+      });
+    });
+
     it('should return undefined for unknown webhook type', () => {
       const payload = {
         webhook_type: 'UNKNOWN',
@@ -278,6 +293,99 @@ describe('PlaidProvider', () => {
           },
         }),
       );
+    });
+  });
+
+  describe('syncInvestmentHoldings', () => {
+    it('should reject invalid authentication', async () => {
+      await expect(
+        provider.syncInvestmentHoldings({ invalid: true }),
+      ).rejects.toThrow('Missing or invalid accessToken');
+    });
+
+    it('should request and map investment holdings and securities', async () => {
+      provider['client'] = {
+        investmentsHoldingsGet: jest.fn().mockResolvedValue({
+          data: {
+            accounts: [{ account_id: 'external-account-id' }],
+            holdings: [
+              {
+                account_id: 'external-account-id',
+                security_id: 'security-id',
+                institution_price: 120.25,
+                institution_price_as_of: '2026-05-20',
+                institution_price_datetime: '2026-05-20T21:00:00Z',
+                institution_value: 1262.625,
+                cost_basis: 1000,
+                quantity: 10.5,
+                iso_currency_code: 'USD',
+                unofficial_currency_code: null,
+                vested_quantity: null,
+                vested_value: null,
+              },
+            ],
+            securities: [
+              {
+                security_id: 'security-id',
+                institution_id: 'ins_123',
+                institution_security_id: 'institution-security-id',
+                name: 'Vanguard FTSE All-World UCITS ETF',
+                ticker_symbol: 'VWRA',
+                isin: 'IE00BK5BQT80',
+                cusip: null,
+                sedol: null,
+                type: 'etf',
+                subtype: 'etf',
+                is_cash_equivalent: false,
+                close_price: 120.25,
+                close_price_as_of: '2026-05-20',
+                update_datetime: '2026-05-20T21:00:00Z',
+                iso_currency_code: 'USD',
+                unofficial_currency_code: null,
+                market_identifier_code: 'XLON',
+                sector: null,
+                industry: null,
+                option_contract: null,
+                fixed_income: null,
+              },
+            ],
+          },
+        }),
+      } as any;
+
+      const result = await provider.syncInvestmentHoldings({
+        accessToken: 'access-token',
+      });
+
+      expect(provider['client'].investmentsHoldingsGet).toHaveBeenCalledWith({
+        access_token: 'access-token',
+      });
+      expect(result).toEqual({
+        externalAccountIds: ['external-account-id'],
+        holdings: [
+          {
+            externalAccountId: 'external-account-id',
+            externalSecurityId: 'security-id',
+            quantity: '10.5',
+            costBasis: '1000',
+            institutionPrice: '120.25',
+            institutionPriceAsOf: '2026-05-20',
+            institutionPriceDatetime: '2026-05-20T21:00:00Z',
+            institutionValue: '1262.625',
+            isoCurrencyCode: 'USD',
+            unofficialCurrencyCode: null,
+            vestedQuantity: null,
+            vestedValue: null,
+          },
+        ],
+        securities: [
+          expect.objectContaining({
+            externalSecurityId: 'security-id',
+            tickerSymbol: 'VWRA',
+            closePrice: '120.25',
+          }),
+        ],
+      });
     });
   });
 });

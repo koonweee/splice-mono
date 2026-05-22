@@ -4,6 +4,7 @@ import type {
   LinkInitiationResponse,
   TransactionSyncResponse,
 } from '../../types/BankLink';
+import type { ProviderInvestmentHoldingsResponse } from '../../types/Investment';
 
 /**
  * Interface that all bank link providers must implement
@@ -136,4 +137,16 @@ export interface IBankLinkProvider {
     authentication: Record<string, any>,
     cursor?: string,
   ): Promise<TransactionSyncResponse>;
+
+  /**
+   * Sync investment holdings from the provider.
+   * Optional - only implemented by providers that support investment holdings
+   * (e.g., Plaid /investments/holdings/get)
+   *
+   * @param authentication - Provider-specific authentication data
+   * @returns Normalized investment holding snapshots and securities
+   */
+  syncInvestmentHoldings?(
+    authentication: Record<string, any>,
+  ): Promise<ProviderInvestmentHoldingsResponse>;
 }

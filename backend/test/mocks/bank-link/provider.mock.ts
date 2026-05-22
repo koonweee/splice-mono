@@ -50,6 +50,49 @@ export const mockTransactionSyncResponse = {
   hasMore: false,
 };
 
+export const mockInvestmentHoldingsResponse = {
+  externalAccountIds: ['plaid-acc-123'],
+  securities: [
+    {
+      externalSecurityId: 'sec-123',
+      institutionId: 'ins_mock_123',
+      institutionSecurityId: 'institution-sec-123',
+      name: 'Vanguard FTSE All-World UCITS ETF',
+      tickerSymbol: 'VWRA',
+      isin: 'IE00BK5BQT80',
+      cusip: null,
+      sedol: null,
+      type: 'etf',
+      subtype: 'etf',
+      isCashEquivalent: false,
+      closePrice: '120.25',
+      closePriceAsOf: '2026-05-20',
+      updateDatetime: '2026-05-20T21:00:00Z',
+      isoCurrencyCode: 'USD',
+      unofficialCurrencyCode: null,
+      marketIdentifierCode: 'XLON',
+      sector: null,
+      industry: null,
+    },
+  ],
+  holdings: [
+    {
+      externalAccountId: 'plaid-acc-123',
+      externalSecurityId: 'sec-123',
+      quantity: '10.5',
+      costBasis: '1000',
+      institutionPrice: '120.25',
+      institutionPriceAsOf: '2026-05-20',
+      institutionPriceDatetime: '2026-05-20T21:00:00Z',
+      institutionValue: '1262.625',
+      isoCurrencyCode: 'USD',
+      unofficialCurrencyCode: null,
+      vestedQuantity: null,
+      vestedValue: null,
+    },
+  ],
+};
+
 export const mockPlaidProvider: IBankLinkProvider = {
   providerName: 'plaid',
   initiateLinking: jest.fn(function (this: void) {
@@ -78,5 +121,8 @@ export const mockPlaidProvider: IBankLinkProvider = {
   }),
   syncTransactions: jest.fn(function (this: void) {
     return Promise.resolve(mockTransactionSyncResponse);
+  }),
+  syncInvestmentHoldings: jest.fn(function (this: void) {
+    return Promise.resolve(mockInvestmentHoldingsResponse);
   }),
 };

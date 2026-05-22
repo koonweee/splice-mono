@@ -17,6 +17,7 @@ import {
   PlaidApi,
   PlaidEnvironments,
   Products,
+  Security,
   SyncUpdatesAvailableWebhook,
   Transaction as PlaidTransaction,
   UserCreateRequest,
@@ -29,6 +30,10 @@ import {
   LinkInitiationResponse,
   type TransactionSyncResponse,
 } from '../../../types/BankLink';
+import type {
+  ProviderInvestmentHoldingsResponse,
+  ProviderInvestmentSecurity,
+} from '../../../types/Investment';
 import { MoneySign, MoneyWithSign } from '../../../types/MoneyWithSign';
 import type { CreateTransactionDto } from '../../../types/Transaction';
 import {
@@ -131,6 +136,18 @@ function isHoldingsDefaultUpdateWebhook(
   return (
     p.webhook_type === 'HOLDINGS' &&
     p.webhook_code === 'DEFAULT_UPDATE' &&
+    typeof p.item_id === 'string'
+  );
+}
+
+function isInvestmentsTransactionsWebhook(
+  payload: unknown,
+): payload is { webhook_type: string; webhook_code: string; item_id: string } {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return (
+    p.webhook_type === 'INVESTMENTS_TRANSACTIONS' &&
+    typeof p.webhook_code === 'string' &&
     typeof p.item_id === 'string'
   );
 }
@@ -564,6 +581,60 @@ export class PlaidProvider implements IBankLinkProvider {
     }
   }
 
+  async syncInvestmentHoldings(
+    authentication: Record<string, any>,
+  ): Promise<ProviderInvestmentHoldingsResponse> {
+    if (!isPlaidAuthentication(authentication)) {
+      throw new Error('Missing or invalid accessToken in authentication data');
+    }
+    const { accessToken } = authentication;
+
+    const startTime = Date.now();
+    this.logger.log({}, 'Fetching investment holdings from Plaid');
+    try {
+      const response = await this.client.investmentsHoldingsGet({
+        access_token: accessToken,
+      });
+      const { accounts, holdings, securities } = response.data;
+      this.logger.log(
+        {
+          accountCount: accounts.length,
+          holdingCount: holdings.length,
+          securityCount: securities.length,
+          durationMs: Date.now() - startTime,
+        },
+        'Received investment holdings from Plaid',
+      );
+
+      return {
+        externalAccountIds: accounts.map((account) => account.account_id),
+        securities: securities.map((security) =>
+          this.mapPlaidSecurity(security),
+        ),
+        holdings: holdings.map((holding) => ({
+          externalAccountId: holding.account_id,
+          externalSecurityId: holding.security_id,
+          quantity: this.toDecimalString(holding.quantity),
+          costBasis: this.toDecimalString(holding.cost_basis),
+          institutionPrice: this.toDecimalString(holding.institution_price),
+          institutionPriceAsOf: holding.institution_price_as_of ?? null,
+          institutionPriceDatetime: holding.institution_price_datetime ?? null,
+          institutionValue: this.toDecimalString(holding.institution_value),
+          isoCurrencyCode: holding.iso_currency_code,
+          unofficialCurrencyCode: holding.unofficial_currency_code,
+          vestedQuantity: this.toDecimalString(holding.vested_quantity),
+          vestedValue: this.toDecimalString(holding.vested_value),
+        })),
+      };
+    } catch (error) {
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        'Error fetching investment holdings from Plaid',
+      );
+      throw error;
+    }
+  }
+
   /**
    * Verify that a webhook is genuine and from Plaid
    *
@@ -741,6 +812,13 @@ export class PlaidProvider implements IBankLinkProvider {
     // Check for HOLDINGS DEFAULT_UPDATE
     if (isHoldingsDefaultUpdateWebhook(rawPayload)) {
       return { itemId: rawPayload.item_id, type: 'HOLDINGS' };
+    }
+
+    if (isInvestmentsTransactionsWebhook(rawPayload)) {
+      return {
+        itemId: rawPayload.item_id,
+        type: 'INVESTMENTS_TRANSACTIONS',
+      };
     }
 
     return undefined;
@@ -1058,6 +1136,34 @@ export class PlaidProvider implements IBankLinkProvider {
         },
       }),
     };
+  }
+
+  private mapPlaidSecurity(security: Security): ProviderInvestmentSecurity {
+    return {
+      externalSecurityId: security.security_id,
+      institutionId: security.institution_id,
+      institutionSecurityId: security.institution_security_id,
+      name: security.name,
+      tickerSymbol: security.ticker_symbol,
+      isin: security.isin,
+      cusip: security.cusip,
+      sedol: security.sedol,
+      type: security.type,
+      subtype: security.subtype ?? null,
+      isCashEquivalent: security.is_cash_equivalent,
+      closePrice: this.toDecimalString(security.close_price),
+      closePriceAsOf: security.close_price_as_of,
+      updateDatetime: security.update_datetime ?? null,
+      isoCurrencyCode: security.iso_currency_code,
+      unofficialCurrencyCode: security.unofficial_currency_code,
+      marketIdentifierCode: security.market_identifier_code,
+      sector: security.sector,
+      industry: security.industry,
+    };
+  }
+
+  private toDecimalString(value: number | null | undefined): string | null {
+    return value === null || value === undefined ? null : value.toString();
   }
 
   // TODO: Implement Plaid link 'update' flow for using same access token to fix broken links

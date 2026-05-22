@@ -8,6 +8,9 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import { In, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceColumns } from '../common/balance.columns';
@@ -17,6 +20,7 @@ import {
   LinkedAccountEvents,
   LinkedAccountUpdatedEvent,
 } from '../events/account.events';
+import { InvestmentService } from '../investment/investment.service';
 import { TransactionService } from '../transaction/transaction.service';
 import type { Account, CreateAccountDto } from '../types/Account';
 import type {
@@ -27,6 +31,7 @@ import type {
   SanitizedBankLink,
   UpdateBankLinkDto,
 } from '../types/BankLink';
+import type { InvestmentHoldingsSyncResult } from '../types/Investment';
 import { UserService } from '../user/user.service';
 import { WebhookEventService } from '../webhook-event/webhook-event.service';
 import { BankLinkEntity } from './bank-link.entity';
@@ -37,6 +42,11 @@ type LinkConversionContext = {
   mode: 'convert-manual-account';
   convertAccountId: string;
 };
+
+const INVESTMENT_ACCOUNT_TYPES = ['investment', 'brokerage'];
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 /**
  * Orchestrates bank account linking across multiple providers
@@ -63,6 +73,7 @@ export class BankLinkService extends OwnedCrudService<
     private eventEmitter: EventEmitter2,
     private userService: UserService,
     private transactionService: TransactionService,
+    private investmentService: InvestmentService,
   ) {
     super(bankLinkRepository);
   }
@@ -299,6 +310,25 @@ export class BankLinkService extends OwnedCrudService<
         }
       });
     }
+
+    if (provider.syncInvestmentHoldings) {
+      const holdingsResults = await Promise.allSettled(
+        savedBankLinks.map((bankLink) =>
+          this.syncInvestmentHoldings(bankLink.id, userId),
+        ),
+      );
+      holdingsResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          this.logger.error(
+            {
+              bankLinkId: savedBankLinks[index].id,
+              error: String(result.reason),
+            },
+            'Failed initial investment holdings sync for new bank link',
+          );
+        }
+      });
+    }
   }
 
   /**
@@ -426,11 +456,37 @@ export class BankLinkService extends OwnedCrudService<
       return;
     }
 
+    if (updateInfo.type === 'INVESTMENTS_TRANSACTIONS') {
+      this.logger.log(
+        { bankLinkId: bankLink.id },
+        'Investment transaction webhook recognized but not synced',
+      );
+      return;
+    }
+
     await this.syncAccounts(bankLink.id, bankLink.userId);
     this.logger.log(
       { bankLinkId: bankLink.id },
       'Synced accounts for bank link',
     );
+
+    if (updateInfo.type === 'HOLDINGS') {
+      try {
+        await this.syncInvestmentHoldings(bankLink.id, bankLink.userId);
+        this.logger.log(
+          { bankLinkId: bankLink.id },
+          'Synced investment holdings for bank link',
+        );
+      } catch (error) {
+        this.logger.error(
+          {
+            bankLinkId: bankLink.id,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Failed to sync investment holdings for bank link',
+        );
+      }
+    }
 
     // Also sync transactions if this is a TRANSACTIONS webhook
     if (updateInfo.type === 'TRANSACTIONS') {
@@ -676,6 +732,75 @@ export class BankLinkService extends OwnedCrudService<
     return { synced, failed };
   }
 
+  async syncAllInvestmentHoldings(
+    userId: string,
+  ): Promise<{ synced: number; failed: number; skipped: number }> {
+    this.logger.log(
+      { userId },
+      'Syncing investment holdings for all bank links',
+    );
+
+    const bankLinks = await this.repository.find({
+      where: { userId },
+    });
+
+    let synced = 0;
+    let failed = 0;
+    let skipped = 0;
+
+    const results = await Promise.allSettled(
+      bankLinks.map(async (bankLink) => {
+        const provider = this.providerRegistry.getProvider(
+          bankLink.providerName,
+        );
+        if (!provider.syncInvestmentHoldings) {
+          return { skipped: true };
+        }
+
+        const hasInvestmentAccounts = await this.hasInvestmentAccounts(
+          userId,
+          bankLink.id,
+        );
+        if (!hasInvestmentAccounts) {
+          this.logger.log(
+            { bankLinkId: bankLink.id },
+            'Bank link has no investment accounts, skipping holdings sync',
+          );
+          return { skipped: true };
+        }
+
+        await this.syncInvestmentHoldings(bankLink.id, userId);
+        return { skipped: false };
+      }),
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        if (result.value.skipped) {
+          skipped++;
+        } else {
+          synced++;
+        }
+      } else {
+        failed++;
+        this.logger.error(
+          {
+            bankLinkId: bankLinks[index].id,
+            error: String(result.reason),
+          },
+          'Failed to sync investment holdings for bank link',
+        );
+      }
+    });
+
+    this.logger.log(
+      { synced, failed, skipped, total: bankLinks.length },
+      'Investment holdings sync complete for all bank links',
+    );
+
+    return { synced, failed, skipped };
+  }
+
   /**
    * Sync accounts for a bank link by fetching latest data from the provider
    *
@@ -838,6 +963,83 @@ export class BankLinkService extends OwnedCrudService<
     );
   }
 
+  async syncInvestmentHoldings(
+    bankLinkId: string,
+    userId: string,
+  ): Promise<InvestmentHoldingsSyncResult> {
+    const bankLink = await this.repository.findOne({
+      where: { id: bankLinkId, userId },
+    });
+    if (!bankLink) {
+      throw new Error(`Bank link not found: ${bankLinkId}`);
+    }
+
+    const provider = this.providerRegistry.getProvider(bankLink.providerName);
+    if (!provider.syncInvestmentHoldings) {
+      this.logger.log(
+        { providerName: bankLink.providerName },
+        'Provider does not support investment holdings sync, skipping',
+      );
+      return {
+        accounts: 0,
+        securities: 0,
+        holdings: 0,
+        deletedStaleHoldings: 0,
+      };
+    }
+
+    const hasInvestmentAccounts = await this.hasInvestmentAccounts(
+      userId,
+      bankLink.id,
+    );
+    if (!hasInvestmentAccounts) {
+      this.logger.log(
+        { bankLinkId },
+        'Bank link has no investment accounts, skipping holdings sync',
+      );
+      return {
+        accounts: 0,
+        securities: 0,
+        holdings: 0,
+        deletedStaleHoldings: 0,
+      };
+    }
+
+    this.logger.log(
+      { bankLinkId, providerName: bankLink.providerName },
+      'Starting investment holdings sync for bank link',
+    );
+
+    const holdingsResponse = await provider.syncInvestmentHoldings(
+      bankLink.authentication,
+    );
+    const accountIdMap = await this.buildExternalAccountIdMap(
+      userId,
+      bankLink.id,
+      holdingsResponse.externalAccountIds,
+    );
+    const snapshotDate = await this.getSnapshotDate(userId);
+    const result = await this.investmentService.upsertPlaidHoldings(
+      userId,
+      accountIdMap,
+      snapshotDate,
+      holdingsResponse,
+    );
+
+    this.logger.log(
+      {
+        bankLinkId,
+        accountCount: result.accounts,
+        securityCount: result.securities,
+        holdingCount: result.holdings,
+        deletedStaleHoldings: result.deletedStaleHoldings,
+      },
+      'Investment holdings sync completed',
+    );
+
+    return result;
+  }
+
   /**
    * Upsert accounts from API responses - updates existing accounts or creates new ones
    *
@@ -973,6 +1175,61 @@ export class BankLinkService extends OwnedCrudService<
     });
 
     return savedAccounts.map((account) => account.toObject());
+  }
+
+  private async hasInvestmentAccounts(
+    userId: string,
+    bankLinkId: string,
+  ): Promise<boolean> {
+    const account = await this.accountRepository.findOne({
+      where: [
+        { userId, bankLinkId, type: In(INVESTMENT_ACCOUNT_TYPES) },
+        { userId, bankLinkId, subType: 'brokerage' },
+      ],
+    });
+
+    return !!account;
+  }
+
+  private async buildExternalAccountIdMap(
+    userId: string,
+    bankLinkId: string,
+    externalAccountIds: string[],
+  ): Promise<Map<string, string>> {
+    if (externalAccountIds.length === 0) {
+      return new Map();
+    }
+
+    const accounts = await this.accountRepository.find({
+      where: {
+        externalAccountId: In(externalAccountIds),
+        userId,
+        bankLinkId,
+      },
+    });
+
+    const accountIdMap = new Map<string, string>();
+    accounts.forEach((account) => {
+      if (account.externalAccountId) {
+        accountIdMap.set(account.externalAccountId, account.id);
+      }
+    });
+
+    this.logger.log(
+      {
+        bankLinkId,
+        mappedAccounts: accountIdMap.size,
+        totalExternalIds: externalAccountIds.length,
+      },
+      'Built account ID map for investment holdings sync',
+    );
+
+    return accountIdMap;
+  }
+
+  private async getSnapshotDate(userId: string): Promise<string> {
+    const userTimezone = await this.userService.getTimezone(userId);
+    return dayjs().tz(userTimezone).format('YYYY-MM-DD');
   }
 
   /**
@@ -1145,6 +1402,19 @@ export class BankLinkService extends OwnedCrudService<
     const provider = this.providerRegistry.getProvider(providerName);
     if (provider.syncTransactions) {
       await this.syncTransactions(bankLink.id, userId);
+    }
+    if (provider.syncInvestmentHoldings) {
+      try {
+        await this.syncInvestmentHoldings(bankLink.id, userId);
+      } catch (error) {
+        this.logger.error(
+          {
+            bankLinkId: bankLink.id,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Failed initial investment holdings sync for converted bank link',
+        );
+      }
     }
   }
 

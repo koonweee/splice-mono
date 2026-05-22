@@ -13,6 +13,7 @@ import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { Save } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { AccountType } from '../api/models'
 import {
   getAccountControllerFindAllQueryKey,
   getBalanceQueryControllerGetAllBalancesQueryKey,
@@ -20,8 +21,10 @@ import {
   useAccountControllerUpdate,
 } from '../api/clients/spliceAPI'
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
+import { useInvestmentHoldings } from '../hooks/useInvestmentHoldings'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
 import {
+  HIDDEN_BALANCE_PLACEHOLDER,
   formatMoneyNumber,
   formatMoneyWithSign,
   formatRelativeTime,
@@ -30,6 +33,7 @@ import { useIsMobile } from '../lib/hooks'
 import styles from './AccountModal.module.css'
 import { UpdateBalanceModal } from './accounts/UpdateBalanceModal'
 import { Chart } from './Chart'
+import { InvestmentHoldingsTable } from './investments/InvestmentHoldingsTable'
 import type { TimePeriod } from '../lib/types'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
@@ -38,6 +42,7 @@ interface AccountModalProps {
   opened: boolean
   onClose: () => void
   period: TimePeriod
+  balancesHidden?: boolean
 }
 
 export function AccountModal({
@@ -45,6 +50,7 @@ export function AccountModal({
   opened,
   onClose,
   period,
+  balancesHidden = false,
 }: AccountModalProps) {
   const isMobile = useIsMobile()
   const queryClient = useQueryClient()
@@ -61,6 +67,15 @@ export function AccountModal({
     opened && !!account?.id,
     period,
   )
+  const isInvestmentAccount =
+    account?.type === AccountType.investment ||
+    account?.type === AccountType.brokerage
+  const {
+    holdings,
+    snapshotDate,
+    isLoading: holdingsLoading,
+    isError: holdingsError,
+  } = useInvestmentHoldings(account?.id, opened && isInvestmentAccount)
 
   // Get account from balance history if available
   const fullAccount = balanceHistory.latestBalance?.account
@@ -164,17 +179,21 @@ export function AccountModal({
                   </Group>
                   <div style={{ textAlign: 'right' }}>
                     <Text fw={600}>
-                      {balanceInfo &&
-                        formatMoneyWithSign({
-                          value: balanceInfo.primaryBalance,
-                        })}
+                      {balancesHidden
+                        ? HIDDEN_BALANCE_PLACEHOLDER
+                        : balanceInfo &&
+                          formatMoneyWithSign({
+                            value: balanceInfo.primaryBalance,
+                          })}
                     </Text>
                     {balanceInfo?.originalBalance && (
                       <Text size="sm" c="dimmed">
-                        {formatMoneyWithSign({
-                          value: balanceInfo.originalBalance,
-                          appendCurrency: true,
-                        })}
+                        {balancesHidden
+                          ? HIDDEN_BALANCE_PLACEHOLDER
+                          : formatMoneyWithSign({
+                              value: balanceInfo.originalBalance,
+                              appendCurrency: true,
+                            })}
                       </Text>
                     )}
                   </div>
@@ -225,6 +244,33 @@ export function AccountModal({
                     </Group>
                   )}
                 </Box>
+
+                {isInvestmentAccount && (
+                  <Box mt="md">
+                    <Group justify="space-between" mb="sm">
+                      <Text fw={500}>Holdings</Text>
+                      {snapshotDate && (
+                        <Text size="xs" c="dimmed">
+                          {snapshotDate}
+                        </Text>
+                      )}
+                    </Group>
+                    {holdingsLoading ? (
+                      <Group justify="center" py="md">
+                        <Loader size="sm" />
+                      </Group>
+                    ) : holdingsError ? (
+                      <Text c="dimmed" size="sm">
+                        Holdings unavailable.
+                      </Text>
+                    ) : (
+                      <InvestmentHoldingsTable
+                        holdings={holdings}
+                        balancesHidden={balancesHidden}
+                      />
+                    )}
+                  </Box>
+                )}
               </>
             )}
 
@@ -237,7 +283,9 @@ export function AccountModal({
                   data={balanceHistory.chartData}
                   height={200}
                   valueFormatter={(value) =>
-                    formatMoneyNumber({ value, decimals: 2 })
+                    balancesHidden
+                      ? HIDDEN_BALANCE_PLACEHOLDER
+                      : formatMoneyNumber({ value, decimals: 2 })
                   }
                 />
               </Box>
