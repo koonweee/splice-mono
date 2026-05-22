@@ -150,7 +150,14 @@ export class InvestmentService {
     userId: string,
     response: ProviderInvestmentHoldingsResponse,
   ): Promise<Map<string, InvestmentSecurityEntity>> {
-    if (response.securities.length === 0) {
+    const uniqueSecurities = new Map(
+      response.securities.map((security) => [
+        security.externalSecurityId,
+        security,
+      ]),
+    );
+
+    if (uniqueSecurities.size === 0) {
       return new Map();
     }
 
@@ -158,9 +165,7 @@ export class InvestmentService {
       where: {
         userId,
         provider: 'plaid',
-        externalSecurityId: In(
-          response.securities.map((security) => security.externalSecurityId),
-        ),
+        externalSecurityId: In(Array.from(uniqueSecurities.keys())),
       },
     });
     const existingByExternalId = new Map(
@@ -171,7 +176,7 @@ export class InvestmentService {
     );
 
     const savedSecurities = new Map<string, InvestmentSecurityEntity>();
-    for (const providerSecurity of response.securities) {
+    for (const providerSecurity of uniqueSecurities.values()) {
       const existing = existingByExternalId.get(
         providerSecurity.externalSecurityId,
       );
