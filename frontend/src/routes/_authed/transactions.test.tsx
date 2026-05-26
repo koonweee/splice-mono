@@ -705,6 +705,8 @@ function makeTransaction(id: string): Transaction {
     categoryId: category.id,
     category,
     categoryUpdatedAt: null,
+    categoryAssignmentSource: null,
+    categoryAssignmentRuleId: null,
     providerCategoryHint: null,
     accountName: account.customName,
     convertedAmount: null,

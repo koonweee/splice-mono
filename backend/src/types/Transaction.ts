@@ -13,6 +13,15 @@ export const TransactionSourceSchema = registerSchema(
 
 export type TransactionSource = z.infer<typeof TransactionSourceSchema>;
 
+export const CategoryAssignmentSourceSchema = registerSchema(
+  'CategoryAssignmentSource',
+  z.enum(['manual', 'rule']),
+);
+
+export type CategoryAssignmentSource = z.infer<
+  typeof CategoryAssignmentSourceSchema
+>;
+
 export const ProviderCategoryHintSchema = registerSchema(
   'ProviderCategoryHint',
   z.object({
@@ -95,6 +104,10 @@ export const TransactionSchema = registerSchema(
       category: CategorySchema.nullable().optional(),
       /** When the user category was last updated */
       categoryUpdatedAt: z.coerce.date().nullable(),
+      /** How the effective app category was assigned. */
+      categoryAssignmentSource: CategoryAssignmentSourceSchema.nullable(),
+      /** Categorization rule that assigned the effective app category. */
+      categoryAssignmentRuleId: z.string().uuid().nullable(),
       /** Provider-supplied category guidance. Never used as the app category. */
       providerCategoryHint: ProviderCategoryHintSchema.nullable(),
       /** Display name of the associated account (customName or name) */

@@ -60,6 +60,7 @@ type TransactionsMobileListProps = {
   onToggleTransactionSelection?: (transactionId: string) => void
   onEditManualTransaction?: (transaction: Transaction) => void
   onDeleteManualTransaction?: (transaction: Transaction) => void
+  readOnly?: boolean
 }
 
 function getCategoryLabel(transaction: Transaction) {
@@ -87,6 +88,10 @@ function getAssignableCategoryPrimaryLabel(
   category: Pick<Category, 'primary'>,
 ) {
   return category.primary
+}
+
+function shouldShowRuleAssignment(transaction: Transaction) {
+  return transaction.categoryAssignmentSource === 'rule'
 }
 
 function getAmountClass(transaction: Transaction) {
@@ -165,6 +170,7 @@ export function TransactionsMobileList({
   onToggleTransactionSelection,
   onEditManualTransaction,
   onDeleteManualTransaction,
+  readOnly = false,
 }: TransactionsMobileListProps) {
   const queryClient = useQueryClient()
   const [activeTransactionId, setActiveTransactionId] = useState<string | null>(
@@ -225,7 +231,7 @@ export function TransactionsMobileList({
   const activeBankActivityDate = activeTransaction
     ? getBankActivityDate(activeTransaction)
     : null
-  const drawerReadOnly = bulkModeEnabled
+  const drawerReadOnly = readOnly || bulkModeEnabled
   const showManualActions =
     activeTransaction !== null &&
     !drawerReadOnly &&
@@ -376,6 +382,11 @@ export function TransactionsMobileList({
                         <span className={styles.meta}>
                           {getCategoryLabel(transaction)}
                         </span>
+                        {shouldShowRuleAssignment(transaction) && (
+                          <Badge color="violet" size="xs" variant="light">
+                            Rule
+                          </Badge>
+                        )}
                       </div>
                       {formatPaymentChannel(transaction.paymentChannel) && (
                         <div className={styles.metaLine}>

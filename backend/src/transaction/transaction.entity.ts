@@ -14,7 +14,10 @@ import { formatProviderCategoryDisplayLabel } from '../category/category-normali
 import { BalanceColumns } from '../common/balance.columns';
 import { TimestampedEntity } from '../common/base.entity';
 import { CreateTransactionDto, Transaction } from '../types/Transaction';
-import type { TransactionSource } from '../types/Transaction';
+import type {
+  CategoryAssignmentSource,
+  TransactionSource,
+} from '../types/Transaction';
 import { getTransactionActivityDate } from './transaction-date';
 
 @Entity()
@@ -139,9 +142,17 @@ export class BankingTransactionEntity extends TimestampedEntity {
   @JoinColumn({ name: 'categoryId' })
   category: CategoryEntity | null;
 
-  /** When the user-selected category was last updated */
+  /** When the effective app category assignment was last updated */
   @Column({ type: 'timestamptz', nullable: true })
   categoryUpdatedAt: Date | null;
+
+  /** Effective category assignment source */
+  @Column({ type: 'varchar', nullable: true })
+  categoryAssignmentSource: CategoryAssignmentSource | null;
+
+  /** Rule that assigned the effective category, when source is rule */
+  @Column({ type: 'uuid', nullable: true })
+  categoryAssignmentRuleId: string | null;
 
   get userId(): string {
     return this.activity.userId;
@@ -230,6 +241,8 @@ export class BankingTransactionEntity extends TimestampedEntity {
     entity.applyBankingDto(dto);
     entity.categoryId = dto.categoryId ?? null;
     entity.categoryUpdatedAt = null;
+    entity.categoryAssignmentSource = null;
+    entity.categoryAssignmentRuleId = null;
     return entity;
   }
 
@@ -315,6 +328,8 @@ export class BankingTransactionEntity extends TimestampedEntity {
       categoryId: this.categoryId,
       category,
       categoryUpdatedAt: this.categoryUpdatedAt,
+      categoryAssignmentSource: this.categoryAssignmentSource,
+      categoryAssignmentRuleId: this.categoryAssignmentRuleId,
       providerCategoryHint,
       accountName: this.account
         ? (this.account.customName ?? this.account.name)

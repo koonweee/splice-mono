@@ -14,6 +14,7 @@ import { CategoryEntity } from '../category/category.entity';
 import type { TransactionSyncResponse } from '../types/BankLink';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
+import { TransactionCategorizationService } from '../transaction-categorization/categorization-rule.service';
 import {
   BulkTransactionCategoryUpdateDto,
   BulkTransactionCategoryUpdateResponse,
@@ -57,6 +58,8 @@ type BulkCategoryUndoSnapshot = {
   id: string;
   categoryId: string | null;
   categoryUpdatedAt: string | null;
+  categoryAssignmentSource: 'manual' | 'rule' | null;
+  categoryAssignmentRuleId: string | null;
 };
 
 type BulkCategoryUndoPayload = {
@@ -85,6 +88,7 @@ export class TransactionService extends OwnedCrudService<
     @InjectRepository(AccountEntity)
     private readonly accountRepository: Repository<AccountEntity>,
     private readonly categoryService: CategoryService,
+    private readonly transactionCategorizationService: TransactionCategorizationService,
     private readonly eventEmitter: EventEmitter2,
   ) {
     super(repository);
@@ -262,12 +266,16 @@ export class TransactionService extends OwnedCrudService<
       entity.categoryId = null;
       entity.category = null;
       entity.categoryUpdatedAt = null;
+      entity.categoryAssignmentSource = 'manual';
+      entity.categoryAssignmentRuleId = null;
       return;
     }
 
     entity.categoryId = category.id;
     entity.category = category;
     entity.categoryUpdatedAt = new Date();
+    entity.categoryAssignmentSource = 'manual';
+    entity.categoryAssignmentRuleId = null;
   }
 
   private async findActiveUserAccount(
@@ -483,6 +491,20 @@ export class TransactionService extends OwnedCrudService<
     };
   }
 
+  private async applyAutomaticCategoryIfEligible(
+    userId: string,
+    entity: TransactionEntity,
+  ): Promise<boolean> {
+    if (entity.categoryAssignmentSource === 'manual') {
+      return false;
+    }
+
+    return this.transactionCategorizationService.applyRuleAssignmentIfEligible(
+      userId,
+      entity,
+    );
+  }
+
   private static readonly SORTABLE_COLUMNS = new Set([
     'activityDate',
     'merchantName',
@@ -547,6 +569,8 @@ export class TransactionService extends OwnedCrudService<
         id: entity.id,
         categoryId: entity.categoryId,
         categoryUpdatedAt: entity.categoryUpdatedAt?.toISOString() ?? null,
+        categoryAssignmentSource: entity.categoryAssignmentSource,
+        categoryAssignmentRuleId: entity.categoryAssignmentRuleId,
       })),
     });
   }
@@ -559,10 +583,14 @@ export class TransactionService extends OwnedCrudService<
       entity.categoryId = null;
       entity.category = null;
       entity.categoryUpdatedAt = null;
+      entity.categoryAssignmentSource = 'manual';
+      entity.categoryAssignmentRuleId = null;
     } else {
       entity.categoryId = category.id;
       entity.category = category;
       entity.categoryUpdatedAt = new Date();
+      entity.categoryAssignmentSource = 'manual';
+      entity.categoryAssignmentRuleId = null;
     }
   }
 
@@ -807,6 +835,8 @@ export class TransactionService extends OwnedCrudService<
       entity.categoryId = null;
       entity.category = null;
       entity.categoryUpdatedAt = null;
+      entity.categoryAssignmentSource = 'manual';
+      entity.categoryAssignmentRuleId = null;
     } else {
       const category = await this.categoryService.findActiveAssignableCategory(
         dto.categoryId,
@@ -824,6 +854,8 @@ export class TransactionService extends OwnedCrudService<
       entity.categoryId = category.id;
       entity.category = category;
       entity.categoryUpdatedAt = new Date();
+      entity.categoryAssignmentSource = 'manual';
+      entity.categoryAssignmentRuleId = null;
     }
 
     const savedEntity = await this.repository.save(entity);
@@ -987,6 +1019,8 @@ export class TransactionService extends OwnedCrudService<
         entity.categoryUpdatedAt = snapshot.categoryUpdatedAt
           ? new Date(snapshot.categoryUpdatedAt)
           : null;
+        entity.categoryAssignmentSource = snapshot.categoryAssignmentSource;
+        entity.categoryAssignmentRuleId = snapshot.categoryAssignmentRuleId;
       });
 
       await txnRepo.save(entities);
@@ -1106,6 +1140,7 @@ export class TransactionService extends OwnedCrudService<
   ): Promise<void> {
     const { added, modified, removed } = syncResults;
     const insertedTransactions: TransactionEntity[] = [];
+    let automaticallyCategorizedCount = 0;
 
     this.logger.log(
       {
@@ -1155,6 +1190,14 @@ export class TransactionService extends OwnedCrudService<
               matchedPending,
               this.buildProviderSyncUpdateDto(dto, internalAccountId),
             );
+            if (
+              await this.applyAutomaticCategoryIfEligible(
+                userId,
+                matchedPending,
+              )
+            ) {
+              automaticallyCategorizedCount += 1;
+            }
             await txnRepo.save(matchedPending);
             this.logger.log(
               {
@@ -1166,12 +1209,14 @@ export class TransactionService extends OwnedCrudService<
             continue;
           }
 
-          newEntities.push(
-            TransactionEntity.fromDto(
-              { ...dto, accountId: internalAccountId, categoryId: null },
-              userId,
-            ),
+          const entity = TransactionEntity.fromDto(
+            { ...dto, accountId: internalAccountId, categoryId: null },
+            userId,
           );
+          if (await this.applyAutomaticCategoryIfEligible(userId, entity)) {
+            automaticallyCategorizedCount += 1;
+          }
+          newEntities.push(entity);
         }
 
         if (newEntities.length > 0) {
@@ -1213,12 +1258,14 @@ export class TransactionService extends OwnedCrudService<
                 { externalTransactionId: dto.externalTransactionId },
                 'Modified transaction not found locally, inserting as new',
               );
-              const savedEntity = await txnRepo.save(
-                TransactionEntity.fromDto(
-                  { ...dto, accountId: internalAccountId, categoryId: null },
-                  userId,
-                ),
+              const entity = TransactionEntity.fromDto(
+                { ...dto, accountId: internalAccountId, categoryId: null },
+                userId,
               );
+              if (await this.applyAutomaticCategoryIfEligible(userId, entity)) {
+                automaticallyCategorizedCount += 1;
+              }
+              const savedEntity = await txnRepo.save(entity);
               insertedTransactions.push(savedEntity);
               return;
             }
@@ -1228,6 +1275,9 @@ export class TransactionService extends OwnedCrudService<
               existing,
               this.buildProviderSyncUpdateDto(dto, internalAccountId),
             );
+            if (await this.applyAutomaticCategoryIfEligible(userId, existing)) {
+              automaticallyCategorizedCount += 1;
+            }
             await txnRepo.save(existing);
           }),
         );
@@ -1300,7 +1350,10 @@ export class TransactionService extends OwnedCrudService<
       );
     }
 
-    this.logger.log({}, 'Transaction sync results processed successfully');
+    this.logger.log(
+      { userId, automaticallyCategorizedCount },
+      'Transaction sync results processed successfully',
+    );
   }
 
   private async removeActivityCascade(
