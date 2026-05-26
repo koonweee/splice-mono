@@ -42,6 +42,8 @@ import {
 import { CategorySelect } from '../categories/CategorySelect'
 import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
+import { TransactionsTable } from '../TransactionsTable'
+import { TransactionsMobileList } from '../transactions/TransactionsMobileList'
 import {
   TransactionConditionInput,
   getDefaultCategorizationCondition,
@@ -771,7 +773,7 @@ export function CategorizationRulesSection() {
         opened={applyRule !== null}
         onClose={() => setApplyRule(null)}
         title="Apply rule to existing transactions"
-        size="lg"
+        size="xl"
       >
         {applyRule && (
           <Stack gap="md">
@@ -810,6 +812,60 @@ export function CategorizationRulesSection() {
             </SimpleGrid>
 
             <Alert color="blue">Manual categories are never overwritten.</Alert>
+
+            <Stack gap="xs">
+              <Group justify="space-between">
+                <Text fw={700} size="sm">
+                  Transactions to update
+                </Text>
+                {applicationCounts && (
+                  <Text c="dimmed" size="xs">
+                    Most recent{' '}
+                    {applicationPreview.data?.transactions.length ?? 0} of{' '}
+                    {applicationCounts.updated.toLocaleString()}
+                  </Text>
+                )}
+              </Group>
+              {applicationPreview.isLoading && (
+                <Group justify="center" py="md">
+                  <Loader size="sm" />
+                </Group>
+              )}
+              {!applicationPreview.isLoading &&
+                applicationPreview.data &&
+                applicationPreview.data.transactions.length === 0 && (
+                  <Text c="dimmed" size="sm">
+                    No eligible transactions to update.
+                  </Text>
+                )}
+              {!applicationPreview.isLoading &&
+                applicationPreview.data &&
+                applicationPreview.data.transactions.length > 0 &&
+                (isMobile ? (
+                  <Box maw="100%" mah={360} style={{ overflowY: 'auto' }}>
+                    <TransactionsMobileList
+                      data={applicationPreview.data.transactions}
+                      isError={false}
+                      isLoading={false}
+                      readOnly
+                      totalRows={applicationPreview.data.transactions.length}
+                      variant="drilldown"
+                    />
+                  </Box>
+                ) : (
+                  <TransactionsTable
+                    data={applicationPreview.data.transactions}
+                    hiddenColumns={['category']}
+                    isError={false}
+                    isLoading={false}
+                    mantineTableContainerProps={{
+                      style: { maxHeight: 360, overflowY: 'auto' },
+                    }}
+                    readOnly
+                    totalRows={applicationPreview.data.transactions.length}
+                  />
+                ))}
+            </Stack>
 
             {applicationPreview.isError && !applyResult && (
               <Alert color="red" title="Error">

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { CategoryColorSchema } from './Category';
 import { TimestampsSchema } from './Timestamps';
+import { TransactionSchema } from './Transaction';
 
 const TextRuleFieldSchema = z.enum([
   'merchantName',
@@ -169,4 +170,15 @@ export const ApplyCategorizationRuleResponseSchema = registerSchema(
 );
 export type ApplyCategorizationRuleResponse = z.infer<
   typeof ApplyCategorizationRuleResponseSchema
+>;
+
+export const PreviewCategorizationRuleApplicationResponseSchema =
+  registerSchema(
+    'PreviewCategorizationRuleApplicationResponse',
+    ApplyCategorizationRuleResponseSchema.extend({
+      transactions: z.array(TransactionSchema),
+    }),
+  );
+export type PreviewCategorizationRuleApplicationResponse = z.infer<
+  typeof PreviewCategorizationRuleApplicationResponseSchema
 >;

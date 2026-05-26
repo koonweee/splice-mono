@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, IsNull, Not, Repository } from 'typeorm';
 import { CategoryEntity } from '../category/category.entity';
 import { TransactionEntity } from '../transaction/transaction.entity';
+import { getTransactionActivityDate } from '../transaction/transaction-date';
 import type {
   ApplyCategorizationRuleResponse,
   CategorizationRuleCategoryView,
@@ -15,6 +16,7 @@ import type {
   CategorizationRuleConflict,
   CategorizationRuleView,
   CreateCategorizationRuleDto,
+  PreviewCategorizationRuleApplicationResponse,
   UpdateCategorizationRuleDto,
 } from '../types/CategorizationRule';
 import { CategorizationRuleEntity } from './categorization-rule.entity';
@@ -29,6 +31,10 @@ type EditableRuleState = {
   targetCategoryId: string;
   conditions: CategorizationRuleCondition[];
   archivedAt: Date | null;
+};
+
+type RuleApplicationEvaluation = ApplyCategorizationRuleResponse & {
+  previewTransactions?: TransactionEntity[];
 };
 
 @Injectable()
@@ -176,15 +182,34 @@ export class TransactionCategorizationService {
   async previewRuleApplication(
     id: string,
     userId: string,
-  ): Promise<ApplyCategorizationRuleResponse | null> {
-    return this.evaluateRuleApplication(id, userId, { persist: false });
+  ): Promise<PreviewCategorizationRuleApplicationResponse | null> {
+    const result = await this.evaluateRuleApplication(id, userId, {
+      persist: false,
+      previewLimit: 10,
+    });
+    if (!result) {
+      return null;
+    }
+
+    return {
+      matched: result.matched,
+      updated: result.updated,
+      skippedManual: result.skippedManual,
+      transactions: (result.previewTransactions ?? []).map((transaction) =>
+        transaction.toObject(),
+      ),
+    };
   }
 
   private async evaluateRuleApplication(
     id: string,
     userId: string,
-    options: { persist: boolean; manager?: EntityManager },
-  ): Promise<ApplyCategorizationRuleResponse | null> {
+    options: {
+      persist: boolean;
+      manager?: EntityManager;
+      previewLimit?: number;
+    },
+  ): Promise<RuleApplicationEvaluation | null> {
     const manager = options.manager ?? this.transactionRepository.manager;
     const rule = await manager.getRepository(CategorizationRuleEntity).findOne({
       where: { id, userId, archivedAt: IsNull() },
@@ -209,6 +234,7 @@ export class TransactionCategorizationService {
     let updated = 0;
     let skippedManual = 0;
     const updates: TransactionEntity[] = [];
+    const previewTransactions: TransactionEntity[] = [];
 
     for (const transaction of transactions) {
       const match = this.engine.findFirstMatch([rule], transaction);
@@ -226,6 +252,10 @@ export class TransactionCategorizationService {
       }
 
       updated += 1;
+      if (options.previewLimit !== undefined) {
+        previewTransactions.push(transaction);
+      }
+
       if (!options.persist) {
         continue;
       }
@@ -242,7 +272,18 @@ export class TransactionCategorizationService {
       await txnRepo.save(updates);
     }
 
-    return { matched, updated, skippedManual };
+    const sortedPreviewTransactions = previewTransactions
+      .sort(compareTransactionsByActivityDateDesc)
+      .slice(0, options.previewLimit);
+
+    return {
+      matched,
+      updated,
+      skippedManual,
+      ...(options.previewLimit !== undefined
+        ? { previewTransactions: sortedPreviewTransactions }
+        : {}),
+    };
   }
 
   private async normalizeCreateDto(
@@ -435,4 +476,18 @@ export class TransactionCategorizationService {
       archivedAt: rule.archivedAt,
     };
   }
+}
+
+function compareTransactionsByActivityDateDesc(
+  left: TransactionEntity,
+  right: TransactionEntity,
+): number {
+  const activityDateComparison = getTransactionActivityDate(
+    right,
+  ).localeCompare(getTransactionActivityDate(left));
+  if (activityDateComparison !== 0) {
+    return activityDateComparison;
+  }
+
+  return right.id.localeCompare(left.id);
 }

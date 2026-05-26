@@ -62,6 +62,7 @@ import type {
   PaginatedInvestmentActivityResponse,
   PaginatedTransactionResponse,
   PersonalAccessToken,
+  PreviewCategorizationRuleApplicationResponse,
   PushConfigResponse,
   PushSubscriptionEndpointDto,
   PushSubscriptionResponse,
@@ -6730,7 +6731,7 @@ export const categorizationRuleControllerPreviewApplication = (
   id: string,
   signal?: AbortSignal,
 ) => {
-  return axios<ApplyCategorizationRuleResponse>({
+  return axios<PreviewCategorizationRuleApplicationResponse>({
     url: `/categorization-rules/${id}/application-preview`,
     method: 'GET',
     signal,

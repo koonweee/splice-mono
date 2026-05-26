@@ -71,6 +71,7 @@ interface TransactionsTableProps {
   onToggleLoadedSelection?: () => void
   onEditManualTransaction?: (transaction: Transaction) => void
   onDeleteManualTransaction?: (transaction: Transaction) => void
+  readOnly?: boolean
 }
 
 function formatMetadataValue(value: string | null | undefined) {
@@ -316,16 +317,19 @@ function MerchantCell({
   bulkModeEnabled = false,
   onDeleteManualTransaction,
   onEditManualTransaction,
+  readOnly = false,
 }: {
   row: { original: Transaction }
   bulkModeEnabled?: boolean
   onDeleteManualTransaction?: (transaction: Transaction) => void
   onEditManualTransaction?: (transaction: Transaction) => void
+  readOnly?: boolean
 }) {
   const transaction = row.original
   const merchantDisplay = getMerchantDisplay(transaction)
   const avatarLabel = merchantDisplay.primary.trim().slice(0, 1).toUpperCase()
-  const showManualActions = !bulkModeEnabled && isManualTransaction(transaction)
+  const showManualActions =
+    !readOnly && !bulkModeEnabled && isManualTransaction(transaction)
 
   return (
     <Group className={styles.merchantCell} gap="xs" wrap="nowrap">
@@ -342,7 +346,7 @@ function MerchantCell({
           <Text className={styles.merchantPrimary} size="sm" span>
             {merchantDisplay.primary}
           </Text>
-          {!bulkModeEnabled && (
+          {!readOnly && !bulkModeEnabled && (
             <TransactionInfoPopover transaction={transaction} />
           )}
           {showManualActions && (
@@ -655,6 +659,7 @@ export function TransactionsTable({
   onToggleLoadedSelection,
   onEditManualTransaction,
   onDeleteManualTransaction,
+  readOnly = false,
 }: TransactionsTableProps) {
   const queryClient = useQueryClient()
   const [editingTransactionId, setEditingTransactionId] = useState<
@@ -823,7 +828,7 @@ export function TransactionsTable({
           )
           const resetDateLabel = dayjs(bankActivityDate).format('MMM D, YYYY')
 
-          if (isEditing && !bulkModeEnabled && !isManual) {
+          if (isEditing && !readOnly && !bulkModeEnabled && !isManual) {
             return (
               <Group className={styles.dateCell} gap={4} wrap="nowrap">
                 <Popover
@@ -903,7 +908,7 @@ export function TransactionsTable({
               >
                 {dateLabel}
               </Text>
-              {!bulkModeEnabled && !isManual && (
+              {!readOnly && !bulkModeEnabled && !isManual && (
                 <Group className={styles.dateActions} gap={2} wrap="nowrap">
                   <Tooltip label="Edit reporting date">
                     <ActionIcon
@@ -949,6 +954,7 @@ export function TransactionsTable({
             bulkModeEnabled={bulkModeEnabled}
             onDeleteManualTransaction={onDeleteManualTransaction}
             onEditManualTransaction={onEditManualTransaction}
+            readOnly={readOnly}
           />
         ),
       },
@@ -995,7 +1001,7 @@ export function TransactionsTable({
           const categoryLabel = category
             ? getCategoryLabel(category)
             : 'Uncategorized'
-          if (isEditing && !bulkModeEnabled && !isManual) {
+          if (isEditing && !readOnly && !bulkModeEnabled && !isManual) {
             return (
               <Group className={styles.categoryCell} gap={4} wrap="nowrap">
                 <CategorySelect
@@ -1050,7 +1056,7 @@ export function TransactionsTable({
                   </Badge>
                 </Tooltip>
               )}
-              {!bulkModeEnabled && !isManual && (
+              {!readOnly && !bulkModeEnabled && !isManual && (
                 <Group className={styles.categoryActions} gap={2} wrap="nowrap">
                   <Tooltip label="Edit category">
                     <ActionIcon
@@ -1098,6 +1104,7 @@ export function TransactionsTable({
       editingReportingDateTransactionId,
       editingTransactionId,
       reportingDateDraft,
+      readOnly,
       selectedTransactionIds,
       onToggleTransactionSelection,
       onDeleteManualTransaction,

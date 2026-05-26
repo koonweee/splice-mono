@@ -158,7 +158,7 @@ beforeEach(() => {
     error: null,
   })
   mockFns.useCategorizationRuleControllerPreviewApplicationMock.mockReturnValue({
-    data: { matched: 24, updated: 18, skippedManual: 6 },
+    data: { matched: 24, updated: 18, skippedManual: 6, transactions: [] },
     isLoading: false,
     isError: false,
     error: null,

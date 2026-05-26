@@ -19,10 +19,12 @@ import {
   ApplyCategorizationRuleResponseSchema,
   CategorizationRuleViewSchema,
   CreateCategorizationRuleDtoSchema,
+  PreviewCategorizationRuleApplicationResponseSchema,
   UpdateCategorizationRuleDtoSchema,
   type ApplyCategorizationRuleResponse,
   type CategorizationRuleView,
   type CreateCategorizationRuleDto,
+  type PreviewCategorizationRuleApplicationResponse,
   type UpdateCategorizationRuleDto,
 } from '../types/CategorizationRule';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
@@ -115,13 +117,13 @@ export class CategorizationRuleController {
   @ZodApiResponse({
     status: 200,
     description: 'Categorization rule application preview',
-    schema: ApplyCategorizationRuleResponseSchema,
+    schema: PreviewCategorizationRuleApplicationResponseSchema,
   })
   @ApiResponse({ status: 404, description: 'Categorization rule not found' })
   async previewApplication(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() user: JwtUser,
-  ): Promise<ApplyCategorizationRuleResponse> {
+  ): Promise<PreviewCategorizationRuleApplicationResponse> {
     const result = await this.categorizationService.previewRuleApplication(
       id,
       user.userId,

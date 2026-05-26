@@ -60,6 +60,7 @@ type TransactionsMobileListProps = {
   onToggleTransactionSelection?: (transactionId: string) => void
   onEditManualTransaction?: (transaction: Transaction) => void
   onDeleteManualTransaction?: (transaction: Transaction) => void
+  readOnly?: boolean
 }
 
 function getCategoryLabel(transaction: Transaction) {
@@ -169,6 +170,7 @@ export function TransactionsMobileList({
   onToggleTransactionSelection,
   onEditManualTransaction,
   onDeleteManualTransaction,
+  readOnly = false,
 }: TransactionsMobileListProps) {
   const queryClient = useQueryClient()
   const [activeTransactionId, setActiveTransactionId] = useState<string | null>(
@@ -229,7 +231,7 @@ export function TransactionsMobileList({
   const activeBankActivityDate = activeTransaction
     ? getBankActivityDate(activeTransaction)
     : null
-  const drawerReadOnly = bulkModeEnabled
+  const drawerReadOnly = readOnly || bulkModeEnabled
   const showManualActions =
     activeTransaction !== null &&
     !drawerReadOnly &&
