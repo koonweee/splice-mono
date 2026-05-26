@@ -17,13 +17,17 @@ import {
 import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import {
   ApplyCategorizationRuleResponseSchema,
+  CategorizationRuleDraftPreviewSchema,
   CategorizationRuleViewSchema,
   CreateCategorizationRuleDtoSchema,
+  PreviewCategorizationRuleDraftDtoSchema,
   PreviewCategorizationRuleApplicationResponseSchema,
   UpdateCategorizationRuleDtoSchema,
   type ApplyCategorizationRuleResponse,
+  type CategorizationRuleDraftPreview,
   type CategorizationRuleView,
   type CreateCategorizationRuleDto,
+  type PreviewCategorizationRuleDraftDto,
   type PreviewCategorizationRuleApplicationResponse,
   type UpdateCategorizationRuleDto,
 } from '../types/CategorizationRule';
@@ -78,6 +82,29 @@ export class CategorizationRuleController {
     dto: CreateCategorizationRuleDto,
   ): Promise<CategorizationRuleView> {
     return this.categorizationService.create(user.userId, dto);
+  }
+
+  @Post('application-preview')
+  @ApiOperation({
+    description:
+      'Preview how an unsaved categorization rule draft would match existing transactions. Manual categories are never overwritten.',
+  })
+  @ZodApiBody({ schema: PreviewCategorizationRuleDraftDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Draft categorization rule application preview',
+    schema: CategorizationRuleDraftPreviewSchema,
+  })
+  @ApiResponse({ status: 409, description: 'A matching active rule exists' })
+  async previewDraftApplication(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(PreviewCategorizationRuleDraftDtoSchema))
+    dto: PreviewCategorizationRuleDraftDto,
+  ): Promise<CategorizationRuleDraftPreview> {
+    return this.categorizationService.previewDraftRuleApplication(
+      user.userId,
+      dto,
+    );
   }
 
   @Patch(':id')

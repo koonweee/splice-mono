@@ -9,6 +9,7 @@ import {
   Group,
   Loader,
   Modal,
+  MultiSelect,
   NumberInput,
   Paper,
   SimpleGrid,
@@ -21,15 +22,20 @@ import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Archive,
+  Check,
   CircleHelp,
+  Eye,
   Pencil,
   Play,
   Plus,
+  RefreshCw,
   RotateCcw,
   Save,
+  Sparkles,
+  Trash2,
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   useAccountControllerFindAll,
   useCategorizationRuleControllerApply,
@@ -37,6 +43,11 @@ import {
   useCategorizationRuleControllerFindAll,
   useCategorizationRuleControllerPreviewApplication,
   useCategorizationRuleControllerUpdate,
+  useCategorizationRuleRecommendationControllerAccept,
+  useCategorizationRuleRecommendationControllerDismiss,
+  useCategorizationRuleRecommendationControllerGenerate,
+  useCategorizationRuleRecommendationControllerList,
+  useCategorizationRuleRecommendationControllerRegenerate,
   useCategoryControllerFindManagement,
 } from '../../api/clients/spliceAPI'
 import { CategorySelect } from '../categories/CategorySelect'
@@ -51,9 +62,12 @@ import {
 } from './categorization/TransactionConditionInput'
 import type { MRT_ColumnDef } from 'mantine-react-table'
 import type {
+  CategorizationRuleSuggestion,
+  CategorizationRuleSuggestionGeneration,
   CategorizationRuleView,
   CategoryManagementItem,
   CreateCategorizationRuleDto,
+  GenerateCategorizationRuleRecommendationsDto,
 } from '../../api/models'
 import type { CategorySelectOption } from '../categories/CategorySelect'
 import type { EditableCategorizationCondition } from './categorization/TransactionConditionInput'
@@ -183,10 +197,48 @@ function invalidateCategorizationConsumers(
       Array.isArray(query.queryKey) &&
       typeof query.queryKey[0] === 'string' &&
       (query.queryKey[0].includes('/categorization-rules') ||
+        query.queryKey[0].includes('/categorization-rule-recommendations') ||
         query.queryKey[0].includes('/transaction') ||
         query.queryKey[0].includes('/category') ||
         query.queryKey[0].includes('/transaction-analysis')),
   })
+}
+
+function isRecommendationGenerationRunning(
+  generation?: CategorizationRuleSuggestionGeneration | null,
+) {
+  return generation?.status === 'pending' || generation?.status === 'processing'
+}
+
+function getRecommendationRunDate(
+  generation?: CategorizationRuleSuggestionGeneration | null,
+) {
+  return (
+    generation?.completedAt ??
+    generation?.failedAt ??
+    generation?.startedAt ??
+    generation?.createdAt ??
+    null
+  )
+}
+
+function formatRecommendationRunDate(
+  generation?: CategorizationRuleSuggestionGeneration | null,
+) {
+  const value = getRecommendationRunDate(generation)
+  if (!value) {
+    return null
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
 }
 
 export function CategorizationRulesSection() {
@@ -198,6 +250,9 @@ export function CategorizationRulesSection() {
   const [applyRule, setApplyRule] = useState<CategorizationRuleView | null>(
     null,
   )
+  const [recommendationsOpen, setRecommendationsOpen] = useState(false)
+  const [previewSuggestion, setPreviewSuggestion] =
+    useState<CategorizationRuleSuggestion | null>(null)
   const [name, setName] = useState('')
   const [targetCategoryId, setTargetCategoryId] = useState<string | null>(null)
   const [priority, setPriority] = useState<string | number>(10)
@@ -209,6 +264,14 @@ export function CategorizationRulesSection() {
     updated: number
     skippedManual: number
   } | null>(null)
+  const [
+    ignoredRecommendationCategoryIds,
+    setIgnoredRecommendationCategoryIds,
+  ] = useState<Array<string>>([])
+  const [
+    recommendationIgnoreCategoriesTouched,
+    setRecommendationIgnoreCategoriesTouched,
+  ] = useState(false)
 
   const {
     data: rules = [],
@@ -222,6 +285,21 @@ export function CategorizationRulesSection() {
     { archived: true },
   )
   const { data: accounts = [] } = useAccountControllerFindAll()
+  const recommendations = useCategorizationRuleRecommendationControllerList({
+    query: {
+      enabled: recommendationsOpen,
+      refetchInterval: (query) => {
+        if (!recommendationsOpen) {
+          return false
+        }
+
+        const data = query.state.data
+        return isRecommendationGenerationRunning(data?.generation)
+          ? 3000
+          : false
+      },
+    },
+  })
 
   const createRule = useCategorizationRuleControllerCreate<unknown>({
     mutation: {
@@ -247,6 +325,39 @@ export function CategorizationRulesSection() {
       },
     },
   })
+  const generateRecommendations =
+    useCategorizationRuleRecommendationControllerGenerate<unknown>({
+      mutation: {
+        onSuccess: () => {
+          invalidateCategorizationConsumers(queryClient)
+        },
+      },
+    })
+  const regenerateRecommendations =
+    useCategorizationRuleRecommendationControllerRegenerate<unknown>({
+      mutation: {
+        onSuccess: () => {
+          invalidateCategorizationConsumers(queryClient)
+        },
+      },
+    })
+  const acceptRecommendation =
+    useCategorizationRuleRecommendationControllerAccept<unknown>({
+      mutation: {
+        onSuccess: () => {
+          setPreviewSuggestion(null)
+          invalidateCategorizationConsumers(queryClient)
+        },
+      },
+    })
+  const dismissRecommendation =
+    useCategorizationRuleRecommendationControllerDismiss<unknown>({
+      mutation: {
+        onSuccess: () => {
+          invalidateCategorizationConsumers(queryClient)
+        },
+      },
+    })
   const applicationPreview = useCategorizationRuleControllerPreviewApplication(
     applyRule?.id ?? '',
     {
@@ -279,6 +390,40 @@ export function CategorizationRulesSection() {
         })),
     [categories],
   )
+
+  const recommendationIgnoredCategoryOptions = useMemo(
+    () =>
+      categories.map((category) => ({
+        value: category.id,
+        label: getCategoryLabel(category),
+      })),
+    [categories],
+  )
+
+  useEffect(() => {
+    if (recommendationIgnoreCategoriesTouched) {
+      return
+    }
+
+    const historicalCategory = categories.find(
+      (category) =>
+        category.primary.trim().toLowerCase() === 'others' &&
+        category.detailed.trim().toLowerCase() === 'pre 2026',
+    )
+    if (historicalCategory) {
+      if (
+        ignoredRecommendationCategoryIds.length === 1 &&
+        ignoredRecommendationCategoryIds[0] === historicalCategory.id
+      ) {
+        return
+      }
+      setIgnoredRecommendationCategoryIds([historicalCategory.id])
+    }
+  }, [
+    categories,
+    ignoredRecommendationCategoryIds,
+    recommendationIgnoreCategoriesTouched,
+  ])
 
   const filteredRules = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
@@ -372,25 +517,146 @@ export function CategorizationRulesSection() {
     setApplyResult(null)
   }
 
-  function renderTargetCategory(rule: CategorizationRuleView) {
+  function openRecommendations() {
+    setRecommendationsOpen(true)
+  }
+
+  function closeRecommendations() {
+    setRecommendationsOpen(false)
+  }
+
+  function buildRecommendationGenerationDto(): GenerateCategorizationRuleRecommendationsDto {
+    return {
+      ignoredCategoryIds: ignoredRecommendationCategoryIds,
+    }
+  }
+
+  function generateRuleRecommendations() {
+    generateRecommendations.mutate({ data: buildRecommendationGenerationDto() })
+  }
+
+  function regenerateRuleRecommendations() {
+    regenerateRecommendations.mutate({
+      data: buildRecommendationGenerationDto(),
+    })
+  }
+
+  function openSuggestionForEdit(suggestion: CategorizationRuleSuggestion) {
+    setRecommendationsOpen(false)
+    setPanel({ mode: 'create' })
+    setName(suggestion.name)
+    setTargetCategoryId(suggestion.targetCategoryId)
+    setPriority(suggestion.priority)
+    setConditions(suggestion.conditions.map(conditionFromApi))
+  }
+
+  function renderCategoryLabel(category: {
+    primary: string
+    detailed: string
+    color: string
+  }) {
     return (
       <Group gap="xs" wrap="nowrap">
         <ColorSwatch
-          color={rule.targetCategory.color}
+          color={category.color}
           size={14}
           withShadow={false}
         />
         <Text size="sm" lineClamp={1}>
-          {getCategoryLabel(rule.targetCategory)}
+          {getCategoryLabel(category)}
         </Text>
       </Group>
     )
   }
 
-  function renderConditionSummary(rule: CategorizationRuleView) {
+  function renderTargetCategory(rule: CategorizationRuleView) {
+    return renderCategoryLabel(rule.targetCategory)
+  }
+
+  function renderConditionSummary(
+    rule: Pick<CategorizationRuleView, 'conditions'>,
+  ) {
     const labels = rule.conditions.map(conditionFromApi).map(getConditionLabel)
 
     return labels.join(' AND ')
+  }
+
+  function renderSuggestionCard(suggestion: CategorizationRuleSuggestion) {
+    return (
+      <Paper key={suggestion.id} withBorder p="sm" radius="md">
+        <Group align="flex-start" gap="sm" justify="space-between" wrap="nowrap">
+          <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <Text fw={700} truncate>
+              {suggestion.name}
+            </Text>
+            <Box mt={4}>{renderCategoryLabel(suggestion.targetCategory)}</Box>
+            <Text c="dimmed" lineClamp={2} mt={6} size="sm">
+              {renderConditionSummary(suggestion)}
+            </Text>
+            <Group gap="xs" mt={8}>
+              <Badge variant="light">
+                {suggestion.updated.toLocaleString()} updates
+              </Badge>
+              <Badge variant="light">
+                {suggestion.manualConflicts.toLocaleString()} conflicts
+              </Badge>
+              <Badge variant="light">
+                {suggestion.existingRuleOverlap.toLocaleString()} overlaps
+              </Badge>
+            </Group>
+            {suggestion.rationale && (
+              <Text c="dimmed" lineClamp={2} mt={6} size="xs">
+                {suggestion.rationale}
+              </Text>
+            )}
+          </Box>
+          <Group gap={2} justify="flex-end" wrap="nowrap">
+            <Tooltip label="Preview recommendation">
+              <ActionIcon
+                aria-label={`Preview recommendation ${suggestion.name}`}
+                onClick={() => setPreviewSuggestion(suggestion)}
+                variant="transparent"
+              >
+                <Eye size={16} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Edit as rule">
+              <ActionIcon
+                aria-label={`Edit recommendation ${suggestion.name}`}
+                onClick={() => openSuggestionForEdit(suggestion)}
+                variant="transparent"
+              >
+                <Pencil size={16} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Accept recommendation">
+              <ActionIcon
+                aria-label={`Accept recommendation ${suggestion.name}`}
+                loading={acceptRecommendation.isPending}
+                onClick={() =>
+                  acceptRecommendation.mutate({ id: suggestion.id })
+                }
+                variant="transparent"
+              >
+                <Check size={16} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Dismiss recommendation">
+              <ActionIcon
+                aria-label={`Dismiss recommendation ${suggestion.name}`}
+                loading={dismissRecommendation.isPending}
+                onClick={() =>
+                  dismissRecommendation.mutate({ id: suggestion.id })
+                }
+                variant="transparent"
+              >
+                <Trash2 size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        </Group>
+      </Paper>
+    )
   }
 
   function renderRuleRowActions(rule: CategorizationRuleView) {
@@ -566,6 +832,29 @@ export function CategorizationRulesSection() {
       ? 'Edit categorization rule'
       : 'New categorization rule'
   const applicationCounts = applyResult ?? applicationPreview.data ?? null
+  const recommendationSuggestions = recommendations.data?.suggestions ?? []
+  const recommendationGeneration = recommendations.data?.generation
+  const recommendationGenerationRunning =
+    isRecommendationGenerationRunning(recommendationGeneration) ||
+    generateRecommendations.isPending ||
+    regenerateRecommendations.isPending
+  const recommendationGenerationFailed =
+    recommendationGeneration?.status === 'failed'
+  const recommendationLastRun = formatRecommendationRunDate(
+    recommendationGeneration,
+  )
+  const hasRecommendationRun = Boolean(recommendationGeneration)
+  const recommendationError =
+    recommendations.isError ||
+    generateRecommendations.isError ||
+    regenerateRecommendations.isError
+  const suggestionPreviewCounts = previewSuggestion
+    ? {
+        matched: previewSuggestion.matched,
+        updated: previewSuggestion.updated,
+        skippedManual: previewSuggestion.skippedManual,
+      }
+    : null
   const updateCountLabel = applyResult ? 'Updated' : 'Would update'
   const applyButtonLabel =
     applicationPreview.data && !applyResult
@@ -591,15 +880,28 @@ export function CategorizationRulesSection() {
             Rules set effective transaction categories during ingestion.
           </Text>
         </Box>
-        <Button
-          leftSection={<Plus size={16} />}
-          onClick={resetFormForCreate}
-          mih={isMobile ? 48 : undefined}
-          size="md"
-          style={{ flex: isMobile ? '1 1 100%' : undefined }}
-        >
-          New rule
-        </Button>
+        <Group gap="xs" style={{ flex: isMobile ? '1 1 100%' : undefined }}>
+          <Button
+            leftSection={<Plus size={16} />}
+            onClick={resetFormForCreate}
+            mih={isMobile ? 48 : undefined}
+            size="md"
+            style={{ flex: isMobile ? '1 1 auto' : undefined }}
+          >
+            New rule
+          </Button>
+          <Tooltip label="Rule recommendations">
+            <ActionIcon
+              aria-label="Rule recommendations"
+              loading={generateRecommendations.isPending}
+              onClick={openRecommendations}
+              size={isMobile ? 48 : 42}
+              variant="filled"
+            >
+              <Sparkles size={18} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
       </Group>
 
       <Group gap="xs" wrap={isMobile ? 'wrap' : 'nowrap'}>
@@ -893,6 +1195,235 @@ export function CategorizationRulesSection() {
                 onClick={() => applyMutation.mutate({ id: applyRule.id })}
               >
                 {applyButtonLabel}
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+
+      <Drawer
+        opened={recommendationsOpen}
+        onClose={closeRecommendations}
+        title={
+          <Group gap="xs" wrap="nowrap">
+            <Sparkles size={18} />
+            <Text fw={700}>Rule recommendations</Text>
+          </Group>
+        }
+        position={isMobile ? 'bottom' : 'right'}
+        size={isMobile ? 'min(92dvh, 760px)' : 560}
+        padding="md"
+      >
+        <Stack gap="md">
+          <Group align="flex-start" justify="space-between" wrap="nowrap">
+            <Box style={{ minWidth: 0 }}>
+              <Text size="sm" c="dimmed">
+                Based on your manually categorized transactions.
+              </Text>
+              {recommendationLastRun && (
+                <Text size="sm" c="dimmed" mt={4}>
+                  Last run {recommendationLastRun}.
+                </Text>
+              )}
+              {recommendationGenerationRunning && (
+                <Text size="sm" c="dimmed" mt={4}>
+                  You can close this panel and come back later.
+                </Text>
+              )}
+            </Box>
+            <Tooltip label="Regenerate recommendations">
+              <ActionIcon
+                aria-label="Regenerate recommendations"
+                disabled={recommendationGenerationRunning}
+                loading={regenerateRecommendations.isPending}
+                onClick={regenerateRuleRecommendations}
+                variant="subtle"
+              >
+                <RefreshCw size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+
+          <MultiSelect
+            clearable
+            data={recommendationIgnoredCategoryOptions}
+            description="Excluded from manual-label learning and conflict checks for this run."
+            disabled={recommendationGenerationRunning}
+            label="Ignore labels from categories"
+            onChange={(value) => {
+              setRecommendationIgnoreCategoriesTouched(true)
+              setIgnoredRecommendationCategoryIds(value)
+            }}
+            searchable
+            value={ignoredRecommendationCategoryIds}
+          />
+
+          {recommendationError && (
+            <Alert color="red" title="Unable to generate recommendations">
+              Recommendation generation is not available right now.
+            </Alert>
+          )}
+
+          {recommendationGenerationFailed && !recommendationError && (
+            <Alert color="yellow" title="Generation failed">
+              {recommendationGeneration.errorMessage ??
+                'Try regenerating recommendations.'}
+            </Alert>
+          )}
+
+          {recommendationGenerationRunning && (
+            <Paper withBorder p="md" radius="md">
+              <Group align="flex-start" gap="sm" wrap="nowrap">
+                <Loader size="sm" />
+                <Box>
+                  <Text fw={700} size="sm">
+                    Finding patterns in manual categories
+                  </Text>
+                  <Text c="dimmed" size="sm">
+                    This may take a moment. You can leave and return later.
+                  </Text>
+                </Box>
+              </Group>
+            </Paper>
+          )}
+
+          {!recommendationGenerationRunning &&
+            !recommendationGenerationFailed &&
+            recommendationSuggestions.length === 0 && (
+              <Paper withBorder p="md" radius="md">
+                <Stack gap="sm">
+                  <Text fw={700} size="sm">
+                    {hasRecommendationRun
+                      ? 'No recommendations found'
+                      : 'No recommendations yet'}
+                  </Text>
+                  <Text c="dimmed" size="sm">
+                    {hasRecommendationRun
+                      ? 'The last run did not produce suggestions that passed validation.'
+                      : 'Generate suggestions from transactions you categorized manually.'}
+                  </Text>
+                  <Button
+                    leftSection={<Sparkles size={16} />}
+                    onClick={() =>
+                      hasRecommendationRun
+                        ? regenerateRuleRecommendations()
+                        : generateRuleRecommendations()
+                    }
+                    size="sm"
+                  >
+                    {hasRecommendationRun
+                      ? 'Regenerate recommendations'
+                      : 'Generate recommendations'}
+                  </Button>
+                </Stack>
+              </Paper>
+            )}
+
+          {recommendationSuggestions.length > 0 && (
+            <Stack gap="xs">
+              {recommendationSuggestions.map(renderSuggestionCard)}
+            </Stack>
+          )}
+        </Stack>
+      </Drawer>
+
+      <Modal
+        opened={previewSuggestion !== null}
+        onClose={() => setPreviewSuggestion(null)}
+        title={
+          previewSuggestion
+            ? `Preview recommendation: ${previewSuggestion.name}`
+            : 'Preview recommendation'
+        }
+        size="xl"
+      >
+        {previewSuggestion && (
+          <Stack gap="md">
+            <Paper withBorder p="sm" radius="md">
+              <Text fw={700}>{previewSuggestion.name}</Text>
+              <Box mt={6}>
+                {renderCategoryLabel(previewSuggestion.targetCategory)}
+              </Box>
+              <Text c="dimmed" mt={6} size="sm">
+                {renderConditionSummary(previewSuggestion)}
+              </Text>
+            </Paper>
+
+            <SimpleGrid cols={{ base: 1, sm: 3 }}>
+              {[
+                ['Matched', suggestionPreviewCounts?.matched],
+                ['Would update', suggestionPreviewCounts?.updated],
+                ['Skipped manual', suggestionPreviewCounts?.skippedManual],
+              ].map(([label, value]) => (
+                <Paper key={label} withBorder p="sm" radius="md">
+                  <Text c="dimmed" size="xs" tt="uppercase">
+                    {label}
+                  </Text>
+                  <Text fw={800} size="xl">
+                    {value ?? '-'}
+                  </Text>
+                </Paper>
+              ))}
+            </SimpleGrid>
+
+            <Alert color="blue">Manual categories are never overwritten.</Alert>
+
+            <Stack gap="xs">
+              <Group justify="space-between">
+                <Text fw={700} size="sm">
+                  Transactions to update
+                </Text>
+                <Text c="dimmed" size="xs">
+                  Most recent{' '}
+                  {previewSuggestion.previewTransactions.length.toLocaleString()}{' '}
+                  of {previewSuggestion.updated.toLocaleString()}
+                </Text>
+              </Group>
+              {previewSuggestion.previewTransactions.length === 0 ? (
+                <Text c="dimmed" size="sm">
+                  No eligible transactions to update.
+                </Text>
+              ) : isMobile ? (
+                <Box maw="100%" mah={360} style={{ overflowY: 'auto' }}>
+                  <TransactionsMobileList
+                    data={previewSuggestion.previewTransactions}
+                    isError={false}
+                    isLoading={false}
+                    readOnly
+                    totalRows={previewSuggestion.previewTransactions.length}
+                    variant="drilldown"
+                  />
+                </Box>
+              ) : (
+                <TransactionsTable
+                  data={previewSuggestion.previewTransactions}
+                  hiddenColumns={['category']}
+                  isError={false}
+                  isLoading={false}
+                  mantineTableContainerProps={{
+                    style: { maxHeight: 360, overflowY: 'auto' },
+                  }}
+                  readOnly
+                  totalRows={previewSuggestion.previewTransactions.length}
+                />
+              )}
+            </Stack>
+
+            <Group justify="flex-end">
+              <Button
+                onClick={() => setPreviewSuggestion(null)}
+                variant="subtle"
+              >
+                Close
+              </Button>
+              <Button
+                leftSection={<Check size={16} />}
+                loading={acceptRecommendation.isPending}
+                onClick={() =>
+                  acceptRecommendation.mutate({ id: previewSuggestion.id })
+                }
+              >
+                Accept rule
               </Button>
             </Group>
           </Stack>
