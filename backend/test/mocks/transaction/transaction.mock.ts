@@ -61,6 +61,8 @@ export const mockTransaction: Transaction = {
   categoryId: mockCategoryId,
   category: null,
   categoryUpdatedAt: null,
+  categoryAssignmentSource: 'manual',
+  categoryAssignmentRuleId: null,
   providerCategoryHint: null,
   ...mockTimestamps,
 };
@@ -91,6 +93,8 @@ export const mockTransaction2: Transaction = {
   categoryId: null,
   category: null,
   categoryUpdatedAt: null,
+  categoryAssignmentSource: null,
+  categoryAssignmentRuleId: null,
   providerCategoryHint: null,
   ...mockTimestamps,
 };

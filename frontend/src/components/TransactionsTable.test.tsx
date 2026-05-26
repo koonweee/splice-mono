@@ -251,6 +251,18 @@ describe('TransactionsTable', () => {
     expect(screen.queryByText('User')).toBeNull()
   })
 
+  it('shows rule assignment provenance on rule-categorized rows', () => {
+    renderTable([
+      makeTransaction({
+        category: foodCategory,
+        categoryAssignmentSource: 'rule',
+        categoryAssignmentRuleId: 'rule-1',
+      }),
+    ])
+
+    expect(screen.getByText('Rule')).toBeTruthy()
+  })
+
   it('clears assigned categories and has no review action', () => {
     renderTable([makeTransaction({ category: foodCategory })])
 
@@ -280,14 +292,14 @@ describe('TransactionsTable', () => {
           merchantName: 'Manual Store',
           source: 'manual',
         }),
-	      ],
-	      {
-	        bulkModeEnabled: true,
-	        selectedTransactionIds: new Set(['txn-1']),
-	        onToggleTransactionSelection: onToggle,
-	        onToggleLoadedSelection: onToggleLoaded,
-	      },
-	    )
+      ],
+      {
+        bulkModeEnabled: true,
+        selectedTransactionIds: new Set(['txn-1']),
+        onToggleTransactionSelection: onToggle,
+        onToggleLoadedSelection: onToggleLoaded,
+      },
+    )
 
     fireEvent.click(
       screen.getByRole('checkbox', {
@@ -419,9 +431,11 @@ function makeTransaction(
     amount?: Transaction['amount']
     id?: string
     category: Category | null
-	    convertedAmount?: Transaction['convertedAmount']
-	    merchantName?: string
-	    providerCategoryHint?: {
+    categoryAssignmentRuleId?: string | null
+    categoryAssignmentSource?: Transaction['categoryAssignmentSource']
+    convertedAmount?: Transaction['convertedAmount']
+    merchantName?: string
+    providerCategoryHint?: {
       provider: 'plaid'
       primary: string | null
       detailed: string | null
@@ -440,8 +454,8 @@ function makeTransaction(
       money: { amount: 1200, currency: 'USD' },
       sign: 'negative',
     },
-	    accountId: 'account-1',
-	    merchantName: params.merchantName ?? 'Store',
+    accountId: 'account-1',
+    merchantName: params.merchantName ?? 'Store',
     providerTransactionName: null,
     originalDescription: null,
     pending: false,
@@ -465,6 +479,8 @@ function makeTransaction(
     categoryId: category?.id ?? null,
     category,
     categoryUpdatedAt: null,
+    categoryAssignmentSource: params.categoryAssignmentSource ?? null,
+    categoryAssignmentRuleId: params.categoryAssignmentRuleId ?? null,
     accountName: 'Checking',
     createdAt: '2026-02-14T00:00:00.000Z',
     updatedAt: '2026-02-14T00:00:00.000Z',

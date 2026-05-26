@@ -140,6 +140,18 @@ describe('TransactionsMobileList', () => {
     expect(screen.queryByRole('button', { name: 'Mark reviewed' })).toBeNull()
   })
 
+  it('shows rule assignment provenance on rule-categorized rows', () => {
+    renderMobileList([
+      makeTransaction({
+        category: foodCategory,
+        categoryAssignmentSource: 'rule',
+        categoryAssignmentRuleId: 'rule-1',
+      }),
+    ])
+
+    expect(screen.getByText('Rule')).toBeTruthy()
+  })
+
   it('uses checkboxes for bulk selection and opens read-only details from rows', async () => {
     const onToggle = vi.fn()
 
@@ -180,11 +192,11 @@ describe('TransactionsMobileList', () => {
 
     expect(onToggle).toHaveBeenCalledWith('txn-1')
 
-	    fireEvent.click(
-	      screen.getByRole('button', {
-	        name: /Open transaction details for Provider Store/,
-	      }),
-	    )
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Open transaction details for Provider Store/,
+      }),
+    )
 
     expect(await screen.findByText('Display')).toBeTruthy()
     expect(screen.queryByLabelText('Reporting date')).toBeNull()
@@ -353,11 +365,13 @@ function makeTransaction(
   overrides: Partial<{
     amount: Transaction['amount']
     activityDate: string
-	    category: Category | null
-	    convertedAmount: Transaction['convertedAmount']
-	    id: string
-	    merchantName: string
-	    providerCategoryHint: {
+    category: Category | null
+    categoryAssignmentRuleId: string | null
+    categoryAssignmentSource: Transaction['categoryAssignmentSource']
+    convertedAmount: Transaction['convertedAmount']
+    id: string
+    merchantName: string
+    providerCategoryHint: {
       provider: 'plaid'
       primary: string | null
       detailed: string | null
@@ -377,8 +391,8 @@ function makeTransaction(
       money: { amount: 1200, currency: 'USD' },
       sign: MoneyWithSignSign.negative,
     },
-	    accountId: 'account-1',
-	    merchantName: overrides.merchantName ?? 'Store',
+    accountId: 'account-1',
+    merchantName: overrides.merchantName ?? 'Store',
     providerTransactionName: null,
     originalDescription: null,
     pending: false,
@@ -402,6 +416,8 @@ function makeTransaction(
     categoryId: category?.id ?? null,
     category,
     categoryUpdatedAt: null,
+    categoryAssignmentSource: overrides.categoryAssignmentSource ?? null,
+    categoryAssignmentRuleId: overrides.categoryAssignmentRuleId ?? null,
     accountName: 'Checking',
     createdAt: '2026-02-14T00:00:00.000Z',
     updatedAt: '2026-02-14T00:00:00.000Z',

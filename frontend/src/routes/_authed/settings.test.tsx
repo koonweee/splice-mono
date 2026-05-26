@@ -16,6 +16,7 @@ const mockFns = vi.hoisted(() => ({
   useUserControllerMeMock: vi.fn(),
   useUserControllerUpdateSettingsMock: vi.fn(),
   analysisRulesSectionMock: vi.fn(),
+  categorizationRulesSectionMock: vi.fn(),
   customCategoriesSectionMock: vi.fn(),
   personalAccessTokenSectionMock: vi.fn(),
   mcpConnectionSectionMock: vi.fn(),
@@ -85,6 +86,16 @@ vi.mock('../../components/settings/AnalysisRulesSection', () => ({
     mockFns.analysisRulesSectionMock(props)
 
     return <div data-testid="analysis-rules-section">Analysis rules</div>
+  },
+}))
+
+vi.mock('../../components/settings/CategorizationRulesSection', () => ({
+  CategorizationRulesSection: () => {
+    mockFns.categorizationRulesSectionMock()
+
+    return (
+      <div data-testid="categorization-rules-section">Categorization rules</div>
+    )
   },
 }))
 
@@ -343,6 +354,15 @@ describe('SettingsPage', () => {
       }),
     )
     expect(window.location.search).toBe('?tab=analysis')
+
+    fireEvent.click(screen.getByRole('tab', { name: /categorization/i }))
+    expect(
+      screen
+        .getByRole('tab', { name: /categorization/i })
+        .getAttribute('aria-selected'),
+    ).toBe('true')
+    expect(screen.getByTestId('categorization-rules-section')).toBeTruthy()
+    expect(window.location.search).toBe('?tab=categorization')
 
     fireEvent.click(screen.getByRole('tab', { name: /mcp/i }))
     expect(

@@ -101,6 +101,8 @@ function makeTransaction(
     categoryId: overrides.categoryId ?? null,
     category: overrides.category,
     categoryUpdatedAt: overrides.categoryUpdatedAt ?? null,
+    categoryAssignmentSource: overrides.categoryAssignmentSource ?? null,
+    categoryAssignmentRuleId: overrides.categoryAssignmentRuleId ?? null,
     providerCategoryHint: overrides.providerCategoryHint ?? null,
     accountName: overrides.accountName ?? 'Checking',
     convertedAmount: overrides.convertedAmount,

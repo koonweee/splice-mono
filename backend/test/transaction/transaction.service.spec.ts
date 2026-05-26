@@ -141,6 +141,9 @@ describe('TransactionService', () => {
   const categoryService = {
     findActiveAssignableCategory: jest.fn(),
   };
+  const transactionCategorizationService = {
+    applyRuleAssignmentIfEligible: jest.fn().mockResolvedValue(false),
+  };
   const eventEmitter = {
     emit: jest.fn(),
   };
@@ -155,6 +158,7 @@ describe('TransactionService', () => {
       categoryRepository as never,
       accountRepository as never,
       categoryService as unknown as CategoryService,
+      transactionCategorizationService as never,
       eventEmitter as unknown as EventEmitter2,
     );
     repository.manager.transaction.mockImplementation(async (callback) =>
@@ -191,6 +195,8 @@ describe('TransactionService', () => {
     expect(categoryService.findActiveAssignableCategory).not.toHaveBeenCalled();
     expect(result.categoryId).toBeNull();
     expect(result.category).toBeNull();
+    expect(result.categoryAssignmentSource).toBeNull();
+    expect(result.categoryAssignmentRuleId).toBeNull();
     expect(result.source).toBe('provider');
     expect(result.providerCategoryHint).toMatchObject({
       provider: 'plaid',
@@ -218,6 +224,8 @@ describe('TransactionService', () => {
     expect(result?.source).toBe('manual');
     expect(result?.amount.money.currency).toBe('USD');
     expect(result?.amount.money.amount).toBe(3400);
+    expect(result?.categoryAssignmentSource).toBe('manual');
+    expect(result?.categoryAssignmentRuleId).toBeNull();
     expect(result?.categoryId).toBe(category.id);
     expect(saved.source).toBe('manual');
     expect(saved.pending).toBe(false);
@@ -404,6 +412,8 @@ describe('TransactionService', () => {
 
     expect(assigned?.categoryId).toBe(category.id);
     expect(transaction.categoryUpdatedAt).toBeInstanceOf(Date);
+    expect(transaction.categoryAssignmentSource).toBe('manual');
+    expect(transaction.categoryAssignmentRuleId).toBeNull();
 
     repository.findOne.mockResolvedValueOnce(transaction);
     repository.save.mockResolvedValueOnce(transaction);
@@ -417,6 +427,8 @@ describe('TransactionService', () => {
 
     expect(cleared?.categoryId).toBeNull();
     expect(transaction.categoryUpdatedAt).toBeNull();
+    expect(transaction.categoryAssignmentSource).toBe('manual');
+    expect(transaction.categoryAssignmentRuleId).toBeNull();
   });
 
   it('returns null for missing transaction or unassignable category', async () => {
@@ -533,6 +545,8 @@ describe('TransactionService', () => {
     });
     expect(transaction.categoryId).toBe(category.id);
     expect(transaction.categoryUpdatedAt).toBeInstanceOf(Date);
+    expect(transaction.categoryAssignmentSource).toBe('manual');
+    expect(transaction.categoryAssignmentRuleId).toBeNull();
     expect(result?.undo).toEqual(expect.any(String));
   });
 
@@ -639,6 +653,63 @@ describe('TransactionService', () => {
     );
   });
 
+  it('sync assigns rule categories to new provider transactions', async () => {
+    const ruleId = '00000000-0000-4000-8000-000000000999';
+    const saved: TransactionEntity[] = [];
+    const txnRepo = {
+      save: jest.fn(
+        async (entities: TransactionEntity | TransactionEntity[]) => {
+          if (Array.isArray(entities)) {
+            saved.push(...entities);
+          } else {
+            saved.push(entities);
+          }
+          return entities;
+        },
+      ),
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+      remove: jest.fn(),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
+      ) => callback({ getRepository: () => txnRepo }),
+    );
+    transactionCategorizationService.applyRuleAssignmentIfEligible.mockImplementation(
+      async (_userId: string, transaction: TransactionEntity) => {
+        transaction.categoryId = category.id;
+        transaction.categoryAssignmentSource = 'rule';
+        transaction.categoryAssignmentRuleId = ruleId;
+        transaction.categoryUpdatedAt = new Date('2026-02-15T00:00:00.000Z');
+        return true;
+      },
+    );
+
+    await service.processSyncResults(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      {
+        added: [
+          buildCreateDto({
+            accountId: 'external-account-id',
+            externalTransactionId: 'external-txn-id',
+            merchantName: 'Uber Trip',
+          }),
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor',
+        hasMore: false,
+      },
+    );
+
+    expect(saved[0].categoryId).toBe(category.id);
+    expect(saved[0].categoryAssignmentSource).toBe('rule');
+    expect(saved[0].categoryAssignmentRuleId).toBe(ruleId);
+    expect(saved[0].categoryUpdatedAt).toBeInstanceOf(Date);
+  });
+
   it('sync updates matched pending transactions to posted while preserving user metadata', async () => {
     const categoryUpdatedAt = new Date('2026-02-14T12:00:00.000Z');
     const pendingTransaction = buildTransaction({
@@ -653,6 +724,8 @@ describe('TransactionService', () => {
       providerCategoryProvider: 'plaid',
       providerCategoryPrimary: 'GENERAL_MERCHANDISE',
       providerCategoryDetailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
+      categoryAssignmentSource: 'manual',
+      categoryAssignmentRuleId: null,
     });
     const saved: TransactionEntity[] = [];
     const txnRepo = {
@@ -721,6 +794,8 @@ describe('TransactionService', () => {
     expect(pendingTransaction.categoryId).toBe(category.id);
     expect(pendingTransaction.category).toBe(category);
     expect(pendingTransaction.categoryUpdatedAt).toBe(categoryUpdatedAt);
+    expect(pendingTransaction.categoryAssignmentSource).toBe('manual');
+    expect(pendingTransaction.categoryAssignmentRuleId).toBeNull();
     expect(pendingTransaction.reportingDateOverride).toBe('2026-02-13');
     expect(pendingTransaction.providerCategoryProvider).toBeNull();
     expect(pendingTransaction.providerCategoryPrimary).toBeNull();

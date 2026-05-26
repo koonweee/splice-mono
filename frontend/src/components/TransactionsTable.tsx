@@ -627,6 +627,10 @@ function getCategoryPrimaryLabel(category: Pick<Category, 'primary'>) {
   return category.primary
 }
 
+function shouldShowRuleAssignment(transaction: Transaction) {
+  return transaction.categoryAssignmentSource === 'rule'
+}
+
 function getBankActivityDate(transaction: Transaction) {
   return transaction.authorizedDate ?? transaction.providerDate
 }
@@ -769,12 +773,12 @@ export function TransactionsTable({
               id: 'bulkSelect',
               header: '',
               Header: () => (
-	                <Checkbox
-	                  aria-label="Select all loaded transactions"
-	                  checked={allLoadedSelected}
-	                  disabled={bulkSelectableData.length === 0}
-	                  indeterminate={someLoadedSelected && !allLoadedSelected}
-	                  onChange={() => onToggleLoadedSelection?.()}
+                <Checkbox
+                  aria-label="Select all loaded transactions"
+                  checked={allLoadedSelected}
+                  disabled={bulkSelectableData.length === 0}
+                  indeterminate={someLoadedSelected && !allLoadedSelected}
+                  onChange={() => onToggleLoadedSelection?.()}
                   onClick={(event) => event.stopPropagation()}
                 />
               ),
@@ -782,15 +786,15 @@ export function TransactionsTable({
               size: 48,
               minSize: 48,
               maxSize: 48,
-	              Cell: ({ row }) => {
-	                const transaction = row.original
-	                const isManual = isManualTransaction(transaction)
+              Cell: ({ row }) => {
+                const transaction = row.original
+                const isManual = isManualTransaction(transaction)
 
-	                if (isManual) {
-	                  return null
-	                }
+                if (isManual) {
+                  return null
+                }
 
-	                return (
+                return (
                   <Checkbox
                     aria-label={`Select transaction ${getMerchantDisplay(transaction).primary}`}
                     checked={selectedTransactionIds.has(transaction.id)}
@@ -1039,6 +1043,13 @@ export function TransactionsTable({
                 {categoryLabel}
               </Badge>
               <ProviderCategoryHintPopover transaction={transaction} />
+              {shouldShowRuleAssignment(transaction) && (
+                <Tooltip label="Assigned by categorization rule">
+                  <Badge color="violet" size="xs" variant="light">
+                    Rule
+                  </Badge>
+                </Tooltip>
+              )}
               {!bulkModeEnabled && !isManual && (
                 <Group className={styles.categoryActions} gap={2} wrap="nowrap">
                   <Tooltip label="Edit category">
@@ -1096,12 +1107,12 @@ export function TransactionsTable({
       updateTransaction.variables?.id,
       updateCategory.isPending,
       updateCategory.mutate,
-	      updateCategory.variables?.id,
-	      allLoadedSelected,
-	      bulkSelectableData.length,
-	      onToggleLoadedSelection,
-	      someLoadedSelected,
-	    ],
+      updateCategory.variables?.id,
+      allLoadedSelected,
+      bulkSelectableData.length,
+      onToggleLoadedSelection,
+      someLoadedSelected,
+    ],
   )
 
   const visibleColumns =

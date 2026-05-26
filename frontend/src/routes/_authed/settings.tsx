@@ -25,6 +25,7 @@ import {
   useUserControllerUpdateSettings,
 } from '../../api/clients/spliceAPI'
 import { AnalysisRulesSection } from '../../components/settings/AnalysisRulesSection'
+import { CategorizationRulesSection } from '../../components/settings/CategorizationRulesSection'
 import { CustomCategoriesSection } from '../../components/settings/CustomCategoriesSection'
 import { McpConnectionSection } from '../../components/settings/McpConnectionSection'
 import { PageHeader } from '../../components/PageHeader'
@@ -51,6 +52,7 @@ type SettingsTab =
   | 'access'
   | 'categories'
   | 'analysis'
+  | 'categorization'
   | 'mcp'
 
 export const Route = createFileRoute('/_authed/settings')({
@@ -61,6 +63,7 @@ export const Route = createFileRoute('/_authed/settings')({
       tab === 'access' ||
       tab === 'categories' ||
       tab === 'analysis' ||
+      tab === 'categorization' ||
       tab === 'mcp'
       ? { tab }
       : {}
@@ -102,6 +105,7 @@ function getInitialSettingsTab(): SettingsTab {
     tab === 'notifications' ||
     tab === 'categories' ||
     tab === 'analysis' ||
+    tab === 'categorization' ||
     tab === 'mcp'
     ? tab
     : 'general'
@@ -479,6 +483,7 @@ export function SettingsPage() {
           <Tabs.Tab value="access">Access</Tabs.Tab>
           <Tabs.Tab value="categories">Categories</Tabs.Tab>
           <Tabs.Tab value="analysis">Analysis</Tabs.Tab>
+          <Tabs.Tab value="categorization">Categorization</Tabs.Tab>
           <Tabs.Tab value="mcp">MCP</Tabs.Tab>
         </Tabs.List>
 
@@ -696,6 +701,10 @@ export function SettingsPage() {
               }}
             />
           </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel className={styles.categoriesPanel} value="categorization">
+          <CategorizationRulesSection />
         </Tabs.Panel>
 
         <Tabs.Panel value="mcp">

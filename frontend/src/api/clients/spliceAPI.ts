@@ -26,6 +26,7 @@ import type {
   AccountControllerUpdateBalanceBody,
   AnalysisRuleControllerFindAllParams,
   AnalysisRuleView,
+  ApplyCategorizationRuleResponse,
   BalanceQueryControllerGetAllBalancesParams,
   BalanceQueryControllerGetBalancesParams,
   BalanceQueryPerDateResult,
@@ -36,6 +37,8 @@ import type {
   BulkTransactionCategoryUpdateDto,
   BulkTransactionCategoryUpdateResponse,
   BulkTransactionCategoryUpdateUndoDto,
+  CategorizationRuleControllerFindAllParams,
+  CategorizationRuleView,
   Category,
   CategoryControllerFindCustomParams,
   CategoryControllerFindManagementParams,
@@ -43,6 +46,7 @@ import type {
   CategoryManagementItem,
   CreateAccountDto,
   CreateAnalysisRuleDto,
+  CreateCategorizationRuleDto,
   CreateCustomCategoryDto,
   CreateManualTransactionDto,
   CreatePersonalAccessTokenDto,
@@ -76,6 +80,7 @@ import type {
   TransactionControllerFindAllParams,
   UpdateAccountDto,
   UpdateAnalysisRuleDto,
+  UpdateCategorizationRuleDto,
   UpdateCustomCategoryDto,
   UpdateManualTransactionDto,
   UpdateTransactionCategoryDto,
@@ -6383,6 +6388,612 @@ export const useCategoryControllerUpdateCustom = <
 > => {
   const mutationOptions =
     getCategoryControllerUpdateCustomMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * List the current user's transaction categorization rules. Active rules are returned by default; pass archived=true to list archived rules.
+ */
+export const categorizationRuleControllerFindAll = (
+  params?: CategorizationRuleControllerFindAllParams,
+  signal?: AbortSignal,
+) => {
+  return axios<CategorizationRuleView[]>({
+    url: `/categorization-rules`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getCategorizationRuleControllerFindAllQueryKey = (
+  params?: CategorizationRuleControllerFindAllParams,
+) => {
+  return [`/categorization-rules`, ...(params ? [params] : [])] as const
+}
+
+export const getCategorizationRuleControllerFindAllQueryOptions = <
+  TData = Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+  TError = unknown,
+>(
+  params?: CategorizationRuleControllerFindAllParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getCategorizationRuleControllerFindAllQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>
+  > = ({ signal }) => categorizationRuleControllerFindAll(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategorizationRuleControllerFindAllQueryResult = NonNullable<
+  Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>
+>
+export type CategorizationRuleControllerFindAllQueryError = unknown
+
+export function useCategorizationRuleControllerFindAll<
+  TData = Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+  TError = unknown,
+>(
+  params: undefined | CategorizationRuleControllerFindAllParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategorizationRuleControllerFindAll<
+  TData = Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+  TError = unknown,
+>(
+  params?: CategorizationRuleControllerFindAllParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+          TError,
+          Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategorizationRuleControllerFindAll<
+  TData = Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+  TError = unknown,
+>(
+  params?: CategorizationRuleControllerFindAllParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useCategorizationRuleControllerFindAll<
+  TData = Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+  TError = unknown,
+>(
+  params?: CategorizationRuleControllerFindAllParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof categorizationRuleControllerFindAll>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getCategorizationRuleControllerFindAllQueryOptions(
+    params,
+    options,
+  )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Create a transaction categorization rule
+ */
+export const categorizationRuleControllerCreate = (
+  createCategorizationRuleDto: CreateCategorizationRuleDto,
+  signal?: AbortSignal,
+) => {
+  return axios<CategorizationRuleView>({
+    url: `/categorization-rules`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createCategorizationRuleDto,
+    signal,
+  })
+}
+
+export const getCategorizationRuleControllerCreateMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof categorizationRuleControllerCreate>>,
+    TError,
+    { data: CreateCategorizationRuleDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof categorizationRuleControllerCreate>>,
+  TError,
+  { data: CreateCategorizationRuleDto },
+  TContext
+> => {
+  const mutationKey = ['categorizationRuleControllerCreate']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof categorizationRuleControllerCreate>>,
+    { data: CreateCategorizationRuleDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return categorizationRuleControllerCreate(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type CategorizationRuleControllerCreateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof categorizationRuleControllerCreate>>
+>
+export type CategorizationRuleControllerCreateMutationBody =
+  CreateCategorizationRuleDto
+export type CategorizationRuleControllerCreateMutationError = void
+
+export const useCategorizationRuleControllerCreate = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof categorizationRuleControllerCreate>>,
+      TError,
+      { data: CreateCategorizationRuleDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof categorizationRuleControllerCreate>>,
+  TError,
+  { data: CreateCategorizationRuleDto },
+  TContext
+> => {
+  const mutationOptions =
+    getCategorizationRuleControllerCreateMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Update, archive, or restore a transaction categorization rule
+ */
+export const categorizationRuleControllerUpdate = (
+  id: string,
+  updateCategorizationRuleDto: UpdateCategorizationRuleDto,
+) => {
+  return axios<CategorizationRuleView>({
+    url: `/categorization-rules/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateCategorizationRuleDto,
+  })
+}
+
+export const getCategorizationRuleControllerUpdateMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof categorizationRuleControllerUpdate>>,
+    TError,
+    { id: string; data: UpdateCategorizationRuleDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof categorizationRuleControllerUpdate>>,
+  TError,
+  { id: string; data: UpdateCategorizationRuleDto },
+  TContext
+> => {
+  const mutationKey = ['categorizationRuleControllerUpdate']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof categorizationRuleControllerUpdate>>,
+    { id: string; data: UpdateCategorizationRuleDto }
+  > = (props) => {
+    const { id, data } = props ?? {}
+
+    return categorizationRuleControllerUpdate(id, data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type CategorizationRuleControllerUpdateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof categorizationRuleControllerUpdate>>
+>
+export type CategorizationRuleControllerUpdateMutationBody =
+  UpdateCategorizationRuleDto
+export type CategorizationRuleControllerUpdateMutationError = void
+
+export const useCategorizationRuleControllerUpdate = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof categorizationRuleControllerUpdate>>,
+      TError,
+      { id: string; data: UpdateCategorizationRuleDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof categorizationRuleControllerUpdate>>,
+  TError,
+  { id: string; data: UpdateCategorizationRuleDto },
+  TContext
+> => {
+  const mutationOptions =
+    getCategorizationRuleControllerUpdateMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Preview how many existing transactions one active categorization rule would match and update. Manual categories are never overwritten.
+ */
+export const categorizationRuleControllerPreviewApplication = (
+  id: string,
+  signal?: AbortSignal,
+) => {
+  return axios<ApplyCategorizationRuleResponse>({
+    url: `/categorization-rules/${id}/application-preview`,
+    method: 'GET',
+    signal,
+  })
+}
+
+export const getCategorizationRuleControllerPreviewApplicationQueryKey = (
+  id?: string,
+) => {
+  return [`/categorization-rules/${id}/application-preview`] as const
+}
+
+export const getCategorizationRuleControllerPreviewApplicationQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof categorizationRuleControllerPreviewApplication>
+  >,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof categorizationRuleControllerPreviewApplication>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getCategorizationRuleControllerPreviewApplicationQueryKey(id)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof categorizationRuleControllerPreviewApplication>>
+  > = ({ signal }) => categorizationRuleControllerPreviewApplication(id, signal)
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof categorizationRuleControllerPreviewApplication>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategorizationRuleControllerPreviewApplicationQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof categorizationRuleControllerPreviewApplication>>
+  >
+export type CategorizationRuleControllerPreviewApplicationQueryError = void
+
+export function useCategorizationRuleControllerPreviewApplication<
+  TData = Awaited<
+    ReturnType<typeof categorizationRuleControllerPreviewApplication>
+  >,
+  TError = void,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof categorizationRuleControllerPreviewApplication>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof categorizationRuleControllerPreviewApplication>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof categorizationRuleControllerPreviewApplication>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategorizationRuleControllerPreviewApplication<
+  TData = Awaited<
+    ReturnType<typeof categorizationRuleControllerPreviewApplication>
+  >,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof categorizationRuleControllerPreviewApplication>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof categorizationRuleControllerPreviewApplication>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof categorizationRuleControllerPreviewApplication>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategorizationRuleControllerPreviewApplication<
+  TData = Awaited<
+    ReturnType<typeof categorizationRuleControllerPreviewApplication>
+  >,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof categorizationRuleControllerPreviewApplication>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useCategorizationRuleControllerPreviewApplication<
+  TData = Awaited<
+    ReturnType<typeof categorizationRuleControllerPreviewApplication>
+  >,
+  TError = void,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof categorizationRuleControllerPreviewApplication>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getCategorizationRuleControllerPreviewApplicationQueryOptions(id, options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Apply one active categorization rule to existing eligible transactions. Manual categories are never overwritten.
+ */
+export const categorizationRuleControllerApply = (
+  id: string,
+  signal?: AbortSignal,
+) => {
+  return axios<ApplyCategorizationRuleResponse>({
+    url: `/categorization-rules/${id}/apply`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getCategorizationRuleControllerApplyMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof categorizationRuleControllerApply>>,
+    TError,
+    { id: string },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof categorizationRuleControllerApply>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['categorizationRuleControllerApply']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof categorizationRuleControllerApply>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {}
+
+    return categorizationRuleControllerApply(id)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type CategorizationRuleControllerApplyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof categorizationRuleControllerApply>>
+>
+
+export type CategorizationRuleControllerApplyMutationError = void
+
+export const useCategorizationRuleControllerApply = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof categorizationRuleControllerApply>>,
+      TError,
+      { id: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof categorizationRuleControllerApply>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions =
+    getCategorizationRuleControllerApplyMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }

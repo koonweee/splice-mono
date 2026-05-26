@@ -89,6 +89,10 @@ function getAssignableCategoryPrimaryLabel(
   return category.primary
 }
 
+function shouldShowRuleAssignment(transaction: Transaction) {
+  return transaction.categoryAssignmentSource === 'rule'
+}
+
 function getAmountClass(transaction: Transaction) {
   const amount = transaction.convertedAmount ?? transaction.amount
   return amount.sign === MoneyWithSignSign.positive
@@ -376,6 +380,11 @@ export function TransactionsMobileList({
                         <span className={styles.meta}>
                           {getCategoryLabel(transaction)}
                         </span>
+                        {shouldShowRuleAssignment(transaction) && (
+                          <Badge color="violet" size="xs" variant="light">
+                            Rule
+                          </Badge>
+                        )}
                       </div>
                       {formatPaymentChannel(transaction.paymentChannel) && (
                         <div className={styles.metaLine}>
