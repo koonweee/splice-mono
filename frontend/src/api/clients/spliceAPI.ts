@@ -22,6 +22,7 @@ import type {
 } from '@tanstack/react-query'
 
 import type {
+  AcceptCategorizationRuleSuggestionResponse,
   Account,
   AccountControllerUpdateBalanceBody,
   AnalysisRuleControllerFindAllParams,
@@ -38,6 +39,9 @@ import type {
   BulkTransactionCategoryUpdateResponse,
   BulkTransactionCategoryUpdateUndoDto,
   CategorizationRuleControllerFindAllParams,
+  CategorizationRuleDraftPreview,
+  CategorizationRuleRecommendationGenerationResponse,
+  CategorizationRuleRecommendationListResponse,
   CategorizationRuleView,
   Category,
   CategoryControllerFindCustomParams,
@@ -52,6 +56,8 @@ import type {
   CreatePersonalAccessTokenDto,
   CreatePersonalAccessTokenResponse,
   CreateTransactionDto,
+  DismissCategorizationRuleSuggestionResponse,
+  GenerateCategorizationRuleRecommendationsDto,
   InitiateLinkRequest,
   InitiateLinkResponse,
   InvestmentControllerFindActivityForAccountParams,
@@ -63,6 +69,7 @@ import type {
   PaginatedTransactionResponse,
   PersonalAccessToken,
   PreviewCategorizationRuleApplicationResponse,
+  PreviewCategorizationRuleDraftDto,
   PushConfigResponse,
   PushSubscriptionEndpointDto,
   PushSubscriptionResponse,
@@ -6641,6 +6648,105 @@ export const useCategorizationRuleControllerCreate = <
 }
 
 /**
+ * Preview how an unsaved categorization rule draft would match existing transactions. Manual categories are never overwritten.
+ */
+export const categorizationRuleControllerPreviewDraftApplication = (
+  previewCategorizationRuleDraftDto: PreviewCategorizationRuleDraftDto,
+  signal?: AbortSignal,
+) => {
+  return axios<CategorizationRuleDraftPreview>({
+    url: `/categorization-rules/application-preview`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: previewCategorizationRuleDraftDto,
+    signal,
+  })
+}
+
+export const getCategorizationRuleControllerPreviewDraftApplicationMutationOptions =
+  <TError = void, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleControllerPreviewDraftApplication>
+      >,
+      TError,
+      { data: PreviewCategorizationRuleDraftDto },
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<
+      ReturnType<typeof categorizationRuleControllerPreviewDraftApplication>
+    >,
+    TError,
+    { data: PreviewCategorizationRuleDraftDto },
+    TContext
+  > => {
+    const mutationKey = ['categorizationRuleControllerPreviewDraftApplication']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof categorizationRuleControllerPreviewDraftApplication>
+      >,
+      { data: PreviewCategorizationRuleDraftDto }
+    > = (props) => {
+      const { data } = props ?? {}
+
+      return categorizationRuleControllerPreviewDraftApplication(data)
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type CategorizationRuleControllerPreviewDraftApplicationMutationResult =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof categorizationRuleControllerPreviewDraftApplication>
+    >
+  >
+export type CategorizationRuleControllerPreviewDraftApplicationMutationBody =
+  PreviewCategorizationRuleDraftDto
+export type CategorizationRuleControllerPreviewDraftApplicationMutationError =
+  void
+
+export const useCategorizationRuleControllerPreviewDraftApplication = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleControllerPreviewDraftApplication>
+      >,
+      TError,
+      { data: PreviewCategorizationRuleDraftDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<
+    ReturnType<typeof categorizationRuleControllerPreviewDraftApplication>
+  >,
+  TError,
+  { data: PreviewCategorizationRuleDraftDto },
+  TContext
+> => {
+  const mutationOptions =
+    getCategorizationRuleControllerPreviewDraftApplicationMutationOptions(
+      options,
+    )
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
  * Update, archive, or restore a transaction categorization rule
  */
 export const categorizationRuleControllerUpdate = (
@@ -6995,6 +7101,563 @@ export const useCategorizationRuleControllerApply = <
 > => {
   const mutationOptions =
     getCategorizationRuleControllerApplyMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * List pending categorization rule recommendations and latest generation state.
+ */
+export const categorizationRuleRecommendationControllerList = (
+  signal?: AbortSignal,
+) => {
+  return axios<CategorizationRuleRecommendationListResponse>({
+    url: `/categorization-rule-recommendations`,
+    method: 'GET',
+    signal,
+  })
+}
+
+export const getCategorizationRuleRecommendationControllerListQueryKey = () => {
+  return [`/categorization-rule-recommendations`] as const
+}
+
+export const getCategorizationRuleRecommendationControllerListQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof categorizationRuleRecommendationControllerList>
+  >,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerList>
+      >,
+      TError,
+      TData
+    >
+  >
+}) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getCategorizationRuleRecommendationControllerListQueryKey()
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof categorizationRuleRecommendationControllerList>>
+  > = ({ signal }) => categorizationRuleRecommendationControllerList(signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof categorizationRuleRecommendationControllerList>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategorizationRuleRecommendationControllerListQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof categorizationRuleRecommendationControllerList>>
+  >
+export type CategorizationRuleRecommendationControllerListQueryError = unknown
+
+export function useCategorizationRuleRecommendationControllerList<
+  TData = Awaited<
+    ReturnType<typeof categorizationRuleRecommendationControllerList>
+  >,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof categorizationRuleRecommendationControllerList>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof categorizationRuleRecommendationControllerList>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof categorizationRuleRecommendationControllerList>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategorizationRuleRecommendationControllerList<
+  TData = Awaited<
+    ReturnType<typeof categorizationRuleRecommendationControllerList>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof categorizationRuleRecommendationControllerList>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof categorizationRuleRecommendationControllerList>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof categorizationRuleRecommendationControllerList>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useCategorizationRuleRecommendationControllerList<
+  TData = Awaited<
+    ReturnType<typeof categorizationRuleRecommendationControllerList>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof categorizationRuleRecommendationControllerList>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useCategorizationRuleRecommendationControllerList<
+  TData = Awaited<
+    ReturnType<typeof categorizationRuleRecommendationControllerList>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof categorizationRuleRecommendationControllerList>
+        >,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getCategorizationRuleRecommendationControllerListQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Start async categorization rule recommendation generation when none is already running.
+ */
+export const categorizationRuleRecommendationControllerGenerate = (
+  generateCategorizationRuleRecommendationsDto: GenerateCategorizationRuleRecommendationsDto,
+  signal?: AbortSignal,
+) => {
+  return axios<CategorizationRuleRecommendationGenerationResponse>({
+    url: `/categorization-rule-recommendations/generate`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: generateCategorizationRuleRecommendationsDto,
+    signal,
+  })
+}
+
+export const getCategorizationRuleRecommendationControllerGenerateMutationOptions =
+  <TError = void, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerGenerate>
+      >,
+      TError,
+      { data: GenerateCategorizationRuleRecommendationsDto },
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<
+      ReturnType<typeof categorizationRuleRecommendationControllerGenerate>
+    >,
+    TError,
+    { data: GenerateCategorizationRuleRecommendationsDto },
+    TContext
+  > => {
+    const mutationKey = ['categorizationRuleRecommendationControllerGenerate']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerGenerate>
+      >,
+      { data: GenerateCategorizationRuleRecommendationsDto }
+    > = (props) => {
+      const { data } = props ?? {}
+
+      return categorizationRuleRecommendationControllerGenerate(data)
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type CategorizationRuleRecommendationControllerGenerateMutationResult =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof categorizationRuleRecommendationControllerGenerate>
+    >
+  >
+export type CategorizationRuleRecommendationControllerGenerateMutationBody =
+  GenerateCategorizationRuleRecommendationsDto
+export type CategorizationRuleRecommendationControllerGenerateMutationError =
+  void
+
+export const useCategorizationRuleRecommendationControllerGenerate = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerGenerate>
+      >,
+      TError,
+      { data: GenerateCategorizationRuleRecommendationsDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<
+    ReturnType<typeof categorizationRuleRecommendationControllerGenerate>
+  >,
+  TError,
+  { data: GenerateCategorizationRuleRecommendationsDto },
+  TContext
+> => {
+  const mutationOptions =
+    getCategorizationRuleRecommendationControllerGenerateMutationOptions(
+      options,
+    )
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Supersede pending recommendations and start a fresh async generation.
+ */
+export const categorizationRuleRecommendationControllerRegenerate = (
+  generateCategorizationRuleRecommendationsDto: GenerateCategorizationRuleRecommendationsDto,
+  signal?: AbortSignal,
+) => {
+  return axios<CategorizationRuleRecommendationGenerationResponse>({
+    url: `/categorization-rule-recommendations/regenerate`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: generateCategorizationRuleRecommendationsDto,
+    signal,
+  })
+}
+
+export const getCategorizationRuleRecommendationControllerRegenerateMutationOptions =
+  <TError = void, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerRegenerate>
+      >,
+      TError,
+      { data: GenerateCategorizationRuleRecommendationsDto },
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<
+      ReturnType<typeof categorizationRuleRecommendationControllerRegenerate>
+    >,
+    TError,
+    { data: GenerateCategorizationRuleRecommendationsDto },
+    TContext
+  > => {
+    const mutationKey = ['categorizationRuleRecommendationControllerRegenerate']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerRegenerate>
+      >,
+      { data: GenerateCategorizationRuleRecommendationsDto }
+    > = (props) => {
+      const { data } = props ?? {}
+
+      return categorizationRuleRecommendationControllerRegenerate(data)
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type CategorizationRuleRecommendationControllerRegenerateMutationResult =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof categorizationRuleRecommendationControllerRegenerate>
+    >
+  >
+export type CategorizationRuleRecommendationControllerRegenerateMutationBody =
+  GenerateCategorizationRuleRecommendationsDto
+export type CategorizationRuleRecommendationControllerRegenerateMutationError =
+  void
+
+export const useCategorizationRuleRecommendationControllerRegenerate = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerRegenerate>
+      >,
+      TError,
+      { data: GenerateCategorizationRuleRecommendationsDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<
+    ReturnType<typeof categorizationRuleRecommendationControllerRegenerate>
+  >,
+  TError,
+  { data: GenerateCategorizationRuleRecommendationsDto },
+  TContext
+> => {
+  const mutationOptions =
+    getCategorizationRuleRecommendationControllerRegenerateMutationOptions(
+      options,
+    )
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Accept a pending recommendation and create a normal categorization rule.
+ */
+export const categorizationRuleRecommendationControllerAccept = (
+  id: string,
+  signal?: AbortSignal,
+) => {
+  return axios<AcceptCategorizationRuleSuggestionResponse>({
+    url: `/categorization-rule-recommendations/${id}/accept`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getCategorizationRuleRecommendationControllerAcceptMutationOptions =
+  <TError = void, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerAccept>
+      >,
+      TError,
+      { id: string },
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<
+      ReturnType<typeof categorizationRuleRecommendationControllerAccept>
+    >,
+    TError,
+    { id: string },
+    TContext
+  > => {
+    const mutationKey = ['categorizationRuleRecommendationControllerAccept']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerAccept>
+      >,
+      { id: string }
+    > = (props) => {
+      const { id } = props ?? {}
+
+      return categorizationRuleRecommendationControllerAccept(id)
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type CategorizationRuleRecommendationControllerAcceptMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof categorizationRuleRecommendationControllerAccept>>
+  >
+
+export type CategorizationRuleRecommendationControllerAcceptMutationError = void
+
+export const useCategorizationRuleRecommendationControllerAccept = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerAccept>
+      >,
+      TError,
+      { id: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof categorizationRuleRecommendationControllerAccept>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions =
+    getCategorizationRuleRecommendationControllerAcceptMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Dismiss a pending recommendation.
+ */
+export const categorizationRuleRecommendationControllerDismiss = (
+  id: string,
+  signal?: AbortSignal,
+) => {
+  return axios<DismissCategorizationRuleSuggestionResponse>({
+    url: `/categorization-rule-recommendations/${id}/dismiss`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getCategorizationRuleRecommendationControllerDismissMutationOptions =
+  <TError = void, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerDismiss>
+      >,
+      TError,
+      { id: string },
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<
+      ReturnType<typeof categorizationRuleRecommendationControllerDismiss>
+    >,
+    TError,
+    { id: string },
+    TContext
+  > => {
+    const mutationKey = ['categorizationRuleRecommendationControllerDismiss']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerDismiss>
+      >,
+      { id: string }
+    > = (props) => {
+      const { id } = props ?? {}
+
+      return categorizationRuleRecommendationControllerDismiss(id)
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type CategorizationRuleRecommendationControllerDismissMutationResult =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof categorizationRuleRecommendationControllerDismiss>
+    >
+  >
+
+export type CategorizationRuleRecommendationControllerDismissMutationError =
+  void
+
+export const useCategorizationRuleRecommendationControllerDismiss = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof categorizationRuleRecommendationControllerDismiss>
+      >,
+      TError,
+      { id: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof categorizationRuleRecommendationControllerDismiss>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions =
+    getCategorizationRuleRecommendationControllerDismissMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }

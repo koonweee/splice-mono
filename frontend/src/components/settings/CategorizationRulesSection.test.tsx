@@ -12,6 +12,7 @@ import type * as ReactQuery from '@tanstack/react-query'
 import type * as SpliceAPI from '../../api/clients/spliceAPI'
 import type {
   Account,
+  CategorizationRuleSuggestion,
   CategorizationRuleView,
   CategoryManagementItem,
 } from '../../api/models'
@@ -23,11 +24,20 @@ const mockFns = vi.hoisted(() => ({
   useCategorizationRuleControllerCreateMock: vi.fn(),
   useCategorizationRuleControllerUpdateMock: vi.fn(),
   useCategorizationRuleControllerApplyMock: vi.fn(),
+  useCategorizationRuleRecommendationControllerAcceptMock: vi.fn(),
+  useCategorizationRuleRecommendationControllerDismissMock: vi.fn(),
+  useCategorizationRuleRecommendationControllerGenerateMock: vi.fn(),
+  useCategorizationRuleRecommendationControllerListMock: vi.fn(),
+  useCategorizationRuleRecommendationControllerRegenerateMock: vi.fn(),
   useCategoryControllerFindManagementMock: vi.fn(),
   useAccountControllerFindAllMock: vi.fn(),
   createMutateMock: vi.fn(),
   updateMutateMock: vi.fn(),
   applyMutateMock: vi.fn(),
+  acceptRecommendationMutateMock: vi.fn(),
+  dismissRecommendationMutateMock: vi.fn(),
+  generateRecommendationsMutateMock: vi.fn(),
+  regenerateRecommendationsMutateMock: vi.fn(),
   invalidateQueriesMock: vi.fn(),
 }))
 
@@ -60,6 +70,16 @@ vi.mock('../../api/clients/spliceAPI', async () => {
       mockFns.useCategorizationRuleControllerPreviewApplicationMock,
     useCategorizationRuleControllerUpdate:
       mockFns.useCategorizationRuleControllerUpdateMock,
+    useCategorizationRuleRecommendationControllerAccept:
+      mockFns.useCategorizationRuleRecommendationControllerAcceptMock,
+    useCategorizationRuleRecommendationControllerDismiss:
+      mockFns.useCategorizationRuleRecommendationControllerDismissMock,
+    useCategorizationRuleRecommendationControllerGenerate:
+      mockFns.useCategorizationRuleRecommendationControllerGenerateMock,
+    useCategorizationRuleRecommendationControllerList:
+      mockFns.useCategorizationRuleRecommendationControllerListMock,
+    useCategorizationRuleRecommendationControllerRegenerate:
+      mockFns.useCategorizationRuleRecommendationControllerRegenerateMock,
     useCategoryControllerFindManagement:
       mockFns.useCategoryControllerFindManagementMock,
   }
@@ -69,6 +89,12 @@ const category = makeCategory({
   id: '00000000-0000-4000-8000-000000000100',
   primary: 'Transport',
   detailed: 'Rideshare',
+})
+
+const historicalCategory = makeCategory({
+  id: '00000000-0000-4000-8000-000000000101',
+  primary: 'Others',
+  detailed: 'Pre 2026',
 })
 
 const archivedRule: CategorizationRuleView = {
@@ -94,6 +120,33 @@ const activeRule: CategorizationRuleView = {
     { field: 'amountSign', operator: 'equals', value: 'negative' },
   ],
   archivedAt: null,
+  createdAt: '2026-02-14T00:00:00.000Z',
+  updatedAt: '2026-02-14T00:00:00.000Z',
+}
+
+const suggestion: CategorizationRuleSuggestion = {
+  id: '00000000-0000-4000-8000-000000000401',
+  userId: 'user-1',
+  generationId: '00000000-0000-4000-8000-000000000501',
+  name: 'Suggested Uber rideshare',
+  priority: 10,
+  targetCategoryId: category.id,
+  targetCategory: category,
+  conditions: [
+    { field: 'merchantName', operator: 'contains', value: 'uber' },
+  ],
+  rationale: 'Several manually categorized transactions mention Uber.',
+  status: 'pending',
+  acceptedRuleId: null,
+  matched: 8,
+  updated: 6,
+  skippedManual: 2,
+  manualAgreement: 6,
+  manualConflicts: 0,
+  existingRuleOverlap: 0,
+  previewTransactions: [],
+  generatedBy: 'mastra',
+  model: 'gpt-5.4-mini',
   createdAt: '2026-02-14T00:00:00.000Z',
   updatedAt: '2026-02-14T00:00:00.000Z',
 }
@@ -129,7 +182,7 @@ beforeEach(() => {
   )
   mockFns.useCategoryControllerFindManagementMock.mockImplementation(
     (params?: { archived?: boolean }) => ({
-      data: params?.archived ? [] : [category],
+      data: params?.archived ? [] : [category, historicalCategory],
       isLoading: false,
       isError: false,
     }),
@@ -157,6 +210,44 @@ beforeEach(() => {
     isError: false,
     error: null,
   })
+  mockFns.useCategorizationRuleRecommendationControllerListMock.mockReturnValue({
+    data: { generation: null, suggestions: [] },
+    isLoading: false,
+    isError: false,
+    error: null,
+  })
+  mockFns.useCategorizationRuleRecommendationControllerGenerateMock.mockReturnValue(
+    {
+      mutate: mockFns.generateRecommendationsMutateMock,
+      isPending: false,
+      isError: false,
+      error: null,
+    },
+  )
+  mockFns.useCategorizationRuleRecommendationControllerRegenerateMock.mockReturnValue(
+    {
+      mutate: mockFns.regenerateRecommendationsMutateMock,
+      isPending: false,
+      isError: false,
+      error: null,
+    },
+  )
+  mockFns.useCategorizationRuleRecommendationControllerAcceptMock.mockReturnValue(
+    {
+      mutate: mockFns.acceptRecommendationMutateMock,
+      isPending: false,
+      isError: false,
+      error: null,
+    },
+  )
+  mockFns.useCategorizationRuleRecommendationControllerDismissMock.mockReturnValue(
+    {
+      mutate: mockFns.dismissRecommendationMutateMock,
+      isPending: false,
+      isError: false,
+      error: null,
+    },
+  )
   mockFns.useCategorizationRuleControllerPreviewApplicationMock.mockReturnValue({
     data: { matched: 24, updated: 18, skippedManual: 6, transactions: [] },
     isLoading: false,
@@ -305,6 +396,262 @@ describe('CategorizationRulesSection', () => {
       id: archivedRule.id,
       data: { archived: false },
     })
+  })
+
+  it('does not start recommendation generation before recommendations load', () => {
+    mockFns.useCategorizationRuleRecommendationControllerListMock.mockReturnValue(
+      {
+        data: undefined,
+        isLoading: true,
+        isError: false,
+        error: null,
+      },
+    )
+
+    renderSection()
+    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+
+    expect(mockFns.generateRecommendationsMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('opens recommendations without auto-generating when none exist', async () => {
+    renderSection()
+
+    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+
+    expect(mockFns.generateRecommendationsMutateMock).not.toHaveBeenCalled()
+    expect(await screen.findByText('No recommendations yet')).toBeTruthy()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /^generate recommendations$/i }),
+    )
+
+    expect(mockFns.generateRecommendationsMutateMock).toHaveBeenCalledWith({
+      data: { ignoredCategoryIds: [historicalCategory.id] },
+    })
+  })
+
+  it('shows last completed run and requires explicit regeneration', async () => {
+    mockFns.useCategorizationRuleRecommendationControllerListMock.mockReturnValue(
+      {
+        data: {
+          generation: {
+            id: '00000000-0000-4000-8000-000000000501',
+            userId: 'user-1',
+            status: 'completed',
+            model: 'gpt-5.4-mini',
+            ignoredCategoryIds: [historicalCategory.id],
+            startedAt: '2026-02-14T00:00:00.000Z',
+            completedAt: '2026-02-14T00:01:00.000Z',
+            failedAt: null,
+            errorMessage: null,
+            createdAt: '2026-02-14T00:00:00.000Z',
+            updatedAt: '2026-02-14T00:01:00.000Z',
+          },
+          suggestions: [],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      },
+    )
+
+    renderSection()
+    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+
+    expect(await screen.findByText(/^Last run/i)).toBeTruthy()
+    expect(screen.getByText('No recommendations found')).toBeTruthy()
+    expect(mockFns.generateRecommendationsMutateMock).not.toHaveBeenCalled()
+    expect(mockFns.regenerateRecommendationsMutateMock).not.toHaveBeenCalled()
+
+    const regenerateButtons = screen.getAllByRole('button', {
+      name: /^regenerate recommendations$/i,
+    })
+    expect(regenerateButtons).toHaveLength(2)
+    fireEvent.click(regenerateButtons[1])
+
+    expect(mockFns.regenerateRecommendationsMutateMock).toHaveBeenCalledWith({
+      data: { ignoredCategoryIds: [historicalCategory.id] },
+    })
+  })
+
+  it('polls recommendations only while generation is running', () => {
+    renderSection()
+    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+
+    const latestCall =
+      mockFns.useCategorizationRuleRecommendationControllerListMock.mock.calls.at(
+        -1,
+      )
+    expect(latestCall).toBeDefined()
+    const options = latestCall?.[0] as {
+      query: {
+        refetchInterval: (query: {
+          state: {
+            data: {
+              generation: { status: string } | null
+              suggestions: Array<unknown>
+            }
+          }
+        }) => number | false
+      }
+    }
+    const refetchInterval = options.query.refetchInterval
+
+    expect(
+      refetchInterval({
+        state: {
+          data: {
+            generation: { status: 'processing' },
+            suggestions: [],
+          },
+        },
+      }),
+    ).toBe(3000)
+    expect(
+      refetchInterval({
+        state: {
+          data: {
+            generation: { status: 'completed' },
+            suggestions: [],
+          },
+        },
+      }),
+    ).toBe(false)
+  })
+
+  it('shows pending recommendations without triggering generation', async () => {
+    mockFns.useCategorizationRuleRecommendationControllerListMock.mockReturnValue(
+      {
+        data: { generation: null, suggestions: [suggestion] },
+        isLoading: false,
+        isError: false,
+        error: null,
+      },
+    )
+
+    renderSection()
+    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+
+    expect(mockFns.generateRecommendationsMutateMock).not.toHaveBeenCalled()
+    expect(await screen.findByText('Suggested Uber rideshare')).toBeTruthy()
+    expect(
+      screen.getByText(
+        'Several manually categorized transactions mention Uber.',
+      ),
+    ).toBeTruthy()
+
+    fireEvent.click(
+      screen.getByLabelText('Accept recommendation Suggested Uber rideshare'),
+    )
+    expect(mockFns.acceptRecommendationMutateMock).toHaveBeenCalledWith({
+      id: suggestion.id,
+    })
+
+    fireEvent.click(
+      screen.getByLabelText('Dismiss recommendation Suggested Uber rideshare'),
+    )
+    expect(mockFns.dismissRecommendationMutateMock).toHaveBeenCalledWith({
+      id: suggestion.id,
+    })
+  })
+
+  it('shows persisted generation progress copy', async () => {
+    mockFns.useCategorizationRuleRecommendationControllerListMock.mockReturnValue(
+      {
+        data: {
+          generation: {
+            id: '00000000-0000-4000-8000-000000000501',
+            userId: 'user-1',
+            status: 'processing',
+            model: 'gpt-5.4-mini',
+            ignoredCategoryIds: [historicalCategory.id],
+            startedAt: '2026-02-14T00:00:00.000Z',
+            completedAt: null,
+            failedAt: null,
+            errorMessage: null,
+            createdAt: '2026-02-14T00:00:00.000Z',
+            updatedAt: '2026-02-14T00:00:00.000Z',
+          },
+          suggestions: [],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      },
+    )
+
+    renderSection()
+    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+
+    expect(
+      await screen.findByText('You can close this panel and come back later.'),
+    ).toBeTruthy()
+    expect(
+      screen.getByText(
+        'This may take a moment. You can leave and return later.',
+      ),
+    ).toBeTruthy()
+  })
+
+  it('previews a recommendation using rule-like surfaces', async () => {
+    mockFns.useCategorizationRuleRecommendationControllerListMock.mockReturnValue(
+      {
+        data: { generation: null, suggestions: [suggestion] },
+        isLoading: false,
+        isError: false,
+        error: null,
+      },
+    )
+
+    renderSection()
+    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+    fireEvent.click(
+      await screen.findByLabelText(
+        'Preview recommendation Suggested Uber rideshare',
+      ),
+    )
+
+    const previewDialog = await screen.findByRole('dialog', {
+      name: /preview recommendation: suggested uber rideshare/i,
+    })
+    expect(within(previewDialog).getByText('Matched')).toBeTruthy()
+    expect(within(previewDialog).getByText('Would update')).toBeTruthy()
+    expect(
+      within(previewDialog).getByText(
+        'Manual categories are never overwritten.',
+      ),
+    ).toBeTruthy()
+
+    fireEvent.click(
+      within(previewDialog).getByRole('button', { name: /^close$/i }),
+    )
+  })
+
+  it('opens a recommendation in the rule editor', async () => {
+    mockFns.useCategorizationRuleRecommendationControllerListMock.mockReturnValue(
+      {
+        data: { generation: null, suggestions: [suggestion] },
+        isLoading: false,
+        isError: false,
+        error: null,
+      },
+    )
+
+    renderSection()
+    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+    await screen.findByText('Suggested Uber rideshare')
+
+    fireEvent.click(
+      screen.getByLabelText('Edit recommendation Suggested Uber rideshare'),
+    )
+
+    const editDialog = await screen.findByRole('dialog', {
+      name: /new categorization rule/i,
+    })
+    expect(
+      within(editDialog).getByDisplayValue('Suggested Uber rideshare'),
+    ).toBeTruthy()
   })
 })
 

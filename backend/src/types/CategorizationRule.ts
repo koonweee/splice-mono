@@ -182,3 +182,27 @@ export const PreviewCategorizationRuleApplicationResponseSchema =
 export type PreviewCategorizationRuleApplicationResponse = z.infer<
   typeof PreviewCategorizationRuleApplicationResponseSchema
 >;
+
+export const PreviewCategorizationRuleDraftDtoSchema = registerSchema(
+  'PreviewCategorizationRuleDraftDto',
+  z.object({
+    targetCategoryId: z.string().uuid(),
+    priority: z.number().int().optional(),
+    conditions: z.array(CategorizationRuleConditionSchema).min(1),
+  }),
+);
+export type PreviewCategorizationRuleDraftDto = z.infer<
+  typeof PreviewCategorizationRuleDraftDtoSchema
+>;
+
+export const CategorizationRuleDraftPreviewSchema = registerSchema(
+  'CategorizationRuleDraftPreview',
+  PreviewCategorizationRuleApplicationResponseSchema.extend({
+    manualAgreement: z.number().int(),
+    manualConflicts: z.number().int(),
+    existingRuleOverlap: z.number().int(),
+  }),
+);
+export type CategorizationRuleDraftPreview = z.infer<
+  typeof CategorizationRuleDraftPreviewSchema
+>;

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, IsNull, Not, Repository } from 'typeorm';
+import { AccountEntity } from '../account/account.entity';
 import { CategoryEntity } from '../category/category.entity';
 import { TransactionEntity } from '../transaction/transaction.entity';
 import { getTransactionActivityDate } from '../transaction/transaction-date';
@@ -14,8 +15,10 @@ import type {
   CategorizationRuleCategoryView,
   CategorizationRuleCondition,
   CategorizationRuleConflict,
+  CategorizationRuleDraftPreview,
   CategorizationRuleView,
   CreateCategorizationRuleDto,
+  PreviewCategorizationRuleDraftDto,
   PreviewCategorizationRuleApplicationResponse,
   UpdateCategorizationRuleDto,
 } from '../types/CategorizationRule';
@@ -34,6 +37,9 @@ type EditableRuleState = {
 };
 
 type RuleApplicationEvaluation = ApplyCategorizationRuleResponse & {
+  manualAgreement: number;
+  manualConflicts: number;
+  existingRuleOverlap: number;
   previewTransactions?: TransactionEntity[];
 };
 
@@ -44,6 +50,8 @@ export class TransactionCategorizationService {
   constructor(
     @InjectRepository(CategorizationRuleEntity)
     private readonly ruleRepository: Repository<CategorizationRuleEntity>,
+    @InjectRepository(AccountEntity)
+    private readonly accountRepository: Repository<AccountEntity>,
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
     @InjectRepository(TransactionEntity)
@@ -124,6 +132,41 @@ export class TransactionCategorizationService {
     });
 
     return this.engine.findFirstMatch(rules, transaction);
+  }
+
+  async previewDraftRuleApplication(
+    userId: string,
+    dto: PreviewCategorizationRuleDraftDto,
+    options: { ignoredManualCategoryIds?: string[] } = {},
+  ): Promise<CategorizationRuleDraftPreview> {
+    const next = await this.normalizeDraftDto(userId, dto);
+    await this.validateActiveTargetCategory(userId, next.targetCategoryId);
+    await this.validateOwnedAccountConditions(userId, next.conditions);
+    await this.assertNoActiveDuplicate(userId, next);
+
+    const draftRule = this.ruleRepository.create({
+      id: '00000000-0000-4000-8000-000000000000',
+      userId,
+      ...next,
+    });
+    const result = await this.evaluateRuleLikeApplication(draftRule, userId, {
+      persist: false,
+      previewLimit: 10,
+      includeExistingRuleOverlap: true,
+      ignoredManualCategoryIds: options.ignoredManualCategoryIds,
+    });
+
+    return {
+      matched: result.matched,
+      updated: result.updated,
+      skippedManual: result.skippedManual,
+      manualAgreement: result.manualAgreement,
+      manualConflicts: result.manualConflicts,
+      existingRuleOverlap: result.existingRuleOverlap,
+      transactions: (result.previewTransactions ?? []).map((transaction) =>
+        transaction.toObject(),
+      ),
+    };
   }
 
   async applyRuleAssignmentIfEligible(
@@ -218,6 +261,21 @@ export class TransactionCategorizationService {
       return null;
     }
 
+    return this.evaluateRuleLikeApplication(rule, userId, options);
+  }
+
+  private async evaluateRuleLikeApplication(
+    rule: CategorizationRuleEntity,
+    userId: string,
+    options: {
+      persist: boolean;
+      manager?: EntityManager;
+      previewLimit?: number;
+      includeExistingRuleOverlap?: boolean;
+      ignoredManualCategoryIds?: string[];
+    },
+  ): Promise<RuleApplicationEvaluation> {
+    const manager = options.manager ?? this.transactionRepository.manager;
     const txnRepo = manager.getRepository(TransactionEntity);
     const transactions = await txnRepo.find({
       where: { activity: { userId } },
@@ -233,8 +291,20 @@ export class TransactionCategorizationService {
     let matched = 0;
     let updated = 0;
     let skippedManual = 0;
+    let manualAgreement = 0;
+    let manualConflicts = 0;
+    let existingRuleOverlap = 0;
     const updates: TransactionEntity[] = [];
     const previewTransactions: TransactionEntity[] = [];
+    const ignoredManualCategoryIds = new Set(
+      options.ignoredManualCategoryIds ?? [],
+    );
+    const activeRules = options.includeExistingRuleOverlap
+      ? await manager.getRepository(CategorizationRuleEntity).find({
+          where: { userId, archivedAt: IsNull() },
+          order: { priority: 'ASC', createdAt: 'ASC', id: 'ASC' },
+        })
+      : [];
 
     for (const transaction of transactions) {
       const match = this.engine.findFirstMatch([rule], transaction);
@@ -244,10 +314,28 @@ export class TransactionCategorizationService {
 
       matched += 1;
       if (
+        options.includeExistingRuleOverlap &&
+        this.engine.findFirstMatch(activeRules, transaction)
+      ) {
+        existingRuleOverlap += 1;
+      }
+
+      if (
         transaction.source === 'manual' ||
         transaction.categoryAssignmentSource === 'manual'
       ) {
         skippedManual += 1;
+        if (
+          transaction.categoryId &&
+          ignoredManualCategoryIds.has(transaction.categoryId)
+        ) {
+          continue;
+        }
+        if (transaction.categoryId === rule.targetCategoryId) {
+          manualAgreement += 1;
+        } else {
+          manualConflicts += 1;
+        }
         continue;
       }
 
@@ -280,6 +368,9 @@ export class TransactionCategorizationService {
       matched,
       updated,
       skippedManual,
+      manualAgreement,
+      manualConflicts,
+      existingRuleOverlap,
       ...(options.previewLimit !== undefined
         ? { previewTransactions: sortedPreviewTransactions }
         : {}),
@@ -292,6 +383,19 @@ export class TransactionCategorizationService {
   ): Promise<EditableRuleState> {
     return {
       name: dto.name.trim(),
+      priority: dto.priority ?? (await this.getNextPriority(userId)),
+      targetCategoryId: dto.targetCategoryId,
+      conditions: this.engine.normalizeConditions(dto.conditions),
+      archivedAt: null,
+    };
+  }
+
+  private async normalizeDraftDto(
+    userId: string,
+    dto: PreviewCategorizationRuleDraftDto,
+  ): Promise<EditableRuleState> {
+    return {
+      name: 'Draft categorization rule',
       priority: dto.priority ?? (await this.getNextPriority(userId)),
       targetCategoryId: dto.targetCategoryId,
       conditions: this.engine.normalizeConditions(dto.conditions),
@@ -366,6 +470,38 @@ export class TransactionCategorizationService {
     }
   }
 
+  private async validateOwnedAccountConditions(
+    userId: string,
+    conditions: CategorizationRuleCondition[],
+  ): Promise<void> {
+    const accountIds = Array.from(
+      new Set(
+        conditions.flatMap((condition) => {
+          if (condition.field !== 'accountId') {
+            return [];
+          }
+
+          return Array.isArray(condition.value)
+            ? condition.value
+            : [condition.value];
+        }),
+      ),
+    );
+    if (accountIds.length === 0) {
+      return;
+    }
+
+    const accounts = await this.accountRepository.find({
+      where: { id: In(accountIds), userId },
+      select: { id: true },
+    });
+    if (accounts.length !== accountIds.length) {
+      throw new BadRequestException(
+        'One or more accountId conditions are not valid for this user',
+      );
+    }
+  }
+
   private async assertNoDuplicate(
     userId: string,
     next: EditableRuleState,
@@ -381,6 +517,34 @@ export class TransactionCategorizationService {
     const duplicate = rules.find(
       (rule) =>
         rule.id !== excludeId &&
+        rule.targetCategoryId === next.targetCategoryId &&
+        this.engine.canonicalConditionsKey(rule.conditions) ===
+          nextConditionsKey,
+    );
+
+    if (!duplicate) {
+      return;
+    }
+
+    throw new ConflictException({
+      message: 'Categorization rule already exists',
+      rule: this.toConflict(duplicate),
+    });
+  }
+
+  private async assertNoActiveDuplicate(
+    userId: string,
+    next: EditableRuleState,
+  ): Promise<void> {
+    const rules = await this.ruleRepository.find({
+      where: { userId, archivedAt: IsNull() },
+      order: { priority: 'ASC', createdAt: 'ASC', id: 'ASC' },
+    });
+    const nextConditionsKey = this.engine.canonicalConditionsKey(
+      next.conditions,
+    );
+    const duplicate = rules.find(
+      (rule) =>
         rule.targetCategoryId === next.targetCategoryId &&
         this.engine.canonicalConditionsKey(rule.conditions) ===
           nextConditionsKey,
