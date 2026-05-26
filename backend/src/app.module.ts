@@ -24,6 +24,7 @@ import { createSeqStream } from './logging/create-seq-stream';
 import { McpModule } from './mcp/mcp.module';
 import { NotificationModule } from './notification/notification.module';
 import { TransactionAnalysisModule } from './transaction-analysis/transaction-analysis.module';
+import { TransactionCategorizationModule } from './transaction-categorization/transaction-categorization.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { UserModule } from './user/user.module';
 
@@ -108,6 +109,7 @@ import { UserModule } from './user/user.module';
     McpModule,
     NotificationModule,
     TransactionAnalysisModule,
+    TransactionCategorizationModule,
     TransactionModule,
     UserModule,
     TypeOrmModule.forRoot({

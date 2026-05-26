@@ -11,6 +11,7 @@ import type { TransactionCounterpartiesItem } from './transactionCounterpartiesI
 import type { TransactionLocation } from './transactionLocation'
 import type { TransactionPaymentMeta } from './transactionPaymentMeta'
 import type { TransactionCategory } from './transactionCategory'
+import type { TransactionCategoryAssignmentSource } from './transactionCategoryAssignmentSource'
 import type { TransactionProviderCategoryHint } from './transactionProviderCategoryHint'
 import type { TransactionConvertedAmount } from './transactionConvertedAmount'
 
@@ -63,6 +64,9 @@ export interface Transaction {
   category?: TransactionCategory
   /** @nullable */
   categoryUpdatedAt: string | null
+  categoryAssignmentSource: TransactionCategoryAssignmentSource
+  /** @nullable */
+  categoryAssignmentRuleId: string | null
   providerCategoryHint: TransactionProviderCategoryHint
   /** @nullable */
   accountName?: string | null

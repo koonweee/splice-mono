@@ -71,6 +71,7 @@ interface TransactionsTableProps {
   onToggleLoadedSelection?: () => void
   onEditManualTransaction?: (transaction: Transaction) => void
   onDeleteManualTransaction?: (transaction: Transaction) => void
+  readOnly?: boolean
 }
 
 function formatMetadataValue(value: string | null | undefined) {
@@ -316,16 +317,19 @@ function MerchantCell({
   bulkModeEnabled = false,
   onDeleteManualTransaction,
   onEditManualTransaction,
+  readOnly = false,
 }: {
   row: { original: Transaction }
   bulkModeEnabled?: boolean
   onDeleteManualTransaction?: (transaction: Transaction) => void
   onEditManualTransaction?: (transaction: Transaction) => void
+  readOnly?: boolean
 }) {
   const transaction = row.original
   const merchantDisplay = getMerchantDisplay(transaction)
   const avatarLabel = merchantDisplay.primary.trim().slice(0, 1).toUpperCase()
-  const showManualActions = !bulkModeEnabled && isManualTransaction(transaction)
+  const showManualActions =
+    !readOnly && !bulkModeEnabled && isManualTransaction(transaction)
 
   return (
     <Group className={styles.merchantCell} gap="xs" wrap="nowrap">
@@ -342,7 +346,7 @@ function MerchantCell({
           <Text className={styles.merchantPrimary} size="sm" span>
             {merchantDisplay.primary}
           </Text>
-          {!bulkModeEnabled && (
+          {!readOnly && !bulkModeEnabled && (
             <TransactionInfoPopover transaction={transaction} />
           )}
           {showManualActions && (
@@ -627,6 +631,10 @@ function getCategoryPrimaryLabel(category: Pick<Category, 'primary'>) {
   return category.primary
 }
 
+function shouldShowRuleAssignment(transaction: Transaction) {
+  return transaction.categoryAssignmentSource === 'rule'
+}
+
 function getBankActivityDate(transaction: Transaction) {
   return transaction.authorizedDate ?? transaction.providerDate
 }
@@ -651,6 +659,7 @@ export function TransactionsTable({
   onToggleLoadedSelection,
   onEditManualTransaction,
   onDeleteManualTransaction,
+  readOnly = false,
 }: TransactionsTableProps) {
   const queryClient = useQueryClient()
   const [editingTransactionId, setEditingTransactionId] = useState<
@@ -769,12 +778,12 @@ export function TransactionsTable({
               id: 'bulkSelect',
               header: '',
               Header: () => (
-	                <Checkbox
-	                  aria-label="Select all loaded transactions"
-	                  checked={allLoadedSelected}
-	                  disabled={bulkSelectableData.length === 0}
-	                  indeterminate={someLoadedSelected && !allLoadedSelected}
-	                  onChange={() => onToggleLoadedSelection?.()}
+                <Checkbox
+                  aria-label="Select all loaded transactions"
+                  checked={allLoadedSelected}
+                  disabled={bulkSelectableData.length === 0}
+                  indeterminate={someLoadedSelected && !allLoadedSelected}
+                  onChange={() => onToggleLoadedSelection?.()}
                   onClick={(event) => event.stopPropagation()}
                 />
               ),
@@ -782,15 +791,15 @@ export function TransactionsTable({
               size: 48,
               minSize: 48,
               maxSize: 48,
-	              Cell: ({ row }) => {
-	                const transaction = row.original
-	                const isManual = isManualTransaction(transaction)
+              Cell: ({ row }) => {
+                const transaction = row.original
+                const isManual = isManualTransaction(transaction)
 
-	                if (isManual) {
-	                  return null
-	                }
+                if (isManual) {
+                  return null
+                }
 
-	                return (
+                return (
                   <Checkbox
                     aria-label={`Select transaction ${getMerchantDisplay(transaction).primary}`}
                     checked={selectedTransactionIds.has(transaction.id)}
@@ -819,7 +828,7 @@ export function TransactionsTable({
           )
           const resetDateLabel = dayjs(bankActivityDate).format('MMM D, YYYY')
 
-          if (isEditing && !bulkModeEnabled && !isManual) {
+          if (isEditing && !readOnly && !bulkModeEnabled && !isManual) {
             return (
               <Group className={styles.dateCell} gap={4} wrap="nowrap">
                 <Popover
@@ -899,7 +908,7 @@ export function TransactionsTable({
               >
                 {dateLabel}
               </Text>
-              {!bulkModeEnabled && !isManual && (
+              {!readOnly && !bulkModeEnabled && !isManual && (
                 <Group className={styles.dateActions} gap={2} wrap="nowrap">
                   <Tooltip label="Edit reporting date">
                     <ActionIcon
@@ -945,6 +954,7 @@ export function TransactionsTable({
             bulkModeEnabled={bulkModeEnabled}
             onDeleteManualTransaction={onDeleteManualTransaction}
             onEditManualTransaction={onEditManualTransaction}
+            readOnly={readOnly}
           />
         ),
       },
@@ -991,7 +1001,7 @@ export function TransactionsTable({
           const categoryLabel = category
             ? getCategoryLabel(category)
             : 'Uncategorized'
-          if (isEditing && !bulkModeEnabled && !isManual) {
+          if (isEditing && !readOnly && !bulkModeEnabled && !isManual) {
             return (
               <Group className={styles.categoryCell} gap={4} wrap="nowrap">
                 <CategorySelect
@@ -1039,7 +1049,14 @@ export function TransactionsTable({
                 {categoryLabel}
               </Badge>
               <ProviderCategoryHintPopover transaction={transaction} />
-              {!bulkModeEnabled && !isManual && (
+              {shouldShowRuleAssignment(transaction) && (
+                <Tooltip label="Assigned by categorization rule">
+                  <Badge color="violet" size="xs" variant="light">
+                    Rule
+                  </Badge>
+                </Tooltip>
+              )}
+              {!readOnly && !bulkModeEnabled && !isManual && (
                 <Group className={styles.categoryActions} gap={2} wrap="nowrap">
                   <Tooltip label="Edit category">
                     <ActionIcon
@@ -1087,6 +1104,7 @@ export function TransactionsTable({
       editingReportingDateTransactionId,
       editingTransactionId,
       reportingDateDraft,
+      readOnly,
       selectedTransactionIds,
       onToggleTransactionSelection,
       onDeleteManualTransaction,
@@ -1096,12 +1114,12 @@ export function TransactionsTable({
       updateTransaction.variables?.id,
       updateCategory.isPending,
       updateCategory.mutate,
-	      updateCategory.variables?.id,
-	      allLoadedSelected,
-	      bulkSelectableData.length,
-	      onToggleLoadedSelection,
-	      someLoadedSelected,
-	    ],
+      updateCategory.variables?.id,
+      allLoadedSelected,
+      bulkSelectableData.length,
+      onToggleLoadedSelection,
+      someLoadedSelected,
+    ],
   )
 
   const visibleColumns =
