@@ -1,7 +1,10 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
+
+# Native dependencies may need compilation during install.
+RUN apk add --no-cache python3 make g++
 
 # Copy package files
 COPY package.json yarn.lock ./
@@ -16,9 +19,12 @@ COPY . .
 RUN yarn build
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
 WORKDIR /app
+
+RUN apk add --no-cache libstdc++ && \
+    apk add --no-cache --virtual .build-deps python3 make g++
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
@@ -29,7 +35,8 @@ COPY package.json yarn.lock ./
 
 # Install only production dependencies
 RUN yarn install --frozen-lockfile --production && \
-    yarn cache clean
+    yarn cache clean && \
+    apk del .build-deps
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
