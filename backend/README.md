@@ -24,7 +24,7 @@ That's it! Your application will be running at `http://localhost:3000` 🚀
 
 - [Docker](https://www.docker.com/get-started) installed on your machine
 - [Docker Compose](https://docs.docker.com/compose/install/) installed
-- (Optional) [Node.js 20+](https://nodejs.org/) and [Yarn](https://yarnpkg.com/) for local development
+- (Optional) [Node.js 22.13+](https://nodejs.org/) and [Yarn](https://yarnpkg.com/) for local development
 
 ## Development Setup
 

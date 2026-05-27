@@ -103,7 +103,7 @@ Amounts stored as integer cents to avoid floating-point precision issues.
 ## Development
 
 ### Prerequisites
-- Node.js
+- Node.js 22.13+
 - Yarn
 - Docker (for PostgreSQL)
 
