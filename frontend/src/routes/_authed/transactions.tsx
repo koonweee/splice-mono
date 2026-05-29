@@ -579,6 +579,40 @@ function TransactionsPage() {
     />
   )
 
+  const bulkEditSwitch = (
+    <Switch
+      checked={bulkModeEnabled}
+      label="Bulk edit"
+      onChange={(event) => setBulkModeEnabled(event.currentTarget.checked)}
+    />
+  )
+
+  const addTransactionAction = isMobile ? (
+    <ActionIcon
+      aria-label="Add transaction"
+      onClick={openCreateManualTransaction}
+      size={40}
+      variant="filled"
+    >
+      <Plus aria-hidden size={18} />
+    </ActionIcon>
+  ) : (
+    <Button
+      leftSection={<Plus size={16} />}
+      onClick={openCreateManualTransaction}
+      size="md"
+    >
+      Add transaction
+    </Button>
+  )
+
+  const headerActions = (
+    <Group gap="sm" wrap="nowrap" ml={isMobile ? undefined : 'auto'}>
+      {isMobile && addTransactionAction}
+      {bulkEditSwitch}
+    </Group>
+  )
+
   return (
     <Flex
       direction="column"
@@ -590,35 +624,7 @@ function TransactionsPage() {
         title="Transactions"
         mb="md"
         wrap="nowrap"
-        actions={
-          <Group gap="sm" wrap="nowrap">
-            {isMobile ? (
-              <ActionIcon
-                aria-label="Add transaction"
-                onClick={openCreateManualTransaction}
-                size={40}
-                variant="filled"
-              >
-                <Plus aria-hidden size={18} />
-              </ActionIcon>
-            ) : (
-              <Button
-                leftSection={<Plus size={16} />}
-                onClick={openCreateManualTransaction}
-                size="md"
-              >
-                Add transaction
-              </Button>
-            )}
-            <Switch
-              checked={bulkModeEnabled}
-              label="Bulk edit"
-              onChange={(event) =>
-                setBulkModeEnabled(event.currentTarget.checked)
-              }
-            />
-          </Group>
-        }
+        actions={headerActions}
       />
       <ManualTransactionModal
         accounts={accounts ?? []}
@@ -725,6 +731,11 @@ function TransactionsPage() {
             showSelectLoaded={false}
             variant="summary"
           />
+        )}
+        {!isMobile && (
+          <Box ml="auto">
+            {addTransactionAction}
+          </Box>
         )}
       </Group>
 
