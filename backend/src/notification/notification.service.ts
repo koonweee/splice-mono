@@ -139,7 +139,7 @@ export class NotificationService {
     if (!user?.settings.notifications.transactions.newSyncedTransactions) {
       this.logger.debug(
         { userId: input.userId },
-        'New synced transaction notification preference disabled',
+        'New uncategorized transaction notification preference disabled',
       );
       return null;
     }
@@ -280,11 +280,11 @@ export class NotificationService {
             count: number;
           };
         return {
-          title: 'New transactions synced',
+          title: 'New uncategorized transactions',
           body:
             transactionsPayload.count === 1
-              ? '1 new transaction was added'
-              : `${transactionsPayload.count} new transactions were added`,
+              ? '1 new uncategorized transaction was added'
+              : `${transactionsPayload.count} new uncategorized transactions were added`,
           url: '/transactions?categoryId=UNCATEGORIZED',
           tag: notification.id,
           badgeCount: transactionsPayload.count,

@@ -320,7 +320,7 @@ describe('SettingsPage', () => {
       }),
     ).toBeTruthy()
     expect(
-      screen.getByRole('switch', { name: /new transactions synced/i }),
+      screen.getByRole('switch', { name: /new uncategorized transactions/i }),
     ).toBeTruthy()
     expect(window.location.search).toBe('?tab=notifications')
 
@@ -499,7 +499,7 @@ describe('SettingsPage', () => {
     expect(queryClientState.invalidateQueries).toHaveBeenCalled()
   })
 
-  it('updates the new synced transactions notification preference', async () => {
+  it('updates the new uncategorized transactions notification preference', async () => {
     meState.data = {
       settings: {
         ...meState.data!.settings,
@@ -514,7 +514,7 @@ describe('SettingsPage', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /notifications/i }))
     fireEvent.click(
-      screen.getByRole('switch', { name: /new transactions synced/i }),
+      screen.getByRole('switch', { name: /new uncategorized transactions/i }),
     )
 
     await waitFor(() => {

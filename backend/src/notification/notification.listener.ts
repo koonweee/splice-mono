@@ -33,7 +33,7 @@ export class NotificationListener {
             notificationId: notification.id,
             count: event.count,
           },
-          'Created notification for new synced transactions',
+          'Created notification for new uncategorized transactions',
         );
       }
     } catch (error) {
@@ -42,7 +42,7 @@ export class NotificationListener {
           userId: event.userId,
           error: error instanceof Error ? error.message : String(error),
         },
-        'Failed to create notification for new synced transactions',
+        'Failed to create notification for new uncategorized transactions',
       );
     }
   }

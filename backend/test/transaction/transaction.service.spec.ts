@@ -708,6 +708,82 @@ describe('TransactionService', () => {
     expect(saved[0].categoryAssignmentSource).toBe('rule');
     expect(saved[0].categoryAssignmentRuleId).toBe(ruleId);
     expect(saved[0].categoryUpdatedAt).toBeInstanceOf(Date);
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('sync notification includes only new uncategorized provider transactions', async () => {
+    const ruleId = '00000000-0000-4000-8000-000000000999';
+    const saved: TransactionEntity[] = [];
+    const txnRepo = {
+      save: jest.fn(
+        async (entities: TransactionEntity | TransactionEntity[]) => {
+          if (Array.isArray(entities)) {
+            entities.forEach((entity, index) => {
+              entity.id = `00000000-0000-4000-8000-00000000040${index}`;
+            });
+            saved.push(...entities);
+          } else {
+            saved.push(entities);
+          }
+          return entities;
+        },
+      ),
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+      remove: jest.fn(),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
+      ) => callback({ getRepository: () => txnRepo }),
+    );
+    transactionCategorizationService.applyRuleAssignmentIfEligible.mockImplementation(
+      async (_userId: string, transaction: TransactionEntity) => {
+        if (transaction.merchantName !== 'Matched Merchant') {
+          return false;
+        }
+
+        transaction.categoryId = category.id;
+        transaction.categoryAssignmentSource = 'rule';
+        transaction.categoryAssignmentRuleId = ruleId;
+        transaction.categoryUpdatedAt = new Date('2026-02-15T00:00:00.000Z');
+        return true;
+      },
+    );
+
+    await service.processSyncResults(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      {
+        added: [
+          buildCreateDto({
+            accountId: 'external-account-id',
+            externalTransactionId: 'categorized-external-id',
+            merchantName: 'Matched Merchant',
+          }),
+          buildCreateDto({
+            accountId: 'external-account-id',
+            externalTransactionId: 'uncategorized-external-id',
+            merchantName: 'Unknown Merchant',
+          }),
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor',
+        hasMore: false,
+      },
+    );
+
+    expect(saved).toHaveLength(2);
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      TransactionEvents.PROVIDER_TRANSACTIONS_SYNCED,
+      expect.objectContaining({
+        userId,
+        transactionIds: ['00000000-0000-4000-8000-000000000401'],
+        accountIds: [accountId],
+        count: 1,
+      }),
+    );
   });
 
   it('sync updates matched pending transactions to posted while preserving user metadata', async () => {

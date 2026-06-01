@@ -644,7 +644,7 @@ export function SettingsPage() {
               <Stack gap="sm">
                 <Title order={4}>Transactions</Title>
                 <Switch
-                  label="New transactions synced"
+                  label="New uncategorized transactions"
                   checked={newSyncedTransactionsEnabled}
                   disabled={newSyncedTransactionsPending || !user?.settings}
                   onChange={(event) => {

@@ -253,7 +253,7 @@ describe('NotificationService', () => {
     ).resolves.toBeNull();
   });
 
-  it('renders count-only push payloads', () => {
+  it('renders uncategorized transaction push payloads', () => {
     const notification = new NotificationEntity();
     notification.id = '00000000-0000-4000-8000-000000000301';
     notification.type = 'transactions.new_synced';
@@ -265,8 +265,8 @@ describe('NotificationService', () => {
     };
 
     expect(service.renderPushPayload(notification)).toEqual({
-      title: 'New transactions synced',
-      body: '3 new transactions were added',
+      title: 'New uncategorized transactions',
+      body: '3 new uncategorized transactions were added',
       url: '/transactions?categoryId=UNCATEGORIZED',
       tag: notification.id,
       badgeCount: 3,
