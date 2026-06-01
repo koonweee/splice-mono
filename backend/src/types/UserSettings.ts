@@ -23,9 +23,15 @@ export const UserNotificationSettingsSchema = z
         newSyncedTransactions: z.boolean().default(true),
       })
       .default({ newSyncedTransactions: true }),
+    bankLinks: z
+      .object({
+        needsAttention: z.boolean().default(true),
+      })
+      .default({ needsAttention: true }),
   })
   .default({
     transactions: { newSyncedTransactions: true },
+    bankLinks: { needsAttention: true },
   });
 
 export type UserNotificationSettings = z.infer<
@@ -55,6 +61,7 @@ export const UserSettingsSchema = registerSchema(
     /** User-level notification type preferences */
     notifications: UserNotificationSettingsSchema.default({
       transactions: { newSyncedTransactions: true },
+      bankLinks: { needsAttention: true },
     }),
     // Future settings can be added here:
     // locale: z.string().default('en-US'),
@@ -82,6 +89,11 @@ export const UpdateUserSettingsDtoSchema = registerSchema(
             newSyncedTransactions: z.boolean().optional(),
           })
           .optional(),
+        bankLinks: z
+          .object({
+            needsAttention: z.boolean().optional(),
+          })
+          .optional(),
       })
       .optional(),
   }),
@@ -102,6 +114,9 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   notifications: {
     transactions: {
       newSyncedTransactions: true,
+    },
+    bankLinks: {
+      needsAttention: true,
     },
   },
 };

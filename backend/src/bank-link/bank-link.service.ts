@@ -20,6 +20,10 @@ import {
   LinkedAccountEvents,
   LinkedAccountUpdatedEvent,
 } from '../events/account.events';
+import {
+  BankLinkEvents,
+  BankLinkNeedsAttentionEvent,
+} from '../events/bank-link.events';
 import { InvestmentService } from '../investment/investment.service';
 import { TransactionService } from '../transaction/transaction.service';
 import type { Account, CreateAccountDto } from '../types/Account';
@@ -589,6 +593,8 @@ export class BankLinkService extends OwnedCrudService<
       return;
     }
 
+    const previousStatus = bankLink.status;
+
     // Update bank link status
     bankLink.status = statusInfo.status;
     bankLink.statusDate = new Date();
@@ -599,6 +605,21 @@ export class BankLinkService extends OwnedCrudService<
       { bankLinkId: bankLink.id, status: statusInfo.status },
       'Updated bank link status',
     );
+
+    if (statusInfo.status !== 'OK' && previousStatus !== statusInfo.status) {
+      this.eventEmitter.emit(
+        BankLinkEvents.NEEDS_ATTENTION,
+        new BankLinkNeedsAttentionEvent(
+          bankLink.userId,
+          bankLink.id,
+          bankLink.providerName,
+          bankLink.institutionName,
+          statusInfo.status,
+          statusInfo.statusBody,
+          bankLink.statusDate.toISOString(),
+        ),
+      );
+    }
 
     // Optionally sync accounts after status update (e.g., LOGIN_REPAIRED)
     if (statusInfo.shouldSync) {

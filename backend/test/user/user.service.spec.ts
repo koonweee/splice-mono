@@ -18,6 +18,9 @@ const defaultSettings: UserSettings = {
     transactions: {
       newSyncedTransactions: true,
     },
+    bankLinks: {
+      needsAttention: true,
+    },
   },
 };
 
@@ -639,6 +642,9 @@ describe('UserService', () => {
           transactions: {
             newSyncedTransactions: true,
           },
+          bankLinks: {
+            needsAttention: true,
+          },
         },
       });
 
@@ -649,6 +655,9 @@ describe('UserService', () => {
         notifications: {
           transactions: {
             newSyncedTransactions: true,
+          },
+          bankLinks: {
+            needsAttention: true,
           },
         },
       });
@@ -676,12 +685,16 @@ describe('UserService', () => {
       expect(result?.notifications.transactions.newSyncedTransactions).toBe(
         true,
       );
+      expect(result?.notifications.bankLinks.needsAttention).toBe(true);
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           settings: expect.objectContaining({
             notifications: {
               transactions: {
                 newSyncedTransactions: true,
+              },
+              bankLinks: {
+                needsAttention: true,
               },
             },
           }),

@@ -4,7 +4,11 @@ import { OwnedSchema } from './Timestamps';
 
 export const NotificationTypeSchema = registerSchema(
   'NotificationType',
-  z.enum(['transactions.new_synced', 'system.test']),
+  z.enum([
+    'transactions.new_synced',
+    'bank_link.needs_attention',
+    'system.test',
+  ]),
 );
 
 export type NotificationType = z.infer<typeof NotificationTypeSchema>;
@@ -36,6 +40,19 @@ export type NewSyncedTransactionsNotificationPayload = z.infer<
   typeof NewSyncedTransactionsNotificationPayloadSchema
 >;
 
+export const BankLinkNeedsAttentionNotificationPayloadSchema = z.object({
+  bankLinkId: z.string().uuid(),
+  providerName: z.string(),
+  institutionName: z.string().nullable(),
+  status: z.enum(['ERROR', 'PENDING_REAUTH']),
+  statusBody: z.record(z.string(), z.any()).nullable(),
+  occurredAt: z.string().datetime(),
+});
+
+export type BankLinkNeedsAttentionNotificationPayload = z.infer<
+  typeof BankLinkNeedsAttentionNotificationPayloadSchema
+>;
+
 export const TestNotificationPayloadSchema = z.object({
   occurredAt: z.string().datetime(),
 });
@@ -48,6 +65,7 @@ export const NotificationPayloadSchema = registerSchema(
   'NotificationPayload',
   z.union([
     NewSyncedTransactionsNotificationPayloadSchema,
+    BankLinkNeedsAttentionNotificationPayloadSchema,
     TestNotificationPayloadSchema,
   ]),
 );

@@ -209,3 +209,19 @@ export async function updateNewSyncedTransactionsPreference(
     },
   })
 }
+
+export async function updateBankLinkNeedsAttentionPreference(
+  enabled: boolean,
+): Promise<void> {
+  await axios({
+    url: '/user/settings',
+    method: 'PATCH',
+    data: {
+      notifications: {
+        bankLinks: {
+          needsAttention: enabled,
+        },
+      },
+    },
+  })
+}

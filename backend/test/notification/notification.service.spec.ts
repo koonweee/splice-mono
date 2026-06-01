@@ -20,6 +20,9 @@ const enabledSettings: UserSettings = {
     transactions: {
       newSyncedTransactions: true,
     },
+    bankLinks: {
+      needsAttention: true,
+    },
   },
 };
 
@@ -96,6 +99,9 @@ describe('NotificationService', () => {
         notifications: {
           transactions: {
             newSyncedTransactions: false,
+          },
+          bankLinks: {
+            needsAttention: true,
           },
         },
       }),
@@ -270,6 +276,57 @@ describe('NotificationService', () => {
       url: '/transactions?categoryId=UNCATEGORIZED',
       tag: notification.id,
       badgeCount: 3,
+    });
+  });
+
+  it('skips bank link needs attention notification creation when preference is disabled', async () => {
+    userService.findOne.mockResolvedValueOnce(
+      buildUser({
+        ...enabledSettings,
+        notifications: {
+          transactions: {
+            newSyncedTransactions: true,
+          },
+          bankLinks: {
+            needsAttention: false,
+          },
+        },
+      }),
+    );
+
+    await expect(
+      service.createBankLinkNeedsAttentionNotification({
+        userId,
+        bankLinkId: '00000000-0000-4000-8000-000000000501',
+        providerName: 'plaid',
+        institutionName: 'Chase',
+        status: 'ERROR',
+        statusBody: { error_code: 'ITEM_LOGIN_REQUIRED' },
+        occurredAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ).resolves.toBeNull();
+
+    expect(notificationRepository.manager.transaction).not.toHaveBeenCalled();
+  });
+
+  it('renders bank link needs attention push payloads with an accounts deep link', () => {
+    const notification = new NotificationEntity();
+    notification.id = '00000000-0000-4000-8000-000000000501';
+    notification.type = 'bank_link.needs_attention';
+    notification.payload = {
+      bankLinkId: '00000000-0000-4000-8000-000000000601',
+      providerName: 'plaid',
+      institutionName: 'Chase',
+      status: 'PENDING_REAUTH',
+      statusBody: { reason: 'pending_expiration' },
+      occurredAt: '2026-01-01T00:00:00.000Z',
+    };
+
+    expect(service.renderPushPayload(notification)).toEqual({
+      title: 'Chase needs attention',
+      body: 'Reconnect this account to keep Splice syncing.',
+      url: '/accounts',
+      tag: notification.id,
     });
   });
 
