@@ -24,6 +24,7 @@ const mockFns = vi.hoisted(() => ({
   enableCurrentDeviceNotificationsMock: vi.fn(),
   disableCurrentDeviceNotificationsMock: vi.fn(),
   updateNewSyncedTransactionsPreferenceMock: vi.fn(),
+  updateBankLinkNeedsAttentionPreferenceMock: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-query', async () => {
@@ -59,6 +60,8 @@ vi.mock('../../lib/notifications/browser-push', () => ({
     mockFns.disableCurrentDeviceNotificationsMock,
   updateNewSyncedTransactionsPreference:
     mockFns.updateNewSyncedTransactionsPreferenceMock,
+  updateBankLinkNeedsAttentionPreference:
+    mockFns.updateBankLinkNeedsAttentionPreferenceMock,
 }))
 
 vi.mock('../../components/settings/PersonalAccessTokenSection', () => ({
@@ -127,6 +130,9 @@ let meState: {
       notifications?: {
         transactions?: {
           newSyncedTransactions?: boolean | null
+        } | null
+        bankLinks?: {
+          needsAttention?: boolean | null
         } | null
       } | null
     }
@@ -210,6 +216,9 @@ beforeEach(() => {
           transactions: {
             newSyncedTransactions: true,
           },
+          bankLinks: {
+            needsAttention: true,
+          },
         },
       },
     },
@@ -250,6 +259,7 @@ beforeEach(() => {
   mockFns.enableCurrentDeviceNotificationsMock.mockResolvedValue(undefined)
   mockFns.disableCurrentDeviceNotificationsMock.mockResolvedValue(undefined)
   mockFns.updateNewSyncedTransactionsPreferenceMock.mockResolvedValue(undefined)
+  mockFns.updateBankLinkNeedsAttentionPreferenceMock.mockResolvedValue(undefined)
 
   Object.defineProperty(window, 'matchMedia', {
     value: vi.fn().mockImplementation(() => ({
@@ -320,7 +330,12 @@ describe('SettingsPage', () => {
       }),
     ).toBeTruthy()
     expect(
-      screen.getByRole('switch', { name: /new transactions synced/i }),
+      screen.getByRole('switch', { name: /new uncategorized transactions/i }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('switch', {
+        name: /bank connections need attention/i,
+      }),
     ).toBeTruthy()
     expect(window.location.search).toBe('?tab=notifications')
 
@@ -499,13 +514,16 @@ describe('SettingsPage', () => {
     expect(queryClientState.invalidateQueries).toHaveBeenCalled()
   })
 
-  it('updates the new synced transactions notification preference', async () => {
+  it('updates the new uncategorized transactions notification preference', async () => {
     meState.data = {
       settings: {
         ...meState.data!.settings,
         notifications: {
           transactions: {
             newSyncedTransactions: false,
+          },
+          bankLinks: {
+            needsAttention: true,
           },
         },
       },
@@ -514,12 +532,43 @@ describe('SettingsPage', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /notifications/i }))
     fireEvent.click(
-      screen.getByRole('switch', { name: /new transactions synced/i }),
+      screen.getByRole('switch', { name: /new uncategorized transactions/i }),
     )
 
     await waitFor(() => {
       expect(
         mockFns.updateNewSyncedTransactionsPreferenceMock,
+      ).toHaveBeenCalledWith(true)
+    })
+    expect(queryClientState.invalidateQueries).toHaveBeenCalled()
+  })
+
+  it('updates the bank connection needs attention notification preference', async () => {
+    meState.data = {
+      settings: {
+        ...meState.data!.settings,
+        notifications: {
+          transactions: {
+            newSyncedTransactions: true,
+          },
+          bankLinks: {
+            needsAttention: false,
+          },
+        },
+      },
+    }
+    renderSettingsPage()
+
+    fireEvent.click(screen.getByRole('tab', { name: /notifications/i }))
+    fireEvent.click(
+      screen.getByRole('switch', {
+        name: /bank connections need attention/i,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        mockFns.updateBankLinkNeedsAttentionPreferenceMock,
       ).toHaveBeenCalledWith(true)
     })
     expect(queryClientState.invalidateQueries).toHaveBeenCalled()

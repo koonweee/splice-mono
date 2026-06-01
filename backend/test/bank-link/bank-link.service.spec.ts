@@ -5,6 +5,7 @@ import { AccountEntity } from '../../src/account/account.entity';
 import { BankLinkEntity } from '../../src/bank-link/bank-link.entity';
 import { BankLinkService } from '../../src/bank-link/bank-link.service';
 import { ProviderRegistry } from '../../src/bank-link/providers/provider.registry';
+import { BankLinkEvents } from '../../src/events/bank-link.events';
 import { InvestmentService } from '../../src/investment/investment.service';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import { UserService } from '../../src/user/user.service';
@@ -1154,6 +1155,16 @@ describe('BankLinkService', () => {
       );
       // Should NOT have synced accounts
       expect(mockPlaidProvider.getAccounts).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        BankLinkEvents.NEEDS_ATTENTION,
+        expect.objectContaining({
+          userId: mockUserId,
+          bankLinkId: bankLinkWithStatus.id,
+          providerName: 'plaid',
+          status: 'ERROR',
+          statusBody: errorPayload.error,
+        }),
+      );
     });
 
     it('should handle LOGIN_REPAIRED status webhook and trigger sync', async () => {
@@ -1210,6 +1221,10 @@ describe('BankLinkService', () => {
       );
       // Should have triggered account sync
       expect(mockPlaidProvider.getAccounts).toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalledWith(
+        BankLinkEvents.NEEDS_ATTENTION,
+        expect.anything(),
+      );
     });
 
     it('should handle PENDING_DISCONNECT status webhook', async () => {
@@ -1257,6 +1272,65 @@ describe('BankLinkService', () => {
         expect.objectContaining({
           status: 'PENDING_REAUTH',
         }),
+      );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        BankLinkEvents.NEEDS_ATTENTION,
+        expect.objectContaining({
+          userId: mockUserId,
+          bankLinkId: bankLinkWithStatus.id,
+          providerName: 'plaid',
+          status: 'PENDING_REAUTH',
+          statusBody: { environment: 'production' },
+        }),
+      );
+    });
+
+    it('should not notify again when status webhook repeats the current bad status', async () => {
+      const providerName = 'plaid';
+      const errorPayload = {
+        webhook_type: 'ITEM',
+        webhook_code: 'ERROR',
+        item_id: 'item-mock-123',
+        error: {
+          error_code: 'ITEM_LOGIN_REQUIRED',
+        },
+      };
+
+      (mockPlaidProvider.parseStatusWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'item-mock-123',
+        webhookCode: 'ERROR',
+        status: 'ERROR',
+        statusBody: errorPayload.error,
+        shouldSync: false,
+      });
+
+      const bankLinkWithError = {
+        ...mockBankLinkEntity,
+        status: 'ERROR',
+        statusDate: new Date(),
+        statusBody: errorPayload.error,
+        userId: mockUserId,
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(bankLinkWithError),
+      };
+      mockBankLinkRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      await service.handleWebhook(
+        providerName,
+        JSON.stringify(errorPayload),
+        mockHeaders,
+        errorPayload,
+      );
+
+      expect(mockEventEmitter.emit).not.toHaveBeenCalledWith(
+        BankLinkEvents.NEEDS_ATTENTION,
+        expect.anything(),
       );
     });
 

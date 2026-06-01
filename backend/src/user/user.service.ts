@@ -177,6 +177,11 @@ export class UserService {
             settingsUpdate.notifications?.transactions?.newSyncedTransactions ??
             oldSettings.notifications.transactions.newSyncedTransactions,
         },
+        bankLinks: {
+          needsAttention:
+            settingsUpdate.notifications?.bankLinks?.needsAttention ??
+            oldSettings.notifications.bankLinks.needsAttention,
+        },
       },
     };
     entity.settings = newSettings;
@@ -220,6 +225,7 @@ export class UserService {
 
     const settings = normalizeUserSettings(entity.settings);
     settings.notifications.transactions.newSyncedTransactions = true;
+    settings.notifications.bankLinks.needsAttention = true;
     entity.settings = settings;
     await this.repository.save(entity);
 

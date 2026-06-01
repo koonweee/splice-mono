@@ -9,6 +9,9 @@ const defaultNotificationSettings = {
     transactions: {
       newSyncedTransactions: true,
     },
+    bankLinks: {
+      needsAttention: true,
+    },
   },
 };
 

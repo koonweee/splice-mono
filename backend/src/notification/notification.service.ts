@@ -31,6 +31,16 @@ type NewSyncedTransactionsInput = {
   occurredAt: string;
 };
 
+type BankLinkNeedsAttentionInput = {
+  userId: string;
+  bankLinkId: string;
+  providerName: string;
+  institutionName: string | null;
+  status: 'ERROR' | 'PENDING_REAUTH';
+  statusBody: Record<string, unknown> | null;
+  occurredAt: string;
+};
+
 type CreateNotificationInput = {
   userId: string;
   type: NotificationType;
@@ -139,7 +149,7 @@ export class NotificationService {
     if (!user?.settings.notifications.transactions.newSyncedTransactions) {
       this.logger.debug(
         { userId: input.userId },
-        'New synced transaction notification preference disabled',
+        'New uncategorized transaction notification preference disabled',
       );
       return null;
     }
@@ -174,6 +184,46 @@ export class NotificationService {
         this.logger.debug(
           { userId: input.userId, dedupeKey: notification.dedupeKey },
           'Notification already exists for dedupe key',
+        );
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
+  async createBankLinkNeedsAttentionNotification(
+    input: BankLinkNeedsAttentionInput,
+  ): Promise<Notification | null> {
+    const user = await this.userService.findOne(input.userId);
+    if (!user?.settings.notifications.bankLinks.needsAttention) {
+      this.logger.debug(
+        { userId: input.userId, bankLinkId: input.bankLinkId },
+        'Bank link needs attention notification preference disabled',
+      );
+      return null;
+    }
+
+    try {
+      const result = await this.createNotificationWithPushDeliveries({
+        userId: input.userId,
+        type: 'bank_link.needs_attention',
+        dedupeKey: this.buildBankLinkNeedsAttentionDedupeKey(input),
+        payload: {
+          bankLinkId: input.bankLinkId,
+          providerName: input.providerName,
+          institutionName: input.institutionName,
+          status: input.status,
+          statusBody: input.statusBody,
+          occurredAt: input.occurredAt,
+        },
+      });
+      return result.notification;
+    } catch (error) {
+      if (this.isUniqueViolation(error)) {
+        this.logger.debug(
+          { userId: input.userId, bankLinkId: input.bankLinkId },
+          'Notification already exists for bank link needs attention dedupe key',
         );
         return null;
       }
@@ -280,14 +330,31 @@ export class NotificationService {
             count: number;
           };
         return {
-          title: 'New transactions synced',
+          title: 'New uncategorized transactions',
           body:
             transactionsPayload.count === 1
-              ? '1 new transaction was added'
-              : `${transactionsPayload.count} new transactions were added`,
+              ? '1 new uncategorized transaction was added'
+              : `${transactionsPayload.count} new uncategorized transactions were added`,
           url: '/transactions?categoryId=UNCATEGORIZED',
           tag: notification.id,
           badgeCount: transactionsPayload.count,
+        };
+      }
+      case 'bank_link.needs_attention': {
+        const bankLinkPayload = notification.payload as NotificationPayload & {
+          institutionName?: string | null;
+          status?: string;
+        };
+        const institutionName =
+          bankLinkPayload.institutionName?.trim() || 'A linked account';
+        return {
+          title: `${institutionName} needs attention`,
+          body:
+            bankLinkPayload.status === 'PENDING_REAUTH'
+              ? 'Reconnect this account to keep Splice syncing.'
+              : 'Fix this connection to keep Splice syncing.',
+          url: '/accounts',
+          tag: notification.id,
         };
       }
       case 'system.test':
@@ -414,6 +481,18 @@ export class NotificationService {
       .update([...transactionIds].sort().join(':'))
       .digest('hex');
     return `transactions.new_synced:${userId}:${hash}`;
+  }
+
+  private buildBankLinkNeedsAttentionDedupeKey(
+    input: BankLinkNeedsAttentionInput,
+  ): string {
+    return [
+      'bank_link.needs_attention',
+      input.userId,
+      input.bankLinkId,
+      input.status,
+      input.occurredAt,
+    ].join(':');
   }
 
   private isUniqueViolation(error: unknown): boolean {

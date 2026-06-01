@@ -1139,7 +1139,7 @@ export class TransactionService extends OwnedCrudService<
     syncResults: TransactionSyncResponse,
   ): Promise<void> {
     const { added, modified, removed } = syncResults;
-    const insertedTransactions: TransactionEntity[] = [];
+    const uncategorizedInsertedTransactions: TransactionEntity[] = [];
     let automaticallyCategorizedCount = 0;
 
     this.logger.log(
@@ -1213,7 +1213,9 @@ export class TransactionService extends OwnedCrudService<
             { ...dto, accountId: internalAccountId, categoryId: null },
             userId,
           );
-          if (await this.applyAutomaticCategoryIfEligible(userId, entity)) {
+          const wasAutomaticallyCategorized =
+            await this.applyAutomaticCategoryIfEligible(userId, entity);
+          if (wasAutomaticallyCategorized) {
             automaticallyCategorizedCount += 1;
           }
           newEntities.push(entity);
@@ -1221,7 +1223,11 @@ export class TransactionService extends OwnedCrudService<
 
         if (newEntities.length > 0) {
           const savedEntities = await txnRepo.save(newEntities);
-          insertedTransactions.push(...savedEntities);
+          uncategorizedInsertedTransactions.push(
+            ...savedEntities.filter(
+              (transaction) => transaction.categoryId === null,
+            ),
+          );
           this.logger.log(
             { count: newEntities.length },
             'Inserted new transactions',
@@ -1262,11 +1268,15 @@ export class TransactionService extends OwnedCrudService<
                 { ...dto, accountId: internalAccountId, categoryId: null },
                 userId,
               );
-              if (await this.applyAutomaticCategoryIfEligible(userId, entity)) {
+              const wasAutomaticallyCategorized =
+                await this.applyAutomaticCategoryIfEligible(userId, entity);
+              if (wasAutomaticallyCategorized) {
                 automaticallyCategorizedCount += 1;
               }
               const savedEntity = await txnRepo.save(entity);
-              insertedTransactions.push(savedEntity);
+              if (savedEntity.categoryId === null) {
+                uncategorizedInsertedTransactions.push(savedEntity);
+              }
               return;
             }
 
@@ -1328,13 +1338,15 @@ export class TransactionService extends OwnedCrudService<
       }
     });
 
-    if (insertedTransactions.length > 0) {
-      const transactionIds = insertedTransactions.map(
+    if (uncategorizedInsertedTransactions.length > 0) {
+      const transactionIds = uncategorizedInsertedTransactions.map(
         (transaction) => transaction.id,
       );
       const accountIds = [
         ...new Set(
-          insertedTransactions.map((transaction) => transaction.accountId),
+          uncategorizedInsertedTransactions.map(
+            (transaction) => transaction.accountId,
+          ),
         ),
       ];
 
@@ -1344,7 +1356,7 @@ export class TransactionService extends OwnedCrudService<
           userId,
           transactionIds,
           accountIds,
-          insertedTransactions.length,
+          uncategorizedInsertedTransactions.length,
           new Date().toISOString(),
         ),
       );

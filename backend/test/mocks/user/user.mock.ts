@@ -23,6 +23,9 @@ export const mockUser: User = {
       transactions: {
         newSyncedTransactions: true,
       },
+      bankLinks: {
+        needsAttention: true,
+      },
     },
   },
   ...mockTimestamps,
@@ -44,6 +47,9 @@ export const mockUser2: User = {
     notifications: {
       transactions: {
         newSyncedTransactions: true,
+      },
+      bankLinks: {
+        needsAttention: true,
       },
     },
   },

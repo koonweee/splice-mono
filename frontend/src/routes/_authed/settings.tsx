@@ -40,6 +40,7 @@ import {
   disableCurrentDeviceNotifications,
   enableCurrentDeviceNotifications,
   loadCurrentDeviceNotificationState,
+  updateBankLinkNeedsAttentionPreference,
   updateNewSyncedTransactionsPreference,
 } from '../../lib/notifications/browser-push'
 import styles from './settings.module.css'
@@ -205,6 +206,9 @@ type UserSettingsWithNotifications = {
     transactions?: {
       newSyncedTransactions?: boolean | null
     } | null
+    bankLinks?: {
+      needsAttention?: boolean | null
+    } | null
   } | null
 }
 
@@ -212,6 +216,12 @@ function getNewSyncedTransactionsEnabled(
   settings: UserSettingsWithNotifications | null | undefined,
 ): boolean {
   return settings?.notifications?.transactions?.newSyncedTransactions ?? false
+}
+
+function getBankLinkNeedsAttentionEnabled(
+  settings: UserSettingsWithNotifications | null | undefined,
+): boolean {
+  return settings?.notifications?.bankLinks?.needsAttention ?? false
 }
 
 function getNotificationSupportMessage(status: NotificationSupportStatus) {
@@ -262,6 +272,10 @@ export function SettingsPage() {
     useState(false)
   const [newSyncedTransactionsPending, setNewSyncedTransactionsPending] =
     useState(false)
+  const [bankLinkNeedsAttentionEnabled, setBankLinkNeedsAttentionEnabled] =
+    useState(false)
+  const [bankLinkNeedsAttentionPending, setBankLinkNeedsAttentionPending] =
+    useState(false)
   const [hasChanges, setHasChanges] = useState(false)
 
   // Initialize form values when user data loads
@@ -276,6 +290,11 @@ export function SettingsPage() {
       setAnalysisSankeyEnabled(user.settings.analysisSankeyEnabled ?? false)
       setNewSyncedTransactionsEnabled(
         getNewSyncedTransactionsEnabled(
+          user.settings as UserSettingsWithNotifications,
+        ),
+      )
+      setBankLinkNeedsAttentionEnabled(
+        getBankLinkNeedsAttentionEnabled(
           user.settings as UserSettingsWithNotifications,
         ),
       )
@@ -431,6 +450,25 @@ export function SettingsPage() {
       setNotificationError('Failed to save notification preference')
     } finally {
       setNewSyncedTransactionsPending(false)
+    }
+  }
+
+  const handleBankLinkNeedsAttentionChange = async (checked: boolean) => {
+    const previousValue = bankLinkNeedsAttentionEnabled
+    setBankLinkNeedsAttentionEnabled(checked)
+    setBankLinkNeedsAttentionPending(true)
+    setNotificationError(null)
+
+    try {
+      await updateBankLinkNeedsAttentionPreference(checked)
+      await queryClient.invalidateQueries({
+        queryKey: getUserControllerMeQueryOptions().queryKey,
+      })
+    } catch {
+      setBankLinkNeedsAttentionEnabled(previousValue)
+      setNotificationError('Failed to save notification preference')
+    } finally {
+      setBankLinkNeedsAttentionPending(false)
     }
   }
 
@@ -644,11 +682,21 @@ export function SettingsPage() {
               <Stack gap="sm">
                 <Title order={4}>Transactions</Title>
                 <Switch
-                  label="New transactions synced"
+                  label="New uncategorized transactions"
                   checked={newSyncedTransactionsEnabled}
                   disabled={newSyncedTransactionsPending || !user?.settings}
                   onChange={(event) => {
                     void handleNewSyncedTransactionsChange(
+                      event.currentTarget.checked,
+                    )
+                  }}
+                />
+                <Switch
+                  label="Bank connections need attention"
+                  checked={bankLinkNeedsAttentionEnabled}
+                  disabled={bankLinkNeedsAttentionPending || !user?.settings}
+                  onChange={(event) => {
+                    void handleBankLinkNeedsAttentionChange(
                       event.currentTarget.checked,
                     )
                   }}
