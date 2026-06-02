@@ -9,6 +9,7 @@ import type React from 'react'
 
 const mockFns = vi.hoisted(() => ({
   createMutateMock: vi.fn(),
+  createRecurringMutateMock: vi.fn(),
   updateMutateMock: vi.fn(),
 }))
 
@@ -126,10 +127,33 @@ vi.mock('@mantine/core', async () => {
         {error && <span>{error}</span>}
       </label>
     ),
+    Switch: ({
+      checked,
+      label,
+      onChange,
+    }: {
+      checked?: boolean
+      label?: string
+      onChange?: React.ChangeEventHandler<HTMLInputElement>
+    }) => (
+      <label>
+        {label}
+        <input
+          aria-label={label}
+          checked={checked}
+          onChange={onChange}
+          type="checkbox"
+        />
+      </label>
+    ),
   }
 })
 
 vi.mock('../../api/clients/spliceAPI', () => ({
+  useRecurringManualTransactionControllerCreate: () => ({
+    mutate: mockFns.createRecurringMutateMock,
+    isPending: false,
+  }),
   useTransactionControllerCreateManual: () => ({
     mutate: mockFns.createMutateMock,
     isPending: false,
@@ -197,6 +221,50 @@ describe('ManualTransactionModal', () => {
         onError: expect.any(Function),
       }),
     )
+  })
+
+  it('creates a recurring manual transaction schedule when recurrence is enabled', () => {
+    renderModal()
+
+    expect(screen.queryByLabelText('Day of month')).toBeNull()
+
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '-12.34' },
+    })
+    fireEvent.change(screen.getByLabelText('Date'), {
+      target: { value: '2026-05-07' },
+    })
+    fireEvent.click(screen.getByLabelText('Repeat monthly'))
+    fireEvent.change(screen.getByLabelText('Merchant'), {
+      target: { value: 'Coffee Shop' },
+    })
+    fireEvent.change(screen.getByLabelText('Category'), {
+      target: { value: 'category-1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(mockFns.createRecurringMutateMock).toHaveBeenCalledWith(
+      {
+        data: {
+          accountId: 'account-1',
+          amount: {
+            money: { amount: 1234, currency: 'USD' },
+            sign: MoneyWithSignSign.negative,
+          },
+          merchantName: 'Coffee Shop',
+          categoryId: 'category-1',
+          frequency: 'monthly',
+          dayOfMonth: 7,
+          startDate: '2026-05-07',
+          endDate: null,
+        },
+      },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    )
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
   })
 
   it('updates currency and precision when the account changes', () => {

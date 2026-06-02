@@ -7,7 +7,9 @@
  */
 import type { NotificationPayloadAnyOf } from './notificationPayloadAnyOf'
 import type { NotificationPayloadAnyOfTwo } from './notificationPayloadAnyOfTwo'
+import type { NotificationPayloadAnyOfFive } from './notificationPayloadAnyOfFive'
 
 export type NotificationPayload =
   | NotificationPayloadAnyOf
   | NotificationPayloadAnyOfTwo
+  | NotificationPayloadAnyOfFive

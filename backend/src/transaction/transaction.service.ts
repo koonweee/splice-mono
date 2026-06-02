@@ -7,7 +7,13 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { In, IsNull, Repository, SelectQueryBuilder } from 'typeorm';
+import {
+  EntityManager,
+  In,
+  IsNull,
+  Repository,
+  SelectQueryBuilder,
+} from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { AccountActivityEntity } from '../account-activity/account-activity.entity';
 import { CategoryEntity } from '../category/category.entity';
@@ -353,6 +359,19 @@ export class TransactionService extends OwnedCrudService<
     entity.reportingDateOverride = null;
     this.syncActivityDate(entity);
     this.applyCategorySelection(entity, category);
+  }
+
+  async createManualEntityWithManager(
+    userId: string,
+    dto: CreateManualTransactionDto,
+    account: AccountEntity,
+    category: CategoryEntity,
+    manager: EntityManager,
+  ): Promise<TransactionEntity> {
+    const entity = new TransactionEntity();
+    entity.userId = userId;
+    this.applyManualTransactionFields(entity, dto, account, category);
+    return manager.getRepository(TransactionEntity).save(entity);
   }
 
   async createManual(

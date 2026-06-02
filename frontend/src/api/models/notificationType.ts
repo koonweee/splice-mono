@@ -12,5 +12,6 @@ export type NotificationType =
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const NotificationType = {
   transactionsnew_synced: 'transactions.new_synced',
+  bank_linkneeds_attention: 'bank_link.needs_attention',
   systemtest: 'system.test',
 } as const

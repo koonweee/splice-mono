@@ -5,6 +5,7 @@ import {
   Modal,
   NumberInput,
   Stack,
+  Switch,
   TextInput,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
@@ -13,6 +14,7 @@ import dayjs from 'dayjs'
 import { Minus, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
+  useRecurringManualTransactionControllerCreate,
   useTransactionControllerCreateManual,
   useTransactionControllerUpdateManual,
 } from '../../api/clients/spliceAPI'
@@ -42,7 +44,12 @@ type ManualTransactionModalProps = {
 
 type FormErrors = Partial<
   Record<
-    'accountId' | 'amount' | 'merchantName' | 'providerDate' | 'categoryId',
+    | 'accountId'
+    | 'amount'
+    | 'merchantName'
+    | 'providerDate'
+    | 'categoryId'
+    | 'recurrenceDay',
     string
   >
 >
@@ -130,6 +137,11 @@ function toggleAmountSign(value: NumberInputProps['value']) {
   return -numericAmount
 }
 
+function getDateDayOfMonth(value: string) {
+  const parsed = dayjs(value)
+  return parsed.isValid() ? parsed.date() : 1
+}
+
 export function ManualTransactionModal({
   opened,
   onClose,
@@ -145,9 +157,15 @@ export function ManualTransactionModal({
   const [merchantName, setMerchantName] = useState('')
   const [providerDate, setProviderDate] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
+  const [recurringEnabled, setRecurringEnabled] = useState(false)
+  const [recurrenceDay, setRecurrenceDay] = useState<NumberInputProps['value']>(
+    1,
+  )
   const [errors, setErrors] = useState<FormErrors>({})
   const createManualTransaction = useTransactionControllerCreateManual()
   const updateManualTransaction = useTransactionControllerUpdateManual()
+  const createRecurringManualTransaction =
+    useRecurringManualTransactionControllerCreate()
   const isEditing = transaction !== null
   const activeAccounts = useMemo(
     () => accounts.filter((account) => !account.archivedAt),
@@ -180,7 +198,9 @@ export function ManualTransactionModal({
     ? viewportAwareDropdownMaxHeight
     : undefined
   const isSaving =
-    createManualTransaction.isPending || updateManualTransaction.isPending
+    createManualTransaction.isPending ||
+    updateManualTransaction.isPending ||
+    createRecurringManualTransaction.isPending
   const displayedNumericAmount = getNumericAmount(amount)
   const amountIsNegative =
     (Number.isFinite(displayedNumericAmount) && displayedNumericAmount < 0) ||
@@ -194,8 +214,11 @@ export function ManualTransactionModal({
     setAccountId(getInitialAccountId(accounts, defaultAccountId, transaction))
     setAmount(getSignedAmountDraft(transaction))
     setMerchantName(transaction?.merchantName ?? '')
-    setProviderDate(transaction?.providerDate ?? '')
+    const nextProviderDate = transaction?.providerDate ?? ''
+    setProviderDate(nextProviderDate)
     setCategoryId(transaction?.categoryId ?? null)
+    setRecurringEnabled(false)
+    setRecurrenceDay(nextProviderDate ? getDateDayOfMonth(nextProviderDate) : 1)
     setErrors({})
   }, [accounts, defaultAccountId, opened, transaction])
 
@@ -222,19 +245,30 @@ export function ManualTransactionModal({
     if (!categoryId) {
       nextErrors.categoryId = 'Category is required'
     }
+    const numericRecurrenceDay = getNumericAmount(recurrenceDay)
+    if (
+      recurringEnabled &&
+      !isEditing &&
+      (!Number.isInteger(numericRecurrenceDay) ||
+        numericRecurrenceDay < 1 ||
+        numericRecurrenceDay > 31)
+    ) {
+      nextErrors.recurrenceDay = 'Enter a day from 1 to 31'
+    }
 
     setErrors(nextErrors)
 
     return {
       isValid: Object.keys(nextErrors).length === 0,
       numericAmount,
+      numericRecurrenceDay,
     }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const { isValid, numericAmount } = validate()
+    const { isValid, numericAmount, numericRecurrenceDay } = validate()
     if (!isValid || !currency || !categoryId) {
       return
     }
@@ -280,6 +314,25 @@ export function ManualTransactionModal({
       return
     }
 
+    if (recurringEnabled) {
+      createRecurringManualTransaction.mutate(
+        {
+          data: {
+            accountId,
+            amount: payload.amount,
+            merchantName: payload.merchantName,
+            categoryId,
+            frequency: 'monthly',
+            dayOfMonth: numericRecurrenceDay,
+            startDate: providerDate,
+            endDate: null,
+          },
+        },
+        mutationOptions,
+      )
+      return
+    }
+
     createManualTransaction.mutate({ data: payload }, mutationOptions)
   }
 
@@ -291,6 +344,7 @@ export function ManualTransactionModal({
       centered={!isMobile}
       fullScreen={Boolean(isMobile)}
       size="md"
+      transitionProps={{ duration: 0 }}
     >
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
@@ -354,7 +408,11 @@ export function ManualTransactionModal({
             error={errors.providerDate}
             label="Date"
             onChange={(event) => {
-              setProviderDate(event.currentTarget.value)
+              const nextProviderDate = event.currentTarget.value
+              setProviderDate(nextProviderDate)
+              if (!isEditing && recurringEnabled && nextProviderDate) {
+                setRecurrenceDay(getDateDayOfMonth(nextProviderDate))
+              }
               setErrors((current) => ({
                 ...current,
                 providerDate: undefined,
@@ -394,6 +452,43 @@ export function ManualTransactionModal({
             required
             value={categoryId}
           />
+          {!isEditing && (
+            <>
+              <Switch
+                checked={recurringEnabled}
+                label="Repeat monthly"
+                onChange={(event) => {
+                  const checked = event.currentTarget.checked
+                  setRecurringEnabled(checked)
+                  if (checked && providerDate) {
+                    setRecurrenceDay(getDateDayOfMonth(providerDate))
+                  }
+                  setErrors((current) => ({
+                    ...current,
+                    recurrenceDay: undefined,
+                  }))
+                }}
+              />
+              {recurringEnabled && (
+                <NumberInput
+                  allowDecimal={false}
+                  clampBehavior="strict"
+                  error={errors.recurrenceDay}
+                  label="Day of month"
+                  max={31}
+                  min={1}
+                  onChange={(value) => {
+                    setRecurrenceDay(value)
+                    setErrors((current) => ({
+                      ...current,
+                      recurrenceDay: undefined,
+                    }))
+                  }}
+                  value={recurrenceDay}
+                />
+              )}
+            </>
+          )}
           <Group justify="flex-end">
             <Button onClick={onClose} type="button" variant="subtle">
               Cancel
