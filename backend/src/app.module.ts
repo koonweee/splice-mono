@@ -23,6 +23,7 @@ import { InvestmentModule } from './investment/investment.module';
 import { createSeqStream } from './logging/create-seq-stream';
 import { McpModule } from './mcp/mcp.module';
 import { NotificationModule } from './notification/notification.module';
+import { RecurringManualTransactionModule } from './recurring-manual-transaction/recurring-manual-transaction.module';
 import { TransactionAnalysisModule } from './transaction-analysis/transaction-analysis.module';
 import { TransactionCategorizationModule } from './transaction-categorization/transaction-categorization.module';
 import { TransactionModule } from './transaction/transaction.module';
@@ -108,6 +109,7 @@ import { UserModule } from './user/user.module';
     InvestmentModule,
     McpModule,
     NotificationModule,
+    RecurringManualTransactionModule,
     TransactionAnalysisModule,
     TransactionCategorizationModule,
     TransactionModule,

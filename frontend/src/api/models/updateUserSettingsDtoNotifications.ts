@@ -6,7 +6,9 @@
  * OpenAPI spec version: 1.0
  */
 import type { UpdateUserSettingsDtoNotificationsTransactions } from './updateUserSettingsDtoNotificationsTransactions'
+import type { UpdateUserSettingsDtoNotificationsBankLinks } from './updateUserSettingsDtoNotificationsBankLinks'
 
 export type UpdateUserSettingsDtoNotifications = {
   transactions?: UpdateUserSettingsDtoNotificationsTransactions
+  bankLinks?: UpdateUserSettingsDtoNotificationsBankLinks
 }

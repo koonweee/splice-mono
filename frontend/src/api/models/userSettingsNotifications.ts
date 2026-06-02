@@ -6,7 +6,9 @@
  * OpenAPI spec version: 1.0
  */
 import type { UserSettingsNotificationsTransactions } from './userSettingsNotificationsTransactions'
+import type { UserSettingsNotificationsBankLinks } from './userSettingsNotificationsBankLinks'
 
 export type UserSettingsNotifications = {
   transactions?: UserSettingsNotificationsTransactions
+  bankLinks?: UserSettingsNotificationsBankLinks
 }

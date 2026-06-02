@@ -5,7 +5,16 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { NotificationPayloadAnyOfTwoStatus } from './notificationPayloadAnyOfTwoStatus'
+import type { NotificationPayloadAnyOfTwoStatusBody } from './notificationPayloadAnyOfTwoStatusBody'
 
 export type NotificationPayloadAnyOfTwo = {
+  bankLinkId: string
+  providerName: string
+  /** @nullable */
+  institutionName: string | null
+  status: NotificationPayloadAnyOfTwoStatus
+  /** @nullable */
+  statusBody: NotificationPayloadAnyOfTwoStatusBody
   occurredAt: string
 }

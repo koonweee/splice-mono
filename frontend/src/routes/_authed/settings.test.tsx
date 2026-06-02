@@ -20,6 +20,7 @@ const mockFns = vi.hoisted(() => ({
   customCategoriesSectionMock: vi.fn(),
   personalAccessTokenSectionMock: vi.fn(),
   mcpConnectionSectionMock: vi.fn(),
+  recurringManualTransactionsSectionMock: vi.fn(),
   loadCurrentDeviceNotificationStateMock: vi.fn(),
   enableCurrentDeviceNotificationsMock: vi.fn(),
   disableCurrentDeviceNotificationsMock: vi.fn(),
@@ -109,6 +110,18 @@ vi.mock('../../components/settings/McpConnectionSection', () => ({
     return (
       <div data-testid="mcp-section">
         <Title order={3}>MCP connection</Title>
+      </div>
+    )
+  },
+}))
+
+vi.mock('../../components/settings/RecurringManualTransactionsSection', () => ({
+  RecurringManualTransactionsSection: () => {
+    mockFns.recurringManualTransactionsSectionMock()
+
+    return (
+      <div data-testid="recurring-manual-transactions-section">
+        Recurring transactions
       </div>
     )
   },
@@ -378,6 +391,17 @@ describe('SettingsPage', () => {
     ).toBe('true')
     expect(screen.getByTestId('categorization-rules-section')).toBeTruthy()
     expect(window.location.search).toBe('?tab=categorization')
+
+    fireEvent.click(screen.getByRole('tab', { name: /recurring/i }))
+    expect(
+      screen
+        .getByRole('tab', { name: /recurring/i })
+        .getAttribute('aria-selected'),
+    ).toBe('true')
+    expect(
+      screen.getByTestId('recurring-manual-transactions-section'),
+    ).toBeTruthy()
+    expect(window.location.search).toBe('?tab=recurring')
 
     fireEvent.click(screen.getByRole('tab', { name: /mcp/i }))
     expect(

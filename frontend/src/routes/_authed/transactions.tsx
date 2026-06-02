@@ -257,6 +257,7 @@ function TransactionsPage() {
         Array.isArray(query.queryKey) &&
         typeof query.queryKey[0] === 'string' &&
         (query.queryKey[0].includes('transaction') ||
+          query.queryKey[0].includes('recurring-manual-transaction') ||
           query.queryKey[0].includes('category') ||
           query.queryKey[0].includes('analysis')),
     })
@@ -601,6 +602,7 @@ function TransactionsPage() {
       leftSection={<Plus size={16} />}
       onClick={openCreateManualTransaction}
       size="md"
+      type="button"
     >
       Add transaction
     </Button>

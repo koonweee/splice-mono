@@ -810,13 +810,33 @@ export function CategorizationRulesSection() {
     enableHiding: false,
     enableTopToolbar: false,
     enableBottomToolbar: false,
+    enableStickyHeader: true,
     initialState: { density: 'xs' },
     mantineTableProps: {
       className: tableChrome.table,
     },
+    mantineTableContainerProps: {
+      style: {
+        flex: '1 1 0',
+        height: '100%',
+        maxHeight: '100%',
+        minHeight: 0,
+        overflow: 'auto',
+      },
+    },
     mantinePaperProps: {
       withBorder: true,
       radius: 'md',
+      style: {
+        display: 'flex',
+        flex: '1 1 0',
+        flexDirection: 'column',
+        height: '100%',
+        maxHeight: '100%',
+        minHeight: 0,
+        minWidth: 0,
+        overflow: 'hidden',
+      },
     },
     renderRowActions: ({ row }) => renderRuleRowActions(row.original),
     renderEmptyRowsFallback: () => (
