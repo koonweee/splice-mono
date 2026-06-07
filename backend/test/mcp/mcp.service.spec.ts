@@ -7,6 +7,7 @@ import { MoneySign } from '../../src/types/MoneyWithSign';
 
 const mockUserId = '00000000-0000-0000-0000-000000000001';
 const mockAccountId = '11111111-1111-4111-8111-111111111111';
+const mockCategoryId = '22222222-2222-4222-8222-222222222222';
 
 describe('SpliceMcpService', () => {
   const userService = {
@@ -25,6 +26,12 @@ describe('SpliceMcpService', () => {
     listTransactions: jest.fn(),
     listBalanceSnapshots: jest.fn(),
     listCategories: jest.fn(),
+    listInvestmentHoldings: jest.fn(),
+    listInvestmentActivity: jest.fn(),
+    listRecurringManualTransactionSchedules: jest.fn(),
+    listAnalysisRules: jest.fn(),
+    listCategorizationRules: jest.fn(),
+    listCategorizationRuleRecommendations: jest.fn(),
   };
   const transactionAnalysisService = {
     getAnalysis: jest.fn(),
@@ -81,9 +88,15 @@ describe('SpliceMcpService', () => {
         'get_cashflow_analysis',
         'get_cashflow_analysis_audit',
         'get_user_context',
+        'list_analysis_rules',
         'list_balance_snapshots',
         'list_cashflow_category_transactions',
         'list_categories',
+        'list_categorization_rule_recommendations',
+        'list_categorization_rules',
+        'list_investment_activity',
+        'list_investment_holdings',
+        'list_recurring_manual_transaction_schedules',
         'list_transactions',
         'search_transactions',
       ]);
@@ -114,6 +127,18 @@ describe('SpliceMcpService', () => {
       expect(
         'text' in guide.contents[0] ? guide.contents[0].text : '',
       ).toContain('call get_cashflow_analysis');
+      expect(
+        'text' in guide.contents[0] ? guide.contents[0].text : '',
+      ).toContain('list_investment_holdings');
+      expect(
+        'text' in guide.contents[0] ? guide.contents[0].text : '',
+      ).toContain('list_recurring_manual_transaction_schedules');
+      expect(
+        'text' in guide.contents[0] ? guide.contents[0].text : '',
+      ).toContain('exact category IDs');
+      expect(
+        'text' in guide.contents[0] ? guide.contents[0].text : '',
+      ).toContain('list_analysis_rules');
     } finally {
       await close();
     }
@@ -280,6 +305,8 @@ describe('SpliceMcpService', () => {
           startDate: '2026-03-01',
           endDate: '2026-03-31',
           merchantQuery: 'coffee',
+          categoryId: mockCategoryId,
+          amountSign: 'negative',
           reportingCurrency: 'USD',
           pageSize: 50,
         },
@@ -289,6 +316,8 @@ describe('SpliceMcpService', () => {
         startDate: '2026-03-01',
         endDate: '2026-03-31',
         merchantQuery: 'coffee',
+        categoryId: mockCategoryId,
+        amountSign: 'negative',
         reportingCurrency: 'USD',
         pageSize: 50,
       });
@@ -349,13 +378,151 @@ describe('SpliceMcpService', () => {
         arguments: {
           startDate: '2026-03-01',
           endDate: '2026-03-31',
+          includeArchived: true,
         },
       });
 
       expect(mcpReadService.listCategories).toHaveBeenCalledWith(mockUserId, {
         startDate: '2026-03-01',
         endDate: '2026-03-31',
+        includeArchived: true,
       });
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates list_investment_holdings to the MCP read service', async () => {
+    mcpReadService.listInvestmentHoldings.mockResolvedValue({
+      data: [],
+      query: { latestOnly: true },
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      await client.callTool({
+        name: 'list_investment_holdings',
+        arguments: {
+          accountIds: [mockAccountId],
+          latestOnly: true,
+        },
+      });
+
+      expect(mcpReadService.listInvestmentHoldings).toHaveBeenCalledWith(
+        mockUserId,
+        {
+          accountIds: [mockAccountId],
+          latestOnly: true,
+        },
+      );
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates list_investment_activity to the MCP read service', async () => {
+    mcpReadService.listInvestmentActivity.mockResolvedValue({
+      data: [],
+      pageInfo: { nextCursor: null, hasMore: false },
+      query: {
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+      },
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      await client.callTool({
+        name: 'list_investment_activity',
+        arguments: {
+          accountIds: [mockAccountId],
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          type: 'buy',
+          pageSize: 25,
+        },
+      });
+
+      expect(mcpReadService.listInvestmentActivity).toHaveBeenCalledWith(
+        mockUserId,
+        {
+          accountIds: [mockAccountId],
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          type: 'buy',
+          pageSize: 25,
+        },
+      );
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates list_recurring_manual_transaction_schedules to the MCP read service', async () => {
+    mcpReadService.listRecurringManualTransactionSchedules.mockResolvedValue({
+      data: [],
+      query: { includePaused: false },
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      await client.callTool({
+        name: 'list_recurring_manual_transaction_schedules',
+        arguments: { includePaused: false },
+      });
+
+      expect(
+        mcpReadService.listRecurringManualTransactionSchedules,
+      ).toHaveBeenCalledWith(mockUserId, { includePaused: false });
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates rule introspection tools to the MCP read service', async () => {
+    mcpReadService.listAnalysisRules.mockResolvedValue({
+      data: [],
+      query: { archived: true },
+    });
+    mcpReadService.listCategorizationRules.mockResolvedValue({
+      data: [],
+      query: { archived: false },
+    });
+    mcpReadService.listCategorizationRuleRecommendations.mockResolvedValue({
+      generation: null,
+      suggestions: [],
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      await client.callTool({
+        name: 'list_analysis_rules',
+        arguments: { archived: true },
+      });
+      await client.callTool({
+        name: 'list_categorization_rules',
+        arguments: {},
+      });
+      await client.callTool({
+        name: 'list_categorization_rule_recommendations',
+        arguments: {},
+      });
+
+      expect(mcpReadService.listAnalysisRules).toHaveBeenCalledWith(
+        mockUserId,
+        { archived: true },
+      );
+      expect(mcpReadService.listCategorizationRules).toHaveBeenCalledWith(
+        mockUserId,
+        {},
+      );
+      expect(
+        mcpReadService.listCategorizationRuleRecommendations,
+      ).toHaveBeenCalledWith(mockUserId);
     } finally {
       await close();
     }

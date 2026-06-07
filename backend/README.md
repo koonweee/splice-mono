@@ -132,8 +132,11 @@ Authorization: Bearer splice_pat_...
 
 The MCP surface includes user context, account snapshots, balance history,
 paginated transaction listing, paginated balance snapshot listing, category
-discovery, legacy transaction search, cash-flow analysis, cash-flow category
-transaction drilldowns, analysis audits, and balance adjustment drilldowns.
+discovery with exact category IDs, legacy transaction search, investment
+holdings, investment activity, recurring manual transaction schedules, analysis
+rule reads, categorization rule reads, categorization rule recommendation reads,
+cash-flow analysis, cash-flow category transaction drilldowns, and analysis
+audits.
 Mutations are not exposed through MCP.
 
 Analysis rules are persisted per user and are applied inside the backend
@@ -141,20 +144,25 @@ transaction-analysis service before summary aggregation or real-transaction
 drilldowns are returned. Pending transactions are treated the same as settled
 transactions in these analysis flows. Neutralization uses the user's
 `neutralizationLookaroundDays` setting to find candidate matches around the
-selected range, while summaries, drilldowns, and balance adjustments still
-report only selected-range rows. The HTTP `GET /transaction-analysis/audit`
+selected range, while summaries and drilldowns still report only selected-range
+rows. The HTTP `GET /transaction-analysis/audit`
 endpoint returns compact rows explaining in-range exclusions and neutralized
 pairs that affect the selected report. MCP cash-flow tools delegate to the same
 backend analysis service and return money in major units with explicit signs.
 
 Compatible clients can read `splice://mcp-guide` for tool-use guidance. In
 short: call `get_user_context` first, use `get_cashflow_analysis` for
-balance-adjustment-aware totals and category breakdowns, page through
-`list_transactions` until `pageInfo.hasMore` is false for custom
-spending-pattern analysis, use
-`get_accounts_snapshot` plus `list_balance_snapshots` for projection baselines,
+rule-adjusted totals and category breakdowns, page through `list_transactions`
+until `pageInfo.hasMore` is false for custom spending-pattern analysis, use
+`list_investment_holdings` and `list_investment_activity` for portfolio
+positions and investment transactions, use
+`list_recurring_manual_transaction_schedules` for known projection assumptions,
+use `get_accounts_snapshot` plus `list_balance_snapshots` for projection
+baselines, inspect rule context with `list_analysis_rules`,
+`list_categorization_rules`, and `list_categorization_rule_recommendations`,
 and compare transaction amounts with `convertedAmount` in the requested
-`reportingCurrency`.
+`reportingCurrency`. Investment activity is separate from banking/manual
+cash-flow analysis.
 
 ## API Documentation
 

@@ -28,6 +28,11 @@ const CurrencySchema = z
   .min(3)
   .max(10)
   .describe('Currency code for major-unit money amounts, e.g. USD or SGD.');
+const UuidSchema = z.string().uuid();
+const CategoryIdFilterSchema = z.union([
+  UuidSchema,
+  z.literal('UNCATEGORIZED'),
+]);
 const CursorSchema = z
   .string()
   .optional()
@@ -43,11 +48,17 @@ For custom spending patterns not covered by get_cashflow_analysis, call list_tra
 
 For projections, use get_accounts_snapshot for current state and list_balance_snapshots for historical account-level baselines. Ask the user for future income, expense, return, allocation, or one-time-event assumptions; do not invent them.
 
+Use list_investment_holdings for current or date-specific investment positions. Use list_investment_activity for investment transactions. Investment activity is separate from banking/manual transactions and is not included in get_cashflow_analysis.
+
+Use list_recurring_manual_transaction_schedules as user-known projection assumptions before asking the user to restate recurring income or expenses. Schedules are projection inputs, not generated future transactions.
+
+Use list_analysis_rules to explain configured cash-flow rules, then get_cashflow_analysis_audit for date-range-specific rule effects. Use list_categorization_rules and list_categorization_rule_recommendations to explain category automation context; these MCP tools are read-only and cannot create, apply, accept, or dismiss rules.
+
 Use reportingCurrency from get_user_context.currency unless the user asks for another currency. Compare amounts using convertedAmount. Native amount preserves the original transaction currency.
 
 All MCP money amounts are major units and always include currency and sign. Amount filters require a currency and are applied after conversion into reportingCurrency.
 
-Transaction date ranges use activityDate (reportingDateOverride when set, otherwise authorizedDate when available, otherwise providerDate). Dates are inclusive YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone. Raw provider and authorized dates remain available for audit.
+Transaction date ranges use activityDate (reportingDateOverride when set, otherwise authorizedDate when available, otherwise providerDate). Dates are inclusive YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone. Raw provider and authorized dates remain available for audit. Provider category hints are guidance only; category filters are user-category filters. Use list_categories for exact category IDs when needed.
 
 Pending transactions are included in cash-flow analysis and excluded from list_transactions by default unless includePending is true. State whether pending transactions were included.`;
 
@@ -188,6 +199,12 @@ export class SpliceMcpService {
     'list_transactions',
     'list_balance_snapshots',
     'list_categories',
+    'list_investment_holdings',
+    'list_investment_activity',
+    'list_recurring_manual_transaction_schedules',
+    'list_analysis_rules',
+    'list_categorization_rules',
+    'list_categorization_rule_recommendations',
     'get_cashflow_analysis',
     'list_cashflow_category_transactions',
     'get_cashflow_analysis_audit',
@@ -342,10 +359,23 @@ export class SpliceMcpService {
             .describe(
               'Primary category code, e.g. FOOD_AND_DRINK. Use list_categories to discover valid values. Use UNCATEGORIZED for uncategorized rows.',
             ),
+          categoryId: CategoryIdFilterSchema.optional().describe(
+            'Exact user category ID, or UNCATEGORIZED. Cannot be combined with categoryPrimary or categoryDetailed.',
+          ),
+          categoryDetailed: z
+            .string()
+            .optional()
+            .describe(
+              'Detailed user category code/label. Cannot be combined with categoryId.',
+            ),
           merchantQuery: z
             .string()
             .optional()
             .describe('Case-insensitive fuzzy merchant-name search.'),
+          amountSign: z
+            .nativeEnum(MoneySign)
+            .optional()
+            .describe('Filter by transaction amount sign.'),
           includePending: z
             .boolean()
             .optional()
@@ -435,10 +465,158 @@ export class SpliceMcpService {
           endDate: DateStringSchema.optional().describe(
             'Optional inclusive activity end date for transaction counts.',
           ),
+          includeArchived: z
+            .boolean()
+            .optional()
+            .describe('When true, include archived user categories.'),
         },
       },
       async (input) =>
         toolResult(await this.mcpReadService.listCategories(userId, input)),
+    );
+
+    server.registerTool(
+      'list_investment_holdings',
+      {
+        title: 'List Investment Holdings',
+        description:
+          'List latest or date-specific investment position snapshots. Holdings are portfolio positions and are separate from account balance snapshots.',
+        inputSchema: {
+          accountIds: z
+            .array(UuidSchema)
+            .optional()
+            .describe(
+              'Optional account IDs. Defaults to all owned investment accounts.',
+            ),
+          snapshotDate: DateStringSchema.optional().describe(
+            'Optional holdings snapshot date in YYYY-MM-DD.',
+          ),
+          latestOnly: z
+            .boolean()
+            .optional()
+            .describe(
+              'Set to true or omit for latest holdings. Cannot be combined with snapshotDate; use snapshotDate for date-specific holdings.',
+            ),
+        },
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpReadService.listInvestmentHoldings(userId, input),
+        ),
+    );
+
+    server.registerTool(
+      'list_investment_activity',
+      {
+        title: 'List Investment Activity',
+        description:
+          'List investment transactions with cursor pagination. Investment activity is not included in banking/manual cash-flow analysis.',
+        inputSchema: {
+          accountIds: z
+            .array(UuidSchema)
+            .optional()
+            .describe('Optional investment account IDs to restrict results.'),
+          startDate: DateStringSchema.optional().describe(
+            'Inclusive investment activity start date in YYYY-MM-DD.',
+          ),
+          endDate: DateStringSchema.optional().describe(
+            'Inclusive investment activity end date in YYYY-MM-DD.',
+          ),
+          type: z.string().optional().describe('Optional investment type.'),
+          subtype: z
+            .string()
+            .optional()
+            .describe('Optional investment subtype.'),
+          cursor: CursorSchema,
+          pageSize: z
+            .number()
+            .int()
+            .positive()
+            .max(100)
+            .optional()
+            .describe('Defaults to 50, maximum 100.'),
+        },
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpReadService.listInvestmentActivity(userId, input),
+        ),
+    );
+
+    server.registerTool(
+      'list_recurring_manual_transaction_schedules',
+      {
+        title: 'List Recurring Manual Transaction Schedules',
+        description:
+          'List recurring manual transaction schedules for projection assumptions. Schedules are not generated future transactions.',
+        inputSchema: {
+          includePaused: z
+            .boolean()
+            .optional()
+            .describe(
+              'Defaults to true. When false, paused schedules are omitted.',
+            ),
+        },
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpReadService.listRecurringManualTransactionSchedules(
+            userId,
+            input,
+          ),
+        ),
+    );
+
+    server.registerTool(
+      'list_analysis_rules',
+      {
+        title: 'List Analysis Rules',
+        description:
+          'List configured cash-flow analysis rules. Use get_cashflow_analysis_audit for date-range-specific rule effects.',
+        inputSchema: {
+          archived: z
+            .boolean()
+            .optional()
+            .describe('Defaults to false. When true, list archived rules.'),
+        },
+      },
+      async (input) =>
+        toolResult(await this.mcpReadService.listAnalysisRules(userId, input)),
+    );
+
+    server.registerTool(
+      'list_categorization_rules',
+      {
+        title: 'List Categorization Rules',
+        description:
+          'List read-only transaction categorization automation rules. This tool cannot create, update, apply, or archive rules.',
+        inputSchema: {
+          archived: z
+            .boolean()
+            .optional()
+            .describe('Defaults to false. When true, list archived rules.'),
+        },
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpReadService.listCategorizationRules(userId, input),
+        ),
+    );
+
+    server.registerTool(
+      'list_categorization_rule_recommendations',
+      {
+        title: 'List Categorization Rule Recommendations',
+        description:
+          'List pending categorization rule recommendations and latest generation state. This read-only tool cannot generate, accept, or dismiss recommendations.',
+        inputSchema: {},
+      },
+      async () =>
+        toolResult(
+          await this.mcpReadService.listCategorizationRuleRecommendations(
+            userId,
+          ),
+        ),
     );
 
     server.registerTool(
