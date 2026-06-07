@@ -56,8 +56,9 @@ export function McpConnectionSection() {
         <Stack gap={4}>
           <Title order={3}>MCP connection</Title>
           <Text size="sm" c="dimmed">
-            Connect AI tools to read Splice accounts, balances, and transactions.
-            Use a personal access token as the bearer token.
+            Connect AI tools to read Splice accounts, balances, transactions,
+            investments, recurring schedules, and rules. Use a personal access
+            token as the bearer token.
           </Text>
         </Stack>
 

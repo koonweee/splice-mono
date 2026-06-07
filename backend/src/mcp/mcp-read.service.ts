@@ -7,15 +7,28 @@ import {
   getAccountGroupingLabel,
   type AccountGrouping,
 } from '../account/account-labels';
+import { AccountService } from '../account/account.service';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { CategoryEntity } from '../category/category.entity';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
+import { InvestmentHoldingSnapshotEntity } from '../investment/investment-holding-snapshot.entity';
+import { InvestmentTransactionEntity } from '../investment/investment-transaction.entity';
+import { RecurringManualTransactionService } from '../recurring-manual-transaction/recurring-manual-transaction.service';
 import {
   getTransactionActivityDate,
   TRANSACTION_ACTIVITY_DATE_EXPRESSION,
 } from '../transaction/transaction-date';
 import { TransactionEntity } from '../transaction/transaction.entity';
+import { AnalysisRuleService } from '../analysis-rule/analysis-rule.service';
+import { TransactionCategorizationService } from '../transaction-categorization/categorization-rule.service';
+import { CategorizationRuleRecommendationService } from '../transaction-categorization/recommendations/categorization-rule-recommendation.service';
+import type { Account } from '../types/Account';
+import type { AnalysisRuleView } from '../types/AnalysisRule';
+import type { CategorizationRuleView } from '../types/CategorizationRule';
+import type { CategorizationRuleRecommendationListResponse } from '../types/CategorizationRuleSuggestion';
+import type { RecurringManualTransactionSchedule } from '../types/RecurringManualTransaction';
 import {
+  getDecimalPlaces,
   MoneySign,
   type SerializedMoneyWithSign,
 } from '../types/MoneyWithSign';
@@ -26,6 +39,8 @@ const TRANSACTION_MAX_PAGE_SIZE = 100;
 const SNAPSHOT_DEFAULT_PAGE_SIZE = 100;
 const SNAPSHOT_MAX_PAGE_SIZE = 250;
 const CANDIDATE_BATCH_SIZE = 250;
+const INVESTMENT_ACTIVITY_DEFAULT_PAGE_SIZE = 50;
+const INVESTMENT_ACTIVITY_MAX_PAGE_SIZE = 100;
 const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
 
 interface CursorPayload {
@@ -34,6 +49,11 @@ interface CursorPayload {
 }
 
 interface TransactionCursorPayload {
+  activityDate: string;
+  id: string;
+}
+
+interface InvestmentActivityCursorPayload {
   activityDate: string;
   id: string;
 }
@@ -66,7 +86,10 @@ export interface McpListTransactionsOptions {
   endDate?: string;
   accountIds?: string[];
   categoryPrimary?: string;
+  categoryId?: string;
+  categoryDetailed?: string;
   merchantQuery?: string;
+  amountSign?: MoneySign;
   includePending?: boolean;
   cursor?: string;
   pageSize?: number;
@@ -85,10 +108,12 @@ export interface McpTransaction {
   providerDate: string;
   providerDatetime: string | null;
   authorizedDate: string | null;
+  categoryId: string | null;
   categoryPrimary: string | null;
   categoryPrimaryLabel: string;
   categoryDetailed: string | null;
   categoryDetailedLabel: string | null;
+  categoryColor: string | null;
   providerCategoryHint: {
     provider: 'plaid';
     primary: string | null;
@@ -108,6 +133,11 @@ export interface McpListTransactionsResult {
   query: {
     startDate?: string;
     endDate?: string;
+    accountIds?: string[];
+    categoryPrimary?: string;
+    categoryId?: string;
+    categoryDetailed?: string;
+    amountSign?: MoneySign;
     includePending: boolean;
     reportingCurrency: string;
     amountFilter?: McpAmountFilter;
@@ -151,16 +181,23 @@ export interface McpListBalanceSnapshotsResult {
 export interface McpListCategoriesOptions {
   startDate?: string;
   endDate?: string;
+  includeArchived?: boolean;
 }
 
 export interface McpCategory {
+  categoryIds: string[];
   primary: string;
   primaryLabel: string;
   description: string | null;
+  color: string | null;
+  archivedAt: Date | null;
   detailedCategories: Array<{
+    id: string;
     detailed: string;
     detailedLabel: string;
     description: string;
+    color: string;
+    archivedAt: Date | null;
   }>;
   transactionCount?: number;
 }
@@ -170,8 +207,122 @@ export interface McpListCategoriesResult {
   query: {
     startDate?: string;
     endDate?: string;
+    includeArchived: boolean;
   };
 }
+
+export interface McpListInvestmentHoldingsOptions {
+  accountIds?: string[];
+  snapshotDate?: string;
+  latestOnly?: boolean;
+}
+
+export interface McpInvestmentHolding {
+  id: string;
+  accountId: string;
+  accountName: string | null;
+  snapshotDate: string;
+  provider: string;
+  securityId: string;
+  securityName: string | null;
+  tickerSymbol: string | null;
+  type: string | null;
+  subtype: string | null;
+  quantity: string | null;
+  costBasis: string | null;
+  institutionPrice: string | null;
+  institutionValue: McpMoney | null;
+  currency: string | null;
+  vestedQuantity: string | null;
+  vestedValue: McpMoney | null;
+}
+
+export interface McpListInvestmentHoldingsResult {
+  data: McpInvestmentHolding[];
+  query: {
+    accountIds?: string[];
+    snapshotDate?: string;
+    latestOnly: boolean;
+  };
+}
+
+export interface McpListInvestmentActivityOptions {
+  accountIds?: string[];
+  startDate?: string;
+  endDate?: string;
+  type?: string;
+  subtype?: string;
+  cursor?: string;
+  pageSize?: number;
+}
+
+export interface McpInvestmentActivity {
+  id: string;
+  activityId: string;
+  accountId: string;
+  accountName: string | null;
+  provider: string;
+  externalActivityId: string | null;
+  activityDate: string;
+  providerDate: string;
+  providerDatetime: string | null;
+  amount: McpMoney;
+  securityId: string | null;
+  externalSecurityId: string | null;
+  securityName: string | null;
+  tickerSymbol: string | null;
+  name: string;
+  quantity: string;
+  price: string;
+  fees: string | null;
+  investmentType: string;
+  investmentSubtype: string;
+  cancelExternalActivityId: string | null;
+}
+
+export interface McpListInvestmentActivityResult {
+  data: McpInvestmentActivity[];
+  pageInfo: McpPageInfo;
+  query: {
+    accountIds?: string[];
+    startDate?: string;
+    endDate?: string;
+    type?: string;
+    subtype?: string;
+  };
+}
+
+export interface McpListRecurringManualTransactionSchedulesOptions {
+  includePaused?: boolean;
+}
+
+export interface McpListRecurringManualTransactionSchedulesResult {
+  data: RecurringManualTransactionSchedule[];
+  query: {
+    includePaused: boolean;
+  };
+}
+
+export interface McpListRulesOptions {
+  archived?: boolean;
+}
+
+export interface McpListAnalysisRulesResult {
+  data: AnalysisRuleView[];
+  query: {
+    archived: boolean;
+  };
+}
+
+export interface McpListCategorizationRulesResult {
+  data: CategorizationRuleView[];
+  query: {
+    archived: boolean;
+  };
+}
+
+export type McpListCategorizationRuleRecommendationsResult =
+  CategorizationRuleRecommendationListResponse;
 
 function normalizeCurrency(currency: string): string {
   return currency.trim().toUpperCase();
@@ -237,6 +388,33 @@ function decodeTransactionCursor(
   throw new BadRequestException('Invalid cursor.');
 }
 
+function decodeInvestmentActivityCursor(
+  cursor: string | undefined,
+): InvestmentActivityCursorPayload | undefined {
+  if (!cursor) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(cursor, 'base64url').toString('utf8'),
+    ) as Partial<InvestmentActivityCursorPayload & CursorPayload>;
+    if (
+      typeof parsed.activityDate === 'string' &&
+      typeof parsed.id === 'string'
+    ) {
+      return { activityDate: parsed.activityDate, id: parsed.id };
+    }
+    if (typeof parsed.date === 'string' && typeof parsed.id === 'string') {
+      return { activityDate: parsed.date, id: parsed.id };
+    }
+  } catch {
+    // Throw below with a stable client-facing message.
+  }
+
+  throw new BadRequestException('Invalid cursor.');
+}
+
 function clampPageSize(
   pageSize: number | undefined,
   defaultPageSize: number,
@@ -276,6 +454,29 @@ function signedMajorAmount(money: McpMoney): number {
   return money.sign === MoneySign.NEGATIVE ? -money.amount : money.amount;
 }
 
+function mcpMoneyFromDecimalString(
+  value: string | null,
+  currency: string | null,
+): McpMoney | null {
+  if (!value || !currency) {
+    return null;
+  }
+
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return null;
+  }
+
+  const normalizedCurrency = normalizeCurrency(currency);
+  const decimals = getDecimalPlaces(normalizedCurrency);
+
+  return {
+    amount: Number(Math.abs(amount).toFixed(decimals)),
+    currency: normalizedCurrency,
+    sign: amount < 0 ? MoneySign.NEGATIVE : MoneySign.POSITIVE,
+  };
+}
+
 @Injectable()
 export class McpReadService {
   constructor(
@@ -285,7 +486,16 @@ export class McpReadService {
     private readonly balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
+    @InjectRepository(InvestmentHoldingSnapshotEntity)
+    private readonly investmentHoldingRepository: Repository<InvestmentHoldingSnapshotEntity>,
+    @InjectRepository(InvestmentTransactionEntity)
+    private readonly investmentTransactionRepository: Repository<InvestmentTransactionEntity>,
     private readonly currencyConversionService: CurrencyConversionService,
+    private readonly accountService: AccountService,
+    private readonly recurringManualTransactionService: RecurringManualTransactionService,
+    private readonly analysisRuleService: AnalysisRuleService,
+    private readonly transactionCategorizationService: TransactionCategorizationService,
+    private readonly categorizationRuleRecommendationService: CategorizationRuleRecommendationService,
   ) {}
 
   async listTransactions(
@@ -305,6 +515,7 @@ export class McpReadService {
         'amountFilter.currency must match reportingCurrency.',
       );
     }
+    this.assertCompatibleTransactionFilters(options);
 
     const pageSize = clampPageSize(
       options.pageSize,
@@ -385,6 +596,11 @@ export class McpReadService {
       query: {
         startDate: options.startDate,
         endDate: options.endDate,
+        accountIds: options.accountIds,
+        categoryPrimary: options.categoryPrimary,
+        categoryId: options.categoryId,
+        categoryDetailed: options.categoryDetailed,
+        amountSign: options.amountSign,
         includePending: options.includePending ?? false,
         reportingCurrency,
         amountFilter,
@@ -468,7 +684,9 @@ export class McpReadService {
     options: McpListCategoriesOptions,
   ): Promise<McpListCategoriesResult> {
     const categories = await this.categoryRepository.find({
-      where: { userId, archivedAt: IsNull() },
+      where: options.includeArchived
+        ? { userId }
+        : { userId, archivedAt: IsNull() },
       order: { primary: 'ASC', detailed: 'ASC' },
     });
     const counts = await this.getCategoryCounts(userId, options);
@@ -483,21 +701,34 @@ export class McpReadService {
     return {
       data: [
         {
+          categoryIds: [],
           primary: 'UNCATEGORIZED',
           primaryLabel: formatCategoryLabel('UNCATEGORIZED'),
           description: 'Transactions with no assigned category.',
+          color: null,
+          archivedAt: null,
           detailedCategories: [],
           transactionCount: counts.get('UNCATEGORIZED') ?? 0,
         },
         ...Array.from(categoriesByPrimary.entries()).map(
           ([primary, detailedCategories]) => ({
+            categoryIds: detailedCategories.map((category) => category.id),
             primary,
             primaryLabel: formatCategoryLabel(primary),
             description: detailedCategories[0]?.description ?? null,
+            color: detailedCategories[0]?.color ?? null,
+            archivedAt: detailedCategories.every(
+              (category) => category.archivedAt !== null,
+            )
+              ? (detailedCategories[0]?.archivedAt ?? null)
+              : null,
             detailedCategories: detailedCategories.map((category) => ({
+              id: category.id,
               detailed: category.detailed,
               detailedLabel: formatCategoryLabel(category.detailed),
               description: category.description,
+              color: category.color,
+              archivedAt: category.archivedAt,
             })),
             transactionCount: counts.get(primary) ?? 0,
           }),
@@ -506,7 +737,388 @@ export class McpReadService {
       query: {
         startDate: options.startDate,
         endDate: options.endDate,
+        includeArchived: options.includeArchived ?? false,
       },
+    };
+  }
+
+  async listInvestmentHoldings(
+    userId: string,
+    options: McpListInvestmentHoldingsOptions,
+  ): Promise<McpListInvestmentHoldingsResult> {
+    if (options.snapshotDate && options.latestOnly !== undefined) {
+      throw new BadRequestException(
+        'snapshotDate and latestOnly cannot be combined.',
+      );
+    }
+    if (options.latestOnly === false) {
+      throw new BadRequestException(
+        'latestOnly=false is not supported. Omit latestOnly for latest holdings or use snapshotDate for date-specific holdings.',
+      );
+    }
+
+    const accounts = await this.accountService.findAll(userId);
+    const accountById = new Map(
+      accounts.map((account) => [account.id, account]),
+    );
+    const targetAccountIds = options.accountIds?.length
+      ? options.accountIds
+      : accounts
+          .filter((account) => this.isInvestmentAccount(account))
+          .map((account) => account.id);
+
+    this.assertOwnedAccountIds(targetAccountIds, accountById);
+
+    const holdings = options.snapshotDate
+      ? await this.findHoldingsForSnapshotDate(
+          userId,
+          targetAccountIds,
+          options.snapshotDate,
+        )
+      : await this.findLatestHoldings(userId, targetAccountIds);
+
+    return {
+      data: holdings.map((holding) =>
+        this.toMcpInvestmentHolding(holding, accountById),
+      ),
+      query: {
+        accountIds: options.accountIds,
+        snapshotDate: options.snapshotDate,
+        latestOnly: !options.snapshotDate,
+      },
+    };
+  }
+
+  async listInvestmentActivity(
+    userId: string,
+    options: McpListInvestmentActivityOptions,
+  ): Promise<McpListInvestmentActivityResult> {
+    if (
+      options.startDate &&
+      options.endDate &&
+      options.startDate > options.endDate
+    ) {
+      throw new BadRequestException(
+        'startDate must be before or equal to endDate',
+      );
+    }
+
+    const pageSize = clampPageSize(
+      options.pageSize,
+      INVESTMENT_ACTIVITY_DEFAULT_PAGE_SIZE,
+      INVESTMENT_ACTIVITY_MAX_PAGE_SIZE,
+    );
+    const cursor = decodeInvestmentActivityCursor(options.cursor);
+    const query = this.buildInvestmentActivityQuery(
+      userId,
+      options,
+      cursor,
+    ).take(pageSize + 1);
+    const rows = await query.getMany();
+    const pageRows = rows.slice(0, pageSize);
+    const last = pageRows[pageRows.length - 1];
+
+    return {
+      data: pageRows.map((transaction) =>
+        this.toMcpInvestmentActivity(transaction),
+      ),
+      pageInfo: {
+        nextCursor:
+          rows.length > pageSize && last
+            ? encodeCursor({
+                activityDate: last.activity.activityDate,
+                id: last.id,
+              })
+            : null,
+        hasMore: rows.length > pageSize,
+      },
+      query: {
+        accountIds: options.accountIds,
+        startDate: options.startDate,
+        endDate: options.endDate,
+        type: options.type,
+        subtype: options.subtype,
+      },
+    };
+  }
+
+  async listRecurringManualTransactionSchedules(
+    userId: string,
+    options: McpListRecurringManualTransactionSchedulesOptions,
+  ): Promise<McpListRecurringManualTransactionSchedulesResult> {
+    const includePaused = options.includePaused ?? true;
+    const schedules =
+      await this.recurringManualTransactionService.findAll(userId);
+
+    return {
+      data: includePaused
+        ? schedules
+        : schedules.filter((schedule) => schedule.pausedAt === null),
+      query: { includePaused },
+    };
+  }
+
+  async listAnalysisRules(
+    userId: string,
+    options: McpListRulesOptions,
+  ): Promise<McpListAnalysisRulesResult> {
+    const archived = options.archived ?? false;
+
+    return {
+      data: await this.analysisRuleService.findAll(userId, {
+        archivedMode: archived,
+      }),
+      query: { archived },
+    };
+  }
+
+  async listCategorizationRules(
+    userId: string,
+    options: McpListRulesOptions,
+  ): Promise<McpListCategorizationRulesResult> {
+    const archived = options.archived ?? false;
+
+    return {
+      data: await this.transactionCategorizationService.findAll(userId, {
+        archivedMode: archived,
+      }),
+      query: { archived },
+    };
+  }
+
+  async listCategorizationRuleRecommendations(
+    userId: string,
+  ): Promise<McpListCategorizationRuleRecommendationsResult> {
+    return this.categorizationRuleRecommendationService.list(userId);
+  }
+
+  private assertCompatibleTransactionFilters(
+    options: McpListTransactionsOptions,
+  ): void {
+    if (
+      options.categoryId &&
+      (options.categoryPrimary || options.categoryDetailed)
+    ) {
+      throw new BadRequestException(
+        'categoryId cannot be combined with categoryPrimary or categoryDetailed.',
+      );
+    }
+
+    if (
+      options.categoryPrimary === 'UNCATEGORIZED' &&
+      options.categoryDetailed
+    ) {
+      throw new BadRequestException(
+        'categoryDetailed cannot be combined with categoryPrimary UNCATEGORIZED.',
+      );
+    }
+  }
+
+  private isInvestmentAccount(account: Account): boolean {
+    return (
+      String(account.type) === 'investment' ||
+      String(account.type) === 'brokerage' ||
+      String(account.subType) === 'brokerage'
+    );
+  }
+
+  private assertOwnedAccountIds(
+    accountIds: string[],
+    accountById: Map<string, Account>,
+  ): void {
+    const unknownAccountIds = accountIds.filter(
+      (accountId) => !accountById.has(accountId),
+    );
+
+    if (unknownAccountIds.length > 0) {
+      throw new BadRequestException(
+        `Unknown accountIds: ${unknownAccountIds.join(', ')}`,
+      );
+    }
+  }
+
+  private async findLatestHoldings(
+    userId: string,
+    accountIds: string[],
+  ): Promise<InvestmentHoldingSnapshotEntity[]> {
+    const holdings: InvestmentHoldingSnapshotEntity[] = [];
+
+    for (const accountId of accountIds) {
+      const latest = await this.investmentHoldingRepository.findOne({
+        where: { userId, accountId },
+        order: { snapshotDate: 'DESC', updatedAt: 'DESC' },
+      });
+
+      if (!latest) {
+        continue;
+      }
+
+      holdings.push(
+        ...(await this.findHoldingsForSnapshotDate(
+          userId,
+          [accountId],
+          latest.snapshotDate,
+        )),
+      );
+    }
+
+    return holdings.sort((left, right) =>
+      `${right.snapshotDate}:${right.accountId}:${right.id}`.localeCompare(
+        `${left.snapshotDate}:${left.accountId}:${left.id}`,
+      ),
+    );
+  }
+
+  private findHoldingsForSnapshotDate(
+    userId: string,
+    accountIds: string[],
+    snapshotDate: string,
+  ): Promise<InvestmentHoldingSnapshotEntity[]> {
+    if (accountIds.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    return this.investmentHoldingRepository
+      .createQueryBuilder('holding')
+      .leftJoinAndSelect('holding.account', 'account')
+      .leftJoinAndSelect('holding.security', 'security')
+      .where('holding.userId = :userId', { userId })
+      .andWhere('holding.accountId IN (:...accountIds)', { accountIds })
+      .andWhere('holding.snapshotDate = :snapshotDate', { snapshotDate })
+      .orderBy('holding.snapshotDate', 'DESC')
+      .addOrderBy('holding.accountId', 'ASC')
+      .addOrderBy('holding.institutionValue', 'DESC')
+      .addOrderBy('holding.id', 'ASC')
+      .getMany();
+  }
+
+  private toMcpInvestmentHolding(
+    holding: InvestmentHoldingSnapshotEntity,
+    accountById: Map<string, Account>,
+  ): McpInvestmentHolding {
+    const currency =
+      holding.isoCurrencyCode ?? holding.unofficialCurrencyCode ?? null;
+    const fallbackAccount = accountById.get(holding.accountId);
+
+    return {
+      id: holding.id,
+      accountId: holding.accountId,
+      accountName:
+        holding.account?.customName ??
+        fallbackAccount?.customName ??
+        holding.account?.name ??
+        fallbackAccount?.name ??
+        null,
+      snapshotDate: holding.snapshotDate,
+      provider: holding.provider,
+      securityId: holding.securityId,
+      securityName: holding.security?.name ?? null,
+      tickerSymbol: holding.security?.tickerSymbol ?? null,
+      type: holding.security?.type ?? null,
+      subtype: holding.security?.subtype ?? null,
+      quantity: holding.quantity,
+      costBasis: holding.costBasis,
+      institutionPrice: holding.institutionPrice,
+      institutionValue: mcpMoneyFromDecimalString(
+        holding.institutionValue,
+        currency,
+      ),
+      currency,
+      vestedQuantity: holding.vestedQuantity,
+      vestedValue: mcpMoneyFromDecimalString(holding.vestedValue, currency),
+    };
+  }
+
+  private buildInvestmentActivityQuery(
+    userId: string,
+    options: McpListInvestmentActivityOptions,
+    cursor: InvestmentActivityCursorPayload | undefined,
+  ): SelectQueryBuilder<InvestmentTransactionEntity> {
+    const query = this.investmentTransactionRepository
+      .createQueryBuilder('investmentTransaction')
+      .leftJoinAndSelect('investmentTransaction.activity', 'activity')
+      .leftJoinAndSelect('activity.account', 'account')
+      .leftJoinAndSelect('investmentTransaction.security', 'security')
+      .where('investmentTransaction.userId = :userId', { userId })
+      .andWhere('activity.activityKind = :activityKind', {
+        activityKind: 'investment_transaction',
+      })
+      .orderBy('activity.activityDate', 'DESC')
+      .addOrderBy('investmentTransaction.id', 'DESC');
+
+    if (options.accountIds?.length) {
+      query.andWhere('activity.accountId IN (:...accountIds)', {
+        accountIds: options.accountIds,
+      });
+    }
+    if (options.startDate) {
+      query.andWhere('activity.activityDate >= :startDate', {
+        startDate: options.startDate,
+      });
+    }
+    if (options.endDate) {
+      query.andWhere('activity.activityDate <= :endDate', {
+        endDate: options.endDate,
+      });
+    }
+    if (options.type) {
+      query.andWhere('investmentTransaction.investmentType = :investmentType', {
+        investmentType: options.type,
+      });
+    }
+    if (options.subtype) {
+      query.andWhere(
+        'investmentTransaction.investmentSubtype = :investmentSubtype',
+        { investmentSubtype: options.subtype },
+      );
+    }
+    if (cursor) {
+      query.andWhere(
+        new Brackets((qb) => {
+          qb.where('activity.activityDate < :cursorActivityDate', {
+            cursorActivityDate: cursor.activityDate,
+          }).orWhere(
+            'activity.activityDate = :cursorActivityDate AND investmentTransaction.id < :cursorId',
+            {
+              cursorActivityDate: cursor.activityDate,
+              cursorId: cursor.id,
+            },
+          );
+        }),
+      );
+    }
+
+    return query;
+  }
+
+  private toMcpInvestmentActivity(
+    transaction: InvestmentTransactionEntity,
+  ): McpInvestmentActivity {
+    const activity = transaction.activity;
+    const account = activity.account;
+
+    return {
+      id: transaction.id,
+      activityId: transaction.activityId,
+      accountId: activity.accountId,
+      accountName: account?.customName ?? account?.name ?? null,
+      provider: activity.provider,
+      externalActivityId: activity.externalActivityId,
+      activityDate: activity.activityDate,
+      providerDate: activity.providerDate,
+      providerDatetime: activity.providerDatetime,
+      amount: toMcpMoney(activity.amount.toMoneyWithSign()),
+      securityId: transaction.securityId,
+      externalSecurityId: transaction.externalSecurityId,
+      securityName: transaction.security?.name ?? null,
+      tickerSymbol: transaction.security?.tickerSymbol ?? null,
+      name: transaction.name,
+      quantity: transaction.quantity,
+      price: transaction.price,
+      fees: transaction.fees,
+      investmentType: transaction.investmentType,
+      investmentSubtype: transaction.investmentSubtype,
+      cancelExternalActivityId: transaction.cancelExternalActivityId,
     };
   }
 
@@ -543,6 +1155,20 @@ export class McpReadService {
     if (!options.includePending) {
       query.andWhere('transaction.pending = false');
     }
+    if (options.amountSign) {
+      query.andWhere('activity.amountSign = :amountSign', {
+        amountSign: options.amountSign,
+      });
+    }
+    if (options.categoryId) {
+      if (options.categoryId === 'UNCATEGORIZED') {
+        query.andWhere('transaction.categoryId IS NULL');
+      } else {
+        query.andWhere('transaction.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+      }
+    }
     if (options.categoryPrimary) {
       if (options.categoryPrimary === 'UNCATEGORIZED') {
         query.andWhere('transaction.categoryId IS NULL');
@@ -551,6 +1177,11 @@ export class McpReadService {
           categoryPrimary: options.categoryPrimary,
         });
       }
+    }
+    if (options.categoryDetailed) {
+      query.andWhere('category.detailed = :categoryDetailed', {
+        categoryDetailed: options.categoryDetailed,
+      });
     }
     const merchantQuery = options.merchantQuery?.trim();
     if (merchantQuery) {
@@ -623,12 +1254,14 @@ export class McpReadService {
       providerDate: transaction.providerDate,
       providerDatetime: transaction.providerDatetime,
       authorizedDate: transaction.authorizedDate,
+      categoryId: category?.id ?? null,
       categoryPrimary: category?.primary ?? null,
       categoryPrimaryLabel: formatCategoryLabel(category?.primary ?? null),
       categoryDetailed: category?.detailed ?? null,
       categoryDetailedLabel: category?.detailed
         ? formatCategoryLabel(category.detailed)
         : null,
+      categoryColor: category?.color ?? null,
       providerCategoryHint,
       amount: toMcpMoney(nativeAmount),
       convertedAmount: toMcpMoney(convertedAmount),

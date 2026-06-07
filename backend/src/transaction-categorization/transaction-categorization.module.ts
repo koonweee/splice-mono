@@ -38,6 +38,10 @@ import { RuleBasedCategorizationEngine } from './rule-based-categorization.engin
     CategorizationRuleRecommendationAgent,
     CategorizationRuleRecommendationTools,
   ],
-  exports: [TransactionCategorizationService, RuleBasedCategorizationEngine],
+  exports: [
+    TransactionCategorizationService,
+    RuleBasedCategorizationEngine,
+    CategorizationRuleRecommendationService,
+  ],
 })
 export class TransactionCategorizationModule {}
