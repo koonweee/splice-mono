@@ -25,6 +25,12 @@ import { UserService } from '../user/user.service';
 import { normalizeMcpMoney, type McpMoney } from './mcp-money';
 import { McpReadService } from './mcp-read.service';
 import {
+  APP_RESOURCES,
+  appToolMeta,
+  appToolResult,
+  registerMcpAppResources,
+} from './mcp-apps';
+import {
   AccountsSnapshotOutputSchema,
   AppToolOutputSchema,
   BalanceHistoryOutputSchema,
@@ -69,31 +75,6 @@ const READ_ONLY_ANNOTATIONS: ToolAnnotations = {
   openWorldHint: false,
 };
 
-const MCP_APP_MIME_TYPE = 'text/html;profile=mcp-app';
-
-const APP_RESOURCES = {
-  cashflowExplorer: {
-    id: 'cashflow_explorer',
-    title: 'Cashflow Explorer',
-    resourceUri: 'ui://splice/cashflow-explorer.html',
-  },
-  projectionScenarioModeler: {
-    id: 'projection_scenario_modeler',
-    title: 'Projection Scenario Modeler',
-    resourceUri: 'ui://splice/projection-scenario-modeler.html',
-  },
-  portfolioViewer: {
-    id: 'portfolio_viewer',
-    title: 'Portfolio Viewer',
-    resourceUri: 'ui://splice/portfolio-viewer.html',
-  },
-  categoryRuleWorkbench: {
-    id: 'category_rule_workbench',
-    title: 'Category Rule Workbench',
-    resourceUri: 'ui://splice/category-rule-workbench.html',
-  },
-} as const;
-
 const MCP_GUIDE = `# Splice MCP Guide
 
 Use get_user_context first to get today, timezone, and the user's preferred currency.
@@ -110,7 +91,7 @@ Available prompts: monthly_cashflow_review, projection_builder, category_cleanup
 
 Prefer resource templates for reusable report reads when a client asks for a durable report URI: splice://reports/cashflow/{startDate}/{endDate}, splice://accounts/{accountId}/snapshot, splice://categories/taxonomy, splice://rules/analysis, and splice://portfolio/holdings/latest.
 
-MCP Apps are progressive enhancement. Use app-backed show_* tools when the host supports MCP Apps; otherwise use each tool's fallback structuredContent and continue with text.
+MCP Apps are progressive enhancement. Use app-backed show_* tools when the host supports MCP Apps; otherwise use each tool's fallback structuredContent and continue with text. App panes are interactive and read-only: Cashflow Explorer can refresh date ranges, drill into categories, and load audit effects; Projection Scenario Modeler can calculate in-session assumptions without saving them; Portfolio Viewer can filter, sort, and page investment reads; Category Rule Workbench can search, filter, inspect details, and load audit effects without accepting, dismissing, applying, creating, editing, or archiving rules. App resources declare restrictive CSP metadata and call only existing read-only MCP tools through the host bridge.
 
 Projection assumption elicitation is optional and non-persistent. If the client does not support elicitation, collect_projection_assumptions returns an inputRequired object the client can ask the user about normally.
 
@@ -247,65 +228,6 @@ function jsonResource(uri: URL, data: unknown) {
   };
 }
 
-function htmlResource(uri: URL, title: string, body: string) {
-  return {
-    contents: [
-      {
-        uri: uri.href,
-        mimeType: MCP_APP_MIME_TYPE,
-        text: `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title}</title>
-  <style>
-    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    body { margin: 0; background: #f8fafc; color: #111827; }
-    main { min-height: 100vh; padding: 20px; box-sizing: border-box; display: grid; gap: 16px; align-content: start; }
-    h1 { margin: 0; font-size: 20px; line-height: 1.2; }
-    p { margin: 0; color: #4b5563; line-height: 1.5; }
-    .panel { background: white; border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; display: grid; gap: 12px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-    .tile { border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; background: #ffffff; min-height: 72px; }
-    .label { font-size: 12px; text-transform: uppercase; color: #6b7280; letter-spacing: 0; }
-    .value { margin-top: 6px; font-size: 18px; font-weight: 650; }
-    .bars { display: grid; gap: 10px; }
-    .bar { display: grid; grid-template-columns: 92px 1fr; gap: 10px; align-items: center; font-size: 13px; color: #374151; }
-    .track { height: 12px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
-    .fill { height: 100%; background: #2563eb; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
-    th { color: #4b5563; font-weight: 650; }
-    form { display: grid; gap: 10px; }
-    label { display: grid; gap: 4px; font-size: 13px; color: #374151; }
-    input { min-height: 34px; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; font: inherit; }
-    @media (max-width: 520px) { main { padding: 14px; } h1 { font-size: 18px; } }
-  </style>
-</head>
-<body>
-  <main data-splice-mcp-app="${title}">
-    ${body}
-  </main>
-</body>
-</html>`,
-      },
-    ],
-  };
-}
-
-function appToolResult(
-  app: (typeof APP_RESOURCES)[keyof typeof APP_RESOURCES],
-  fallback: string,
-  data?: unknown,
-): CallToolResult {
-  return toolResult({
-    app,
-    data,
-    fallback,
-  });
-}
-
 function promptText(text: string) {
   return {
     messages: [
@@ -427,129 +349,7 @@ export class SpliceMcpService {
       }),
     );
 
-    server.registerResource(
-      'splice_cashflow_explorer_app',
-      APP_RESOURCES.cashflowExplorer.resourceUri,
-      {
-        title: APP_RESOURCES.cashflowExplorer.title,
-        description: 'Interactive cash-flow chart and category drilldown UI.',
-        mimeType: MCP_APP_MIME_TYPE,
-      },
-      (uri) =>
-        htmlResource(
-          uri,
-          APP_RESOURCES.cashflowExplorer.title,
-          `<section class="panel">
-    <h1>Cashflow Explorer</h1>
-    <p>Review rule-adjusted income, outflows, category totals, and transaction drilldowns from Splice MCP tools.</p>
-  </section>
-  <section class="grid" aria-label="Cashflow summary placeholders">
-    <div class="tile"><div class="label">Totals</div><div class="value">Tool driven</div></div>
-    <div class="tile"><div class="label">Categories</div><div class="value">Drilldown</div></div>
-    <div class="tile"><div class="label">Rules</div><div class="value">Auditable</div></div>
-  </section>
-  <section class="panel" aria-label="Cashflow category chart">
-    <div class="bars">
-      <div class="bar"><span>Income</span><div class="track"><div class="fill" style="width: 82%"></div></div></div>
-      <div class="bar"><span>Housing</span><div class="track"><div class="fill" style="width: 58%"></div></div></div>
-      <div class="bar"><span>Food</span><div class="track"><div class="fill" style="width: 34%"></div></div></div>
-    </div>
-  </section>`,
-        ),
-    );
-
-    server.registerResource(
-      'splice_projection_scenario_modeler_app',
-      APP_RESOURCES.projectionScenarioModeler.resourceUri,
-      {
-        title: APP_RESOURCES.projectionScenarioModeler.title,
-        description:
-          'Interactive projection assumption UI for non-persistent scenarios.',
-        mimeType: MCP_APP_MIME_TYPE,
-      },
-      (uri) =>
-        htmlResource(
-          uri,
-          APP_RESOURCES.projectionScenarioModeler.title,
-          `<section class="panel">
-    <h1>Projection Scenario Modeler</h1>
-    <p>Collect horizon, recurring cash-flow changes, one-time events, and expected return assumptions without persisting them.</p>
-  </section>
-  <section class="grid" aria-label="Projection inputs">
-    <div class="tile"><div class="label">Horizon</div><div class="value">Date</div></div>
-    <div class="tile"><div class="label">Recurring</div><div class="value">Income/Expense</div></div>
-    <div class="tile"><div class="label">Events</div><div class="value">Scenario only</div></div>
-  </section>
-  <section class="panel" aria-label="Projection assumption form">
-    <form>
-      <label>Horizon date<input value="2027-12-31" readonly></label>
-      <label>Monthly income change<input value="0.00" readonly></label>
-      <label>Expected annual return<input value="5%" readonly></label>
-    </form>
-  </section>`,
-        ),
-    );
-
-    server.registerResource(
-      'splice_portfolio_viewer_app',
-      APP_RESOURCES.portfolioViewer.resourceUri,
-      {
-        title: APP_RESOURCES.portfolioViewer.title,
-        description: 'Interactive portfolio holdings and activity UI.',
-        mimeType: MCP_APP_MIME_TYPE,
-      },
-      (uri) =>
-        htmlResource(
-          uri,
-          APP_RESOURCES.portfolioViewer.title,
-          `<section class="panel">
-    <h1>Portfolio Viewer</h1>
-    <p>Inspect latest holdings, date-specific positions, and investment activity from Splice MCP investment tools.</p>
-  </section>
-  <section class="grid" aria-label="Portfolio panels">
-    <div class="tile"><div class="label">Holdings</div><div class="value">Latest</div></div>
-    <div class="tile"><div class="label">Activity</div><div class="value">Paged</div></div>
-    <div class="tile"><div class="label">Securities</div><div class="value">Context</div></div>
-  </section>
-  <section class="panel" aria-label="Portfolio holdings table">
-    <table>
-      <thead><tr><th>Security</th><th>Quantity</th><th>Value</th></tr></thead>
-      <tbody><tr><td>Example Fund</td><td>Tool data</td><td>Structured fallback</td></tr></tbody>
-    </table>
-  </section>`,
-        ),
-    );
-
-    server.registerResource(
-      'splice_category_rule_workbench_app',
-      APP_RESOURCES.categoryRuleWorkbench.resourceUri,
-      {
-        title: APP_RESOURCES.categoryRuleWorkbench.title,
-        description:
-          'Interactive category, analysis rule, and categorization recommendation UI.',
-        mimeType: MCP_APP_MIME_TYPE,
-      },
-      (uri) =>
-        htmlResource(
-          uri,
-          APP_RESOURCES.categoryRuleWorkbench.title,
-          `<section class="panel">
-    <h1>Category Rule Workbench</h1>
-    <p>Compare categories, cash-flow analysis rules, categorization automation, and pending rule recommendations in read-only mode.</p>
-  </section>
-  <section class="grid" aria-label="Rule workbench panels">
-    <div class="tile"><div class="label">Categories</div><div class="value">Metadata</div></div>
-    <div class="tile"><div class="label">Analysis</div><div class="value">Rules</div></div>
-    <div class="tile"><div class="label">Automation</div><div class="value">Suggestions</div></div>
-  </section>
-  <section class="panel" aria-label="Category rules table">
-    <table>
-      <thead><tr><th>Surface</th><th>Context</th><th>Mode</th></tr></thead>
-      <tbody><tr><td>Categories</td><td>IDs, colors, archived state</td><td>Read-only</td></tr><tr><td>Rules</td><td>Analysis and categorization</td><td>Read-only</td></tr></tbody>
-    </table>
-  </section>`,
-        ),
-    );
+    registerMcpAppResources(server);
 
     server.registerResource(
       'cashflow_report',
@@ -1173,10 +973,7 @@ export class SpliceMcpService {
         },
         outputSchema: AppToolOutputSchema,
         annotations: READ_ONLY_ANNOTATIONS,
-        _meta: {
-          ui: { resourceUri: APP_RESOURCES.cashflowExplorer.resourceUri },
-          'openai/outputTemplate': APP_RESOURCES.cashflowExplorer.resourceUri,
-        },
+        _meta: appToolMeta(APP_RESOURCES.cashflowExplorer),
       },
       async (input) => {
         assertDateRange(input.startDate, input.endDate);
@@ -1205,13 +1002,7 @@ export class SpliceMcpService {
         inputSchema: {},
         outputSchema: AppToolOutputSchema,
         annotations: READ_ONLY_ANNOTATIONS,
-        _meta: {
-          ui: {
-            resourceUri: APP_RESOURCES.projectionScenarioModeler.resourceUri,
-          },
-          'openai/outputTemplate':
-            APP_RESOURCES.projectionScenarioModeler.resourceUri,
-        },
+        _meta: appToolMeta(APP_RESOURCES.projectionScenarioModeler),
       },
       async () =>
         appToolResult(
@@ -1240,10 +1031,7 @@ export class SpliceMcpService {
         },
         outputSchema: AppToolOutputSchema,
         annotations: READ_ONLY_ANNOTATIONS,
-        _meta: {
-          ui: { resourceUri: APP_RESOURCES.portfolioViewer.resourceUri },
-          'openai/outputTemplate': APP_RESOURCES.portfolioViewer.resourceUri,
-        },
+        _meta: appToolMeta(APP_RESOURCES.portfolioViewer),
       },
       async (input) =>
         appToolResult(
@@ -1270,13 +1058,7 @@ export class SpliceMcpService {
         inputSchema: {},
         outputSchema: AppToolOutputSchema,
         annotations: READ_ONLY_ANNOTATIONS,
-        _meta: {
-          ui: {
-            resourceUri: APP_RESOURCES.categoryRuleWorkbench.resourceUri,
-          },
-          'openai/outputTemplate':
-            APP_RESOURCES.categoryRuleWorkbench.resourceUri,
-        },
+        _meta: appToolMeta(APP_RESOURCES.categoryRuleWorkbench),
       },
       async () =>
         appToolResult(

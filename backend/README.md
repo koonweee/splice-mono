@@ -173,6 +173,34 @@ elicitation for non-sensitive projection assumptions. App and elicitation
 support are progressive enhancements; clients without those capabilities can use
 the structured fallback responses.
 
+MCP Apps-capable hosts can render four interactive, read-only panes through
+`ui://splice/...` resources:
+
+- `show_cashflow_explorer` renders `ui://splice/cashflow-explorer.html` for
+  date range refreshes, category search, category transaction drilldowns, and
+  cash-flow audit effects.
+- `show_projection_scenario_modeler` renders
+  `ui://splice/projection-scenario-modeler.html` for local scenario assumptions,
+  one-time events, account inclusion, and projected summary estimates. These
+  values are in-session only and are not persisted.
+- `show_portfolio_viewer` renders `ui://splice/portfolio-viewer.html` for
+  investment holdings search/sort/filtering and investment activity pagination.
+- `show_category_rule_workbench` renders
+  `ui://splice/category-rule-workbench.html` for category/rule/recommendation
+  inspection and date-ranged audit effects. It intentionally omits mutating
+  controls such as accept, dismiss, apply, create, edit, or archive.
+
+Each app tool still returns `structuredContent` fallback data for non-App
+clients. The app resources are self-contained HTML, declare
+`text/html;profile=mcp-app`, include restrictive `_meta.ui.csp` resource
+metadata with no external domains, and call only existing read-only MCP tools
+through the host bridge. Local browser smoke fixtures can be generated with:
+
+```bash
+cd backend
+npx ts-node -r tsconfig-paths/register test/mcp/fixtures/render-mcp-app-resource.ts
+```
+
 ## API Documentation
 
 Swagger/OpenAPI documentation is available at `/api` when the server is running.

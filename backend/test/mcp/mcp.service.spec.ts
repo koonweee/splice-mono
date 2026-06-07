@@ -221,6 +221,14 @@ describe('SpliceMcpService', () => {
             uri: 'ui://splice/projection-scenario-modeler.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
+          expect.objectContaining({
+            uri: 'ui://splice/portfolio-viewer.html',
+            mimeType: 'text/html;profile=mcp-app',
+          }),
+          expect.objectContaining({
+            uri: 'ui://splice/category-rule-workbench.html',
+            mimeType: 'text/html;profile=mcp-app',
+          }),
         ]),
       );
 
@@ -229,9 +237,38 @@ describe('SpliceMcpService', () => {
       });
       expect(app.contents[0]).toMatchObject({
         mimeType: 'text/html;profile=mcp-app',
+        _meta: {
+          ui: {
+            csp: {
+              connectDomains: [],
+              resourceDomains: [],
+              frameDomains: [],
+              baseUriDomains: [],
+            },
+            prefersBorder: true,
+          },
+        },
       });
       expect('text' in app.contents[0] ? app.contents[0].text : '').toContain(
         'data-splice-mcp-app',
+      );
+      expect('text' in app.contents[0] ? app.contents[0].text : '').toContain(
+        'splice-mcp-app-fixture',
+      );
+      expect('text' in app.contents[0] ? app.contents[0].text : '').toContain(
+        'tools/call',
+      );
+      const fixtureJson = (
+        'text' in app.contents[0] ? app.contents[0].text : ''
+      ).match(
+        /<script id="splice-mcp-app-fixture" type="application\/json">(?<fixture>.*?)<\/script>/s,
+      )?.groups?.fixture;
+      expect(JSON.parse(fixtureJson ?? '{}')).toMatchObject({
+        app: { id: 'cashflow_explorer' },
+        data: { startDate: '2026-03-01' },
+      });
+      expect('text' in app.contents[0] ? app.contents[0].text : '').not.toMatch(
+        /splice_pat_|password|access_token/i,
       );
 
       const templates = await client.listResourceTemplates();
@@ -872,8 +909,43 @@ describe('SpliceMcpService', () => {
         tools.tools.find((tool) => tool.name === 'show_cashflow_explorer')
           ?._meta,
       ).toMatchObject({
-        ui: { resourceUri: 'ui://splice/cashflow-explorer.html' },
+        ui: {
+          resourceUri: 'ui://splice/cashflow-explorer.html',
+          visibility: ['model', 'app'],
+        },
+        'ui/resourceUri': 'ui://splice/cashflow-explorer.html',
         'openai/outputTemplate': 'ui://splice/cashflow-explorer.html',
+      });
+      expect(
+        tools.tools.find(
+          (tool) => tool.name === 'show_projection_scenario_modeler',
+        )?._meta,
+      ).toMatchObject({
+        ui: {
+          resourceUri: 'ui://splice/projection-scenario-modeler.html',
+          visibility: ['model', 'app'],
+        },
+        'ui/resourceUri': 'ui://splice/projection-scenario-modeler.html',
+      });
+      expect(
+        tools.tools.find((tool) => tool.name === 'show_portfolio_viewer')
+          ?._meta,
+      ).toMatchObject({
+        ui: {
+          resourceUri: 'ui://splice/portfolio-viewer.html',
+          visibility: ['model', 'app'],
+        },
+        'ui/resourceUri': 'ui://splice/portfolio-viewer.html',
+      });
+      expect(
+        tools.tools.find((tool) => tool.name === 'show_category_rule_workbench')
+          ?._meta,
+      ).toMatchObject({
+        ui: {
+          resourceUri: 'ui://splice/category-rule-workbench.html',
+          visibility: ['model', 'app'],
+        },
+        'ui/resourceUri': 'ui://splice/category-rule-workbench.html',
       });
 
       const cashflow = (await client.callTool({
