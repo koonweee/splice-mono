@@ -1,5 +1,11 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import {
+  McpServer,
+  ResourceTemplate,
+} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type {
+  CallToolResult,
+  ToolAnnotations,
+} from '@modelcontextprotocol/sdk/types.js';
 import {
   BadRequestException,
   Injectable,
@@ -18,6 +24,23 @@ import type {
 import { UserService } from '../user/user.service';
 import { normalizeMcpMoney, type McpMoney } from './mcp-money';
 import { McpReadService } from './mcp-read.service';
+import {
+  AccountsSnapshotOutputSchema,
+  AppToolOutputSchema,
+  BalanceHistoryOutputSchema,
+  CashflowAnalysisOutputSchema,
+  CashflowAuditOutputSchema,
+  CashflowCategoryTransactionsOutputSchema,
+  CategoriesOutputSchema,
+  CategorizationRecommendationsOutputSchema,
+  GetUserContextOutputSchema,
+  InvestmentHoldingsOutputSchema,
+  PaginatedListOutputSchema,
+  ProjectionAssumptionsOutputSchema,
+  RecurringSchedulesOutputSchema,
+  RuleListOutputSchema,
+  SearchTransactionsOutputSchema,
+} from './mcp-schemas';
 
 const DateStringSchema = z
   .string()
@@ -37,6 +60,39 @@ const CursorSchema = z
   .string()
   .optional()
   .describe('Opaque cursor returned by the previous pageInfo.nextCursor.');
+const DetailLevelSchema = z.enum(['summary', 'standard', 'detailed']);
+
+const READ_ONLY_ANNOTATIONS: ToolAnnotations = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
+
+const MCP_APP_MIME_TYPE = 'text/html;profile=mcp-app';
+
+const APP_RESOURCES = {
+  cashflowExplorer: {
+    id: 'cashflow_explorer',
+    title: 'Cashflow Explorer',
+    resourceUri: 'ui://splice/cashflow-explorer.html',
+  },
+  projectionScenarioModeler: {
+    id: 'projection_scenario_modeler',
+    title: 'Projection Scenario Modeler',
+    resourceUri: 'ui://splice/projection-scenario-modeler.html',
+  },
+  portfolioViewer: {
+    id: 'portfolio_viewer',
+    title: 'Portfolio Viewer',
+    resourceUri: 'ui://splice/portfolio-viewer.html',
+  },
+  categoryRuleWorkbench: {
+    id: 'category_rule_workbench',
+    title: 'Category Rule Workbench',
+    resourceUri: 'ui://splice/category-rule-workbench.html',
+  },
+} as const;
 
 const MCP_GUIDE = `# Splice MCP Guide
 
@@ -47,6 +103,16 @@ For cash-flow totals and category breakdowns, call get_cashflow_analysis. The su
 For custom spending patterns not covered by get_cashflow_analysis, call list_transactions for the full date range and keep paging until pageInfo.hasMore is false. Do not infer totals from a partial page unless you clearly say it is a sample.
 
 For projections, use get_accounts_snapshot for current state and list_balance_snapshots for historical account-level baselines. Ask the user for future income, expense, return, allocation, or one-time-event assumptions; do not invent them.
+
+Every tool returns structuredContent and declares an outputSchema. Use structuredContent for validation and parsing; text content mirrors the same JSON for older clients. Tools are annotated read-only unless a future guide explicitly says otherwise.
+
+Available prompts: monthly_cashflow_review, projection_builder, category_cleanup_audit, portfolio_snapshot, and tax_or_refund_anomaly_review. Prompts provide workflow guidance and still require clients to call the listed tools.
+
+Prefer resource templates for reusable report reads when a client asks for a durable report URI: splice://reports/cashflow/{startDate}/{endDate}, splice://accounts/{accountId}/snapshot, splice://categories/taxonomy, splice://rules/analysis, and splice://portfolio/holdings/latest.
+
+MCP Apps are progressive enhancement. Use app-backed show_* tools when the host supports MCP Apps; otherwise use each tool's fallback structuredContent and continue with text.
+
+Projection assumption elicitation is optional and non-persistent. If the client does not support elicitation, collect_projection_assumptions returns an inputRequired object the client can ask the user about normally.
 
 Use list_investment_holdings for current or date-specific investment positions. Use list_investment_activity for investment transactions. Investment activity is separate from banking/manual transactions and is not included in get_cashflow_analysis.
 
@@ -167,6 +233,113 @@ function toolResult(data: unknown): CallToolResult {
   };
 }
 
+function jsonResource(uri: URL, data: unknown) {
+  const structuredContent = normalizeMcpMoney(data);
+
+  return {
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: 'application/json',
+        text: JSON.stringify(structuredContent, null, 2),
+      },
+    ],
+  };
+}
+
+function htmlResource(uri: URL, title: string, body: string) {
+  return {
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: MCP_APP_MIME_TYPE,
+        text: `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title}</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; background: #f8fafc; color: #111827; }
+    main { min-height: 100vh; padding: 20px; box-sizing: border-box; display: grid; gap: 16px; align-content: start; }
+    h1 { margin: 0; font-size: 20px; line-height: 1.2; }
+    p { margin: 0; color: #4b5563; line-height: 1.5; }
+    .panel { background: white; border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; display: grid; gap: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+    .tile { border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; background: #ffffff; min-height: 72px; }
+    .label { font-size: 12px; text-transform: uppercase; color: #6b7280; letter-spacing: 0; }
+    .value { margin-top: 6px; font-size: 18px; font-weight: 650; }
+    .bars { display: grid; gap: 10px; }
+    .bar { display: grid; grid-template-columns: 92px 1fr; gap: 10px; align-items: center; font-size: 13px; color: #374151; }
+    .track { height: 12px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
+    .fill { height: 100%; background: #2563eb; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
+    th { color: #4b5563; font-weight: 650; }
+    form { display: grid; gap: 10px; }
+    label { display: grid; gap: 4px; font-size: 13px; color: #374151; }
+    input { min-height: 34px; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; font: inherit; }
+    @media (max-width: 520px) { main { padding: 14px; } h1 { font-size: 18px; } }
+  </style>
+</head>
+<body>
+  <main data-splice-mcp-app="${title}">
+    ${body}
+  </main>
+</body>
+</html>`,
+      },
+    ],
+  };
+}
+
+function appToolResult(
+  app: (typeof APP_RESOURCES)[keyof typeof APP_RESOURCES],
+  fallback: string,
+  data?: unknown,
+): CallToolResult {
+  return toolResult({
+    app,
+    data,
+    fallback,
+  });
+}
+
+function promptText(text: string) {
+  return {
+    messages: [
+      {
+        role: 'user' as const,
+        content: {
+          type: 'text' as const,
+          text,
+        },
+      },
+    ],
+  };
+}
+
+function promptDateRange(input: {
+  startDate?: string;
+  endDate?: string;
+  reportingCurrency?: string;
+  detailLevel?: string;
+}): string {
+  const range =
+    input.startDate && input.endDate
+      ? `${input.startDate} through ${input.endDate}`
+      : 'the requested date range';
+  const currency = input.reportingCurrency
+    ? ` Use ${input.reportingCurrency} as reportingCurrency where tools require it.`
+    : ' Use get_user_context.currency where tools require reportingCurrency.';
+  const detail = input.detailLevel
+    ? ` Detail level: ${input.detailLevel}.`
+    : '';
+
+  return `${range}.${currency}${detail}`;
+}
+
 function getTodayForTimezone(timeZone: string): string {
   try {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -208,6 +381,11 @@ export class SpliceMcpService {
     'get_cashflow_analysis',
     'list_cashflow_category_transactions',
     'get_cashflow_analysis_audit',
+    'show_cashflow_explorer',
+    'show_projection_scenario_modeler',
+    'show_portfolio_viewer',
+    'show_category_rule_workbench',
+    'collect_projection_assumptions',
   ] as const;
 
   constructor(
@@ -249,6 +427,243 @@ export class SpliceMcpService {
       }),
     );
 
+    server.registerResource(
+      'splice_cashflow_explorer_app',
+      APP_RESOURCES.cashflowExplorer.resourceUri,
+      {
+        title: APP_RESOURCES.cashflowExplorer.title,
+        description: 'Interactive cash-flow chart and category drilldown UI.',
+        mimeType: MCP_APP_MIME_TYPE,
+      },
+      (uri) =>
+        htmlResource(
+          uri,
+          APP_RESOURCES.cashflowExplorer.title,
+          `<section class="panel">
+    <h1>Cashflow Explorer</h1>
+    <p>Review rule-adjusted income, outflows, category totals, and transaction drilldowns from Splice MCP tools.</p>
+  </section>
+  <section class="grid" aria-label="Cashflow summary placeholders">
+    <div class="tile"><div class="label">Totals</div><div class="value">Tool driven</div></div>
+    <div class="tile"><div class="label">Categories</div><div class="value">Drilldown</div></div>
+    <div class="tile"><div class="label">Rules</div><div class="value">Auditable</div></div>
+  </section>
+  <section class="panel" aria-label="Cashflow category chart">
+    <div class="bars">
+      <div class="bar"><span>Income</span><div class="track"><div class="fill" style="width: 82%"></div></div></div>
+      <div class="bar"><span>Housing</span><div class="track"><div class="fill" style="width: 58%"></div></div></div>
+      <div class="bar"><span>Food</span><div class="track"><div class="fill" style="width: 34%"></div></div></div>
+    </div>
+  </section>`,
+        ),
+    );
+
+    server.registerResource(
+      'splice_projection_scenario_modeler_app',
+      APP_RESOURCES.projectionScenarioModeler.resourceUri,
+      {
+        title: APP_RESOURCES.projectionScenarioModeler.title,
+        description:
+          'Interactive projection assumption UI for non-persistent scenarios.',
+        mimeType: MCP_APP_MIME_TYPE,
+      },
+      (uri) =>
+        htmlResource(
+          uri,
+          APP_RESOURCES.projectionScenarioModeler.title,
+          `<section class="panel">
+    <h1>Projection Scenario Modeler</h1>
+    <p>Collect horizon, recurring cash-flow changes, one-time events, and expected return assumptions without persisting them.</p>
+  </section>
+  <section class="grid" aria-label="Projection inputs">
+    <div class="tile"><div class="label">Horizon</div><div class="value">Date</div></div>
+    <div class="tile"><div class="label">Recurring</div><div class="value">Income/Expense</div></div>
+    <div class="tile"><div class="label">Events</div><div class="value">Scenario only</div></div>
+  </section>
+  <section class="panel" aria-label="Projection assumption form">
+    <form>
+      <label>Horizon date<input value="2027-12-31" readonly></label>
+      <label>Monthly income change<input value="0.00" readonly></label>
+      <label>Expected annual return<input value="5%" readonly></label>
+    </form>
+  </section>`,
+        ),
+    );
+
+    server.registerResource(
+      'splice_portfolio_viewer_app',
+      APP_RESOURCES.portfolioViewer.resourceUri,
+      {
+        title: APP_RESOURCES.portfolioViewer.title,
+        description: 'Interactive portfolio holdings and activity UI.',
+        mimeType: MCP_APP_MIME_TYPE,
+      },
+      (uri) =>
+        htmlResource(
+          uri,
+          APP_RESOURCES.portfolioViewer.title,
+          `<section class="panel">
+    <h1>Portfolio Viewer</h1>
+    <p>Inspect latest holdings, date-specific positions, and investment activity from Splice MCP investment tools.</p>
+  </section>
+  <section class="grid" aria-label="Portfolio panels">
+    <div class="tile"><div class="label">Holdings</div><div class="value">Latest</div></div>
+    <div class="tile"><div class="label">Activity</div><div class="value">Paged</div></div>
+    <div class="tile"><div class="label">Securities</div><div class="value">Context</div></div>
+  </section>
+  <section class="panel" aria-label="Portfolio holdings table">
+    <table>
+      <thead><tr><th>Security</th><th>Quantity</th><th>Value</th></tr></thead>
+      <tbody><tr><td>Example Fund</td><td>Tool data</td><td>Structured fallback</td></tr></tbody>
+    </table>
+  </section>`,
+        ),
+    );
+
+    server.registerResource(
+      'splice_category_rule_workbench_app',
+      APP_RESOURCES.categoryRuleWorkbench.resourceUri,
+      {
+        title: APP_RESOURCES.categoryRuleWorkbench.title,
+        description:
+          'Interactive category, analysis rule, and categorization recommendation UI.',
+        mimeType: MCP_APP_MIME_TYPE,
+      },
+      (uri) =>
+        htmlResource(
+          uri,
+          APP_RESOURCES.categoryRuleWorkbench.title,
+          `<section class="panel">
+    <h1>Category Rule Workbench</h1>
+    <p>Compare categories, cash-flow analysis rules, categorization automation, and pending rule recommendations in read-only mode.</p>
+  </section>
+  <section class="grid" aria-label="Rule workbench panels">
+    <div class="tile"><div class="label">Categories</div><div class="value">Metadata</div></div>
+    <div class="tile"><div class="label">Analysis</div><div class="value">Rules</div></div>
+    <div class="tile"><div class="label">Automation</div><div class="value">Suggestions</div></div>
+  </section>
+  <section class="panel" aria-label="Category rules table">
+    <table>
+      <thead><tr><th>Surface</th><th>Context</th><th>Mode</th></tr></thead>
+      <tbody><tr><td>Categories</td><td>IDs, colors, archived state</td><td>Read-only</td></tr><tr><td>Rules</td><td>Analysis and categorization</td><td>Read-only</td></tr></tbody>
+    </table>
+  </section>`,
+        ),
+    );
+
+    server.registerResource(
+      'cashflow_report',
+      new ResourceTemplate('splice://reports/cashflow/{startDate}/{endDate}', {
+        list: undefined,
+      }),
+      {
+        title: 'Cashflow Report',
+        description:
+          'Rule-adjusted cash-flow report for an inclusive activity date range.',
+        mimeType: 'application/json',
+      },
+      async (uri, variables) => {
+        const startDate = String(variables.startDate);
+        const endDate = String(variables.endDate);
+        DateStringSchema.parse(startDate);
+        DateStringSchema.parse(endDate);
+        assertDateRange(startDate, endDate);
+
+        return jsonResource(
+          uri,
+          mcpCashflowAnalysis(
+            await this.transactionAnalysisService.getAnalysis(
+              startDate,
+              endDate,
+              userId,
+            ),
+          ),
+        );
+      },
+    );
+
+    server.registerResource(
+      'account_snapshot_report',
+      new ResourceTemplate('splice://accounts/{accountId}/snapshot', {
+        list: undefined,
+      }),
+      {
+        title: 'Account Snapshot',
+        description: 'Single-account current snapshot from Splice accounts.',
+        mimeType: 'application/json',
+      },
+      async (uri, variables) => {
+        const accountId = UuidSchema.parse(String(variables.accountId));
+        const snapshot =
+          await this.accountsSurfaceService.getAccountsSnapshot(userId);
+        const accounts = Array.isArray(snapshot.accounts)
+          ? snapshot.accounts
+          : [];
+        const account = accounts.find(
+          (candidate: { id?: string }) => candidate.id === accountId,
+        );
+        if (!account) {
+          throw new NotFoundException('Account not found');
+        }
+
+        return jsonResource(uri, { account });
+      },
+    );
+
+    server.registerResource(
+      'categories_taxonomy',
+      new ResourceTemplate('splice://categories/taxonomy', {
+        list: undefined,
+      }),
+      {
+        title: 'Category Taxonomy',
+        description: 'User category taxonomy with IDs, labels, and colors.',
+        mimeType: 'application/json',
+      },
+      async (uri) =>
+        jsonResource(uri, await this.mcpReadService.listCategories(userId, {})),
+    );
+
+    server.registerResource(
+      'analysis_rules_report',
+      new ResourceTemplate('splice://rules/analysis', {
+        list: undefined,
+      }),
+      {
+        title: 'Rules Analysis',
+        description:
+          'Read-only analysis and categorization rules for the current user.',
+        mimeType: 'application/json',
+      },
+      async (uri) =>
+        jsonResource(uri, {
+          analysisRules: await this.mcpReadService.listAnalysisRules(
+            userId,
+            {},
+          ),
+          categorizationRules:
+            await this.mcpReadService.listCategorizationRules(userId, {}),
+        }),
+    );
+
+    server.registerResource(
+      'latest_portfolio_holdings',
+      new ResourceTemplate('splice://portfolio/holdings/latest', {
+        list: undefined,
+      }),
+      {
+        title: 'Latest Portfolio Holdings',
+        description:
+          'Latest investment holdings across owned investment accounts.',
+        mimeType: 'application/json',
+      },
+      async (uri) =>
+        jsonResource(
+          uri,
+          await this.mcpReadService.listInvestmentHoldings(userId, {}),
+        ),
+    );
+
     server.registerTool(
       'get_user_context',
       {
@@ -256,6 +671,8 @@ export class SpliceMcpService {
         description:
           'Get the authenticated Splice user timezone, preferred currency, and current date.',
         inputSchema: {},
+        outputSchema: GetUserContextOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async () => {
         const user = await this.userService.findOne(userId);
@@ -280,6 +697,8 @@ export class SpliceMcpService {
         description:
           'Get current Splice accounts, institutions, account groupings, and balances for the authenticated user.',
         inputSchema: {},
+        outputSchema: AccountsSnapshotOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async () =>
         toolResult(
@@ -298,6 +717,8 @@ export class SpliceMcpService {
           endDate: DateStringSchema,
           accountIds: z.array(z.string().uuid()).optional(),
         },
+        outputSchema: BalanceHistoryOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) =>
         toolResult(
@@ -326,6 +747,8 @@ export class SpliceMcpService {
           includePending: z.boolean().optional(),
           limit: z.number().int().positive().max(20).optional(),
         },
+        outputSchema: SearchTransactionsOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) =>
         toolResult(
@@ -414,6 +837,8 @@ export class SpliceMcpService {
               'Converted amount filter. Requires currency and is applied to convertedAmount after currency conversion.',
             ),
         },
+        outputSchema: PaginatedListOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) =>
         toolResult(await this.mcpReadService.listTransactions(userId, input)),
@@ -445,6 +870,8 @@ export class SpliceMcpService {
             .optional()
             .describe('Defaults to 100, maximum 250.'),
         },
+        outputSchema: PaginatedListOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) =>
         toolResult(
@@ -470,6 +897,8 @@ export class SpliceMcpService {
             .optional()
             .describe('When true, include archived user categories.'),
         },
+        outputSchema: CategoriesOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) =>
         toolResult(await this.mcpReadService.listCategories(userId, input)),
@@ -498,6 +927,8 @@ export class SpliceMcpService {
               'Set to true or omit for latest holdings. Cannot be combined with snapshotDate; use snapshotDate for date-specific holdings.',
             ),
         },
+        outputSchema: InvestmentHoldingsOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) =>
         toolResult(
@@ -536,6 +967,8 @@ export class SpliceMcpService {
             .optional()
             .describe('Defaults to 50, maximum 100.'),
         },
+        outputSchema: PaginatedListOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) =>
         toolResult(
@@ -557,6 +990,8 @@ export class SpliceMcpService {
               'Defaults to true. When false, paused schedules are omitted.',
             ),
         },
+        outputSchema: RecurringSchedulesOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) =>
         toolResult(
@@ -579,6 +1014,8 @@ export class SpliceMcpService {
             .optional()
             .describe('Defaults to false. When true, list archived rules.'),
         },
+        outputSchema: RuleListOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) =>
         toolResult(await this.mcpReadService.listAnalysisRules(userId, input)),
@@ -596,6 +1033,8 @@ export class SpliceMcpService {
             .optional()
             .describe('Defaults to false. When true, list archived rules.'),
         },
+        outputSchema: RuleListOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) =>
         toolResult(
@@ -610,6 +1049,8 @@ export class SpliceMcpService {
         description:
           'List pending categorization rule recommendations and latest generation state. This read-only tool cannot generate, accept, or dismiss recommendations.',
         inputSchema: {},
+        outputSchema: CategorizationRecommendationsOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async () =>
         toolResult(
@@ -633,6 +1074,8 @@ export class SpliceMcpService {
             'Inclusive activity end date in YYYY-MM-DD.',
           ),
         },
+        outputSchema: CashflowAnalysisOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) => {
         assertDateRange(input.startDate, input.endDate);
@@ -669,6 +1112,8 @@ export class SpliceMcpService {
             ),
           flowDirection: z.enum(['inflow', 'outflow']),
         },
+        outputSchema: CashflowCategoryTransactionsOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) => {
         assertDateRange(input.startDate, input.endDate);
@@ -700,6 +1145,8 @@ export class SpliceMcpService {
             'Inclusive activity end date in YYYY-MM-DD.',
           ),
         },
+        outputSchema: CashflowAuditOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
       },
       async (input) => {
         assertDateRange(input.startDate, input.endDate);
@@ -711,6 +1158,391 @@ export class SpliceMcpService {
             userId,
           ),
         );
+      },
+    );
+
+    server.registerTool(
+      'show_cashflow_explorer',
+      {
+        title: 'Show Cashflow Explorer',
+        description:
+          'Return an MCP Apps UI for exploring rule-adjusted cash-flow totals and category drilldowns, with structured fallback data.',
+        inputSchema: {
+          startDate: DateStringSchema,
+          endDate: DateStringSchema,
+        },
+        outputSchema: AppToolOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
+        _meta: {
+          ui: { resourceUri: APP_RESOURCES.cashflowExplorer.resourceUri },
+          'openai/outputTemplate': APP_RESOURCES.cashflowExplorer.resourceUri,
+        },
+      },
+      async (input) => {
+        assertDateRange(input.startDate, input.endDate);
+        const analysis = mcpCashflowAnalysis(
+          await this.transactionAnalysisService.getAnalysis(
+            input.startDate,
+            input.endDate,
+            userId,
+          ),
+        );
+
+        return appToolResult(
+          APP_RESOURCES.cashflowExplorer,
+          'Use the structured cash-flow analysis data to summarize income, outflows, categories, and rule-adjusted totals.',
+          analysis,
+        );
+      },
+    );
+
+    server.registerTool(
+      'show_projection_scenario_modeler',
+      {
+        title: 'Show Projection Scenario Modeler',
+        description:
+          'Return an MCP Apps UI for collecting non-persistent projection assumptions and reviewing current projection baselines.',
+        inputSchema: {},
+        outputSchema: AppToolOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
+        _meta: {
+          ui: {
+            resourceUri: APP_RESOURCES.projectionScenarioModeler.resourceUri,
+          },
+          'openai/outputTemplate':
+            APP_RESOURCES.projectionScenarioModeler.resourceUri,
+        },
+      },
+      async () =>
+        appToolResult(
+          APP_RESOURCES.projectionScenarioModeler,
+          'Collect non-sensitive projection assumptions, then use get_accounts_snapshot, list_balance_snapshots, and list_recurring_manual_transaction_schedules for baselines.',
+          {
+            accounts:
+              await this.accountsSurfaceService.getAccountsSnapshot(userId),
+            recurringSchedules:
+              await this.mcpReadService.listRecurringManualTransactionSchedules(
+                userId,
+                {},
+              ),
+          },
+        ),
+    );
+
+    server.registerTool(
+      'show_portfolio_viewer',
+      {
+        title: 'Show Portfolio Viewer',
+        description:
+          'Return an MCP Apps UI for latest holdings and investment activity, with structured fallback data.',
+        inputSchema: {
+          accountIds: z.array(UuidSchema).optional(),
+        },
+        outputSchema: AppToolOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
+        _meta: {
+          ui: { resourceUri: APP_RESOURCES.portfolioViewer.resourceUri },
+          'openai/outputTemplate': APP_RESOURCES.portfolioViewer.resourceUri,
+        },
+      },
+      async (input) =>
+        appToolResult(
+          APP_RESOURCES.portfolioViewer,
+          'Use holdings and investment activity fallback data to summarize portfolio positions and recent investment transactions.',
+          {
+            holdings: await this.mcpReadService.listInvestmentHoldings(userId, {
+              accountIds: input.accountIds,
+            }),
+            activity: await this.mcpReadService.listInvestmentActivity(userId, {
+              accountIds: input.accountIds,
+              pageSize: 25,
+            }),
+          },
+        ),
+    );
+
+    server.registerTool(
+      'show_category_rule_workbench',
+      {
+        title: 'Show Category Rule Workbench',
+        description:
+          'Return an MCP Apps UI for read-only category, analysis rule, categorization rule, and recommendation context.',
+        inputSchema: {},
+        outputSchema: AppToolOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
+        _meta: {
+          ui: {
+            resourceUri: APP_RESOURCES.categoryRuleWorkbench.resourceUri,
+          },
+          'openai/outputTemplate':
+            APP_RESOURCES.categoryRuleWorkbench.resourceUri,
+        },
+      },
+      async () =>
+        appToolResult(
+          APP_RESOURCES.categoryRuleWorkbench,
+          'Use category and rule fallback data to explain category metadata, cash-flow rules, categorization automation, and pending recommendations.',
+          {
+            categories: await this.mcpReadService.listCategories(userId, {}),
+            analysisRules: await this.mcpReadService.listAnalysisRules(
+              userId,
+              {},
+            ),
+            categorizationRules:
+              await this.mcpReadService.listCategorizationRules(userId, {}),
+            recommendations:
+              await this.mcpReadService.listCategorizationRuleRecommendations(
+                userId,
+              ),
+          },
+        ),
+    );
+
+    server.registerTool(
+      'collect_projection_assumptions',
+      {
+        title: 'Collect Projection Assumptions',
+        description:
+          'Collect non-sensitive, non-persistent projection assumptions through client elicitation when supported, or return an inputRequired fallback.',
+        inputSchema: {
+          suggestedHorizonDate: DateStringSchema.optional(),
+          goalName: z.string().optional(),
+        },
+        outputSchema: ProjectionAssumptionsOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
+      },
+      async (input) => {
+        const inputRequired = {
+          fields: [
+            'horizonDate',
+            'goalName',
+            'recurringIncomeAdjustment',
+            'recurringExpenseAdjustment',
+            'oneTimeEventsText',
+            'expectedAnnualReturnPercent',
+          ],
+          prompt:
+            'Ask the user for a projection horizon date, optional goal name, recurring income/expense adjustments, one-time events, and expected annual return. Do not ask for credentials or payment details.',
+        };
+        const capabilities = server.server.getClientCapabilities();
+
+        if (!capabilities?.elicitation) {
+          return toolResult({
+            source: 'fallback',
+            inputRequired,
+          });
+        }
+
+        const result = await server.server.elicitInput({
+          mode: 'form',
+          message:
+            'Provide non-sensitive projection assumptions for this in-session Splice scenario. These values will not be saved.',
+          requestedSchema: {
+            type: 'object',
+            properties: {
+              horizonDate: {
+                type: 'string',
+                title: 'Horizon date',
+                description: 'Projection horizon date in YYYY-MM-DD.',
+                format: 'date',
+              },
+              goalName: {
+                type: 'string',
+                title: 'Goal name',
+                description: 'Optional scenario label.',
+                default: input.goalName,
+              },
+              recurringIncomeAdjustment: {
+                type: 'number',
+                title: 'Recurring income adjustment',
+                description: 'Monthly recurring income change in major units.',
+                default: 0,
+              },
+              recurringExpenseAdjustment: {
+                type: 'number',
+                title: 'Recurring expense adjustment',
+                description: 'Monthly recurring expense change in major units.',
+                default: 0,
+              },
+              oneTimeEventsText: {
+                type: 'string',
+                title: 'One-time events',
+                description:
+                  'Optional plain-text event list with date, amount, currency, sign, and label.',
+              },
+              expectedAnnualReturnPercent: {
+                type: 'number',
+                title: 'Expected annual return percent',
+                description: 'Optional expected annual return percentage.',
+              },
+            },
+            required: ['horizonDate'],
+          },
+        });
+
+        if (result.action !== 'accept') {
+          return toolResult({
+            source: 'fallback',
+            inputRequired: {
+              ...inputRequired,
+              action: result.action,
+            },
+          });
+        }
+
+        const assumptions = result.content ?? {};
+        if (
+          typeof assumptions.horizonDate === 'string' &&
+          !DateStringSchema.safeParse(assumptions.horizonDate).success
+        ) {
+          throw new BadRequestException(
+            'Elicited horizonDate must be YYYY-MM-DD.',
+          );
+        }
+
+        return toolResult({
+          source: 'elicited',
+          assumptions,
+        });
+      },
+    );
+
+    const workflowPromptArgs = {
+      startDate: DateStringSchema.optional(),
+      endDate: DateStringSchema.optional(),
+      reportingCurrency: CurrencySchema.optional(),
+      accountIds: z.array(UuidSchema).optional(),
+      detailLevel: DetailLevelSchema.optional(),
+    };
+
+    server.registerPrompt(
+      'monthly_cashflow_review',
+      {
+        title: 'Monthly Cashflow Review',
+        description:
+          'Review monthly cash-flow totals, category breakdowns, rules, and notable transactions.',
+        argsSchema: workflowPromptArgs,
+      },
+      (input) => {
+        if (input.startDate && input.endDate) {
+          assertDateRange(input.startDate, input.endDate);
+        }
+
+        return promptText(`Run a Splice monthly cash-flow review for ${promptDateRange(input)}
+
+Tool sequence:
+1. Call get_user_context.
+2. Call get_cashflow_analysis for the requested range.
+3. Call get_cashflow_analysis_audit to explain rule and neutralization effects.
+4. Use list_cashflow_category_transactions for important categories that need drilldown.
+5. If custom patterns are requested, call list_transactions and page until pageInfo.hasMore is false.
+
+State whether pending transactions are included, use structuredContent, and do not infer totals from partial pages.`);
+      },
+    );
+
+    server.registerPrompt(
+      'projection_builder',
+      {
+        title: 'Projection Builder',
+        description:
+          'Build a projection workflow from current accounts, historical balances, recurring schedules, and explicit user assumptions.',
+        argsSchema: workflowPromptArgs,
+      },
+      (input) => {
+        if (input.startDate && input.endDate) {
+          assertDateRange(input.startDate, input.endDate);
+        }
+
+        return promptText(`Build a Splice projection workflow for ${promptDateRange(input)}
+
+Tool sequence:
+1. Call get_user_context.
+2. Call get_accounts_snapshot for current account baselines.
+3. Call list_balance_snapshots for historical baselines and page when needed.
+4. Call list_recurring_manual_transaction_schedules for known recurring assumptions.
+5. Call collect_projection_assumptions if the host supports elicitation, or ask the user for the returned inputRequired fields.
+6. Use show_projection_scenario_modeler when MCP Apps are supported.
+
+Do not invent future income, expense, return, allocation, or one-time-event assumptions.`);
+      },
+    );
+
+    server.registerPrompt(
+      'category_cleanup_audit',
+      {
+        title: 'Category Cleanup Audit',
+        description:
+          'Audit category metadata, uncategorized activity, categorization rules, and recommendations.',
+        argsSchema: workflowPromptArgs,
+      },
+      (input) => {
+        if (input.startDate && input.endDate) {
+          assertDateRange(input.startDate, input.endDate);
+        }
+
+        return promptText(`Audit Splice category cleanup opportunities for ${promptDateRange(input)}
+
+Tool sequence:
+1. Call get_user_context.
+2. Call list_categories with includeArchived when historical context is needed.
+3. Call list_transactions with categoryId UNCATEGORIZED and page fully for uncategorized rows.
+4. Call list_categorization_rules and list_categorization_rule_recommendations.
+5. Use show_category_rule_workbench when MCP Apps are supported.
+
+Provider category hints are guidance only; category filters are user-category filters.`);
+      },
+    );
+
+    server.registerPrompt(
+      'portfolio_snapshot',
+      {
+        title: 'Portfolio Snapshot',
+        description:
+          'Summarize latest holdings, date-specific positions, and recent investment activity.',
+        argsSchema: workflowPromptArgs,
+      },
+      (input) => {
+        if (input.startDate && input.endDate) {
+          assertDateRange(input.startDate, input.endDate);
+        }
+
+        return promptText(`Create a Splice portfolio snapshot for ${promptDateRange(input)}
+
+Tool sequence:
+1. Call get_user_context.
+2. Call list_investment_holdings for latest positions or date-specific positions when requested.
+3. Call list_investment_activity for investment transactions and page until pageInfo.hasMore is false if the full period matters.
+4. Call get_accounts_snapshot for account balance context.
+5. Use show_portfolio_viewer when MCP Apps are supported.
+
+Keep investment activity separate from banking/manual cash-flow analysis.`);
+      },
+    );
+
+    server.registerPrompt(
+      'tax_or_refund_anomaly_review',
+      {
+        title: 'Tax Or Refund Anomaly Review',
+        description:
+          'Review potential refund, transfer, or tax-related anomalies using cash-flow analysis and raw transaction reads.',
+        argsSchema: workflowPromptArgs,
+      },
+      (input) => {
+        if (input.startDate && input.endDate) {
+          assertDateRange(input.startDate, input.endDate);
+        }
+
+        return promptText(`Review tax, refund, or transfer anomalies for ${promptDateRange(input)}
+
+Tool sequence:
+1. Call get_user_context.
+2. Call get_cashflow_analysis and get_cashflow_analysis_audit for rule-adjusted context.
+3. Call list_transactions with relevant date, amountSign, categoryId, categoryDetailed, merchantQuery, and amountFilter options.
+4. Page list_transactions until pageInfo.hasMore is false for any claim about totals.
+5. Use list_analysis_rules to explain configured exclusions or neutralizations.
+
+Separate rule-adjusted analysis from raw transaction observations in the answer.`);
       },
     );
 

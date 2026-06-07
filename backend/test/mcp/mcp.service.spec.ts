@@ -1,7 +1,10 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import {
+  ElicitRequestSchema,
+  type CallToolResult,
+} from '@modelcontextprotocol/sdk/types.js';
 import { SpliceMcpService } from '../../src/mcp/mcp.service';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 
@@ -56,11 +59,17 @@ describe('SpliceMcpService', () => {
     jest.clearAllMocks();
   });
 
-  async function connect(server: McpServer) {
-    const client = new Client({
-      name: 'splice-mcp-test-client',
-      version: '1.0.0',
-    });
+  async function connect(
+    server: McpServer,
+    options?: ConstructorParameters<typeof Client>[1],
+  ) {
+    const client = new Client(
+      {
+        name: 'splice-mcp-test-client',
+        version: '1.0.0',
+      },
+      options,
+    );
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
 
@@ -83,6 +92,7 @@ describe('SpliceMcpService', () => {
       const result = await client.listTools();
 
       expect(result.tools.map((tool) => tool.name).sort()).toEqual([
+        'collect_projection_assumptions',
         'get_accounts_snapshot',
         'get_balance_history',
         'get_cashflow_analysis',
@@ -99,7 +109,21 @@ describe('SpliceMcpService', () => {
         'list_recurring_manual_transaction_schedules',
         'list_transactions',
         'search_transactions',
+        'show_cashflow_explorer',
+        'show_category_rule_workbench',
+        'show_portfolio_viewer',
+        'show_projection_scenario_modeler',
       ]);
+      expect(
+        result.tools.every(
+          (tool) =>
+            tool.outputSchema &&
+            tool.annotations?.readOnlyHint === true &&
+            tool.annotations.destructiveHint === false &&
+            tool.annotations.idempotentHint === true &&
+            tool.annotations.openWorldHint === false,
+        ),
+      ).toBe(true);
     } finally {
       await close();
     }
@@ -139,6 +163,141 @@ describe('SpliceMcpService', () => {
       expect(
         'text' in guide.contents[0] ? guide.contents[0].text : '',
       ).toContain('list_analysis_rules');
+      expect(
+        'text' in guide.contents[0] ? guide.contents[0].text : '',
+      ).toContain('outputSchema');
+      expect(
+        'text' in guide.contents[0] ? guide.contents[0].text : '',
+      ).toContain('monthly_cashflow_review');
+    } finally {
+      await close();
+    }
+  });
+
+  it('exposes MCP Apps resources and report resource templates', async () => {
+    transactionAnalysisService.getAnalysis.mockResolvedValue({
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+      currency: 'USD',
+      inflows: [],
+      outflows: [],
+      totalInflow: 0,
+      totalOutflow: 0,
+      netFlow: 0,
+      uncategorizedInflow: 0,
+      uncategorizedOutflow: 0,
+    });
+    accountsSurfaceService.getAccountsSnapshot.mockResolvedValue({
+      accounts: [{ id: mockAccountId, displayName: 'Checking' }],
+    });
+    mcpReadService.listCategories.mockResolvedValue({
+      data: [],
+      query: { includeArchived: false },
+    });
+    mcpReadService.listAnalysisRules.mockResolvedValue({
+      data: [],
+      query: { archived: false },
+    });
+    mcpReadService.listCategorizationRules.mockResolvedValue({
+      data: [],
+      query: { archived: false },
+    });
+    mcpReadService.listInvestmentHoldings.mockResolvedValue({
+      data: [],
+      query: { latestOnly: true },
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      const resources = await client.listResources();
+      expect(resources.resources).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            uri: 'ui://splice/cashflow-explorer.html',
+            mimeType: 'text/html;profile=mcp-app',
+          }),
+          expect.objectContaining({
+            uri: 'ui://splice/projection-scenario-modeler.html',
+            mimeType: 'text/html;profile=mcp-app',
+          }),
+        ]),
+      );
+
+      const app = await client.readResource({
+        uri: 'ui://splice/cashflow-explorer.html',
+      });
+      expect(app.contents[0]).toMatchObject({
+        mimeType: 'text/html;profile=mcp-app',
+      });
+      expect('text' in app.contents[0] ? app.contents[0].text : '').toContain(
+        'data-splice-mcp-app',
+      );
+
+      const templates = await client.listResourceTemplates();
+      expect(
+        templates.resourceTemplates.map((item) => item.uriTemplate),
+      ).toEqual(
+        expect.arrayContaining([
+          'splice://reports/cashflow/{startDate}/{endDate}',
+          'splice://accounts/{accountId}/snapshot',
+          'splice://categories/taxonomy',
+          'splice://rules/analysis',
+          'splice://portfolio/holdings/latest',
+        ]),
+      );
+
+      const cashflow = await client.readResource({
+        uri: 'splice://reports/cashflow/2026-03-01/2026-03-31',
+      });
+      expect(cashflow.contents[0]).toMatchObject({
+        mimeType: 'application/json',
+      });
+      expect(transactionAnalysisService.getAnalysis).toHaveBeenCalledWith(
+        '2026-03-01',
+        '2026-03-31',
+        mockUserId,
+      );
+
+      await client.readResource({
+        uri: `splice://accounts/${mockAccountId}/snapshot`,
+      });
+      expect(accountsSurfaceService.getAccountsSnapshot).toHaveBeenCalledWith(
+        mockUserId,
+      );
+    } finally {
+      await close();
+    }
+  });
+
+  it('exposes workflow prompts with deterministic tool guidance', async () => {
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      const prompts = await client.listPrompts();
+      expect(prompts.prompts.map((prompt) => prompt.name).sort()).toEqual([
+        'category_cleanup_audit',
+        'monthly_cashflow_review',
+        'portfolio_snapshot',
+        'projection_builder',
+        'tax_or_refund_anomaly_review',
+      ]);
+
+      const prompt = await client.getPrompt({
+        name: 'projection_builder',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          reportingCurrency: 'USD',
+        },
+      });
+      const text =
+        prompt.messages[0].content.type === 'text'
+          ? prompt.messages[0].content.text
+          : '';
+      expect(text).toContain('get_accounts_snapshot');
+      expect(text).toContain('collect_projection_assumptions');
+      expect(text).toContain('Do not invent');
     } finally {
       await close();
     }
@@ -677,6 +836,145 @@ describe('SpliceMcpService', () => {
         '2026-03-31',
         mockUserId,
       );
+    } finally {
+      await close();
+    }
+  });
+
+  it('returns app-backed fallback data for MCP Apps tools', async () => {
+    transactionAnalysisService.getAnalysis.mockResolvedValue({
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+      currency: 'USD',
+      inflows: [],
+      outflows: [],
+      totalInflow: 0,
+      totalOutflow: 0,
+      netFlow: 0,
+      uncategorizedInflow: 0,
+      uncategorizedOutflow: 0,
+    });
+    mcpReadService.listInvestmentHoldings.mockResolvedValue({
+      data: [],
+      query: { latestOnly: true },
+    });
+    mcpReadService.listInvestmentActivity.mockResolvedValue({
+      data: [],
+      pageInfo: { nextCursor: null, hasMore: false },
+      query: {},
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      const tools = await client.listTools();
+      expect(
+        tools.tools.find((tool) => tool.name === 'show_cashflow_explorer')
+          ?._meta,
+      ).toMatchObject({
+        ui: { resourceUri: 'ui://splice/cashflow-explorer.html' },
+        'openai/outputTemplate': 'ui://splice/cashflow-explorer.html',
+      });
+
+      const cashflow = (await client.callTool({
+        name: 'show_cashflow_explorer',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+        },
+      })) as CallToolResult;
+      expect(cashflow.structuredContent).toMatchObject({
+        app: {
+          id: 'cashflow_explorer',
+          resourceUri: 'ui://splice/cashflow-explorer.html',
+        },
+      });
+
+      const portfolio = (await client.callTool({
+        name: 'show_portfolio_viewer',
+        arguments: {
+          accountIds: [mockAccountId],
+        },
+      })) as CallToolResult;
+      expect(portfolio.structuredContent).toMatchObject({
+        app: { id: 'portfolio_viewer' },
+      });
+      expect(mcpReadService.listInvestmentHoldings).toHaveBeenCalledWith(
+        mockUserId,
+        { accountIds: [mockAccountId] },
+      );
+    } finally {
+      await close();
+    }
+  });
+
+  it('falls back when projection elicitation is unsupported', async () => {
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      const result = (await client.callTool({
+        name: 'collect_projection_assumptions',
+        arguments: {},
+      })) as CallToolResult;
+
+      expect(result.structuredContent).toMatchObject({
+        source: 'fallback',
+        inputRequired: expect.objectContaining({
+          fields: expect.arrayContaining(['horizonDate']),
+        }),
+      });
+    } finally {
+      await close();
+    }
+  });
+
+  it('collects projection assumptions with supported elicitation', async () => {
+    const server = service.createServer(mockUserId);
+    const { client, close } = await connect(server, {
+      capabilities: {
+        elicitation: {},
+      },
+    });
+    client.setRequestHandler(ElicitRequestSchema, (request) => {
+      if (request.params.mode === 'url') {
+        throw new Error('Expected form elicitation');
+      }
+      expect(request.params.requestedSchema.properties).toHaveProperty(
+        'horizonDate',
+      );
+      expect(JSON.stringify(request.params.requestedSchema)).not.toContain(
+        'password',
+      );
+
+      return {
+        action: 'accept',
+        content: {
+          horizonDate: '2027-12-31',
+          goalName: 'Runway',
+          recurringIncomeAdjustment: 500,
+          recurringExpenseAdjustment: 100,
+          oneTimeEventsText: '2027-06-01 -5000 USD negative car repair',
+          expectedAnnualReturnPercent: 5,
+        },
+      };
+    });
+
+    try {
+      const result = (await client.callTool({
+        name: 'collect_projection_assumptions',
+        arguments: {
+          suggestedHorizonDate: '2027-12-31',
+          goalName: 'Runway',
+        },
+      })) as CallToolResult;
+
+      expect(result.structuredContent).toMatchObject({
+        source: 'elicited',
+        assumptions: {
+          horizonDate: '2027-12-31',
+          goalName: 'Runway',
+        },
+      });
     } finally {
       await close();
     }

@@ -136,7 +136,7 @@ discovery with exact category IDs, legacy transaction search, investment
 holdings, investment activity, recurring manual transaction schedules, analysis
 rule reads, categorization rule reads, categorization rule recommendation reads,
 cash-flow analysis, cash-flow category transaction drilldowns, and analysis
-audits.
+audits. MCP tools declare structured output schemas and read-only annotations.
 Mutations are not exposed through MCP.
 
 Analysis rules are persisted per user and are applied inside the backend
@@ -163,6 +163,15 @@ baselines, inspect rule context with `list_analysis_rules`,
 and compare transaction amounts with `convertedAmount` in the requested
 `reportingCurrency`. Investment activity is separate from banking/manual
 cash-flow analysis.
+
+The MCP server also exposes workflow prompts (`monthly_cashflow_review`,
+`projection_builder`, `category_cleanup_audit`, `portfolio_snapshot`, and
+`tax_or_refund_anomaly_review`), report resource templates such as
+`splice://reports/cashflow/{startDate}/{endDate}`, MCP Apps resources for
+interactive cash-flow/projection/portfolio/category views, and optional
+elicitation for non-sensitive projection assumptions. App and elicitation
+support are progressive enhancements; clients without those capabilities can use
+the structured fallback responses.
 
 ## API Documentation
 
