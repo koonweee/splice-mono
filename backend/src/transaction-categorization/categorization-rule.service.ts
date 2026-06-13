@@ -339,6 +339,14 @@ export class TransactionCategorizationService {
         continue;
       }
 
+      const alreadyAssigned =
+        transaction.categoryId === category.id &&
+        transaction.categoryAssignmentSource === 'rule' &&
+        transaction.categoryAssignmentRuleId === rule.id;
+      if (alreadyAssigned) {
+        continue;
+      }
+
       updated += 1;
       if (options.previewLimit !== undefined) {
         previewTransactions.push(transaction);

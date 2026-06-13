@@ -121,6 +121,65 @@ export const CategorizationRecommendationsOutputSchema = z
   })
   .passthrough();
 
+const CategorizationPreviewCountsSchema = z
+  .object({
+    matched: z.number().int(),
+    updated: z.number().int(),
+    skippedManual: z.number().int(),
+    manualAgreement: z.number().int().optional(),
+    manualConflicts: z.number().int().optional(),
+    existingRuleOverlap: z.number().int().optional(),
+  })
+  .passthrough();
+
+export const ManualCategorizedExamplesOutputSchema = z
+  .object({
+    transactions: z.array(z.unknown()),
+  })
+  .passthrough();
+
+export const RuleCandidatePatternsOutputSchema = z
+  .object({
+    filters: z
+      .object({
+        fields: z.array(z.string()),
+        minAgreement: z.number(),
+        maxConflictRate: z.number(),
+        limit: z.number(),
+      })
+      .passthrough(),
+    candidates: z.array(z.unknown()),
+  })
+  .passthrough();
+
+export const CategorizationRuleDraftPreviewOutputSchema =
+  CategorizationPreviewCountsSchema.extend({
+    transactions: z.array(z.unknown()),
+    normalizedDraft: z
+      .object({
+        targetCategoryId: z.string().uuid(),
+        priority: z.number().int().optional(),
+        conditions: z.array(z.unknown()),
+      })
+      .passthrough(),
+    previewToken: z.string(),
+  }).passthrough();
+
+export const CreateCategorizationRuleOutputSchema = z
+  .object({
+    rule: z.unknown(),
+  })
+  .passthrough();
+
+export const CategorizationRuleApplicationPreviewOutputSchema =
+  CategorizationPreviewCountsSchema.extend({
+    transactions: z.array(z.unknown()),
+    previewToken: z.string(),
+  }).passthrough();
+
+export const ApplyCategorizationRuleOutputSchema =
+  CategorizationPreviewCountsSchema;
+
 export const CashflowAnalysisOutputSchema = z
   .object({
     startDate: DateStringSchema,

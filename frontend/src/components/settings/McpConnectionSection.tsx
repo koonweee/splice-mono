@@ -57,8 +57,9 @@ export function McpConnectionSection() {
           <Title order={3}>MCP connection</Title>
           <Text size="sm" c="dimmed">
             Connect AI tools to read Splice accounts, balances, transactions,
-            investments, recurring schedules, and rules. Use a personal access
-            token as the bearer token.
+            investments, recurring schedules, and rules, and to manage
+            categorization rules. MCP personal access tokens are full-scope
+            automation keys; only share them with clients you trust.
           </Text>
         </Stack>
 
