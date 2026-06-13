@@ -16,6 +16,7 @@ import { TransactionModule } from '../transaction/transaction.module';
 import { TransactionEntity } from '../transaction/transaction.entity';
 import { UserModule } from '../user/user.module';
 import { McpController } from './mcp.controller';
+import { McpCategorizationService } from './mcp-categorization.service';
 import { McpReadService } from './mcp-read.service';
 import { SpliceMcpService } from './mcp.service';
 
@@ -40,7 +41,7 @@ import { SpliceMcpService } from './mcp.service';
     UserModule,
   ],
   controllers: [McpController],
-  providers: [SpliceMcpService, McpReadService],
+  providers: [SpliceMcpService, McpReadService, McpCategorizationService],
   exports: [SpliceMcpService],
 })
 export class McpModule {}

@@ -123,8 +123,8 @@ If you prefer to run the application locally without Docker:
 
 ## MCP Configuration
 
-Splice exposes a read-only MCP endpoint at `/mcp` for compatible AI tools.
-Authenticate with a personal access token:
+Splice exposes an MCP endpoint at `/mcp` for compatible AI tools. Authenticate
+with a personal access token:
 
 ```http
 Authorization: Bearer splice_pat_...
@@ -135,9 +135,12 @@ paginated transaction listing, paginated balance snapshot listing, category
 discovery with exact category IDs, legacy transaction search, investment
 holdings, investment activity, recurring manual transaction schedules, analysis
 rule reads, categorization rule reads, categorization rule recommendation reads,
-cash-flow analysis, cash-flow category transaction drilldowns, and analysis
-audits. MCP tools declare structured output schemas and read-only annotations.
-Mutations are not exposed through MCP.
+categorization rule evidence, categorization rule draft previews, guarded
+categorization rule creation/application, cash-flow analysis, cash-flow category
+transaction drilldowns, and analysis audits. MCP tools declare structured output
+schemas and annotations. Personal access tokens used with MCP are full-scope
+automation keys; trusted clients can modify categorization rules and apply them
+to existing non-manual transactions.
 
 Analysis rules are persisted per user and are applied inside the backend
 transaction-analysis service before summary aggregation or real-transaction
@@ -160,9 +163,12 @@ positions and investment transactions, use
 use `get_accounts_snapshot` plus `list_balance_snapshots` for projection
 baselines, inspect rule context with `list_analysis_rules`,
 `list_categorization_rules`, and `list_categorization_rule_recommendations`,
-and compare transaction amounts with `convertedAmount` in the requested
-`reportingCurrency`. Investment activity is separate from banking/manual
-cash-flow analysis.
+use manual examples and candidate patterns as evidence for proposed
+categorization rules, preview a draft before creating it, preview a saved rule
+before applying it, and compare transaction amounts with `convertedAmount` in
+the requested `reportingCurrency`. Investment activity is separate from
+banking/manual cash-flow analysis. Categorization rule application never
+overwrites manual transactions or manual category assignments.
 
 The MCP server also exposes workflow prompts (`monthly_cashflow_review`,
 `projection_builder`, `category_cleanup_audit`, `portfolio_snapshot`, and

@@ -16,6 +16,7 @@ import { AccountsSurfaceService } from '../account/accounts-surface.service';
 import { BalanceHistorySurfaceService } from '../balance-query/balance-history-surface.service';
 import { TransactionAnalysisService } from '../transaction-analysis/transaction-analysis.service';
 import { TransactionsSurfaceService } from '../transaction/transactions-surface.service';
+import { CategorizationRuleConditionSchema } from '../types/CategorizationRule';
 import { getDecimalPlaces, MoneySign } from '../types/MoneyWithSign';
 import type {
   CategoryAggregate,
@@ -31,6 +32,7 @@ import {
   registerMcpAppResources,
 } from './mcp-apps';
 import {
+  ApplyCategorizationRuleOutputSchema,
   AccountsSnapshotOutputSchema,
   AppToolOutputSchema,
   BalanceHistoryOutputSchema,
@@ -38,15 +40,21 @@ import {
   CashflowAuditOutputSchema,
   CashflowCategoryTransactionsOutputSchema,
   CategoriesOutputSchema,
+  CategorizationRuleApplicationPreviewOutputSchema,
+  CategorizationRuleDraftPreviewOutputSchema,
   CategorizationRecommendationsOutputSchema,
+  CreateCategorizationRuleOutputSchema,
   GetUserContextOutputSchema,
   InvestmentHoldingsOutputSchema,
+  ManualCategorizedExamplesOutputSchema,
   PaginatedListOutputSchema,
   ProjectionAssumptionsOutputSchema,
   RecurringSchedulesOutputSchema,
   RuleListOutputSchema,
+  RuleCandidatePatternsOutputSchema,
   SearchTransactionsOutputSchema,
 } from './mcp-schemas';
+import { McpCategorizationService } from './mcp-categorization.service';
 
 const DateStringSchema = z
   .string()
@@ -67,10 +75,38 @@ const CursorSchema = z
   .optional()
   .describe('Opaque cursor returned by the previous pageInfo.nextCursor.');
 const DetailLevelSchema = z.enum(['summary', 'standard', 'detailed']);
+const IgnoredCategoryIdsSchema = z
+  .array(UuidSchema)
+  .max(100)
+  .optional()
+  .describe(
+    'Optional manual category IDs to ignore when counting manual conflicts.',
+  );
+const RuleCandidatePatternFieldSchema = z.enum([
+  'merchantName',
+  'website',
+  'merchantEntityId',
+  'providerCategoryDetailed',
+  'providerCategoryPrimary',
+]);
 
 const READ_ONLY_ANNOTATIONS: ToolAnnotations = {
   readOnlyHint: true,
   destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
+
+const ADDITIVE_WRITE_ANNOTATIONS: ToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+};
+
+const DESTRUCTIVE_IDEMPOTENT_WRITE_ANNOTATIONS: ToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: true,
   idempotentHint: true,
   openWorldHint: false,
 };
@@ -85,7 +121,7 @@ For custom spending patterns not covered by get_cashflow_analysis, call list_tra
 
 For projections, use get_accounts_snapshot for current state and list_balance_snapshots for historical account-level baselines. Ask the user for future income, expense, return, allocation, or one-time-event assumptions; do not invent them.
 
-Every tool returns structuredContent and declares an outputSchema. Use structuredContent for validation and parsing; text content mirrors the same JSON for older clients. Tools are annotated read-only unless a future guide explicitly says otherwise.
+Every tool returns structuredContent and declares an outputSchema. Use structuredContent for validation and parsing; text content mirrors the same JSON for older clients. Inspect tool annotations before calling mutation tools.
 
 Available prompts: monthly_cashflow_review, projection_builder, category_cleanup_audit, portfolio_snapshot, and tax_or_refund_anomaly_review. Prompts provide workflow guidance and still require clients to call the listed tools.
 
@@ -99,7 +135,7 @@ Use list_investment_holdings for current or date-specific investment positions. 
 
 Use list_recurring_manual_transaction_schedules as user-known projection assumptions before asking the user to restate recurring income or expenses. Schedules are projection inputs, not generated future transactions.
 
-Use list_analysis_rules to explain configured cash-flow rules, then get_cashflow_analysis_audit for date-range-specific rule effects. Use list_categorization_rules and list_categorization_rule_recommendations to explain category automation context; these MCP tools are read-only and cannot create, apply, accept, or dismiss rules.
+Use list_analysis_rules to explain configured cash-flow rules, then get_cashflow_analysis_audit for date-range-specific rule effects. Use list_categorization_rules and list_categorization_rule_recommendations to explain category automation context. MCP personal access tokens are full-scope automation keys. Trusted clients can inspect manual examples and candidate patterns, preview a proposed categorization rule draft, create the user-approved rule with the matching preview token, preview a saved rule application, and apply it with the matching preview token. Treat Splice preview counts as authoritative; do not rely on client-estimated impact. Rule application never overwrites manual transactions or manual category assignments.
 
 Use reportingCurrency from get_user_context.currency unless the user asks for another currency. Compare amounts using convertedAmount. Native amount preserves the original transaction currency.
 
@@ -300,6 +336,12 @@ export class SpliceMcpService {
     'list_analysis_rules',
     'list_categorization_rules',
     'list_categorization_rule_recommendations',
+    'list_manual_categorized_transaction_examples',
+    'list_rule_candidate_patterns',
+    'preview_categorization_rule_draft',
+    'create_categorization_rule',
+    'preview_categorization_rule_application',
+    'apply_categorization_rule',
     'get_cashflow_analysis',
     'list_cashflow_category_transactions',
     'get_cashflow_analysis_audit',
@@ -316,6 +358,7 @@ export class SpliceMcpService {
     private readonly balanceHistorySurfaceService: BalanceHistorySurfaceService,
     private readonly transactionsSurfaceService: TransactionsSurfaceService,
     private readonly mcpReadService: McpReadService,
+    private readonly mcpCategorizationService: McpCategorizationService,
     private readonly transactionAnalysisService: TransactionAnalysisService,
   ) {}
 
@@ -857,6 +900,172 @@ export class SpliceMcpService {
           await this.mcpReadService.listCategorizationRuleRecommendations(
             userId,
           ),
+        ),
+    );
+
+    server.registerTool(
+      'list_manual_categorized_transaction_examples',
+      {
+        title: 'List Manual Categorized Transaction Examples',
+        description:
+          'List historical manually categorized transactions as evidence for MCP clients proposing deterministic categorization rules.',
+        inputSchema: {
+          categoryId: UuidSchema.optional().describe(
+            'Optional target category ID to restrict manual examples.',
+          ),
+          query: z
+            .string()
+            .trim()
+            .min(1)
+            .optional()
+            .describe('Optional merchant or transaction text search.'),
+          limit: z
+            .number()
+            .int()
+            .min(1)
+            .max(100)
+            .optional()
+            .describe('Defaults to the backend evidence limit, maximum 100.'),
+          ignoredCategoryIds: IgnoredCategoryIdsSchema,
+        },
+        outputSchema: ManualCategorizedExamplesOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpCategorizationService.listManualCategorizedTransactionExamples(
+            userId,
+            input,
+          ),
+        ),
+    );
+
+    server.registerTool(
+      'list_rule_candidate_patterns',
+      {
+        title: 'List Rule Candidate Patterns',
+        description:
+          'List deterministic rule candidate patterns mined from historical manual categorization evidence. The MCP client decides which, if any, to propose to the user.',
+        inputSchema: {
+          fields: z
+            .array(RuleCandidatePatternFieldSchema)
+            .min(1)
+            .optional()
+            .describe('Optional transaction fields to mine for candidates.'),
+          minAgreement: z
+            .number()
+            .int()
+            .min(1)
+            .max(50)
+            .optional()
+            .describe('Minimum historical manual agreements required.'),
+          maxConflictRate: z
+            .number()
+            .min(0)
+            .max(1)
+            .optional()
+            .describe('Maximum acceptable manual conflict rate from 0 to 1.'),
+          limit: z
+            .number()
+            .int()
+            .min(1)
+            .max(100)
+            .optional()
+            .describe('Defaults to the backend candidate limit, maximum 100.'),
+          ignoredCategoryIds: IgnoredCategoryIdsSchema,
+        },
+        outputSchema: RuleCandidatePatternsOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpCategorizationService.listRuleCandidatePatterns(
+            userId,
+            input,
+          ),
+        ),
+    );
+
+    server.registerTool(
+      'preview_categorization_rule_draft',
+      {
+        title: 'Preview Categorization Rule Draft',
+        description:
+          'Preview a client-proposed categorization rule draft with the Splice rule engine. Use the returned previewToken only for the exact normalized draft the user approves.',
+        inputSchema: {
+          targetCategoryId: UuidSchema,
+          priority: z.number().int().optional(),
+          conditions: z.array(CategorizationRuleConditionSchema).min(1),
+          ignoredManualCategoryIds: IgnoredCategoryIdsSchema,
+        },
+        outputSchema: CategorizationRuleDraftPreviewOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpCategorizationService.previewDraft(userId, input),
+        ),
+    );
+
+    server.registerTool(
+      'create_categorization_rule',
+      {
+        title: 'Create Categorization Rule',
+        description:
+          'Create a user-approved categorization rule from an exact previously previewed draft. Requires the previewToken returned by preview_categorization_rule_draft.',
+        inputSchema: {
+          name: z.string().trim().min(1).max(80),
+          targetCategoryId: UuidSchema,
+          priority: z.number().int().optional(),
+          conditions: z.array(CategorizationRuleConditionSchema).min(1),
+          previewToken: z.string().min(1),
+        },
+        outputSchema: CreateCategorizationRuleOutputSchema,
+        annotations: ADDITIVE_WRITE_ANNOTATIONS,
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpCategorizationService.createRule(userId, input),
+        ),
+    );
+
+    server.registerTool(
+      'preview_categorization_rule_application',
+      {
+        title: 'Preview Categorization Rule Application',
+        description:
+          'Preview applying a saved categorization rule to existing transactions. Use the returned previewToken only for applying the same saved rule.',
+        inputSchema: {
+          ruleId: UuidSchema,
+        },
+        outputSchema: CategorizationRuleApplicationPreviewOutputSchema,
+        annotations: READ_ONLY_ANNOTATIONS,
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpCategorizationService.previewRuleApplication(
+            userId,
+            input.ruleId,
+          ),
+        ),
+    );
+
+    server.registerTool(
+      'apply_categorization_rule',
+      {
+        title: 'Apply Categorization Rule',
+        description:
+          'Apply a saved categorization rule to existing non-manual transactions after preview. Requires the previewToken returned by preview_categorization_rule_application.',
+        inputSchema: {
+          ruleId: UuidSchema,
+          previewToken: z.string().min(1),
+        },
+        outputSchema: ApplyCategorizationRuleOutputSchema,
+        annotations: DESTRUCTIVE_IDEMPOTENT_WRITE_ANNOTATIONS,
+      },
+      async (input) =>
+        toolResult(
+          await this.mcpCategorizationService.applyRule(userId, input),
         ),
     );
 

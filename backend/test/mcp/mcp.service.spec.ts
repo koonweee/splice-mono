@@ -36,6 +36,14 @@ describe('SpliceMcpService', () => {
     listCategorizationRules: jest.fn(),
     listCategorizationRuleRecommendations: jest.fn(),
   };
+  const mcpCategorizationService = {
+    listManualCategorizedTransactionExamples: jest.fn(),
+    listRuleCandidatePatterns: jest.fn(),
+    previewDraft: jest.fn(),
+    createRule: jest.fn(),
+    previewRuleApplication: jest.fn(),
+    applyRule: jest.fn(),
+  };
   const transactionAnalysisService = {
     getAnalysis: jest.fn(),
     getCategoryTransactions: jest.fn(),
@@ -51,6 +59,7 @@ describe('SpliceMcpService', () => {
       balanceHistorySurfaceService as never,
       transactionsSurfaceService as never,
       mcpReadService as never,
+      mcpCategorizationService as never,
       transactionAnalysisService as never,
     );
   });
@@ -85,13 +94,15 @@ describe('SpliceMcpService', () => {
     };
   }
 
-  it('registers read-only MCP tools including cashflow analysis', async () => {
+  it('registers MCP tools with read and write annotations', async () => {
     const { client, close } = await connect(service.createServer(mockUserId));
 
     try {
       const result = await client.listTools();
-
-      expect(result.tools.map((tool) => tool.name).sort()).toEqual([
+      const toolsByName = new Map(
+        result.tools.map((tool) => [tool.name, tool]),
+      );
+      const readOnlyToolNames = [
         'collect_projection_assumptions',
         'get_accounts_snapshot',
         'get_balance_history',
@@ -106,24 +117,77 @@ describe('SpliceMcpService', () => {
         'list_categorization_rules',
         'list_investment_activity',
         'list_investment_holdings',
+        'list_manual_categorized_transaction_examples',
         'list_recurring_manual_transaction_schedules',
+        'list_rule_candidate_patterns',
         'list_transactions',
+        'preview_categorization_rule_application',
+        'preview_categorization_rule_draft',
+        'search_transactions',
+        'show_cashflow_explorer',
+        'show_category_rule_workbench',
+        'show_portfolio_viewer',
+        'show_projection_scenario_modeler',
+      ];
+
+      expect(result.tools.map((tool) => tool.name).sort()).toEqual([
+        'apply_categorization_rule',
+        'collect_projection_assumptions',
+        'create_categorization_rule',
+        'get_accounts_snapshot',
+        'get_balance_history',
+        'get_cashflow_analysis',
+        'get_cashflow_analysis_audit',
+        'get_user_context',
+        'list_analysis_rules',
+        'list_balance_snapshots',
+        'list_cashflow_category_transactions',
+        'list_categories',
+        'list_categorization_rule_recommendations',
+        'list_categorization_rules',
+        'list_investment_activity',
+        'list_investment_holdings',
+        'list_manual_categorized_transaction_examples',
+        'list_recurring_manual_transaction_schedules',
+        'list_rule_candidate_patterns',
+        'list_transactions',
+        'preview_categorization_rule_application',
+        'preview_categorization_rule_draft',
         'search_transactions',
         'show_cashflow_explorer',
         'show_category_rule_workbench',
         'show_portfolio_viewer',
         'show_projection_scenario_modeler',
       ]);
-      expect(
-        result.tools.every(
-          (tool) =>
-            tool.outputSchema &&
-            tool.annotations?.readOnlyHint === true &&
-            tool.annotations.destructiveHint === false &&
-            tool.annotations.idempotentHint === true &&
-            tool.annotations.openWorldHint === false,
-        ),
-      ).toBe(true);
+      for (const name of readOnlyToolNames) {
+        expect(toolsByName.get(name)).toMatchObject({
+          outputSchema: expect.any(Object),
+          annotations: {
+            readOnlyHint: true,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: false,
+          },
+        });
+      }
+      expect(toolsByName.get('create_categorization_rule')).toMatchObject({
+        outputSchema: expect.any(Object),
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
+      });
+      expect(toolsByName.get('apply_categorization_rule')).toMatchObject({
+        outputSchema: expect.any(Object),
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      });
     } finally {
       await close();
     }
@@ -169,6 +233,12 @@ describe('SpliceMcpService', () => {
       expect(
         'text' in guide.contents[0] ? guide.contents[0].text : '',
       ).toContain('monthly_cashflow_review');
+      expect(
+        'text' in guide.contents[0] ? guide.contents[0].text : '',
+      ).toContain('full-scope automation keys');
+      expect(
+        'text' in guide.contents[0] ? guide.contents[0].text : '',
+      ).toContain('preview a proposed categorization rule draft');
     } finally {
       await close();
     }
@@ -719,6 +789,164 @@ describe('SpliceMcpService', () => {
       expect(
         mcpReadService.listCategorizationRuleRecommendations,
       ).toHaveBeenCalledWith(mockUserId);
+    } finally {
+      await close();
+    }
+  });
+
+  it('delegates categorization evidence and write tools to the MCP categorization service', async () => {
+    const ruleId = '33333333-3333-4333-8333-333333333333';
+    const conditions = [
+      { field: 'merchantName', operator: 'contains', value: 'uber' },
+    ];
+    mcpCategorizationService.listManualCategorizedTransactionExamples.mockResolvedValue(
+      {
+        transactions: [],
+      },
+    );
+    mcpCategorizationService.listRuleCandidatePatterns.mockResolvedValue({
+      filters: {
+        fields: ['merchantName'],
+        minAgreement: 2,
+        maxConflictRate: 0,
+        limit: 10,
+      },
+      candidates: [],
+    });
+    mcpCategorizationService.previewDraft.mockResolvedValue({
+      matched: 5,
+      updated: 4,
+      skippedManual: 1,
+      manualAgreement: 1,
+      manualConflicts: 0,
+      existingRuleOverlap: 0,
+      transactions: [],
+      normalizedDraft: {
+        targetCategoryId: mockCategoryId,
+        conditions,
+      },
+      previewToken: 'draft-token',
+    });
+    mcpCategorizationService.createRule.mockResolvedValue({
+      rule: {
+        id: ruleId,
+        name: 'Uber rides',
+      },
+    });
+    mcpCategorizationService.previewRuleApplication.mockResolvedValue({
+      matched: 5,
+      updated: 4,
+      skippedManual: 1,
+      transactions: [],
+      previewToken: 'apply-token',
+    });
+    mcpCategorizationService.applyRule.mockResolvedValue({
+      matched: 5,
+      updated: 4,
+      skippedManual: 1,
+    });
+
+    const { client, close } = await connect(service.createServer(mockUserId));
+
+    try {
+      await client.callTool({
+        name: 'list_manual_categorized_transaction_examples',
+        arguments: {
+          categoryId: mockCategoryId,
+          query: 'uber',
+          limit: 25,
+          ignoredCategoryIds: [mockCategoryId],
+        },
+      });
+      await client.callTool({
+        name: 'list_rule_candidate_patterns',
+        arguments: {
+          fields: ['merchantName'],
+          minAgreement: 2,
+          maxConflictRate: 0,
+          limit: 10,
+          ignoredCategoryIds: [mockCategoryId],
+        },
+      });
+      const preview = (await client.callTool({
+        name: 'preview_categorization_rule_draft',
+        arguments: {
+          targetCategoryId: mockCategoryId,
+          conditions,
+          ignoredManualCategoryIds: [mockCategoryId],
+        },
+      })) as CallToolResult;
+      const created = (await client.callTool({
+        name: 'create_categorization_rule',
+        arguments: {
+          name: 'Uber rides',
+          targetCategoryId: mockCategoryId,
+          conditions,
+          previewToken: 'draft-token',
+        },
+      })) as CallToolResult;
+      const applicationPreview = (await client.callTool({
+        name: 'preview_categorization_rule_application',
+        arguments: { ruleId },
+      })) as CallToolResult;
+      const applied = (await client.callTool({
+        name: 'apply_categorization_rule',
+        arguments: { ruleId, previewToken: 'apply-token' },
+      })) as CallToolResult;
+
+      expect(
+        mcpCategorizationService.listManualCategorizedTransactionExamples,
+      ).toHaveBeenCalledWith(mockUserId, {
+        categoryId: mockCategoryId,
+        query: 'uber',
+        limit: 25,
+        ignoredCategoryIds: [mockCategoryId],
+      });
+      expect(
+        mcpCategorizationService.listRuleCandidatePatterns,
+      ).toHaveBeenCalledWith(mockUserId, {
+        fields: ['merchantName'],
+        minAgreement: 2,
+        maxConflictRate: 0,
+        limit: 10,
+        ignoredCategoryIds: [mockCategoryId],
+      });
+      expect(mcpCategorizationService.previewDraft).toHaveBeenCalledWith(
+        mockUserId,
+        {
+          targetCategoryId: mockCategoryId,
+          conditions,
+          ignoredManualCategoryIds: [mockCategoryId],
+        },
+      );
+      expect(mcpCategorizationService.createRule).toHaveBeenCalledWith(
+        mockUserId,
+        {
+          name: 'Uber rides',
+          targetCategoryId: mockCategoryId,
+          conditions,
+          previewToken: 'draft-token',
+        },
+      );
+      expect(
+        mcpCategorizationService.previewRuleApplication,
+      ).toHaveBeenCalledWith(mockUserId, ruleId);
+      expect(mcpCategorizationService.applyRule).toHaveBeenCalledWith(
+        mockUserId,
+        { ruleId, previewToken: 'apply-token' },
+      );
+      expect(preview.structuredContent).toMatchObject({
+        previewToken: 'draft-token',
+      });
+      expect(created.structuredContent).toMatchObject({
+        rule: { id: ruleId },
+      });
+      expect(applicationPreview.structuredContent).toMatchObject({
+        previewToken: 'apply-token',
+      });
+      expect(applied.structuredContent).toMatchObject({
+        updated: 4,
+      });
     } finally {
       await close();
     }

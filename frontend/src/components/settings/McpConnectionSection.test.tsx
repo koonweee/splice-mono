@@ -70,6 +70,7 @@ describe('McpConnectionSection', () => {
     expect(screen.getByTestId('mcp-config').textContent).toContain(
       '"Authorization": "Bearer splice_pat_..."',
     )
+    expect(screen.getByText(/full-scope automation keys/i)).toBeTruthy()
   })
 
   it('copies the endpoint', async () => {
