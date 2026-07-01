@@ -77,6 +77,7 @@ const createMockSnapshotEntity = (
   availableAmount: number,
   currentAmount: number,
   currency = 'USD',
+  updatedAt = new Date('2024-01-01'),
 ) => ({
   id: `snapshot-${accountId}-${snapshotDate}`,
   accountId,
@@ -102,7 +103,7 @@ const createMockSnapshotEntity = (
     }),
   },
   createdAt: new Date('2024-01-01'),
-  updatedAt: new Date('2024-01-01'),
+  updatedAt,
   toObject: jest.fn(),
 });
 
@@ -266,6 +267,36 @@ describe('BalanceQueryService', () => {
       expect(
         result[0].balances['acc-1'].availableBalance.balance.money.amount,
       ).toBe(90000);
+    });
+
+    it('should include latestSyncedAt for forward-filled account balances', async () => {
+      const accountEntity = createMockAccountEntity('acc-1');
+      const latestSyncedAt = new Date('2024-01-10T12:00:00.000Z');
+      const snapshotEntity = createMockSnapshotEntity(
+        'acc-1',
+        '2024-01-10',
+        90000,
+        95000,
+        'USD',
+        latestSyncedAt,
+      );
+
+      mockAccountRepository.find.mockResolvedValue([accountEntity]);
+      mockSnapshotRepository.find.mockResolvedValueOnce([snapshotEntity]);
+      mockSnapshotRepository.find.mockResolvedValueOnce([]);
+      mockSnapshotRepository.createQueryBuilder.mockReturnValue(
+        createMockQueryBuilder([snapshotEntity]),
+      );
+
+      const result = await service.getSnapshotBalancesForDateRange(
+        ['acc-1'],
+        '2024-01-15',
+        '2024-01-15',
+        mockUserId,
+      );
+
+      expect(result[0].balances['acc-1'].syncedAt).toBeUndefined();
+      expect(result[0].balances['acc-1'].latestSyncedAt).toBe(latestSyncedAt);
     });
 
     it('should return zero balances when no snapshots exist', async () => {

@@ -8011,6 +8011,590 @@ export function useMcpControllerHandleUnsupportedMethod<
 }
 
 /**
+ * Get recurring manual transaction schedules
+ */
+export const recurringManualTransactionControllerFindAll = (
+  signal?: AbortSignal,
+) => {
+  return axios<RecurringManualTransactionSchedule[]>({
+    url: `/recurring-manual-transaction`,
+    method: 'GET',
+    signal,
+  })
+}
+
+export const getRecurringManualTransactionControllerFindAllQueryKey = () => {
+  return [`/recurring-manual-transaction`] as const
+}
+
+export const getRecurringManualTransactionControllerFindAllQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof recurringManualTransactionControllerFindAll>
+  >,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
+      TError,
+      TData
+    >
+  >
+}) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getRecurringManualTransactionControllerFindAllQueryKey()
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>
+  > = ({ signal }) => recurringManualTransactionControllerFindAll(signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type RecurringManualTransactionControllerFindAllQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>
+  >
+export type RecurringManualTransactionControllerFindAllQueryError = unknown
+
+export function useRecurringManualTransactionControllerFindAll<
+  TData = Awaited<
+    ReturnType<typeof recurringManualTransactionControllerFindAll>
+  >,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof recurringManualTransactionControllerFindAll>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof recurringManualTransactionControllerFindAll>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useRecurringManualTransactionControllerFindAll<
+  TData = Awaited<
+    ReturnType<typeof recurringManualTransactionControllerFindAll>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof recurringManualTransactionControllerFindAll>
+          >,
+          TError,
+          Awaited<
+            ReturnType<typeof recurringManualTransactionControllerFindAll>
+          >
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useRecurringManualTransactionControllerFindAll<
+  TData = Awaited<
+    ReturnType<typeof recurringManualTransactionControllerFindAll>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useRecurringManualTransactionControllerFindAll<
+  TData = Awaited<
+    ReturnType<typeof recurringManualTransactionControllerFindAll>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions =
+    getRecurringManualTransactionControllerFindAllQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+/**
+ * Create a recurring manual transaction schedule
+ */
+export const recurringManualTransactionControllerCreate = (
+  createRecurringManualTransactionScheduleDto: CreateRecurringManualTransactionScheduleDto,
+  signal?: AbortSignal,
+) => {
+  return axios<RecurringManualTransactionSchedule>({
+    url: `/recurring-manual-transaction`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createRecurringManualTransactionScheduleDto,
+    signal,
+  })
+}
+
+export const getRecurringManualTransactionControllerCreateMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>,
+    TError,
+    { data: CreateRecurringManualTransactionScheduleDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>,
+  TError,
+  { data: CreateRecurringManualTransactionScheduleDto },
+  TContext
+> => {
+  const mutationKey = ['recurringManualTransactionControllerCreate']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>,
+    { data: CreateRecurringManualTransactionScheduleDto }
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return recurringManualTransactionControllerCreate(data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type RecurringManualTransactionControllerCreateMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>
+  >
+export type RecurringManualTransactionControllerCreateMutationBody =
+  CreateRecurringManualTransactionScheduleDto
+export type RecurringManualTransactionControllerCreateMutationError = void
+
+export const useRecurringManualTransactionControllerCreate = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>,
+      TError,
+      { data: CreateRecurringManualTransactionScheduleDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>,
+  TError,
+  { data: CreateRecurringManualTransactionScheduleDto },
+  TContext
+> => {
+  const mutationOptions =
+    getRecurringManualTransactionControllerCreateMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Update a recurring manual transaction schedule
+ */
+export const recurringManualTransactionControllerUpdate = (
+  id: string,
+  updateRecurringManualTransactionScheduleDto: UpdateRecurringManualTransactionScheduleDto,
+) => {
+  return axios<RecurringManualTransactionSchedule>({
+    url: `/recurring-manual-transaction/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateRecurringManualTransactionScheduleDto,
+  })
+}
+
+export const getRecurringManualTransactionControllerUpdateMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>,
+    TError,
+    { id: string; data: UpdateRecurringManualTransactionScheduleDto },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>,
+  TError,
+  { id: string; data: UpdateRecurringManualTransactionScheduleDto },
+  TContext
+> => {
+  const mutationKey = ['recurringManualTransactionControllerUpdate']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>,
+    { id: string; data: UpdateRecurringManualTransactionScheduleDto }
+  > = (props) => {
+    const { id, data } = props ?? {}
+
+    return recurringManualTransactionControllerUpdate(id, data)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type RecurringManualTransactionControllerUpdateMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>
+  >
+export type RecurringManualTransactionControllerUpdateMutationBody =
+  UpdateRecurringManualTransactionScheduleDto
+export type RecurringManualTransactionControllerUpdateMutationError = void
+
+export const useRecurringManualTransactionControllerUpdate = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>,
+      TError,
+      { id: string; data: UpdateRecurringManualTransactionScheduleDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>,
+  TError,
+  { id: string; data: UpdateRecurringManualTransactionScheduleDto },
+  TContext
+> => {
+  const mutationOptions =
+    getRecurringManualTransactionControllerUpdateMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Archive a recurring manual transaction schedule
+ */
+export const recurringManualTransactionControllerArchive = (id: string) => {
+  return axios<void>({
+    url: `/recurring-manual-transaction/${id}`,
+    method: 'DELETE',
+  })
+}
+
+export const getRecurringManualTransactionControllerArchiveMutationOptions = <
+  TError = void,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>,
+    TError,
+    { id: string },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['recurringManualTransactionControllerArchive']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {}
+
+    return recurringManualTransactionControllerArchive(id)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type RecurringManualTransactionControllerArchiveMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>
+  >
+
+export type RecurringManualTransactionControllerArchiveMutationError = void
+
+export const useRecurringManualTransactionControllerArchive = <
+  TError = void,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>,
+      TError,
+      { id: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions =
+    getRecurringManualTransactionControllerArchiveMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Pause a recurring manual transaction schedule
+ */
+export const recurringManualTransactionControllerPause = (
+  id: string,
+  signal?: AbortSignal,
+) => {
+  return axios<RecurringManualTransactionSchedule>({
+    url: `/recurring-manual-transaction/${id}/pause`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getRecurringManualTransactionControllerPauseMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>,
+    TError,
+    { id: string },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['recurringManualTransactionControllerPause']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {}
+
+    return recurringManualTransactionControllerPause(id)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type RecurringManualTransactionControllerPauseMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>
+  >
+
+export type RecurringManualTransactionControllerPauseMutationError = unknown
+
+export const useRecurringManualTransactionControllerPause = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>,
+      TError,
+      { id: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions =
+    getRecurringManualTransactionControllerPauseMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
+ * Resume a recurring manual transaction schedule
+ */
+export const recurringManualTransactionControllerResume = (
+  id: string,
+  signal?: AbortSignal,
+) => {
+  return axios<RecurringManualTransactionSchedule>({
+    url: `/recurring-manual-transaction/${id}/resume`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getRecurringManualTransactionControllerResumeMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>,
+    TError,
+    { id: string },
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ['recurringManualTransactionControllerResume']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {}
+
+    return recurringManualTransactionControllerResume(id)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type RecurringManualTransactionControllerResumeMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>
+  >
+
+export type RecurringManualTransactionControllerResumeMutationError = unknown
+
+export const useRecurringManualTransactionControllerResume = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>,
+      TError,
+      { id: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions =
+    getRecurringManualTransactionControllerResumeMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+/**
  * Get cash flow analysis grouped by category for an activity date range. Pending transactions are included and treated like settled transactions. Exact equal-and-opposite transactions can be neutralized using the user lookaround setting before aggregation. Returns inflow/outflow breakdowns with amounts converted to the user preferred currency.
  */
 export const transactionAnalysisControllerGetAnalysis = (
@@ -9235,590 +9819,6 @@ export const useNotificationControllerRevokeCurrentPushSubscription = <
     getNotificationControllerRevokeCurrentPushSubscriptionMutationOptions(
       options,
     )
-
-  return useMutation(mutationOptions, queryClient)
-}
-
-/**
- * Get recurring manual transaction schedules
- */
-export const recurringManualTransactionControllerFindAll = (
-  signal?: AbortSignal,
-) => {
-  return axios<RecurringManualTransactionSchedule[]>({
-    url: `/recurring-manual-transaction`,
-    method: 'GET',
-    signal,
-  })
-}
-
-export const getRecurringManualTransactionControllerFindAllQueryKey = () => {
-  return [`/recurring-manual-transaction`] as const
-}
-
-export const getRecurringManualTransactionControllerFindAllQueryOptions = <
-  TData = Awaited<
-    ReturnType<typeof recurringManualTransactionControllerFindAll>
-  >,
-  TError = unknown,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
-      TError,
-      TData
-    >
-  >
-}) => {
-  const { query: queryOptions } = options ?? {}
-
-  const queryKey =
-    queryOptions?.queryKey ??
-    getRecurringManualTransactionControllerFindAllQueryKey()
-
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>
-  > = ({ signal }) => recurringManualTransactionControllerFindAll(signal)
-
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type RecurringManualTransactionControllerFindAllQueryResult =
-  NonNullable<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>
-  >
-export type RecurringManualTransactionControllerFindAllQueryError = unknown
-
-export function useRecurringManualTransactionControllerFindAll<
-  TData = Awaited<
-    ReturnType<typeof recurringManualTransactionControllerFindAll>
-  >,
-  TError = unknown,
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof recurringManualTransactionControllerFindAll>
-          >,
-          TError,
-          Awaited<
-            ReturnType<typeof recurringManualTransactionControllerFindAll>
-          >
-        >,
-        'initialData'
-      >
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-export function useRecurringManualTransactionControllerFindAll<
-  TData = Awaited<
-    ReturnType<typeof recurringManualTransactionControllerFindAll>
-  >,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof recurringManualTransactionControllerFindAll>
-          >,
-          TError,
-          Awaited<
-            ReturnType<typeof recurringManualTransactionControllerFindAll>
-          >
-        >,
-        'initialData'
-      >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-export function useRecurringManualTransactionControllerFindAll<
-  TData = Awaited<
-    ReturnType<typeof recurringManualTransactionControllerFindAll>
-  >,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
-        TError,
-        TData
-      >
-    >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-}
-
-export function useRecurringManualTransactionControllerFindAll<
-  TData = Awaited<
-    ReturnType<typeof recurringManualTransactionControllerFindAll>
-  >,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof recurringManualTransactionControllerFindAll>>,
-        TError,
-        TData
-      >
-    >
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>
-} {
-  const queryOptions =
-    getRecurringManualTransactionControllerFindAllQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> }
-
-  query.queryKey = queryOptions.queryKey
-
-  return query
-}
-
-/**
- * Create a recurring manual transaction schedule
- */
-export const recurringManualTransactionControllerCreate = (
-  createRecurringManualTransactionScheduleDto: CreateRecurringManualTransactionScheduleDto,
-  signal?: AbortSignal,
-) => {
-  return axios<RecurringManualTransactionSchedule>({
-    url: `/recurring-manual-transaction`,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    data: createRecurringManualTransactionScheduleDto,
-    signal,
-  })
-}
-
-export const getRecurringManualTransactionControllerCreateMutationOptions = <
-  TError = void,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>,
-    TError,
-    { data: CreateRecurringManualTransactionScheduleDto },
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>,
-  TError,
-  { data: CreateRecurringManualTransactionScheduleDto },
-  TContext
-> => {
-  const mutationKey = ['recurringManualTransactionControllerCreate']
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>,
-    { data: CreateRecurringManualTransactionScheduleDto }
-  > = (props) => {
-    const { data } = props ?? {}
-
-    return recurringManualTransactionControllerCreate(data)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type RecurringManualTransactionControllerCreateMutationResult =
-  NonNullable<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>
-  >
-export type RecurringManualTransactionControllerCreateMutationBody =
-  CreateRecurringManualTransactionScheduleDto
-export type RecurringManualTransactionControllerCreateMutationError = void
-
-export const useRecurringManualTransactionControllerCreate = <
-  TError = void,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>,
-      TError,
-      { data: CreateRecurringManualTransactionScheduleDto },
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof recurringManualTransactionControllerCreate>>,
-  TError,
-  { data: CreateRecurringManualTransactionScheduleDto },
-  TContext
-> => {
-  const mutationOptions =
-    getRecurringManualTransactionControllerCreateMutationOptions(options)
-
-  return useMutation(mutationOptions, queryClient)
-}
-
-/**
- * Update a recurring manual transaction schedule
- */
-export const recurringManualTransactionControllerUpdate = (
-  id: string,
-  updateRecurringManualTransactionScheduleDto: UpdateRecurringManualTransactionScheduleDto,
-) => {
-  return axios<RecurringManualTransactionSchedule>({
-    url: `/recurring-manual-transaction/${id}`,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    data: updateRecurringManualTransactionScheduleDto,
-  })
-}
-
-export const getRecurringManualTransactionControllerUpdateMutationOptions = <
-  TError = void,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>,
-    TError,
-    { id: string; data: UpdateRecurringManualTransactionScheduleDto },
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>,
-  TError,
-  { id: string; data: UpdateRecurringManualTransactionScheduleDto },
-  TContext
-> => {
-  const mutationKey = ['recurringManualTransactionControllerUpdate']
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>,
-    { id: string; data: UpdateRecurringManualTransactionScheduleDto }
-  > = (props) => {
-    const { id, data } = props ?? {}
-
-    return recurringManualTransactionControllerUpdate(id, data)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type RecurringManualTransactionControllerUpdateMutationResult =
-  NonNullable<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>
-  >
-export type RecurringManualTransactionControllerUpdateMutationBody =
-  UpdateRecurringManualTransactionScheduleDto
-export type RecurringManualTransactionControllerUpdateMutationError = void
-
-export const useRecurringManualTransactionControllerUpdate = <
-  TError = void,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>,
-      TError,
-      { id: string; data: UpdateRecurringManualTransactionScheduleDto },
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof recurringManualTransactionControllerUpdate>>,
-  TError,
-  { id: string; data: UpdateRecurringManualTransactionScheduleDto },
-  TContext
-> => {
-  const mutationOptions =
-    getRecurringManualTransactionControllerUpdateMutationOptions(options)
-
-  return useMutation(mutationOptions, queryClient)
-}
-
-/**
- * Archive a recurring manual transaction schedule
- */
-export const recurringManualTransactionControllerArchive = (id: string) => {
-  return axios<void>({
-    url: `/recurring-manual-transaction/${id}`,
-    method: 'DELETE',
-  })
-}
-
-export const getRecurringManualTransactionControllerArchiveMutationOptions = <
-  TError = void,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>,
-    TError,
-    { id: string },
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>,
-  TError,
-  { id: string },
-  TContext
-> => {
-  const mutationKey = ['recurringManualTransactionControllerArchive']
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>,
-    { id: string }
-  > = (props) => {
-    const { id } = props ?? {}
-
-    return recurringManualTransactionControllerArchive(id)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type RecurringManualTransactionControllerArchiveMutationResult =
-  NonNullable<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>
-  >
-
-export type RecurringManualTransactionControllerArchiveMutationError = void
-
-export const useRecurringManualTransactionControllerArchive = <
-  TError = void,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>,
-      TError,
-      { id: string },
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof recurringManualTransactionControllerArchive>>,
-  TError,
-  { id: string },
-  TContext
-> => {
-  const mutationOptions =
-    getRecurringManualTransactionControllerArchiveMutationOptions(options)
-
-  return useMutation(mutationOptions, queryClient)
-}
-
-/**
- * Pause a recurring manual transaction schedule
- */
-export const recurringManualTransactionControllerPause = (
-  id: string,
-  signal?: AbortSignal,
-) => {
-  return axios<RecurringManualTransactionSchedule>({
-    url: `/recurring-manual-transaction/${id}/pause`,
-    method: 'POST',
-    signal,
-  })
-}
-
-export const getRecurringManualTransactionControllerPauseMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>,
-    TError,
-    { id: string },
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>,
-  TError,
-  { id: string },
-  TContext
-> => {
-  const mutationKey = ['recurringManualTransactionControllerPause']
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>,
-    { id: string }
-  > = (props) => {
-    const { id } = props ?? {}
-
-    return recurringManualTransactionControllerPause(id)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type RecurringManualTransactionControllerPauseMutationResult =
-  NonNullable<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>
-  >
-
-export type RecurringManualTransactionControllerPauseMutationError = unknown
-
-export const useRecurringManualTransactionControllerPause = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>,
-      TError,
-      { id: string },
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof recurringManualTransactionControllerPause>>,
-  TError,
-  { id: string },
-  TContext
-> => {
-  const mutationOptions =
-    getRecurringManualTransactionControllerPauseMutationOptions(options)
-
-  return useMutation(mutationOptions, queryClient)
-}
-
-/**
- * Resume a recurring manual transaction schedule
- */
-export const recurringManualTransactionControllerResume = (
-  id: string,
-  signal?: AbortSignal,
-) => {
-  return axios<RecurringManualTransactionSchedule>({
-    url: `/recurring-manual-transaction/${id}/resume`,
-    method: 'POST',
-    signal,
-  })
-}
-
-export const getRecurringManualTransactionControllerResumeMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>,
-    TError,
-    { id: string },
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>,
-  TError,
-  { id: string },
-  TContext
-> => {
-  const mutationKey = ['recurringManualTransactionControllerResume']
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>,
-    { id: string }
-  > = (props) => {
-    const { id } = props ?? {}
-
-    return recurringManualTransactionControllerResume(id)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type RecurringManualTransactionControllerResumeMutationResult =
-  NonNullable<
-    Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>
-  >
-
-export type RecurringManualTransactionControllerResumeMutationError = unknown
-
-export const useRecurringManualTransactionControllerResume = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>,
-      TError,
-      { id: string },
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof recurringManualTransactionControllerResume>>,
-  TError,
-  { id: string },
-  TContext
-> => {
-  const mutationOptions =
-    getRecurringManualTransactionControllerResumeMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }

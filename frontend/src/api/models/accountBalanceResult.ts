@@ -14,4 +14,5 @@ export interface AccountBalanceResult {
   currentBalance: BalanceWithConvertedBalance
   effectiveBalance: BalanceWithConvertedBalance
   syncedAt?: string
+  latestSyncedAt?: string
 }

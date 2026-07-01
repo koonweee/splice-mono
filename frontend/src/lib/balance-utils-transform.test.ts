@@ -53,6 +53,35 @@ describe('balance-utils transform', () => {
       )
       expect(data.chartData).toHaveLength(4)
     })
+
+    it('should use account-level latestSyncedAt for account summaries', () => {
+      const data = transformToDashboardData(
+        [
+          {
+            date: '2026-06-01',
+            balances: {
+              acc1: {
+                account: {
+                  id: 'acc1',
+                  name: 'Forward-filled Account',
+                  type: AccountType.investment,
+                },
+                effectiveBalance: {
+                  balance: {
+                    money: { amount: 10000, currency: 'USD' },
+                    sign: MoneyWithSignSign.positive,
+                  },
+                },
+                latestSyncedAt: '2026-05-25T07:06:11.560Z',
+              },
+            },
+          },
+        ] as any,
+        TimePeriod.month,
+      )
+
+      expect(data.assets[0].syncedAt).toBe('2026-05-25T07:06:11.560Z')
+    })
   })
 
   describe('transformToAccountChartData', () => {
