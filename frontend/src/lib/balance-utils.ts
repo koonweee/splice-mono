@@ -277,7 +277,10 @@ export function transformToDashboardData(
           changeAmount: accountChangeAmount,
           institutionName:
             accountResult.account.bankLink?.institutionName ?? undefined,
-          syncedAt: getLatestSyncedAt(sortedResults, accountId)?.toISOString(),
+          syncedAt: getLatestAccountSyncedAt(
+            sortedResults,
+            accountId,
+          )?.toISOString(),
           archivedAt: (accountResult.account as { archivedAt?: string | null })
             .archivedAt,
         }
@@ -397,4 +400,29 @@ export function getLatestSyncedAt(
   })
 
   return latest
+}
+
+/**
+ * Get the most recent account-level sync timestamp from query results.
+ * Falls back to per-date syncedAt for API responses generated before
+ * latestSyncedAt existed.
+ */
+export function getLatestAccountSyncedAt(
+  results: Array<BalanceQueryPerDateResult>,
+  accountId: string,
+): Date | undefined {
+  let latest: Date | undefined
+
+  results.forEach((result) => {
+    const balance =
+      accountId in result.balances ? result.balances[accountId] : undefined
+    const latestSyncedAt = balance?.latestSyncedAt
+      ? new Date(balance.latestSyncedAt)
+      : undefined
+    if (latestSyncedAt && (!latest || latestSyncedAt > latest)) {
+      latest = latestSyncedAt
+    }
+  })
+
+  return latest ?? getLatestSyncedAt(results, accountId)
 }

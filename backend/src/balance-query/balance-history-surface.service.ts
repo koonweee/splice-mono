@@ -149,6 +149,26 @@ function getLatestSyncedAt(
   return latest;
 }
 
+function getLatestAccountSyncedAt(
+  results: BalanceQueryPerDateResult[],
+  accountId: string,
+): Date | undefined {
+  let latest: Date | undefined;
+
+  results.forEach((result) => {
+    const balance =
+      accountId in result.balances ? result.balances[accountId] : undefined;
+    if (balance?.latestSyncedAt) {
+      const latestSyncedAt = new Date(balance.latestSyncedAt);
+      if (!latest || latestSyncedAt > latest) {
+        latest = latestSyncedAt;
+      }
+    }
+  });
+
+  return latest ?? getLatestSyncedAt(results, accountId);
+}
+
 @Injectable()
 export class BalanceHistorySurfaceService {
   constructor(private readonly balanceQueryService: BalanceQueryService) {}
@@ -284,7 +304,7 @@ export class BalanceHistorySurfaceService {
             changePercent: accountChangePercent,
             institutionName:
               accountResult.account.bankLink?.institutionName ?? null,
-            syncedAt: getLatestSyncedAt(
+            syncedAt: getLatestAccountSyncedAt(
               sortedResults,
               accountId,
             )?.toISOString(),

@@ -1,12 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
-import { Between, In, Repository } from 'typeorm';
+import { Between, In, Not, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { calculateEffectiveBalance as calculateSharedEffectiveBalance } from '../common/effective-balance';
 import { CurrencyExchangeService } from '../currency-exchange/currency-exchange.service';
 import type { Account } from '../types/Account';
+import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import type {
   AccountBalanceResult,
   BalanceQueryPerDateResult,
@@ -88,6 +89,11 @@ export class BalanceQueryService {
       return [];
     }
 
+    const latestSyncedAtByAccount = await this.getLatestSyncedAtByAccount(
+      validAccountIds,
+      userId,
+    );
+
     // Step 2: Fetch snapshots within the date range
     const snapshotsInRange = await this.snapshotRepository.find({
       where: {
@@ -162,6 +168,7 @@ export class BalanceQueryService {
           account,
           snapshot,
           dateStr,
+          latestSyncedAtByAccount.get(accountId),
           targetCurrency,
           ratesByDate?.get(dateStr),
         );
@@ -323,6 +330,33 @@ export class BalanceQueryService {
     return mostRecent;
   }
 
+  private async getLatestSyncedAtByAccount(
+    accountIds: string[],
+    userId: string,
+  ): Promise<Map<string, Date>> {
+    if (accountIds.length === 0) {
+      return new Map();
+    }
+
+    const snapshots = await this.snapshotRepository.find({
+      where: {
+        accountId: In(accountIds),
+        userId,
+        snapshotType: Not(BalanceSnapshotType.FORWARD_FILL),
+      },
+      order: { updatedAt: 'DESC' },
+    });
+
+    const latestSyncedAtByAccount = new Map<string, Date>();
+    snapshots.forEach((snapshot) => {
+      if (!latestSyncedAtByAccount.has(snapshot.accountId)) {
+        latestSyncedAtByAccount.set(snapshot.accountId, snapshot.updatedAt);
+      }
+    });
+
+    return latestSyncedAtByAccount;
+  }
+
   /**
    * Build the AccountBalanceResult for a single account on a single date.
    */
@@ -330,6 +364,7 @@ export class BalanceQueryService {
     account: Account,
     snapshot: BalanceSnapshotEntity | undefined,
     targetDate: string,
+    latestSyncedAt: Date | undefined,
     targetCurrency: string | undefined,
     dateRates: Map<string, RateWithSource> | undefined,
   ): AccountBalanceResult {
@@ -369,6 +404,7 @@ export class BalanceQueryService {
         dateRates,
       ),
       syncedAt,
+      latestSyncedAt,
     };
   }
 
