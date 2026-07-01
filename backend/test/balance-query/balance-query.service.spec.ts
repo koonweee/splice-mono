@@ -282,11 +282,14 @@ describe('BalanceQueryService', () => {
       );
 
       mockAccountRepository.find.mockResolvedValue([accountEntity]);
-      mockSnapshotRepository.find.mockResolvedValueOnce([snapshotEntity]);
-      mockSnapshotRepository.find.mockResolvedValueOnce([]);
-      mockSnapshotRepository.createQueryBuilder.mockReturnValue(
-        createMockQueryBuilder([snapshotEntity]),
-      );
+      mockSnapshotRepository.find.mockResolvedValue([]);
+      const latestSyncQueryBuilder = createMockQueryBuilder([snapshotEntity]);
+      const priorSnapshotQueryBuilder = createMockQueryBuilder([
+        snapshotEntity,
+      ]);
+      mockSnapshotRepository.createQueryBuilder
+        .mockReturnValueOnce(latestSyncQueryBuilder)
+        .mockReturnValueOnce(priorSnapshotQueryBuilder);
 
       const result = await service.getSnapshotBalancesForDateRange(
         ['acc-1'],
@@ -297,6 +300,13 @@ describe('BalanceQueryService', () => {
 
       expect(result[0].balances['acc-1'].syncedAt).toBeUndefined();
       expect(result[0].balances['acc-1'].latestSyncedAt).toBe(latestSyncedAt);
+      expect(latestSyncQueryBuilder.distinctOn).toHaveBeenCalledWith([
+        'snapshot.accountId',
+      ]);
+      expect(latestSyncQueryBuilder.addOrderBy).toHaveBeenCalledWith(
+        'snapshot.updatedAt',
+        'DESC',
+      );
     });
 
     it('should return zero balances when no snapshots exist', async () => {
