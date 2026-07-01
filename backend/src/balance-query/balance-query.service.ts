@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
-import { Between, In, Not, Repository } from 'typeorm';
+import { Between, In, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { calculateEffectiveBalance as calculateSharedEffectiveBalance } from '../common/effective-balance';
@@ -338,14 +338,17 @@ export class BalanceQueryService {
       return new Map();
     }
 
-    const snapshots = await this.snapshotRepository.find({
-      where: {
-        accountId: In(accountIds),
-        userId,
-        snapshotType: Not(BalanceSnapshotType.FORWARD_FILL),
-      },
-      order: { updatedAt: 'DESC' },
-    });
+    const snapshots = await this.snapshotRepository
+      .createQueryBuilder('snapshot')
+      .distinctOn(['snapshot.accountId'])
+      .where('snapshot.accountId IN (:...accountIds)', { accountIds })
+      .andWhere('snapshot.userId = :userId', { userId })
+      .andWhere('snapshot.snapshotType != :forwardFillSnapshotType', {
+        forwardFillSnapshotType: BalanceSnapshotType.FORWARD_FILL,
+      })
+      .orderBy('snapshot.accountId')
+      .addOrderBy('snapshot.updatedAt', 'DESC')
+      .getMany();
 
     const latestSyncedAtByAccount = new Map<string, Date>();
     snapshots.forEach((snapshot) => {
