@@ -290,22 +290,47 @@ export class PlaidProvider implements IBankLinkProvider {
     } = input;
     this.logger.log({ userId, redirectUri }, 'Plaid link initiated');
 
-    // Parse and validate existing provider details
-    const existingDetails = this.parseProviderUserDetails(providerUserDetails);
-
-    // Reuse existing user token or create a new one
-    let userToken: string;
     let updatedProviderUserDetails: PlaidUserDetails | undefined;
+    let linkModeParams:
+      | Pick<LinkTokenCreateRequest, 'access_token'>
+      | (Omit<
+          Pick<
+            LinkTokenCreateRequest,
+            | 'user_token'
+            | 'products'
+            | 'optional_products'
+            | 'enable_multi_item_link'
+            | 'link_customization_name'
+          >,
+          'link_customization_name'
+        > & { link_customization_name?: string });
 
-    if (existingDetails?.userToken) {
-      // Reuse existing user token
-      userToken = existingDetails.userToken;
-      this.logger.log({ userId }, 'Reusing existing Plaid user token');
+    if (accessToken) {
+      linkModeParams = { access_token: accessToken };
     } else {
-      // Create new user token and return it for persistence
-      userToken = await this.createUserToken(userId);
-      updatedProviderUserDetails = { userToken };
-      this.logger.log({ userId }, 'Created new Plaid user token');
+      const existingDetails =
+        this.parseProviderUserDetails(providerUserDetails);
+      let userToken: string;
+      if (existingDetails?.userToken) {
+        userToken = existingDetails.userToken;
+        this.logger.log({ userId }, 'Reusing existing Plaid user token');
+      } else {
+        userToken = await this.createUserToken(userId);
+        updatedProviderUserDetails = { userToken };
+        this.logger.log({ userId }, 'Created new Plaid user token');
+      }
+      linkModeParams = {
+        user_token: userToken,
+        products: [Products.Transactions],
+        optional_products: [Products.Investments],
+        enable_multi_item_link: !singleAccountSelect,
+        ...(singleAccountSelect
+          ? {
+              link_customization_name:
+                PlaidProvider.SINGLE_ACCOUNT_CONVERSION_CUSTOMIZATION_NAME,
+            }
+          : {}),
+      };
     }
 
     // Construct link token request
@@ -323,20 +348,7 @@ export class PlaidProvider implements IBankLinkProvider {
         completion_redirect_uri: redirectUri,
       },
       webhook: `${process.env.API_DOMAIN}/bank-link/webhook/plaid`,
-      ...(accessToken
-        ? { access_token: accessToken }
-        : {
-            user_token: userToken,
-            products: [Products.Transactions],
-            optional_products: [Products.Investments],
-            enable_multi_item_link: !singleAccountSelect,
-            ...(singleAccountSelect
-              ? {
-                  link_customization_name:
-                    PlaidProvider.SINGLE_ACCOUNT_CONVERSION_CUSTOMIZATION_NAME,
-                }
-              : {}),
-          }),
+      ...linkModeParams,
     };
 
     try {
@@ -423,7 +435,7 @@ export class PlaidProvider implements IBankLinkProvider {
       return undefined;
     }
 
-    if (status !== 'success') {
+    if (status.toLowerCase() !== 'success') {
       this.logger.warn(
         { status },
         'SESSION_FINISHED webhook status is not success',
@@ -959,9 +971,11 @@ export class PlaidProvider implements IBankLinkProvider {
             ? {
                 error_type: error.error_type,
                 error_code: error.error_code,
+                error_code_reason: error.error_code_reason,
                 error_message: error.error_message,
                 display_message: error.display_message,
                 suggested_action: error.suggested_action,
+                documentation_url: error.documentation_url,
                 receivedAt: new Date().toISOString(),
               }
             : null,
@@ -1040,6 +1054,31 @@ export class PlaidProvider implements IBankLinkProvider {
       );
       throw error;
     }
+  }
+
+  async getConnectionDiagnostics(
+    authentication: Record<string, any>,
+  ): Promise<Record<string, unknown>> {
+    if (!isPlaidAuthentication(authentication)) {
+      throw new Error('Missing or invalid accessToken in authentication data');
+    }
+
+    const response = await this.client.itemGet({
+      access_token: authentication.accessToken,
+    });
+    const { item } = response.data;
+
+    return {
+      update_type: item.update_type,
+      consent_expiration_time: item.consent_expiration_time ?? null,
+      error_type: item.error?.error_type ?? null,
+      error_code: item.error?.error_code ?? null,
+      error_code_reason: item.error?.error_code_reason ?? null,
+      error_message: item.error?.error_message ?? null,
+      display_message: item.error?.display_message ?? null,
+      suggested_action: item.error?.suggested_action ?? null,
+      documentation_url: item.error?.documentation_url ?? null,
+    };
   }
 
   /**

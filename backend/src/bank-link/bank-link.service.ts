@@ -50,6 +50,13 @@ type LinkConversionContext = {
   convertAccountId: string;
 };
 
+type LinkUpdateContext = {
+  mode: 'update-bank-link';
+  bankLinkId: string;
+};
+
+type LinkFlowContext = LinkConversionContext | LinkUpdateContext;
+
 const INVESTMENT_ACCOUNT_TYPES = ['investment', 'brokerage'];
 const INVESTMENT_TRANSACTION_LOOKBACK_DAYS = 730;
 
@@ -158,7 +165,10 @@ export class BankLinkService extends OwnedCrudService<
       );
     }
 
-    let conversionContext: LinkConversionContext | undefined;
+    let linkFlowContext: LinkFlowContext | undefined;
+    if (bankLinkId) {
+      linkFlowContext = { mode: 'update-bank-link', bankLinkId };
+    }
     if (convertAccountId) {
       const accountToConvert = await this.accountRepository.findOne({
         where: { id: convertAccountId, userId },
@@ -174,7 +184,7 @@ export class BankLinkService extends OwnedCrudService<
         );
       }
 
-      conversionContext = {
+      linkFlowContext = {
         mode: 'convert-manual-account',
         convertAccountId,
       };
@@ -194,7 +204,7 @@ export class BankLinkService extends OwnedCrudService<
       redirectUri,
       providerUserDetails,
       accessToken,
-      singleAccountSelect: !!conversionContext,
+      singleAccountSelect: linkFlowContext?.mode === 'convert-manual-account',
     });
 
     // If provider returned updated user details, persist them
@@ -216,7 +226,7 @@ export class BankLinkService extends OwnedCrudService<
         providerName,
         userId,
         linkResponse.immediateAccounts,
-        conversionContext,
+        this.getConversionContext(linkFlowContext),
       );
       // Return empty response (accounts created, no redirect needed)
       return {};
@@ -230,7 +240,7 @@ export class BankLinkService extends OwnedCrudService<
         providerName,
         userId,
         linkResponse.expiresAt,
-        conversionContext,
+        linkFlowContext,
       );
       this.logger.log(
         { webhookId: linkResponse.webhookId },
@@ -594,11 +604,34 @@ export class BankLinkService extends OwnedCrudService<
     }
 
     const previousStatus = bankLink.status;
+    let statusBody = statusInfo.statusBody;
+    const provider = this.providerRegistry.getProvider(bankLink.providerName);
+    if (statusInfo.status !== 'OK' && provider.getConnectionDiagnostics) {
+      try {
+        const diagnostics = await provider.getConnectionDiagnostics(
+          bankLink.authentication,
+        );
+        const meaningfulDiagnostics = Object.fromEntries(
+          Object.entries(diagnostics).filter(
+            ([, value]) => value !== null && value !== undefined,
+          ),
+        );
+        statusBody = { ...statusBody, ...meaningfulDiagnostics };
+      } catch (error) {
+        this.logger.warn(
+          {
+            bankLinkId: bankLink.id,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'Failed to enrich bank link status with provider diagnostics',
+        );
+      }
+    }
 
     // Update bank link status
     bankLink.status = statusInfo.status;
     bankLink.statusDate = new Date();
-    bankLink.statusBody = statusInfo.statusBody;
+    bankLink.statusBody = statusBody;
 
     await this.repository.save(bankLink);
     this.logger.log(
@@ -615,7 +648,7 @@ export class BankLinkService extends OwnedCrudService<
           bankLink.providerName,
           bankLink.institutionName,
           statusInfo.status,
-          statusInfo.statusBody,
+          statusBody,
           bankLink.statusDate.toISOString(),
         ),
       );
@@ -655,9 +688,20 @@ export class BankLinkService extends OwnedCrudService<
     }
 
     const userId = pendingEvent.userId;
+    const linkFlowContext = this.parseLinkFlowContext(pendingEvent.context);
     this.logger.log({ webhookId, userId }, 'Found pending webhook event');
 
     try {
+      if (linkFlowContext?.mode === 'update-bank-link') {
+        await this.completeBankLinkUpdate(linkFlowContext.bankLinkId, userId);
+        await this.webhookEventService.markCompleted(webhookId, parsedPayload);
+        this.logger.log(
+          { webhookId, bankLinkId: linkFlowContext.bankLinkId },
+          'Bank link update completed',
+        );
+        return;
+      }
+
       if (!provider.processLinkCompletion) {
         this.logger.warn(
           { providerName },
@@ -679,7 +723,7 @@ export class BankLinkService extends OwnedCrudService<
         providerName,
         userId,
         linkCompletionResponses,
-        this.parseConversionContext(pendingEvent.context),
+        this.getConversionContext(linkFlowContext),
       );
 
       // Mark webhook event as completed
@@ -1476,9 +1520,18 @@ export class BankLinkService extends OwnedCrudService<
       .getOne();
   }
 
-  private parseConversionContext(
+  private parseLinkFlowContext(
     context?: Record<string, any> | null,
-  ): LinkConversionContext | undefined {
+  ): LinkFlowContext | undefined {
+    if (
+      context?.mode === 'update-bank-link' &&
+      typeof context.bankLinkId === 'string'
+    ) {
+      return {
+        mode: 'update-bank-link',
+        bankLinkId: context.bankLinkId,
+      };
+    }
     if (
       context?.mode === 'convert-manual-account' &&
       typeof context.convertAccountId === 'string'
@@ -1489,6 +1542,31 @@ export class BankLinkService extends OwnedCrudService<
       };
     }
     return undefined;
+  }
+
+  private getConversionContext(
+    context?: LinkFlowContext,
+  ): LinkConversionContext | undefined {
+    return context?.mode === 'convert-manual-account' ? context : undefined;
+  }
+
+  private async completeBankLinkUpdate(
+    bankLinkId: string,
+    userId: string,
+  ): Promise<void> {
+    const bankLink = await this.repository.findOne({
+      where: { id: bankLinkId, userId },
+    });
+    if (!bankLink) {
+      throw new NotFoundException(`Bank link not found: ${bankLinkId}`);
+    }
+
+    await this.syncAccounts(bankLinkId, userId);
+
+    bankLink.status = 'OK';
+    bankLink.statusDate = new Date();
+    bankLink.statusBody = null;
+    await this.repository.save(bankLink);
   }
 
   private async saveBankLinkFromLinkCompletionResponse(

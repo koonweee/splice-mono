@@ -101,6 +101,14 @@ export interface IBankLinkProvider {
   getItemId?(authentication: Record<string, any>): Promise<string>;
 
   /**
+   * Get sanitized provider diagnostics for the current connection state.
+   * Optional - used to enrich webhook errors without exposing credentials.
+   */
+  getConnectionDiagnostics?(
+    authentication: Record<string, any>,
+  ): Promise<Record<string, unknown>>;
+
+  /**
    * Parse status webhooks that signal bank link status changes
    * Optional - only implemented by providers that support status webhooks
    * (e.g., Plaid ITEM webhooks: ERROR, LOGIN_REPAIRED, PENDING_DISCONNECT, PENDING_EXPIRATION)
