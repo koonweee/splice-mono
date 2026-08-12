@@ -66,6 +66,9 @@ const mockBankLinkEntity = {
   providerName: 'plaid',
   authentication: { accessToken: 'test-token' },
   accountIds: ['acc-1', 'acc-2'],
+  status: 'OK',
+  statusDate: new Date('2026-01-01T00:00:00Z'),
+  statusBody: null as Record<string, unknown> | null,
   toObject: jest.fn().mockReturnValue(mockBankLink),
 };
 
@@ -169,6 +172,9 @@ describe('BankLinkService', () => {
     mockBankLinkEntity.providerName = 'plaid';
     mockBankLinkEntity.authentication = { accessToken: 'test-token' };
     mockBankLinkEntity.accountIds = ['acc-1', 'acc-2'];
+    mockBankLinkEntity.status = 'OK';
+    mockBankLinkEntity.statusDate = new Date('2026-01-01T00:00:00Z');
+    mockBankLinkEntity.statusBody = null;
     mockBankLinkEntity.toObject.mockReturnValue(mockBankLink);
     mockAccountRepository.findOne.mockResolvedValue(null);
     mockBankLinkRepository.createQueryBuilder = jest.fn().mockReturnValue({
@@ -512,6 +518,13 @@ describe('BankLinkService', () => {
         accessToken: 'test-token',
         singleAccountSelect: false,
       });
+      expect(mockWebhookEventService.createPending).toHaveBeenCalledWith(
+        'webhook-mock-123',
+        providerName,
+        mockUserId,
+        expect.any(Date),
+        { mode: 'update-bank-link', bankLinkId },
+      );
     });
 
     it('should throw error when bankLinkId not found', async () => {
@@ -659,6 +672,55 @@ describe('BankLinkService', () => {
       expect(
         mockWebhookEventService.findPendingByWebhookId,
       ).not.toHaveBeenCalled();
+    });
+
+    it('should complete update mode without exchanging a replacement token', async () => {
+      const providerName = 'plaid';
+      mockBankLinkEntity.status = 'ERROR';
+      mockBankLinkEntity.statusBody = {
+        error_code: 'ITEM_LOGIN_REQUIRED',
+        error_code_reason: 'OAUTH_CONSENT_EXPIRED',
+      };
+      mockWebhookEventService.findPendingByWebhookId.mockResolvedValueOnce({
+        id: 'pending-webhook',
+        userId: mockUserId,
+        webhookId: 'webhook-mock-123',
+        webhookContent: null,
+        status: 'pending',
+        providerName,
+        expiresAt: null,
+        completedAt: null,
+        errorMessage: null,
+        context: {
+          mode: 'update-bank-link',
+          bankLinkId: mockBankLinkEntity.id,
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      await service.handleWebhook(
+        providerName,
+        mockRawBody,
+        mockHeaders,
+        mockParsedPayload,
+      );
+
+      expect(mockPlaidProvider.processLinkCompletion).not.toHaveBeenCalled();
+      expect(mockPlaidProvider.getAccounts).toHaveBeenCalledWith(
+        mockBankLinkEntity.authentication,
+      );
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: mockBankLinkEntity.id,
+          status: 'OK',
+          statusBody: null,
+        }),
+      );
+      expect(mockWebhookEventService.markCompleted).toHaveBeenCalledWith(
+        'webhook-mock-123',
+        mockParsedPayload,
+      );
     });
 
     it('should create accounts with rawApiAccount from provider response', async () => {
@@ -1104,6 +1166,7 @@ describe('BankLinkService', () => {
         error: {
           error_type: 'ITEM_ERROR',
           error_code: 'ITEM_LOGIN_REQUIRED',
+          error_code_reason: 'OAUTH_CONSENT_EXPIRED',
           error_message: 'the login details of this item have changed',
           display_message: 'Please update your credentials',
           suggested_action: 'relink',
@@ -1116,6 +1179,16 @@ describe('BankLinkService', () => {
         status: 'ERROR',
         statusBody: errorPayload.error,
         shouldSync: false,
+      });
+      (
+        mockPlaidProvider.getConnectionDiagnostics as jest.Mock
+      ).mockResolvedValueOnce({
+        error_type: null,
+        error_code: null,
+        error_code_reason: null,
+        error_message: null,
+        consent_expiration_time: '2027-08-01T00:00:00Z',
+        update_type: 'background',
       });
 
       const bankLinkWithStatus = {
@@ -1150,7 +1223,11 @@ describe('BankLinkService', () => {
       expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'ERROR',
-          statusBody: errorPayload.error,
+          statusBody: {
+            ...errorPayload.error,
+            consent_expiration_time: '2027-08-01T00:00:00Z',
+            update_type: 'background',
+          },
         }),
       );
       // Should NOT have synced accounts
@@ -1162,7 +1239,12 @@ describe('BankLinkService', () => {
           bankLinkId: bankLinkWithStatus.id,
           providerName: 'plaid',
           status: 'ERROR',
-          statusBody: errorPayload.error,
+          statusBody: expect.objectContaining({
+            error_code: 'ITEM_LOGIN_REQUIRED',
+            error_code_reason: 'OAUTH_CONSENT_EXPIRED',
+            error_message: 'the login details of this item have changed',
+            update_type: 'background',
+          }),
         }),
       );
     });
