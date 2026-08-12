@@ -40,6 +40,117 @@ describe('PlaidProvider', () => {
         }),
       );
     });
+
+    it('should not create a user token in update mode', async () => {
+      provider['client'] = {
+        linkTokenCreate: jest.fn().mockResolvedValue({
+          data: {
+            link_token: 'link-token-123',
+            expiration: '2026-01-01T00:00:00Z',
+            hosted_link_url: 'https://plaid.com/link',
+          },
+        }),
+      } as any;
+      provider['createUserToken'] = jest
+        .fn()
+        .mockRejectedValue(new Error('should not be called'));
+
+      await provider.initiateLinking({
+        userId: 'user-123',
+        redirectUri: 'https://app.example.com/accounts',
+        accessToken: 'access-token-123',
+      });
+
+      expect(provider['createUserToken']).not.toHaveBeenCalled();
+      expect(provider['client'].linkTokenCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          access_token: 'access-token-123',
+        }),
+      );
+      expect(provider['client'].linkTokenCreate).toHaveBeenCalledWith(
+        expect.not.objectContaining({ user_token: expect.anything() }),
+      );
+    });
+  });
+
+  describe('parseLinkCompletionWebhook', () => {
+    it.each(['success', 'SUCCESS'])('accepts %s status', (status) => {
+      expect(
+        provider.parseLinkCompletionWebhook({
+          webhook_type: 'LINK',
+          webhook_code: 'SESSION_FINISHED',
+          link_token: 'link-token-123',
+          status,
+        }),
+      ).toEqual({ linkToken: 'link-token-123' });
+    });
+  });
+
+  describe('parseStatusWebhook', () => {
+    it('preserves the machine-readable OAuth error reason', () => {
+      const result = provider.parseStatusWebhook({
+        webhook_type: 'ITEM',
+        webhook_code: 'ERROR',
+        item_id: 'item-123',
+        error: {
+          error_type: 'ITEM_ERROR',
+          error_code: 'ITEM_LOGIN_REQUIRED',
+          error_code_reason: 'OAUTH_CONSENT_EXPIRED',
+          error_message: 'Login required',
+          display_message: 'Consent expired',
+          documentation_url: 'https://plaid.com/docs/errors/item',
+        },
+      });
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          statusBody: expect.objectContaining({
+            error_code: 'ITEM_LOGIN_REQUIRED',
+            error_code_reason: 'OAUTH_CONSENT_EXPIRED',
+            documentation_url: 'https://plaid.com/docs/errors/item',
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('getConnectionDiagnostics', () => {
+    it('returns sanitized Item health fields', async () => {
+      provider['client'] = {
+        itemGet: jest.fn().mockResolvedValue({
+          data: {
+            item: {
+              item_id: 'item-123',
+              update_type: 'background',
+              consent_expiration_time: '2027-08-01T00:00:00Z',
+              error: {
+                error_type: 'ITEM_ERROR',
+                error_code: 'ITEM_LOGIN_REQUIRED',
+                error_code_reason: 'OAUTH_CONSENT_EXPIRED',
+                error_message: 'Login required',
+                display_message: 'Consent expired',
+                suggested_action: null,
+                documentation_url: 'https://plaid.com/docs/errors/item',
+              },
+            },
+          },
+        }),
+      } as any;
+
+      await expect(
+        provider.getConnectionDiagnostics({ accessToken: 'access-token' }),
+      ).resolves.toEqual({
+        update_type: 'background',
+        consent_expiration_time: '2027-08-01T00:00:00Z',
+        error_type: 'ITEM_ERROR',
+        error_code: 'ITEM_LOGIN_REQUIRED',
+        error_code_reason: 'OAUTH_CONSENT_EXPIRED',
+        error_message: 'Login required',
+        display_message: 'Consent expired',
+        suggested_action: null,
+        documentation_url: 'https://plaid.com/docs/errors/item',
+      });
+    });
   });
 
   describe('parseUpdateWebhook', () => {

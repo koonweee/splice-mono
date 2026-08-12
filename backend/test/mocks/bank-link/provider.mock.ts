@@ -146,6 +146,9 @@ export const mockPlaidProvider: IBankLinkProvider = {
   getItemId: jest.fn(function (this: void) {
     return Promise.resolve('item-mock-123');
   }),
+  getConnectionDiagnostics: jest.fn(function (this: void) {
+    return Promise.resolve({});
+  }),
   parseStatusWebhook: jest.fn(function (this: void) {
     return undefined; // Default: not a status webhook
   }),
