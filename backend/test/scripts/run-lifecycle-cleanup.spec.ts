@@ -4,6 +4,8 @@ import {
   readLifecycleCleanupGuards,
   runLifecycleCleanup,
 } from '../../src/scripts/run-lifecycle-cleanup';
+import { RefreshTokenCleanupService } from '../../src/auth/refresh-token-cleanup.service';
+import { WebhookEventCleanupService } from '../../src/webhook-event/webhook-event-cleanup.service';
 
 describe('lifecycle cleanup one-shot', () => {
   it('refuses without disabled schedules and exact confirmation', () => {
@@ -101,7 +103,10 @@ describe('lifecycle cleanup one-shot', () => {
       }),
     };
     const bankLinkLifecycle = {
-      archiveStaleEmptyBankLinks: jest.fn().mockResolvedValueOnce(3),
+      archiveStaleEmptyBankLinks: jest
+        .fn()
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(0),
       archiveEmptyBankLink: jest
         .fn()
         .mockResolvedValueOnce(true)
@@ -137,6 +142,8 @@ describe('lifecycle cleanup one-shot', () => {
     ).resolves.toEqual({
       bankLinks: {
         automaticArchivedCount: 3,
+        automaticBatchCount: 2,
+        automaticBatchLimitReached: false,
         exactGuardRequestedCount: 2,
         exactGuardArchivedCount: 1,
         exactGuardAlreadyArchivedCount: 1,
@@ -200,5 +207,65 @@ describe('lifecycle cleanup one-shot', () => {
       batchLimitReached: true,
     });
     expect(webhookCleanup.cleanupExpiredPending).toHaveBeenCalledTimes(10);
+  });
+
+  it('continues through TypeORM DELETE tuples until a partial batch', async () => {
+    const returnedRows = (prefix: string, count: number) =>
+      Array.from({ length: count }, (_, index) => ({
+        id: `${prefix}-${index}`,
+      }));
+    const webhookRepository = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce([returnedRows('webhook-a', 100), 100])
+        .mockResolvedValueOnce([returnedRows('webhook-b', 100), 100])
+        .mockResolvedValueOnce([returnedRows('webhook-c', 4), 4]),
+    };
+    const refreshTokenRepository = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce([returnedRows('token-a', 100), 100])
+        .mockResolvedValueOnce([returnedRows('token-b', 100), 100])
+        .mockResolvedValueOnce([returnedRows('token-c', 25), 25]),
+    };
+
+    const result = await runLifecycleCleanup(
+      {
+        webhookCleanup: new WebhookEventCleanupService(
+          webhookRepository as never,
+        ),
+        refreshTokenCleanup: new RefreshTokenCleanupService(
+          refreshTokenRepository as never,
+        ),
+        recommendationCleanup: {
+          expireOldPendingSuggestions: jest.fn().mockResolvedValue(0),
+        },
+        notificationCleanup: {
+          cleanupOldNotificationRecords: jest.fn().mockResolvedValue({
+            deliveries: 0,
+            notifications: 0,
+          }),
+        },
+        bankLinkLifecycle: {
+          archiveStaleEmptyBankLinks: jest.fn().mockResolvedValue(0),
+          archiveEmptyBankLink: jest.fn(),
+        },
+      },
+      [],
+      new Date('2026-08-15T18:00:00.000Z'),
+    );
+
+    expect(result.webhookContexts).toEqual({
+      affectedCount: 204,
+      batchCount: 3,
+      batchLimitReached: false,
+    });
+    expect(result.refreshTokens).toEqual({
+      affectedCount: 225,
+      batchCount: 3,
+      batchLimitReached: false,
+    });
+    expect(webhookRepository.query).toHaveBeenCalledTimes(3);
+    expect(refreshTokenRepository.query).toHaveBeenCalledTimes(3);
   });
 });

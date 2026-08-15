@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { getPostgresMutationAffectedCount } from '../common/postgres-mutation-result';
 import { RefreshTokenEntity } from './refresh-token.entity';
 
 export const REFRESH_TOKEN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -26,7 +27,7 @@ export class RefreshTokenCleanupService {
     );
     const cutoff = new Date(now.getTime() - REFRESH_TOKEN_RETENTION_MS);
 
-    const deleted = await this.repository.query<Array<{ id: string }>>(
+    const deleted: unknown = await this.repository.query(
       `WITH candidates AS (
          SELECT token."id"
          FROM "refresh_token" token
@@ -54,10 +55,11 @@ export class RefreshTokenCleanupService {
       [cutoff, batchSize],
     );
 
+    const deletedCount = getPostgresMutationAffectedCount(deleted);
     this.logger.log(
-      { cutoff, batchSize, deletedCount: deleted.length },
+      { cutoff, batchSize, deletedCount },
       'Inactive refresh token cleanup batch completed',
     );
-    return deleted.length;
+    return deletedCount;
   }
 }

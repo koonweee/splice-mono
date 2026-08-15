@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { getPostgresMutationAffectedCount } from '../common/postgres-mutation-result';
 import { WebhookEventStatus } from '../types/WebhookEvent';
 import { WebhookEventEntity } from './webhook-event.entity';
 
@@ -27,7 +28,7 @@ export class WebhookEventCleanupService {
     );
     const cutoff = new Date(now.getTime() - WEBHOOK_PENDING_RETENTION_MS);
 
-    const deleted = await this.repository.query<Array<{ id: string }>>(
+    const deleted: unknown = await this.repository.query(
       `WITH candidates AS (
          SELECT event."id"
          FROM "webhook_event_entity" event
@@ -47,10 +48,11 @@ export class WebhookEventCleanupService {
       [WebhookEventStatus.PENDING, cutoff, batchSize],
     );
 
+    const deletedCount = getPostgresMutationAffectedCount(deleted);
     this.logger.log(
-      { cutoff, batchSize, deletedCount: deleted.length },
+      { cutoff, batchSize, deletedCount },
       'Expired pending webhook context cleanup batch completed',
     );
-    return deleted.length;
+    return deletedCount;
   }
 }
