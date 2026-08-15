@@ -59,6 +59,30 @@ type LinkFlowContext = LinkConversionContext | LinkUpdateContext;
 
 const INVESTMENT_ACCOUNT_TYPES = ['investment', 'brokerage'];
 const INVESTMENT_TRANSACTION_LOOKBACK_DAYS = 730;
+const LINKED_ACCOUNT_IDENTITY_CONSTRAINT = 'UQ_account_user_bank_link_external';
+
+type PostgresError = {
+  code?: string;
+  constraint?: string;
+};
+
+function isLinkedAccountIdentityConflict(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+
+  const queryError = error as {
+    code?: string;
+    constraint?: string;
+    driverError?: PostgresError;
+  };
+  const postgresError = queryError.driverError ?? queryError;
+
+  return (
+    postgresError.code === '23505' &&
+    postgresError.constraint === LINKED_ACCOUNT_IDENTITY_CONSTRAINT
+  );
+}
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -1324,34 +1348,7 @@ export class BankLinkService extends OwnedCrudService<
       'Upserting accounts from API',
     );
 
-    // Get existing accounts by external account IDs (scoped by userId)
-    const externalAccountIds = apiAccounts.map((a) => a.accountId);
-    const existingAccounts = await this.accountRepository.find({
-      where: { externalAccountId: In(externalAccountIds), userId },
-    });
-
-    this.logger.log(
-      {
-        existingAccountCount: existingAccounts.length,
-        existingAccountIds: existingAccounts.map((a) => a.externalAccountId),
-        newAccountCount: apiAccounts.length - existingAccounts.length,
-      },
-      'Found existing accounts for upsert',
-    );
-
-    // Create a map of external account ID to existing entity
-    const existingAccountMap = new Map<string, AccountEntity>();
-    existingAccounts.forEach((account) => {
-      if (account.externalAccountId) {
-        existingAccountMap.set(account.externalAccountId, account);
-      }
-    });
-
-    // Update existing accounts or create new ones
-    const accountsToSave: AccountEntity[] = [];
-    const newAccountExternalIds = new Set<string>();
-
-    apiAccounts.forEach((apiAccount) => {
+    const accountInputs = apiAccounts.map((apiAccount) => {
       const bankLinkId = accountIdToBankLinkId.get(apiAccount.accountId);
       if (!bankLinkId) {
         throw new Error(
@@ -1359,30 +1356,115 @@ export class BankLinkService extends OwnedCrudService<
         );
       }
 
+      return {
+        apiAccount,
+        bankLinkId,
+        identity: {
+          userId,
+          bankLinkId,
+          externalAccountId: apiAccount.accountId,
+        },
+        identityKey: `${bankLinkId}:${apiAccount.accountId}`,
+      };
+    });
+    const existingAccounts = await this.accountRepository.find({
+      where: accountInputs.map(({ identity }) => identity),
+    });
+    const existingAccountMap = new Map(
+      existingAccounts.map((account) => [
+        `${account.bankLinkId}:${account.externalAccountId}`,
+        account,
+      ]),
+    );
+    const savedAccounts: AccountEntity[] = [];
+    const createdAccountIds = new Set<string>();
+    let existingAccountCount = 0;
+
+    for (const {
+      apiAccount,
+      bankLinkId,
+      identity,
+      identityKey,
+    } of accountInputs) {
       const dto = this.createAccountDtoFromAPIAccount(apiAccount, bankLinkId);
-      const existingAccount = existingAccountMap.get(apiAccount.accountId);
-      if (existingAccount) {
-        if (existingAccount.archivedAt) {
-          this.logger.log(
-            {
-              accountId: existingAccount.id,
-              externalAccountId: apiAccount.accountId,
-            },
-            'Skipping archived account during sync',
+      let account = existingAccountMap.get(identityKey) ?? null;
+      let created = false;
+
+      if (!account) {
+        const newAccount = AccountEntity.fromDto(dto, userId);
+        try {
+          const insertResult = await this.accountRepository.insert({
+            userId: newAccount.userId,
+            name: newAccount.name,
+            customName: newAccount.customName,
+            notes: newAccount.notes,
+            mask: newAccount.mask,
+            availableBalance: newAccount.availableBalance,
+            currentBalance: newAccount.currentBalance,
+            type: newAccount.type,
+            subType: newAccount.subType,
+            externalAccountId: newAccount.externalAccountId,
+            rawApiAccount: newAccount.rawApiAccount,
+            archivedAt: newAccount.archivedAt,
+            bankLinkId: newAccount.bankLinkId,
+          });
+          Object.assign(
+            newAccount,
+            insertResult.identifiers[0],
+            insertResult.generatedMaps?.[0],
           );
-          return;
+          if (!newAccount.id) {
+            throw new Error(
+              `Linked account ${apiAccount.accountId} was inserted without returning an ID`,
+            );
+          }
+          account = newAccount;
+          created = true;
+        } catch (error: unknown) {
+          if (!isLinkedAccountIdentityConflict(error)) {
+            throw error;
+          }
+
+          this.logger.log(
+            { bankLinkId, externalAccountId: apiAccount.accountId, userId },
+            'Another sync created the linked account; using the existing row',
+          );
+
+          account = await this.accountRepository.findOne({ where: identity });
+          if (!account) {
+            throw new Error(
+              `Concurrent linked account ${apiAccount.accountId} could not be loaded`,
+            );
+          }
         }
+      }
+
+      if (account.archivedAt) {
+        this.logger.log(
+          {
+            accountId: account.id,
+            externalAccountId: apiAccount.accountId,
+          },
+          'Skipping archived account during sync',
+        );
+        continue;
+      }
+
+      if (created) {
+        createdAccountIds.add(account.id);
+      } else {
+        existingAccountCount += 1;
 
         // Capture old balance for logging
-        const oldCurrentBalance = existingAccount.currentBalance;
-        this.applyAccountDtoToEntity(existingAccount, dto);
-        const newCurrentBalance = existingAccount.currentBalance;
+        const oldCurrentBalance = account.currentBalance;
+        this.applyAccountDtoToEntity(account, dto);
+        const newCurrentBalance = account.currentBalance;
 
         // Log if balance changed (compare amount values)
         if (oldCurrentBalance.amount !== newCurrentBalance.amount) {
           this.logger.log(
             {
-              accountId: existingAccount.id,
+              accountId: account.id,
               externalAccountId: apiAccount.accountId,
               oldBalance: {
                 amount: oldCurrentBalance.amount,
@@ -1396,30 +1478,30 @@ export class BankLinkService extends OwnedCrudService<
             'Account balance changed during sync',
           );
         }
-        accountsToSave.push(existingAccount);
-      } else {
-        accountsToSave.push(AccountEntity.fromDto(dto, userId));
-        newAccountExternalIds.add(apiAccount.accountId);
-      }
-    });
 
-    const savedAccounts =
-      accountsToSave.length > 0
-        ? await this.accountRepository.save(accountsToSave)
-        : [];
+        account = await this.accountRepository.save(account);
+      }
+
+      savedAccounts.push(account);
+    }
+
+    this.logger.log(
+      {
+        existingAccountCount,
+        newAccountCount: createdAccountIds.size,
+      },
+      'Finished linked account upsert',
+    );
 
     // Log event emission counts
-    const createdCount = newAccountExternalIds.size;
+    const createdCount = createdAccountIds.size;
     const updatedCount = savedAccounts.length - createdCount;
     this.logger.log({ createdCount, updatedCount }, 'Emitting account events');
 
     // Emit events for saved accounts
     savedAccounts.forEach((account) => {
       const accountObj = account.toObject();
-      if (
-        account.externalAccountId &&
-        newAccountExternalIds.has(account.externalAccountId)
-      ) {
+      if (createdAccountIds.has(account.id)) {
         this.eventEmitter.emit(
           LinkedAccountEvents.CREATED,
           new LinkedAccountCreatedEvent(accountObj),

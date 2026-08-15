@@ -24,6 +24,7 @@ describe('BankLinkService archived account sync', () => {
     );
     const archivedAccount = {
       id: 'archived-account-id',
+      bankLinkId: 'bank-link-id',
       externalAccountId: mockApiAccount.accountId,
       name: 'Archived Name',
       currentBalance: { currency: 'USD', amount: 0, sign: 'positive' },

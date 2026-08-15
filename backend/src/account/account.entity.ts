@@ -2,6 +2,7 @@ import { AccountSubtype, AccountType } from 'plaid';
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -13,6 +14,14 @@ import { Account, CreateAccountDto } from '../types/Account';
 import type { APIAccount } from '../types/BankLink';
 
 @Entity()
+@Index(
+  'UQ_account_user_bank_link_external',
+  ['userId', 'bankLinkId', 'externalAccountId'],
+  {
+    unique: true,
+    where: '"bankLinkId" IS NOT NULL AND "externalAccountId" IS NOT NULL',
+  },
+)
 export class AccountEntity extends OwnedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
