@@ -108,4 +108,26 @@ export class CategorizationRuleRecommendationProcessor {
       this.processing = false;
     }
   }
+
+  @Cron('0 15 3 * * *', {
+    name: 'categorizationRuleSuggestionExpiry',
+    timeZone: 'UTC',
+  })
+  async expireOldPendingSuggestions(): Promise<void> {
+    try {
+      const expiredCount =
+        await this.recommendationService.expireOldPendingSuggestions();
+      if (expiredCount > 0) {
+        this.logger.log(
+          { expiredCount },
+          'Expired old pending categorization rule suggestions',
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        'Failed to expire old pending categorization rule suggestions',
+      );
+    }
+  }
 }

@@ -463,6 +463,313 @@ describe('PlaidProvider', () => {
     });
   });
 
+  describe('getPendingTransactionReconciliationSnapshot', () => {
+    it('returns only posted transactions with an explicit candidate pending identity', async () => {
+      const transactionsGet = jest.fn().mockResolvedValue({
+        data: {
+          transactions: [
+            {
+              account_id: 'external-account-id',
+              amount: 12.34,
+              iso_currency_code: 'USD',
+              unofficial_currency_code: null,
+              transaction_id: 'posted-transaction-id',
+              name: 'Posted Store',
+              merchant_name: 'Posted Store',
+              original_description: null,
+              pending: false,
+              pending_transaction_id: 'stale-pending-id',
+              account_owner: null,
+              date: '2026-08-10',
+              datetime: null,
+              authorized_date: '2026-08-01',
+              authorized_datetime: null,
+              logo_url: null,
+              website: null,
+              merchant_entity_id: null,
+              payment_channel: 'in store',
+              transaction_code: null,
+              personal_finance_category_icon_url: null,
+              counterparties: [],
+              location: null,
+              payment_meta: null,
+              personal_finance_category: null,
+            },
+            {
+              account_id: 'external-account-id',
+              amount: 8,
+              iso_currency_code: 'USD',
+              unofficial_currency_code: null,
+              transaction_id: 'unrelated-transaction-id',
+              name: 'Unrelated',
+              merchant_name: null,
+              original_description: null,
+              pending: false,
+              pending_transaction_id: 'some-other-pending-id',
+              account_owner: null,
+              date: '2026-08-11',
+              datetime: null,
+              authorized_date: null,
+              authorized_datetime: null,
+              logo_url: null,
+              website: null,
+              merchant_entity_id: null,
+              payment_channel: 'other',
+              transaction_code: null,
+              personal_finance_category_icon_url: null,
+              counterparties: [],
+              location: null,
+              payment_meta: null,
+              personal_finance_category: null,
+            },
+          ],
+          total_transactions: 2,
+          accounts: [
+            {
+              account_id: 'external-account-id',
+              type: 'depository',
+              subtype: 'checking',
+            },
+          ],
+        },
+      });
+      const itemGet = jest.fn().mockResolvedValue({
+        data: {
+          item: { error: null },
+          status: {
+            transactions: {
+              last_successful_update: '2026-08-15T12:00:00.000Z',
+              last_failed_update: null,
+            },
+          },
+        },
+      });
+      provider['client'] = { transactionsGet, itemGet } as any;
+
+      const result = await provider.getPendingTransactionReconciliationSnapshot(
+        { accessToken: 'access-token' },
+        [
+          {
+            externalAccountId: 'external-account-id',
+            pendingExternalTransactionId: 'stale-pending-id',
+            providerDate: '2026-08-01',
+            localUpdatedAt: '2026-08-01T12:00:00.000Z',
+          },
+        ],
+        '2026-08-15',
+      );
+
+      expect(transactionsGet).toHaveBeenCalledWith({
+        access_token: 'access-token',
+        start_date: '2026-07-25',
+        end_date: '2026-08-15',
+        options: {
+          account_ids: ['external-account-id'],
+          count: 500,
+          offset: 0,
+          include_original_description: true,
+          include_personal_finance_category: true,
+        },
+      });
+      expect(result).toEqual(
+        expect.objectContaining({
+          complete: true,
+          presentCandidateKeys: [],
+          eligibleExternalAccountIds: ['external-account-id'],
+          startDate: '2026-07-25',
+          endDate: '2026-08-15',
+          lastSuccessfulUpdate: '2026-08-15T12:00:00.000Z',
+          replacements: [
+            expect.objectContaining({
+              accountId: 'external-account-id',
+              externalTransactionId: 'posted-transaction-id',
+              pending: false,
+              pendingTransactionId: 'stale-pending-id',
+            }),
+          ],
+        }),
+      );
+    });
+
+    it('does not treat absence from the provider window as a removal', async () => {
+      provider['client'] = {
+        transactionsGet: jest.fn().mockResolvedValue({
+          data: {
+            transactions: [],
+            total_transactions: 0,
+            accounts: [
+              {
+                account_id: 'external-account-id',
+                type: 'depository',
+                subtype: 'checking',
+              },
+            ],
+          },
+        }),
+        itemGet: jest.fn().mockResolvedValue({
+          data: {
+            item: { error: null },
+            status: {
+              transactions: {
+                last_successful_update: '2026-08-15T12:00:00.000Z',
+                last_failed_update: null,
+              },
+            },
+          },
+        }),
+      } as any;
+
+      await expect(
+        provider.getPendingTransactionReconciliationSnapshot(
+          { accessToken: 'access-token' },
+          [
+            {
+              externalAccountId: 'external-account-id',
+              pendingExternalTransactionId: 'stale-pending-id',
+              providerDate: '2026-08-01',
+              localUpdatedAt: '2026-08-01T12:00:00.000Z',
+            },
+          ],
+          '2026-08-15',
+        ),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          complete: true,
+          replacements: [],
+          presentCandidateKeys: [],
+        }),
+      );
+    });
+
+    it('marks the snapshot incomplete when pagination totals drift', async () => {
+      const account = {
+        account_id: 'external-account-id',
+        type: 'depository',
+        subtype: 'checking',
+      };
+      const transactionsGet = jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: {
+            transactions: [
+              {
+                account_id: 'external-account-id',
+                transaction_id: 'first-id',
+                pending: true,
+                pending_transaction_id: null,
+              },
+            ],
+            total_transactions: 2,
+            accounts: [account],
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            transactions: [
+              {
+                account_id: 'external-account-id',
+                transaction_id: 'second-id',
+                pending: true,
+                pending_transaction_id: null,
+              },
+            ],
+            total_transactions: 3,
+            accounts: [account],
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            transactions: [],
+            total_transactions: 3,
+            accounts: [account],
+          },
+        });
+      const itemGet = jest.fn().mockResolvedValue({
+        data: {
+          item: { error: null },
+          status: {
+            transactions: {
+              last_successful_update: '2026-08-15T12:00:00.000Z',
+              last_failed_update: null,
+            },
+          },
+        },
+      });
+      provider['client'] = { transactionsGet, itemGet } as any;
+
+      const result = await provider.getPendingTransactionReconciliationSnapshot(
+        { accessToken: 'access-token' },
+        [
+          {
+            externalAccountId: 'external-account-id',
+            pendingExternalTransactionId: 'stale-pending-id',
+            providerDate: '2026-08-01',
+            localUpdatedAt: '2026-08-01T12:00:00.000Z',
+          },
+        ],
+        '2026-08-15',
+      );
+
+      expect(result.complete).toBe(false);
+    });
+
+    it('reports a candidate that is still present in the complete current dataset', async () => {
+      provider['client'] = {
+        transactionsGet: jest.fn().mockResolvedValue({
+          data: {
+            transactions: [
+              {
+                account_id: 'external-account-id',
+                transaction_id: 'stale-pending-id',
+                pending: true,
+                pending_transaction_id: null,
+              },
+            ],
+            total_transactions: 1,
+            accounts: [
+              {
+                account_id: 'external-account-id',
+                type: 'depository',
+                subtype: 'checking',
+              },
+            ],
+          },
+        }),
+        itemGet: jest.fn().mockResolvedValue({
+          data: {
+            item: { error: null },
+            status: {
+              transactions: {
+                last_successful_update: '2026-08-15T12:00:00.000Z',
+                last_failed_update: null,
+              },
+            },
+          },
+        }),
+      } as any;
+
+      const result = await provider.getPendingTransactionReconciliationSnapshot(
+        { accessToken: 'access-token' },
+        [
+          {
+            externalAccountId: 'external-account-id',
+            pendingExternalTransactionId: 'stale-pending-id',
+            providerDate: '2026-08-01',
+            localUpdatedAt: '2026-08-01T12:00:00.000Z',
+          },
+        ],
+        '2026-08-15',
+      );
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          complete: true,
+          presentCandidateKeys: ['external-account-id\u0000stale-pending-id'],
+        }),
+      );
+    });
+  });
+
   describe('syncInvestmentHoldings', () => {
     it('should reject invalid authentication', async () => {
       await expect(

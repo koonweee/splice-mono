@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { OwnedEntity } from '../common/owned.entity';
 import type {
   BankLinkStatus,
@@ -7,6 +7,7 @@ import type {
 } from '../types/BankLink';
 
 @Entity()
+@Index('IDX_bank_link_user_active', ['userId', 'archivedAt'])
 export class BankLinkEntity extends OwnedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -35,6 +36,9 @@ export class BankLinkEntity extends OwnedEntity {
   @Column({ type: 'jsonb', nullable: true })
   statusBody: Record<string, any> | null;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  archivedAt: Date | null;
+
   /**
    * Create entity from DTO
    */
@@ -49,6 +53,7 @@ export class BankLinkEntity extends OwnedEntity {
     entity.status = 'OK';
     entity.statusDate = new Date();
     entity.statusBody = null;
+    entity.archivedAt = null;
     return entity;
   }
 

@@ -3,6 +3,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
+import { RefreshTokenCleanupScheduledService } from './refresh-token-cleanup.scheduled';
+import { RefreshTokenCleanupService } from './refresh-token-cleanup.service';
 import { RefreshTokenEntity } from './refresh-token.entity';
 import { PersonalAccessTokenEntity } from './personal-access-token.entity';
 import { PersonalAccessTokenService } from './personal-access-token.service';
@@ -30,7 +32,13 @@ import { UserEntity } from '../user/user.entity';
       },
     }),
   ],
-  providers: [JwtStrategy, AuthService, PersonalAccessTokenService],
+  providers: [
+    JwtStrategy,
+    AuthService,
+    PersonalAccessTokenService,
+    RefreshTokenCleanupService,
+    RefreshTokenCleanupScheduledService,
+  ],
   exports: [JwtModule, AuthService, PersonalAccessTokenService],
 })
 export class AuthModule {}

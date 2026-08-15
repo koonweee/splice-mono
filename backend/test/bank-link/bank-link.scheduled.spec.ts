@@ -53,7 +53,10 @@ describe('BankLinkScheduledService', () => {
       await scheduledService.handleDailySync();
 
       expect(mockBankLinkRepository.find).toHaveBeenCalledWith({
-        where: { providerName: expect.objectContaining({ _type: 'not' }) },
+        where: {
+          providerName: expect.objectContaining({ _type: 'not' }),
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
       });
       expect(bankLinkService.syncAccounts).toHaveBeenCalledTimes(2);
       expect(bankLinkService.syncAccounts).toHaveBeenCalledWith(
@@ -112,7 +115,10 @@ describe('BankLinkScheduledService', () => {
       await scheduledService.handleFrequentSync();
 
       expect(mockBankLinkRepository.find).toHaveBeenCalledWith({
-        where: { providerName: expect.objectContaining({ _type: 'in' }) },
+        where: {
+          providerName: expect.objectContaining({ _type: 'in' }),
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
       });
       expect(bankLinkService.syncAccounts).toHaveBeenCalledTimes(2);
       expect(bankLinkService.syncAccounts).toHaveBeenCalledWith(

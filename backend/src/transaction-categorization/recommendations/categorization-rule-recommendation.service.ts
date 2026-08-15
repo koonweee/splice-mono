@@ -88,6 +88,9 @@ type CandidateRejectionReason =
   | 'existing-rule-overlap-too-high'
   | 'invalid-draft';
 
+const PENDING_SUGGESTION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+export const SUGGESTION_EXPIRY_BATCH_SIZE = 500;
+
 const GENERIC_TEXT_VALUES = new Set([
   'sq',
   'tst',
@@ -296,28 +299,71 @@ export class CategorizationRuleRecommendationService {
     id: string,
     userId: string,
   ): Promise<CategorizationRuleSuggestion> {
-    const suggestion = await this.findPendingSuggestion(id, userId);
-    const rule = await this.categorizationService.create(userId, {
-      name: suggestion.name,
-      priority: suggestion.priority,
-      targetCategoryId: suggestion.targetCategoryId,
-      conditions: suggestion.conditions,
-    });
+    return this.withLockedPendingSuggestion(
+      id,
+      userId,
+      async (suggestion, suggestionRepository) => {
+        const rule = await this.categorizationService.create(userId, {
+          name: suggestion.name,
+          priority: suggestion.priority,
+          targetCategoryId: suggestion.targetCategoryId,
+          conditions: suggestion.conditions,
+        });
 
-    suggestion.status = 'accepted';
-    suggestion.acceptedRuleId = rule.id;
-    const saved = await this.suggestionRepository.save(suggestion);
-    return this.toSuggestionView(saved, userId);
+        suggestion.status = 'accepted';
+        suggestion.acceptedRuleId = rule.id;
+        const saved = await suggestionRepository.save(suggestion);
+        return this.toSuggestionView(saved, userId);
+      },
+    );
   }
 
   async dismiss(
     id: string,
     userId: string,
   ): Promise<CategorizationRuleSuggestion> {
-    const suggestion = await this.findPendingSuggestion(id, userId);
-    suggestion.status = 'dismissed';
-    const saved = await this.suggestionRepository.save(suggestion);
-    return this.toSuggestionView(saved, userId);
+    return this.withLockedPendingSuggestion(
+      id,
+      userId,
+      async (suggestion, suggestionRepository) => {
+        suggestion.status = 'dismissed';
+        const saved = await suggestionRepository.save(suggestion);
+        return this.toSuggestionView(saved, userId);
+      },
+    );
+  }
+
+  async expireOldPendingSuggestions(now = new Date()): Promise<number> {
+    const cutoff = new Date(now.getTime() - PENDING_SUGGESTION_RETENTION_MS);
+    return this.suggestionRepository.manager.transaction(async (manager) => {
+      const suggestionRepository = manager.getRepository(
+        CategorizationRuleSuggestionEntity,
+      );
+      const candidates = await suggestionRepository
+        .createQueryBuilder('suggestion')
+        .select(['suggestion.id'])
+        .where('suggestion.status = :status', { status: 'pending' })
+        .andWhere('suggestion.createdAt < :cutoff', { cutoff })
+        .orderBy('suggestion.createdAt', 'ASC')
+        .addOrderBy('suggestion.id', 'ASC')
+        .take(SUGGESTION_EXPIRY_BATCH_SIZE)
+        .setLock('pessimistic_write')
+        .setOnLocked('skip_locked')
+        .getMany();
+
+      if (candidates.length === 0) {
+        return 0;
+      }
+
+      const result = await suggestionRepository.update(
+        {
+          id: In(candidates.map((candidate) => candidate.id)),
+          status: 'pending',
+        },
+        { status: 'expired' },
+      );
+      return result.affected ?? 0;
+    });
   }
 
   async listExistingRulesForAgent(
@@ -1126,6 +1172,29 @@ export class CategorizationRuleRecommendationService {
     return suggestion;
   }
 
+  private async withLockedPendingSuggestion<T>(
+    id: string,
+    userId: string,
+    action: (
+      suggestion: CategorizationRuleSuggestionEntity,
+      repository: Repository<CategorizationRuleSuggestionEntity>,
+    ) => Promise<T>,
+  ): Promise<T> {
+    return this.suggestionRepository.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(
+        CategorizationRuleSuggestionEntity,
+      );
+      const suggestion = await repository.findOne({
+        where: { id, userId, status: 'pending' },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!suggestion) {
+        throw new NotFoundException(`Recommendation ${id} not found`);
+      }
+      return action(suggestion, repository);
+    });
+  }
+
   private async toSuggestionViews(
     suggestions: CategorizationRuleSuggestionEntity[],
     userId: string,
@@ -1141,6 +1210,9 @@ export class CategorizationRuleRecommendationService {
     suggestion: CategorizationRuleSuggestionEntity,
     userId: string,
   ): Promise<CategorizationRuleSuggestion> {
+    if (suggestion.status === 'expired') {
+      throw new NotFoundException(`Recommendation ${suggestion.id} expired`);
+    }
     const category = await this.categoryRepository.findOne({
       where: { id: suggestion.targetCategoryId, userId },
     });

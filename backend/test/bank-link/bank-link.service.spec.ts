@@ -28,13 +28,26 @@ if (!plaidSyncTransactions) {
   throw new Error('Plaid transaction sync mock is required');
 }
 const mockPlaidSyncTransactions = jest.mocked(plaidSyncTransactions);
+const plaidGetPendingTransactionReconciliationSnapshot =
+  mockPlaidProvider.getPendingTransactionReconciliationSnapshot;
+if (!plaidGetPendingTransactionReconciliationSnapshot) {
+  throw new Error('Plaid pending replacement mock is required');
+}
+const mockPlaidGetPendingTransactionReconciliationSnapshot = jest.mocked(
+  plaidGetPendingTransactionReconciliationSnapshot,
+);
 
 const mockEventEmitter = {
   emit: jest.fn(),
 };
 
 const mockTransactionService = {
-  processSyncResults: jest.fn().mockResolvedValue(undefined),
+  processSyncResults: jest.fn().mockResolvedValue({
+    normalRemovedCount: 0,
+    authoritativeAbsenceArchivedCount: 0,
+    authoritativeAbsenceDeletedCount: 0,
+  }),
+  findStalePendingProviderTransactions: jest.fn().mockResolvedValue([]),
 };
 
 const mockInvestmentService = {
@@ -81,7 +94,15 @@ const mockBankLinkEntity = {
   status: 'OK',
   statusDate: new Date('2026-01-01T00:00:00Z'),
   statusBody: null as Record<string, unknown> | null,
+  archivedAt: null as Date | null,
   toObject: jest.fn().mockReturnValue(mockBankLink),
+};
+
+const mockReconciliationQueryRunner = {
+  connect: jest.fn().mockResolvedValue(undefined),
+  query: jest.fn(),
+  release: jest.fn().mockResolvedValue(undefined),
+  manager: undefined as unknown as typeof mockEntityManager,
 };
 
 const mockBankLinkRepository: any = {
@@ -129,6 +150,9 @@ const mockBankLinkRepository: any = {
     getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
   }),
   manager: {
+    connection: {
+      createQueryRunner: jest.fn(() => mockReconciliationQueryRunner),
+    },
     transaction: jest
       .fn()
       .mockImplementation(async (cb: any) => cb(mockEntityManager)),
@@ -164,6 +188,7 @@ const mockAccountRepository: any = {
   }),
   findOne: jest.fn().mockResolvedValue(null),
   find: jest.fn().mockResolvedValue([]),
+  count: jest.fn().mockResolvedValue(0),
 };
 
 const mockEntityManager = {
@@ -187,6 +212,10 @@ describe('BankLinkService', () => {
   beforeEach(async () => {
     // Reset mocks before each test
     jest.clearAllMocks();
+    mockReconciliationQueryRunner.query
+      .mockResolvedValueOnce([{ acquired: true }])
+      .mockResolvedValueOnce([{ pg_advisory_unlock: true }]);
+    mockReconciliationQueryRunner.manager = mockEntityManager;
     // Reset shared mockBankLinkEntity to original values (may be mutated by update tests)
     mockBankLinkEntity.providerName = 'plaid';
     mockBankLinkEntity.authentication = { accessToken: 'test-token' };
@@ -194,6 +223,7 @@ describe('BankLinkService', () => {
     mockBankLinkEntity.status = 'OK';
     mockBankLinkEntity.statusDate = new Date('2026-01-01T00:00:00Z');
     mockBankLinkEntity.statusBody = null;
+    mockBankLinkEntity.archivedAt = null;
     mockBankLinkEntity.toObject.mockReturnValue(mockBankLink);
     mockAccountRepository.findOne.mockResolvedValue(null);
     mockBankLinkRepository.createQueryBuilder = jest.fn().mockReturnValue({
@@ -527,7 +557,11 @@ describe('BankLinkService', () => {
       );
 
       expect(repository.findOne).toHaveBeenCalledWith({
-        where: { id: bankLinkId, userId: mockUserId },
+        where: {
+          id: bankLinkId,
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
       });
 
       expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
@@ -790,6 +824,7 @@ describe('BankLinkService', () => {
 
     it('should update existing bank link instead of creating new one when itemId matches', async () => {
       const providerName = 'plaid';
+      mockBankLinkEntity.archivedAt = new Date('2026-07-01T00:00:00Z');
       mockBankLinkEntity.authentication = {
         accessToken: 'old-access-token',
         itemId: 'item-mock-123',
@@ -818,6 +853,7 @@ describe('BankLinkService', () => {
           id: mockBankLinkEntity.id, // Same entity ID = update, not create
           status: 'OK',
           statusBody: null,
+          archivedAt: null,
           authentication: expect.objectContaining({
             accessToken: 'access-token-123',
             itemId: 'item-mock-123',
@@ -1027,6 +1063,9 @@ describe('BankLinkService', () => {
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         '"bankLink"."authentication"->>\'itemId\' = :itemId',
         { itemId: 'item-mock-123' },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        '"bankLink"."archivedAt" IS NULL',
       );
       // Should NOT have processed as link completion
       expect(
@@ -1519,6 +1558,16 @@ describe('BankLinkService', () => {
         accessToken: 'test-token',
       });
       expect(mockAccountRepository.insert).toHaveBeenCalled();
+      expect(mockReconciliationQueryRunner.query).toHaveBeenNthCalledWith(
+        1,
+        'SELECT pg_advisory_lock(hashtextextended($1, 1777502000))',
+        [mockBankLink.id],
+      );
+      expect(mockReconciliationQueryRunner.query).toHaveBeenNthCalledWith(
+        2,
+        'SELECT pg_advisory_unlock(hashtextextended($1, 1777502000))',
+        [mockBankLink.id],
+      );
       expect(result).toBeDefined();
     });
 
@@ -1582,15 +1631,19 @@ describe('BankLinkService', () => {
         institutionName: 'Old Bank Name',
         userId: mockUserId,
       };
-      mockBankLinkRepository.findOne.mockResolvedValueOnce(
-        bankLinkWithOldInstitution,
-      );
+      mockBankLinkRepository.findOne
+        .mockResolvedValueOnce(bankLinkWithOldInstitution)
+        .mockResolvedValueOnce(bankLinkWithOldInstitution);
 
       await service.syncAccounts(mockBankLink.id, mockUserId);
 
       // Verify bank link is saved with updated institution info
       expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
-        { id: mockBankLink.id, userId: mockUserId },
+        {
+          id: mockBankLink.id,
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
         {
           institutionId: mockInstitution.id,
           institutionName: mockInstitution.name,
@@ -1684,7 +1737,11 @@ describe('BankLinkService', () => {
       await service.syncAccounts(mockBankLink.id, mockUserId);
 
       expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
-        { id: mockBankLink.id, userId: mockUserId },
+        {
+          id: mockBankLink.id,
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
         { accountIds: [mockApiAccount.accountId] },
       );
       expect(staleBankLink.authentication).toEqual({
@@ -1704,10 +1761,17 @@ describe('BankLinkService', () => {
       const result = await service.syncAllAccounts(mockUserId);
 
       expect(mockBankLinkRepository.find).toHaveBeenCalledWith({
-        where: { userId: mockUserId },
+        where: {
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
       });
       expect(mockBankLinkRepository.findOne).toHaveBeenCalledWith({
-        where: { id: mockBankLink.id, userId: mockUserId },
+        where: {
+          id: mockBankLink.id,
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
       });
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
@@ -1720,7 +1784,10 @@ describe('BankLinkService', () => {
 
       expect(result).toEqual([]);
       expect(mockBankLinkRepository.find).toHaveBeenCalledWith({
-        where: { userId: mockUserId },
+        where: {
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
       });
     });
 
@@ -1851,7 +1918,11 @@ describe('BankLinkService', () => {
         mockInvestmentService.upsertPlaidInvestmentTransactions,
       ).toHaveBeenCalled();
       expect(mockBankLinkRepository.findOne).toHaveBeenCalledWith({
-        where: { id: currentBankLink.id, userId: mockUserId },
+        where: {
+          id: currentBankLink.id,
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
         lock: { mode: 'pessimistic_write' },
       });
       expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
@@ -1920,13 +1991,21 @@ describe('BankLinkService', () => {
       const result = await service.backfillPlaidItemIds(mockUserId);
 
       expect(mockBankLinkRepository.find).toHaveBeenCalledWith({
-        where: { providerName: 'plaid', userId: mockUserId },
+        where: {
+          providerName: 'plaid',
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
       });
       expect(mockPlaidProvider.getItemId).toHaveBeenCalledWith({
         accessToken: 'test-token',
       });
       expect(mockBankLinkRepository.findOne).toHaveBeenCalledWith({
-        where: { id: bankLinkWithoutItemId.id, userId: mockUserId },
+        where: {
+          id: bankLinkWithoutItemId.id,
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
         lock: { mode: 'pessimistic_write' },
       });
       expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
@@ -2540,6 +2619,362 @@ describe('BankLinkService', () => {
       await service.syncTransactions(mockBankLink.id, mockUserId);
 
       expect(mockTransactionService.processSyncResults).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reconcileStalePendingTransactions', () => {
+    beforeEach(() => {
+      mockTransactionService.processSyncResults.mockReset().mockResolvedValue({
+        normalRemovedCount: 0,
+        authoritativeAbsenceArchivedCount: 0,
+        authoritativeAbsenceDeletedCount: 0,
+      });
+      mockBankLinkRepository.findOne.mockResolvedValue({
+        ...mockBankLinkEntity,
+        userId: mockUserId,
+        archivedAt: null,
+      });
+      mockAccountRepository.find
+        .mockReset()
+        .mockResolvedValueOnce([
+          {
+            id: 'internal-account-id',
+            externalAccountId: 'external-account-id',
+            archivedAt: null,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      mockTransactionService.findStalePendingProviderTransactions.mockResolvedValueOnce(
+        [
+          {
+            internalAccountId: 'internal-account-id',
+            pendingExternalTransactionId: 'stale-pending-id',
+            providerDate: '2026-08-01',
+            localUpdatedAt: '2026-08-02T00:00:00.000Z',
+          },
+        ],
+      );
+    });
+
+    it('applies only an explicit unambiguous posted replacement', async () => {
+      mockPlaidGetPendingTransactionReconciliationSnapshot.mockResolvedValueOnce(
+        {
+          replacements: [
+            {
+              accountId: 'external-account-id',
+              amount: {
+                money: { amount: 1200, currency: 'USD' },
+                sign: MoneySign.NEGATIVE,
+              },
+              merchantName: 'Posted Store',
+              pending: false,
+              pendingTransactionId: 'stale-pending-id',
+              externalTransactionId: 'posted-transaction-id',
+              providerDate: '2026-08-10',
+            },
+          ],
+          presentCandidateKeys: [],
+          eligibleExternalAccountIds: ['external-account-id'],
+          startDate: '2026-07-25',
+          endDate: '2026-08-15',
+          complete: true,
+          lastSuccessfulUpdate: null,
+          lastFailedUpdate: null,
+          hasItemError: false,
+        },
+      );
+      mockTransactionService.processSyncResults.mockResolvedValueOnce({
+        normalRemovedCount: 0,
+        authoritativeAbsenceArchivedCount: 0,
+        authoritativeAbsenceDeletedCount: 0,
+      });
+
+      await expect(
+        service.reconcileStalePendingTransactions(mockBankLink.id, mockUserId),
+      ).resolves.toEqual({
+        candidateCount: 1,
+        reconciledCount: 1,
+        unresolvedCount: 0,
+        ambiguousCount: 0,
+      });
+
+      expect(
+        mockPlaidGetPendingTransactionReconciliationSnapshot,
+      ).toHaveBeenCalledWith(
+        { accessToken: 'test-token' },
+        [
+          {
+            internalAccountId: 'internal-account-id',
+            externalAccountId: 'external-account-id',
+            pendingExternalTransactionId: 'stale-pending-id',
+            providerDate: '2026-08-01',
+            localUpdatedAt: '2026-08-02T00:00:00.000Z',
+          },
+        ],
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      );
+      expect(mockTransactionService.processSyncResults).toHaveBeenCalledWith(
+        mockUserId,
+        new Map([['external-account-id', 'internal-account-id']]),
+        expect.objectContaining({
+          added: [
+            expect.objectContaining({
+              externalTransactionId: 'posted-transaction-id',
+              pendingTransactionId: 'stale-pending-id',
+            }),
+          ],
+          removed: [],
+        }),
+        { authoritativePendingAbsenceRemovals: [] },
+      );
+    });
+
+    it('reports a qualified absence as unresolved when its final delete guard skips it', async () => {
+      const dateBefore = (days: number) =>
+        new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+      const providerDate = dateBefore(20);
+      const localUpdatedAt = new Date(
+        Date.now() - 19 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      mockTransactionService.findStalePendingProviderTransactions
+        .mockReset()
+        .mockResolvedValueOnce([
+          {
+            internalAccountId: 'internal-account-id',
+            pendingExternalTransactionId: 'stale-pending-id',
+            providerDate,
+            localUpdatedAt,
+          },
+        ]);
+      mockPlaidGetPendingTransactionReconciliationSnapshot.mockResolvedValueOnce(
+        {
+          replacements: [],
+          presentCandidateKeys: [],
+          eligibleExternalAccountIds: ['external-account-id'],
+          startDate: dateBefore(30),
+          endDate: dateBefore(0),
+          complete: true,
+          lastSuccessfulUpdate: new Date(
+            Date.now() - 60 * 60 * 1000,
+          ).toISOString(),
+          lastFailedUpdate: null,
+          hasItemError: false,
+        },
+      );
+      mockTransactionService.processSyncResults.mockResolvedValueOnce({
+        normalRemovedCount: 0,
+        authoritativeAbsenceArchivedCount: 0,
+        authoritativeAbsenceDeletedCount: 0,
+      });
+
+      await expect(
+        service.reconcileStalePendingTransactions(mockBankLink.id, mockUserId),
+      ).resolves.toEqual({
+        candidateCount: 1,
+        reconciledCount: 0,
+        unresolvedCount: 1,
+        ambiguousCount: 0,
+      });
+    });
+
+    it('leaves a stale pending row unchanged when the provider window has no replacement', async () => {
+      mockPlaidGetPendingTransactionReconciliationSnapshot.mockResolvedValueOnce(
+        {
+          replacements: [],
+          presentCandidateKeys: [],
+          eligibleExternalAccountIds: [],
+          startDate: '2026-07-25',
+          endDate: '2026-08-15',
+          complete: false,
+          lastSuccessfulUpdate: null,
+          lastFailedUpdate: null,
+          hasItemError: false,
+        },
+      );
+      await expect(
+        service.reconcileStalePendingTransactions(mockBankLink.id, mockUserId),
+      ).resolves.toEqual({
+        candidateCount: 1,
+        reconciledCount: 0,
+        unresolvedCount: 1,
+        ambiguousCount: 0,
+      });
+
+      expect(mockTransactionService.processSyncResults).not.toHaveBeenCalled();
+    });
+
+    it('qualifies an old missing pending row from a fresh complete provider snapshot', async () => {
+      const dateBefore = (days: number) =>
+        new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+      const providerDate = dateBefore(20);
+      const localUpdatedAt = new Date(
+        Date.now() - 19 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      const lastSuccessfulUpdate = new Date(
+        Date.now() - 60 * 60 * 1000,
+      ).toISOString();
+      mockTransactionService.findStalePendingProviderTransactions
+        .mockReset()
+        .mockResolvedValueOnce([
+          {
+            internalAccountId: 'internal-account-id',
+            pendingExternalTransactionId: 'stale-pending-id',
+            providerDate,
+            localUpdatedAt,
+          },
+        ]);
+      mockPlaidGetPendingTransactionReconciliationSnapshot.mockResolvedValueOnce(
+        {
+          replacements: [],
+          presentCandidateKeys: [],
+          eligibleExternalAccountIds: ['external-account-id'],
+          startDate: dateBefore(30),
+          endDate: dateBefore(0),
+          complete: true,
+          lastSuccessfulUpdate,
+          lastFailedUpdate: null,
+          hasItemError: false,
+        },
+      );
+      mockTransactionService.processSyncResults.mockResolvedValueOnce({
+        normalRemovedCount: 0,
+        authoritativeAbsenceArchivedCount: 1,
+        authoritativeAbsenceDeletedCount: 1,
+      });
+
+      await expect(
+        service.reconcileStalePendingTransactions(mockBankLink.id, mockUserId),
+      ).resolves.toEqual({
+        candidateCount: 1,
+        reconciledCount: 1,
+        unresolvedCount: 0,
+        ambiguousCount: 0,
+      });
+
+      expect(mockTransactionService.processSyncResults).toHaveBeenCalledWith(
+        mockUserId,
+        new Map([['external-account-id', 'internal-account-id']]),
+        {
+          added: [],
+          modified: [],
+          removed: ['stale-pending-id'],
+          nextCursor: '',
+          hasMore: false,
+        },
+        {
+          authoritativePendingAbsenceRemovals: [
+            {
+              internalAccountId: 'internal-account-id',
+              externalTransactionId: 'stale-pending-id',
+              expectedProviderDate: providerDate,
+              expectedLocalUpdatedAt: localUpdatedAt,
+              evidence: {
+                schemaVersion: 1,
+                bankLinkId: mockBankLink.id,
+                externalAccountId: 'external-account-id',
+                localUpdatedAt,
+                providerWindowStart: dateBefore(30),
+                providerWindowEnd: dateBefore(0),
+                providerLastSuccessfulUpdate: lastSuccessfulUpdate,
+              },
+            },
+          ],
+        },
+      );
+    });
+
+    it('does not choose between conflicting posted replacements', async () => {
+      mockPlaidGetPendingTransactionReconciliationSnapshot.mockResolvedValueOnce(
+        {
+          replacements: [
+            {
+              accountId: 'external-account-id',
+              amount: {
+                money: { amount: 1200, currency: 'USD' },
+                sign: MoneySign.NEGATIVE,
+              },
+              merchantName: 'First Posted Store',
+              pending: false,
+              pendingTransactionId: 'stale-pending-id',
+              externalTransactionId: 'posted-transaction-id-1',
+              providerDate: '2026-08-10',
+            },
+            {
+              accountId: 'external-account-id',
+              amount: {
+                money: { amount: 1200, currency: 'USD' },
+                sign: MoneySign.NEGATIVE,
+              },
+              merchantName: 'Second Posted Store',
+              pending: false,
+              pendingTransactionId: 'stale-pending-id',
+              externalTransactionId: 'posted-transaction-id-2',
+              providerDate: '2026-08-10',
+            },
+          ],
+          presentCandidateKeys: [],
+          eligibleExternalAccountIds: ['external-account-id'],
+          startDate: '2026-07-25',
+          endDate: '2026-08-15',
+          complete: true,
+          lastSuccessfulUpdate: null,
+          lastFailedUpdate: null,
+          hasItemError: false,
+        },
+      );
+
+      await expect(
+        service.reconcileStalePendingTransactions(mockBankLink.id, mockUserId),
+      ).resolves.toEqual({
+        candidateCount: 1,
+        reconciledCount: 0,
+        unresolvedCount: 1,
+        ambiguousCount: 1,
+      });
+      expect(mockTransactionService.processSyncResults).not.toHaveBeenCalled();
+    });
+
+    it('skips safely when another replica holds the bank-link advisory lock', async () => {
+      mockReconciliationQueryRunner.query
+        .mockReset()
+        .mockResolvedValueOnce([{ acquired: false }]);
+
+      await expect(
+        service.reconcileStalePendingTransactions(mockBankLink.id, mockUserId),
+      ).resolves.toEqual({
+        candidateCount: 0,
+        reconciledCount: 0,
+        unresolvedCount: 0,
+        ambiguousCount: 0,
+      });
+
+      expect(mockBankLinkRepository.findOne).not.toHaveBeenCalled();
+      expect(
+        mockPlaidGetPendingTransactionReconciliationSnapshot,
+      ).not.toHaveBeenCalled();
+      expect(mockReconciliationQueryRunner.query).toHaveBeenCalledTimes(1);
+      expect(mockReconciliationQueryRunner.release).toHaveBeenCalledTimes(1);
+    });
+
+    it('releases the bank-link advisory lock when provider reconciliation fails', async () => {
+      mockPlaidGetPendingTransactionReconciliationSnapshot.mockRejectedValueOnce(
+        new Error('provider unavailable'),
+      );
+
+      await expect(
+        service.reconcileStalePendingTransactions(mockBankLink.id, mockUserId),
+      ).rejects.toThrow('provider unavailable');
+
+      expect(mockReconciliationQueryRunner.query).toHaveBeenNthCalledWith(
+        2,
+        'SELECT pg_advisory_unlock(hashtextextended($1, 1777503002))',
+        [mockBankLink.id],
+      );
+      expect(mockReconciliationQueryRunner.release).toHaveBeenCalledTimes(1);
     });
   });
 });

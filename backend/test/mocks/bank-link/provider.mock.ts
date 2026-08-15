@@ -155,6 +155,19 @@ export const mockPlaidProvider: IBankLinkProvider = {
   syncTransactions: jest.fn(function (this: void) {
     return Promise.resolve(mockTransactionSyncResponse);
   }),
+  getPendingTransactionReconciliationSnapshot: jest.fn(function (this: void) {
+    return Promise.resolve({
+      replacements: [],
+      presentCandidateKeys: [],
+      eligibleExternalAccountIds: [],
+      startDate: '2026-08-01',
+      endDate: '2026-08-15',
+      complete: true,
+      lastSuccessfulUpdate: '2026-08-15T12:00:00.000Z',
+      lastFailedUpdate: null,
+      hasItemError: false,
+    });
+  }),
   syncInvestmentHoldings: jest.fn(function (this: void) {
     return Promise.resolve(mockInvestmentHoldingsResponse);
   }),
