@@ -47,23 +47,23 @@ export class NotificationPushProcessor {
   }
 
   @Cron('0 30 3 * * *', {
-    name: 'notificationPushDeliveryCleanup',
+    name: 'notificationRecordCleanup',
     timeZone: 'UTC',
   })
-  async cleanupOldPushDeliveries(): Promise<void> {
+  async cleanupOldNotificationRecords(): Promise<void> {
     try {
-      const deletedCount =
-        await this.notificationService.cleanupOldPushDeliveries();
-      if (deletedCount > 0) {
+      const deleted =
+        await this.notificationService.cleanupOldNotificationRecords();
+      if (deleted.deliveries > 0 || deleted.notifications > 0) {
         this.logger.log(
-          { deletedCount },
-          'Cleaned up old notification push deliveries',
+          deleted,
+          'Cleaned up old notification delivery records',
         );
       }
     } catch (error) {
       this.logger.error(
         { error: error instanceof Error ? error.message : String(error) },
-        'Failed to clean up old notification push deliveries',
+        'Failed to clean up old notification delivery records',
       );
     }
   }

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { FindOptionsWhere } from 'typeorm';
-import { In, Not, Repository } from 'typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import type { Account } from '../types/Account';
 import { BankLinkEntity } from './bank-link.entity';
 import { BankLinkService } from './bank-link.service';
@@ -97,7 +97,9 @@ export class BankLinkScheduledService {
     where: FindOptionsWhere<BankLinkEntity>,
     context: string,
   ): Promise<Account[]> {
-    const bankLinks = await this.bankLinkRepository.find({ where });
+    const bankLinks = await this.bankLinkRepository.find({
+      where: { ...where, archivedAt: IsNull() },
+    });
 
     if (bankLinks.length === 0) {
       this.logger.log({ context }, 'No bank links to sync');

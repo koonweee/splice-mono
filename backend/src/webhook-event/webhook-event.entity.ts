@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { OwnedEntity } from '../common/owned.entity';
 import type {
   CreateWebhookEventDto,
@@ -7,6 +7,9 @@ import type {
 import { WebhookEventStatus } from '../types/WebhookEvent';
 
 @Entity()
+@Index('IDX_webhook_event_pending_expiry_cleanup', ['expiresAt', 'id'], {
+  where: '"status" = \'pending\' AND "expiresAt" IS NOT NULL',
+})
 export class WebhookEventEntity extends OwnedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

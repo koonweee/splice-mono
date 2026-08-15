@@ -11,11 +11,17 @@ describe('WebhookEventService', () => {
   const mockRepository = {
     save: jest.fn(),
     findOne: jest.fn(),
+    manager: {
+      transaction: jest.fn(),
+    },
   };
 
   const mockUserId = 'user-uuid-123';
 
   beforeEach(async () => {
+    mockRepository.manager.transaction.mockImplementation(async (callback) =>
+      callback({ getRepository: () => mockRepository }),
+    );
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WebhookEventService,
@@ -105,11 +111,29 @@ describe('WebhookEventService', () => {
       expect(result?.webhookId).toBe('wh_plaid_12345');
       expect(result?.status).toBe(WebhookEventStatus.PENDING);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          webhookId: 'wh_plaid_12345',
-          status: WebhookEventStatus.PENDING,
-        },
+        where: expect.arrayContaining([
+          expect.objectContaining({
+            webhookId: 'wh_plaid_12345',
+            status: WebhookEventStatus.PENDING,
+          }),
+        ]),
       });
+    });
+
+    it('should reject an expired pending webhook event defensively', async () => {
+      const expiredEntity = new WebhookEventEntity();
+      expiredEntity.id = 'expired-webhook-event';
+      expiredEntity.webhookId = 'wh_plaid_expired';
+      expiredEntity.providerName = 'plaid';
+      expiredEntity.status = WebhookEventStatus.PENDING;
+      expiredEntity.userId = mockUserId;
+      expiredEntity.expiresAt = new Date(Date.now() - 1);
+
+      mockRepository.findOne.mockResolvedValue(expiredEntity);
+
+      await expect(
+        service.findPendingByWebhookId('wh_plaid_expired'),
+      ).resolves.toBeNull();
     });
 
     it('should return null when pending webhook event not found', async () => {
@@ -154,6 +178,16 @@ describe('WebhookEventService', () => {
       expect(result?.status).toBe(WebhookEventStatus.COMPLETED);
       expect(result?.webhookContent).toEqual(webhookContent);
       expect(result?.completedAt).toBeDefined();
+      expect(mockRepository.manager.transaction).toHaveBeenCalledTimes(1);
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: expect.arrayContaining([
+          expect.objectContaining({
+            webhookId: 'wh_plaid_12345',
+            status: WebhookEventStatus.PENDING,
+          }),
+        ]),
+        lock: { mode: 'pessimistic_write' },
+      });
     });
 
     it('should return null when pending webhook event not found', async () => {
@@ -162,6 +196,21 @@ describe('WebhookEventService', () => {
       const result = await service.markCompleted('wh_plaid_nonexistent', {});
 
       expect(result).toBeNull();
+    });
+
+    it('should not complete an expired pending webhook event', async () => {
+      const expiredEntity = new WebhookEventEntity();
+      expiredEntity.id = 'expired-webhook-event';
+      expiredEntity.webhookId = 'wh_plaid_expired';
+      expiredEntity.status = WebhookEventStatus.PENDING;
+      expiredEntity.expiresAt = new Date(Date.now() - 1);
+
+      mockRepository.findOne.mockResolvedValue(expiredEntity);
+
+      await expect(
+        service.markCompleted('wh_plaid_expired', { result: 'late' }),
+      ).resolves.toBeNull();
+      expect(mockRepository.save).not.toHaveBeenCalled();
     });
   });
 
@@ -233,6 +282,21 @@ describe('WebhookEventService', () => {
       const result = await service.markFailed('wh_plaid_nonexistent', 'error');
 
       expect(result).toBeNull();
+    });
+
+    it('should not mutate an expired pending webhook event', async () => {
+      const expiredEntity = new WebhookEventEntity();
+      expiredEntity.id = 'expired-webhook-event';
+      expiredEntity.webhookId = 'wh_plaid_expired';
+      expiredEntity.status = WebhookEventStatus.PENDING;
+      expiredEntity.expiresAt = new Date(Date.now() - 1);
+
+      mockRepository.findOne.mockResolvedValue(expiredEntity);
+
+      await expect(
+        service.markFailed('wh_plaid_expired', 'late failure'),
+      ).resolves.toBeNull();
+      expect(mockRepository.save).not.toHaveBeenCalled();
     });
   });
 

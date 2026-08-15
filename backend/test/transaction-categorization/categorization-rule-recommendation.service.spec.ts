@@ -124,6 +124,8 @@ describe('CategorizationRuleRecommendationService', () => {
     create: jest.Mock;
     save: jest.Mock;
     update: jest.Mock;
+    createQueryBuilder: jest.Mock;
+    manager: { transaction: jest.Mock };
   };
   let generationRepository: {
     findOne: jest.Mock;
@@ -159,7 +161,15 @@ describe('CategorizationRuleRecommendationService', () => {
       ),
       save: jest.fn(async (entity: unknown) => entity),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
+      createQueryBuilder: jest.fn(),
+      manager: {
+        transaction: jest.fn(),
+      },
     };
+    suggestionRepository.manager.transaction.mockImplementation(
+      async (callback: (manager: unknown) => unknown) =>
+        callback({ getRepository: () => suggestionRepository }),
+    );
     generationRepository = {
       findOne: jest.fn(),
       create: jest.fn(
@@ -254,6 +264,46 @@ describe('CategorizationRuleRecommendationService', () => {
     );
   });
 
+  it('expires only a bounded batch of pending suggestions older than thirty days', async () => {
+    const queryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      setOnLocked: jest.fn().mockReturnThis(),
+      getMany: jest
+        .fn()
+        .mockResolvedValue([
+          buildSuggestion({ id: suggestionId }),
+          buildSuggestion({ id: '66666666-6666-4666-8666-666666666667' }),
+        ]),
+    };
+    suggestionRepository.createQueryBuilder.mockReturnValueOnce(queryBuilder);
+    suggestionRepository.update.mockResolvedValueOnce({ affected: 2 });
+
+    await expect(
+      service.expireOldPendingSuggestions(new Date('2026-03-16T00:00:00.000Z')),
+    ).resolves.toBe(2);
+
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'suggestion.createdAt < :cutoff',
+      { cutoff: new Date('2026-02-14T00:00:00.000Z') },
+    );
+    expect(queryBuilder.take).toHaveBeenCalledWith(500);
+    expect(queryBuilder.setLock).toHaveBeenCalledWith('pessimistic_write');
+    expect(queryBuilder.setOnLocked).toHaveBeenCalledWith('skip_locked');
+    expect(suggestionRepository.update).toHaveBeenCalledWith(
+      {
+        id: expect.objectContaining({ _type: 'in' }),
+        status: 'pending',
+      },
+      { status: 'expired' },
+    );
+  });
+
   it('returns pending suggestions instead of starting a duplicate generation', async () => {
     process.env.OPENAI_API_KEY = 'test-key';
     const suggestion = buildSuggestion();
@@ -319,6 +369,10 @@ describe('CategorizationRuleRecommendationService', () => {
       priority: suggestion.priority,
       targetCategoryId: suggestion.targetCategoryId,
       conditions: suggestion.conditions,
+    });
+    expect(suggestionRepository.findOne).toHaveBeenCalledWith({
+      where: { id: suggestion.id, userId, status: 'pending' },
+      lock: { mode: 'pessimistic_write' },
     });
     expect(suggestionRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({

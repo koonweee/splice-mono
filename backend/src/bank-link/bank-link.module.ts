@@ -7,12 +7,15 @@ import { TransactionModule } from '../transaction/transaction.module';
 import { UserModule } from '../user/user.module';
 import { WebhookEventModule } from '../webhook-event/webhook-event.module';
 import { BankLinkController } from './bank-link.controller';
+import { BankLinkLifecycleService } from './bank-link-lifecycle.service';
+import { BankLinkLifecycleScheduledService } from './bank-link-lifecycle.scheduled';
 import { BankLinkEntity } from './bank-link.entity';
 import { BankLinkScheduledService } from './bank-link.scheduled';
 import { BankLinkService } from './bank-link.service';
 import { CryptoProvider } from './providers/crypto/crypto.provider';
 import { PlaidProvider } from './providers/plaid/plaid.provider';
 import { ProviderRegistry } from './providers/provider.registry';
+import { StalePendingTransactionScheduledService } from './stale-pending-transaction.scheduled';
 
 /**
  * Module for bank account linking functionality
@@ -32,13 +35,17 @@ import { ProviderRegistry } from './providers/provider.registry';
   controllers: [BankLinkController],
   providers: [
     BankLinkService,
+    BankLinkLifecycleService,
+    BankLinkLifecycleScheduledService,
     BankLinkScheduledService, // Scheduled tasks for bank link operations
+    StalePendingTransactionScheduledService,
     ProviderRegistry,
     PlaidProvider, // Register Plaid provider
     CryptoProvider, // Register Crypto provider
   ],
   exports: [
     BankLinkService, // Export for use in other modules
+    BankLinkLifecycleService,
   ],
 })
 export class BankLinkModule {}

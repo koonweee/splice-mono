@@ -4,6 +4,10 @@ import type { CategorizationRuleCondition } from '../../types/CategorizationRule
 import type { CategorizationRuleSuggestionStatus } from '../../types/CategorizationRuleSuggestion';
 import type { Transaction } from '../../types/Transaction';
 
+export type StoredCategorizationRuleSuggestionStatus =
+  | CategorizationRuleSuggestionStatus
+  | 'expired';
+
 @Entity()
 export class CategorizationRuleSuggestionEntity extends TimestampedEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -31,7 +35,7 @@ export class CategorizationRuleSuggestionEntity extends TimestampedEntity {
   rationale: string;
 
   @Column({ type: 'varchar' })
-  status: CategorizationRuleSuggestionStatus;
+  status: StoredCategorizationRuleSuggestionStatus;
 
   @Column({ type: 'uuid', nullable: true })
   acceptedRuleId: string | null;

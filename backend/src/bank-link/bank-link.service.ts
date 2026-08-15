@@ -43,6 +43,10 @@ import type {
 import { UserService } from '../user/user.service';
 import { WebhookEventService } from '../webhook-event/webhook-event.service';
 import { BankLinkEntity } from './bank-link.entity';
+import {
+  BANK_LINK_LIFECYCLE_LOCK_SQL,
+  BANK_LINK_LIFECYCLE_UNLOCK_SQL,
+} from './bank-link-lifecycle-lock';
 import type { IBankLinkProvider } from './providers/bank-link-provider.interface';
 import { ProviderRegistry } from './providers/provider.registry';
 
@@ -61,6 +65,10 @@ type LinkFlowContext = LinkConversionContext | LinkUpdateContext;
 const INVESTMENT_ACCOUNT_TYPES = ['investment', 'brokerage'];
 const INVESTMENT_TRANSACTION_LOOKBACK_DAYS = 730;
 const TRANSACTION_SYNC_CURSOR_RETRY_LIMIT = 3;
+const STALE_PENDING_TRANSACTION_AGE_DAYS = 7;
+const AUTHORITATIVE_PENDING_ABSENCE_AGE_DAYS = 14;
+const PROVIDER_SNAPSHOT_MAX_AGE_HOURS = 48;
+const STALE_PENDING_TRANSACTION_BATCH_LIMIT = 100;
 
 class BankLinkCursorChangedError extends Error {}
 const LINKED_ACCOUNT_IDENTITY_CONSTRAINT = 'UQ_account_user_bank_link_external';
@@ -68,6 +76,13 @@ const LINKED_ACCOUNT_IDENTITY_CONSTRAINT = 'UQ_account_user_bank_link_external';
 type PostgresError = {
   code?: string;
   constraint?: string;
+};
+
+export type StalePendingTransactionReconciliationResult = {
+  candidateCount: number;
+  reconciledCount: number;
+  unresolvedCount: number;
+  ambiguousCount: number;
 };
 
 function isLinkedAccountIdentityConflict(error: unknown): boolean {
@@ -179,7 +194,7 @@ export class BankLinkService extends OwnedCrudService<
     let accessToken: string | undefined;
     if (bankLinkId) {
       const existingLink = await this.repository.findOne({
-        where: { id: bankLinkId, userId },
+        where: { id: bankLinkId, userId, archivedAt: IsNull() },
       });
       if (!existingLink) {
         throw new Error(`Bank link not found: ${bankLinkId}`);
@@ -787,7 +802,7 @@ export class BankLinkService extends OwnedCrudService<
     this.logger.log({ userId }, 'Syncing accounts for all bank links');
 
     const bankLinks = await this.repository.find({
-      where: { userId },
+      where: { userId, archivedAt: IsNull() },
     });
     this.logger.log({ count: bankLinks.length }, 'Found bank links to sync');
 
@@ -825,7 +840,7 @@ export class BankLinkService extends OwnedCrudService<
     this.logger.log({ userId }, 'Syncing transactions for all bank links');
 
     const bankLinks = await this.repository.find({
-      where: { userId },
+      where: { userId, archivedAt: IsNull() },
     });
     this.logger.log(
       { count: bankLinks.length },
@@ -870,7 +885,7 @@ export class BankLinkService extends OwnedCrudService<
     );
 
     const bankLinks = await this.repository.find({
-      where: { userId },
+      where: { userId, archivedAt: IsNull() },
     });
 
     let synced = 0;
@@ -939,7 +954,7 @@ export class BankLinkService extends OwnedCrudService<
     );
 
     const bankLinks = await this.repository.find({
-      where: { userId },
+      where: { userId, archivedAt: IsNull() },
     });
 
     let synced = 0;
@@ -1009,7 +1024,7 @@ export class BankLinkService extends OwnedCrudService<
   async syncAccounts(bankLinkId: string, userId: string): Promise<Account[]> {
     // Get bank link entity (scoped by userId)
     const bankLink = await this.repository.findOne({
-      where: { id: bankLinkId, userId },
+      where: { id: bankLinkId, userId, archivedAt: IsNull() },
     });
     if (!bankLink) {
       throw new Error(`Bank link not found: ${bankLinkId}`);
@@ -1037,45 +1052,89 @@ export class BankLinkService extends OwnedCrudService<
       'Fetched accounts from provider',
     );
 
-    // Update bank link institution info if changed
-    if (institution) {
-      const institutionId = institution.id ?? null;
-      const institutionName = institution.name ?? null;
-      if (
-        bankLink.institutionId !== institutionId ||
-        bankLink.institutionName !== institutionName
-      ) {
-        bankLink.institutionId = institutionId;
-        bankLink.institutionName = institutionName;
-        await this.repository.update(
-          { id: bankLink.id, userId },
-          { institutionId, institutionName },
-        );
-        bankLink.institutionId = institutionId;
-        bankLink.institutionName = institutionName;
-        this.logger.log(
-          { bankLinkId, institutionName, institutionId },
-          'Updated institution info for bank link',
-        );
+    return this.applyAccountSyncWithLifecycleLock(
+      bankLinkId,
+      userId,
+      apiAccounts,
+      institution,
+    );
+  }
+
+  private async applyAccountSyncWithLifecycleLock(
+    bankLinkId: string,
+    userId: string,
+    apiAccounts: APIAccount[],
+    institution?: { id?: string | null; name?: string | null },
+  ): Promise<Account[]> {
+    const queryRunner = this.repository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    let lockAcquired = false;
+    try {
+      await queryRunner.query(BANK_LINK_LIFECYCLE_LOCK_SQL, [bankLinkId]);
+      lockAcquired = true;
+      const bankLinkRepository =
+        queryRunner.manager.getRepository(BankLinkEntity);
+      const accountRepository =
+        queryRunner.manager.getRepository(AccountEntity);
+      const bankLink = await bankLinkRepository.findOne({
+        where: { id: bankLinkId, userId, archivedAt: IsNull() },
+      });
+      if (!bankLink) {
+        throw new Error(`Bank link not found: ${bankLinkId}`);
+      }
+
+      // Update bank link institution info if changed
+      if (institution) {
+        const institutionId = institution.id ?? null;
+        const institutionName = institution.name ?? null;
+        if (
+          bankLink.institutionId !== institutionId ||
+          bankLink.institutionName !== institutionName
+        ) {
+          await bankLinkRepository.update(
+            { id: bankLink.id, userId, archivedAt: IsNull() },
+            { institutionId, institutionName },
+          );
+          bankLink.institutionId = institutionId;
+          bankLink.institutionName = institutionName;
+          this.logger.log(
+            { bankLinkId, institutionName, institutionId },
+            'Updated institution info for bank link',
+          );
+        }
+      }
+
+      // Create mapping of all external account IDs to this bank link ID
+      const accountIdToBankLinkId = new Map<string, string>();
+      apiAccounts.forEach((apiAccount) => {
+        accountIdToBankLinkId.set(apiAccount.accountId, bankLink.id);
+      });
+
+      // Upsert accounts using shared method
+      const savedAccounts = await this.upsertAccountsFromAPI(
+        apiAccounts,
+        accountIdToBankLinkId,
+        bankLink.userId,
+        accountRepository,
+      );
+      await this.reconcileAccountIdsCache(
+        bankLink,
+        userId,
+        bankLinkRepository,
+        accountRepository,
+      );
+      this.logger.log({ count: savedAccounts.length }, 'Synced accounts');
+
+      return savedAccounts;
+    } finally {
+      try {
+        if (lockAcquired) {
+          await queryRunner.query(BANK_LINK_LIFECYCLE_UNLOCK_SQL, [bankLinkId]);
+        }
+      } finally {
+        await queryRunner.release();
       }
     }
-
-    // Create mapping of all external account IDs to this bank link ID
-    const accountIdToBankLinkId = new Map<string, string>();
-    apiAccounts.forEach((apiAccount) => {
-      accountIdToBankLinkId.set(apiAccount.accountId, bankLink.id);
-    });
-
-    // Upsert accounts using shared method
-    const savedAccounts = await this.upsertAccountsFromAPI(
-      apiAccounts,
-      accountIdToBankLinkId,
-      bankLink.userId,
-    );
-    await this.reconcileAccountIdsCache(bankLink, userId);
-    this.logger.log({ count: savedAccounts.length }, 'Synced accounts');
-
-    return savedAccounts;
   }
 
   /**
@@ -1111,12 +1170,299 @@ export class BankLinkService extends OwnedCrudService<
     }
   }
 
+  async reconcileStalePendingTransactions(
+    bankLinkId: string,
+    userId: string,
+  ): Promise<StalePendingTransactionReconciliationResult> {
+    const queryRunner = this.repository.manager.connection.createQueryRunner();
+    let connected = false;
+    let lockAcquired = false;
+    try {
+      await queryRunner.connect();
+      connected = true;
+      const lockRows = (await queryRunner.query(
+        'SELECT pg_try_advisory_lock(hashtextextended($1, 1777503002)) AS acquired',
+        [bankLinkId],
+      )) as Array<{ acquired: boolean }>;
+      lockAcquired = lockRows[0]?.acquired === true;
+      if (!lockAcquired) {
+        this.logger.log(
+          { bankLinkId },
+          'Skipping stale pending transaction reconciliation because another replica holds the bank-link lock',
+        );
+        return {
+          candidateCount: 0,
+          reconciledCount: 0,
+          unresolvedCount: 0,
+          ambiguousCount: 0,
+        };
+      }
+      this.logger.log(
+        { bankLinkId },
+        'Acquired stale pending transaction reconciliation bank-link lock',
+      );
+      return await this.reconcileStalePendingTransactionsWithLock(
+        bankLinkId,
+        userId,
+      );
+    } finally {
+      if (lockAcquired) {
+        try {
+          await queryRunner.query(
+            'SELECT pg_advisory_unlock(hashtextextended($1, 1777503002))',
+            [bankLinkId],
+          );
+          this.logger.log(
+            { bankLinkId },
+            'Released stale pending transaction reconciliation bank-link lock',
+          );
+        } catch (error) {
+          this.logger.error(
+            {
+              bankLinkId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+            'Failed to explicitly release stale pending transaction reconciliation bank-link lock',
+          );
+        }
+      }
+      if (connected) {
+        await queryRunner.release();
+      }
+    }
+  }
+
+  private async reconcileStalePendingTransactionsWithLock(
+    bankLinkId: string,
+    userId: string,
+  ): Promise<StalePendingTransactionReconciliationResult> {
+    const emptyResult: StalePendingTransactionReconciliationResult = {
+      candidateCount: 0,
+      reconciledCount: 0,
+      unresolvedCount: 0,
+      ambiguousCount: 0,
+    };
+    const bankLink = await this.repository.findOne({
+      where: { id: bankLinkId, userId, archivedAt: IsNull() },
+    });
+    if (!bankLink) {
+      throw new Error(`Bank link not found: ${bankLinkId}`);
+    }
+
+    const provider = this.providerRegistry.getProvider(bankLink.providerName);
+    if (!provider.getPendingTransactionReconciliationSnapshot) {
+      return emptyResult;
+    }
+
+    const accountMappings = await this.buildTransactionAccountMappings(
+      bankLinkId,
+      userId,
+    );
+    const externalAccountIdByInternalId = new Map<string, string>();
+    for (const [
+      externalAccountId,
+      internalAccountId,
+    ] of accountMappings.activeAccountIdMap) {
+      externalAccountIdByInternalId.set(internalAccountId, externalAccountId);
+    }
+    const staleOnOrBefore = dayjs
+      .utc()
+      .subtract(STALE_PENDING_TRANSACTION_AGE_DAYS, 'day')
+      .format('YYYY-MM-DD');
+    const staleTransactions =
+      await this.transactionService.findStalePendingProviderTransactions(
+        userId,
+        [...externalAccountIdByInternalId.keys()],
+        staleOnOrBefore,
+        STALE_PENDING_TRANSACTION_BATCH_LIMIT,
+      );
+    if (staleTransactions.length === 0) {
+      return emptyResult;
+    }
+
+    const candidates = staleTransactions.flatMap((transaction) => {
+      const externalAccountId = externalAccountIdByInternalId.get(
+        transaction.internalAccountId,
+      );
+      return externalAccountId
+        ? [
+            {
+              internalAccountId: transaction.internalAccountId,
+              externalAccountId,
+              pendingExternalTransactionId:
+                transaction.pendingExternalTransactionId,
+              providerDate: transaction.providerDate,
+              localUpdatedAt: transaction.localUpdatedAt,
+            },
+          ]
+        : [];
+    });
+    const candidateKeys = new Set(
+      candidates.map(
+        (candidate) =>
+          `${candidate.externalAccountId}\u0000${candidate.pendingExternalTransactionId}`,
+      ),
+    );
+    const snapshot = await provider.getPendingTransactionReconciliationSnapshot(
+      bankLink.authentication,
+      candidates,
+      dayjs.utc().format('YYYY-MM-DD'),
+    );
+    const replacements = snapshot.replacements;
+    const replacementsByPendingKey = new Map<
+      string,
+      Map<string, (typeof replacements)[number]>
+    >();
+
+    for (const replacement of replacements) {
+      if (
+        replacement.pending ||
+        !replacement.pendingTransactionId ||
+        !replacement.externalTransactionId
+      ) {
+        continue;
+      }
+      const pendingKey = `${replacement.accountId}\u0000${replacement.pendingTransactionId}`;
+      if (!candidateKeys.has(pendingKey)) {
+        continue;
+      }
+      const byPostedId =
+        replacementsByPendingKey.get(pendingKey) ??
+        new Map<string, (typeof replacements)[number]>();
+      byPostedId.set(replacement.externalTransactionId, replacement);
+      replacementsByPendingKey.set(pendingKey, byPostedId);
+    }
+
+    const unambiguousReplacements = [...replacementsByPendingKey.values()]
+      .filter((byPostedId) => byPostedId.size === 1)
+      .map((byPostedId) => [...byPostedId.values()][0]);
+    const ambiguousCount = [...replacementsByPendingKey.values()].filter(
+      (byPostedId) => byPostedId.size > 1,
+    ).length;
+
+    const lastSuccessfulUpdateMs = snapshot.lastSuccessfulUpdate
+      ? Date.parse(snapshot.lastSuccessfulUpdate)
+      : Number.NaN;
+    const lastFailedUpdateMs = snapshot.lastFailedUpdate
+      ? Date.parse(snapshot.lastFailedUpdate)
+      : Number.NaN;
+    const nowMs = Date.now();
+    const itemSnapshotIsFresh =
+      Number.isFinite(lastSuccessfulUpdateMs) &&
+      lastSuccessfulUpdateMs <= nowMs + 5 * 60 * 1000 &&
+      nowMs - lastSuccessfulUpdateMs <=
+        PROVIDER_SNAPSHOT_MAX_AGE_HOURS * 60 * 60 * 1000 &&
+      (!Number.isFinite(lastFailedUpdateMs) ||
+        lastFailedUpdateMs <= lastSuccessfulUpdateMs) &&
+      !snapshot.hasItemError;
+    const presentCandidateKeys = new Set(snapshot.presentCandidateKeys);
+    const eligibleExternalAccountIds = new Set(
+      snapshot.eligibleExternalAccountIds,
+    );
+    const authoritativeAbsenceBefore = dayjs
+      .utc()
+      .subtract(AUTHORITATIVE_PENDING_ABSENCE_AGE_DAYS, 'day')
+      .format('YYYY-MM-DD');
+    const replacementPendingKeys = new Set(replacementsByPendingKey.keys());
+    const authoritativeAbsenceRemovals = candidates.filter((candidate) => {
+      const pendingKey = `${candidate.externalAccountId}\u0000${candidate.pendingExternalTransactionId}`;
+      const localUpdatedAtMs = Date.parse(candidate.localUpdatedAt);
+      return (
+        snapshot.complete &&
+        itemSnapshotIsFresh &&
+        snapshot.startDate <= candidate.providerDate &&
+        snapshot.endDate >= candidate.providerDate &&
+        candidate.providerDate < authoritativeAbsenceBefore &&
+        Number.isFinite(localUpdatedAtMs) &&
+        lastSuccessfulUpdateMs > localUpdatedAtMs &&
+        eligibleExternalAccountIds.has(candidate.externalAccountId) &&
+        !presentCandidateKeys.has(pendingKey) &&
+        !replacementPendingKeys.has(pendingKey)
+      );
+    });
+    const authoritativeAbsenceRemovalIds = authoritativeAbsenceRemovals.map(
+      (candidate) => candidate.pendingExternalTransactionId,
+    );
+
+    let authoritativeAbsenceDeletedCount = 0;
+    if (
+      unambiguousReplacements.length > 0 ||
+      authoritativeAbsenceRemovalIds.length > 0
+    ) {
+      const processingResult = await this.transactionService.processSyncResults(
+        userId,
+        accountMappings.activeAccountIdMap,
+        {
+          added: unambiguousReplacements,
+          modified: [],
+          removed: authoritativeAbsenceRemovalIds,
+          nextCursor: '',
+          hasMore: false,
+        },
+        {
+          authoritativePendingAbsenceRemovals: authoritativeAbsenceRemovals.map(
+            (candidate) => ({
+              internalAccountId: candidate.internalAccountId,
+              externalTransactionId: candidate.pendingExternalTransactionId,
+              expectedProviderDate: candidate.providerDate,
+              expectedLocalUpdatedAt: candidate.localUpdatedAt,
+              evidence: {
+                schemaVersion: 1,
+                bankLinkId,
+                externalAccountId: candidate.externalAccountId,
+                localUpdatedAt: candidate.localUpdatedAt,
+                providerWindowStart: snapshot.startDate,
+                providerWindowEnd: snapshot.endDate,
+                providerLastSuccessfulUpdate: snapshot.lastSuccessfulUpdate,
+              },
+            }),
+          ),
+        },
+      );
+      authoritativeAbsenceDeletedCount =
+        processingResult.authoritativeAbsenceDeletedCount;
+    }
+
+    const reconciledCount =
+      unambiguousReplacements.length + authoritativeAbsenceDeletedCount;
+    const result = {
+      candidateCount: candidates.length,
+      reconciledCount,
+      unresolvedCount: candidates.length - reconciledCount,
+      ambiguousCount,
+    };
+    const logContext = {
+      bankLinkId,
+      ...result,
+      batchLimitReached:
+        staleTransactions.length === STALE_PENDING_TRANSACTION_BATCH_LIMIT,
+      explicitReplacementCount: unambiguousReplacements.length,
+      authoritativeAbsenceRemovalCount: authoritativeAbsenceRemovalIds.length,
+      authoritativeAbsenceDeletedCount,
+      providerSnapshotComplete: snapshot.complete,
+      providerSnapshotFresh: itemSnapshotIsFresh,
+    };
+    if (result.unresolvedCount > 0) {
+      this.logger.warn(
+        logContext,
+        'Stale pending transactions remain unresolved after provider reconciliation',
+      );
+    } else {
+      this.logger.log(
+        logContext,
+        'Reconciled stale pending transactions from provider evidence',
+      );
+    }
+
+    return result;
+  }
+
   private async syncTransactionsAtCurrentCursor(
     bankLinkId: string,
     userId: string,
   ): Promise<void> {
     const bankLink = await this.repository.findOne({
-      where: { id: bankLinkId, userId },
+      where: { id: bankLinkId, userId, archivedAt: IsNull() },
     });
     if (!bankLink) {
       throw new Error(`Bank link not found: ${bankLinkId}`);
@@ -1195,7 +1541,7 @@ export class BankLinkService extends OwnedCrudService<
         beforeChanges: async (manager) => {
           const bankLinkRepository = manager.getRepository(BankLinkEntity);
           const currentBankLink = await bankLinkRepository.findOne({
-            where: { id: bankLinkId, userId },
+            where: { id: bankLinkId, userId, archivedAt: IsNull() },
             lock: { mode: 'pessimistic_write' },
           });
           if (!currentBankLink) {
@@ -1232,7 +1578,7 @@ export class BankLinkService extends OwnedCrudService<
     userId: string,
   ): Promise<InvestmentHoldingsSyncResult> {
     const bankLink = await this.repository.findOne({
-      where: { id: bankLinkId, userId },
+      where: { id: bankLinkId, userId, archivedAt: IsNull() },
     });
     if (!bankLink) {
       throw new Error(`Bank link not found: ${bankLinkId}`);
@@ -1309,7 +1655,7 @@ export class BankLinkService extends OwnedCrudService<
     userId: string,
   ): Promise<InvestmentTransactionsSyncResult> {
     const bankLink = await this.repository.findOne({
-      where: { id: bankLinkId, userId },
+      where: { id: bankLinkId, userId, archivedAt: IsNull() },
     });
     if (!bankLink) {
       throw new Error(`Bank link not found: ${bankLinkId}`);
@@ -1405,6 +1751,7 @@ export class BankLinkService extends OwnedCrudService<
     apiAccounts: APIAccount[],
     accountIdToBankLinkId: Map<string, string>,
     userId: string,
+    accountRepository = this.accountRepository,
   ): Promise<Account[]> {
     if (apiAccounts.length === 0) {
       return [];
@@ -1438,7 +1785,7 @@ export class BankLinkService extends OwnedCrudService<
         identityKey: `${bankLinkId}:${apiAccount.accountId}`,
       };
     });
-    const existingAccounts = await this.accountRepository.find({
+    const existingAccounts = await accountRepository.find({
       where: accountInputs.map(({ identity }) => identity),
     });
     const existingAccountMap = new Map(
@@ -1464,7 +1811,7 @@ export class BankLinkService extends OwnedCrudService<
       if (!account) {
         const newAccount = AccountEntity.fromDto(dto, userId);
         try {
-          const insertResult = await this.accountRepository.insert({
+          const insertResult = await accountRepository.insert({
             userId: newAccount.userId,
             name: newAccount.name,
             customName: newAccount.customName,
@@ -1501,7 +1848,7 @@ export class BankLinkService extends OwnedCrudService<
             'Another sync created the linked account; using the existing row',
           );
 
-          account = await this.accountRepository.findOne({ where: identity });
+          account = await accountRepository.findOne({ where: identity });
           if (!account) {
             throw new Error(
               `Concurrent linked account ${apiAccount.accountId} could not be loaded`,
@@ -1550,7 +1897,7 @@ export class BankLinkService extends OwnedCrudService<
           );
         }
 
-        account = await this.accountRepository.save(account);
+        account = await accountRepository.save(account);
       }
 
       savedAccounts.push(account);
@@ -1615,7 +1962,7 @@ export class BankLinkService extends OwnedCrudService<
     return this.repository.manager.transaction(async (manager) => {
       const repository = manager.getRepository(BankLinkEntity);
       const bankLink = await repository.findOne({
-        where: { id: bankLinkId, userId },
+        where: { id: bankLinkId, userId, archivedAt: IsNull() },
         lock: { mode: 'pessimistic_write' },
       });
       if (!bankLink) {
@@ -1632,8 +1979,9 @@ export class BankLinkService extends OwnedCrudService<
   private async buildActiveTransactionAccountIdMap(
     bankLinkId: string,
     userId: string,
+    accountRepository = this.accountRepository,
   ): Promise<Map<string, string>> {
-    const accounts = await this.accountRepository.find({
+    const accounts = await accountRepository.find({
       where: {
         userId,
         bankLinkId,
@@ -1721,10 +2069,16 @@ export class BankLinkService extends OwnedCrudService<
   private async reconcileAccountIdsCache(
     bankLink: BankLinkEntity,
     userId: string,
+    bankLinkRepository = this.repository,
+    accountRepository = this.accountRepository,
   ): Promise<void> {
     const activeAccountIds = [
       ...(
-        await this.buildActiveTransactionAccountIdMap(bankLink.id, userId)
+        await this.buildActiveTransactionAccountIdMap(
+          bankLink.id,
+          userId,
+          accountRepository,
+        )
       ).keys(),
     ].sort();
     const cachedAccountIds = [...bankLink.accountIds].sort();
@@ -1737,8 +2091,8 @@ export class BankLinkService extends OwnedCrudService<
       return;
     }
 
-    await this.repository.update(
-      { id: bankLink.id, userId },
+    await bankLinkRepository.update(
+      { id: bankLink.id, userId, archivedAt: IsNull() },
       { accountIds: activeAccountIds },
     );
     this.logger.log(
@@ -1810,12 +2164,16 @@ export class BankLinkService extends OwnedCrudService<
    */
   private async findByPlaidItemId(
     itemId: string,
+    includeArchived = false,
   ): Promise<BankLinkEntity | null> {
-    return this.repository
+    const query = this.repository
       .createQueryBuilder('bankLink')
       .where('bankLink.providerName = :provider', { provider: 'plaid' })
-      .andWhere(`"bankLink"."authentication"->>'itemId' = :itemId`, { itemId })
-      .getOne();
+      .andWhere(`"bankLink"."authentication"->>'itemId' = :itemId`, { itemId });
+    if (!includeArchived) {
+      query.andWhere('"bankLink"."archivedAt" IS NULL');
+    }
+    return query.getOne();
   }
 
   private parseLinkFlowContext(
@@ -1853,7 +2211,7 @@ export class BankLinkService extends OwnedCrudService<
     userId: string,
   ): Promise<void> {
     const bankLink = await this.repository.findOne({
-      where: { id: bankLinkId, userId },
+      where: { id: bankLinkId, userId, archivedAt: IsNull() },
     });
     if (!bankLink) {
       throw new NotFoundException(`Bank link not found: ${bankLinkId}`);
@@ -1888,7 +2246,7 @@ export class BankLinkService extends OwnedCrudService<
     let bankLink: BankLinkEntity | null = null;
 
     if (itemId) {
-      bankLink = await this.findByPlaidItemId(itemId);
+      bankLink = await this.findByPlaidItemId(itemId, true);
     }
 
     if (bankLink) {
@@ -1919,6 +2277,7 @@ export class BankLinkService extends OwnedCrudService<
       bankLink.status = 'OK';
       bankLink.statusDate = new Date();
       bankLink.statusBody = null;
+      bankLink.archivedAt = null;
       bankLink.accountIds = Array.from(mergedAccountIds);
       if (response.institution?.id !== undefined) {
         bankLink.institutionId = response.institution.id ?? null;
@@ -2058,7 +2417,7 @@ export class BankLinkService extends OwnedCrudService<
     this.logger.log({ userId }, 'Starting backfill of Plaid item IDs');
 
     const plaidLinks = await this.repository.find({
-      where: { providerName: 'plaid', userId },
+      where: { providerName: 'plaid', userId, archivedAt: IsNull() },
     });
 
     const provider = this.providerRegistry.getProvider('plaid');
@@ -2124,7 +2483,9 @@ export class BankLinkService extends OwnedCrudService<
   ): Promise<{ updated: number; failed: number }> {
     this.logger.log({ userId }, 'Starting webhook URL update for bank links');
 
-    const bankLinks = await this.repository.find({ where: { userId } });
+    const bankLinks = await this.repository.find({
+      where: { userId, archivedAt: IsNull() },
+    });
     this.logger.log(
       { count: bankLinks.length, userId },
       'Found bank links for webhook URL update',

@@ -28,6 +28,7 @@ import { TransactionAnalysisModule } from './transaction-analysis/transaction-an
 import { TransactionCategorizationModule } from './transaction-categorization/transaction-categorization.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { UserModule } from './user/user.module';
+import { getScheduleModuleOptions } from './schedule-options';
 
 @Module({
   imports: [
@@ -95,7 +96,7 @@ import { UserModule } from './user/user.module';
       },
     }),
     EventEmitterModule.forRoot(),
-    ScheduleModule.forRoot(),
+    ScheduleModule.forRoot(getScheduleModuleOptions()),
     AccountActivityModule,
     AuthModule,
     AccountModule,

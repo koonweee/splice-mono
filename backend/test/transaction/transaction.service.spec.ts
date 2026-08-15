@@ -179,6 +179,56 @@ describe('TransactionService', () => {
     });
   });
 
+  it('finds a bounded batch of stale provider pending transactions', async () => {
+    const stalePending = buildTransaction({
+      pending: true,
+      source: 'provider',
+      externalTransactionId: 'stale-pending-id',
+      providerDate: '2026-08-01',
+      updatedAt: new Date('2026-08-02T00:00:00.000Z'),
+    });
+    stalePending.activity.updatedAt = new Date('2026-08-03T00:00:00.000Z');
+    stalePending.activity.account = buildAccount();
+    repository.find.mockResolvedValueOnce([stalePending]);
+
+    await expect(
+      service.findStalePendingProviderTransactions(
+        userId,
+        [accountId],
+        '2026-08-08',
+        100,
+      ),
+    ).resolves.toEqual([
+      {
+        internalAccountId: accountId,
+        pendingExternalTransactionId: 'stale-pending-id',
+        providerDate: '2026-08-01',
+        localUpdatedAt: '2026-08-03T00:00:00.000Z',
+      },
+    ]);
+
+    expect(repository.find).toHaveBeenCalledWith({
+      where: {
+        source: 'provider',
+        pending: true,
+        activity: {
+          userId,
+          accountId: expect.any(Object),
+          provider: 'plaid',
+          providerDate: expect.any(Object),
+          externalActivityId: expect.any(Object),
+          account: {
+            archivedAt: expect.any(Object),
+            type: expect.any(Object),
+          },
+        },
+      },
+      relations: ['activity', 'activity.account', 'category'],
+      order: { activity: { providerDate: 'ASC', id: 'ASC' } },
+      take: 100,
+    });
+  });
+
   it('creates uncategorized transactions while preserving provider category hints', async () => {
     const result = await service.create(
       buildCreateDto({
@@ -895,6 +945,85 @@ describe('TransactionService', () => {
     expect(txnRepo.remove).not.toHaveBeenCalled();
   });
 
+  it('consolidates an existing posted row with its explicitly matched pending row', async () => {
+    const postedTransaction = buildTransaction({
+      id: '00000000-0000-4000-8000-000000000301',
+      externalTransactionId: 'posted-external-id',
+      pending: false,
+      categoryId: null,
+      category: null,
+      categoryAssignmentSource: null,
+      reportingDateOverride: null,
+    });
+    const pendingTransaction = buildTransaction({
+      id: '00000000-0000-4000-8000-000000000302',
+      activityId: '00000000-0000-4000-8000-000000000303',
+      externalTransactionId: 'pending-external-id',
+      pending: true,
+      categoryId: category.id,
+      category,
+      categoryUpdatedAt: new Date('2026-08-02T00:00:00.000Z'),
+      categoryAssignmentSource: 'manual',
+      reportingDateOverride: '2026-08-02',
+    });
+    const txnRepo = {
+      save: jest.fn().mockResolvedValue(postedTransaction),
+      findOne: jest
+        .fn()
+        .mockImplementation(async (options) =>
+          options.where.pending === true
+            ? pendingTransaction
+            : postedTransaction,
+        ),
+      find: jest.fn().mockResolvedValue([]),
+    };
+    const activityRepo = {
+      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: {
+          getRepository: (
+            entity: unknown,
+          ) => typeof txnRepo | typeof activityRepo;
+        }) => unknown,
+      ) =>
+        callback({
+          getRepository: (entity: unknown) =>
+            entity === AccountActivityEntity ? activityRepo : txnRepo,
+        }),
+    );
+
+    await service.processSyncResults(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      {
+        added: [
+          buildCreateDto({
+            accountId: 'external-account-id',
+            externalTransactionId: 'posted-external-id',
+            pending: false,
+            pendingTransactionId: 'pending-external-id',
+            merchantName: 'Posted Store',
+          }),
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor',
+        hasMore: false,
+      },
+    );
+
+    expect(txnRepo.save).toHaveBeenCalledWith(postedTransaction);
+    expect(activityRepo.delete).toHaveBeenCalledWith({
+      id: pendingTransaction.activityId,
+    });
+    expect(postedTransaction.categoryId).toBe(category.id);
+    expect(postedTransaction.categoryAssignmentSource).toBe('manual');
+    expect(postedTransaction.reportingDateOverride).toBe('2026-08-02');
+    expect(postedTransaction.merchantName).toBe('Posted Store');
+  });
+
   it('sync removes account activity parents for provider removals', async () => {
     const providerTransaction = buildTransaction({
       source: 'provider',
@@ -950,6 +1079,204 @@ describe('TransactionService', () => {
       id: expect.any(Object),
     });
     expect(txnRepo.remove).not.toHaveBeenCalled();
+  });
+
+  it('keeps an absence candidate that became posted before its row lock', async () => {
+    const txnRepo = {
+      save: jest.fn(),
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+    };
+    const activityRepo = {
+      delete: jest.fn().mockResolvedValue({ affected: 0 }),
+    };
+    const manager = {
+      query: jest.fn().mockResolvedValueOnce([]),
+      getRepository: (entity: unknown) =>
+        entity === AccountActivityEntity ? activityRepo : txnRepo,
+    };
+    repository.manager.transaction.mockImplementation(async (callback) =>
+      callback(manager),
+    );
+
+    await expect(
+      service.processSyncResults(
+        userId,
+        new Map([['external-account-id', accountId]]),
+        {
+          added: [],
+          modified: [],
+          removed: ['stale-pending-id'],
+          nextCursor: '',
+          hasMore: false,
+        },
+        {
+          authoritativePendingAbsenceRemovals: [
+            {
+              internalAccountId: accountId,
+              externalTransactionId: 'stale-pending-id',
+              expectedProviderDate: '2026-07-01',
+              expectedLocalUpdatedAt: '2026-07-02T00:00:00.000Z',
+              evidence: { schemaVersion: 1 },
+            },
+          ],
+        },
+      ),
+    ).resolves.toEqual({
+      normalRemovedCount: 0,
+      authoritativeAbsenceArchivedCount: 0,
+      authoritativeAbsenceDeletedCount: 0,
+    });
+
+    expect(manager.query).toHaveBeenCalledTimes(1);
+    expect(activityRepo.delete).not.toHaveBeenCalled();
+  });
+
+  it('keeps a locked candidate when the archive insert produces no row', async () => {
+    const txnRepo = {
+      save: jest.fn(),
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+    };
+    const activityRepo = {
+      delete: jest.fn().mockResolvedValue({ affected: 0 }),
+    };
+    const manager = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            activityId: 'activity-id',
+            accountId,
+            externalTransactionId: 'stale-pending-id',
+            providerDate: '2026-07-01',
+            localUpdatedAt: '2026-07-02T00:00:00.000123Z',
+            accountType: 'depository',
+            accountSubtype: 'checking',
+          },
+        ])
+        .mockResolvedValueOnce([]),
+      getRepository: (entity: unknown) =>
+        entity === AccountActivityEntity ? activityRepo : txnRepo,
+    };
+    repository.manager.transaction.mockImplementation(async (callback) =>
+      callback(manager),
+    );
+
+    await expect(
+      service.processSyncResults(
+        userId,
+        new Map([['external-account-id', accountId]]),
+        {
+          added: [],
+          modified: [],
+          removed: ['stale-pending-id'],
+          nextCursor: '',
+          hasMore: false,
+        },
+        {
+          authoritativePendingAbsenceRemovals: [
+            {
+              internalAccountId: accountId,
+              externalTransactionId: 'stale-pending-id',
+              expectedProviderDate: '2026-07-01',
+              expectedLocalUpdatedAt: '2026-07-02T00:00:00.000Z',
+              evidence: { schemaVersion: 1 },
+            },
+          ],
+        },
+      ),
+    ).resolves.toEqual({
+      normalRemovedCount: 0,
+      authoritativeAbsenceArchivedCount: 0,
+      authoritativeAbsenceDeletedCount: 0,
+    });
+
+    expect(manager.query).toHaveBeenCalledTimes(2);
+    expect(activityRepo.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes a locked candidate only after successfully archiving it', async () => {
+    const txnRepo = {
+      save: jest.fn(),
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+    };
+    const activityRepo = {
+      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+    const manager = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            activityId: 'activity-id',
+            accountId,
+            externalTransactionId: 'stale-pending-id',
+            providerDate: '2026-07-01',
+            localUpdatedAt: '2026-07-02T00:00:00.000123Z',
+            accountType: 'depository',
+            accountSubtype: 'checking',
+          },
+        ])
+        .mockResolvedValueOnce([{ id: 'archive-id' }]),
+      getRepository: (entity: unknown) =>
+        entity === AccountActivityEntity ? activityRepo : txnRepo,
+    };
+    repository.manager.transaction.mockImplementation(async (callback) =>
+      callback(manager),
+    );
+
+    await expect(
+      service.processSyncResults(
+        userId,
+        new Map([['external-account-id', accountId]]),
+        {
+          added: [],
+          modified: [],
+          removed: ['stale-pending-id'],
+          nextCursor: '',
+          hasMore: false,
+        },
+        {
+          authoritativePendingAbsenceRemovals: [
+            {
+              internalAccountId: accountId,
+              externalTransactionId: 'stale-pending-id',
+              expectedProviderDate: '2026-07-01',
+              expectedLocalUpdatedAt: '2026-07-02T00:00:00.000Z',
+              evidence: { schemaVersion: 1, providerSnapshotComplete: true },
+            },
+          ],
+        },
+      ),
+    ).resolves.toEqual({
+      normalRemovedCount: 0,
+      authoritativeAbsenceArchivedCount: 1,
+      authoritativeAbsenceDeletedCount: 1,
+    });
+
+    expect(manager.query).toHaveBeenCalledTimes(2);
+    expect(manager.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining(
+        'INSERT INTO "transaction_reconciliation_archive_entity"',
+      ),
+      expect.arrayContaining([
+        'activity-id',
+        JSON.stringify({ schemaVersion: 1, providerSnapshotComplete: true }),
+      ]),
+    );
+    expect(manager.query.mock.calls[1][0]).not.toContain(
+      'GREATEST(banking."updatedAt", activity."updatedAt") =',
+    );
+    expect(manager.query.mock.calls[1][1]).toHaveLength(6);
+    expect(activityRepo.delete).toHaveBeenCalledWith({
+      id: expect.any(Object),
+    });
+    expect(manager.query.mock.invocationCallOrder[1]).toBeLessThan(
+      activityRepo.delete.mock.invocationCallOrder[0],
+    );
   });
 
   it('sync emits one event for provider rows inserted from missing modified transactions', async () => {
