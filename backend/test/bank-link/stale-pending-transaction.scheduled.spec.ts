@@ -26,7 +26,7 @@ describe('StalePendingTransactionScheduledService', () => {
     jest.clearAllMocks();
     queryRunner.query
       .mockResolvedValueOnce([{ acquired: true }])
-      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([[], 0])
       .mockResolvedValueOnce([{ pg_advisory_unlock: true }]);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -106,6 +106,29 @@ describe('StalePendingTransactionScheduledService', () => {
     ).not.toHaveBeenCalled();
     expect(queryRunner.query).toHaveBeenCalledTimes(1);
     expect(queryRunner.release).toHaveBeenCalledTimes(1);
+  });
+
+  it('counts the TypeORM DELETE tuple when purging expired archives', async () => {
+    queryRunner.query
+      .mockReset()
+      .mockResolvedValueOnce([{ acquired: true }])
+      .mockResolvedValueOnce([
+        [{ id: 'archive-1' }, { id: 'archive-2' }, { id: 'archive-3' }],
+        3,
+      ])
+      .mockResolvedValueOnce([{ pg_advisory_unlock: true }]);
+    bankLinkRepository.find.mockResolvedValueOnce([]);
+    const logger = Reflect.get(service, 'logger') as {
+      log: (context: unknown, message: string) => void;
+    };
+    const logSpy = jest.spyOn(logger, 'log');
+
+    await service.handleReconciliation();
+
+    expect(logSpy).toHaveBeenCalledWith(
+      { purgedCount: 3 },
+      'Purged expired transaction reconciliation archives',
+    );
   });
 
   it('releases the advisory lock and connection when the scheduled run fails', async () => {
