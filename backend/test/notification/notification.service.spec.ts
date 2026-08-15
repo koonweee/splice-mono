@@ -56,6 +56,8 @@ describe('NotificationService', () => {
       transaction: jest.fn(),
     },
     save: jest.fn(),
+    createQueryBuilder: jest.fn(),
+    delete: jest.fn(),
   };
   const pushSubscriptionRepository = {
     findOne: jest.fn(),
@@ -68,6 +70,8 @@ describe('NotificationService', () => {
     },
     save: jest.fn(),
     delete: jest.fn(),
+    createQueryBuilder: jest.fn(),
+    find: jest.fn(),
   };
   const userService = {
     findOne: jest.fn(),
@@ -607,15 +611,79 @@ describe('NotificationService', () => {
     expect(deliveryRepo.find).not.toHaveBeenCalled();
   });
 
-  it('cleans up push delivery rows older than thirty days', async () => {
-    pushDeliveryRepository.delete.mockResolvedValueOnce({ affected: 4 });
+  it('retains pending work while cleaning terminal deliveries and old notification records', async () => {
+    const notificationCandidates = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      setOnLocked: jest.fn().mockReturnThis(),
+      getMany: jest
+        .fn()
+        .mockResolvedValue([
+          { id: 'notification-1' },
+          { id: 'notification-2' },
+        ]),
+    };
+    const deliveryCandidates = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      setOnLocked: jest.fn().mockReturnThis(),
+      getMany: jest
+        .fn()
+        .mockResolvedValue([{ id: 'delivery-1' }, { id: 'delivery-2' }]),
+    };
+    const scopedNotificationRepository = {
+      createQueryBuilder: jest.fn().mockReturnValue(notificationCandidates),
+      delete: jest.fn().mockResolvedValue({ affected: 2 }),
+    };
+    const scopedDeliveryRepository = {
+      createQueryBuilder: jest.fn().mockReturnValue(deliveryCandidates),
+      delete: jest.fn().mockResolvedValue({ affected: 2 }),
+    };
+    notificationRepository.manager.transaction.mockImplementationOnce(
+      async (callback: (manager: { getRepository: jest.Mock }) => unknown) =>
+        callback({
+          getRepository: jest.fn((entity: unknown) =>
+            entity === NotificationEntity
+              ? scopedNotificationRepository
+              : scopedDeliveryRepository,
+          ),
+        }),
+    );
 
     await expect(
-      service.cleanupOldPushDeliveries(new Date('2026-02-01T00:00:00.000Z')),
-    ).resolves.toBe(4);
+      service.cleanupOldNotificationRecords(
+        new Date('2026-02-01T00:00:00.000Z'),
+      ),
+    ).resolves.toEqual({ deliveries: 2, notifications: 2 });
 
-    expect(pushDeliveryRepository.delete).toHaveBeenCalledWith({
-      createdAt: expect.any(Object),
+    expect(deliveryCandidates.take).toHaveBeenCalledWith(500);
+    expect(deliveryCandidates.setLock).toHaveBeenCalledWith(
+      'pessimistic_write',
+    );
+    expect(deliveryCandidates.setOnLocked).toHaveBeenCalledWith('skip_locked');
+    expect(scopedDeliveryRepository.delete).toHaveBeenCalledWith({
+      id: expect.objectContaining({ _type: 'in' }),
+      status: expect.objectContaining({ _type: 'in' }),
     });
+    expect(notificationCandidates.andWhere).toHaveBeenCalledWith(
+      expect.stringContaining('"delivery"."notificationId"'),
+    );
+    expect(notificationCandidates.take).toHaveBeenCalledWith(500);
+    expect(notificationCandidates.setLock).toHaveBeenCalledWith(
+      'pessimistic_write',
+    );
+    expect(notificationCandidates.setOnLocked).toHaveBeenCalledWith(
+      'skip_locked',
+    );
   });
 });

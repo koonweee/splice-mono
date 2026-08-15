@@ -40,6 +40,7 @@ describe('CategorizationRuleRecommendationProcessor', () => {
     previewDraftForAgent: jest.Mock;
     completeGeneration: jest.Mock;
     failGeneration: jest.Mock;
+    expireOldPendingSuggestions: jest.Mock;
   };
   let agent: {
     generateCandidates: jest.Mock;
@@ -88,6 +89,7 @@ describe('CategorizationRuleRecommendationProcessor', () => {
       }),
       completeGeneration: jest.fn().mockResolvedValue([{ id: 'suggestion-1' }]),
       failGeneration: jest.fn().mockResolvedValue(undefined),
+      expireOldPendingSuggestions: jest.fn().mockResolvedValue(0),
     };
     agent = {
       generateCandidates: jest.fn().mockResolvedValue([
@@ -166,6 +168,14 @@ describe('CategorizationRuleRecommendationProcessor', () => {
 
     expect(service.failGeneration).toHaveBeenCalledWith(generation, error);
     expect(service.completeGeneration).not.toHaveBeenCalled();
+  });
+
+  it('expires old pending suggestions on the retention schedule', async () => {
+    service.expireOldPendingSuggestions.mockResolvedValueOnce(7);
+
+    await processor.expireOldPendingSuggestions();
+
+    expect(service.expireOldPendingSuggestions).toHaveBeenCalledTimes(1);
   });
 
   it('logs acquisition failures and allows the next run to proceed', async () => {

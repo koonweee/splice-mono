@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createHash, timingSafeEqual } from 'crypto';
 import { decodeJwt, decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
 import {
+  AccountSubtype,
+  AccountType,
   Configuration,
   CountryCode,
   DefaultUpdateWebhook,
@@ -43,7 +45,11 @@ import {
   PlaidUserDetails,
   PlaidUserDetailsSchema,
 } from '../../../types/ProviderUserDetails';
-import { IBankLinkProvider } from '../bank-link-provider.interface';
+import {
+  IBankLinkProvider,
+  type PendingTransactionReconciliationSnapshot,
+  type StalePendingTransactionCandidate,
+} from '../bank-link-provider.interface';
 
 /**
  * Authentication data for Plaid API calls
@@ -54,6 +60,9 @@ interface PlaidAuthentication {
 }
 
 const TRANSACTIONS_SYNC_PAGINATION_RESTART_LIMIT = 3;
+const TRANSACTIONS_GET_PAGE_SIZE = 500;
+const TRANSACTIONS_GET_MAX_PAGES = 20;
+const TRANSACTIONS_GET_START_DATE_BUFFER_DAYS = 7;
 const TRANSACTIONS_SYNC_MUTATION_ERROR =
   'TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION';
 
@@ -1235,6 +1244,181 @@ export class PlaidProvider implements IBankLinkProvider {
     }
 
     throw new Error('Transaction sync pagination restart limit exhausted');
+  }
+
+  /**
+   * Fetches the current Plaid transaction window to recover explicit
+   * pending-to-posted identity links that may have been missed by an older
+   * cursor consumer. Absence from this response is deliberately not treated
+   * as evidence that a local pending transaction should be removed.
+   */
+  async getPendingTransactionReconciliationSnapshot(
+    authentication: Record<string, any>,
+    candidates: StalePendingTransactionCandidate[],
+    endDate: string,
+  ): Promise<PendingTransactionReconciliationSnapshot> {
+    if (!isPlaidAuthentication(authentication)) {
+      throw new Error('Missing or invalid accessToken in authentication data');
+    }
+    if (candidates.length === 0) {
+      return {
+        replacements: [],
+        presentCandidateKeys: [],
+        eligibleExternalAccountIds: [],
+        startDate: endDate,
+        endDate,
+        complete: true,
+        lastSuccessfulUpdate: null,
+        lastFailedUpdate: null,
+        hasItemError: false,
+      };
+    }
+
+    const candidateKeys = new Set(
+      candidates.map(
+        (candidate) =>
+          `${candidate.externalAccountId}\u0000${candidate.pendingExternalTransactionId}`,
+      ),
+    );
+    const accountIds = [
+      ...new Set(candidates.map((candidate) => candidate.externalAccountId)),
+    ];
+    const earliestCandidateDate = candidates.reduce(
+      (earliest, candidate) =>
+        candidate.providerDate < earliest ? candidate.providerDate : earliest,
+      candidates[0].providerDate,
+    );
+    const startDate = new Date(`${earliestCandidateDate}T00:00:00.000Z`);
+    startDate.setUTCDate(
+      startDate.getUTCDate() - TRANSACTIONS_GET_START_DATE_BUFFER_DAYS,
+    );
+    const bufferedStartDate = startDate.toISOString().slice(0, 10);
+    const replacements: CreateTransactionDto[] = [];
+    const presentCandidateKeys = new Set<string>();
+    const eligibleExternalAccountIds = new Set<string>();
+    const seenTransactionKeys = new Set<string>();
+    let offset = 0;
+    let totalTransactions = Number.POSITIVE_INFINITY;
+    let initialTotalTransactions: number | null = null;
+    let totalCountStable = true;
+    let emptyPageAnomaly = false;
+    let pages = 0;
+    const itemBefore = await this.client.itemGet({
+      access_token: authentication.accessToken,
+    });
+
+    while (offset < totalTransactions && pages < TRANSACTIONS_GET_MAX_PAGES) {
+      const response = await this.client.transactionsGet({
+        access_token: authentication.accessToken,
+        start_date: bufferedStartDate,
+        end_date: endDate,
+        options: {
+          account_ids: accountIds,
+          count: TRANSACTIONS_GET_PAGE_SIZE,
+          offset,
+          include_original_description: true,
+          include_personal_finance_category: true,
+        },
+      });
+      const page = response.data.transactions;
+      totalTransactions = response.data.total_transactions;
+      if (initialTotalTransactions === null) {
+        initialTotalTransactions = totalTransactions;
+      } else if (totalTransactions !== initialTotalTransactions) {
+        totalCountStable = false;
+      }
+      pages += 1;
+      offset += page.length;
+
+      for (const account of response.data.accounts) {
+        const transactionsCovered =
+          account.type === AccountType.Depository ||
+          account.type === AccountType.Credit ||
+          (account.type === AccountType.Loan &&
+            (account.subtype === AccountSubtype.Student ||
+              account.subtype === AccountSubtype.Mortgage));
+        if (transactionsCovered) {
+          eligibleExternalAccountIds.add(account.account_id);
+        }
+      }
+
+      for (const transaction of page) {
+        const transactionKey = `${transaction.account_id}\u0000${transaction.transaction_id}`;
+        seenTransactionKeys.add(transactionKey);
+        if (candidateKeys.has(transactionKey)) {
+          presentCandidateKeys.add(transactionKey);
+        }
+        if (transaction.pending || !transaction.pending_transaction_id) {
+          continue;
+        }
+        const key = `${transaction.account_id}\u0000${transaction.pending_transaction_id}`;
+        if (candidateKeys.has(key)) {
+          replacements.push(this.mapPlaidTransactionToDto(transaction));
+        }
+      }
+
+      if (page.length === 0) {
+        emptyPageAnomaly = offset < totalTransactions;
+        break;
+      }
+    }
+
+    const itemAfter = await this.client.itemGet({
+      access_token: authentication.accessToken,
+    });
+    const statusBefore = itemBefore.data.status?.transactions;
+    const statusAfter = itemAfter.data.status?.transactions;
+    const lastSuccessfulUpdate = statusAfter?.last_successful_update ?? null;
+    const lastFailedUpdate = statusAfter?.last_failed_update ?? null;
+    const itemUpdateStable =
+      (statusBefore?.last_successful_update ?? null) === lastSuccessfulUpdate &&
+      (statusBefore?.last_failed_update ?? null) === lastFailedUpdate;
+    const fullyPaged =
+      initialTotalTransactions !== null &&
+      offset >= initialTotalTransactions &&
+      seenTransactionKeys.size === initialTotalTransactions &&
+      !emptyPageAnomaly;
+    const complete =
+      fullyPaged &&
+      totalCountStable &&
+      itemUpdateStable &&
+      pages <= TRANSACTIONS_GET_MAX_PAGES;
+
+    if (offset < totalTransactions) {
+      this.logger.warn(
+        {
+          candidateCount: candidates.length,
+          fetchedCount: offset,
+          totalTransactions,
+          maxPages: TRANSACTIONS_GET_MAX_PAGES,
+        },
+        'Stopped stale pending replacement scan at the pagination safety limit',
+      );
+    }
+
+    this.logger.log(
+      {
+        candidateCount: candidates.length,
+        replacementCount: replacements.length,
+        fetchedCount: offset,
+        pageCount: pages,
+      },
+      'Completed stale pending replacement scan',
+    );
+
+    return {
+      replacements,
+      presentCandidateKeys: [...presentCandidateKeys],
+      eligibleExternalAccountIds: [...eligibleExternalAccountIds],
+      startDate: bufferedStartDate,
+      endDate,
+      complete,
+      lastSuccessfulUpdate,
+      lastFailedUpdate,
+      hasItemError:
+        itemBefore.data.item.error !== null ||
+        itemAfter.data.item.error !== null,
+    };
   }
 
   /**

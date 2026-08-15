@@ -4,7 +4,7 @@ describe('NotificationPushProcessor', () => {
   const notificationService = {
     claimPendingPushDeliveries: jest.fn(),
     sendPushDelivery: jest.fn(),
-    cleanupOldPushDeliveries: jest.fn(),
+    cleanupOldNotificationRecords: jest.fn(),
   };
   let processor: NotificationPushProcessor;
 
@@ -29,12 +29,15 @@ describe('NotificationPushProcessor', () => {
   });
 
   it('cleans up old push delivery rows', async () => {
-    notificationService.cleanupOldPushDeliveries.mockResolvedValueOnce(3);
+    notificationService.cleanupOldNotificationRecords.mockResolvedValueOnce({
+      deliveries: 3,
+      notifications: 2,
+    });
 
-    await processor.cleanupOldPushDeliveries();
+    await processor.cleanupOldNotificationRecords();
 
-    expect(notificationService.cleanupOldPushDeliveries).toHaveBeenCalledTimes(
-      1,
-    );
+    expect(
+      notificationService.cleanupOldNotificationRecords,
+    ).toHaveBeenCalledTimes(1);
   });
 });

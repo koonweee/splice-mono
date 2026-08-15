@@ -8,6 +8,26 @@ import type {
   ProviderInvestmentHoldingsResponse,
   ProviderInvestmentTransactionsResponse,
 } from '../../types/Investment';
+import type { CreateTransactionDto } from '../../types/Transaction';
+
+export type StalePendingTransactionCandidate = {
+  externalAccountId: string;
+  pendingExternalTransactionId: string;
+  providerDate: string;
+  localUpdatedAt: string;
+};
+
+export type PendingTransactionReconciliationSnapshot = {
+  replacements: CreateTransactionDto[];
+  presentCandidateKeys: string[];
+  eligibleExternalAccountIds: string[];
+  startDate: string;
+  endDate: string;
+  complete: boolean;
+  lastSuccessfulUpdate: string | null;
+  lastFailedUpdate: string | null;
+  hasItemError: boolean;
+};
 
 /**
  * Interface that all bank link providers must implement
@@ -148,6 +168,17 @@ export interface IBankLinkProvider {
     authentication: Record<string, any>,
     cursor?: string,
   ): Promise<TransactionSyncResponse>;
+
+  /**
+   * Re-query a bounded provider transaction window for explicit posted
+   * replacements of stale pending transactions. An empty result is not a
+   * removal signal: callers must leave unmatched pending rows unchanged.
+   */
+  getPendingTransactionReconciliationSnapshot?(
+    authentication: Record<string, any>,
+    candidates: StalePendingTransactionCandidate[],
+    endDate: string,
+  ): Promise<PendingTransactionReconciliationSnapshot>;
 
   /**
    * Sync investment holdings from the provider.

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, MoreThan, Repository } from 'typeorm';
+import { IsNull, Like, MoreThan, Repository } from 'typeorm';
 import { WebhookEvent, WebhookEventStatus } from '../types/WebhookEvent';
 import { WebhookEventEntity } from './webhook-event.entity';
 
@@ -54,11 +54,12 @@ export class WebhookEventService {
     webhookId: string,
   ): Promise<WebhookEvent | null> {
     this.logger.log({ webhookId }, 'Finding pending webhook event');
+    const now = new Date();
     const entity = await this.repository.findOne({
-      where: { webhookId, status: WebhookEventStatus.PENDING },
+      where: this.activePendingWhere(webhookId, now),
     });
 
-    if (!entity) {
+    if (!entity || this.isExpired(entity, now)) {
       this.logger.warn({ webhookId }, 'Pending WebhookEvent not found');
       return null;
     }
@@ -75,23 +76,22 @@ export class WebhookEventService {
     webhookContent: Record<string, any>,
   ): Promise<WebhookEvent | null> {
     this.logger.log({ webhookId }, 'Marking webhook event as completed');
-    const entity = await this.repository.findOne({
-      where: { webhookId, status: WebhookEventStatus.PENDING },
-    });
+    const savedEntity = await this.mutateActivePending(
+      webhookId,
+      (entity, now) => {
+        entity.status = WebhookEventStatus.COMPLETED;
+        entity.webhookContent = webhookContent;
+        entity.completedAt = now;
+      },
+    );
 
-    if (!entity) {
+    if (!savedEntity) {
       this.logger.warn(
         { webhookId },
         'Pending WebhookEvent not found for completion',
       );
       return null;
     }
-
-    entity.status = WebhookEventStatus.COMPLETED;
-    entity.webhookContent = webhookContent;
-    entity.completedAt = new Date();
-
-    const savedEntity = await this.repository.save(entity);
     this.logger.log({ webhookId }, 'WebhookEvent marked as completed');
     return savedEntity.toObject();
   }
@@ -105,24 +105,23 @@ export class WebhookEventService {
     webhookContent?: Record<string, any>,
   ): Promise<WebhookEvent | null> {
     this.logger.log({ webhookId }, 'Marking webhook event as failed');
-    const entity = await this.repository.findOne({
-      where: { webhookId, status: WebhookEventStatus.PENDING },
-    });
+    const savedEntity = await this.mutateActivePending(
+      webhookId,
+      (entity, now) => {
+        entity.status = WebhookEventStatus.FAILED;
+        entity.errorMessage = errorMessage;
+        entity.webhookContent = webhookContent ?? null;
+        entity.completedAt = now;
+      },
+    );
 
-    if (!entity) {
+    if (!savedEntity) {
       this.logger.warn(
         { webhookId },
         'Pending WebhookEvent not found for failure',
       );
       return null;
     }
-
-    entity.status = WebhookEventStatus.FAILED;
-    entity.errorMessage = errorMessage;
-    entity.webhookContent = webhookContent ?? null;
-    entity.completedAt = new Date();
-
-    const savedEntity = await this.repository.save(entity);
     this.logger.log({ webhookId }, 'WebhookEvent marked as failed');
     return savedEntity.toObject();
   }
@@ -191,5 +190,38 @@ export class WebhookEventService {
     );
 
     return { acquired: true };
+  }
+
+  private activePendingWhere(webhookId: string, now: Date) {
+    const base = { webhookId, status: WebhookEventStatus.PENDING };
+    return [
+      { ...base, expiresAt: IsNull() },
+      { ...base, expiresAt: MoreThan(now) },
+    ];
+  }
+
+  private isExpired(entity: WebhookEventEntity, now: Date): boolean {
+    return entity.expiresAt !== null && entity.expiresAt <= now;
+  }
+
+  private async mutateActivePending(
+    webhookId: string,
+    mutate: (entity: WebhookEventEntity, now: Date) => void,
+  ): Promise<WebhookEventEntity | null> {
+    return this.repository.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(WebhookEventEntity);
+      const now = new Date();
+      const entity = await repository.findOne({
+        where: this.activePendingWhere(webhookId, now),
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!entity || this.isExpired(entity, now)) {
+        return null;
+      }
+
+      mutate(entity, now);
+      return repository.save(entity);
+    });
   }
 }

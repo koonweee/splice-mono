@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'crypto';
-import { Brackets, In, IsNull, LessThan, Repository } from 'typeorm';
+import { Brackets, In, IsNull, Repository } from 'typeorm';
 import type {
   Notification,
   NotificationPayload,
@@ -19,6 +19,8 @@ import { PushSubscriptionEntity } from './push-subscription.entity';
 import { RenderedPushPayload, WebPushAdapter } from './web-push.adapter';
 
 const NOTIFICATION_PUSH_DELIVERY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const NOTIFICATION_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+export const NOTIFICATION_CLEANUP_BATCH_SIZE = 500;
 const MAX_PUSH_DELIVERY_ATTEMPTS = 3;
 const PUSH_RETRY_DELAY_MS = 5 * 60 * 1000;
 const PUSH_PROCESSING_STALE_MS = 10 * 60 * 1000;
@@ -384,14 +386,73 @@ export class NotificationService {
     }
   }
 
-  async cleanupOldPushDeliveries(now = new Date()): Promise<number> {
-    const cutoff = new Date(
+  async cleanupOldNotificationRecords(
+    now = new Date(),
+  ): Promise<{ deliveries: number; notifications: number }> {
+    const deliveryCutoff = new Date(
       now.getTime() - NOTIFICATION_PUSH_DELIVERY_RETENTION_MS,
     );
-    const result = await this.pushDeliveryRepository.delete({
-      createdAt: LessThan(cutoff),
+    const terminalStatuses = ['sent', 'failed'] as const;
+    const notificationCutoff = new Date(
+      now.getTime() - NOTIFICATION_RETENTION_MS,
+    );
+    return this.notificationRepository.manager.transaction(async (manager) => {
+      const deliveryRepository = manager.getRepository(
+        NotificationPushDeliveryEntity,
+      );
+      const notificationRepository = manager.getRepository(NotificationEntity);
+      const deliveries = await deliveryRepository
+        .createQueryBuilder('delivery')
+        .select(['delivery.id'])
+        .where('delivery.createdAt < :deliveryCutoff', { deliveryCutoff })
+        .andWhere('delivery.status IN (:...terminalStatuses)', {
+          terminalStatuses: [...terminalStatuses],
+        })
+        .orderBy('delivery.createdAt', 'ASC')
+        .addOrderBy('delivery.id', 'ASC')
+        .take(NOTIFICATION_CLEANUP_BATCH_SIZE)
+        .setLock('pessimistic_write')
+        .setOnLocked('skip_locked')
+        .getMany();
+      const deliveryResult =
+        deliveries.length === 0
+          ? { affected: 0 }
+          : await deliveryRepository.delete({
+              id: In(deliveries.map((delivery) => delivery.id)),
+              status: In([...terminalStatuses]),
+            });
+
+      const notifications = await notificationRepository
+        .createQueryBuilder('notification')
+        .select(['notification.id'])
+        .where('notification.createdAt < :notificationCutoff', {
+          notificationCutoff,
+        })
+        .andWhere(
+          `NOT EXISTS (
+            SELECT 1
+            FROM "notification_push_delivery_entity" "delivery"
+            WHERE "delivery"."notificationId" = "notification"."id"
+          )`,
+        )
+        .orderBy('notification.createdAt', 'ASC')
+        .addOrderBy('notification.id', 'ASC')
+        .take(NOTIFICATION_CLEANUP_BATCH_SIZE)
+        .setLock('pessimistic_write')
+        .setOnLocked('skip_locked')
+        .getMany();
+      const notificationResult =
+        notifications.length === 0
+          ? { affected: 0 }
+          : await notificationRepository.delete({
+              id: In(notifications.map((notification) => notification.id)),
+            });
+
+      return {
+        deliveries: deliveryResult.affected ?? 0,
+        notifications: notificationResult.affected ?? 0,
+      };
     });
-    return result.affected ?? 0;
   }
 
   private async handlePushDeliveryFailure(
