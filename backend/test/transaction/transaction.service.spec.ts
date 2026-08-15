@@ -815,7 +815,11 @@ describe('TransactionService', () => {
           return entities;
         },
       ),
-      findOne: jest.fn().mockResolvedValue(pendingTransaction),
+      findOne: jest
+        .fn()
+        .mockImplementation(async (options) =>
+          options.where.pending === true ? pendingTransaction : null,
+        ),
       find: jest.fn().mockResolvedValue([]),
       remove: jest.fn(),
     };
@@ -997,5 +1001,164 @@ describe('TransactionService', () => {
         count: 1,
       }),
     );
+  });
+
+  it('rejects unknown provider account IDs before opening a transaction', async () => {
+    await expect(
+      service.processSyncResults(userId, new Map(), {
+        added: [
+          buildCreateDto({
+            accountId: 'unknown-provider-account',
+            externalTransactionId: 'unknown-provider-transaction',
+          }),
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'must-not-persist',
+        hasMore: false,
+      }),
+    ).rejects.toThrow(
+      'unknown or archived provider accounts: unknown-provider-account',
+    );
+
+    expect(repository.manager.transaction).not.toHaveBeenCalled();
+  });
+
+  it('idempotently updates an existing posted transaction when an added page is replayed', async () => {
+    const existing = buildTransaction({
+      externalTransactionId: 'replayed-provider-transaction',
+      merchantName: 'Old Merchant',
+      source: 'provider',
+    });
+    const txnRepo = {
+      findOne: jest.fn().mockResolvedValue(existing),
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockResolvedValue(existing),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
+      ) => callback({ getRepository: () => txnRepo }),
+    );
+
+    await service.processSyncResults(
+      userId,
+      new Map([['external-account-id', accountId]]),
+      {
+        added: [
+          buildCreateDto({
+            accountId: 'external-account-id',
+            externalTransactionId: 'replayed-provider-transaction',
+            merchantName: 'Current Merchant',
+          }),
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor',
+        hasMore: false,
+      },
+    );
+
+    expect(txnRepo.findOne).toHaveBeenCalledWith({
+      where: {
+        activity: {
+          externalActivityId: 'replayed-provider-transaction',
+          accountId,
+          userId,
+        },
+      },
+      relations: ['activity', 'activity.account', 'category'],
+    });
+    expect(txnRepo.save).toHaveBeenCalledTimes(1);
+    expect(txnRepo.save).toHaveBeenCalledWith(existing);
+    expect(existing.merchantName).toBe('Current Merchant');
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('rolls back the sync outcome and emits no event when cursor persistence fails', async () => {
+    const txnRepo = {
+      findOne: jest.fn().mockResolvedValue(null),
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn(
+        async (entities: TransactionEntity | TransactionEntity[]) => {
+          if (Array.isArray(entities)) {
+            entities[0].id = '00000000-0000-4000-8000-000000000777';
+          }
+          return entities;
+        },
+      ),
+    };
+    const manager = { getRepository: () => txnRepo };
+    repository.manager.transaction.mockImplementation(async (callback) =>
+      callback(manager),
+    );
+    const beforeChanges = jest.fn().mockResolvedValue(undefined);
+    const beforeCommit = jest
+      .fn()
+      .mockRejectedValue(new Error('cursor persistence failed'));
+
+    await expect(
+      service.processSyncResults(
+        userId,
+        new Map([['external-account-id', accountId]]),
+        {
+          added: [
+            buildCreateDto({
+              accountId: 'external-account-id',
+              externalTransactionId: 'new-provider-transaction',
+            }),
+          ],
+          modified: [],
+          removed: [],
+          nextCursor: 'cursor',
+          hasMore: false,
+        },
+        { beforeChanges, beforeCommit },
+      ),
+    ).rejects.toThrow('cursor persistence failed');
+
+    expect(beforeChanges).toHaveBeenCalledWith(manager);
+    expect(beforeCommit).toHaveBeenCalledWith(manager);
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('does not swallow an individual modified transaction failure or advance the cursor', async () => {
+    const existing = buildTransaction({
+      externalTransactionId: 'modified-provider-transaction',
+    });
+    const txnRepo = {
+      findOne: jest.fn().mockResolvedValue(existing),
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockRejectedValue(new Error('row update failed')),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
+      ) => callback({ getRepository: () => txnRepo }),
+    );
+    const beforeCommit = jest.fn().mockResolvedValue(undefined);
+
+    await expect(
+      service.processSyncResults(
+        userId,
+        new Map([['external-account-id', accountId]]),
+        {
+          added: [],
+          modified: [
+            buildCreateDto({
+              accountId: 'external-account-id',
+              externalTransactionId: 'modified-provider-transaction',
+            }),
+          ],
+          removed: [],
+          nextCursor: 'cursor',
+          hasMore: false,
+        },
+        { beforeCommit },
+      ),
+    ).rejects.toThrow('row update failed');
+
+    expect(beforeCommit).not.toHaveBeenCalled();
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
   });
 });

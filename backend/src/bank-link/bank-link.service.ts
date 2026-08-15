@@ -11,7 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
@@ -33,6 +33,7 @@ import type {
   InitiateLinkResponse,
   LinkCompletionResponse,
   SanitizedBankLink,
+  TransactionSyncResponse,
   UpdateBankLinkDto,
 } from '../types/BankLink';
 import type {
@@ -59,6 +60,9 @@ type LinkFlowContext = LinkConversionContext | LinkUpdateContext;
 
 const INVESTMENT_ACCOUNT_TYPES = ['investment', 'brokerage'];
 const INVESTMENT_TRANSACTION_LOOKBACK_DAYS = 730;
+const TRANSACTION_SYNC_CURSOR_RETRY_LIMIT = 3;
+
+class BankLinkCursorChangedError extends Error {}
 const LINKED_ACCOUNT_IDENTITY_CONSTRAINT = 'UQ_account_user_bank_link_external';
 
 type PostgresError = {
@@ -652,12 +656,15 @@ export class BankLinkService extends OwnedCrudService<
       }
     }
 
-    // Update bank link status
-    bankLink.status = statusInfo.status;
-    bankLink.statusDate = new Date();
-    bankLink.statusBody = statusBody;
-
-    await this.repository.save(bankLink);
+    const statusDate = new Date();
+    await this.repository.update(
+      { id: bankLink.id, userId: bankLink.userId },
+      {
+        status: statusInfo.status,
+        statusDate,
+        statusBody,
+      },
+    );
     this.logger.log(
       { bankLinkId: bankLink.id, status: statusInfo.status },
       'Updated bank link status',
@@ -673,7 +680,7 @@ export class BankLinkService extends OwnedCrudService<
           bankLink.institutionName,
           statusInfo.status,
           statusBody,
-          bankLink.statusDate.toISOString(),
+          statusDate.toISOString(),
         ),
       );
     }
@@ -1040,7 +1047,12 @@ export class BankLinkService extends OwnedCrudService<
       ) {
         bankLink.institutionId = institutionId;
         bankLink.institutionName = institutionName;
-        await this.repository.save(bankLink);
+        await this.repository.update(
+          { id: bankLink.id, userId },
+          { institutionId, institutionName },
+        );
+        bankLink.institutionId = institutionId;
+        bankLink.institutionName = institutionName;
         this.logger.log(
           { bankLinkId, institutionName, institutionId },
           'Updated institution info for bank link',
@@ -1060,6 +1072,7 @@ export class BankLinkService extends OwnedCrudService<
       accountIdToBankLinkId,
       bankLink.userId,
     );
+    await this.reconcileAccountIdsCache(bankLink, userId);
     this.logger.log({ count: savedAccounts.length }, 'Synced accounts');
 
     return savedAccounts;
@@ -1074,6 +1087,34 @@ export class BankLinkService extends OwnedCrudService<
    * @param userId - ID of the user who owns this bank link
    */
   async syncTransactions(bankLinkId: string, userId: string): Promise<void> {
+    for (
+      let attempt = 1;
+      attempt <= TRANSACTION_SYNC_CURSOR_RETRY_LIMIT;
+      attempt++
+    ) {
+      try {
+        await this.syncTransactionsAtCurrentCursor(bankLinkId, userId);
+        return;
+      } catch (error) {
+        const canRetry =
+          error instanceof BankLinkCursorChangedError &&
+          attempt < TRANSACTION_SYNC_CURSOR_RETRY_LIMIT;
+        if (!canRetry) {
+          throw error;
+        }
+
+        this.logger.warn(
+          { bankLinkId, attempt },
+          'Bank link cursor changed during transaction sync; refetching from the current cursor',
+        );
+      }
+    }
+  }
+
+  private async syncTransactionsAtCurrentCursor(
+    bankLinkId: string,
+    userId: string,
+  ): Promise<void> {
     const bankLink = await this.repository.findOne({
       where: { id: bankLinkId, userId },
     });
@@ -1090,11 +1131,7 @@ export class BankLinkService extends OwnedCrudService<
       return;
     }
 
-    // Get current cursor from authentication data
-    const currentCursor = bankLink.authentication.nextCursor as
-      | string
-      | undefined;
-
+    const currentCursor = this.getTransactionCursor(bankLink);
     this.logger.log(
       {
         bankLinkId,
@@ -1104,49 +1141,85 @@ export class BankLinkService extends OwnedCrudService<
       'Starting transaction sync for bank link',
     );
 
-    // Call provider to get sync results
     const syncResults = await provider.syncTransactions(
       bankLink.authentication,
       currentCursor,
     );
-
-    // Build external account ID -> internal account ID map
-    const externalAccountIds = bankLink.accountIds;
-    const accounts = await this.accountRepository.find({
-      where: {
-        externalAccountId: In(externalAccountIds),
-        userId,
-      },
-    });
-
-    const accountIdMap = new Map<string, string>();
-    accounts.forEach((account) => {
-      if (account.externalAccountId) {
-        accountIdMap.set(account.externalAccountId, account.id);
-      }
-    });
-
-    this.logger.log(
-      {
-        mappedAccounts: accountIdMap.size,
-        totalExternalIds: externalAccountIds.length,
-      },
-      'Built account ID map for transaction sync',
+    let accountMappings = await this.buildTransactionAccountMappings(
+      bankLinkId,
+      userId,
+    );
+    let processableSyncResults = this.excludeArchivedAccountTransactions(
+      syncResults,
+      accountMappings.archivedExternalAccountIds,
+      bankLinkId,
+    );
+    let unknownAccountIds = this.findUnknownTransactionAccountIds(
+      accountMappings.activeAccountIdMap,
+      processableSyncResults,
     );
 
-    // Process sync results (add/modify/remove transactions)
+    if (unknownAccountIds.length > 0) {
+      this.logger.warn(
+        { bankLinkId, unknownExternalAccountIds: unknownAccountIds },
+        'Transaction sync references unknown accounts; refreshing accounts once',
+      );
+      await this.syncAccounts(bankLinkId, userId);
+      accountMappings = await this.buildTransactionAccountMappings(
+        bankLinkId,
+        userId,
+      );
+      processableSyncResults = this.excludeArchivedAccountTransactions(
+        syncResults,
+        accountMappings.archivedExternalAccountIds,
+        bankLinkId,
+      );
+      unknownAccountIds = this.findUnknownTransactionAccountIds(
+        accountMappings.activeAccountIdMap,
+        processableSyncResults,
+      );
+    }
+
+    if (unknownAccountIds.length > 0) {
+      throw new Error(
+        `Transaction sync references unknown provider accounts after account refresh: ${unknownAccountIds.join(', ')}`,
+      );
+    }
+
+    let lockedBankLink: BankLinkEntity | null = null;
     await this.transactionService.processSyncResults(
       userId,
-      accountIdMap,
-      syncResults,
+      accountMappings.activeAccountIdMap,
+      processableSyncResults,
+      {
+        beforeChanges: async (manager) => {
+          const bankLinkRepository = manager.getRepository(BankLinkEntity);
+          const currentBankLink = await bankLinkRepository.findOne({
+            where: { id: bankLinkId, userId },
+            lock: { mode: 'pessimistic_write' },
+          });
+          if (!currentBankLink) {
+            throw new Error(`Bank link not found: ${bankLinkId}`);
+          }
+          if (this.getTransactionCursor(currentBankLink) !== currentCursor) {
+            throw new BankLinkCursorChangedError(
+              `Bank link cursor changed during sync: ${bankLinkId}`,
+            );
+          }
+          lockedBankLink = currentBankLink;
+        },
+        beforeCommit: async (manager) => {
+          if (!lockedBankLink) {
+            throw new Error(`Bank link was not locked for sync: ${bankLinkId}`);
+          }
+          lockedBankLink.authentication = {
+            ...lockedBankLink.authentication,
+            nextCursor: syncResults.nextCursor,
+          };
+          await manager.getRepository(BankLinkEntity).save(lockedBankLink);
+        },
+      },
     );
-
-    // Update cursor in authentication data
-    bankLink.authentication = {
-      ...bankLink.authentication,
-      nextCursor: syncResults.nextCursor,
-    };
-    await this.repository.save(bankLink);
 
     this.logger.log(
       { bankLinkId, newCursor: syncResults.nextCursor },
@@ -1298,15 +1371,13 @@ export class BankLinkService extends OwnedCrudService<
         response,
       );
 
-    bankLink.authentication = {
-      ...bankLink.authentication,
+    await this.mergeBankLinkAuthentication(bankLink.id, userId, {
       investmentTransactionsSync: {
         lastSyncedAt: new Date().toISOString(),
         lastStartDate: startDate,
         lastEndDate: endDate,
       },
-    };
-    await this.repository.save(bankLink);
+    });
 
     this.logger.log(
       {
@@ -1531,6 +1602,151 @@ export class BankLinkService extends OwnedCrudService<
     return !!account;
   }
 
+  private getTransactionCursor(bankLink: BankLinkEntity): string | undefined {
+    const cursor: unknown = bankLink.authentication.nextCursor;
+    return typeof cursor === 'string' ? cursor : undefined;
+  }
+
+  private async mergeBankLinkAuthentication(
+    bankLinkId: string,
+    userId: string,
+    patch: Record<string, unknown>,
+  ): Promise<BankLinkEntity> {
+    return this.repository.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(BankLinkEntity);
+      const bankLink = await repository.findOne({
+        where: { id: bankLinkId, userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!bankLink) {
+        throw new NotFoundException(`Bank link not found: ${bankLinkId}`);
+      }
+      bankLink.authentication = {
+        ...bankLink.authentication,
+        ...patch,
+      };
+      return repository.save(bankLink);
+    });
+  }
+
+  private async buildActiveTransactionAccountIdMap(
+    bankLinkId: string,
+    userId: string,
+  ): Promise<Map<string, string>> {
+    const accounts = await this.accountRepository.find({
+      where: {
+        userId,
+        bankLinkId,
+        archivedAt: IsNull(),
+      },
+    });
+    const accountIdMap = new Map<string, string>();
+    accounts.forEach((account) => {
+      if (account.externalAccountId) {
+        accountIdMap.set(account.externalAccountId, account.id);
+      }
+    });
+
+    this.logger.log(
+      { bankLinkId, mappedAccounts: accountIdMap.size },
+      'Built active relational account ID map for transaction sync',
+    );
+    return accountIdMap;
+  }
+
+  private async buildTransactionAccountMappings(
+    bankLinkId: string,
+    userId: string,
+  ): Promise<{
+    activeAccountIdMap: Map<string, string>;
+    archivedExternalAccountIds: Set<string>;
+  }> {
+    const [activeAccountIdMap, archivedAccounts] = await Promise.all([
+      this.buildActiveTransactionAccountIdMap(bankLinkId, userId),
+      this.accountRepository.find({
+        where: {
+          userId,
+          bankLinkId,
+          archivedAt: Not(IsNull()),
+        },
+      }),
+    ]);
+    return {
+      activeAccountIdMap,
+      archivedExternalAccountIds: new Set(
+        archivedAccounts.flatMap((account) =>
+          account.externalAccountId ? [account.externalAccountId] : [],
+        ),
+      ),
+    };
+  }
+
+  private excludeArchivedAccountTransactions(
+    syncResults: TransactionSyncResponse,
+    archivedExternalAccountIds: Set<string>,
+    bankLinkId: string,
+  ): TransactionSyncResponse {
+    const added = syncResults.added.filter(
+      (transaction) => !archivedExternalAccountIds.has(transaction.accountId),
+    );
+    const modified = syncResults.modified.filter(
+      (transaction) => !archivedExternalAccountIds.has(transaction.accountId),
+    );
+    const ignoredCount =
+      syncResults.added.length -
+      added.length +
+      (syncResults.modified.length - modified.length);
+    if (ignoredCount > 0) {
+      this.logger.log(
+        { bankLinkId, ignoredCount },
+        'Ignored provider transaction changes for intentionally archived accounts',
+      );
+    }
+    return { ...syncResults, added, modified };
+  }
+
+  private findUnknownTransactionAccountIds(
+    accountIdMap: Map<string, string>,
+    syncResults: TransactionSyncResponse,
+  ): string[] {
+    return [
+      ...new Set(
+        [...syncResults.added, ...syncResults.modified]
+          .map((transaction) => transaction.accountId)
+          .filter((accountId) => !accountIdMap.has(accountId)),
+      ),
+    ];
+  }
+
+  private async reconcileAccountIdsCache(
+    bankLink: BankLinkEntity,
+    userId: string,
+  ): Promise<void> {
+    const activeAccountIds = [
+      ...(
+        await this.buildActiveTransactionAccountIdMap(bankLink.id, userId)
+      ).keys(),
+    ].sort();
+    const cachedAccountIds = [...bankLink.accountIds].sort();
+    if (
+      activeAccountIds.length === cachedAccountIds.length &&
+      activeAccountIds.every(
+        (accountId, index) => accountId === cachedAccountIds[index],
+      )
+    ) {
+      return;
+    }
+
+    await this.repository.update(
+      { id: bankLink.id, userId },
+      { accountIds: activeAccountIds },
+    );
+    this.logger.log(
+      { bankLinkId: bankLink.id, accountCount: activeAccountIds.length },
+      'Reconciled bank link account ID cache from active relational accounts',
+    );
+  }
+
   private async buildExternalAccountIdMap(
     userId: string,
     bankLinkId: string,
@@ -1645,18 +1861,29 @@ export class BankLinkService extends OwnedCrudService<
 
     await this.syncAccounts(bankLinkId, userId);
 
-    bankLink.status = 'OK';
-    bankLink.statusDate = new Date();
-    bankLink.statusBody = null;
-    await this.repository.save(bankLink);
+    await this.repository.update(
+      { id: bankLink.id, userId },
+      { status: 'OK', statusDate: new Date(), statusBody: null },
+    );
   }
 
   private async saveBankLinkFromLinkCompletionResponse(
     providerName: string,
     userId: string,
     response: LinkCompletionResponse,
-    repository: Pick<Repository<BankLinkEntity>, 'save'> = this.repository,
+    repository?: Repository<BankLinkEntity>,
   ): Promise<BankLinkEntity> {
+    if (!repository) {
+      return this.repository.manager.transaction((manager) =>
+        this.saveBankLinkFromLinkCompletionResponse(
+          providerName,
+          userId,
+          response,
+          manager.getRepository(BankLinkEntity),
+        ),
+      );
+    }
+
     const itemId = response.authentication.itemId as string | undefined;
     let bankLink: BankLinkEntity | null = null;
 
@@ -1665,6 +1892,14 @@ export class BankLinkService extends OwnedCrudService<
     }
 
     if (bankLink) {
+      const lockedBankLink = await repository.findOne({
+        where: { id: bankLink.id, userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!lockedBankLink) {
+        throw new NotFoundException(`Bank link not found: ${bankLink.id}`);
+      }
+      bankLink = lockedBankLink;
       this.logger.log(
         { bankLinkId: bankLink.id, itemId },
         'Found existing bank link, updating',
@@ -1673,7 +1908,14 @@ export class BankLinkService extends OwnedCrudService<
         ...bankLink.accountIds,
         ...response.accounts.map((a) => a.accountId),
       ]);
-      bankLink.authentication = response.authentication;
+      const nextCursor = this.getTransactionCursor(bankLink);
+      const investmentTransactionsSync: unknown =
+        bankLink.authentication.investmentTransactionsSync;
+      bankLink.authentication = {
+        ...response.authentication,
+        ...(nextCursor ? { nextCursor } : {}),
+        ...(investmentTransactionsSync ? { investmentTransactionsSync } : {}),
+      };
       bankLink.status = 'OK';
       bankLink.statusDate = new Date();
       bankLink.statusBody = null;
@@ -1838,9 +2080,11 @@ export class BankLinkService extends OwnedCrudService<
 
     const results = await Promise.allSettled(
       linksToUpdate.map(async (link) => {
-        const itemId = await provider.getItemId!(link.authentication);
-        link.authentication = { ...link.authentication, itemId };
-        await this.repository.save(link);
+        if (!provider.getItemId) {
+          throw new Error('Provider does not support getItemId');
+        }
+        const itemId: string = await provider.getItemId(link.authentication);
+        await this.mergeBankLinkAuthentication(link.id, userId, { itemId });
         this.logger.log(
           { bankLinkId: link.id },
           'Backfilled itemId for bank link',

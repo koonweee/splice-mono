@@ -9,6 +9,7 @@ import { LinkedAccountEvents } from '../../src/events/account.events';
 import { BankLinkEvents } from '../../src/events/bank-link.events';
 import { InvestmentService } from '../../src/investment/investment.service';
 import { TransactionService } from '../../src/transaction/transaction.service';
+import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserService } from '../../src/user/user.service';
 import { WebhookEventService } from '../../src/webhook-event/webhook-event.service';
 import { mockProviderRegistry } from '../mocks/bank-link/provider-registry.mock';
@@ -21,6 +22,12 @@ import {
 } from '../mocks/bank-link/provider.mock';
 import { mockUserService } from '../mocks/user/user-service.mock';
 import { mockWebhookEventService } from '../mocks/webhook-event/webhook-event-service.mock';
+
+const plaidSyncTransactions = mockPlaidProvider.syncTransactions;
+if (!plaidSyncTransactions) {
+  throw new Error('Plaid transaction sync mock is required');
+}
+const mockPlaidSyncTransactions = jest.mocked(plaidSyncTransactions);
 
 const mockEventEmitter = {
   emit: jest.fn(),
@@ -61,11 +68,15 @@ const mockCreateBankLinkDto = {
   accountIds: ['acc-1', 'acc-2'],
 };
 
+const mockBankLinkAuthentication: Record<string, unknown> = {
+  accessToken: 'test-token',
+};
+
 const mockBankLinkEntity = {
   id: '123e4567-e89b-12d3-a456-426614174000',
   userId: mockUserId,
   providerName: 'plaid',
-  authentication: { accessToken: 'test-token' },
+  authentication: mockBankLinkAuthentication,
   accountIds: ['acc-1', 'acc-2'],
   status: 'OK',
   statusDate: new Date('2026-01-01T00:00:00Z'),
@@ -110,6 +121,7 @@ const mockBankLinkRepository: any = {
   }),
   findOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
   find: jest.fn().mockResolvedValue([mockBankLinkEntity]),
+  update: jest.fn().mockResolvedValue({ affected: 1 }),
   delete: jest.fn().mockResolvedValue({ affected: 1 }),
   createQueryBuilder: jest.fn().mockReturnValue({
     where: jest.fn().mockReturnThis(),
@@ -683,6 +695,10 @@ describe('BankLinkService', () => {
 
     it('should complete update mode without exchanging a replacement token', async () => {
       const providerName = 'plaid';
+      mockBankLinkEntity.authentication = {
+        accessToken: 'test-token',
+        nextCursor: 'current-cursor',
+      };
       mockBankLinkEntity.status = 'ERROR';
       mockBankLinkEntity.statusBody = {
         error_code: 'ITEM_LOGIN_REQUIRED',
@@ -717,12 +733,16 @@ describe('BankLinkService', () => {
       expect(mockPlaidProvider.getAccounts).toHaveBeenCalledWith(
         mockBankLinkEntity.authentication,
       );
-      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+      expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
+        { id: mockBankLinkEntity.id, userId: mockUserId },
         expect.objectContaining({
-          id: mockBankLinkEntity.id,
           status: 'OK',
           statusBody: null,
         }),
+      );
+      expect(mockBankLinkRepository.update).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ authentication: expect.anything() }),
       );
       expect(mockWebhookEventService.markCompleted).toHaveBeenCalledWith(
         'webhook-mock-123',
@@ -770,6 +790,12 @@ describe('BankLinkService', () => {
 
     it('should update existing bank link instead of creating new one when itemId matches', async () => {
       const providerName = 'plaid';
+      mockBankLinkEntity.authentication = {
+        accessToken: 'old-access-token',
+        itemId: 'item-mock-123',
+        nextCursor: 'current-cursor',
+        investmentTransactionsSync: { lastSyncedAt: '2026-08-01T00:00:00Z' },
+      };
 
       await service.handleWebhook(
         providerName,
@@ -780,6 +806,10 @@ describe('BankLinkService', () => {
 
       // findByPlaidItemId is called (via createQueryBuilder) to check for existing link
       expect(mockBankLinkRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(mockBankLinkRepository.findOne).toHaveBeenCalledWith({
+        where: { id: mockBankLinkEntity.id, userId: mockUserId },
+        lock: { mode: 'pessimistic_write' },
+      });
 
       // Should save the updated existing entity (not create a new one via fromDto)
       // The authentication now includes nextCursor from initial transaction sync
@@ -791,6 +821,10 @@ describe('BankLinkService', () => {
           authentication: expect.objectContaining({
             accessToken: 'access-token-123',
             itemId: 'item-mock-123',
+            nextCursor: 'current-cursor',
+            investmentTransactionsSync: {
+              lastSyncedAt: '2026-08-01T00:00:00Z',
+            },
           }),
         }),
       );
@@ -1198,6 +1232,10 @@ describe('BankLinkService', () => {
 
       const bankLinkWithStatus = {
         ...mockBankLinkEntity,
+        authentication: {
+          accessToken: 'test-token',
+          nextCursor: 'current-cursor',
+        },
         status: 'OK',
         statusDate: new Date(),
         statusBody: null,
@@ -1225,7 +1263,8 @@ describe('BankLinkService', () => {
         errorPayload,
       );
       // Should have updated the bank link status
-      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+      expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
+        { id: bankLinkWithStatus.id, userId: mockUserId },
         expect.objectContaining({
           status: 'ERROR',
           statusBody: {
@@ -1234,6 +1273,10 @@ describe('BankLinkService', () => {
             update_type: 'background',
           },
         }),
+      );
+      expect(mockBankLinkRepository.update).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ authentication: expect.anything() }),
       );
       // Should NOT have synced accounts
       expect(mockPlaidProvider.getAccounts).not.toHaveBeenCalled();
@@ -1300,7 +1343,8 @@ describe('BankLinkService', () => {
       );
 
       // Should have updated status to OK and cleared statusBody
-      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+      expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
+        { id: bankLinkWithError.id, userId: mockUserId },
         expect.objectContaining({
           status: 'OK',
           statusBody: null,
@@ -1355,7 +1399,8 @@ describe('BankLinkService', () => {
         disconnectPayload,
       );
 
-      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+      expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
+        { id: bankLinkWithStatus.id, userId: mockUserId },
         expect.objectContaining({
           status: 'PENDING_REAUTH',
         }),
@@ -1544,11 +1589,12 @@ describe('BankLinkService', () => {
       await service.syncAccounts(mockBankLink.id, mockUserId);
 
       // Verify bank link is saved with updated institution info
-      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
+      expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
+        { id: mockBankLink.id, userId: mockUserId },
+        {
           institutionId: mockInstitution.id,
           institutionName: mockInstitution.name,
-        }),
+        },
       );
     });
 
@@ -1563,17 +1609,22 @@ describe('BankLinkService', () => {
       mockBankLinkRepository.findOne.mockResolvedValueOnce(
         bankLinkWithSameInstitution,
       );
+      mockAccountRepository.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { id: 'account-1', externalAccountId: 'acc-1' },
+          { id: 'account-2', externalAccountId: 'acc-2' },
+        ]);
 
       await service.syncAccounts(mockBankLink.id, mockUserId);
 
-      // Bank link repository save should only be called for accounts, not for the bank link itself
-      // The bank link save would be called with the entity object (not an array)
-      const saveCallsWithBankLink =
-        mockBankLinkRepository.save.mock.calls.filter(
-          (call: unknown[]) =>
-            !Array.isArray(call[0]) && call[0] === bankLinkWithSameInstitution,
-        );
-      expect(saveCallsWithBankLink.length).toBe(0);
+      expect(mockBankLinkRepository.update).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          institutionId: expect.anything(),
+          institutionName: expect.anything(),
+        }),
+      );
     });
 
     it('should handle missing institution info from provider gracefully', async () => {
@@ -1592,17 +1643,53 @@ describe('BankLinkService', () => {
       mockBankLinkRepository.findOne.mockResolvedValueOnce(
         bankLinkWithInstitution,
       );
+      mockAccountRepository.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { id: 'account-1', externalAccountId: 'acc-1' },
+          { id: 'account-2', externalAccountId: 'acc-2' },
+        ]);
 
       // Should not throw and should not update institution
       await service.syncAccounts(mockBankLink.id, mockUserId);
 
-      // Verify no bank link save was called for institution update
-      const saveCallsWithBankLink =
-        mockBankLinkRepository.save.mock.calls.filter(
-          (call: unknown[]) =>
-            !Array.isArray(call[0]) && call[0] === bankLinkWithInstitution,
-        );
-      expect(saveCallsWithBankLink.length).toBe(0);
+      expect(mockBankLinkRepository.update).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          institutionId: expect.anything(),
+          institutionName: expect.anything(),
+        }),
+      );
+    });
+
+    it('reconciles the accountIds cache from active relational accounts', async () => {
+      const staleBankLink = {
+        ...mockBankLinkEntity,
+        userId: mockUserId,
+        accountIds: ['archived-or-stale-account'],
+      };
+      mockBankLinkRepository.findOne.mockResolvedValueOnce(staleBankLink);
+      mockAccountRepository.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 'active-account',
+            externalAccountId: mockApiAccount.accountId,
+            bankLinkId: mockBankLink.id,
+            userId: mockUserId,
+            archivedAt: null,
+          },
+        ]);
+
+      await service.syncAccounts(mockBankLink.id, mockUserId);
+
+      expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
+        { id: mockBankLink.id, userId: mockUserId },
+        { accountIds: [mockApiAccount.accountId] },
+      );
+      expect(staleBankLink.authentication).toEqual({
+        accessToken: 'test-token',
+      });
     });
   });
 
@@ -1737,6 +1824,22 @@ describe('BankLinkService', () => {
     });
 
     it('should sync investment transactions for providers that support them', async () => {
+      const staleBankLink = {
+        ...mockBankLinkEntity,
+        authentication: { accessToken: 'test-token' },
+      };
+      const currentBankLink = {
+        ...mockBankLinkEntity,
+        authentication: {
+          accessToken: 'test-token',
+          nextCursor: 'current-cursor',
+        },
+      };
+      mockBankLinkRepository.find.mockResolvedValueOnce([staleBankLink]);
+      mockBankLinkRepository.findOne
+        .mockResolvedValueOnce(staleBankLink)
+        .mockResolvedValueOnce(currentBankLink);
+
       const result = await service.syncAllInvestmentTransactions(mockUserId);
 
       expect(mockPlaidProvider.syncInvestmentTransactions).toHaveBeenCalledWith(
@@ -1747,9 +1850,14 @@ describe('BankLinkService', () => {
       expect(
         mockInvestmentService.upsertPlaidInvestmentTransactions,
       ).toHaveBeenCalled();
+      expect(mockBankLinkRepository.findOne).toHaveBeenCalledWith({
+        where: { id: currentBankLink.id, userId: mockUserId },
+        lock: { mode: 'pessimistic_write' },
+      });
       expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           authentication: expect.objectContaining({
+            nextCursor: 'current-cursor',
             investmentTransactionsSync: expect.objectContaining({
               lastSyncedAt: expect.any(String),
               lastStartDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
@@ -1801,6 +1909,13 @@ describe('BankLinkService', () => {
       mockBankLinkRepository.find.mockResolvedValueOnce([
         bankLinkWithoutItemId,
       ]);
+      mockBankLinkRepository.findOne.mockResolvedValueOnce({
+        ...bankLinkWithoutItemId,
+        authentication: {
+          accessToken: 'test-token',
+          nextCursor: 'current-cursor',
+        },
+      });
 
       const result = await service.backfillPlaidItemIds(mockUserId);
 
@@ -1810,10 +1925,15 @@ describe('BankLinkService', () => {
       expect(mockPlaidProvider.getItemId).toHaveBeenCalledWith({
         accessToken: 'test-token',
       });
+      expect(mockBankLinkRepository.findOne).toHaveBeenCalledWith({
+        where: { id: bankLinkWithoutItemId.id, userId: mockUserId },
+        lock: { mode: 'pessimistic_write' },
+      });
       expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           authentication: {
             accessToken: 'test-token',
+            nextCursor: 'current-cursor',
             itemId: 'item-mock-123',
           },
         }),
@@ -2117,16 +2237,27 @@ describe('BankLinkService', () => {
         ...mockBankLinkEntity,
         userId: mockUserId,
       });
-      mockAccountRepository.find.mockResolvedValue([
-        {
-          id: 'internal-acc-1',
-          externalAccountId: 'acc-1',
-        },
-        {
-          id: 'internal-acc-2',
-          externalAccountId: 'acc-2',
-        },
-      ]);
+      mockAccountRepository.find
+        .mockResolvedValueOnce([
+          {
+            id: 'internal-acc-1',
+            externalAccountId: 'acc-1',
+            archivedAt: null,
+          },
+          {
+            id: 'internal-acc-2',
+            externalAccountId: 'acc-2',
+            archivedAt: null,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      mockTransactionService.processSyncResults.mockImplementation(
+        async (_userId, _accountIdMap, _syncResults, hooks) =>
+          mockBankLinkRepository.manager.transaction(async (manager) => {
+            await hooks?.beforeChanges?.(manager);
+            await hooks?.beforeCommit?.(manager);
+          }),
+      );
     });
 
     it('should call provider syncTransactions and process results', async () => {
@@ -2145,7 +2276,18 @@ describe('BankLinkService', () => {
           removed: [],
           nextCursor: 'cursor-mock-123',
         }),
+        expect.objectContaining({
+          beforeChanges: expect.any(Function),
+          beforeCommit: expect.any(Function),
+        }),
       );
+      expect(mockAccountRepository.find).toHaveBeenCalledWith({
+        where: {
+          userId: mockUserId,
+          bankLinkId: mockBankLink.id,
+          archivedAt: expect.any(Object),
+        },
+      });
     });
 
     it('should update cursor in authentication after sync', async () => {
@@ -2175,6 +2317,207 @@ describe('BankLinkService', () => {
       expect(mockPlaidProvider.syncTransactions).toHaveBeenCalledWith(
         { accessToken: 'test-token', nextCursor: 'existing-cursor' },
         'existing-cursor',
+      );
+    });
+
+    it('uses active relational accounts even when the accountIds cache is stale', async () => {
+      mockBankLinkRepository.findOne.mockResolvedValue({
+        ...mockBankLinkEntity,
+        userId: mockUserId,
+        accountIds: ['stale-cached-account'],
+      });
+      mockAccountRepository.find
+        .mockReset()
+        .mockResolvedValueOnce([
+          {
+            id: 'internal-relational-account',
+            externalAccountId: 'provider-account',
+            bankLinkId: mockBankLink.id,
+            userId: mockUserId,
+            archivedAt: null,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      mockPlaidSyncTransactions.mockResolvedValueOnce({
+        added: [
+          {
+            accountId: 'provider-account',
+            amount: {
+              money: { amount: 1200, currency: 'USD' },
+              sign: MoneySign.NEGATIVE,
+            },
+            merchantName: 'Store',
+            pending: false,
+            providerDate: '2026-08-15',
+            externalTransactionId: 'provider-transaction',
+          },
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'next-cursor',
+        hasMore: false,
+      });
+
+      await service.syncTransactions(mockBankLink.id, mockUserId);
+
+      const accountIdMap = mockTransactionService.processSyncResults.mock
+        .calls[0][1] as Map<string, string>;
+      expect(accountIdMap).toEqual(
+        new Map([['provider-account', 'internal-relational-account']]),
+      );
+    });
+
+    it('refreshes accounts once and hard-fails without advancing the cursor when an account remains unknown', async () => {
+      mockAccountRepository.find.mockResolvedValue([]);
+      mockPlaidSyncTransactions.mockResolvedValueOnce({
+        added: [
+          {
+            accountId: 'unknown-provider-account',
+            amount: {
+              money: { amount: 1200, currency: 'USD' },
+              sign: MoneySign.NEGATIVE,
+            },
+            merchantName: 'Store',
+            pending: false,
+            providerDate: '2026-08-15',
+            externalTransactionId: 'provider-transaction',
+          },
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'must-not-persist',
+        hasMore: false,
+      });
+
+      await expect(
+        service.syncTransactions(mockBankLink.id, mockUserId),
+      ).rejects.toThrow(
+        'unknown provider accounts after account refresh: unknown-provider-account',
+      );
+
+      expect(mockPlaidProvider.getAccounts).toHaveBeenCalledTimes(1);
+      expect(mockTransactionService.processSyncResults).not.toHaveBeenCalled();
+      expect(mockBankLinkRepository.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          authentication: expect.objectContaining({
+            nextCursor: 'must-not-persist',
+          }),
+        }),
+      );
+    });
+
+    it('ignores provider changes for intentionally archived accounts while advancing the cursor', async () => {
+      mockAccountRepository.find
+        .mockReset()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 'archived-account',
+            externalAccountId: 'archived-provider-account',
+            bankLinkId: mockBankLink.id,
+            userId: mockUserId,
+            archivedAt: new Date('2026-08-01T00:00:00Z'),
+          },
+        ]);
+      mockPlaidSyncTransactions.mockResolvedValueOnce({
+        added: [
+          {
+            accountId: 'archived-provider-account',
+            amount: {
+              money: { amount: 1200, currency: 'USD' },
+              sign: MoneySign.NEGATIVE,
+            },
+            merchantName: 'Hidden Store',
+            pending: false,
+            providerDate: '2026-08-15',
+            externalTransactionId: 'archived-provider-transaction',
+          },
+        ],
+        modified: [],
+        removed: [],
+        nextCursor: 'cursor-after-archived-change',
+        hasMore: false,
+      });
+
+      await service.syncTransactions(mockBankLink.id, mockUserId);
+
+      expect(mockPlaidProvider.getAccounts).not.toHaveBeenCalled();
+      expect(mockTransactionService.processSyncResults).toHaveBeenCalledWith(
+        mockUserId,
+        new Map(),
+        expect.objectContaining({ added: [], modified: [] }),
+        expect.any(Object),
+      );
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authentication: expect.objectContaining({
+            nextCursor: 'cursor-after-archived-change',
+          }),
+        }),
+      );
+    });
+
+    it('refetches from the current cursor when a concurrent sync advances it', async () => {
+      const cursorA = {
+        ...mockBankLinkEntity,
+        authentication: { accessToken: 'test-token', nextCursor: 'cursor-a' },
+      };
+      const cursorB = {
+        ...mockBankLinkEntity,
+        authentication: { accessToken: 'test-token', nextCursor: 'cursor-b' },
+      };
+      mockBankLinkRepository.findOne
+        .mockResolvedValueOnce(cursorA)
+        .mockResolvedValueOnce(cursorB)
+        .mockResolvedValueOnce(cursorB)
+        .mockResolvedValueOnce(cursorB);
+      mockAccountRepository.find
+        .mockReset()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      mockPlaidSyncTransactions
+        .mockResolvedValueOnce({
+          added: [],
+          modified: [],
+          removed: [],
+          nextCursor: 'stale-result-cursor',
+          hasMore: false,
+        })
+        .mockResolvedValueOnce({
+          added: [],
+          modified: [],
+          removed: [],
+          nextCursor: 'fresh-result-cursor',
+          hasMore: false,
+        });
+
+      await service.syncTransactions(mockBankLink.id, mockUserId);
+
+      expect(mockPlaidProvider.syncTransactions).toHaveBeenNthCalledWith(
+        1,
+        cursorA.authentication,
+        'cursor-a',
+      );
+      expect(mockPlaidProvider.syncTransactions).toHaveBeenNthCalledWith(
+        2,
+        { accessToken: 'test-token', nextCursor: 'cursor-b' },
+        'cursor-b',
+      );
+      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authentication: expect.objectContaining({
+            nextCursor: 'fresh-result-cursor',
+          }),
+        }),
+      );
+      expect(mockBankLinkRepository.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          authentication: expect.objectContaining({
+            nextCursor: 'stale-result-cursor',
+          }),
+        }),
       );
     });
 

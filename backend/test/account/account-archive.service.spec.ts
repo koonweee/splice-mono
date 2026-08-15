@@ -32,6 +32,7 @@ describe('AccountService archive', () => {
   const mockBankLinkRepository = {
     findOne: jest.fn(),
     save: jest.fn(),
+    update: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -40,6 +41,7 @@ describe('AccountService archive', () => {
     mockSnapshotRepository.save.mockImplementation(async (entity) => entity);
     mockBankLinkRepository.findOne.mockResolvedValue(null);
     mockBankLinkRepository.save.mockImplementation(async (entity) => entity);
+    mockBankLinkRepository.update.mockResolvedValue({ affected: 1 });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -142,12 +144,9 @@ describe('AccountService archive', () => {
 
     await service.archive('archive-id', mockUserId);
 
-    expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'bank-link-id',
-        accountIds: ['external-keep-id'],
-        authentication: { accessToken: 'test-token', itemId: 'item-id' },
-      }),
+    expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
+      { id: 'bank-link-id', userId: mockUserId },
+      { accountIds: ['external-keep-id'] },
     );
   });
 
@@ -221,11 +220,9 @@ describe('AccountService archive', () => {
     expect(result?.archivedAt?.toISOString()).toBe('2026-04-01T00:00:00.000Z');
     expect(mockRepository.save).not.toHaveBeenCalled();
     expect(mockSnapshotRepository.save).not.toHaveBeenCalled();
-    expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'bank-link-id',
-        accountIds: ['remaining-external-id'],
-      }),
+    expect(mockBankLinkRepository.update).toHaveBeenCalledWith(
+      { id: 'bank-link-id', userId: mockUserId },
+      { accountIds: ['remaining-external-id'] },
     );
   });
 });

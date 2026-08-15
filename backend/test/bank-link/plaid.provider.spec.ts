@@ -405,6 +405,62 @@ describe('PlaidProvider', () => {
         }),
       );
     });
+
+    it('restarts pagination from the original cursor when transaction data mutates', async () => {
+      const transactionsSync = jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: {
+            added: [],
+            modified: [],
+            removed: [{ transaction_id: 'discarded-first-attempt' }],
+            next_cursor: 'first-attempt-page-2',
+            has_more: true,
+          },
+        })
+        .mockRejectedValueOnce({
+          response: {
+            data: {
+              error_code: 'TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION',
+            },
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            added: [],
+            modified: [],
+            removed: [{ transaction_id: 'kept-restarted-attempt' }],
+            next_cursor: 'final-cursor',
+            has_more: false,
+          },
+        });
+      provider['client'] = { transactionsSync } as any;
+
+      const result = await provider.syncTransactions(
+        { accessToken: 'access-token' },
+        'original-cursor',
+      );
+
+      expect(transactionsSync).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ cursor: 'original-cursor' }),
+      );
+      expect(transactionsSync).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ cursor: 'first-attempt-page-2' }),
+      );
+      expect(transactionsSync).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({ cursor: 'original-cursor' }),
+      );
+      expect(result).toEqual({
+        added: [],
+        modified: [],
+        removed: ['kept-restarted-attempt'],
+        nextCursor: 'final-cursor',
+        hasMore: false,
+      });
+    });
   });
 
   describe('syncInvestmentHoldings', () => {
