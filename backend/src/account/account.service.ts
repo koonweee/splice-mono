@@ -246,10 +246,13 @@ export class AccountService extends OwnedCrudService<
       return;
     }
 
-    bankLink.accountIds = bankLink.accountIds.filter(
+    const accountIds = bankLink.accountIds.filter(
       (accountId) => accountId !== accountEntity.externalAccountId,
     );
-    await this.bankLinkRepository.save(bankLink);
+    await this.bankLinkRepository.update(
+      { id: bankLink.id, userId },
+      { accountIds },
+    );
   }
 
   private createZeroBalance(currency: string): BalanceColumns {

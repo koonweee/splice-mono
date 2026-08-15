@@ -53,6 +53,29 @@ interface PlaidAuthentication {
   itemId?: string;
 }
 
+const TRANSACTIONS_SYNC_PAGINATION_RESTART_LIMIT = 3;
+const TRANSACTIONS_SYNC_MUTATION_ERROR =
+  'TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION';
+
+function getPlaidErrorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('response' in error)) {
+    return undefined;
+  }
+  const response = error.response;
+  if (
+    typeof response !== 'object' ||
+    response === null ||
+    !('data' in response)
+  ) {
+    return undefined;
+  }
+  const data = response.data;
+  if (typeof data !== 'object' || data === null || !('error_code' in data)) {
+    return undefined;
+  }
+  return typeof data.error_code === 'string' ? data.error_code : undefined;
+}
+
 /**
  * Type guard for PlaidAuthentication
  */
@@ -1130,66 +1153,88 @@ export class PlaidProvider implements IBankLinkProvider {
     }
     const { accessToken } = authentication;
 
-    const allAdded: CreateTransactionDto[] = [];
-    const allModified: CreateTransactionDto[] = [];
-    const allRemoved: string[] = [];
-    let currentCursor = cursor ?? '';
-    let hasMore = true;
-
     this.logger.log(
       { accessTokenHint: accessToken.slice(-4), hasCursor: !!cursor },
       'Starting transaction sync',
     );
 
-    while (hasMore) {
-      const response = await this.client.transactionsSync({
-        access_token: accessToken,
-        cursor: currentCursor,
-        count: 500,
-        options: {
-          include_original_description: true,
-          include_personal_finance_category: true,
-        },
-      });
+    for (
+      let attempt = 1;
+      attempt <= TRANSACTIONS_SYNC_PAGINATION_RESTART_LIMIT;
+      attempt++
+    ) {
+      const allAdded: CreateTransactionDto[] = [];
+      const allModified: CreateTransactionDto[] = [];
+      const allRemoved: string[] = [];
+      let currentCursor = cursor ?? '';
+      let hasMore = true;
 
-      const { added, modified, removed, next_cursor, has_more } = response.data;
+      try {
+        while (hasMore) {
+          const response = await this.client.transactionsSync({
+            access_token: accessToken,
+            cursor: currentCursor,
+            count: 500,
+            options: {
+              include_original_description: true,
+              include_personal_finance_category: true,
+            },
+          });
 
-      allAdded.push(...added.map((t) => this.mapPlaidTransactionToDto(t)));
-      allModified.push(
-        ...modified.map((t) => this.mapPlaidTransactionToDto(t)),
-      );
-      allRemoved.push(...removed.map((r) => r.transaction_id));
+          const { added, modified, removed, next_cursor, has_more } =
+            response.data;
 
-      currentCursor = next_cursor;
-      hasMore = has_more;
+          allAdded.push(...added.map((t) => this.mapPlaidTransactionToDto(t)));
+          allModified.push(
+            ...modified.map((t) => this.mapPlaidTransactionToDto(t)),
+          );
+          allRemoved.push(...removed.map((r) => r.transaction_id));
 
-      this.logger.log(
-        {
-          addedCount: added.length,
-          modifiedCount: modified.length,
-          removedCount: removed.length,
-          hasMore,
-        },
-        'Fetched transaction sync page',
-      );
+          currentCursor = next_cursor;
+          hasMore = has_more;
+
+          this.logger.log(
+            {
+              addedCount: added.length,
+              modifiedCount: modified.length,
+              removedCount: removed.length,
+              hasMore,
+            },
+            'Fetched transaction sync page',
+          );
+        }
+
+        this.logger.log(
+          {
+            totalAdded: allAdded.length,
+            totalModified: allModified.length,
+            totalRemoved: allRemoved.length,
+          },
+          'Transaction sync complete',
+        );
+
+        return {
+          added: allAdded,
+          modified: allModified,
+          removed: allRemoved,
+          nextCursor: currentCursor,
+          hasMore: false,
+        };
+      } catch (error) {
+        const canRestart =
+          getPlaidErrorCode(error) === TRANSACTIONS_SYNC_MUTATION_ERROR &&
+          attempt < TRANSACTIONS_SYNC_PAGINATION_RESTART_LIMIT;
+        if (!canRestart) {
+          throw error;
+        }
+        this.logger.warn(
+          { attempt, hasStartingCursor: !!cursor },
+          'Transaction data changed during pagination; restarting from the original cursor',
+        );
+      }
     }
 
-    this.logger.log(
-      {
-        totalAdded: allAdded.length,
-        totalModified: allModified.length,
-        totalRemoved: allRemoved.length,
-      },
-      'Transaction sync complete',
-    );
-
-    return {
-      added: allAdded,
-      modified: allModified,
-      removed: allRemoved,
-      nextCursor: currentCursor,
-      hasMore: false,
-    };
+    throw new Error('Transaction sync pagination restart limit exhausted');
   }
 
   /**

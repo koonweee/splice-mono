@@ -74,6 +74,11 @@ type BulkCategoryUndoPayload = {
   transactions: BulkCategoryUndoSnapshot[];
 };
 
+export type TransactionSyncTransactionHooks = {
+  beforeChanges?: (manager: EntityManager) => Promise<void>;
+  beforeCommit?: (manager: EntityManager) => Promise<void>;
+};
+
 @Injectable()
 export class TransactionService extends OwnedCrudService<
   TransactionEntity,
@@ -1156,10 +1161,33 @@ export class TransactionService extends OwnedCrudService<
     userId: string,
     accountIdMap: Map<string, string>,
     syncResults: TransactionSyncResponse,
+    hooks: TransactionSyncTransactionHooks = {},
   ): Promise<void> {
     const { added, modified, removed } = syncResults;
     const uncategorizedInsertedTransactions: TransactionEntity[] = [];
     let automaticallyCategorizedCount = 0;
+
+    const unknownExternalAccountIds = [
+      ...new Set(
+        [...added, ...modified]
+          .map((transaction) => transaction.accountId)
+          .filter((accountId) => !accountIdMap.has(accountId)),
+      ),
+    ];
+    if (unknownExternalAccountIds.length > 0) {
+      throw new Error(
+        `Transaction sync references unknown or archived provider accounts: ${unknownExternalAccountIds.join(', ')}`,
+      );
+    }
+    const getInternalAccountId = (externalAccountId: string): string => {
+      const internalAccountId = accountIdMap.get(externalAccountId);
+      if (!internalAccountId) {
+        throw new Error(
+          `Transaction sync references unknown or archived provider account: ${externalAccountId}`,
+        );
+      }
+      return internalAccountId;
+    };
 
     this.logger.log(
       {
@@ -1172,6 +1200,7 @@ export class TransactionService extends OwnedCrudService<
     );
 
     await this.repository.manager.transaction(async (manager) => {
+      await hooks.beforeChanges?.(manager);
       const txnRepo = manager.getRepository(TransactionEntity);
 
       // Process added transactions
@@ -1179,12 +1208,36 @@ export class TransactionService extends OwnedCrudService<
         const newEntities: TransactionEntity[] = [];
 
         for (const dto of added) {
-          const internalAccountId = accountIdMap.get(dto.accountId);
-          if (!internalAccountId) {
-            this.logger.warn(
-              { externalAccountId: dto.accountId },
-              'No internal account found for external account ID, skipping transaction',
+          const internalAccountId = getInternalAccountId(dto.accountId);
+
+          const existingPosted = dto.externalTransactionId
+            ? await txnRepo.findOne({
+                where: {
+                  activity: {
+                    externalActivityId: dto.externalTransactionId,
+                    accountId: internalAccountId,
+                    userId,
+                  },
+                },
+                relations: this.relations,
+              })
+            : null;
+
+          if (existingPosted) {
+            existingPosted.source = 'provider';
+            this.applyUpdate(
+              existingPosted,
+              this.buildProviderSyncUpdateDto(dto, internalAccountId),
             );
+            if (
+              await this.applyAutomaticCategoryIfEligible(
+                userId,
+                existingPosted,
+              )
+            ) {
+              automaticallyCategorizedCount += 1;
+            }
+            await txnRepo.save(existingPosted);
             continue;
           }
 
@@ -1256,69 +1309,50 @@ export class TransactionService extends OwnedCrudService<
 
       // Process modified transactions
       if (modified.length > 0) {
-        const modifyResults = await Promise.allSettled(
-          modified.map(async (dto) => {
-            const internalAccountId = accountIdMap.get(dto.accountId);
-            if (!internalAccountId) {
-              this.logger.warn(
-                { externalAccountId: dto.accountId },
-                'No internal account found for modified transaction, skipping',
-              );
-              return;
-            }
+        for (const dto of modified) {
+          const internalAccountId = getInternalAccountId(dto.accountId);
 
-            const existing = await txnRepo.findOne({
-              where: {
-                activity: {
-                  externalActivityId: dto.externalTransactionId ?? undefined,
-                  accountId: internalAccountId,
-                  userId,
-                },
-              },
-              relations: this.relations,
-            });
-
-            if (!existing) {
-              this.logger.warn(
-                { externalTransactionId: dto.externalTransactionId },
-                'Modified transaction not found locally, inserting as new',
-              );
-              const entity = TransactionEntity.fromDto(
-                { ...dto, accountId: internalAccountId, categoryId: null },
+          const existing = await txnRepo.findOne({
+            where: {
+              activity: {
+                externalActivityId: dto.externalTransactionId ?? undefined,
+                accountId: internalAccountId,
                 userId,
-              );
-              const wasAutomaticallyCategorized =
-                await this.applyAutomaticCategoryIfEligible(userId, entity);
-              if (wasAutomaticallyCategorized) {
-                automaticallyCategorizedCount += 1;
-              }
-              const savedEntity = await txnRepo.save(entity);
-              if (savedEntity.categoryId === null) {
-                uncategorizedInsertedTransactions.push(savedEntity);
-              }
-              return;
-            }
+              },
+            },
+            relations: this.relations,
+          });
 
-            existing.source = 'provider';
-            this.applyUpdate(
-              existing,
-              this.buildProviderSyncUpdateDto(dto, internalAccountId),
+          if (!existing) {
+            this.logger.warn(
+              { externalTransactionId: dto.externalTransactionId },
+              'Modified transaction not found locally, inserting as new',
             );
-            if (await this.applyAutomaticCategoryIfEligible(userId, existing)) {
+            const entity = TransactionEntity.fromDto(
+              { ...dto, accountId: internalAccountId, categoryId: null },
+              userId,
+            );
+            const wasAutomaticallyCategorized =
+              await this.applyAutomaticCategoryIfEligible(userId, entity);
+            if (wasAutomaticallyCategorized) {
               automaticallyCategorizedCount += 1;
             }
-            await txnRepo.save(existing);
-          }),
-        );
+            const savedEntity = await txnRepo.save(entity);
+            if (savedEntity.categoryId === null) {
+              uncategorizedInsertedTransactions.push(savedEntity);
+            }
+            continue;
+          }
 
-        const failedCount = modifyResults.filter(
-          (r) => r.status === 'rejected',
-        ).length;
-        if (failedCount > 0) {
-          this.logger.warn(
-            { failedCount, totalCount: modified.length },
-            'Some modified transactions failed to update',
+          existing.source = 'provider';
+          this.applyUpdate(
+            existing,
+            this.buildProviderSyncUpdateDto(dto, internalAccountId),
           );
+          if (await this.applyAutomaticCategoryIfEligible(userId, existing)) {
+            automaticallyCategorizedCount += 1;
+          }
+          await txnRepo.save(existing);
         }
       }
 
@@ -1355,6 +1389,8 @@ export class TransactionService extends OwnedCrudService<
           'Removed transactions',
         );
       }
+
+      await hooks.beforeCommit?.(manager);
     });
 
     if (uncategorizedInsertedTransactions.length > 0) {
