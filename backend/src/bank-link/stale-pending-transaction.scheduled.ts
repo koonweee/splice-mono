@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, IsNull, Repository } from 'typeorm';
+import { getPostgresMutationAffectedCount } from '../common/postgres-mutation-result';
 import { BankLinkEntity } from './bank-link.entity';
 import { BankLinkService } from './bank-link.service';
 
@@ -54,7 +55,7 @@ export class StalePendingTransactionScheduledService {
         'Acquired stale pending transaction reconciliation scheduler lock',
       );
 
-      const purgedRows = (await queryRunner.query(`
+      const purgeResult: unknown = await queryRunner.query(`
         WITH expired AS (
           SELECT id
           FROM "transaction_reconciliation_archive_entity"
@@ -67,9 +68,9 @@ export class StalePendingTransactionScheduledService {
         USING expired
         WHERE archive.id = expired.id
         RETURNING archive.id
-      `)) as Array<{ id: string }>;
+      `);
       this.logger.log(
-        { purgedCount: purgedRows.length },
+        { purgedCount: getPostgresMutationAffectedCount(purgeResult) },
         'Purged expired transaction reconciliation archives',
       );
 

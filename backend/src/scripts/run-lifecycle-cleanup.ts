@@ -52,6 +52,8 @@ export type LifecycleCleanupDependencies = {
 export type LifecycleCleanupResult = {
   bankLinks: {
     automaticArchivedCount: number;
+    automaticBatchCount: number;
+    automaticBatchLimitReached: boolean;
     exactGuardRequestedCount: number;
     exactGuardArchivedCount: number;
     exactGuardAlreadyArchivedCount: number;
@@ -165,8 +167,11 @@ export async function runLifecycleCleanup(
   exactBankLinkGuards: EmptyBankLinkArchiveGuard[],
   now = new Date(),
 ): Promise<LifecycleCleanupResult> {
-  const automaticArchivedCount =
-    await dependencies.bankLinkLifecycle.archiveStaleEmptyBankLinks(now);
+  const automaticBankLinks = await runUntilEmptyCountCleanup(
+    (cleanupNow) =>
+      dependencies.bankLinkLifecycle.archiveStaleEmptyBankLinks(cleanupNow),
+    now,
+  );
   let exactGuardArchivedCount = 0;
   let exactGuardAlreadyArchivedCount = 0;
   for (const guard of exactBankLinkGuards) {
@@ -212,7 +217,9 @@ export async function runLifecycleCleanup(
 
   return {
     bankLinks: {
-      automaticArchivedCount,
+      automaticArchivedCount: automaticBankLinks.affectedCount,
+      automaticBatchCount: automaticBankLinks.batchCount,
+      automaticBatchLimitReached: automaticBankLinks.batchLimitReached,
       exactGuardRequestedCount: exactBankLinkGuards.length,
       exactGuardArchivedCount,
       exactGuardAlreadyArchivedCount,
@@ -246,6 +253,23 @@ async function runCountCleanup(
     batchLimitReached:
       batchCount === MAX_BATCHES_PER_CLEANUP && lastBatchCount === batchSize,
   };
+}
+
+async function runUntilEmptyCountCleanup(
+  cleanup: (now: Date) => Promise<number>,
+  now: Date,
+): Promise<BatchCleanupResult> {
+  let affectedCount = 0;
+  let batchCount = 0;
+  while (batchCount < MAX_BATCHES_PER_CLEANUP) {
+    const batchAffectedCount = await cleanup(now);
+    affectedCount += batchAffectedCount;
+    batchCount += 1;
+    if (batchAffectedCount === 0) {
+      return { affectedCount, batchCount, batchLimitReached: false };
+    }
+  }
+  return { affectedCount, batchCount, batchLimitReached: true };
 }
 
 async function runNotificationCleanup(

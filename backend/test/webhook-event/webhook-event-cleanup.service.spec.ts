@@ -13,7 +13,10 @@ describe('WebhookEventCleanupService', () => {
   });
 
   it('deletes only one bounded batch of pending contexts expired beyond retention', async () => {
-    repository.query.mockResolvedValue([{ id: 'webhook-1' }]);
+    repository.query.mockResolvedValue([
+      [{ id: 'webhook-1' }, { id: 'webhook-2' }, { id: 'webhook-3' }],
+      3,
+    ]);
     const module = await Test.createTestingModule({
       providers: [
         WebhookEventCleanupService,
@@ -26,7 +29,7 @@ describe('WebhookEventCleanupService', () => {
     const service = module.get(WebhookEventCleanupService);
     const now = new Date('2026-08-15T12:00:00.000Z');
 
-    await expect(service.cleanupExpiredPending(now, 25)).resolves.toBe(1);
+    await expect(service.cleanupExpiredPending(now, 25)).resolves.toBe(3);
 
     const [sql, parameters] = repository.query.mock.calls[0];
     expect(sql).toContain('FOR UPDATE SKIP LOCKED');
@@ -40,7 +43,7 @@ describe('WebhookEventCleanupService', () => {
   });
 
   it('clamps the batch size to a safe maximum', async () => {
-    repository.query.mockResolvedValue([]);
+    repository.query.mockResolvedValue([[], 0]);
     const module = await Test.createTestingModule({
       providers: [
         WebhookEventCleanupService,
