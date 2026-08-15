@@ -5,6 +5,7 @@ import { AccountEntity } from '../../src/account/account.entity';
 import { BankLinkEntity } from '../../src/bank-link/bank-link.entity';
 import { BankLinkService } from '../../src/bank-link/bank-link.service';
 import { ProviderRegistry } from '../../src/bank-link/providers/provider.registry';
+import { LinkedAccountEvents } from '../../src/events/account.events';
 import { BankLinkEvents } from '../../src/events/bank-link.events';
 import { InvestmentService } from '../../src/investment/investment.service';
 import { TransactionService } from '../../src/transaction/transaction.service';
@@ -123,6 +124,12 @@ const mockBankLinkRepository: any = {
 };
 
 const mockAccountRepository: any = {
+  insert: jest.fn().mockImplementation((entity: AccountEntity) => {
+    entity.id = 'account-id-0';
+    entity.createdAt = new Date('2026-01-01T00:00:00Z');
+    entity.updatedAt = new Date('2026-01-01T00:00:00Z');
+    return Promise.resolve({ identifiers: [{ id: entity.id }] });
+  }),
   save: jest.fn().mockImplementation((entities: unknown) => {
     // Handle both single entity and array saves
     if (Array.isArray(entities)) {
@@ -733,14 +740,12 @@ describe('BankLinkService', () => {
         mockParsedPayload,
       );
 
-      expect(mockAccountRepository.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            name: mockApiAccount.name,
-            externalAccountId: mockApiAccount.accountId,
-            rawApiAccount: mockApiAccount,
-          }),
-        ]),
+      expect(mockAccountRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: mockApiAccount.name,
+          externalAccountId: mockApiAccount.accountId,
+          rawApiAccount: mockApiAccount,
+        }),
       );
     });
 
@@ -1468,7 +1473,7 @@ describe('BankLinkService', () => {
       expect(mockPlaidProvider.getAccounts).toHaveBeenCalledWith({
         accessToken: 'test-token',
       });
-      expect(mockAccountRepository.save).toHaveBeenCalled();
+      expect(mockAccountRepository.insert).toHaveBeenCalled();
       expect(result).toBeDefined();
     });
 
@@ -1491,6 +1496,7 @@ describe('BankLinkService', () => {
     it('should update existing accounts when matched by externalAccountId', async () => {
       const existingAccountEntity = {
         id: 'existing-account-id',
+        bankLinkId: mockBankLink.id,
         externalAccountId: mockApiAccount.accountId,
         name: 'Old Name',
         currentBalance: { currency: 'USD', amount: 10000, sign: 'positive' },
@@ -1506,24 +1512,20 @@ describe('BankLinkService', () => {
       // Should have updated the existing entity
       expect(existingAccountEntity.name).toBe(mockApiAccount.name);
       expect(mockAccountRepository.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            id: 'existing-account-id',
-          }),
-        ]),
+        expect.objectContaining({
+          id: 'existing-account-id',
+        }),
       );
     });
 
     it('should create new accounts when no match found', async () => {
       await service.syncAccounts(mockBankLink.id, mockUserId);
 
-      expect(mockAccountRepository.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            externalAccountId: mockApiAccount.accountId,
-            name: mockApiAccount.name,
-          }),
-        ]),
+      expect(mockAccountRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          externalAccountId: mockApiAccount.accountId,
+          name: mockApiAccount.name,
+        }),
       );
     });
 
@@ -1871,7 +1873,8 @@ describe('BankLinkService', () => {
     const bankLinkId = 'bank-link-123';
 
     beforeEach(() => {
-      mockAccountRepository.find = jest.fn().mockResolvedValue([]);
+      mockAccountRepository.find.mockResolvedValue([]);
+      mockAccountRepository.findOne.mockResolvedValue(null);
     });
 
     it('should return empty array when no accounts provided', async () => {
@@ -1883,6 +1886,7 @@ describe('BankLinkService', () => {
 
       expect(result).toEqual([]);
       expect(mockAccountRepository.find).not.toHaveBeenCalled();
+      expect(mockAccountRepository.insert).not.toHaveBeenCalled();
       expect(mockAccountRepository.save).not.toHaveBeenCalled();
     });
 
@@ -1896,23 +1900,35 @@ describe('BankLinkService', () => {
         mockUserId,
       );
 
-      expect(mockAccountRepository.find).toHaveBeenCalled();
-      expect(mockAccountRepository.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            name: mockApiAccount.name,
-            externalAccountId: mockApiAccount.accountId,
+      expect(mockAccountRepository.find).toHaveBeenCalledWith({
+        where: [
+          {
+            userId: mockUserId,
             bankLinkId,
-          }),
-        ]),
+            externalAccountId: mockApiAccount.accountId,
+          },
+        ],
+      });
+      expect(mockAccountRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: mockApiAccount.name,
+          externalAccountId: mockApiAccount.accountId,
+          bankLinkId,
+        }),
       );
+      expect(mockAccountRepository.save).not.toHaveBeenCalled();
       expect(result).toBeDefined();
       expect(result.length).toBe(1);
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        LinkedAccountEvents.CREATED,
+        expect.anything(),
+      );
     });
 
     it('should update existing accounts matched by externalAccountId', async () => {
       const existingAccountEntity = {
         id: 'existing-account-id',
+        bankLinkId,
         externalAccountId: mockApiAccount.accountId,
         name: 'Old Name',
         currentBalance: { currency: 'USD', amount: 10000, sign: 'positive' },
@@ -1936,17 +1952,16 @@ describe('BankLinkService', () => {
       // Should have updated the existing entity's name
       expect(existingAccountEntity.name).toBe(mockApiAccount.name);
       expect(mockAccountRepository.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            id: 'existing-account-id',
-          }),
-        ]),
+        expect.objectContaining({
+          id: 'existing-account-id',
+        }),
       );
     });
 
     it('should handle mixed scenario with new and existing accounts', async () => {
       const existingAccountEntity = {
         id: 'existing-account-id',
+        bankLinkId,
         externalAccountId: mockApiAccount.accountId,
         name: 'Old Name',
         currentBalance: { currency: 'USD', amount: 10000, sign: 'positive' },
@@ -1974,23 +1989,22 @@ describe('BankLinkService', () => {
       );
 
       expect(mockAccountRepository.save).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          // Existing account (updated)
-          expect.objectContaining({
-            id: 'existing-account-id',
-          }),
-          // New account (created)
-          expect.objectContaining({
-            externalAccountId: 'new-account-456',
-            name: 'New Savings Account',
-          }),
-        ]),
+        expect.objectContaining({
+          id: 'existing-account-id',
+        }),
+      );
+      expect(mockAccountRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          externalAccountId: 'new-account-456',
+          name: 'New Savings Account',
+        }),
       );
     });
 
     it('should preserve customName when syncing existing accounts', async () => {
       const existingAccountEntity = {
         id: 'existing-account-id',
+        bankLinkId,
         externalAccountId: mockApiAccount.accountId,
         name: 'Old Name',
         customName: 'My Custom Name',
@@ -2015,6 +2029,75 @@ describe('BankLinkService', () => {
 
       // customName should be preserved (applyAccountDtoToEntity doesn't touch it)
       expect(existingAccountEntity.customName).toBe('My Custom Name');
+    });
+
+    it('should reuse an account created by a concurrent sync', async () => {
+      const competingAccount = {
+        id: 'competing-account-id',
+        userId: mockUserId,
+        bankLinkId,
+        externalAccountId: mockApiAccount.accountId,
+        archivedAt: null,
+        name: mockApiAccount.name,
+        currentBalance: {
+          currency: 'USD',
+          amount: 10000,
+          sign: 'positive',
+        },
+        toObject: jest.fn().mockReturnValue({
+          id: 'competing-account-id',
+          externalAccountId: mockApiAccount.accountId,
+        }),
+      };
+      mockAccountRepository.findOne.mockResolvedValueOnce(competingAccount);
+      mockAccountRepository.insert.mockRejectedValueOnce({
+        driverError: {
+          code: '23505',
+          constraint: 'UQ_account_user_bank_link_external',
+        },
+      });
+
+      const result = await service.upsertAccountsFromAPI(
+        [mockApiAccount],
+        new Map([[mockApiAccount.accountId, bankLinkId]]),
+        mockUserId,
+      );
+
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'competing-account-id' }),
+      ]);
+      expect(mockAccountRepository.save).toHaveBeenCalledWith(competingAccount);
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        LinkedAccountEvents.UPDATED,
+        expect.anything(),
+      );
+      expect(mockEventEmitter.emit).not.toHaveBeenCalledWith(
+        LinkedAccountEvents.CREATED,
+        expect.anything(),
+      );
+    });
+
+    it('should rethrow unrelated insert conflicts', async () => {
+      mockAccountRepository.insert.mockRejectedValueOnce({
+        driverError: {
+          code: '23505',
+          constraint: 'some_other_constraint',
+        },
+      });
+
+      await expect(
+        service.upsertAccountsFromAPI(
+          [mockApiAccount],
+          new Map([[mockApiAccount.accountId, bankLinkId]]),
+          mockUserId,
+        ),
+      ).rejects.toEqual(
+        expect.objectContaining({
+          driverError: expect.objectContaining({
+            constraint: 'some_other_constraint',
+          }),
+        }),
+      );
     });
 
     it('should throw error when bankLinkId is missing from map', async () => {
