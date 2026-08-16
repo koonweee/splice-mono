@@ -18,6 +18,15 @@ import {
   normalizeCurrencyPair,
 } from './utils/currency-pair.utils';
 
+export function buildExchangeRateKey(
+  baseCurrency: string,
+  targetCurrency: string,
+  rateDate: string,
+): string {
+  const normalized = normalizeCurrencyPair(baseCurrency, targetCurrency);
+  return `${normalized.base}:${normalized.target}:${rateDate}`;
+}
+
 @Injectable()
 export class CurrencyExchangeService {
   private readonly logger = new Logger(CurrencyExchangeService.name);
@@ -332,7 +341,7 @@ export class CurrencyExchangeService {
    * @param targetCurrencies - Array of target currencies
    * @param startDate - Start date (YYYY-MM-DD)
    * @param endDate - End date (YYYY-MM-DD)
-   * @returns Set of "targetCurrency:date" keys that already have rates
+   * @returns Set of canonical "baseCurrency:targetCurrency:date" keys
    */
   async getExistingRateKeys(
     baseCurrency: string,
@@ -362,21 +371,18 @@ export class CurrencyExchangeService {
       .andWhere('rate.rateDate <= :endDate', { endDate })
       .getMany();
 
-    // Build a set of existing keys using the original (non-normalized) target currency
-    // so we can look up by what the caller passed in
+    // Return canonical stored pair identities so callers can safely union
+    // results from more than one base currency.
     const existingKeys = new Set<string>();
 
     entities.forEach((entity) => {
-      // Find which original target currency this maps to
-      targetCurrencies.forEach((targetCurrency, i) => {
-        const normalized = normalizedPairs[i];
-        if (
-          entity.baseCurrency === normalized.base &&
-          entity.targetCurrency === normalized.target
-        ) {
-          existingKeys.add(`${targetCurrency}:${entity.rateDate}`);
-        }
-      });
+      existingKeys.add(
+        buildExchangeRateKey(
+          entity.baseCurrency,
+          entity.targetCurrency,
+          entity.rateDate,
+        ),
+      );
     });
 
     return existingKeys;

@@ -4,6 +4,7 @@ import {
   useBalanceQueryControllerGetBalances,
 } from '../api/clients/spliceAPI'
 import {
+  BalanceCurrencyMismatchError,
   getDateRange,
   getLatestAccountBalance,
   getLatestSyncedAt,
@@ -21,21 +22,32 @@ import { TimePeriod } from '@/lib/types'
 /**
  * Hook for fetching all account balances for the dashboard
  */
-export function useBalanceData(period: TimePeriod) {
+export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
   const { startDate, endDate } = getDateRange(period)
 
   const query = useBalanceQueryControllerGetAllBalances({ startDate, endDate })
 
   // Transform data to dashboard format
-  const dashboard = useMemo<DashboardData | undefined>(() => {
-    if (!query.data) return undefined
-    return transformToDashboardData(query.data, period)
-  }, [query.data, period])
+  const transformed = useMemo<{
+    data?: DashboardData
+    error?: BalanceCurrencyMismatchError
+  }>(() => {
+    if (!query.data) return {}
+
+    try {
+      return {
+        data: transformToDashboardData(query.data, period, reportingCurrency),
+      }
+    } catch (error) {
+      if (error instanceof BalanceCurrencyMismatchError) return { error }
+      throw error
+    }
+  }, [query.data, period, reportingCurrency])
 
   return {
-    data: dashboard,
+    data: transformed.data,
     isLoading: query.isPending,
-    error: query.error,
+    error: query.error ?? transformed.error,
     refetch: query.refetch,
   }
 }
@@ -71,27 +83,50 @@ export function useAccountBalanceHistory(
   )
 
   // Transform data for the chart
-  const result = useMemo<AccountBalanceHistoryResult>(() => {
+  const transformed = useMemo<{
+    data: AccountBalanceHistoryResult
+    error?: BalanceCurrencyMismatchError
+  }>(() => {
     if (!query.data || !accountId) {
       return {
-        chartData: [],
-        latestBalance: undefined,
-        latestSyncedAt: undefined,
-        rawResults: [],
+        data: {
+          chartData: [],
+          latestBalance: undefined,
+          latestSyncedAt: undefined,
+          rawResults: [],
+        },
       }
     }
 
-    return {
-      chartData: transformToAccountChartData(query.data, accountId, period),
-      latestBalance: getLatestAccountBalance(query.data, accountId),
-      latestSyncedAt: getLatestSyncedAt(query.data, accountId),
-      rawResults: query.data,
+    try {
+      return {
+        data: {
+          chartData: transformToAccountChartData(query.data, accountId, period),
+          latestBalance: getLatestAccountBalance(query.data, accountId),
+          latestSyncedAt: getLatestSyncedAt(query.data, accountId),
+          rawResults: query.data,
+        },
+      }
+    } catch (error) {
+      if (!(error instanceof BalanceCurrencyMismatchError)) throw error
+      return {
+        data: {
+          chartData: [],
+          latestBalance: undefined,
+          latestSyncedAt: undefined,
+          rawResults: query.data,
+        },
+        error,
+      }
     }
   }, [query.data, accountId, period])
 
   return {
-    data: result,
+    data: transformed.data,
     isLoading: query.isPending,
-    error: query.error,
+    isFetching: query.isFetching,
+    isError: query.isError || transformed.error !== undefined,
+    error: query.error ?? transformed.error,
+    refetch: query.refetch,
   }
 }

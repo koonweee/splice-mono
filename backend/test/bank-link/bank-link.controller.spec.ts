@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ServiceUnavailableException } from '@nestjs/common';
 import type { Request } from 'express';
 import type { JwtUser } from '../../src/auth/decorators/current-user.decorator';
 import { BankLinkController } from '../../src/bank-link/bank-link.controller';
@@ -155,6 +156,23 @@ describe('BankLinkController', () => {
       );
 
       expect(result).toEqual({ received: true });
+    });
+
+    it('propagates retriable contention instead of acknowledging the webhook', async () => {
+      service.handleWebhook.mockRejectedValueOnce(
+        new ServiceUnavailableException(
+          'Webhook is already being processed; retry later',
+        ),
+      );
+      const req = {
+        body: { webhook_type: 'TRANSACTIONS' },
+        rawBody: Buffer.from('{"webhook_type":"TRANSACTIONS"}'),
+        headers: {},
+      } as unknown as Request;
+
+      await expect(controller.handleWebhook('plaid', req)).rejects.toThrow(
+        ServiceUnavailableException,
+      );
     });
   });
 

@@ -6,9 +6,11 @@
  * OpenAPI spec version: 1.0
  */
 
-export type UpdateTransactionDtoPersonalFinanceCategory = {
+export interface UpdateAccountMetadataDto {
   /** @nullable */
-  primary: string | null
+  name?: string | null
   /** @nullable */
-  detailed: string | null
+  customName?: string | null
+  /** @nullable */
+  notes?: string | null
 }

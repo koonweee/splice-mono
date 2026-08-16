@@ -10,7 +10,7 @@ import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { AccountType } from 'plaid';
-import { In, Not, Repository } from 'typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedCrudService } from '../common/owned-crud.service';
 import {
@@ -18,7 +18,11 @@ import {
   ManualAccountCreatedEvent,
   ManualAccountEvents,
 } from '../events/account.events';
-import { Account, CreateAccountDto, UpdateAccountDto } from '../types/Account';
+import {
+  Account,
+  CreateManualAccountDto,
+  UpdateAccountMetadataDto,
+} from '../types/Account';
 import { MoneySign, SerializedMoneyWithSign } from '../types/MoneyWithSign';
 import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import { AccountEntity } from './account.entity';
@@ -37,8 +41,8 @@ interface FindAllAccountsOptions {
 export class AccountService extends OwnedCrudService<
   AccountEntity,
   Account,
-  CreateAccountDto,
-  UpdateAccountDto
+  CreateManualAccountDto,
+  UpdateAccountMetadataDto
 > {
   protected readonly logger = new Logger(AccountService.name);
   protected readonly entityName = 'Account';
@@ -61,8 +65,19 @@ export class AccountService extends OwnedCrudService<
   /**
    * Override create to emit event for manual accounts
    */
-  async create(dto: CreateAccountDto, userId: string): Promise<Account> {
-    const account = await super.create(dto, userId);
+  async create(dto: CreateManualAccountDto, userId: string): Promise<Account> {
+    // Copy only the public manual-account fields before entity mapping so a
+    // structurally wider internal object cannot smuggle provider-owned data.
+    const manualDto: CreateManualAccountDto = {
+      name: dto.name,
+      customName: dto.customName,
+      notes: dto.notes,
+      type: dto.type,
+      subType: dto.subType,
+      availableBalance: dto.availableBalance,
+      currentBalance: dto.currentBalance,
+    };
+    const account = await super.create(manualDto, userId);
 
     if (!account.bankLinkId) {
       this.eventEmitter.emit(
@@ -82,7 +97,7 @@ export class AccountService extends OwnedCrudService<
     newBalance: SerializedMoneyWithSign,
   ): Promise<Account> {
     const accountEntity = await this.repository.findOne({
-      where: { id: accountId, userId },
+      where: { id: accountId, userId, archivedAt: IsNull() },
     });
 
     if (!accountEntity) {
@@ -121,27 +136,47 @@ export class AccountService extends OwnedCrudService<
     return account;
   }
 
-  protected applyUpdate(entity: AccountEntity, dto: UpdateAccountDto): void {
-    if (dto.name !== undefined) entity.name = dto.name;
+  async update(
+    id: string,
+    dto: UpdateAccountMetadataDto,
+    userId: string,
+  ): Promise<Account | null> {
+    this.logger.log({ id, userId }, `Updating ${this.entityName}`);
+
+    const entity = await this.repository.findOne({
+      where: { id, userId, archivedAt: IsNull() },
+      relations: this.relations,
+    });
+
+    if (!entity) {
+      this.logger.warn(
+        { id, userId },
+        `${this.entityName} not found for update`,
+      );
+      return null;
+    }
+
+    this.applyUpdate(entity, dto);
+
+    const savedEntity = await this.repository.save(entity);
+    this.logger.log({ id }, `${this.entityName} updated successfully`);
+    return savedEntity.toObject();
+  }
+
+  protected applyUpdate(
+    entity: AccountEntity,
+    dto: UpdateAccountMetadataDto,
+  ): void {
+    if (dto.name !== undefined) {
+      if (entity.bankLinkId) {
+        throw new BadRequestException(
+          'Linked account provider names cannot be updated directly',
+        );
+      }
+      entity.name = dto.name;
+    }
     if (dto.customName !== undefined) entity.customName = dto.customName;
     if (dto.notes !== undefined) entity.notes = dto.notes;
-    if (dto.availableBalance !== undefined) {
-      entity.availableBalance = BalanceColumns.fromMoneyWithSign(
-        dto.availableBalance,
-      );
-    }
-    if (dto.currentBalance !== undefined) {
-      entity.currentBalance = BalanceColumns.fromMoneyWithSign(
-        dto.currentBalance,
-      );
-    }
-    if (dto.type !== undefined) entity.type = dto.type;
-    if (dto.subType !== undefined) entity.subType = dto.subType;
-    if (dto.externalAccountId !== undefined)
-      entity.externalAccountId = dto.externalAccountId;
-    if (dto.bankLinkId !== undefined) {
-      entity.bankLinkId = dto.bankLinkId;
-    }
   }
 
   async findOne(id: string, userId: string): Promise<Account | null> {

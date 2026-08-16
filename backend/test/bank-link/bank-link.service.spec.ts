@@ -613,6 +613,13 @@ describe('BankLinkService', () => {
         convertAccountId,
       );
 
+      expect(mockAccountRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          id: convertAccountId,
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
+      });
       expect(mockPlaidProvider.initiateLinking).toHaveBeenCalledWith({
         userId: mockUserId,
         redirectUri: 'https://myapp.com/callback',
@@ -630,6 +637,32 @@ describe('BankLinkService', () => {
           convertAccountId,
         },
       );
+    });
+
+    it('should reject a missing, cross-owner, or archived conversion account', async () => {
+      mockAccountRepository.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.initiateLinking(
+          'plaid',
+          mockUserId,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          'unavailable-account',
+        ),
+      ).rejects.toThrow('Account with id unavailable-account not found');
+
+      expect(mockAccountRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          id: 'unavailable-account',
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
+      });
+      expect(mockPlaidProvider.initiateLinking).not.toHaveBeenCalled();
+      expect(mockWebhookEventService.createPending).not.toHaveBeenCalled();
     });
   });
 
@@ -976,6 +1009,53 @@ describe('BankLinkService', () => {
       );
     });
 
+    it('does not persist a link when the conversion account was archived while Link was open', async () => {
+      const convertAccountId = 'manual-account-archived-during-link';
+      mockWebhookEventService.findPendingByWebhookId.mockResolvedValueOnce({
+        id: 'pending-webhook',
+        userId: mockUserId,
+        webhookId: 'webhook-mock-123',
+        webhookContent: null,
+        status: 'pending',
+        providerName: 'plaid',
+        expiresAt: null,
+        completedAt: null,
+        errorMessage: null,
+        context: {
+          mode: 'convert-manual-account',
+          convertAccountId,
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+      mockAccountRepository.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.handleWebhook(
+          'plaid',
+          mockRawBody,
+          mockHeaders,
+          mockParsedPayload,
+        ),
+      ).rejects.toThrow(`Account with id ${convertAccountId} not found`);
+
+      expect(mockAccountRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          id: convertAccountId,
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
+        lock: { mode: 'pessimistic_write' },
+      });
+      expect(mockBankLinkRepository.save).not.toHaveBeenCalled();
+      expect(mockAccountRepository.save).not.toHaveBeenCalled();
+      expect(mockWebhookEventService.markFailed).toHaveBeenCalledWith(
+        'webhook-mock-123',
+        `Account with id ${convertAccountId} not found`,
+        mockParsedPayload,
+      );
+    });
+
     it('should fail conversion when provider returns multiple accounts', async () => {
       const providerName = 'plaid';
       const convertAccountId = 'manual-account-123';
@@ -1071,7 +1151,77 @@ describe('BankLinkService', () => {
       expect(
         mockWebhookEventService.findPendingByWebhookId,
       ).not.toHaveBeenCalled();
+      expect(mockWebhookEventService.processWebhookOnce).toHaveBeenCalledWith(
+        'plaid:TRANSACTIONS:DEFAULT_UPDATE:item-mock-123',
+        'plaid',
+        mockUserId,
+        updatePayload,
+        expect.any(Function),
+        5 * 60 * 1000,
+      );
     });
+
+    it.each([
+      ['account', 'TRANSACTIONS'],
+      ['transaction', 'TRANSACTIONS'],
+      ['holding', 'HOLDINGS'],
+      ['investment transaction', 'INVESTMENTS_TRANSACTIONS'],
+    ] as const)(
+      'propagates a required %s sync failure to the claim owner',
+      async (failureStage, updateType) => {
+        const updatePayload = {
+          webhook_type: updateType,
+          webhook_code: 'DEFAULT_UPDATE',
+          item_id: 'item-mock-123',
+        };
+        (mockPlaidProvider.parseUpdateWebhook as jest.Mock).mockReturnValueOnce(
+          {
+            itemId: 'item-mock-123',
+            type: updateType,
+          },
+        );
+        mockBankLinkRepository.createQueryBuilder = jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnThis(),
+          andWhere: jest.fn().mockReturnThis(),
+          getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
+        });
+
+        const accountSpy = jest
+          .spyOn(service, 'syncAccounts')
+          .mockImplementationOnce(() =>
+            failureStage === 'account'
+              ? Promise.reject(new Error('required sync failed'))
+              : Promise.resolve([]),
+          );
+        const secondarySpy =
+          failureStage === 'transaction'
+            ? jest
+                .spyOn(service, 'syncTransactions')
+                .mockRejectedValueOnce(new Error('required sync failed'))
+            : failureStage === 'holding'
+              ? jest
+                  .spyOn(service, 'syncInvestmentHoldings')
+                  .mockRejectedValueOnce(new Error('required sync failed'))
+              : failureStage === 'investment transaction'
+                ? jest
+                    .spyOn(service, 'syncInvestmentTransactions')
+                    .mockRejectedValueOnce(new Error('required sync failed'))
+                : null;
+
+        await expect(
+          service.handleWebhook(
+            'plaid',
+            JSON.stringify(updatePayload),
+            mockHeaders,
+            updatePayload,
+          ),
+        ).rejects.toThrow('required sync failed');
+
+        expect(mockWebhookEventService.processWebhookOnce).toHaveBeenCalled();
+        accountSpy.mockRestore();
+        secondarySpy?.mockRestore();
+      },
+    );
 
     it('should skip sync when no bank link found for update webhook', async () => {
       const providerName = 'plaid';
@@ -1334,6 +1484,14 @@ describe('BankLinkService', () => {
           }),
         }),
       );
+      expect(mockWebhookEventService.processWebhookOnce).toHaveBeenCalledWith(
+        'plaid:ITEM:ERROR:item-mock-123',
+        'plaid',
+        mockUserId,
+        errorPayload,
+        expect.any(Function),
+        60 * 1000,
+      );
     });
 
     it('should handle LOGIN_REPAIRED status webhook and trigger sync', async () => {
@@ -1395,6 +1553,40 @@ describe('BankLinkService', () => {
         BankLinkEvents.NEEDS_ATTENTION,
         expect.anything(),
       );
+    });
+
+    it('propagates a status sync failure to the claim owner', async () => {
+      const repairedPayload = {
+        webhook_type: 'ITEM',
+        webhook_code: 'LOGIN_REPAIRED',
+        item_id: 'item-mock-123',
+      };
+      (mockPlaidProvider.parseStatusWebhook as jest.Mock).mockReturnValueOnce({
+        itemId: 'item-mock-123',
+        webhookCode: 'LOGIN_REPAIRED',
+        status: 'OK',
+        statusBody: null,
+        shouldSync: true,
+      });
+      mockBankLinkRepository.createQueryBuilder = jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
+      });
+      const syncSpy = jest
+        .spyOn(service, 'syncAccounts')
+        .mockRejectedValueOnce(new Error('status sync failed'));
+
+      await expect(
+        service.handleWebhook(
+          'plaid',
+          JSON.stringify(repairedPayload),
+          mockHeaders,
+          repairedPayload,
+        ),
+      ).rejects.toThrow('status sync failed');
+      expect(mockWebhookEventService.processWebhookOnce).toHaveBeenCalled();
+      syncSpy.mockRestore();
     });
 
     it('should handle PENDING_DISCONNECT status webhook', async () => {

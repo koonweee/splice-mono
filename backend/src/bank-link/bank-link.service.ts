@@ -214,7 +214,7 @@ export class BankLinkService extends OwnedCrudService<
     }
     if (convertAccountId) {
       const accountToConvert = await this.accountRepository.findOne({
-        where: { id: convertAccountId, userId },
+        where: { id: convertAccountId, userId, archivedAt: IsNull() },
       });
       if (!accountToConvert) {
         throw new NotFoundException(
@@ -520,81 +520,50 @@ export class BankLinkService extends OwnedCrudService<
 
     // Deduplicate using composite key with 5-minute window
     const baseWebhookId = `plaid:${updateInfo.type}:DEFAULT_UPDATE:${updateInfo.itemId}`;
-    const result = await this.webhookEventService.tryAcquireWebhook(
+    const result = await this.webhookEventService.processWebhookOnce(
       baseWebhookId,
       'plaid',
       bankLink.userId,
       parsedPayload,
+      async () => {
+        await this.syncAccounts(bankLink.id, bankLink.userId);
+        this.logger.log(
+          { bankLinkId: bankLink.id },
+          'Synced accounts for bank link',
+        );
+
+        if (updateInfo.type === 'HOLDINGS') {
+          await this.syncInvestmentHoldings(bankLink.id, bankLink.userId);
+          this.logger.log(
+            { bankLinkId: bankLink.id },
+            'Synced investment holdings for bank link',
+          );
+        }
+
+        if (updateInfo.type === 'INVESTMENTS_TRANSACTIONS') {
+          await this.syncInvestmentTransactions(bankLink.id, bankLink.userId);
+          this.logger.log(
+            { bankLinkId: bankLink.id },
+            'Synced investment transactions for bank link',
+          );
+        }
+
+        if (updateInfo.type === 'TRANSACTIONS') {
+          await this.syncTransactions(bankLink.id, bankLink.userId);
+          this.logger.log(
+            { bankLinkId: bankLink.id },
+            'Synced transactions for bank link',
+          );
+        }
+      },
       5 * 60 * 1000, // 5 minutes
     );
 
-    if (!result.acquired) {
+    if (!result.processed) {
       this.logger.log(
         { baseWebhookId, reason: result.reason },
         'Skipping duplicate update webhook',
       );
-      return;
-    }
-
-    await this.syncAccounts(bankLink.id, bankLink.userId);
-    this.logger.log(
-      { bankLinkId: bankLink.id },
-      'Synced accounts for bank link',
-    );
-
-    if (updateInfo.type === 'HOLDINGS') {
-      try {
-        await this.syncInvestmentHoldings(bankLink.id, bankLink.userId);
-        this.logger.log(
-          { bankLinkId: bankLink.id },
-          'Synced investment holdings for bank link',
-        );
-      } catch (error) {
-        this.logger.error(
-          {
-            bankLinkId: bankLink.id,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          'Failed to sync investment holdings for bank link',
-        );
-      }
-    }
-
-    if (updateInfo.type === 'INVESTMENTS_TRANSACTIONS') {
-      try {
-        await this.syncInvestmentTransactions(bankLink.id, bankLink.userId);
-        this.logger.log(
-          { bankLinkId: bankLink.id },
-          'Synced investment transactions for bank link',
-        );
-      } catch (error) {
-        this.logger.error(
-          {
-            bankLinkId: bankLink.id,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          'Failed to sync investment transactions for bank link',
-        );
-      }
-    }
-
-    // Also sync transactions if this is a TRANSACTIONS webhook
-    if (updateInfo.type === 'TRANSACTIONS') {
-      try {
-        await this.syncTransactions(bankLink.id, bankLink.userId);
-        this.logger.log(
-          { bankLinkId: bankLink.id },
-          'Synced transactions for bank link',
-        );
-      } catch (error) {
-        this.logger.error(
-          {
-            bankLinkId: bankLink.id,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          'Failed to sync transactions for bank link',
-        );
-      }
     }
   }
 
@@ -630,83 +599,87 @@ export class BankLinkService extends OwnedCrudService<
 
     // Deduplicate using composite key with 1-minute window
     const baseWebhookId = `plaid:ITEM:${statusInfo.webhookCode}:${statusInfo.itemId}`;
-    const result = await this.webhookEventService.tryAcquireWebhook(
+    const result = await this.webhookEventService.processWebhookOnce(
       baseWebhookId,
       'plaid',
       bankLink.userId,
       parsedPayload,
+      async () => {
+        const previousStatus = bankLink.status;
+        let statusBody = statusInfo.statusBody;
+        const provider = this.providerRegistry.getProvider(
+          bankLink.providerName,
+        );
+        if (statusInfo.status !== 'OK' && provider.getConnectionDiagnostics) {
+          try {
+            const diagnostics = await provider.getConnectionDiagnostics(
+              bankLink.authentication,
+            );
+            const meaningfulDiagnostics = Object.fromEntries(
+              Object.entries(diagnostics).filter(
+                ([, value]) => value !== null && value !== undefined,
+              ),
+            );
+            statusBody = { ...statusBody, ...meaningfulDiagnostics };
+          } catch (error) {
+            this.logger.warn(
+              {
+                bankLinkId: bankLink.id,
+                error: error instanceof Error ? error.message : String(error),
+              },
+              'Failed to enrich bank link status with provider diagnostics',
+            );
+          }
+        }
+
+        const statusDate = new Date();
+        await this.repository.update(
+          { id: bankLink.id, userId: bankLink.userId },
+          {
+            status: statusInfo.status,
+            statusDate,
+            statusBody,
+          },
+        );
+        this.logger.log(
+          { bankLinkId: bankLink.id, status: statusInfo.status },
+          'Updated bank link status',
+        );
+
+        if (
+          statusInfo.status !== 'OK' &&
+          previousStatus !== statusInfo.status
+        ) {
+          this.eventEmitter.emit(
+            BankLinkEvents.NEEDS_ATTENTION,
+            new BankLinkNeedsAttentionEvent(
+              bankLink.userId,
+              bankLink.id,
+              bankLink.providerName,
+              bankLink.institutionName,
+              statusInfo.status,
+              statusBody,
+              statusDate.toISOString(),
+            ),
+          );
+        }
+
+        if (statusInfo.shouldSync) {
+          this.logger.log(
+            { webhookCode: statusInfo.webhookCode, bankLinkId: bankLink.id },
+            'Triggering account sync after status webhook',
+          );
+          await this.syncAccounts(bankLink.id, bankLink.userId);
+        }
+      },
       1 * 60 * 1000, // 1 minute
     );
 
-    if (!result.acquired) {
+    if (!result.processed) {
       this.logger.log(
         { baseWebhookId, reason: result.reason },
         'Skipping duplicate status webhook',
       );
-      return;
-    }
-
-    const previousStatus = bankLink.status;
-    let statusBody = statusInfo.statusBody;
-    const provider = this.providerRegistry.getProvider(bankLink.providerName);
-    if (statusInfo.status !== 'OK' && provider.getConnectionDiagnostics) {
-      try {
-        const diagnostics = await provider.getConnectionDiagnostics(
-          bankLink.authentication,
-        );
-        const meaningfulDiagnostics = Object.fromEntries(
-          Object.entries(diagnostics).filter(
-            ([, value]) => value !== null && value !== undefined,
-          ),
-        );
-        statusBody = { ...statusBody, ...meaningfulDiagnostics };
-      } catch (error) {
-        this.logger.warn(
-          {
-            bankLinkId: bankLink.id,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          'Failed to enrich bank link status with provider diagnostics',
-        );
-      }
-    }
-
-    const statusDate = new Date();
-    await this.repository.update(
-      { id: bankLink.id, userId: bankLink.userId },
-      {
-        status: statusInfo.status,
-        statusDate,
-        statusBody,
-      },
-    );
-    this.logger.log(
-      { bankLinkId: bankLink.id, status: statusInfo.status },
-      'Updated bank link status',
-    );
-
-    if (statusInfo.status !== 'OK' && previousStatus !== statusInfo.status) {
-      this.eventEmitter.emit(
-        BankLinkEvents.NEEDS_ATTENTION,
-        new BankLinkNeedsAttentionEvent(
-          bankLink.userId,
-          bankLink.id,
-          bankLink.providerName,
-          bankLink.institutionName,
-          statusInfo.status,
-          statusBody,
-          statusDate.toISOString(),
-        ),
-      );
-    }
-
-    // Optionally sync accounts after status update (e.g., LOGIN_REPAIRED)
-    if (statusInfo.shouldSync) {
-      this.logger.log(
-        { webhookCode: statusInfo.webhookCode, bankLinkId: bankLink.id },
-        'Triggering account sync after status webhook',
-      );
-      await this.syncAccounts(bankLink.id, bankLink.userId);
     }
   }
 
@@ -2326,17 +2299,13 @@ export class BankLinkService extends OwnedCrudService<
       await this.repository.manager.transaction(async (manager) => {
         const bankLinkRepository = manager.getRepository(BankLinkEntity);
         const accountRepository = manager.getRepository(AccountEntity);
-        const bankLink = await this.saveBankLinkFromLinkCompletionResponse(
-          providerName,
-          userId,
-          response,
-          bankLinkRepository,
-        );
         const targetAccount = await accountRepository.findOne({
           where: {
             id: conversionContext.convertAccountId,
             userId,
+            archivedAt: IsNull(),
           },
+          lock: { mode: 'pessimistic_write' },
         });
 
         if (!targetAccount) {
@@ -2349,6 +2318,13 @@ export class BankLinkService extends OwnedCrudService<
             `Account with id ${conversionContext.convertAccountId} is already linked`,
           );
         }
+
+        const bankLink = await this.saveBankLinkFromLinkCompletionResponse(
+          providerName,
+          userId,
+          response,
+          bankLinkRepository,
+        );
 
         const conflictingAccount = await accountRepository.findOne({
           where: {

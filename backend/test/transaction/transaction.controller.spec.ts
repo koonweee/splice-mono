@@ -7,10 +7,8 @@ import { mockTransactionService } from '../mocks/transaction/transaction-service
 import {
   mockAccountId,
   mockCreateManualTransactionDto,
-  mockCreateTransactionDto,
   mockTransaction,
   mockTransaction2,
-  mockUpdateTransactionDto,
 } from '../mocks/transaction/transaction.mock';
 
 const mockCurrencyConversionService = {
@@ -166,15 +164,14 @@ describe('TransactionController', () => {
     });
   });
 
-  it('delegates create, update, category update, undo, and delete flows', async () => {
-    await expect(
-      controller.create(mockUser, mockCreateTransactionDto),
-    ).resolves.toBe(mockTransaction);
+  it('delegates manual, reporting-date, category, undo, and delete flows', async () => {
     await expect(
       controller.createManual(mockUser, mockCreateManualTransactionDto),
     ).resolves.toMatchObject({ source: 'manual' });
     await expect(
-      controller.update(mockTransaction.id, mockUser, mockUpdateTransactionDto),
+      controller.update(mockTransaction.id, mockUser, {
+        reportingDateOverride: '2026-08-15',
+      }),
     ).resolves.toBe(mockTransaction);
     await expect(
       controller.updateManual(
@@ -198,9 +195,6 @@ describe('TransactionController', () => {
       controller.undoBulkUpdateCategories(mockUser, { undo: 'undo-token' }),
     ).resolves.toMatchObject({ count: 1 });
     await expect(
-      controller.remove(mockTransaction.id, mockUser),
-    ).resolves.toBeUndefined();
-    await expect(
       controller.removeManual(mockTransaction.id, mockUser),
     ).resolves.toBeUndefined();
 
@@ -213,6 +207,11 @@ describe('TransactionController', () => {
       mockUser.userId,
       mockCreateManualTransactionDto,
     );
+    expect(mockTransactionService.updateReportingDate).toHaveBeenCalledWith(
+      mockTransaction.id,
+      { reportingDateOverride: '2026-08-15' },
+      mockUser.userId,
+    );
     expect(mockTransactionService.removeManual).toHaveBeenCalledWith(
       mockTransaction.id,
       mockUser.userId,
@@ -222,6 +221,7 @@ describe('TransactionController', () => {
   it('throws NotFoundException when service returns null', async () => {
     mockTransactionService.findOne.mockResolvedValueOnce(null);
     mockTransactionService.updateCategory.mockResolvedValueOnce(null);
+    mockTransactionService.updateReportingDate.mockResolvedValueOnce(null);
     mockTransactionService.createManual.mockResolvedValueOnce(null);
     mockTransactionService.updateManual.mockResolvedValueOnce(null);
     mockTransactionService.removeManual.mockResolvedValueOnce(false);
@@ -232,6 +232,11 @@ describe('TransactionController', () => {
     await expect(
       controller.updateCategory(mockTransaction.id, mockUser, {
         categoryId: null,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      controller.update(mockTransaction.id, mockUser, {
+        reportingDateOverride: null,
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
     await expect(

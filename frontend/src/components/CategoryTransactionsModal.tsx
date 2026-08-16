@@ -1,4 +1,4 @@
-import { Box, Group, Loader, Modal, Text } from '@mantine/core'
+import { Alert, Box, Button, Group, Loader, Modal, Text } from '@mantine/core'
 import { useTransactionAnalysisControllerGetTransactions } from '../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../lib/format'
 import { useIsMobile } from '../lib/hooks'
@@ -28,15 +28,16 @@ export function CategoryTransactionsModal({
   const title = `${categoryPrimary ? formatPrimaryCategory(categoryPrimary) : 'Transactions'} Transactions (${directionLabel})`
 
   function TransactionsDrilldown() {
-    const { data, isPending } = useTransactionAnalysisControllerGetTransactions(
-      {
-        startDate,
-        endDate,
-        categoryPrimary: categoryPrimary ?? '',
-        flowDirection,
-      },
-      { query: { enabled: opened && !!categoryPrimary } },
-    )
+    const { data, isPending, isError, isFetching, refetch } =
+      useTransactionAnalysisControllerGetTransactions(
+        {
+          startDate,
+          endDate,
+          categoryPrimary: categoryPrimary ?? '',
+          flowDirection,
+        },
+        { query: { enabled: opened && !!categoryPrimary } },
+      )
 
     const transactions = data ?? []
 
@@ -45,6 +46,25 @@ export function CategoryTransactionsModal({
         <Group justify="center" py="xl">
           <Loader />
         </Group>
+      )
+    }
+
+    if (isError) {
+      return (
+        <Alert color="red" title="Unable to load transactions">
+          <Text size="sm" mb="sm">
+            The transactions for this category could not be loaded.
+          </Text>
+          <Button
+            color="red"
+            loading={isFetching}
+            onClick={() => void refetch()}
+            size="xs"
+            variant="light"
+          >
+            Retry
+          </Button>
+        </Alert>
       )
     }
 

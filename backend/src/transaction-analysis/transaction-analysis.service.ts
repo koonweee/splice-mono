@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
@@ -119,6 +123,9 @@ export class TransactionAnalysisService {
     const foreignCurrencies = [
       ...new Set(
         remainingReportTransactions
+          .filter(
+            (transaction) => this.getAmountInSmallestUnit(transaction) !== 0,
+          )
           .map((transaction) => transaction.amount.currency)
           .filter((c) => c !== preferredCurrency),
       ),
@@ -307,6 +314,9 @@ export class TransactionAnalysisService {
     const foreignCurrencies = [
       ...new Set(
         filteredTransactions
+          .filter(
+            (transaction) => this.getAmountInSmallestUnit(transaction) !== 0,
+          )
           .map((transaction) => transaction.amount.currency)
           .filter((currency) => currency !== preferredCurrency),
       ),
@@ -711,9 +721,15 @@ export class TransactionAnalysisService {
       return amount;
     }
 
+    if (amount === 0) {
+      return 0;
+    }
+
     const rate = rateMap.get(sourceCurrency);
-    if (!rate) {
-      return amount;
+    if (!rate || !Number.isFinite(rate) || rate <= 0) {
+      throw new ServiceUnavailableException(
+        `Required exchange rate is unavailable for ${sourceCurrency} to ${preferredCurrency}`,
+      );
     }
 
     return this.currencyConversionService.convertAmount(
@@ -736,9 +752,22 @@ export class TransactionAnalysisService {
       return transactionObject;
     }
 
+    const amount = this.getAmountInSmallestUnit(transaction);
+    if (amount === 0) {
+      return {
+        ...transactionObject,
+        convertedAmount: {
+          money: { currency: preferredCurrency, amount: 0 },
+          sign: transaction.amount.sign,
+        },
+      };
+    }
+
     const rate = rateMap.get(sourceCurrency);
-    if (!rate) {
-      return transactionObject;
+    if (!rate || !Number.isFinite(rate) || rate <= 0) {
+      throw new ServiceUnavailableException(
+        `Required exchange rate is unavailable for ${sourceCurrency} to ${preferredCurrency}`,
+      );
     }
 
     return {
@@ -747,7 +776,7 @@ export class TransactionAnalysisService {
         money: {
           currency: preferredCurrency,
           amount: this.currencyConversionService.convertAmount(
-            this.getAmountInSmallestUnit(transaction),
+            amount,
             sourceCurrency,
             preferredCurrency,
             rate,

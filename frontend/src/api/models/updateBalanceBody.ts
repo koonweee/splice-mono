@@ -5,10 +5,8 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { MoneyWithSign } from './moneyWithSign'
 
-/**
- * @nullable
- */
-export type UpdateTransactionDtoLocation = {
-  [key: string]: unknown | null
-} | null
+export interface UpdateBalanceBody {
+  balance: MoneyWithSign
+}

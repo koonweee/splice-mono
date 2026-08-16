@@ -6,7 +6,7 @@ import { mockAccountService } from '../mocks/account/account-service.mock';
 import {
   mockAccount,
   mockAccount2,
-  mockCreateAccountDto,
+  mockCreateManualAccountDto,
 } from '../mocks/account/account.mock';
 
 describe('AccountController', () => {
@@ -57,17 +57,20 @@ describe('AccountController', () => {
     const mockUser = { userId: 'user-uuid-123', email: 'test@example.com' };
 
     it('should create and return a new account', async () => {
-      const result = await controller.create(mockUser, mockCreateAccountDto);
+      const result = await controller.create(
+        mockUser,
+        mockCreateManualAccountDto,
+      );
 
       expect(result).toEqual(mockAccount);
       expect(mockAccountService.create).toHaveBeenCalledWith(
-        mockCreateAccountDto,
+        mockCreateManualAccountDto,
         mockUser.userId,
       );
     });
 
     it('should call accountService.create', async () => {
-      await controller.create(mockUser, mockCreateAccountDto);
+      await controller.create(mockUser, mockCreateManualAccountDto);
 
       expect(mockAccountService.create).toHaveBeenCalledTimes(1);
     });

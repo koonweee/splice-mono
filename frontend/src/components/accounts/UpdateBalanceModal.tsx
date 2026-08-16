@@ -8,6 +8,11 @@ import {
   getBalanceQueryControllerGetBalancesQueryKey,
   useAccountControllerUpdateBalance,
 } from '../../api/clients/spliceAPI'
+import {
+  createMoneyWithSign,
+  getSignedAmount,
+} from '../../lib/balance-utils'
+import { getDecimalPlaces } from '../../lib/format'
 import type { Account } from '../../api/models'
 
 interface UpdateBalanceModalProps {
@@ -26,24 +31,18 @@ export function UpdateBalanceModal({
 
   const form = useForm({
     initialValues: {
-      amount: account.currentBalance.money.amount / 100,
+      amount: getSignedAmount(account.currentBalance),
     },
   })
 
   const handleSubmit = (values: typeof form.values) => {
-    const amountInCents = Math.round(values.amount * 100)
+    const currency = account.currentBalance.money.currency || 'USD'
 
     updateBalance.mutate(
       {
         id: account.id,
         data: {
-          balance: {
-            money: {
-              amount: amountInCents,
-              currency: account.currentBalance.money.currency || 'USD',
-            },
-            sign: amountInCents >= 0 ? 'positive' : 'negative',
-          },
+          balance: createMoneyWithSign(values.amount, currency),
         },
       },
       {
@@ -81,7 +80,9 @@ export function UpdateBalanceModal({
           <NumberInput
             label="Current Balance"
             placeholder="0.00"
-            decimalScale={2}
+            decimalScale={getDecimalPlaces(
+              account.currentBalance.money.currency,
+            )}
             fixedDecimalScale
             prefix={account.currentBalance.money.currency === 'USD' ? '$' : ''}
             size="md"

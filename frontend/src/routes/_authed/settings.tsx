@@ -18,7 +18,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   getUserControllerMeQueryOptions,
   useUserControllerMe,
@@ -57,6 +57,13 @@ type SettingsTab =
   | 'categorization'
   | 'recurring'
   | 'mcp'
+
+type GeneralSettingsValues = {
+  theme: ThemePresetId
+  currency: string
+  timezone: string
+  hideZeroBalanceAccounts: boolean
+}
 
 export const Route = createFileRoute('/_authed/settings')({
   validateSearch: (search: Record<string, unknown>): { tab?: SettingsTab } => {
@@ -280,17 +287,61 @@ export function SettingsPage() {
     useState(false)
   const [bankLinkNeedsAttentionPending, setBankLinkNeedsAttentionPending] =
     useState(false)
-  const [hasChanges, setHasChanges] = useState(false)
+  const [settingsBaseline, setSettingsBaseline] =
+    useState<GeneralSettingsValues | null>(null)
+  const settingsBaselineRef = useRef<GeneralSettingsValues | null>(null)
+  const latestServerGeneralSettingsRef =
+    useRef<GeneralSettingsValues | null>(null)
+  const generalDraftRef = useRef<GeneralSettingsValues>({
+    theme,
+    currency,
+    timezone,
+    hideZeroBalanceAccounts,
+  })
+  generalDraftRef.current = {
+    theme,
+    currency,
+    timezone,
+    hideZeroBalanceAccounts,
+  }
+  const hasChanges =
+    settingsBaseline !== null &&
+    (theme !== settingsBaseline.theme ||
+      currency !== settingsBaseline.currency ||
+      timezone !== settingsBaseline.timezone ||
+      hideZeroBalanceAccounts !== settingsBaseline.hideZeroBalanceAccounts)
 
-  // Initialize form values when user data loads
+  // Adopt server values only while the General form is clean. Unrelated
+  // immediate-save refetches must not replace an in-progress draft.
   useEffect(() => {
     if (user?.settings) {
-      const nextTheme = normalizeThemePresetId(user.settings.theme)
-      setTheme(nextTheme)
-      applyThemePresetId(nextTheme)
-      setCurrency(user.settings.currency ?? 'USD')
-      setTimezone(user.settings.timezone ?? 'UTC')
-      setHideZeroBalanceAccounts(user.settings.hideZeroBalanceAccounts ?? false)
+      const nextGeneralSettings: GeneralSettingsValues = {
+        theme: normalizeThemePresetId(user.settings.theme),
+        currency: user.settings.currency ?? 'USD',
+        timezone: user.settings.timezone ?? 'UTC',
+        hideZeroBalanceAccounts: user.settings.hideZeroBalanceAccounts ?? false,
+      }
+      latestServerGeneralSettingsRef.current = nextGeneralSettings
+      const currentBaseline = settingsBaselineRef.current
+      const currentDraft = generalDraftRef.current
+      const draftIsDirty =
+        currentBaseline !== null &&
+        (currentDraft.theme !== currentBaseline.theme ||
+          currentDraft.currency !== currentBaseline.currency ||
+          currentDraft.timezone !== currentBaseline.timezone ||
+          currentDraft.hideZeroBalanceAccounts !==
+            currentBaseline.hideZeroBalanceAccounts)
+
+      if (!draftIsDirty) {
+        settingsBaselineRef.current = nextGeneralSettings
+        setSettingsBaseline(nextGeneralSettings)
+        setTheme(nextGeneralSettings.theme)
+        applyThemePresetId(nextGeneralSettings.theme)
+        setCurrency(nextGeneralSettings.currency)
+        setTimezone(nextGeneralSettings.timezone)
+        setHideZeroBalanceAccounts(nextGeneralSettings.hideZeroBalanceAccounts)
+      }
+
       setAnalysisSankeyEnabled(user.settings.analysisSankeyEnabled ?? false)
       setNewSyncedTransactionsEnabled(
         getNewSyncedTransactionsEnabled(
@@ -304,6 +355,34 @@ export function SettingsPage() {
       )
     }
   }, [user?.settings])
+
+  // A refetch may arrive while the draft is dirty. If the user later reverts
+  // every field to the old baseline, adopt the already-cached server values at
+  // that clean transition instead of leaving an obsolete clean-looking form.
+  useEffect(() => {
+    if (hasChanges || settingsBaselineRef.current === null) return
+
+    const latestServerSettings = latestServerGeneralSettingsRef.current
+    const currentDraft = generalDraftRef.current
+    if (
+      !latestServerSettings ||
+      (currentDraft.theme === latestServerSettings.theme &&
+        currentDraft.currency === latestServerSettings.currency &&
+        currentDraft.timezone === latestServerSettings.timezone &&
+        currentDraft.hideZeroBalanceAccounts ===
+          latestServerSettings.hideZeroBalanceAccounts)
+    ) {
+      return
+    }
+
+    settingsBaselineRef.current = latestServerSettings
+    setSettingsBaseline(latestServerSettings)
+    setTheme(latestServerSettings.theme)
+    applyThemePresetId(latestServerSettings.theme)
+    setCurrency(latestServerSettings.currency)
+    setTimezone(latestServerSettings.timezone)
+    setHideZeroBalanceAccounts(latestServerSettings.hideZeroBalanceAccounts)
+  }, [hasChanges])
 
   useEffect(() => {
     let cancelled = false
@@ -337,37 +416,27 @@ export function SettingsPage() {
     }
   }, [])
 
-  // Track if there are unsaved changes
-  useEffect(() => {
-    if (user?.settings) {
-      const themeChanged = theme !== normalizeThemePresetId(user.settings.theme)
-      const currencyChanged = currency !== (user.settings.currency ?? 'USD')
-      const timezoneChanged = timezone !== (user.settings.timezone ?? 'UTC')
-      const hideZeroBalanceAccountsChanged =
-        hideZeroBalanceAccounts !==
-        (user.settings.hideZeroBalanceAccounts ?? false)
-      setHasChanges(
-        themeChanged ||
-          currencyChanged ||
-          timezoneChanged ||
-          hideZeroBalanceAccountsChanged,
-      )
-    }
-  }, [theme, currency, timezone, hideZeroBalanceAccounts, user?.settings])
-
   const handleSave = () => {
-    const savedTheme = normalizeThemePresetId(user?.settings.theme)
+    const savedTheme = settingsBaseline?.theme ?? 'splice-dark'
+    const submittedSettings = {
+      theme,
+      currency,
+      timezone,
+      hideZeroBalanceAccounts,
+    }
 
     updateSettingsMutation.mutate(
-      { data: { theme, currency, timezone, hideZeroBalanceAccounts } },
+      { data: submittedSettings },
       {
         onSuccess: () => {
           applyThemePresetId(theme)
+          latestServerGeneralSettingsRef.current = submittedSettings
+          settingsBaselineRef.current = submittedSettings
+          setSettingsBaseline(submittedSettings)
           // Invalidate user query to refresh the data
           queryClient.invalidateQueries({
             queryKey: getUserControllerMeQueryOptions().queryKey,
           })
-          setHasChanges(false)
         },
         onError: () => {
           previewThemePresetId(savedTheme)

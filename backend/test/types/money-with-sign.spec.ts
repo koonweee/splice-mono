@@ -6,6 +6,7 @@ import {
   MoneyWithSignSchema,
   SerializedMoneyWithSign,
 } from '../../src/types/MoneyWithSign';
+import { BalanceColumns } from '../../src/common/balance.columns';
 
 describe('MoneyWithSign', () => {
   describe('constructor', () => {
@@ -320,6 +321,15 @@ describe('MoneyWithSign Zod Schemas', () => {
       expect(result.success).toBe(false);
     });
 
+    it('should reject negative magnitudes', () => {
+      const result = MoneySchema.safeParse({
+        currency: 'USD',
+        amount: -1000,
+      });
+
+      expect(result.success).toBe(false);
+    });
+
     it('should reject missing currency', () => {
       const result = MoneySchema.safeParse({
         amount: 1000,
@@ -343,6 +353,19 @@ describe('MoneyWithSign Zod Schemas', () => {
       });
 
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe('BalanceColumns', () => {
+    it('should canonicalize trusted internal negative magnitudes', () => {
+      const balance = BalanceColumns.fromMoneyWithSign({
+        money: { currency: 'USD', amount: -1000 },
+        sign: MoneySign.NEGATIVE,
+      });
+
+      expect(balance.amount).toBe(1000);
+      expect(balance.currency).toBe('USD');
+      expect(balance.sign).toBe(MoneySign.NEGATIVE);
     });
   });
 

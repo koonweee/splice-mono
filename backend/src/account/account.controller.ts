@@ -13,25 +13,34 @@ import {
   CurrentUser,
   type JwtUser,
 } from '../auth/decorators/current-user.decorator';
-import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
+import {
+  registerSchema,
+  ZodApiBody,
+  ZodApiResponse,
+} from '../common/zod-api-response';
 import { z } from 'zod';
 import type {
   Account,
-  CreateAccountDto,
-  UpdateAccountDto,
+  CreateManualAccountDto,
+  UpdateAccountMetadataDto,
 } from '../types/Account';
 import {
   AccountSchema,
-  CreateAccountDtoSchema,
-  UpdateAccountDtoSchema,
+  CreateManualAccountDtoSchema,
+  UpdateAccountMetadataDtoSchema,
 } from '../types/Account';
 import { CurrentAndAvailableBalanceSchema } from '../types/MoneyWithSign';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { AccountService } from './account.service';
 
-const UpdateBalanceBodySchema = z.object({
-  balance: CurrentAndAvailableBalanceSchema.shape.currentBalance,
-});
+export const UpdateBalanceBodySchema = registerSchema(
+  'UpdateBalanceBody',
+  z
+    .object({
+      balance: CurrentAndAvailableBalanceSchema.shape.currentBalance,
+    })
+    .strict(),
+);
 
 @ApiTags('account')
 @Controller('account')
@@ -51,8 +60,8 @@ export class AccountController {
   }
 
   @Post()
-  @ApiOperation({ description: 'Create a new account' })
-  @ZodApiBody({ schema: CreateAccountDtoSchema })
+  @ApiOperation({ description: 'Create a new manual account' })
+  @ZodApiBody({ schema: CreateManualAccountDtoSchema })
   @ZodApiResponse({
     status: 201,
     description: 'Account created successfully',
@@ -60,8 +69,8 @@ export class AccountController {
   })
   async create(
     @CurrentUser() user: JwtUser,
-    @Body(new ZodValidationPipe(CreateAccountDtoSchema))
-    createAccountDto: CreateAccountDto,
+    @Body(new ZodValidationPipe(CreateManualAccountDtoSchema))
+    createAccountDto: CreateManualAccountDto,
   ): Promise<Account> {
     // Create the account, then return it with converted balances
     const account = await this.accountService.create(
@@ -91,8 +100,8 @@ export class AccountController {
   }
 
   @Patch(':id')
-  @ApiOperation({ description: 'Update an account' })
-  @ZodApiBody({ schema: UpdateAccountDtoSchema })
+  @ApiOperation({ description: 'Update user-editable account metadata' })
+  @ZodApiBody({ schema: UpdateAccountMetadataDtoSchema })
   @ZodApiResponse({
     status: 200,
     description: 'Returns the updated account',
@@ -102,8 +111,8 @@ export class AccountController {
   async update(
     @Param('id') id: string,
     @CurrentUser() user: JwtUser,
-    @Body(new ZodValidationPipe(UpdateAccountDtoSchema))
-    updateAccountDto: UpdateAccountDto,
+    @Body(new ZodValidationPipe(UpdateAccountMetadataDtoSchema))
+    updateAccountDto: UpdateAccountMetadataDto,
   ): Promise<Account> {
     const account = await this.accountService.update(
       id,

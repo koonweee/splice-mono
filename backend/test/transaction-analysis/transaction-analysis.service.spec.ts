@@ -905,6 +905,51 @@ describe('TransactionAnalysisService', () => {
       );
     });
 
+    it('does not aggregate a foreign amount without its conversion rate', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'eur-income',
+          amount: 10000,
+          sign: MoneySign.POSITIVE,
+          currency: 'EUR',
+          providerDate: '2024-01-10',
+          primary: 'INCOME',
+        }),
+      ]);
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(new Map());
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).rejects.toThrow('Required exchange rate is unavailable for EUR to USD');
+    });
+
+    it('does not require an exchange rate for a foreign zero amount', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'eur-zero',
+          amount: 0,
+          sign: MoneySign.POSITIVE,
+          currency: 'EUR',
+          providerDate: '2024-01-10',
+          primary: 'INCOME',
+        }),
+      ]);
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(new Map());
+
+      await expect(
+        service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
+      ).resolves.toMatchObject({
+        totalInflow: 0,
+        totalOutflow: 0,
+        netFlow: 0,
+      });
+      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
+        [],
+        'USD',
+        '2024-01-31',
+      );
+    });
+
     it('does not cancel transactions that fall in different analysis windows', async () => {
       const februaryExpense = buildTransaction({
         id: 'feb-expense',
@@ -1591,6 +1636,63 @@ describe('TransactionAnalysisService', () => {
         '2024-01-31',
       );
       expect(result[0]?.convertedAmount?.money.amount).toBe(11000);
+    });
+
+    it('does not return an unconverted foreign drilldown row', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'eur-income',
+          amount: 10000,
+          sign: MoneySign.POSITIVE,
+          currency: 'EUR',
+          providerDate: '2024-01-10',
+          primary: 'INCOME',
+        }),
+      ]);
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(new Map());
+
+      await expect(
+        service.getCategoryTransactions(
+          '2024-01-01',
+          '2024-01-31',
+          'INCOME',
+          'inflow',
+          mockUserId,
+        ),
+      ).rejects.toThrow('Required exchange rate is unavailable for EUR to USD');
+    });
+
+    it('returns a foreign zero drilldown row without requiring a rate', async () => {
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'eur-zero',
+          amount: 0,
+          sign: MoneySign.POSITIVE,
+          currency: 'EUR',
+          providerDate: '2024-01-10',
+          primary: 'INCOME',
+        }),
+      ]);
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(new Map());
+
+      const result = await service.getCategoryTransactions(
+        '2024-01-01',
+        '2024-01-31',
+        'INCOME',
+        'inflow',
+        mockUserId,
+      );
+
+      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
+        [],
+        'USD',
+        '2024-01-31',
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0]?.convertedAmount).toEqual({
+        money: { amount: 0, currency: 'USD' },
+        sign: MoneySign.POSITIVE,
+      });
     });
 
     it('returns drilldown rows sorted by date descending then id descending', async () => {

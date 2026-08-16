@@ -24,7 +24,6 @@ import type {
 import type {
   AcceptCategorizationRuleSuggestionResponse,
   Account,
-  AccountControllerUpdateBalanceBody,
   AnalysisRuleControllerFindAllParams,
   AnalysisRuleView,
   ApplyCategorizationRuleResponse,
@@ -48,15 +47,14 @@ import type {
   CategoryControllerFindManagementParams,
   CategoryControllerSearchParams,
   CategoryManagementItem,
-  CreateAccountDto,
   CreateAnalysisRuleDto,
   CreateCategorizationRuleDto,
   CreateCustomCategoryDto,
+  CreateManualAccountDto,
   CreateManualTransactionDto,
   CreatePersonalAccessTokenDto,
   CreatePersonalAccessTokenResponse,
   CreateRecurringManualTransactionScheduleDto,
-  CreateTransactionDto,
   DismissCategorizationRuleSuggestionResponse,
   GenerateCategorizationRuleRecommendationsDto,
   InitiateLinkRequest,
@@ -88,14 +86,15 @@ import type {
   TransactionAnalysisResponse,
   TransactionAnalysisTransactionsResponse,
   TransactionControllerFindAllParams,
-  UpdateAccountDto,
+  UpdateAccountMetadataDto,
   UpdateAnalysisRuleDto,
+  UpdateBalanceBody,
   UpdateCategorizationRuleDto,
   UpdateCustomCategoryDto,
   UpdateManualTransactionDto,
   UpdateRecurringManualTransactionScheduleDto,
   UpdateTransactionCategoryDto,
-  UpdateTransactionDto,
+  UpdateTransactionReportingDateDto,
   UpdateUserSettingsDto,
   User,
   UserControllerDevLoginParams,
@@ -247,17 +246,17 @@ export function useAccountControllerFindAll<
 }
 
 /**
- * Create a new account
+ * Create a new manual account
  */
 export const accountControllerCreate = (
-  createAccountDto: CreateAccountDto,
+  createManualAccountDto: CreateManualAccountDto,
   signal?: AbortSignal,
 ) => {
   return axios<Account>({
     url: `/account`,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    data: createAccountDto,
+    data: createManualAccountDto,
     signal,
   })
 }
@@ -269,13 +268,13 @@ export const getAccountControllerCreateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof accountControllerCreate>>,
     TError,
-    { data: CreateAccountDto },
+    { data: CreateManualAccountDto },
     TContext
   >
 }): UseMutationOptions<
   Awaited<ReturnType<typeof accountControllerCreate>>,
   TError,
-  { data: CreateAccountDto },
+  { data: CreateManualAccountDto },
   TContext
 > => {
   const mutationKey = ['accountControllerCreate']
@@ -289,7 +288,7 @@ export const getAccountControllerCreateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof accountControllerCreate>>,
-    { data: CreateAccountDto }
+    { data: CreateManualAccountDto }
   > = (props) => {
     const { data } = props ?? {}
 
@@ -302,7 +301,7 @@ export const getAccountControllerCreateMutationOptions = <
 export type AccountControllerCreateMutationResult = NonNullable<
   Awaited<ReturnType<typeof accountControllerCreate>>
 >
-export type AccountControllerCreateMutationBody = CreateAccountDto
+export type AccountControllerCreateMutationBody = CreateManualAccountDto
 export type AccountControllerCreateMutationError = unknown
 
 export const useAccountControllerCreate = <
@@ -313,7 +312,7 @@ export const useAccountControllerCreate = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof accountControllerCreate>>,
       TError,
-      { data: CreateAccountDto },
+      { data: CreateManualAccountDto },
       TContext
     >
   },
@@ -321,7 +320,7 @@ export const useAccountControllerCreate = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof accountControllerCreate>>,
   TError,
-  { data: CreateAccountDto },
+  { data: CreateManualAccountDto },
   TContext
 > => {
   const mutationOptions = getAccountControllerCreateMutationOptions(options)
@@ -483,17 +482,17 @@ export function useAccountControllerFindOne<
 }
 
 /**
- * Update an account
+ * Update user-editable account metadata
  */
 export const accountControllerUpdate = (
   id: string,
-  updateAccountDto: UpdateAccountDto,
+  updateAccountMetadataDto: UpdateAccountMetadataDto,
 ) => {
   return axios<Account>({
     url: `/account/${id}`,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    data: updateAccountDto,
+    data: updateAccountMetadataDto,
   })
 }
 
@@ -504,13 +503,13 @@ export const getAccountControllerUpdateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof accountControllerUpdate>>,
     TError,
-    { id: string; data: UpdateAccountDto },
+    { id: string; data: UpdateAccountMetadataDto },
     TContext
   >
 }): UseMutationOptions<
   Awaited<ReturnType<typeof accountControllerUpdate>>,
   TError,
-  { id: string; data: UpdateAccountDto },
+  { id: string; data: UpdateAccountMetadataDto },
   TContext
 > => {
   const mutationKey = ['accountControllerUpdate']
@@ -524,7 +523,7 @@ export const getAccountControllerUpdateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof accountControllerUpdate>>,
-    { id: string; data: UpdateAccountDto }
+    { id: string; data: UpdateAccountMetadataDto }
   > = (props) => {
     const { id, data } = props ?? {}
 
@@ -537,7 +536,7 @@ export const getAccountControllerUpdateMutationOptions = <
 export type AccountControllerUpdateMutationResult = NonNullable<
   Awaited<ReturnType<typeof accountControllerUpdate>>
 >
-export type AccountControllerUpdateMutationBody = UpdateAccountDto
+export type AccountControllerUpdateMutationBody = UpdateAccountMetadataDto
 export type AccountControllerUpdateMutationError = void
 
 export const useAccountControllerUpdate = <TError = void, TContext = unknown>(
@@ -545,7 +544,7 @@ export const useAccountControllerUpdate = <TError = void, TContext = unknown>(
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof accountControllerUpdate>>,
       TError,
-      { id: string; data: UpdateAccountDto },
+      { id: string; data: UpdateAccountMetadataDto },
       TContext
     >
   },
@@ -553,7 +552,7 @@ export const useAccountControllerUpdate = <TError = void, TContext = unknown>(
 ): UseMutationResult<
   Awaited<ReturnType<typeof accountControllerUpdate>>,
   TError,
-  { id: string; data: UpdateAccountDto },
+  { id: string; data: UpdateAccountMetadataDto },
   TContext
 > => {
   const mutationOptions = getAccountControllerUpdateMutationOptions(options)
@@ -637,14 +636,14 @@ export const useAccountControllerRemove = <TError = void, TContext = unknown>(
  */
 export const accountControllerUpdateBalance = (
   id: string,
-  accountControllerUpdateBalanceBody: AccountControllerUpdateBalanceBody,
+  updateBalanceBody: UpdateBalanceBody,
   signal?: AbortSignal,
 ) => {
   return axios<Account>({
     url: `/account/${id}/balance`,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    data: accountControllerUpdateBalanceBody,
+    data: updateBalanceBody,
     signal,
   })
 }
@@ -656,13 +655,13 @@ export const getAccountControllerUpdateBalanceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof accountControllerUpdateBalance>>,
     TError,
-    { id: string; data: AccountControllerUpdateBalanceBody },
+    { id: string; data: UpdateBalanceBody },
     TContext
   >
 }): UseMutationOptions<
   Awaited<ReturnType<typeof accountControllerUpdateBalance>>,
   TError,
-  { id: string; data: AccountControllerUpdateBalanceBody },
+  { id: string; data: UpdateBalanceBody },
   TContext
 > => {
   const mutationKey = ['accountControllerUpdateBalance']
@@ -676,7 +675,7 @@ export const getAccountControllerUpdateBalanceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof accountControllerUpdateBalance>>,
-    { id: string; data: AccountControllerUpdateBalanceBody }
+    { id: string; data: UpdateBalanceBody }
   > = (props) => {
     const { id, data } = props ?? {}
 
@@ -689,8 +688,7 @@ export const getAccountControllerUpdateBalanceMutationOptions = <
 export type AccountControllerUpdateBalanceMutationResult = NonNullable<
   Awaited<ReturnType<typeof accountControllerUpdateBalance>>
 >
-export type AccountControllerUpdateBalanceMutationBody =
-  AccountControllerUpdateBalanceBody
+export type AccountControllerUpdateBalanceMutationBody = UpdateBalanceBody
 export type AccountControllerUpdateBalanceMutationError = unknown
 
 export const useAccountControllerUpdateBalance = <
@@ -701,7 +699,7 @@ export const useAccountControllerUpdateBalance = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof accountControllerUpdateBalance>>,
       TError,
-      { id: string; data: AccountControllerUpdateBalanceBody },
+      { id: string; data: UpdateBalanceBody },
       TContext
     >
   },
@@ -709,7 +707,7 @@ export const useAccountControllerUpdateBalance = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof accountControllerUpdateBalance>>,
   TError,
-  { id: string; data: AccountControllerUpdateBalanceBody },
+  { id: string; data: UpdateBalanceBody },
   TContext
 > => {
   const mutationOptions =
@@ -4487,89 +4485,6 @@ export function useTransactionControllerFindAll<
 }
 
 /**
- * Create a new transaction
- */
-export const transactionControllerCreate = (
-  createTransactionDto: CreateTransactionDto,
-  signal?: AbortSignal,
-) => {
-  return axios<Transaction>({
-    url: `/transaction`,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    data: createTransactionDto,
-    signal,
-  })
-}
-
-export const getTransactionControllerCreateMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof transactionControllerCreate>>,
-    TError,
-    { data: CreateTransactionDto },
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof transactionControllerCreate>>,
-  TError,
-  { data: CreateTransactionDto },
-  TContext
-> => {
-  const mutationKey = ['transactionControllerCreate']
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof transactionControllerCreate>>,
-    { data: CreateTransactionDto }
-  > = (props) => {
-    const { data } = props ?? {}
-
-    return transactionControllerCreate(data)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type TransactionControllerCreateMutationResult = NonNullable<
-  Awaited<ReturnType<typeof transactionControllerCreate>>
->
-export type TransactionControllerCreateMutationBody = CreateTransactionDto
-export type TransactionControllerCreateMutationError = unknown
-
-export const useTransactionControllerCreate = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof transactionControllerCreate>>,
-      TError,
-      { data: CreateTransactionDto },
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof transactionControllerCreate>>,
-  TError,
-  { data: CreateTransactionDto },
-  TContext
-> => {
-  const mutationOptions = getTransactionControllerCreateMutationOptions(options)
-
-  return useMutation(mutationOptions, queryClient)
-}
-
-/**
  * Create a manual transaction
  */
 export const transactionControllerCreateManual = (
@@ -4815,17 +4730,17 @@ export function useTransactionControllerFindOne<
 }
 
 /**
- * Update a transaction
+ * Update a transaction reporting date override
  */
 export const transactionControllerUpdate = (
   id: string,
-  updateTransactionDto: UpdateTransactionDto,
+  updateTransactionReportingDateDto: UpdateTransactionReportingDateDto,
 ) => {
   return axios<Transaction>({
     url: `/transaction/${id}`,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    data: updateTransactionDto,
+    data: updateTransactionReportingDateDto,
   })
 }
 
@@ -4836,13 +4751,13 @@ export const getTransactionControllerUpdateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof transactionControllerUpdate>>,
     TError,
-    { id: string; data: UpdateTransactionDto },
+    { id: string; data: UpdateTransactionReportingDateDto },
     TContext
   >
 }): UseMutationOptions<
   Awaited<ReturnType<typeof transactionControllerUpdate>>,
   TError,
-  { id: string; data: UpdateTransactionDto },
+  { id: string; data: UpdateTransactionReportingDateDto },
   TContext
 > => {
   const mutationKey = ['transactionControllerUpdate']
@@ -4856,7 +4771,7 @@ export const getTransactionControllerUpdateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof transactionControllerUpdate>>,
-    { id: string; data: UpdateTransactionDto }
+    { id: string; data: UpdateTransactionReportingDateDto }
   > = (props) => {
     const { id, data } = props ?? {}
 
@@ -4869,7 +4784,8 @@ export const getTransactionControllerUpdateMutationOptions = <
 export type TransactionControllerUpdateMutationResult = NonNullable<
   Awaited<ReturnType<typeof transactionControllerUpdate>>
 >
-export type TransactionControllerUpdateMutationBody = UpdateTransactionDto
+export type TransactionControllerUpdateMutationBody =
+  UpdateTransactionReportingDateDto
 export type TransactionControllerUpdateMutationError = void
 
 export const useTransactionControllerUpdate = <
@@ -4880,7 +4796,7 @@ export const useTransactionControllerUpdate = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof transactionControllerUpdate>>,
       TError,
-      { id: string; data: UpdateTransactionDto },
+      { id: string; data: UpdateTransactionReportingDateDto },
       TContext
     >
   },
@@ -4888,84 +4804,10 @@ export const useTransactionControllerUpdate = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof transactionControllerUpdate>>,
   TError,
-  { id: string; data: UpdateTransactionDto },
+  { id: string; data: UpdateTransactionReportingDateDto },
   TContext
 > => {
   const mutationOptions = getTransactionControllerUpdateMutationOptions(options)
-
-  return useMutation(mutationOptions, queryClient)
-}
-
-/**
- * Delete a transaction
- */
-export const transactionControllerRemove = (id: string) => {
-  return axios<void>({ url: `/transaction/${id}`, method: 'DELETE' })
-}
-
-export const getTransactionControllerRemoveMutationOptions = <
-  TError = void,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof transactionControllerRemove>>,
-    TError,
-    { id: string },
-    TContext
-  >
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof transactionControllerRemove>>,
-  TError,
-  { id: string },
-  TContext
-> => {
-  const mutationKey = ['transactionControllerRemove']
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } }
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof transactionControllerRemove>>,
-    { id: string }
-  > = (props) => {
-    const { id } = props ?? {}
-
-    return transactionControllerRemove(id)
-  }
-
-  return { mutationFn, ...mutationOptions }
-}
-
-export type TransactionControllerRemoveMutationResult = NonNullable<
-  Awaited<ReturnType<typeof transactionControllerRemove>>
->
-
-export type TransactionControllerRemoveMutationError = void
-
-export const useTransactionControllerRemove = <
-  TError = void,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof transactionControllerRemove>>,
-      TError,
-      { id: string },
-      TContext
-    >
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof transactionControllerRemove>>,
-  TError,
-  { id: string },
-  TContext
-> => {
-  const mutationOptions = getTransactionControllerRemoveMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }

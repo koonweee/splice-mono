@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import type { CurrencyPair } from '../types/ExchangeRate';
 import { getDecimalPlaces } from '../types/MoneyWithSign';
 import { UserService } from '../user/user.service';
@@ -31,11 +31,12 @@ export class CurrencyConversionService {
     referenceDate: string,
   ): Promise<Map<string, number>> {
     const rateMap = new Map<string, number>();
-    if (sourceCurrencies.length === 0) {
+    const uniqueSourceCurrencies = [...new Set(sourceCurrencies)];
+    if (uniqueSourceCurrencies.length === 0) {
       return rateMap;
     }
 
-    const pairs: CurrencyPair[] = sourceCurrencies.map((currency) => ({
+    const pairs: CurrencyPair[] = uniqueSourceCurrencies.map((currency) => ({
       baseCurrency: currency,
       targetCurrency,
     }));
@@ -51,6 +52,16 @@ export class CurrencyConversionService {
       rateResponses[0].rates.forEach((rate) => {
         rateMap.set(rate.baseCurrency, rate.rate);
       });
+    }
+
+    const missingCurrency = uniqueSourceCurrencies.find((currency) => {
+      const rate = rateMap.get(currency);
+      return rate === undefined || !Number.isFinite(rate) || rate <= 0;
+    });
+    if (missingCurrency) {
+      throw new ServiceUnavailableException(
+        `Required exchange rate is unavailable for ${missingCurrency} to ${targetCurrency} on ${referenceDate}`,
+      );
     }
 
     return rateMap;
