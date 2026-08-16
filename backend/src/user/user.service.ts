@@ -251,6 +251,11 @@ export class UserService {
     return entity?.settings?.timezone ?? 'UTC';
   }
 
+  async getPreferredCurrency(userId: string): Promise<string> {
+    const entity = await this.repository.findOne({ where: { id: userId } });
+    return normalizeUserSettings(entity?.settings).currency.toUpperCase();
+  }
+
   /**
    * Get provider-specific details for a user
    *

@@ -132,9 +132,7 @@ const suggestion: CategorizationRuleSuggestion = {
   priority: 10,
   targetCategoryId: category.id,
   targetCategory: category,
-  conditions: [
-    { field: 'merchantName', operator: 'contains', value: 'uber' },
-  ],
+  conditions: [{ field: 'merchantName', operator: 'contains', value: 'uber' }],
   rationale: 'Several manually categorized transactions mention Uber.',
   status: 'pending',
   acceptedRuleId: null,
@@ -155,6 +153,7 @@ const account: Account = {
   id: '00000000-0000-4000-8000-000000000010',
   name: 'Checking',
   type: 'depository',
+  valuationMode: 'balance',
   subType: 'checking',
   availableBalance: {
     money: { amount: 10000, currency: 'USD' },
@@ -210,12 +209,14 @@ beforeEach(() => {
     isError: false,
     error: null,
   })
-  mockFns.useCategorizationRuleRecommendationControllerListMock.mockReturnValue({
-    data: { generation: null, suggestions: [] },
-    isLoading: false,
-    isError: false,
-    error: null,
-  })
+  mockFns.useCategorizationRuleRecommendationControllerListMock.mockReturnValue(
+    {
+      data: { generation: null, suggestions: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+    },
+  )
   mockFns.useCategorizationRuleRecommendationControllerGenerateMock.mockReturnValue(
     {
       mutate: mockFns.generateRecommendationsMutateMock,
@@ -248,12 +249,14 @@ beforeEach(() => {
       error: null,
     },
   )
-  mockFns.useCategorizationRuleControllerPreviewApplicationMock.mockReturnValue({
-    data: { matched: 24, updated: 18, skippedManual: 6, transactions: [] },
-    isLoading: false,
-    isError: false,
-    error: null,
-  })
+  mockFns.useCategorizationRuleControllerPreviewApplicationMock.mockReturnValue(
+    {
+      data: { matched: 24, updated: 18, skippedManual: 6, transactions: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+    },
+  )
 
   Object.defineProperty(window, 'matchMedia', {
     value: vi.fn().mockImplementation(() => ({

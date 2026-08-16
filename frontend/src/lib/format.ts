@@ -204,15 +204,39 @@ export function formatRelativeTime(date: Date | string): string {
 }
 
 /**
+ * Format an ISO date or timestamp for display without shifting date-only values
+ * across time zones.
+ */
+export function formatDateTime(value: string): string {
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  const date = dateOnlyMatch
+    ? new Date(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3]),
+      )
+    : new Date(value)
+
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat(
+    'en-US',
+    dateOnlyMatch
+      ? { dateStyle: 'medium' }
+      : { dateStyle: 'medium', timeStyle: 'short' },
+  ).format(date)
+}
+
+/**
  * Format a provider category hint into a readable name.
- * Strips the primary prefix from the detailed string and converts to Title Case.
+ * Strips the primary prefix and converts the detailed category to sentence case.
  *
  * @example
  * formatCategoryName({ primary: 'FOOD_AND_DRINK', detailed: 'FOOD_AND_DRINK_COFFEE' })
  * // => "Coffee"
  *
  * formatCategoryName({ primary: 'LOAN_PAYMENTS', detailed: 'LOAN_PAYMENTS_CAR_PAYMENT' })
- * // => "Car Payment"
+ * // => "Car payment"
  */
 export function formatCategoryName(category: {
   primary: string
@@ -222,32 +246,22 @@ export function formatCategoryName(category: {
     ? category.detailed.slice(category.primary.length + 1)
     : category.detailed
 
-  return suffix
-    .toLowerCase()
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
+  const normalized = suffix.toLowerCase().replace(/_/g, ' ')
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
 /**
  * Format a primary category string for display.
- * Converts SCREAMING_SNAKE_CASE to Title Case.
+ * Converts SCREAMING_SNAKE_CASE to sentence case.
  *
  * @example
- * formatPrimaryCategory('FOOD_AND_DRINK') // => "Food And Drink"
- * formatPrimaryCategory('RENT_AND_UTILITIES') // => "Rent And Utilities"
+ * formatPrimaryCategory('FOOD_AND_DRINK') // => "Food and drink"
+ * formatPrimaryCategory('RENT_AND_UTILITIES') // => "Rent and utilities"
  * formatPrimaryCategory('UNCATEGORIZED') // => "Uncategorized"
  */
 export function formatPrimaryCategory(primary: string): string {
-  if (primary.includes(' ')) {
-    return primary
-  }
-
-  return primary
-    .toLowerCase()
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
+  const normalized = primary.toLowerCase().replace(/_/g, ' ')
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
 /**
@@ -264,8 +278,8 @@ type AccountTypeOrSubType = AccountTypeValue | AccountSubTypeValue
  * For unknown types, falls back to capitalizing and formatting the string
  *
  * @example
- * formatAccountType('crypto_wallet')        // => "Crypto Wallet"
- * formatAccountType('crypto exchange')      // => "Crypto Exchange"
+ * formatAccountType('crypto_wallet')        // => "Crypto wallet"
+ * formatAccountType('crypto exchange')      // => "Crypto exchange"
  * formatAccountType('checking')             // => "Checking"
  * formatAccountType('401k')                 // => "401(k)"
  */
@@ -283,57 +297,57 @@ export function formatAccountType(
     loan: 'Loan',
     brokerage: 'Brokerage',
     other: 'Other',
-    crypto_wallet: 'Crypto Wallet',
+    crypto_wallet: 'Crypto wallet',
 
     // Account SubTypes from AccountSubType.ts - Alphanumeric
     '401a': '401(a)',
     '401k': '401(k)',
     '403B': '403(b)',
     '457b': '457(b)',
-    '529': '529 Plan',
+    '529': '529 plan',
 
     // Account SubTypes - Regular words
     auto: 'Auto',
     business: 'Business',
     'cash isa': 'Cash ISA',
-    'cash management': 'Cash Management',
+    'cash management': 'Cash management',
     cd: 'CD',
     checking: 'Checking',
     commercial: 'Commercial',
     construction: 'Construction',
     consumer: 'Consumer',
-    'credit card': 'Credit Card',
-    'crypto exchange': 'Crypto Exchange', // Crypto-specific type
+    'credit card': 'Credit card',
+    'crypto exchange': 'Crypto exchange', // Crypto-specific type
     ebt: 'EBT',
-    'education savings account': 'Education Savings Account',
-    'fixed annuity': 'Fixed Annuity',
+    'education savings account': 'Education savings account',
+    'fixed annuity': 'Fixed annuity',
     gic: 'GIC',
-    'health reimbursement arrangement': 'Health Reimbursement Arrangement',
-    'home equity': 'Home Equity',
+    'health reimbursement arrangement': 'Health reimbursement arrangement',
+    'home equity': 'Home equity',
     hsa: 'HSA',
     isa: 'ISA',
     ira: 'IRA',
     keogh: 'Keogh',
     lif: 'LIF',
-    'life insurance': 'Life Insurance',
-    'line of credit': 'Line of Credit',
+    'life insurance': 'Life insurance',
+    'line of credit': 'Line of credit',
     lira: 'LIRA',
     lrif: 'LRIF',
     lrsp: 'LRSP',
-    'money market': 'Money Market',
+    'money market': 'Money market',
     mortgage: 'Mortgage',
-    'mutual fund': 'Mutual Fund',
-    'non-custodial wallet': 'Non-Custodial Wallet', // Crypto-specific type
-    'non-taxable brokerage account': 'Non-Taxable Brokerage Account',
-    'other insurance': 'Other Insurance',
-    'other annuity': 'Other Annuity',
+    'mutual fund': 'Mutual fund',
+    'non-custodial wallet': 'Non-custodial wallet', // Crypto-specific type
+    'non-taxable brokerage account': 'Non-taxable brokerage account',
+    'other insurance': 'Other insurance',
+    'other annuity': 'Other annuity',
     overdraft: 'Overdraft',
     paypal: 'PayPal',
     payroll: 'Payroll',
     pension: 'Pension',
     prepaid: 'Prepaid',
     prif: 'PRIF',
-    'profit sharing plan': 'Profit Sharing Plan',
+    'profit sharing plan': 'Profit sharing plan',
     rdsp: 'RDSP',
     resp: 'RESP',
     retirement: 'Retirement',
@@ -347,14 +361,14 @@ export function formatAccountType(
     'sep ira': 'SEP IRA',
     'simple ira': 'SIMPLE IRA',
     sipp: 'SIPP',
-    'stock plan': 'Stock Plan',
+    'stock plan': 'Stock plan',
     student: 'Student',
-    'thrift savings plan': 'Thrift Savings Plan',
+    'thrift savings plan': 'Thrift savings plan',
     tfsa: 'TFSA',
     trust: 'Trust',
     ugma: 'UGMA',
     utma: 'UTMA',
-    'variable annuity': 'Variable Annuity',
+    'variable annuity': 'Variable annuity',
   }
 
   // Return mapped value if found, otherwise use default formatting

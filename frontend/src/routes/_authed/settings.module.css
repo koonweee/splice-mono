@@ -18,15 +18,25 @@
   overflow: hidden;
 }
 
-.settingsTabList {
+.settingsTabScroller {
   max-width: 100%;
-  min-height: 44px;
   flex: 0 0 auto;
-  flex-wrap: nowrap;
   overflow-x: auto;
-  overflow-y: visible;
-  scrollbar-width: thin;
+  overflow-y: hidden;
+  margin-bottom: var(--mantine-spacing-lg);
+  scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+}
+
+.settingsTabScroller::-webkit-scrollbar {
+  display: none;
+}
+
+.settingsTabList {
+  width: max-content;
+  min-width: 100%;
+  min-height: 44px;
+  flex-wrap: nowrap;
 }
 
 .settingsTabList :global(.mantine-Tabs-tab) {

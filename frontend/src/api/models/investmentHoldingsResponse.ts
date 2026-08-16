@@ -5,6 +5,7 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { InvestmentHoldingsResponseAccountValue } from './investmentHoldingsResponseAccountValue'
 import type { InvestmentHoldingSnapshot } from './investmentHoldingSnapshot'
 
 export interface InvestmentHoldingsResponse {
@@ -14,5 +15,8 @@ export interface InvestmentHoldingsResponse {
    * @pattern ^\d{4}-\d{2}-\d{2}$
    */
   snapshotDate: string | null
+  /** @nullable */
+  accountCurrency: string | null
+  accountValue: InvestmentHoldingsResponseAccountValue
   holdings: InvestmentHoldingSnapshot[]
 }

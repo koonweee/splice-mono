@@ -108,6 +108,11 @@ export class AccountService extends OwnedCrudService<
         `Account with id ${accountId} is linked and cannot be manually updated`,
       );
     }
+    if (accountEntity.valuationMode === 'holdings') {
+      throw new BadRequestException(
+        `Account with id ${accountId} is valued from holdings and cannot be manually balanced`,
+      );
+    }
 
     accountEntity.currentBalance = BalanceColumns.fromMoneyWithSign(newBalance);
 

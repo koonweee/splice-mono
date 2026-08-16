@@ -4,3 +4,27 @@
   padding-right: 0;
   padding-left: 0;
 }
+
+.balanceRow {
+  min-height: 44px;
+}
+
+.balanceValue {
+  min-width: 0;
+}
+
+.nativeBalanceRow {
+  min-height: 44px;
+}
+
+@media (max-width: 22.5em) {
+  .balanceRow {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .balanceValue {
+    width: 100%;
+  }
+}

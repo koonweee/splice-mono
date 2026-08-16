@@ -23,14 +23,25 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   getAccountControllerFindAllQueryKey,
+  getBalanceQueryControllerGetAllBalancesQueryKey,
+  getBalanceQueryControllerGetBalancesQueryKey,
+  investmentControllerSearchSecurities,
   useAccountControllerCreate,
   useBankLinkControllerInitiateLinking,
+  useInvestmentControllerCreateManualBrokerageAccount,
 } from '../../api/clients/spliceAPI'
 import { AccountSubType, AccountType } from '../../api/models'
+import { getApiErrorMessage } from '../../lib/api-errors'
 import { createMoneyWithSign } from '../../lib/balance-utils'
 import { getDecimalPlaces } from '../../lib/format'
+import { useIsMobile } from '../../lib/hooks'
+import {
+  ManualBrokeragePositionsEditor,
+  isPositiveDecimal,
+} from '../investments/ManualBrokeragePositionsEditor'
 import type { InitiateLinkRequestNetwork } from '../../api/models'
 import type { ComponentType } from 'react'
+import type { ManualBrokeragePositionDraft } from '../investments/ManualBrokeragePositionsEditor'
 
 interface Provider {
   id: string
@@ -58,7 +69,7 @@ const MANUAL_ACCOUNT_TYPES = [
     subType: AccountSubType.checking,
   },
   {
-    label: 'Credit Card',
+    label: 'Credit card',
     value: 'credit_card',
     type: AccountType.credit,
     subType: AccountSubType.credit_card,
@@ -70,7 +81,13 @@ const MANUAL_ACCOUNT_TYPES = [
     subType: AccountSubType.loan,
   },
   {
-    label: 'Investment',
+    label: 'Brokerage (holdings)',
+    value: 'brokerage_holdings',
+    type: AccountType.investment,
+    subType: AccountSubType.brokerage,
+  },
+  {
+    label: 'Investment (balance only)',
     value: 'investment',
     type: AccountType.investment,
     subType: AccountSubType.brokerage,
@@ -103,12 +120,12 @@ const PROVIDERS: Array<Provider> = [
   },
   {
     id: 'crypto',
-    name: 'Crypto Wallet',
+    name: 'Crypto wallet',
     icon: IconWallet,
   },
   {
     id: 'manual',
-    name: 'Manual Account',
+    name: 'Manual account',
     icon: IconPencil,
   },
 ]
@@ -119,9 +136,11 @@ interface AddAccountModalProps {
 }
 
 export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
+  const isMobile = useIsMobile()
   const queryClient = useQueryClient()
   const initiateLinking = useBankLinkControllerInitiateLinking()
   const createAccount = useAccountControllerCreate()
+  const createBrokerage = useInvestmentControllerCreateManualBrokerageAccount()
   const [selectedProvider, setSelectedProvider] = useState<string | undefined>(
     undefined,
   )
@@ -133,6 +152,11 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
   const [manualCurrency, setManualCurrency] = useState('USD')
   const [manualBalance, setManualBalance] = useState<number | string>(0)
   const [manualTypeSelection, setManualTypeSelection] = useState('cash')
+  const [manualPositions, setManualPositions] = useState<
+    Array<ManualBrokeragePositionDraft>
+  >([])
+
+  const isManualBrokerage = manualTypeSelection === 'brokerage_holdings'
 
   const handleClose = () => {
     setShowCryptoForm(false)
@@ -142,6 +166,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
     setManualName('')
     setManualBalance(0)
     setManualTypeSelection('cash')
+    setManualPositions([])
     setSelectedProvider(undefined)
     onClose()
   }
@@ -197,7 +222,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
             queryKey: getAccountControllerFindAllQueryKey(),
           })
           notifications.show({
-            title: 'Wallet Added',
+            title: 'Wallet added',
             message: `Your ${network === 'ethereum' ? 'Ethereum' : 'Bitcoin'} wallet has been linked successfully`,
             color: 'green',
           })
@@ -215,7 +240,45 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
       MANUAL_ACCOUNT_TYPES.find((t) => t.value === manualTypeSelection) ??
       MANUAL_ACCOUNT_TYPES[0]
 
-    // For investment/brokerage accounts, effective balance = available + current,
+    if (isManualBrokerage) {
+      createBrokerage.mutate(
+        {
+          data: {
+            name: manualName.trim(),
+            accountCurrency: manualCurrency,
+            positions: manualPositions.map(({ symbol, quantity }) => ({
+              symbol,
+              quantity: quantity.trim(),
+            })),
+          },
+        },
+        {
+          onSuccess: (response) => {
+            queryClient.invalidateQueries({
+              queryKey: getAccountControllerFindAllQueryKey(),
+            })
+            queryClient.invalidateQueries({
+              queryKey: getBalanceQueryControllerGetBalancesQueryKey(),
+            })
+            queryClient.invalidateQueries({
+              queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
+            })
+            notifications.show({
+              title: 'Brokerage created',
+              message:
+                response.staleSymbols.length > 0
+                  ? `Created using cached prices for ${response.staleSymbols.join(', ')}.`
+                  : 'Manual brokerage created successfully.',
+              color: response.staleSymbols.length > 0 ? 'yellow' : 'green',
+            })
+            handleClose()
+          },
+        },
+      )
+      return
+    }
+
+    // For 401(k) and HSA accounts, effective balance = available + current,
     // so set available to zero to avoid doubling.
     const isInvestmentType = typeDef.type === AccountType.investment
     const balancePayload = createMoneyWithSign(
@@ -240,7 +303,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
             queryKey: getAccountControllerFindAllQueryKey(),
           })
           notifications.show({
-            title: 'Account Created',
+            title: 'Account created',
             message: 'Manual account created successfully',
             color: 'green',
           })
@@ -250,18 +313,23 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
     )
   }
 
+  const brokerageErrorMessage = getApiErrorMessage(
+    createBrokerage.error,
+    'Unable to value these positions. Check the symbols and try again.',
+  )
+
   const renderManualForm = () => (
     <Stack gap="md">
       <Group gap="xs">
         <ActionIcon variant="subtle" onClick={() => setShowManualForm(false)}>
           <IconArrowLeft size={16} />
         </ActionIcon>
-        <Text fw={500}>Add Manual Account</Text>
+        <Text fw={500}>Add manual account</Text>
       </Group>
 
       <TextInput
-        label="Account Name"
-        placeholder="e.g. Emergency Fund"
+        label="Account name"
+        placeholder="e.g. Emergency fund"
         required
         size="md"
         value={manualName}
@@ -269,7 +337,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
       />
 
       <Select
-        label="Account Type"
+        label="Account type"
         data={MANUAL_ACCOUNT_TYPES.map((t) => ({
           value: t.value,
           label: t.label,
@@ -288,22 +356,52 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         size="md"
       />
 
-      <NumberInput
-        label="Current Balance"
-        decimalScale={getDecimalPlaces(manualCurrency)}
-        fixedDecimalScale
-        prefix={manualCurrency === 'USD' ? '$' : ''}
-        size="md"
-        value={manualBalance}
-        onChange={setManualBalance}
-      />
+      {isManualBrokerage ? (
+        <>
+          {createBrokerage.isError && (
+            <Alert color="red" role="alert" title="Brokerage not created">
+              {brokerageErrorMessage ||
+                'Unable to value these positions. Check the symbols and try again.'}
+            </Alert>
+          )}
+          <ManualBrokeragePositionsEditor
+            disabled={createBrokerage.isPending}
+            onChange={setManualPositions}
+            positions={manualPositions}
+            searchSecurities={(query, signal) =>
+              investmentControllerSearchSecurities({ query, limit: 10 }, signal)
+            }
+          />
+        </>
+      ) : (
+        <NumberInput
+          label="Current balance"
+          decimalScale={getDecimalPlaces(manualCurrency)}
+          fixedDecimalScale
+          prefix={manualCurrency === 'USD' ? '$' : ''}
+          size="md"
+          value={manualBalance}
+          onChange={setManualBalance}
+        />
+      )}
 
       <Button
         onClick={handleManualSubmit}
-        loading={createAccount.isPending}
-        disabled={!manualName.trim()}
+        loading={
+          isManualBrokerage
+            ? createBrokerage.isPending
+            : createAccount.isPending
+        }
+        disabled={
+          !manualName.trim() ||
+          (isManualBrokerage &&
+            (manualPositions.length === 0 ||
+              !manualPositions.every((position) =>
+                isPositiveDecimal(position.quantity),
+              )))
+        }
       >
-        Create Account
+        Create account
       </Button>
     </Stack>
   )
@@ -314,7 +412,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         <ActionIcon variant="subtle" onClick={() => setShowCryptoForm(false)}>
           <IconArrowLeft size={16} />
         </ActionIcon>
-        <Text fw={500}>Add Crypto Wallet</Text>
+        <Text fw={500}>Add crypto wallet</Text>
       </Group>
 
       {initiateLinking.isError && (
@@ -335,7 +433,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
       />
 
       <TextInput
-        label="Wallet Address"
+        label="Wallet address"
         placeholder={
           network === 'ethereum' ? '0x...' : 'bc1... or 1... or 3...'
         }
@@ -354,7 +452,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         loading={initiateLinking.isPending && selectedProvider === 'crypto'}
         disabled={!walletAddress.trim()}
       >
-        Add Wallet
+        Add wallet
       </Button>
     </Stack>
   )
@@ -393,7 +491,13 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
   )
 
   return (
-    <Modal opened={opened} onClose={handleClose} title="Add Account" centered>
+    <Modal
+      centered
+      fullScreen={isMobile}
+      onClose={handleClose}
+      opened={opened}
+      title="Add account"
+    >
       {showCryptoForm
         ? renderCryptoForm()
         : showManualForm

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MoneyWithSignSign } from '../api/models'
 import {
   formatAccountType,
+  formatDateTime,
   formatMoneyNumber,
   formatMoneyWithSign,
   formatPercent,
@@ -9,6 +10,19 @@ import {
 } from './format'
 
 describe('format utils', () => {
+  describe('formatDateTime', () => {
+    it('pretty formats date-only values without a timezone shift', () => {
+      expect(formatDateTime('2026-05-20')).toBe('May 20, 2026')
+    })
+
+    it('pretty formats timestamps and preserves invalid provider values', () => {
+      expect(formatDateTime('2026-05-20T14:35:00')).toBe(
+        'May 20, 2026, 2:35 PM',
+      )
+      expect(formatDateTime('not-a-date')).toBe('not-a-date')
+    })
+  })
+
   describe('getDecimalPlaces', () => {
     it('should return correct decimals for fiat currencies', () => {
       expect(getDecimalPlaces('USD')).toBe(2)
@@ -131,23 +145,23 @@ describe('format utils', () => {
 
   describe('formatAccountType', () => {
     it('should format crypto wallet type correctly', () => {
-      expect(formatAccountType('crypto_wallet')).toBe('Crypto Wallet')
+      expect(formatAccountType('crypto_wallet')).toBe('Crypto wallet')
     })
 
     it('should format crypto exchange subType correctly', () => {
-      expect(formatAccountType('crypto exchange')).toBe('Crypto Exchange')
+      expect(formatAccountType('crypto exchange')).toBe('Crypto exchange')
     })
 
     it('should format non-custodial wallet subType correctly', () => {
       expect(formatAccountType('non-custodial wallet')).toBe(
-        'Non-Custodial Wallet',
+        'Non-custodial wallet',
       )
     })
 
     it('should handle regular account types with default formatting', () => {
       expect(formatAccountType('checking')).toBe('Checking')
       expect(formatAccountType('savings')).toBe('Savings')
-      expect(formatAccountType('home equity')).toBe('Home Equity') // API model has space, not underscore
+      expect(formatAccountType('home equity')).toBe('Home equity') // API model has space, not underscore
     })
 
     it('should handle undefined and null values', () => {

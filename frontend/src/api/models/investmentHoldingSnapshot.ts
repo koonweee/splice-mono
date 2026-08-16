@@ -32,6 +32,12 @@ export interface InvestmentHoldingSnapshot {
   /** @nullable */
   unofficialCurrencyCode: string | null
   /** @nullable */
+  accountCurrency: string | null
+  /** @nullable */
+  exchangeRateToAccountCurrency: string | null
+  /** @nullable */
+  accountValue: string | null
+  /** @nullable */
   vestedQuantity: string | null
   /** @nullable */
   vestedValue: string | null

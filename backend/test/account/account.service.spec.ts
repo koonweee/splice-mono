@@ -831,6 +831,27 @@ describe('AccountService', () => {
       expect(mockRepository.save).not.toHaveBeenCalled();
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
+
+    it('rejects direct balance updates for holdings-valued accounts', async () => {
+      const holdingsEntity = AccountEntity.fromDto(
+        {
+          ...mockCreateManualAccountDto,
+          type: AccountType.Investment,
+          subType: AccountSubtype.Brokerage,
+          valuationMode: 'holdings',
+        },
+        mockUserId,
+      );
+      holdingsEntity.id = 'holdings-id';
+      mockRepository.findOne.mockResolvedValue(holdingsEntity);
+
+      await expect(
+        service.updateManualBalance('holdings-id', mockUserId, newBalance),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockRepository.save).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
   });
 
   describe('remove', () => {

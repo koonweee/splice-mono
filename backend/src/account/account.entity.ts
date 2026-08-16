@@ -1,6 +1,7 @@
 import { AccountSubtype, AccountType } from 'plaid';
 import {
   Column,
+  Check,
   Entity,
   Index,
   JoinColumn,
@@ -10,10 +11,18 @@ import {
 import { BankLinkEntity } from '../bank-link/bank-link.entity';
 import { BalanceColumns } from '../common/balance.columns';
 import { OwnedEntity } from '../common/owned.entity';
-import { Account, CreateAccountDto } from '../types/Account';
+import {
+  Account,
+  type AccountValuationMode,
+  CreateAccountDto,
+} from '../types/Account';
 import type { APIAccount } from '../types/BankLink';
 
 @Entity()
+@Check(
+  'CHK_account_valuation_mode',
+  `"valuationMode" IN ('balance', 'holdings')`,
+)
 @Index(
   'UQ_account_user_bank_link_external',
   ['userId', 'bankLinkId', 'externalAccountId'],
@@ -55,6 +64,9 @@ export class AccountEntity extends OwnedEntity {
   @Column({ type: 'varchar', nullable: true })
   subType: string | null;
 
+  @Column({ type: 'varchar', default: 'balance' })
+  valuationMode: AccountValuationMode;
+
   /** External account ID from bank provider (e.g., Plaid account_id) */
   @Column({ type: 'varchar', nullable: true })
   externalAccountId: string | null;
@@ -94,6 +106,7 @@ export class AccountEntity extends OwnedEntity {
     );
     entity.type = dto.type;
     entity.subType = dto.subType;
+    entity.valuationMode = dto.valuationMode ?? 'balance';
     entity.externalAccountId = dto.externalAccountId ?? null;
     entity.bankLinkId = dto.bankLinkId ?? null;
     entity.rawApiAccount = dto.rawApiAccount ?? null;
@@ -116,6 +129,7 @@ export class AccountEntity extends OwnedEntity {
       currentBalance: this.currentBalance.toMoneyWithSign(),
       type: this.type as AccountType,
       subType: this.subType ? (this.subType as AccountSubtype) : null,
+      valuationMode: this.valuationMode ?? 'balance',
       externalAccountId: this.externalAccountId,
       bankLinkId: this.bankLinkId,
       bankLink: this.bankLink?.toObject() ?? null,

@@ -1,6 +1,12 @@
 import { MantineProvider } from '@mantine/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   AccountType,
@@ -28,7 +34,10 @@ const mockFns = vi.hoisted(() => ({
   useInvestmentActivityMock: vi.fn(),
   investmentActivityTableMock: vi.fn(),
   useAccountControllerUpdateMock: vi.fn(),
+  updateBalanceMutateMock: vi.fn(),
   notificationsShowMock: vi.fn(),
+  refreshPricesMutateMock: vi.fn(),
+  replaceHoldingsMutateAsyncMock: vi.fn(),
 }))
 
 vi.mock('../hooks/useBalanceData', async () => {
@@ -86,6 +95,18 @@ vi.mock('../api/clients/spliceAPI', async () => {
       '/balance-query/balances',
     ],
     useAccountControllerUpdate: mockFns.useAccountControllerUpdateMock,
+    useAccountControllerUpdateBalance: () => ({
+      mutate: mockFns.updateBalanceMutateMock,
+      isPending: false,
+    }),
+    investmentControllerSearchSecurities: vi.fn(),
+    useInvestmentControllerRefreshManualBrokeragePrices: () => ({
+      mutate: mockFns.refreshPricesMutateMock,
+      isPending: false,
+    }),
+    useInvestmentControllerReplaceManualBrokerageHoldings: () => ({
+      mutateAsync: mockFns.replaceHoldingsMutateAsyncMock,
+    }),
   }
 })
 
@@ -95,9 +116,9 @@ vi.mock('@mantine/notifications', () => ({
   },
 }))
 
-function createMoney(amount: number) {
+function createMoney(amount: number, currency = 'USD') {
   return {
-    money: { amount, currency: 'USD' },
+    money: { amount, currency },
     sign: MoneyWithSignSign.positive,
   }
 }
@@ -107,6 +128,7 @@ const accountSummary: AccountSummaryData = {
   name: 'Checking',
   customName: null,
   type: AccountType.depository,
+  valuationMode: 'balance',
   effectiveBalance: createMoney(10000),
 }
 
@@ -127,6 +149,9 @@ const investmentHolding: InvestmentHoldingSnapshot = {
   institutionValue: '1202.5',
   isoCurrencyCode: 'USD',
   unofficialCurrencyCode: null,
+  accountCurrency: null,
+  exchangeRateToAccountCurrency: null,
+  accountValue: null,
   vestedQuantity: null,
   vestedValue: null,
   createdAt: '2026-05-20T00:00:00.000Z',
@@ -162,6 +187,7 @@ const investmentHolding: InvestmentHoldingSnapshot = {
 function createAccount(
   notes: string | null,
   type: AccountTypeValue = AccountType.depository,
+  valuationMode: 'balance' | 'holdings' = 'balance',
 ): Account {
   return {
     id: 'account-id',
@@ -173,17 +199,39 @@ function createAccount(
     availableBalance: createMoney(10000),
     currentBalance: createMoney(10000),
     type,
+    valuationMode,
     subType: null,
     externalAccountId: null,
-    bankLinkId: 'bank-link-id',
+    bankLinkId: valuationMode === 'holdings' ? null : 'bank-link-id',
     bankLink: null,
     createdAt: '2026-04-01T00:00:00.000Z',
     updatedAt: '2026-04-01T00:00:00.000Z',
   }
 }
 
-function createLatestBalance(account: Account): AccountBalanceResult {
-  const balance = { balance: createMoney(10000) }
+function createLatestBalance(
+  account: Account,
+  reportingCurrency?: string,
+  snapshotBalanceAmount?: number,
+): AccountBalanceResult {
+  const snapshotCurrentBalance =
+    snapshotBalanceAmount === undefined
+      ? account.currentBalance
+      : {
+          ...account.currentBalance,
+          money: {
+            ...account.currentBalance.money,
+            amount: snapshotBalanceAmount,
+          },
+        }
+  const balance = {
+    balance: snapshotCurrentBalance,
+    convertedBalance:
+      reportingCurrency &&
+      reportingCurrency !== snapshotCurrentBalance.money.currency
+        ? createMoney(7500, reportingCurrency)
+        : undefined,
+  }
 
   return {
     account,
@@ -196,13 +244,19 @@ function createLatestBalance(account: Account): AccountBalanceResult {
 function createBalanceHistoryHookState(
   account: Account,
   error: Error | null = null,
+  reportingCurrency?: string,
+  snapshotBalanceAmount?: number,
 ) {
   return {
     data:
       error === null
         ? {
             chartData: [],
-            latestBalance: createLatestBalance(account),
+            latestBalance: createLatestBalance(
+              account,
+              reportingCurrency,
+              snapshotBalanceAmount,
+            ),
             latestSyncedAt: undefined,
             rawResults: [],
           }
@@ -238,17 +292,39 @@ function renderAccountModal(
     investmentActivityLoading?: boolean
     investmentActivityLoadMoreError?: boolean
     investmentActivityInitialError?: boolean
+    valuationMode?: 'balance' | 'holdings'
+    manual?: boolean
+    nativeCurrency?: string
+    reportingCurrency?: string
+    accountBalanceAmount?: number
+    snapshotBalanceAmount?: number
   } = {},
 ) {
-  const account = createAccount(notes, options.type)
+  const account = createAccount(
+    notes,
+    options.type,
+    options.valuationMode ?? 'balance',
+  )
+  if (options.manual) {
+    account.bankLinkId = null
+  }
+  if (options.nativeCurrency || options.accountBalanceAmount !== undefined) {
+    const amount = options.accountBalanceAmount ?? 10000
+    const currency = options.nativeCurrency ?? 'USD'
+    account.availableBalance = createMoney(amount, currency)
+    account.currentBalance = createMoney(amount, currency)
+  }
   const summary = {
     ...accountSummary,
     type: options.type ?? AccountType.depository,
+    valuationMode: options.valuationMode ?? 'balance',
   }
 
   const balanceHistoryState = createBalanceHistoryHookState(
     account,
     options.balanceHistoryError ?? null,
+    options.reportingCurrency,
+    options.snapshotBalanceAmount,
   )
   if (options.balanceHistoryEmpty) {
     balanceHistoryState.data = {
@@ -263,6 +339,7 @@ function renderAccountModal(
   mockFns.useInvestmentHoldingsMock.mockReturnValue({
     holdings: options.holdings ?? [],
     snapshotDate: options.holdings?.length ? '2026-05-20' : null,
+    accountCurrency: options.valuationMode === 'holdings' ? 'USD' : null,
     isLoading: options.holdingsLoading ?? false,
     isError: options.holdingsError ?? false,
   })
@@ -281,12 +358,14 @@ function renderAccountModal(
     defaultOptions: { queries: { retry: false } },
   })
 
+  let currentSummary = summary
+  let modalOpened = true
   const renderModal = () => (
     <QueryClientProvider client={queryClient}>
       <MantineProvider>
         <AccountModal
-          account={summary}
-          opened
+          account={currentSummary}
+          opened={modalOpened}
           onClose={vi.fn()}
           period={TimePeriod.month}
           balancesHidden={options.balancesHidden ?? false}
@@ -298,6 +377,15 @@ function renderAccountModal(
 
   return {
     ...result,
+    queryClient,
+    rerenderWithAccount: (nextAccount: AccountSummaryData) => {
+      currentSummary = nextAccount
+      result.rerender(renderModal())
+    },
+    setOpened: (nextOpened: boolean) => {
+      modalOpened = nextOpened
+      result.rerender(renderModal())
+    },
     rerenderModal: () => result.rerender(renderModal()),
   }
 }
@@ -326,6 +414,15 @@ beforeEach(() => {
       ...createAccount(data.notes ?? null),
       notes: data.notes ?? null,
     })
+  })
+  mockFns.refreshPricesMutateMock.mockImplementation((_variables, options) => {
+    options?.onSuccess?.({ staleSymbols: [] })
+  })
+  mockFns.replaceHoldingsMutateAsyncMock.mockResolvedValue({
+    staleSymbols: [],
+  })
+  mockFns.updateBalanceMutateMock.mockImplementation((_variables, options) => {
+    options?.onSuccess?.()
   })
 
   Object.defineProperty(window, 'matchMedia', {
@@ -443,7 +540,7 @@ describe('AccountModal balance history', () => {
       screen.getByText('No balance history is available for this account.'),
     ).toBeTruthy()
     expect(screen.queryByText('Unable to load account history')).toBeNull()
-    expect(screen.queryByText('Current Balance')).toBeNull()
+    expect(screen.queryByText('Current balance')).toBeNull()
   })
 
   it('recovers from a balance-history error after Retry', () => {
@@ -452,7 +549,7 @@ describe('AccountModal balance history', () => {
     })
 
     expect(screen.getByText('Unable to load account history')).toBeTruthy()
-    expect(screen.queryByText('Current Balance')).toBeNull()
+    expect(screen.queryByText('Current balance')).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(mockFns.refetchBalanceHistoryMock).toHaveBeenCalledTimes(1)
@@ -467,7 +564,9 @@ describe('AccountModal balance history', () => {
     result.rerenderModal()
 
     expect(
-      screen.getByRole('button', { name: 'Retry' }).getAttribute('data-loading'),
+      screen
+        .getByRole('button', { name: 'Retry' })
+        .getAttribute('data-loading'),
     ).toBe('true')
 
     mockFns.useAccountBalanceHistoryMock.mockReturnValue(
@@ -477,8 +576,104 @@ describe('AccountModal balance history', () => {
 
     expect(screen.queryByText('Unable to load account history')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
-    expect(screen.getByText('Current Balance')).toBeTruthy()
+    expect(screen.getByText('Current balance')).toBeTruthy()
     expect(screen.getByLabelText('Account notes')).toBeTruthy()
+  })
+
+  it('edits a manual account balance inline and confirms the change', () => {
+    renderAccountModal(null, { manual: true })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit balance' }))
+
+    const input = screen.getByRole('textbox', { name: 'Current balance' })
+    fireEvent.change(input, { target: { value: '25.50' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save balance' }))
+
+    expect(mockFns.updateBalanceMutateMock).toHaveBeenCalledWith(
+      {
+        id: 'account-id',
+        data: {
+          balance: {
+            money: { amount: 2550, currency: 'USD' },
+            sign: MoneyWithSignSign.positive,
+          },
+        },
+      },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    )
+    expect(screen.queryByRole('form', { name: 'Edit balance' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Edit balance' })).toBeTruthy()
+  })
+
+  it('cancels an inline balance edit without saving', () => {
+    renderAccountModal(null, { manual: true })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit balance' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Current balance' }), {
+      target: { value: '25.50' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Cancel balance edit' }),
+    )
+
+    expect(mockFns.updateBalanceMutateMock).not.toHaveBeenCalled()
+    expect(screen.queryByRole('form', { name: 'Edit balance' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Edit balance' })).toBeTruthy()
+  })
+
+  it('keeps the reporting value visible while editing the native balance', () => {
+    renderAccountModal(null, {
+      manual: true,
+      nativeCurrency: 'SGD',
+      reportingCurrency: 'USD',
+    })
+
+    expect(screen.getByText('$75.00')).toBeTruthy()
+    expect(screen.getByText('$100.00 (SGD)')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit balance' }))
+
+    expect(screen.getByText('$75.00')).toBeTruthy()
+    const input = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Current balance',
+    })
+    expect(input.value).toBe('100.00 SGD')
+
+    fireEvent.change(input, { target: { value: '125.00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save balance' }))
+
+    expect(mockFns.updateBalanceMutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          balance: {
+            money: { amount: 12500, currency: 'SGD' },
+            sign: MoneyWithSignSign.positive,
+          },
+        },
+      }),
+      expect.any(Object),
+    )
+  })
+
+  it('edits the same snapshot balance that is displayed', () => {
+    renderAccountModal(null, {
+      manual: true,
+      accountBalanceAmount: 999900,
+      snapshotBalanceAmount: 213340,
+    })
+
+    expect(screen.getByText('$2,133.40')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit balance' }))
+
+    const input = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Current balance',
+    })
+    expect(input.value).toContain('2133.40')
+    expect(input.value).not.toContain('9999.00')
   })
 })
 
@@ -527,7 +722,7 @@ describe('AccountModal holdings', () => {
     })
 
     expect(screen.getByText('Holdings unavailable.')).toBeTruthy()
-    expect(screen.getByText('Current Balance')).toBeTruthy()
+    expect(screen.getByText('Current balance')).toBeTruthy()
   })
 
   it('shows investment activity loading without an empty-state flash', () => {
@@ -600,5 +795,157 @@ describe('AccountModal holdings', () => {
       screen.getByRole('button', { name: 'Retry loading activity' }),
     )
     expect(retry).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses holdings controls and suppresses provider activity for a manual brokerage', () => {
+    renderAccountModal(null, {
+      type: AccountType.investment,
+      valuationMode: 'holdings',
+      holdings: [investmentHolding],
+    })
+
+    expect(screen.getByRole('button', { name: 'Edit holdings' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
+    expect(screen.getByText('(as of May 20, 2026)')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Edit balance' })).toBeNull()
+    expect(screen.queryByText('Activity')).toBeNull()
+    expect(mockFns.useInvestmentActivityMock).toHaveBeenCalledWith(
+      'account-id',
+      false,
+    )
+  })
+
+  it('waits for holdings to load before opening a populated editor', async () => {
+    const result = renderAccountModal(null, {
+      type: AccountType.investment,
+      valuationMode: 'holdings',
+      holdingsLoading: true,
+    })
+    const loadingEditButton = screen.getByRole<HTMLButtonElement>('button', {
+      name: 'Edit holdings',
+    })
+
+    expect(loadingEditButton.disabled).toBe(true)
+
+    mockFns.useInvestmentHoldingsMock.mockReturnValue({
+      holdings: [investmentHolding],
+      snapshotDate: '2026-05-20',
+      accountCurrency: 'USD',
+      isLoading: false,
+      isError: false,
+    })
+    result.rerenderModal()
+
+    const loadedEditButton = screen.getByRole<HTMLButtonElement>('button', {
+      name: 'Edit holdings',
+    })
+    expect(loadedEditButton.disabled).toBe(false)
+
+    fireEvent.click(loadedEditButton)
+
+    const quantityInput =
+      await screen.findByLabelText<HTMLInputElement>('VWRA quantity')
+    expect(quantityInput.value).toBe('10')
+  })
+
+  it('refreshes a manual brokerage and reports cached symbols without zeroing it', () => {
+    mockFns.refreshPricesMutateMock.mockImplementation(
+      (_variables, options) => {
+        options?.onSuccess?.({ staleSymbols: ['C6L.SI'] })
+      },
+    )
+    renderAccountModal(null, {
+      type: AccountType.investment,
+      valuationMode: 'holdings',
+      holdings: [investmentHolding],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+
+    expect(mockFns.refreshPricesMutateMock).toHaveBeenCalledWith(
+      { accountId: 'account-id' },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    )
+    expect(screen.getByRole('status').textContent).toContain(
+      'Using cached prices for C6L.SI',
+    )
+    expect(mockFns.notificationsShowMock).toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'yellow' }),
+    )
+  })
+
+  it('clears cached-price warnings when the selected account changes', async () => {
+    mockFns.refreshPricesMutateMock.mockImplementation(
+      (_variables, options) => {
+        options?.onSuccess?.({ staleSymbols: ['C6L.SI'] })
+      },
+    )
+    const result = renderAccountModal(null, {
+      type: AccountType.investment,
+      valuationMode: 'holdings',
+      holdings: [investmentHolding],
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+    expect(screen.getByRole('status').textContent).toContain('C6L.SI')
+
+    result.rerenderWithAccount({
+      ...accountSummary,
+      id: 'account-id-2',
+      type: AccountType.investment,
+      valuationMode: 'holdings',
+    })
+
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+  })
+
+  it('clears cached-price warnings when the account modal reopens', async () => {
+    mockFns.refreshPricesMutateMock.mockImplementation(
+      (_variables, options) => {
+        options?.onSuccess?.({ staleSymbols: ['C6L.SI'] })
+      },
+    )
+    const result = renderAccountModal(null, {
+      type: AccountType.investment,
+      valuationMode: 'holdings',
+      holdings: [investmentHolding],
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+    expect(screen.getByRole('status').textContent).toContain('C6L.SI')
+
+    result.setOpened(false)
+    result.setOpened(true)
+
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+  })
+
+  it('replaces edited holdings and invalidates account valuation queries', async () => {
+    const { queryClient } = renderAccountModal(null, {
+      type: AccountType.investment,
+      valuationMode: 'holdings',
+      holdings: [investmentHolding],
+    })
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit holdings' }))
+    fireEvent.change(await screen.findByLabelText('VWRA quantity'), {
+      target: { value: '12.5' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save holdings' }))
+
+    await waitFor(() =>
+      expect(mockFns.replaceHoldingsMutateAsyncMock).toHaveBeenCalledWith({
+        accountId: 'account-id',
+        data: { positions: [{ symbol: 'VWRA', quantity: '12.5' }] },
+      }),
+    )
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['/investment/account/account-id/holdings/latest'],
+    })
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['/balance-query/balances'],
+    })
   })
 })

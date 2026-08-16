@@ -4,10 +4,21 @@ import {
   MoneyWithSignSchema,
   type SerializedMoneyWithSign,
 } from './MoneyWithSign';
+import { AccountSchema } from './Account';
 import { OwnedSchema } from './Timestamps';
 
-export const InvestmentProviderSchema = z.enum(['plaid']);
-export type InvestmentProvider = z.infer<typeof InvestmentProviderSchema>;
+export const InvestmentSecurityProviderSchema = z.enum(['plaid', 'yahoo']);
+export type InvestmentSecurityProvider = z.infer<
+  typeof InvestmentSecurityProviderSchema
+>;
+export const InvestmentHoldingProviderSchema = z.enum(['plaid', 'manual']);
+export type InvestmentHoldingProvider = z.infer<
+  typeof InvestmentHoldingProviderSchema
+>;
+export const InvestmentActivityProviderSchema = z.literal('plaid');
+export type InvestmentActivityProvider = z.infer<
+  typeof InvestmentActivityProviderSchema
+>;
 
 export const DateStringSchema = z
   .string()
@@ -21,7 +32,7 @@ export const InvestmentSecuritySchema = registerSchema(
   z
     .object({
       id: z.string().uuid(),
-      provider: InvestmentProviderSchema,
+      provider: InvestmentSecurityProviderSchema,
       externalSecurityId: z.string(),
       institutionId: z.string().nullable(),
       institutionSecurityId: z.string().nullable(),
@@ -54,7 +65,7 @@ export const InvestmentHoldingSnapshotSchema = registerSchema(
       id: z.string().uuid(),
       accountId: z.string().uuid(),
       securityId: z.string().uuid(),
-      provider: InvestmentProviderSchema,
+      provider: InvestmentHoldingProviderSchema,
       snapshotDate: DateStringSchema,
       quantity: NullableDecimalStringSchema,
       costBasis: NullableDecimalStringSchema,
@@ -64,6 +75,9 @@ export const InvestmentHoldingSnapshotSchema = registerSchema(
       institutionValue: NullableDecimalStringSchema,
       isoCurrencyCode: z.string().nullable(),
       unofficialCurrencyCode: z.string().nullable(),
+      accountCurrency: z.string().nullable(),
+      exchangeRateToAccountCurrency: NullableDecimalStringSchema,
+      accountValue: NullableDecimalStringSchema,
       vestedQuantity: NullableDecimalStringSchema,
       vestedValue: NullableDecimalStringSchema,
       security: InvestmentSecuritySchema,
@@ -104,7 +118,7 @@ export const InvestmentActivitySchema = registerSchema(
     activityId: z.string().uuid(),
     accountId: z.string().uuid(),
     accountName: z.string().nullable(),
-    provider: InvestmentProviderSchema,
+    provider: InvestmentActivityProviderSchema,
     externalActivityId: z.string().nullable(),
     activityDate: DateStringSchema,
     providerDate: DateStringSchema,
@@ -144,6 +158,8 @@ export const InvestmentHoldingsResponseSchema = registerSchema(
   z.object({
     accountId: z.string().uuid(),
     snapshotDate: DateStringSchema.nullable(),
+    accountCurrency: z.string().nullable(),
+    accountValue: MoneyWithSignSchema.nullable(),
     holdings: z.array(InvestmentHoldingSnapshotSchema),
   }),
 );
@@ -161,6 +177,63 @@ export const InvestmentHoldingsDateQuerySchema = registerSchema(
 
 export type InvestmentHoldingsDateQuery = z.infer<
   typeof InvestmentHoldingsDateQuerySchema
+>;
+
+const CurrencyCodeSchema = z
+  .string()
+  .regex(/^[A-Z]{3}$/, 'Must be an uppercase ISO 4217 currency code');
+
+export const ManualBrokeragePositionInputSchema = registerSchema(
+  'ManualBrokeragePositionInput',
+  z.object({
+    symbol: z.string().trim().min(1).max(32),
+    quantity: z
+      .string()
+      .regex(
+        /^(?:0|[1-9]\d{0,17})(?:\.\d{1,12})?$/,
+        'Must have at most 18 integer and 12 fractional digits',
+      )
+      .refine((value) => /[1-9]/.test(value), 'Must be greater than zero'),
+  }),
+);
+export type ManualBrokeragePositionInput = z.infer<
+  typeof ManualBrokeragePositionInputSchema
+>;
+
+export const CreateManualBrokerageAccountDtoSchema = registerSchema(
+  'CreateManualBrokerageAccountDto',
+  z
+    .object({
+      name: z.string().trim().min(1),
+      customName: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
+      accountCurrency: CurrencyCodeSchema,
+      positions: z.array(ManualBrokeragePositionInputSchema).min(1),
+    })
+    .strict(),
+);
+export type CreateManualBrokerageAccountDto = z.infer<
+  typeof CreateManualBrokerageAccountDtoSchema
+>;
+
+export const ReplaceManualBrokerageHoldingsDtoSchema = registerSchema(
+  'ReplaceManualBrokerageHoldingsDto',
+  z.object({ positions: z.array(ManualBrokeragePositionInputSchema) }).strict(),
+);
+export type ReplaceManualBrokerageHoldingsDto = z.infer<
+  typeof ReplaceManualBrokerageHoldingsDtoSchema
+>;
+
+export const ManualBrokeragePortfolioResponseSchema = registerSchema(
+  'ManualBrokeragePortfolioResponse',
+  z.object({
+    account: AccountSchema,
+    snapshot: InvestmentHoldingsResponseSchema,
+    staleSymbols: z.array(z.string()),
+  }),
+);
+export type ManualBrokeragePortfolioResponse = z.infer<
+  typeof ManualBrokeragePortfolioResponseSchema
 >;
 
 export type ProviderInvestmentSecurity = {

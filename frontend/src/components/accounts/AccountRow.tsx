@@ -21,10 +21,7 @@ import {
   useBankLinkControllerInitiateLinking,
 } from '../../api/clients/spliceAPI'
 import { axios } from '../../api/axios'
-import {
-  formatAccountType,
-  formatRelativeTime,
-} from '../../lib/format'
+import { formatAccountType, formatRelativeTime } from '../../lib/format'
 import { StatusBadge } from './StatusBadge'
 import type { Account } from '../../api/models'
 
@@ -44,9 +41,10 @@ export function AccountRow({ account }: { account: Account }) {
   const [editedName, setEditedName] = useState('')
   const [archiveModalOpened, setArchiveModalOpened] = useState(false)
 
-  const displayName = account.customName ?? account.name ?? 'Unnamed Account'
+  const displayName = account.customName ?? account.name ?? 'Unnamed account'
   const isLinked = !!account.bankLinkId
   const isManual = !isLinked
+  const isHoldingsValued = account.valuationMode === 'holdings'
 
   const startEditing = useCallback(() => {
     setEditedName(displayName)
@@ -106,7 +104,7 @@ export function AccountRow({ account }: { account: Account }) {
           invalidateAccounts()
           invalidateAccountBalances()
           notifications.show({
-            title: 'Account Archived',
+            title: 'Account archived',
             message: 'The account has been hidden and its balance set to zero.',
             color: 'green',
           })
@@ -114,14 +112,19 @@ export function AccountRow({ account }: { account: Account }) {
         },
         onError: () => {
           notifications.show({
-            title: 'Archive Failed',
+            title: 'Archive failed',
             message: 'Unable to archive this account. Please try again.',
             color: 'red',
           })
         },
       },
     )
-  }, [account.id, archiveAccount, invalidateAccountBalances, invalidateAccounts])
+  }, [
+    account.id,
+    archiveAccount,
+    invalidateAccountBalances,
+    invalidateAccounts,
+  ])
 
   const needsFix =
     account.bankLink && account.bankLink.status !== SanitizedBankLinkStatus.OK
@@ -150,33 +153,34 @@ export function AccountRow({ account }: { account: Account }) {
       }
     : undefined
 
-  const handleConvertToLinked = isManual
-    ? () => {
-        initiateLinking.mutate(
-          {
-            provider: 'plaid',
-            data: {
-              redirectUri: getPlaidRedirectUri(),
-              convertAccountId: account.id,
+  const handleConvertToLinked =
+    isManual && !isHoldingsValued
+      ? () => {
+          initiateLinking.mutate(
+            {
+              provider: 'plaid',
+              data: {
+                redirectUri: getPlaidRedirectUri(),
+                convertAccountId: account.id,
+              },
             },
-          },
-          {
-            onSuccess: (response) => {
-              if (response.linkUrl) {
-                window.location.href = response.linkUrl
-              }
+            {
+              onSuccess: (response) => {
+                if (response.linkUrl) {
+                  window.location.href = response.linkUrl
+                }
+              },
+              onError: () => {
+                notifications.show({
+                  title: 'Link failed',
+                  message: 'Unable to start Plaid linking for this account.',
+                  color: 'red',
+                })
+              },
             },
-            onError: () => {
-              notifications.show({
-                title: 'Link Failed',
-                message: 'Unable to start Plaid linking for this account.',
-                color: 'red',
-              })
-            },
-          },
-        )
-      }
-    : undefined
+          )
+        }
+      : undefined
 
   return (
     <>

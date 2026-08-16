@@ -12,4 +12,5 @@ export type InvestmentSecurityProvider =
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const InvestmentSecurityProvider = {
   plaid: 'plaid',
+  yahoo: 'yahoo',
 } as const

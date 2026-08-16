@@ -84,26 +84,26 @@ export const Route = createFileRoute('/_authed/settings')({
 
 // Common currencies - curated list for better UX
 const CURRENCY_OPTIONS = [
-  { value: 'USD', label: 'USD - US Dollar' },
-  { value: 'EUR', label: 'EUR - Euro' },
-  { value: 'GBP', label: 'GBP - British Pound' },
-  { value: 'JPY', label: 'JPY - Japanese Yen' },
-  { value: 'CAD', label: 'CAD - Canadian Dollar' },
-  { value: 'AUD', label: 'AUD - Australian Dollar' },
-  { value: 'CHF', label: 'CHF - Swiss Franc' },
-  { value: 'CNY', label: 'CNY - Chinese Yuan' },
-  { value: 'INR', label: 'INR - Indian Rupee' },
-  { value: 'MXN', label: 'MXN - Mexican Peso' },
-  { value: 'BRL', label: 'BRL - Brazilian Real' },
-  { value: 'KRW', label: 'KRW - South Korean Won' },
-  { value: 'SGD', label: 'SGD - Singapore Dollar' },
-  { value: 'HKD', label: 'HKD - Hong Kong Dollar' },
-  { value: 'NZD', label: 'NZD - New Zealand Dollar' },
-  { value: 'SEK', label: 'SEK - Swedish Krona' },
-  { value: 'NOK', label: 'NOK - Norwegian Krone' },
-  { value: 'DKK', label: 'DKK - Danish Krone' },
-  { value: 'ZAR', label: 'ZAR - South African Rand' },
-  { value: 'THB', label: 'THB - Thai Baht' },
+  { value: 'USD', label: 'USD - US dollar' },
+  { value: 'EUR', label: 'EUR - euro' },
+  { value: 'GBP', label: 'GBP - British pound' },
+  { value: 'JPY', label: 'JPY - Japanese yen' },
+  { value: 'CAD', label: 'CAD - Canadian dollar' },
+  { value: 'AUD', label: 'AUD - Australian dollar' },
+  { value: 'CHF', label: 'CHF - Swiss franc' },
+  { value: 'CNY', label: 'CNY - Chinese yuan' },
+  { value: 'INR', label: 'INR - Indian rupee' },
+  { value: 'MXN', label: 'MXN - Mexican peso' },
+  { value: 'BRL', label: 'BRL - Brazilian real' },
+  { value: 'KRW', label: 'KRW - South Korean won' },
+  { value: 'SGD', label: 'SGD - Singapore dollar' },
+  { value: 'HKD', label: 'HKD - Hong Kong dollar' },
+  { value: 'NZD', label: 'NZD - New Zealand dollar' },
+  { value: 'SEK', label: 'SEK - Swedish krona' },
+  { value: 'NOK', label: 'NOK - Norwegian krone' },
+  { value: 'DKK', label: 'DKK - Danish krone' },
+  { value: 'ZAR', label: 'ZAR - South African rand' },
+  { value: 'THB', label: 'THB - Thai baht' },
 ]
 
 function getInitialSettingsTab(): SettingsTab {
@@ -256,6 +256,7 @@ export function SettingsPage() {
   const [selectedTab, setSelectedTab] = useState<SettingsTab>(
     getInitialSettingsTab,
   )
+  const tabListRef = useRef<HTMLDivElement>(null)
 
   const timezoneOptions = useMemo(() => getTimezoneOptions(), [])
   const browserTimezone = useMemo(() => getBrowserTimezone(), [])
@@ -355,6 +356,15 @@ export function SettingsPage() {
       )
     }
   }, [user?.settings])
+
+  useEffect(() => {
+    if (isLoading) return
+
+    const activeTab = tabListRef.current?.querySelector<HTMLElement>(
+      '[role="tab"][aria-selected="true"]',
+    )
+    activeTab?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [isLoading, selectedTab])
 
   // A refetch may arrive while the draft is dirty. If the user later reverts
   // every field to the old baseline, adopt the already-cached server values at
@@ -588,16 +598,18 @@ export function SettingsPage() {
         onChange={handleTabChange}
         keepMounted={false}
       >
-        <Tabs.List className={styles.settingsTabList} mb="lg">
-          <Tabs.Tab value="general">General</Tabs.Tab>
-          <Tabs.Tab value="notifications">Notifications</Tabs.Tab>
-          <Tabs.Tab value="access">Access</Tabs.Tab>
-          <Tabs.Tab value="categories">Categories</Tabs.Tab>
-          <Tabs.Tab value="analysis">Analysis</Tabs.Tab>
-          <Tabs.Tab value="categorization">Categorization</Tabs.Tab>
-          <Tabs.Tab value="recurring">Recurring</Tabs.Tab>
-          <Tabs.Tab value="mcp">MCP</Tabs.Tab>
-        </Tabs.List>
+        <div className={styles.settingsTabScroller}>
+          <Tabs.List ref={tabListRef} className={styles.settingsTabList}>
+            <Tabs.Tab value="general">General</Tabs.Tab>
+            <Tabs.Tab value="notifications">Notifications</Tabs.Tab>
+            <Tabs.Tab value="access">Access</Tabs.Tab>
+            <Tabs.Tab value="categories">Categories</Tabs.Tab>
+            <Tabs.Tab value="analysis">Analysis</Tabs.Tab>
+            <Tabs.Tab value="categorization">Categorization</Tabs.Tab>
+            <Tabs.Tab value="recurring">Recurring</Tabs.Tab>
+            <Tabs.Tab value="mcp">MCP</Tabs.Tab>
+          </Tabs.List>
+        </div>
 
         <Tabs.Panel value="general">
           <Paper
@@ -634,7 +646,7 @@ export function SettingsPage() {
 
               <div>
                 <Title order={4} mb="xs">
-                  Display Currency
+                  Display currency
                 </Title>
                 <Text size="sm" c="dimmed" mb="sm">
                   All balances and amounts will be converted to this currency
@@ -673,7 +685,7 @@ export function SettingsPage() {
                     onClick={handleSetBrowserTimezone}
                     disabled={timezone === browserTimezone}
                   >
-                    Use Browser
+                    Use browser
                   </Button>
                 </Group>
                 {browserTimezone && (
@@ -685,7 +697,7 @@ export function SettingsPage() {
 
               <div>
                 <Title order={4} mb="xs">
-                  Home Dashboard
+                  Home dashboard
                 </Title>
                 <Text size="sm" c="dimmed" mb="sm">
                   Hide zero-balance accounts from the Assets and Liabilities
@@ -706,7 +718,7 @@ export function SettingsPage() {
                   loading={updateSettingsMutation.isPending}
                   disabled={!hasChanges}
                 >
-                  Save Changes
+                  Save changes
                 </Button>
               </Group>
 
@@ -798,7 +810,7 @@ export function SettingsPage() {
           <Stack gap="lg">
             <Paper withBorder p="lg" radius="md">
               <Stack gap="sm">
-                <Title order={4}>Analysis Display</Title>
+                <Title order={4}>Analysis display</Title>
                 <Switch
                   label="Use Sankey diagram on Analysis"
                   description="Replace separate inflow and outflow charts with one cashflow diagram."

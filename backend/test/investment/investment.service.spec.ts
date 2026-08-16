@@ -3,6 +3,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountActivityService } from '../../src/account-activity/account-activity.service';
 import { AccountEntity } from '../../src/account/account.entity';
+import { BalanceSnapshotEntity } from '../../src/balance-snapshot/balance-snapshot.entity';
+import { BalanceColumns } from '../../src/common/balance.columns';
 import { InvestmentHoldingSnapshotEntity } from '../../src/investment/investment-holding-snapshot.entity';
 import { InvestmentSecurityEntity } from '../../src/investment/investment-security.entity';
 import { InvestmentService } from '../../src/investment/investment.service';
@@ -137,6 +139,9 @@ describe('InvestmentService', () => {
   const accountRepository = {
     findOne: jest.fn(),
   };
+  const balanceSnapshotRepository = {
+    findOne: jest.fn(),
+  };
   const accountActivityService = {
     upsertExternal: jest.fn(),
   };
@@ -172,7 +177,12 @@ describe('InvestmentService', () => {
         updatedAt: new Date('2026-05-20T00:00:00Z'),
       }),
     );
-    accountRepository.findOne.mockResolvedValue({ id: accountId, userId });
+    accountRepository.findOne.mockResolvedValue({
+      id: accountId,
+      userId,
+      valuationMode: 'balance',
+    });
+    balanceSnapshotRepository.findOne.mockResolvedValue(null);
     accountActivityService.upsertExternal.mockResolvedValue({
       id: activityId,
       accountId,
@@ -208,6 +218,10 @@ describe('InvestmentService', () => {
         {
           provide: getRepositoryToken(AccountEntity),
           useValue: accountRepository,
+        },
+        {
+          provide: getRepositoryToken(BalanceSnapshotEntity),
+          useValue: balanceSnapshotRepository,
         },
         {
           provide: AccountActivityService,
@@ -308,6 +322,42 @@ describe('InvestmentService', () => {
     });
     expect(result.snapshotDate).toBe('2026-05-20');
     expect(result.holdings[0].quantity).toBe('10.123456789012');
+  });
+
+  it('uses the latest factual balance header for a cleared holdings account', async () => {
+    const zeroBalance = BalanceColumns.fromMoneyWithSign({
+      money: { currency: 'USD', amount: 0 },
+      sign: MoneySign.POSITIVE,
+    });
+    accountRepository.findOne.mockResolvedValue({
+      id: accountId,
+      userId,
+      valuationMode: 'holdings',
+      currentBalance: zeroBalance,
+    });
+    balanceSnapshotRepository.findOne.mockResolvedValue({
+      snapshotDate: '2026-05-21',
+      currentBalance: zeroBalance,
+    });
+    holdingRepository.find.mockResolvedValue([]);
+    holdingRepository.findOne.mockResolvedValue(buildHolding());
+
+    const result = await service.findLatestHoldingsForAccount(
+      userId,
+      accountId,
+    );
+
+    expect(result).toEqual({
+      accountId,
+      snapshotDate: '2026-05-21',
+      accountCurrency: 'USD',
+      accountValue: {
+        money: { currency: 'USD', amount: 0 },
+        sign: MoneySign.POSITIVE,
+      },
+      holdings: [],
+    });
+    expect(holdingRepository.findOne).not.toHaveBeenCalled();
   });
 
   it('blocks cross-user account access', async () => {

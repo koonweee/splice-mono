@@ -3,15 +3,41 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountType, MoneyWithSignSign } from '../../api/models'
 import { AddAccountModal } from './AddAccountModal'
-import { UpdateBalanceModal } from './UpdateBalanceModal'
+import { InlineBalanceEditor } from './InlineBalanceEditor'
 import type * as Mantine from '@mantine/core'
 import type { Account } from '../../api/models'
 import type React from 'react'
 
 const mockFns = vi.hoisted(() => ({
   createMutateMock: vi.fn(),
+  createBrokerageMutateMock: vi.fn(),
+  useCreateBrokerageMock: vi.fn(),
   updateBalanceMutateMock: vi.fn(),
   invalidateQueriesMock: vi.fn(),
+}))
+
+vi.mock('../investments/ManualBrokeragePositionsEditor', () => ({
+  isPositiveDecimal: (value: string) => Number(value) > 0,
+  ManualBrokeragePositionsEditor: ({
+    onChange,
+  }: {
+    onChange: (positions: Array<{ symbol: string; quantity: string }>) => void
+  }) => (
+    <button
+      onClick={() =>
+        onChange([
+          { symbol: 'GOOGL', quantity: '2' },
+          { symbol: 'INTC', quantity: '97' },
+          { symbol: 'NVDA', quantity: '7' },
+          { symbol: 'TSM', quantity: '8' },
+          { symbol: 'C6L.SI', quantity: '200' },
+        ])
+      }
+      type="button"
+    >
+      Load reference portfolio
+    </button>
+  ),
 }))
 
 vi.mock('@mantine/core', async () => {
@@ -37,10 +63,12 @@ vi.mock('@mantine/core', async () => {
         </div>
       ) : null,
     NumberInput: ({
+      'aria-label': ariaLabel,
       label,
       onChange,
       value,
     }: {
+      'aria-label'?: string
       label?: string
       onChange?: (value: number | string) => void
       value?: number | string
@@ -48,7 +76,7 @@ vi.mock('@mantine/core', async () => {
       <label>
         {label}
         <input
-          aria-label={label}
+          aria-label={ariaLabel ?? label}
           onChange={(event) => onChange?.(Number(event.currentTarget.value))}
           value={value ?? ''}
         />
@@ -113,10 +141,13 @@ vi.mock('../../api/clients/spliceAPI', () => ({
   getBalanceQueryControllerGetBalancesQueryKey: () => [
     '/balance-query/balances',
   ],
+  investmentControllerSearchSecurities: vi.fn(),
   useAccountControllerCreate: () => ({
     mutate: mockFns.createMutateMock,
     isPending: false,
   }),
+  useInvestmentControllerCreateManualBrokerageAccount: () =>
+    mockFns.useCreateBrokerageMock(),
   useAccountControllerUpdateBalance: () => ({
     mutate: mockFns.updateBalanceMutateMock,
     isPending: false,
@@ -143,6 +174,7 @@ function buildAccount(
     availableBalance: { money: { amount, currency }, sign },
     currentBalance: { money: { amount, currency }, sign },
     type: AccountType.depository,
+    valuationMode: 'balance',
     subType: null,
     externalAccountId: null,
     bankLinkId: null,
@@ -155,6 +187,12 @@ function buildAccount(
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockFns.useCreateBrokerageMock.mockReturnValue({
+    mutate: mockFns.createBrokerageMutateMock,
+    isPending: false,
+    isError: false,
+    error: null,
+  })
   Object.defineProperty(window, 'matchMedia', {
     value: vi.fn().mockImplementation(() => ({
       matches: false,
@@ -189,20 +227,17 @@ describe('manual account money payloads', () => {
         </MantineProvider>,
       )
 
-      fireEvent.click(screen.getByText('Manual Account'))
-      fireEvent.change(
-        screen.getByRole('textbox', { name: /Account Name/ }),
-        {
-          target: { value: 'Cash' },
-        },
-      )
+      fireEvent.click(screen.getByText('Manual account'))
+      fireEvent.change(screen.getByRole('textbox', { name: /Account name/ }), {
+        target: { value: 'Cash' },
+      })
       fireEvent.change(screen.getByLabelText('Currency'), {
         target: { value: currency },
       })
-      fireEvent.change(screen.getByLabelText('Current Balance'), {
+      fireEvent.change(screen.getByLabelText('Current balance'), {
         target: { value: String(enteredAmount) },
       })
-      fireEvent.click(screen.getByRole('button', { name: 'Create Account' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
 
       const expectedSign =
         enteredAmount < 0
@@ -226,6 +261,122 @@ describe('manual account money payloads', () => {
     },
   )
 
+  it('creates a brokerage through the holdings contract instead of a balance payload', () => {
+    mockFns.createBrokerageMutateMock.mockImplementation(
+      (_variables, options) => options?.onSuccess?.({ staleSymbols: [] }),
+    )
+    render(
+      <MantineProvider>
+        <AddAccountModal opened onClose={vi.fn()} />
+      </MantineProvider>,
+    )
+
+    fireEvent.click(screen.getByText('Manual account'))
+    fireEvent.change(screen.getByRole('textbox', { name: /Account name/ }), {
+      target: { value: 'Prime Account UI valuation test' },
+    })
+    fireEvent.change(screen.getByLabelText('Account type'), {
+      target: { value: 'brokerage_holdings' },
+    })
+    fireEvent.change(screen.getByLabelText('Currency'), {
+      target: { value: 'USD' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Load reference portfolio' }),
+    )
+    expect(screen.queryByLabelText('Current balance')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+
+    expect(mockFns.createBrokerageMutateMock).toHaveBeenCalledWith(
+      {
+        data: {
+          name: 'Prime Account UI valuation test',
+          accountCurrency: 'USD',
+          positions: [
+            { symbol: 'GOOGL', quantity: '2' },
+            { symbol: 'INTC', quantity: '97' },
+            { symbol: 'NVDA', quantity: '7' },
+            { symbol: 'TSM', quantity: '8' },
+            { symbol: 'C6L.SI', quantity: '200' },
+          ],
+        },
+      },
+      expect.any(Object),
+    )
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
+    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
+      queryKey: ['/account'],
+    })
+    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
+      queryKey: ['/balance-query/balances'],
+    })
+    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
+      queryKey: ['/balance-query/all-balances'],
+    })
+  })
+
+  it('keeps balance-only manual investment accounts available', () => {
+    render(
+      <MantineProvider>
+        <AddAccountModal opened onClose={vi.fn()} />
+      </MantineProvider>,
+    )
+
+    fireEvent.click(screen.getByText('Manual account'))
+    fireEvent.change(screen.getByRole('textbox', { name: /Account name/ }), {
+      target: { value: 'Private investment' },
+    })
+    fireEvent.change(screen.getByLabelText('Account type'), {
+      target: { value: 'investment' },
+    })
+    fireEvent.change(screen.getByLabelText('Current balance'), {
+      target: { value: '1250' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }))
+
+    expect(mockFns.createMutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: 'Private investment',
+          type: AccountType.investment,
+          currentBalance: {
+            money: { amount: 125000, currency: 'USD' },
+            sign: MoneyWithSignSign.positive,
+          },
+        }),
+      }),
+      expect.any(Object),
+    )
+    expect(mockFns.createBrokerageMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps the brokerage form open with an actionable valuation error', () => {
+    mockFns.useCreateBrokerageMock.mockReturnValue({
+      mutate: mockFns.createBrokerageMutateMock,
+      isPending: false,
+      isError: true,
+      error: {
+        response: { data: { message: 'C6L.SI has no usable quote.' } },
+      },
+    })
+    render(
+      <MantineProvider>
+        <AddAccountModal opened onClose={vi.fn()} />
+      </MantineProvider>,
+    )
+
+    fireEvent.click(screen.getByText('Manual account'))
+    fireEvent.change(screen.getByLabelText('Account type'), {
+      target: { value: 'brokerage_holdings' },
+    })
+
+    expect(screen.getByRole('alert').textContent).toContain(
+      'C6L.SI has no usable quote.',
+    )
+    expect(screen.getByText('Add manual account')).toBeTruthy()
+  })
+
   it.each([
     ['USD', -25.5, 1234, 2550, MoneyWithSignSign.negative],
     ['USD', 25.5, 1234, 2550, MoneyWithSignSign.positive],
@@ -242,24 +393,31 @@ describe('manual account money payloads', () => {
     ) => {
       render(
         <MantineProvider>
-          <UpdateBalanceModal
-            opened
-            onClose={vi.fn()}
+          <InlineBalanceEditor
             account={buildAccount(
               initialMagnitude,
               currency,
               MoneyWithSignSign.negative,
             )}
+            balance={
+              buildAccount(
+                initialMagnitude,
+                currency,
+                MoneyWithSignSign.negative,
+              ).currentBalance
+            }
+            onCancel={vi.fn()}
+            onSaved={vi.fn()}
           />
         </MantineProvider>,
       )
 
-      const input = screen.getByLabelText('Current Balance')
+      const input = screen.getByLabelText('Current balance')
       expect((input as HTMLInputElement).value).toBe(
         String(currency === 'JPY' ? -1234 : -12.34),
       )
       fireEvent.change(input, { target: { value: String(enteredAmount) } })
-      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save balance' }))
 
       expect(mockFns.updateBalanceMutateMock).toHaveBeenCalledWith(
         {

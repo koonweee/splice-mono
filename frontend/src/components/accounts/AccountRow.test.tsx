@@ -72,6 +72,7 @@ const account: Account = {
     sign: MoneyWithSignSign.positive,
   },
   type: AccountType.depository,
+  valuationMode: 'balance',
   subType: null,
   externalAccountId: null,
   bankLinkId: null,
@@ -84,6 +85,14 @@ function renderAccountRow() {
   return render(
     <MantineProvider>
       <AccountRow account={account} />
+    </MantineProvider>,
+  )
+}
+
+function renderAccount(overrides: Partial<Account>) {
+  return render(
+    <MantineProvider>
+      <AccountRow account={{ ...account, ...overrides }} />
     </MantineProvider>,
   )
 }
@@ -150,8 +159,22 @@ describe('AccountRow archive action', () => {
     })
     expect(mockFns.notificationsShowMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'Account Archived',
+        title: 'Account archived',
       }),
     )
+  })
+})
+
+describe('AccountRow Plaid conversion', () => {
+  it('offers Plaid conversion for ordinary manual accounts', () => {
+    renderAccountRow()
+
+    expect(screen.getByRole('button', { name: 'Link with Plaid' })).toBeTruthy()
+  })
+
+  it('does not offer Plaid conversion for holdings-valued accounts', () => {
+    renderAccount({ valuationMode: 'holdings' } as Partial<Account>)
+
+    expect(screen.queryByRole('button', { name: 'Link with Plaid' })).toBeNull()
   })
 })

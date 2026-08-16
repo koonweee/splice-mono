@@ -1,7 +1,7 @@
 import { Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 import { OwnedEntity } from '../common/owned.entity';
 import type {
-  InvestmentProvider,
+  InvestmentSecurityProvider,
   InvestmentSecurity,
   ProviderInvestmentSecurity,
 } from '../types/Investment';
@@ -13,7 +13,7 @@ export class InvestmentSecurityEntity extends OwnedEntity {
   id: string;
 
   @Column({ type: 'varchar' })
-  provider: InvestmentProvider;
+  provider: InvestmentSecurityProvider;
 
   @Column({ type: 'varchar' })
   externalSecurityId: string;
@@ -75,7 +75,7 @@ export class InvestmentSecurityEntity extends OwnedEntity {
   static fromProvider(
     providerSecurity: ProviderInvestmentSecurity,
     userId: string,
-    provider: InvestmentProvider = 'plaid',
+    provider: InvestmentSecurityProvider = 'plaid',
   ): InvestmentSecurityEntity {
     const entity = new InvestmentSecurityEntity();
     entity.userId = userId;

@@ -39,14 +39,14 @@ function AccountsPage() {
           queryKey: getAccountControllerFindAllQueryKey(),
         })
         showNotification({
-          title: 'Sync Complete',
+          title: 'Sync complete',
           message: 'All accounts have been synced successfully',
           color: 'green',
         })
       },
       onError: () => {
         showNotification({
-          title: 'Sync Failed',
+          title: 'Sync failed',
           message: 'Failed to sync accounts. Please try again.',
           color: 'red',
         })
@@ -66,7 +66,7 @@ function AccountsPage() {
       )
       .forEach((account) => {
         const institution =
-          account.bankLink?.institutionName ?? 'Manual Accounts'
+          account.bankLink?.institutionName ?? 'Manual accounts'
         const existing = groups.get(institution) ?? []
         groups.set(institution, [...existing, account])
       })
@@ -107,7 +107,7 @@ function AccountsPage() {
               variant="outline"
               disabled={syncAll.isPending}
             >
-              {syncAll.isPending ? 'Syncing...' : 'Sync All'}
+              {syncAll.isPending ? 'Syncing...' : 'Sync all'}
             </Button>
             <Button
               leftSection={<IconUpload size={16} />}
@@ -121,7 +121,7 @@ function AccountsPage() {
               onClick={openModal}
               variant="outline"
             >
-              Add Account
+              Add account
             </Button>
           </Group>
         }
