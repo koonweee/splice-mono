@@ -51,6 +51,7 @@ function buildSubscription(id: string): PushSubscriptionEntity {
 }
 
 describe('NotificationService', () => {
+  const pushSubscriptionTransactionQuery = jest.fn();
   const notificationRepository = {
     manager: {
       transaction: jest.fn(),
@@ -60,7 +61,11 @@ describe('NotificationService', () => {
     delete: jest.fn(),
   };
   const pushSubscriptionRepository = {
+    manager: {
+      transaction: jest.fn(),
+    },
     findOne: jest.fn(),
+    find: jest.fn(),
     save: jest.fn(),
     createQueryBuilder: jest.fn(),
   };
@@ -72,6 +77,8 @@ describe('NotificationService', () => {
     delete: jest.fn(),
     createQueryBuilder: jest.fn(),
     find: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
   };
   const userService = {
     findOne: jest.fn(),
@@ -87,6 +94,29 @@ describe('NotificationService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    pushSubscriptionTransactionQuery.mockResolvedValue([]);
+    pushSubscriptionRepository.manager.transaction.mockImplementation(
+      async (callback) =>
+        callback({
+          query: pushSubscriptionTransactionQuery,
+          getRepository: (entity: unknown) =>
+            entity === PushSubscriptionEntity
+              ? pushSubscriptionRepository
+              : pushDeliveryRepository,
+        }),
+    );
+    pushDeliveryRepository.manager.transaction.mockImplementation(
+      async (callback) =>
+        callback({
+          query: jest
+            .fn()
+            .mockResolvedValue([{ id: 'delivery-id', ownersMatch: true }]),
+          getRepository: (entity: unknown) =>
+            entity === PushSubscriptionEntity
+              ? pushSubscriptionRepository
+              : pushDeliveryRepository,
+        }),
+    );
     service = new NotificationService(
       notificationRepository as never,
       pushSubscriptionRepository as never,
@@ -94,6 +124,246 @@ describe('NotificationService', () => {
       userService as never,
       webPushAdapter as never,
     );
+  });
+
+  it('locks and cancels old-owner pending work before reassigning an endpoint', async () => {
+    const subscription = buildSubscription('subscription-id');
+    subscription.userId = 'old-user-id';
+    subscription.endpoint = 'https://push.example.com/shared';
+    pushSubscriptionRepository.findOne.mockResolvedValueOnce(subscription);
+    pushSubscriptionRepository.save.mockImplementation((entity) =>
+      Promise.resolve(entity),
+    );
+    pushSubscriptionTransactionQuery
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'pending-delivery', status: 'pending' }]);
+    pushDeliveryRepository.update.mockResolvedValueOnce({ affected: 2 });
+
+    await service.registerPushSubscription(userId, {
+      endpoint: subscription.endpoint,
+      keys: { p256dh: 'new-key', auth: 'new-auth' },
+      userAgent: 'new browser',
+    });
+
+    expect(pushDeliveryRepository.update).toHaveBeenCalledWith(
+      {
+        id: expect.objectContaining({ _type: 'in' }),
+        status: expect.objectContaining({ _type: 'in' }),
+      },
+      expect.objectContaining({
+        status: 'failed',
+        lastError: 'Push endpoint ownership changed',
+      }),
+    );
+    expect(subscription.userId).toBe('old-user-id');
+    expect(subscription.revokedAt).toBeInstanceOf(Date);
+    expect(subscription.endpoint).toMatch(/^reassigned:subscription-id:/);
+    const newSubscription = pushSubscriptionRepository.save.mock.calls[1][0];
+    expect(newSubscription.userId).toBe(userId);
+    expect(newSubscription.endpoint).toBe('https://push.example.com/shared');
+    expect(newSubscription.p256dh).toBe('new-key');
+    expect(pushSubscriptionTransactionQuery.mock.calls[1][0]).toContain(
+      'FOR UPDATE OF delivery',
+    );
+  });
+
+  it('refuses cross-owner reassignment while a legacy worker may be sending', async () => {
+    const subscription = buildSubscription('subscription-id');
+    subscription.userId = 'old-user-id';
+    subscription.endpoint = 'https://push.example.com/shared';
+    pushSubscriptionRepository.findOne.mockResolvedValueOnce(subscription);
+    pushSubscriptionTransactionQuery
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'processing-delivery',
+          status: 'processing',
+          processingStartedAt: new Date(),
+        },
+      ]);
+
+    await expect(
+      service.registerPushSubscription(userId, {
+        endpoint: subscription.endpoint,
+        keys: { p256dh: 'new-key', auth: 'new-auth' },
+        userAgent: 'new browser',
+      }),
+    ).rejects.toThrow(
+      'Push subscription is currently delivering a notification; retry registration shortly',
+    );
+
+    expect(pushDeliveryRepository.update).not.toHaveBeenCalled();
+    expect(pushSubscriptionRepository.save).not.toHaveBeenCalled();
+    expect(subscription.userId).toBe('old-user-id');
+    expect(subscription.p256dh).toBe('p256dh');
+  });
+
+  it('leaves late legacy deliveries attached to a revoked old-owner tombstone', async () => {
+    const subscription = buildSubscription('subscription-id');
+    subscription.userId = 'old-user-id';
+    subscription.endpoint = 'https://push.example.com/shared';
+    pushSubscriptionRepository.findOne.mockResolvedValueOnce(subscription);
+    pushSubscriptionRepository.save.mockImplementation((entity) =>
+      Promise.resolve(entity),
+    );
+    pushSubscriptionTransactionQuery
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    await service.registerPushSubscription(userId, {
+      endpoint: 'https://push.example.com/shared',
+      keys: { p256dh: 'new-key', auth: 'new-auth' },
+    });
+
+    const tombstone = pushSubscriptionRepository.save.mock.calls[0][0];
+    const replacement = pushSubscriptionRepository.save.mock.calls[1][0];
+    expect(tombstone.id).toBe('subscription-id');
+    expect(tombstone.userId).toBe('old-user-id');
+    expect(tombstone.revokedAt).toBeInstanceOf(Date);
+    expect(tombstone.endpoint).not.toBe('https://push.example.com/shared');
+    expect(replacement).not.toBe(tombstone);
+    expect(replacement.userId).toBe(userId);
+    expect(replacement.endpoint).toBe('https://push.example.com/shared');
+    expect(replacement.revokedAt).toBeNull();
+  });
+
+  it('terminalizes stale processing work before transferring an endpoint', async () => {
+    const subscription = buildSubscription('subscription-id');
+    subscription.userId = 'old-user-id';
+    subscription.endpoint = 'https://push.example.com/shared';
+    pushSubscriptionRepository.findOne.mockResolvedValueOnce(subscription);
+    pushSubscriptionRepository.save.mockImplementation((entity) =>
+      Promise.resolve(entity),
+    );
+    pushSubscriptionTransactionQuery
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'stale-processing-delivery',
+          status: 'processing',
+          processingStartedAt: new Date(Date.now() - 11 * 60 * 1000),
+        },
+      ]);
+    pushDeliveryRepository.update.mockResolvedValueOnce({ affected: 1 });
+
+    await service.registerPushSubscription(userId, {
+      endpoint: subscription.endpoint,
+      keys: { p256dh: 'new-key', auth: 'new-auth' },
+    });
+
+    expect(pushDeliveryRepository.update).toHaveBeenCalledWith(
+      {
+        id: expect.objectContaining({ _type: 'in' }),
+        status: expect.objectContaining({ _type: 'in' }),
+      },
+      expect.objectContaining({
+        status: 'failed',
+        processingStartedAt: null,
+        lastError: 'Push endpoint ownership changed',
+      }),
+    );
+    expect(subscription.revokedAt).toBeInstanceOf(Date);
+    expect(pushSubscriptionRepository.save).toHaveBeenCalledTimes(2);
+  });
+
+  it('revokes under the endpoint lock and terminalizes only abandoned work', async () => {
+    const subscription = buildSubscription('subscription-id');
+    pushSubscriptionRepository.findOne.mockResolvedValueOnce(subscription);
+    pushSubscriptionRepository.save.mockImplementation((entity) =>
+      Promise.resolve(entity),
+    );
+    pushSubscriptionTransactionQuery
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: 'pending-delivery' },
+        { id: 'stale-processing-delivery' },
+      ]);
+    pushDeliveryRepository.update.mockResolvedValueOnce({ affected: 2 });
+
+    await expect(
+      service.revokeCurrentPushSubscription(userId, subscription.endpoint),
+    ).resolves.toBe(true);
+
+    expect(pushSubscriptionTransactionQuery.mock.calls[0][0]).toContain(
+      'pg_advisory_xact_lock',
+    );
+    expect(pushSubscriptionTransactionQuery.mock.calls[1][0]).toContain(
+      'delivery."processingStartedAt" <= $2',
+    );
+    expect(pushDeliveryRepository.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: expect.objectContaining({ _type: 'in' }),
+      }),
+      expect.objectContaining({
+        status: 'failed',
+        lastError: 'Push subscription revoked',
+      }),
+    );
+    expect(subscription.revokedAt).toBeInstanceOf(Date);
+  });
+
+  it('revokes all subscriptions after locking their endpoints in order', async () => {
+    const subscriptions = [
+      buildSubscription('subscription-a'),
+      buildSubscription('subscription-b'),
+    ];
+    subscriptions[0].endpoint = 'https://push.example.com/a';
+    subscriptions[1].endpoint = 'https://push.example.com/b';
+    pushSubscriptionRepository.find.mockResolvedValueOnce(subscriptions);
+    pushSubscriptionRepository.save.mockImplementation((entities) =>
+      Promise.resolve(entities),
+    );
+    pushSubscriptionTransactionQuery
+      .mockResolvedValueOnce(
+        subscriptions.map(({ endpoint }) => ({ endpoint })),
+      )
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'pending-delivery' }]);
+    pushDeliveryRepository.update.mockResolvedValueOnce({ affected: 1 });
+
+    await expect(service.revokeAllPushSubscriptions(userId)).resolves.toBe(2);
+
+    expect(pushSubscriptionTransactionQuery.mock.calls[1][0]).toContain(
+      'pg_advisory_xact_lock',
+    );
+    expect(pushSubscriptionTransactionQuery.mock.calls[1][1]).toEqual([
+      subscriptions.map(({ endpoint }) => endpoint),
+    ]);
+    expect(pushSubscriptionRepository.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        order: { endpoint: 'ASC' },
+        lock: { mode: 'pessimistic_write' },
+      }),
+    );
+    expect(subscriptions.every(({ revokedAt }) => revokedAt !== null)).toBe(
+      true,
+    );
+    expect(pushDeliveryRepository.update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: expect.objectContaining({ _type: 'in' }) }),
+      expect.objectContaining({ lastError: 'Push subscription revoked' }),
+    );
+  });
+
+  it('preserves same-owner subscription refreshes while a delivery is processing', async () => {
+    const subscription = buildSubscription('subscription-id');
+    subscription.endpoint = 'https://push.example.com/shared';
+    pushSubscriptionRepository.findOne.mockResolvedValueOnce(subscription);
+    pushSubscriptionRepository.save.mockImplementationOnce((entity) =>
+      Promise.resolve(entity),
+    );
+
+    await service.registerPushSubscription(userId, {
+      endpoint: subscription.endpoint,
+      keys: { p256dh: 'refreshed-key', auth: 'refreshed-auth' },
+      userAgent: 'new browser',
+    });
+
+    // Only the endpoint advisory lock runs; delivery fencing is necessary
+    // solely when ownership crosses users.
+    expect(pushSubscriptionTransactionQuery).toHaveBeenCalledTimes(1);
+    expect(pushDeliveryRepository.update).not.toHaveBeenCalled();
+    expect(subscription.userId).toBe(userId);
+    expect(subscription.p256dh).toBe('refreshed-key');
   });
 
   it('skips canonical notification creation when type preference is disabled', async () => {
@@ -420,6 +690,7 @@ describe('NotificationService', () => {
     delivery.attemptCount = 1;
     delivery.notification = new NotificationEntity();
     delivery.notification.id = '00000000-0000-4000-8000-000000000301';
+    delivery.notification.userId = userId;
     delivery.notification.type = 'transactions.new_synced';
     delivery.notification.payload = {
       count: 1,
@@ -438,6 +709,7 @@ describe('NotificationService', () => {
       delivery.subscription,
     );
     pushDeliveryRepository.save.mockResolvedValueOnce(delivery);
+    pushDeliveryRepository.findOne.mockResolvedValueOnce(delivery);
 
     await service.sendPushDelivery(delivery);
 
@@ -455,6 +727,7 @@ describe('NotificationService', () => {
     delivery.attemptCount = 1;
     delivery.notification = new NotificationEntity();
     delivery.notification.id = '00000000-0000-4000-8000-000000000301';
+    delivery.notification.userId = userId;
     delivery.notification.type = 'transactions.new_synced';
     delivery.notification.payload = {
       count: 1,
@@ -467,6 +740,7 @@ describe('NotificationService', () => {
     );
     webPushAdapter.send.mockRejectedValueOnce(new Error('temporary'));
     pushDeliveryRepository.save.mockResolvedValueOnce(delivery);
+    pushDeliveryRepository.findOne.mockResolvedValueOnce(delivery);
 
     await service.sendPushDelivery(delivery);
 
@@ -474,8 +748,10 @@ describe('NotificationService', () => {
     expect(delivery.availableAt).toBeInstanceOf(Date);
 
     delivery.attemptCount = 3;
+    delivery.status = 'processing';
     webPushAdapter.send.mockRejectedValueOnce(new Error('temporary'));
     pushDeliveryRepository.save.mockResolvedValueOnce(delivery);
+    pushDeliveryRepository.findOne.mockResolvedValueOnce(delivery);
 
     await service.sendPushDelivery(delivery);
 
@@ -487,11 +763,17 @@ describe('NotificationService', () => {
     pendingDelivery.id = '00000000-0000-4000-8000-000000000501';
     pendingDelivery.status = 'pending';
     pendingDelivery.attemptCount = 0;
+    pendingDelivery.notification = new NotificationEntity();
+    pendingDelivery.notification.userId = userId;
+    pendingDelivery.subscription = buildSubscription('subscription-1');
 
     const staleProcessingDelivery = new NotificationPushDeliveryEntity();
     staleProcessingDelivery.id = '00000000-0000-4000-8000-000000000502';
     staleProcessingDelivery.status = 'processing';
     staleProcessingDelivery.attemptCount = 1;
+    staleProcessingDelivery.notification = new NotificationEntity();
+    staleProcessingDelivery.notification.userId = userId;
+    staleProcessingDelivery.subscription = buildSubscription('subscription-2');
     staleProcessingDelivery.processingStartedAt = new Date(
       '2026-01-01T00:00:00.000Z',
     );
@@ -518,14 +800,17 @@ describe('NotificationService', () => {
       find: jest
         .fn()
         .mockResolvedValue([pendingDelivery, staleProcessingDelivery]),
+      update: jest.fn(),
     };
     pushDeliveryRepository.manager.transaction.mockImplementationOnce(
       async (
         callback: (manager: {
+          query: jest.Mock;
           getRepository: (entity: unknown) => unknown;
         }) => unknown,
       ) =>
         callback({
+          query: jest.fn().mockResolvedValue([[], 0]),
           getRepository: () => deliveryRepo,
         }),
     );
@@ -536,14 +821,21 @@ describe('NotificationService', () => {
       'delivery.subscription',
       'subscription',
     );
+    expect(queryBuilder.innerJoin).toHaveBeenCalledWith(
+      'delivery.notification',
+      'notification',
+    );
     expect(queryBuilder.where).toHaveBeenCalledWith(expect.any(Object));
     expect(queryBuilder.andWhere).toHaveBeenCalledWith(
       'subscription.revokedAt IS NULL',
     );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'notification.userId = subscription.userId',
+    );
     expect(queryBuilder.setLock).toHaveBeenCalledWith(
       'pessimistic_write',
       undefined,
-      ['delivery'],
+      ['delivery', 'subscription'],
     );
     expect(queryBuilder.setOnLocked).toHaveBeenCalledWith('skip_locked');
     expect(deliveryRepo.save).toHaveBeenCalledWith([
@@ -573,6 +865,35 @@ describe('NotificationService', () => {
     expect(result.map((delivery) => delivery.attemptCount)).toEqual([1, 2]);
   });
 
+  it('rechecks ownership under the subscription lock before sending', async () => {
+    const delivery = new NotificationPushDeliveryEntity();
+    delivery.id = 'mismatched-delivery';
+    delivery.status = 'processing';
+    pushDeliveryRepository.manager.transaction.mockImplementationOnce(
+      async (callback) =>
+        callback({
+          query: jest
+            .fn()
+            .mockResolvedValue([{ id: delivery.id, ownersMatch: false }]),
+          getRepository: (entity: unknown) =>
+            entity === PushSubscriptionEntity
+              ? pushSubscriptionRepository
+              : pushDeliveryRepository,
+        }),
+    );
+
+    await service.sendPushDelivery(delivery);
+
+    expect(webPushAdapter.send).not.toHaveBeenCalled();
+    expect(pushDeliveryRepository.update).toHaveBeenCalledWith(
+      { id: delivery.id, status: 'processing' },
+      expect.objectContaining({
+        status: 'failed',
+        lastError: 'Push delivery owner mismatch',
+      }),
+    );
+  });
+
   it('does not save or reload push deliveries when no rows are claimed', async () => {
     const queryBuilder = {
       innerJoin: jest.fn().mockReturnThis(),
@@ -588,14 +909,17 @@ describe('NotificationService', () => {
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
       save: jest.fn(),
       find: jest.fn(),
+      update: jest.fn(),
     };
     pushDeliveryRepository.manager.transaction.mockImplementationOnce(
       async (
         callback: (manager: {
+          query: jest.Mock;
           getRepository: (entity: unknown) => unknown;
         }) => unknown,
       ) =>
         callback({
+          query: jest.fn().mockResolvedValue([[], 0]),
           getRepository: () => deliveryRepo,
         }),
     );
@@ -605,10 +929,114 @@ describe('NotificationService', () => {
     expect(queryBuilder.setLock).toHaveBeenCalledWith(
       'pessimistic_write',
       undefined,
-      ['delivery'],
+      ['delivery', 'subscription'],
     );
     expect(deliveryRepo.save).not.toHaveBeenCalled();
     expect(deliveryRepo.find).not.toHaveBeenCalled();
+  });
+
+  it('fails a delivery whose owner changed between selection and reload', async () => {
+    const delivery = new NotificationPushDeliveryEntity();
+    delivery.id = 'owner-changed-delivery';
+    delivery.status = 'pending';
+    delivery.attemptCount = 0;
+    delivery.notification = new NotificationEntity();
+    delivery.notification.userId = 'old-user';
+    delivery.subscription = buildSubscription('changed-subscription');
+    delivery.subscription.userId = 'new-user';
+    const queryBuilder = {
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      setOnLocked: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([delivery]),
+    };
+    const deliveryRepo = {
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      save: jest.fn().mockResolvedValue([delivery]),
+      find: jest.fn().mockResolvedValue([delivery]),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+    pushDeliveryRepository.manager.transaction.mockImplementationOnce(
+      async (callback) =>
+        callback({
+          query: jest.fn().mockResolvedValue([[], 0]),
+          getRepository: () => deliveryRepo,
+        }),
+    );
+
+    await expect(service.claimPendingPushDeliveries(25)).resolves.toEqual([]);
+    expect(deliveryRepo.update).toHaveBeenCalledWith(
+      { id: expect.objectContaining({ _type: 'in' }), status: 'processing' },
+      expect.objectContaining({
+        status: 'failed',
+        lastError: 'Push delivery is no longer owner-eligible',
+      }),
+    );
+  });
+
+  it('sweeps revoked or owner-mismatched abandoned work before claiming', async () => {
+    const abandonedQuery = jest
+      .fn()
+      .mockResolvedValueOnce([[{ id: 'abandoned-delivery' }], 1]);
+    const queryBuilder = {
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      setOnLocked: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    };
+    const deliveryRepo = {
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      save: jest.fn(),
+      find: jest.fn(),
+      update: jest.fn(),
+    };
+    pushDeliveryRepository.manager.transaction.mockImplementationOnce(
+      async (callback) =>
+        callback({
+          query: abandonedQuery,
+          getRepository: () => deliveryRepo,
+        }),
+    );
+
+    await expect(service.claimPendingPushDeliveries(25)).resolves.toEqual([]);
+
+    expect(abandonedQuery).toHaveBeenCalledWith(
+      expect.stringContaining('subscription."revokedAt" IS NOT NULL'),
+      [expect.any(Date), 500],
+    );
+    expect(abandonedQuery.mock.calls[0][0]).toContain(
+      'delivery."processingStartedAt" IS NULL',
+    );
+    expect(abandonedQuery.mock.calls[0][0]).toContain(
+      'notification."userId" <> subscription."userId"',
+    );
+    expect(abandonedQuery.mock.calls[0][0]).toContain('"updatedAt" = now()');
+  });
+
+  it('fails closed when PostgreSQL returns a malformed sweep result', async () => {
+    const deliveryRepo = {
+      createQueryBuilder: jest.fn(),
+    };
+    pushDeliveryRepository.manager.transaction.mockImplementationOnce(
+      async (callback) =>
+        callback({
+          query: jest.fn().mockResolvedValue([{ id: 'not-a-driver-tuple' }]),
+          getRepository: () => deliveryRepo,
+        }),
+    );
+
+    await expect(service.claimPendingPushDeliveries(25)).rejects.toThrow(
+      'Unexpected PostgreSQL mutation result',
+    );
+    expect(deliveryRepo.createQueryBuilder).not.toHaveBeenCalled();
   });
 
   it('retains pending work while cleaning terminal deliveries and old notification records', async () => {

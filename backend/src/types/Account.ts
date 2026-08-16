@@ -47,35 +47,57 @@ export type Account = z.infer<typeof AccountSchema>;
 
 /** AccountService arguments */
 
-export const CreateAccountDtoSchema = registerSchema(
-  'CreateAccountDto',
+/** Internal account persistence shape used by provider ingestion. */
+export const CreateAccountDtoSchema = z
+  .object({
+    name: z.string().nullable(),
+    customName: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    /** Mask of account number (e.g., last 4 digits) */
+    mask: z.string().nullable().optional(),
+    type: AccountTypeSchema,
+    subType: AccountSubTypeSchema.nullable(),
+    /** External account ID from bank provider (e.g., Plaid account_id) */
+    externalAccountId: z.string().nullable().optional(),
+    /** ID of BankLink to associate with this account */
+    bankLinkId: z.string().nullable().optional(),
+    /** Raw API account data from provider */
+    rawApiAccount: APIAccountSchema.nullable().optional(),
+  })
+  .merge(CurrentAndAvailableBalanceSchema);
+
+export type CreateAccountDto = z.infer<typeof CreateAccountDtoSchema>;
+
+/** Public manual-account creation shape. */
+export const CreateManualAccountDtoSchema = registerSchema(
+  'CreateManualAccountDto',
   z
     .object({
       name: z.string().nullable(),
       customName: z.string().nullable().optional(),
       notes: z.string().nullable().optional(),
-      /** Mask of account number (e.g., last 4 digits) */
-      mask: z.string().nullable().optional(),
       type: AccountTypeSchema,
       subType: AccountSubTypeSchema.nullable(),
-      /** External account ID from bank provider (e.g., Plaid account_id) */
-      externalAccountId: z.string().nullable().optional(),
-      /** ID of BankLink to associate with this account */
-      bankLinkId: z.string().nullable().optional(),
-      /** Raw API account data from provider */
-      rawApiAccount: APIAccountSchema.nullable().optional(),
     })
-    .merge(CurrentAndAvailableBalanceSchema),
+    .merge(CurrentAndAvailableBalanceSchema)
+    .strict(),
 );
 
-export type CreateAccountDto = z.infer<typeof CreateAccountDtoSchema>;
+export type CreateManualAccountDto = z.infer<
+  typeof CreateManualAccountDtoSchema
+>;
 
-/**
- * DTO for updating an existing Account
- */
-export const UpdateAccountDtoSchema = registerSchema(
-  'UpdateAccountDto',
-  CreateAccountDtoSchema.partial(),
+export const UpdateAccountMetadataDtoSchema = registerSchema(
+  'UpdateAccountMetadataDto',
+  z
+    .object({
+      name: z.string().nullable().optional(),
+      customName: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
+    })
+    .strict(),
 );
 
-export type UpdateAccountDto = z.infer<typeof UpdateAccountDtoSchema>;
+export type UpdateAccountMetadataDto = z.infer<
+  typeof UpdateAccountMetadataDtoSchema
+>;

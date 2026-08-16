@@ -32,6 +32,7 @@ import {
   Transaction,
   UpdateManualTransactionDto,
   UpdateTransactionCategoryDto,
+  UpdateTransactionReportingDateDto,
   UpdateTransactionDto,
 } from '../types/Transaction';
 import { TransactionEntity } from './transaction.entity';
@@ -270,6 +271,32 @@ export class TransactionService extends OwnedCrudService<
 
     const savedEntity = await this.repository.save(entity);
     this.logger.log({ id }, `${this.entityName} updated successfully`);
+    return savedEntity.toObject();
+  }
+
+  async updateReportingDate(
+    id: string,
+    dto: UpdateTransactionReportingDateDto,
+    userId: string,
+  ): Promise<Transaction | null> {
+    this.logger.log({ id, userId }, 'Updating transaction reporting date');
+
+    const entity = await this.repository.findOne({
+      where: { id, source: 'provider', activity: { userId } },
+      relations: this.relations,
+    });
+    if (!entity) {
+      this.logger.warn(
+        { id, userId },
+        'Provider transaction not found for reporting date update',
+      );
+      return null;
+    }
+
+    entity.reportingDateOverride = dto.reportingDateOverride;
+    this.syncActivityDate(entity);
+    const savedEntity = await this.repository.save(entity);
+    this.logger.log({ id }, 'Transaction reporting date updated');
     return savedEntity.toObject();
   }
 
@@ -1125,7 +1152,7 @@ export class TransactionService extends OwnedCrudService<
       const categories =
         categoryIds.length > 0
           ? await this.categoryRepository.find({
-              where: { id: In(categoryIds), userId },
+              where: { id: In(categoryIds), userId, archivedAt: IsNull() },
             })
           : [];
       const categoryById = new Map(

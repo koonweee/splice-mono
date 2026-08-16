@@ -1,5 +1,9 @@
 import { AccountType } from 'plaid';
-import { Account, CreateAccountDto } from '../../../src/types/Account';
+import {
+  Account,
+  CreateAccountDto,
+  CreateManualAccountDto,
+} from '../../../src/types/Account';
 import { MoneySign } from '../../../src/types/MoneyWithSign';
 
 /** Standard mock timestamps for testing */
@@ -89,7 +93,7 @@ export const mockManualAccount: Account = {
 /**
  * Mock DTO for creating a manual account
  */
-export const mockCreateManualAccountDto: CreateAccountDto = {
+export const mockCreateManualAccountDto: CreateManualAccountDto = {
   name: 'Manual Cash Account',
   availableBalance: {
     money: { currency: 'USD', amount: 20000 },

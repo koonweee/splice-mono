@@ -72,6 +72,55 @@ export function resolveEffectiveBalance(
   return balance.convertedBalance ?? balance.balance
 }
 
+export class BalanceCurrencyMismatchError extends Error {
+  readonly code = 'BALANCE_CURRENCY_MISMATCH'
+
+  constructor(
+    readonly expectedCurrency: string,
+    readonly actualCurrency: string,
+  ) {
+    super(
+      `Cannot combine ${actualCurrency} balances with ${expectedCurrency} balances`,
+    )
+    this.name = 'BalanceCurrencyMismatchError'
+  }
+}
+
+function normalizeCurrency(currency: string): string {
+  return currency.toUpperCase()
+}
+
+function resolveConsistentCurrency(
+  balance: MoneyWithSign,
+  expectedCurrency: string | undefined,
+): string | undefined {
+  const actualCurrency = normalizeCurrency(balance.money.currency)
+  // Zero does not establish or change a total's unit. This lets a later
+  // non-zero balance choose the reporting currency when user settings have not
+  // loaded yet, while callers may retain a zero-only display fallback.
+  if (balance.money.amount === 0) return expectedCurrency
+
+  if (expectedCurrency !== undefined && actualCurrency !== expectedCurrency) {
+    throw new BalanceCurrencyMismatchError(expectedCurrency, actualCurrency)
+  }
+
+  return actualCurrency
+}
+
+function resolveDifferenceCurrency(
+  current: MoneyWithSign,
+  previous: MoneyWithSign,
+  fallbackCurrency: string,
+): string {
+  if (current.money.amount !== 0) {
+    return normalizeCurrency(current.money.currency)
+  }
+  if (previous.money.amount !== 0) {
+    return normalizeCurrency(previous.money.currency)
+  }
+  return fallbackCurrency
+}
+
 export function isZeroBalanceAccount(
   account: Pick<
     AccountSummaryData,
@@ -89,11 +138,16 @@ export function isZeroBalanceAccount(
  */
 export function calculateNetWorthForDate(
   balances: Record<string, AccountBalanceResult>,
+  expectedCurrency?: string,
 ): number {
   let netWorth = 0
+  let currency = expectedCurrency
+    ? normalizeCurrency(expectedCurrency)
+    : undefined
 
   Object.values(balances).forEach((result) => {
     const effectiveBalance = resolveEffectiveBalance(result.effectiveBalance)
+    currency = resolveConsistentCurrency(effectiveBalance, currency)
     const amount = getSignedAmount(effectiveBalance)
 
     if (isLiabilityType(result.account.type)) {
@@ -139,6 +193,25 @@ export function createMoneyWithSign(
   }
 }
 
+function downsampleChartResults(
+  results: Array<BalanceQueryPerDateResult>,
+  period: TimePeriod,
+): Array<BalanceQueryPerDateResult> {
+  const shouldDownsample = [
+    TimePeriod.year,
+    TimePeriod.threeYears,
+    TimePeriod.fiveYears,
+    TimePeriod.tenYears,
+  ].includes(period)
+
+  if (!shouldDownsample) return results
+
+  return results.filter(
+    (result, index) =>
+      dayjs(result.date).date() === 1 || index === results.length - 1,
+  )
+}
+
 /**
  * Account summary data for display in dashboard
  * Matches the AccountSummary interface from the API for component compatibility
@@ -177,6 +250,7 @@ export interface DashboardData {
 export function transformToDashboardData(
   results: Array<BalanceQueryPerDateResult>,
   period: TimePeriod,
+  reportingCurrency?: string,
 ): DashboardData {
   // Sort results by date ascending
   const sortedResults = [...results].sort(
@@ -190,47 +264,57 @@ export function transformToDashboardData(
       ? sortedResults[sortedResults.length - 1]
       : undefined
 
-  // Calculate net worth for first and last dates
+  // Validate the complete time series before producing any totals. Carrying
+  // the currency forward also prevents a chart from silently changing units.
+  let currency = reportingCurrency
+    ? normalizeCurrency(reportingCurrency)
+    : undefined
+  let zeroOnlyCurrency: string | undefined
+  const netWorthByDate = new Map<string, number>()
+  sortedResults.forEach((result) => {
+    const effectiveBalances = Object.values(result.balances).map((balance) =>
+      resolveEffectiveBalance(balance.effectiveBalance),
+    )
+    effectiveBalances.forEach((balance) => {
+      if (balance.money.amount === 0) {
+        zeroOnlyCurrency ??= normalizeCurrency(balance.money.currency)
+      }
+      currency = resolveConsistentCurrency(balance, currency)
+    })
+    netWorthByDate.set(
+      result.date,
+      calculateNetWorthForDate(
+        result.balances,
+        currency ?? zeroOnlyCurrency,
+      ),
+    )
+  })
+
   const firstNetWorth = firstResult
-    ? calculateNetWorthForDate(firstResult.balances)
+    ? (netWorthByDate.get(firstResult.date) ?? 0)
     : 0
   const lastNetWorth = lastResult
-    ? calculateNetWorthForDate(lastResult.balances)
+    ? (netWorthByDate.get(lastResult.date) ?? 0)
     : 0
 
   // Calculate period change
   const changePercent = calculateChangePercent(lastNetWorth, firstNetWorth)
 
-  // Determine currency from first account (assume all converted to same currency)
-  const firstAccount = lastResult ? Object.values(lastResult.balances)[0] : null
-  const currency = firstAccount
-    ? resolveEffectiveBalance(firstAccount.effectiveBalance).money.currency
-    : 'USD'
+  const displayCurrency = currency ?? zeroOnlyCurrency ?? 'USD'
   const changeAmount = createMoneyWithSign(
     lastNetWorth - firstNetWorth,
-    currency,
+    displayCurrency,
   )
 
   // Build chart data from all dates
-  const chartData: Array<ChartDataPoint> = sortedResults
-    .filter((result) => {
-      if (
-        [
-          TimePeriod.year,
-          TimePeriod.threeYears,
-          TimePeriod.fiveYears,
-          TimePeriod.tenYears,
-        ].includes(period)
-      ) {
-        return dayjs(result.date).date() === 1
-      }
-      return true
-    })
-    .map((result) => ({
-      date: result.date,
-      label: dayjs(result.date).format('MMM D'),
-      value: calculateNetWorthForDate(result.balances),
-    }))
+  const chartData: Array<ChartDataPoint> = downsampleChartResults(
+    sortedResults,
+    period,
+  ).map((result) => ({
+    date: result.date,
+    label: dayjs(result.date).format('MMM D'),
+    value: netWorthByDate.get(result.date) ?? 0,
+  }))
 
   // Build account summaries from last result
   const assets: Array<AccountSummaryData> = []
@@ -260,7 +344,11 @@ export function transformToDashboardData(
           )
           accountChangeAmount = createMoneyWithSign(
             currentAmount - previousAmount,
-            currentEffective.money.currency,
+            resolveDifferenceCurrency(
+              currentEffective,
+              previousEffective,
+              displayCurrency,
+            ),
           )
         }
 
@@ -296,15 +384,17 @@ export function transformToDashboardData(
   // Sort assets and liabilities by effective balance of the last result (descending)
   const sortedAssets = assets.sort(
     (a, b) =>
-      getSignedAmount(b.effectiveBalance) - getSignedAmount(a.effectiveBalance),
+      getSignedAmount(b.convertedEffectiveBalance ?? b.effectiveBalance) -
+      getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance),
   )
   const sortedLiabilities = liabilities.sort(
     (a, b) =>
-      getSignedAmount(b.effectiveBalance) - getSignedAmount(a.effectiveBalance),
+      getSignedAmount(b.convertedEffectiveBalance ?? b.effectiveBalance) -
+      getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance),
   )
 
   return {
-    netWorth: createMoneyWithSign(lastNetWorth, currency),
+    netWorth: createMoneyWithSign(lastNetWorth, displayCurrency),
     changePercent,
     changeAmount,
     comparisonPeriod: period,
@@ -327,20 +417,9 @@ export function transformToAccountChartData(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   )
 
-  return sortedResults
-    .filter((result) => {
-      if (
-        [
-          TimePeriod.year,
-          TimePeriod.threeYears,
-          TimePeriod.fiveYears,
-          TimePeriod.tenYears,
-        ].includes(period)
-      ) {
-        return dayjs(result.date).date() === 1
-      }
-      return true
-    })
+  let currency: string | undefined
+
+  return downsampleChartResults(sortedResults, period)
     .map((result) => {
       const accountResult =
         accountId in result.balances ? result.balances[accountId] : undefined
@@ -349,6 +428,7 @@ export function transformToAccountChartData(
       const effectiveBalance = resolveEffectiveBalance(
         accountResult.effectiveBalance,
       )
+      currency = resolveConsistentCurrency(effectiveBalance, currency)
       const amount = getSignedAmount(effectiveBalance)
 
       return {

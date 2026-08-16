@@ -10,6 +10,7 @@ import type { InvestmentActivity } from '../../api/models'
 interface InvestmentActivityTableProps {
   activity: Array<InvestmentActivity>
   balancesHidden: boolean
+  total?: number
 }
 
 function formatDecimal(
@@ -51,20 +52,23 @@ function formatCashImpact(
 export function InvestmentActivityTable({
   activity,
   balancesHidden,
+  total = activity.length,
 }: InvestmentActivityTableProps) {
   const isMobile = useIsMobile()
 
   if (activity.length === 0) {
     return (
       <Text c="dimmed" size="sm">
-        Provider activity is unavailable or incomplete.
+        No investment activity found.
       </Text>
     )
   }
 
   if (isMobile) {
     return (
-      <Box aria-label={`Investment activity list, ${activity.length} total`}>
+      <Box
+        aria-label={`Investment activity list, ${activity.length} of ${total} shown`}
+      >
         {activity.map((row) => (
           <Box key={row.id} className={styles.mobileRow} px="xs" py="sm">
             <Group justify="space-between" align="flex-start" wrap="nowrap">

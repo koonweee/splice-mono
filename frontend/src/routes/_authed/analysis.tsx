@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DonutChart } from '@mantine/charts'
 import {
   Alert,
@@ -43,15 +43,25 @@ type AnalysisSearch = {
   endDate?: string
 }
 
-const isValidDateString = (value: unknown): value is string =>
-  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+const isValidDateString = (value: unknown): value is string => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false
+  }
+
+  const parsed = new Date(`${value}T00:00:00.000Z`)
+  return (
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  )
+}
 
 export const Route = createFileRoute('/_authed/analysis')({
   component: AnalysisPage,
   validateSearch: (search: Record<string, unknown>): AnalysisSearch => {
     if (
       isValidDateString(search.startDate) &&
-      isValidDateString(search.endDate)
+      isValidDateString(search.endDate) &&
+      search.startDate <= search.endDate
     ) {
       return { startDate: search.startDate, endDate: search.endDate }
     }
@@ -277,8 +287,7 @@ function AnalysisPage() {
     isError,
   } = useTransactionAnalysisControllerGetAnalysis({ startDate, endDate })
   const { data: user } = useUserControllerMe()
-  const analysisSankeyEnabled =
-    user?.settings.analysisSankeyEnabled ?? false
+  const analysisSankeyEnabled = user?.settings.analysisSankeyEnabled ?? false
 
   // Category drill-down modal
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure()
@@ -306,6 +315,10 @@ function AnalysisPage() {
     dayjs(startDate).toDate(),
     dayjs(endDate).toDate(),
   ])
+
+  useEffect(() => {
+    setDateRangeValue([dayjs(startDate).toDate(), dayjs(endDate).toDate()])
+  }, [startDate, endDate])
 
   const handleDateRangeChange = (range: DatesRangeValue) => {
     setDateRangeValue(range)

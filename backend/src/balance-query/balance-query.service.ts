@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
 import { Between, In, Repository } from 'typeorm';
@@ -138,8 +142,13 @@ export class BalanceQueryService {
     let ratesByDate: Map<string, Map<string, RateWithSource>> | null = null;
 
     if (targetCurrency) {
+      const selectableSnapshots = snapshots.filter(
+        (snapshot) =>
+          snapshot.snapshotDate >= startDate ||
+          !snapshotsByAccount.get(snapshot.accountId)?.has(startDate),
+      );
       ratesByDate = await this.fetchExchangeRates(
-        accounts,
+        selectableSnapshots,
         targetCurrency,
         startDate,
         endDate,
@@ -250,7 +259,7 @@ export class BalanceQueryService {
    * Fetch exchange rates for the date range, building a lookup map.
    */
   private async fetchExchangeRates(
-    accounts: AccountEntity[],
+    snapshots: BalanceSnapshotEntity[],
     targetCurrency: string,
     startDate: string,
     endDate: string,
@@ -259,17 +268,27 @@ export class BalanceQueryService {
     const currencyPairs: CurrencyPair[] = [];
     const seenPairs = new Set<string>();
 
-    accounts.forEach((account) => {
-      const accountCurrency = account.currentBalance.currency;
-      if (accountCurrency !== targetCurrency) {
-        const pairKey = `${accountCurrency}:${targetCurrency}`;
-        if (!seenPairs.has(pairKey)) {
-          seenPairs.add(pairKey);
-          currencyPairs.push({
-            baseCurrency: accountCurrency,
-            targetCurrency,
-          });
-        }
+    const addCurrencyPair = (baseCurrency: string) => {
+      if (baseCurrency === targetCurrency) {
+        return;
+      }
+
+      const pairKey = `${baseCurrency}:${targetCurrency}`;
+      if (!seenPairs.has(pairKey)) {
+        seenPairs.add(pairKey);
+        currencyPairs.push({
+          baseCurrency,
+          targetCurrency,
+        });
+      }
+    };
+
+    snapshots.forEach((snapshot) => {
+      if (Number(snapshot.availableBalance.amount) !== 0) {
+        addCurrencyPair(snapshot.availableBalance.currency);
+      }
+      if (Number(snapshot.currentBalance.amount) !== 0) {
+        addCurrencyPair(snapshot.currentBalance.currency);
       }
     });
 
@@ -395,16 +414,19 @@ export class BalanceQueryService {
         availableBalance,
         targetCurrency,
         dateRates,
+        targetDate,
       ),
       currentBalance: this.buildBalanceWithConversion(
         currentBalance,
         targetCurrency,
         dateRates,
+        targetDate,
       ),
       effectiveBalance: this.buildBalanceWithConversion(
         effectiveBalance,
         targetCurrency,
         dateRates,
+        targetDate,
       ),
       syncedAt,
       latestSyncedAt,
@@ -429,36 +451,53 @@ export class BalanceQueryService {
     balance: SerializedMoneyWithSign,
     targetCurrency: string | undefined,
     dateRates: Map<string, RateWithSource> | undefined,
+    targetDate: string,
   ): BalanceWithConvertedBalance {
     const result: BalanceWithConvertedBalance = { balance };
 
-    if (
-      targetCurrency &&
-      balance.money.currency !== targetCurrency &&
-      dateRates
-    ) {
-      const rateKey = `${balance.money.currency}:${targetCurrency}`;
-      const rateInfo = dateRates.get(rateKey);
-
-      if (rateInfo) {
-        // Calculate major units (floats) to handle different decimal places
-        const sourceDecimals = getDecimalPlaces(balance.money.currency);
-        const targetDecimals = getDecimalPlaces(targetCurrency);
-        const sourceMajor = balance.money.amount / Math.pow(10, sourceDecimals);
-        const convertedMajor = sourceMajor * rateInfo.rate;
-        const convertedAmount = Math.round(
-          convertedMajor * Math.pow(10, targetDecimals),
-        );
-
+    if (targetCurrency && balance.money.currency !== targetCurrency) {
+      if (balance.money.amount === 0) {
         result.convertedBalance = {
-          money: {
-            amount: convertedAmount,
-            currency: targetCurrency,
-          },
+          money: { amount: 0, currency: targetCurrency },
           sign: balance.sign,
         };
-        result.exchangeRate = rateInfo;
+        return result;
       }
+
+      const rateKey = `${balance.money.currency}:${targetCurrency}`;
+      const rateInfo = dateRates?.get(rateKey);
+
+      if (!rateInfo || !Number.isFinite(rateInfo.rate) || rateInfo.rate <= 0) {
+        this.logger.error(
+          {
+            baseCurrency: balance.money.currency,
+            targetCurrency,
+            targetDate,
+          },
+          'Required exchange rate is unavailable',
+        );
+        throw new ServiceUnavailableException(
+          `Required exchange rate is unavailable for ${balance.money.currency} to ${targetCurrency} on ${targetDate}`,
+        );
+      }
+
+      // Calculate major units (floats) to handle different decimal places
+      const sourceDecimals = getDecimalPlaces(balance.money.currency);
+      const targetDecimals = getDecimalPlaces(targetCurrency);
+      const sourceMajor = balance.money.amount / Math.pow(10, sourceDecimals);
+      const convertedMajor = sourceMajor * rateInfo.rate;
+      const convertedAmount = Math.round(
+        convertedMajor * Math.pow(10, targetDecimals),
+      );
+
+      result.convertedBalance = {
+        money: {
+          amount: convertedAmount,
+          currency: targetCurrency,
+        },
+        sign: balance.sign,
+      };
+      result.exchangeRate = rateInfo;
     }
 
     return result;

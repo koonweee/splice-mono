@@ -9,7 +9,10 @@ import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.enti
 import type { BalanceSnapshot } from '../types/BalanceSnapshot';
 import type { CurrencyPair, ExchangeRate } from '../types/ExchangeRate';
 import { UserEntity } from '../user/user.entity';
-import { CurrencyExchangeService } from './currency-exchange.service';
+import {
+  CurrencyExchangeService,
+  buildExchangeRateKey,
+} from './currency-exchange.service';
 import {
   CRYPTO_CURRENCIES,
   isCryptoCurrency,
@@ -96,7 +99,11 @@ export class CurrencyBackfillService {
 
     // Filter out pairs that already have rates for today
     const pairsToSync = fiatPairs.filter((pair) => {
-      const key = `${pair.targetCurrency}:${today}`;
+      const key = buildExchangeRateKey(
+        pair.baseCurrency,
+        pair.targetCurrency,
+        today,
+      );
       return !existingKeys.has(key);
     });
 
@@ -335,6 +342,7 @@ export class CurrencyBackfillService {
 
         // Check if all required keys already exist
         const requiredKeys = this.generateRequiredRateKeys(
+          baseCurrency,
           targets,
           earliestDate,
           today,
@@ -382,7 +390,11 @@ export class CurrencyBackfillService {
         // Only insert rates for dates that don't already exist
         for (const [dateKey, targetRates] of ratesByDateAndTarget) {
           for (const [targetCurrency, rate] of targetRates) {
-            const key = `${targetCurrency}:${dateKey}`;
+            const key = buildExchangeRateKey(
+              baseCurrency,
+              targetCurrency,
+              dateKey,
+            );
             if (existingKeys.has(key)) {
               skipped++;
               continue;
@@ -653,9 +665,10 @@ export class CurrencyBackfillService {
 
   /**
    * Generate all required rate keys for a set of target currencies and date range.
-   * Keys are in the format "targetCurrency:YYYY-MM-DD".
+   * Keys are in the format "baseCurrency:targetCurrency:YYYY-MM-DD".
    */
   private generateRequiredRateKeys(
+    baseCurrency: string,
     targetCurrencies: string[],
     startDate: string,
     endDate: string,
@@ -667,7 +680,7 @@ export class CurrencyBackfillService {
     while (currentDate.diff(end, 'day') <= 0) {
       const dateStr = currentDate.format('YYYY-MM-DD');
       targetCurrencies.forEach((target) => {
-        keys.push(`${target}:${dateStr}`);
+        keys.push(buildExchangeRateKey(baseCurrency, target, dateStr));
       });
       currentDate = currentDate.add(1, 'day');
     }

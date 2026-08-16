@@ -7,7 +7,7 @@
  */
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CreateAccountDtoType = {
+export const CreateManualAccountDtoType = {
   investment: 'investment',
   credit: 'credit',
   depository: 'depository',

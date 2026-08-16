@@ -127,11 +127,14 @@ describe('CurrencyConversionService', () => {
       );
     });
 
-    it('should return empty map when no rate responses', async () => {
+    it('should fail closed when a requested rate is missing', async () => {
       mockCurrencyExchangeService.getRatesForDateRange.mockResolvedValue([]);
 
-      const result = await service.getRateMap(['EUR'], 'USD', '2024-01-31');
-      expect(result.size).toBe(0);
+      await expect(
+        service.getRateMap(['EUR'], 'USD', '2024-01-31'),
+      ).rejects.toThrow(
+        'Required exchange rate is unavailable for EUR to USD on 2024-01-31',
+      );
     });
   });
 

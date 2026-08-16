@@ -9,12 +9,12 @@
 /**
  * @nullable
  */
-export type UpdateAccountDtoRawApiAccountSubType =
-  | (typeof UpdateAccountDtoRawApiAccountSubType)[keyof typeof UpdateAccountDtoRawApiAccountSubType]
+export type CreateManualAccountDtoSubType =
+  | (typeof CreateManualAccountDtoSubType)[keyof typeof CreateManualAccountDtoSubType]
   | null
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const UpdateAccountDtoRawApiAccountSubType = {
+export const CreateManualAccountDtoSubType = {
   '401a': '401a',
   '401k': '401k',
   '403B': '403B',

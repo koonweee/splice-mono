@@ -1,13 +1,125 @@
 import { BadRequestException } from '@nestjs/common';
+import { generateSchemaComponents } from '../../src/common/zod-api-response';
 import { ZodValidationPipe } from '../../src/zod-validation/zod-validation.pipe';
-import { CreateAccountDtoSchema } from '../../src/types/Account';
+import { UpdateBalanceBodySchema } from '../../src/account/account.controller';
+import {
+  CreateManualAccountDtoSchema,
+  UpdateAccountMetadataDtoSchema,
+} from '../../src/types/Account';
+import { MoneySign } from '../../src/types/MoneyWithSign';
+import {
+  UpdateTransactionCategoryDtoSchema,
+  UpdateTransactionReportingDateDtoSchema,
+} from '../../src/types/Transaction';
 import { z } from 'zod';
 
 describe('ZodValidationPipe', () => {
   let pipe: ZodValidationPipe;
 
   beforeEach(() => {
-    pipe = new ZodValidationPipe(CreateAccountDtoSchema);
+    pipe = new ZodValidationPipe(CreateManualAccountDtoSchema);
+  });
+
+  it('rejects provider-managed fields on public account writes', () => {
+    const manualAccount = {
+      name: 'Cash',
+      type: 'depository',
+      subType: null,
+      availableBalance: {
+        money: { amount: 10000, currency: 'USD' },
+        sign: MoneySign.POSITIVE,
+      },
+      currentBalance: {
+        money: { amount: 10000, currency: 'USD' },
+        sign: MoneySign.POSITIVE,
+      },
+    };
+
+    expect(() =>
+      CreateManualAccountDtoSchema.parse({
+        ...manualAccount,
+        bankLinkId: '00000000-0000-4000-8000-000000000001',
+      }),
+    ).toThrow();
+    expect(() =>
+      CreateManualAccountDtoSchema.parse({
+        ...manualAccount,
+        externalAccountId: 'provider-account-id',
+      }),
+    ).toThrow();
+    expect(() =>
+      UpdateAccountMetadataDtoSchema.parse({
+        notes: 'User note',
+        currentBalance: manualAccount.currentBalance,
+      }),
+    ).toThrow();
+  });
+
+  it('rejects negative money magnitudes', () => {
+    expect(() =>
+      CreateManualAccountDtoSchema.parse({
+        name: 'Cash',
+        type: 'depository',
+        subType: null,
+        availableBalance: {
+          money: { amount: -10000, currency: 'USD' },
+          sign: MoneySign.NEGATIVE,
+        },
+        currentBalance: {
+          money: { amount: -10000, currency: 'USD' },
+          sign: MoneySign.NEGATIVE,
+        },
+      }),
+    ).toThrow();
+  });
+
+  it('allows only reportingDateOverride on the narrow transaction update', () => {
+    expect(
+      UpdateTransactionReportingDateDtoSchema.parse({
+        reportingDateOverride: '2026-08-15',
+      }),
+    ).toEqual({ reportingDateOverride: '2026-08-15' });
+    expect(() =>
+      UpdateTransactionReportingDateDtoSchema.parse({
+        reportingDateOverride: '2026-08-15',
+        amount: {
+          money: { amount: 100, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        },
+      }),
+    ).toThrow();
+  });
+
+  it('rejects provider-managed fields on other retained narrow writes', () => {
+    expect(() =>
+      UpdateBalanceBodySchema.parse({
+        balance: {
+          money: { amount: 100, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        },
+        bankLinkId: '00000000-0000-4000-8000-000000000001',
+      }),
+    ).toThrow();
+    expect(() =>
+      UpdateTransactionCategoryDtoSchema.parse({
+        categoryId: null,
+        externalTransactionId: 'provider-transaction-id',
+      }),
+    ).toThrow();
+  });
+
+  it('publishes the manual balance body as a concrete OpenAPI component', () => {
+    const components = generateSchemaComponents();
+
+    expect(components.UpdateBalanceBody).toEqual(
+      expect.objectContaining({
+        type: 'object',
+        required: ['balance'],
+        properties: {
+          balance: { $ref: '#/components/schemas/MoneyWithSign' },
+        },
+      }),
+    );
   });
 
   it('should be defined', () => {
@@ -34,7 +146,6 @@ describe('ZodValidationPipe', () => {
         },
         type: 'depository',
         subType: null,
-        bankLinkId: null,
       };
 
       const result = pipe.transform(validDto);
@@ -61,7 +172,6 @@ describe('ZodValidationPipe', () => {
         },
         type: 'depository',
         subType: null,
-        bankLinkId: null,
       };
 
       const result = pipe.transform(validDto);
