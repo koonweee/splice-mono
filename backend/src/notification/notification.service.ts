@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'crypto';
-import { Brackets, In, IsNull, Repository } from 'typeorm';
+import { Brackets, EntityManager, In, IsNull, Repository } from 'typeorm';
 import type {
   Notification,
   NotificationPayload,
@@ -12,6 +12,7 @@ import type {
   RegisterPushSubscriptionDto,
   TestNotificationResponse,
 } from '../types/Notification';
+import { getPostgresMutationAffectedCount } from '../common/postgres-mutation-result';
 import { UserService } from '../user/user.service';
 import { NotificationPushDeliveryEntity } from './notification-push-delivery.entity';
 import { NotificationEntity } from './notification.entity';
@@ -99,49 +100,179 @@ export class NotificationService {
   ): Promise<PushSubscriptionResponse> {
     await this.userService.enableDefaultNotificationsIfUnset(userId);
 
-    const existing = await this.pushSubscriptionRepository.findOne({
-      where: { endpoint: dto.endpoint },
-    });
-    const entity = existing ?? new PushSubscriptionEntity();
+    return this.pushSubscriptionRepository.manager.transaction(
+      async (manager) => {
+        await manager.query(
+          'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
+          [dto.endpoint],
+        );
+        const subscriptionRepo = manager.getRepository(PushSubscriptionEntity);
+        const deliveryRepo = manager.getRepository(
+          NotificationPushDeliveryEntity,
+        );
+        const existing = await subscriptionRepo.findOne({
+          where: { endpoint: dto.endpoint },
+          lock: { mode: 'pessimistic_write' },
+        });
+        let entity = existing ?? new PushSubscriptionEntity();
 
-    entity.userId = userId;
-    entity.endpoint = dto.endpoint;
-    entity.p256dh = dto.keys.p256dh;
-    entity.auth = dto.keys.auth;
-    entity.userAgent = dto.userAgent ?? null;
-    entity.revokedAt = null;
+        if (existing && existing.userId !== userId) {
+          const staleBefore = new Date(Date.now() - PUSH_PROCESSING_STALE_MS);
+          const activeOldOwnerDeliveries: Array<{
+            id: string;
+            status: 'pending' | 'processing';
+            processingStartedAt: Date | null;
+          }> = await manager.query(
+            `
+              SELECT delivery.id,
+                delivery.status,
+                delivery."processingStartedAt"
+              FROM notification_push_delivery_entity delivery
+              WHERE delivery."subscriptionId" = $1
+                AND delivery.status IN ('pending', 'processing')
+              FOR UPDATE OF delivery
+            `,
+            [existing.id],
+          );
+          if (
+            activeOldOwnerDeliveries.some(
+              (delivery) =>
+                delivery.status === 'processing' &&
+                delivery.processingStartedAt !== null &&
+                new Date(delivery.processingStartedAt) > staleBefore,
+            )
+          ) {
+            // A legacy worker may already hold an in-memory copy of this
+            // delivery and does not re-check endpoint ownership before send.
+            // Keep ownership unchanged until that send finishes; the client
+            // can safely retry registration afterward.
+            throw new ConflictException(
+              'Push subscription is currently delivering a notification; retry registration shortly',
+            );
+          }
 
-    const saved = await this.pushSubscriptionRepository.save(entity);
-    return saved.toResponse();
+          const abandonedDeliveryIds = activeOldOwnerDeliveries.map(
+            (delivery) => delivery.id,
+          );
+          if (abandonedDeliveryIds.length > 0) {
+            await deliveryRepo.update(
+              {
+                id: In(abandonedDeliveryIds),
+                status: In(['pending', 'processing']),
+              },
+              {
+                status: 'failed',
+                processingStartedAt: null,
+                lastError: 'Push endpoint ownership changed',
+              },
+            );
+          }
+
+          // Do not reassign the existing row in place. A legacy notification
+          // transaction may have selected it for the old owner before this
+          // transaction acquired the endpoint lock and insert a delivery after
+          // we commit. Keeping that row owned by the old user and revoked makes
+          // such a late insert ineligible, while moving the unique endpoint off
+          // the row lets the new owner receive a fresh subscription identity.
+          existing.endpoint = `reassigned:${existing.id}:${randomUUID()}`;
+          existing.revokedAt = new Date();
+          await subscriptionRepo.save(existing);
+          entity = new PushSubscriptionEntity();
+        }
+
+        entity.userId = userId;
+        entity.endpoint = dto.endpoint;
+        entity.p256dh = dto.keys.p256dh;
+        entity.auth = dto.keys.auth;
+        entity.userAgent = dto.userAgent ?? null;
+        entity.revokedAt = null;
+
+        const saved = await subscriptionRepo.save(entity);
+        return saved.toResponse();
+      },
+    );
   }
 
   async revokeCurrentPushSubscription(
     userId: string,
     endpoint: string,
   ): Promise<boolean> {
-    const subscription = await this.pushSubscriptionRepository.findOne({
-      where: { userId, endpoint, revokedAt: IsNull() },
-    });
+    return this.pushSubscriptionRepository.manager.transaction(
+      async (manager) => {
+        await manager.query(
+          'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
+          [endpoint],
+        );
+        const subscriptionRepo = manager.getRepository(PushSubscriptionEntity);
+        const subscription = await subscriptionRepo.findOne({
+          where: { userId, endpoint, revokedAt: IsNull() },
+          lock: { mode: 'pessimistic_write' },
+        });
 
-    if (!subscription) {
-      return false;
-    }
+        if (!subscription) {
+          return false;
+        }
 
-    subscription.revokedAt = new Date();
-    await this.pushSubscriptionRepository.save(subscription);
-    return true;
+        await this.terminalizeAbandonedPushDeliveries(
+          manager,
+          [subscription.id],
+          'Push subscription revoked',
+        );
+        subscription.revokedAt = new Date();
+        await subscriptionRepo.save(subscription);
+        return true;
+      },
+    );
   }
 
   async revokeAllPushSubscriptions(userId: string): Promise<number> {
-    const result = await this.pushSubscriptionRepository
-      .createQueryBuilder()
-      .update(PushSubscriptionEntity)
-      .set({ revokedAt: new Date() })
-      .where('"userId" = :userId', { userId })
-      .andWhere('"revokedAt" IS NULL')
-      .execute();
+    return this.pushSubscriptionRepository.manager.transaction(
+      async (manager) => {
+        const endpoints: Array<{ endpoint: string }> = await manager.query(
+          `
+            SELECT endpoint
+            FROM push_subscription_entity
+            WHERE "userId" = $1
+              AND "revokedAt" IS NULL
+            ORDER BY endpoint
+          `,
+          [userId],
+        );
+        if (endpoints.length === 0) {
+          return 0;
+        }
 
-    return result.affected ?? 0;
+        await manager.query(
+          `
+            SELECT pg_advisory_xact_lock(hashtextextended(endpoint, 0))
+            FROM unnest($1::text[]) endpoint
+            ORDER BY endpoint
+          `,
+          [endpoints.map(({ endpoint }) => endpoint)],
+        );
+        const subscriptionRepo = manager.getRepository(PushSubscriptionEntity);
+        const subscriptions = await subscriptionRepo.find({
+          where: { userId, revokedAt: IsNull() },
+          order: { endpoint: 'ASC' },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (subscriptions.length === 0) {
+          return 0;
+        }
+
+        await this.terminalizeAbandonedPushDeliveries(
+          manager,
+          subscriptions.map(({ id }) => id),
+          'Push subscription revoked',
+        );
+        const revokedAt = new Date();
+        subscriptions.forEach((subscription) => {
+          subscription.revokedAt = revokedAt;
+        });
+        await subscriptionRepo.save(subscriptions);
+        return subscriptions.length;
+      },
+    );
   }
 
   async createNewSyncedTransactionsNotification(
@@ -262,9 +393,55 @@ export class NotificationService {
       );
       const now = new Date();
       const staleBefore = new Date(now.getTime() - PUSH_PROCESSING_STALE_MS);
+      const abandonedResult: unknown = await manager.query(
+        `
+          WITH abandoned AS (
+            SELECT delivery.id
+            FROM notification_push_delivery_entity delivery
+            JOIN push_subscription_entity subscription
+              ON subscription.id = delivery."subscriptionId"
+            JOIN notification_entity notification
+              ON notification.id = delivery."notificationId"
+            WHERE (
+                delivery.status = 'pending'
+                OR (
+                  delivery.status = 'processing'
+                  AND (
+                    delivery."processingStartedAt" IS NULL
+                    OR delivery."processingStartedAt" <= $1
+                  )
+                )
+              )
+              AND (
+                subscription."revokedAt" IS NOT NULL
+                OR notification."userId" <> subscription."userId"
+              )
+            ORDER BY delivery."createdAt", delivery.id
+            FOR UPDATE OF delivery, subscription SKIP LOCKED
+            LIMIT $2
+          )
+          UPDATE notification_push_delivery_entity delivery
+          SET status = 'failed',
+            "processingStartedAt" = NULL,
+            "lastError" = 'Push delivery is no longer owner-eligible',
+            "updatedAt" = now()
+          FROM abandoned
+          WHERE delivery.id = abandoned.id
+          RETURNING delivery.id
+        `,
+        [staleBefore, Math.max(limit, NOTIFICATION_CLEANUP_BATCH_SIZE)],
+      );
+      const abandonedCount = getPostgresMutationAffectedCount(abandonedResult);
+      if (abandonedCount > 0) {
+        this.logger.debug(
+          { count: abandonedCount },
+          'Terminalized abandoned push deliveries',
+        );
+      }
       const deliveries = await deliveryRepo
         .createQueryBuilder('delivery')
         .innerJoin('delivery.subscription', 'subscription')
+        .innerJoin('delivery.notification', 'notification')
         .where(
           new Brackets((qb) => {
             qb.where('delivery.status = :pendingStatus', {
@@ -285,8 +462,9 @@ export class NotificationService {
           }),
         )
         .andWhere('subscription.revokedAt IS NULL')
+        .andWhere('notification.userId = subscription.userId')
         .orderBy('delivery.createdAt', 'ASC')
-        .setLock('pessimistic_write', undefined, ['delivery'])
+        .setLock('pessimistic_write', undefined, ['delivery', 'subscription'])
         .setOnLocked('skip_locked')
         .take(limit)
         .getMany();
@@ -315,11 +493,83 @@ export class NotificationService {
       const deliveryById = new Map(
         claimedDeliveries.map((delivery) => [delivery.id, delivery]),
       );
+      const ineligibleIds = claimedDeliveries
+        .filter(
+          (delivery) =>
+            delivery.notification.userId !== delivery.subscription.userId ||
+            delivery.subscription.revokedAt !== null,
+        )
+        .map((delivery) => delivery.id);
+      if (ineligibleIds.length > 0) {
+        await deliveryRepo.update(
+          { id: In(ineligibleIds), status: 'processing' },
+          {
+            status: 'failed',
+            processingStartedAt: null,
+            lastError: 'Push delivery is no longer owner-eligible',
+          },
+        );
+      }
       return claimedIds.flatMap((id) => {
         const delivery = deliveryById.get(id);
-        return delivery ? [delivery] : [];
+        return delivery &&
+          delivery.notification.userId === delivery.subscription.userId &&
+          delivery.subscription.revokedAt === null
+          ? [delivery]
+          : [];
       });
     });
+  }
+
+  private async terminalizeAbandonedPushDeliveries(
+    manager: EntityManager,
+    subscriptionIds: string[],
+    reason: string,
+    now = new Date(),
+  ): Promise<number> {
+    if (subscriptionIds.length === 0) {
+      return 0;
+    }
+
+    const staleBefore = new Date(now.getTime() - PUSH_PROCESSING_STALE_MS);
+    const rows: Array<{ id: string }> = await manager.query(
+      `
+        SELECT delivery.id
+        FROM notification_push_delivery_entity delivery
+        WHERE delivery."subscriptionId" = ANY($1::uuid[])
+          AND (
+            delivery.status = 'pending'
+            OR (
+              delivery.status = 'processing'
+              AND (
+                delivery."processingStartedAt" IS NULL
+                OR delivery."processingStartedAt" <= $2
+              )
+            )
+          )
+        ORDER BY delivery."createdAt", delivery.id
+        FOR UPDATE OF delivery
+      `,
+      [subscriptionIds, staleBefore],
+    );
+    if (rows.length === 0) {
+      return 0;
+    }
+
+    const result = await manager
+      .getRepository(NotificationPushDeliveryEntity)
+      .update(
+        {
+          id: In(rows.map(({ id }) => id)),
+          status: In(['pending', 'processing']),
+        },
+        {
+          status: 'failed',
+          processingStartedAt: null,
+          lastError: reason,
+        },
+      );
+    return result.affected ?? 0;
   }
 
   renderPushPayload(
@@ -372,18 +622,79 @@ export class NotificationService {
   async sendPushDelivery(
     delivery: NotificationPushDeliveryEntity,
   ): Promise<void> {
-    try {
-      await this.webPushAdapter.send(
-        delivery.subscription,
-        this.renderPushPayload(delivery.notification),
+    await this.pushDeliveryRepository.manager.transaction(async (manager) => {
+      const lockedRows: Array<{ id: string; ownersMatch: boolean }> =
+        await manager.query(
+          `
+            SELECT delivery.id,
+              (notification."userId" = subscription."userId") AS "ownersMatch"
+            FROM notification_push_delivery_entity delivery
+            JOIN push_subscription_entity subscription
+              ON subscription.id = delivery."subscriptionId"
+            JOIN notification_entity notification
+              ON notification.id = delivery."notificationId"
+            WHERE delivery.id = $1
+              AND delivery.status = 'processing'
+            FOR UPDATE OF delivery, subscription
+          `,
+          [delivery.id],
+        );
+      const deliveryRepo = manager.getRepository(
+        NotificationPushDeliveryEntity,
       );
-      delivery.status = 'sent';
-      delivery.sentAt = new Date();
-      delivery.lastError = null;
-      await this.pushDeliveryRepository.save(delivery);
-    } catch (error) {
-      await this.handlePushDeliveryFailure(delivery, error);
-    }
+      const subscriptionRepo = manager.getRepository(PushSubscriptionEntity);
+      const locked = lockedRows[0];
+      if (!locked) {
+        return;
+      }
+      if (!locked.ownersMatch) {
+        await deliveryRepo.update(
+          { id: delivery.id, status: 'processing' },
+          {
+            status: 'failed',
+            processingStartedAt: null,
+            lastError: 'Push delivery owner mismatch',
+          },
+        );
+        return;
+      }
+
+      const current = await deliveryRepo.findOne({
+        where: { id: delivery.id, status: 'processing' },
+        relations: { notification: true, subscription: true },
+      });
+      if (
+        !current ||
+        current.subscription.revokedAt !== null ||
+        current.notification.userId !== current.subscription.userId
+      ) {
+        if (current) {
+          current.status = 'failed';
+          current.processingStartedAt = null;
+          current.lastError = 'Push delivery is no longer owner-eligible';
+          await deliveryRepo.save(current);
+        }
+        return;
+      }
+
+      try {
+        await this.webPushAdapter.send(
+          current.subscription,
+          this.renderPushPayload(current.notification),
+        );
+        current.status = 'sent';
+        current.sentAt = new Date();
+        current.lastError = null;
+        await deliveryRepo.save(current);
+      } catch (error) {
+        await this.handlePushDeliveryFailure(
+          current,
+          error,
+          subscriptionRepo,
+          deliveryRepo,
+        );
+      }
+    });
   }
 
   async cleanupOldNotificationRecords(
@@ -458,6 +769,8 @@ export class NotificationService {
   private async handlePushDeliveryFailure(
     delivery: NotificationPushDeliveryEntity,
     error: unknown,
+    subscriptionRepository: Repository<PushSubscriptionEntity>,
+    deliveryRepository: Repository<NotificationPushDeliveryEntity>,
   ): Promise<void> {
     const statusCode = this.getWebPushStatusCode(error);
     const message = error instanceof Error ? error.message : String(error);
@@ -466,22 +779,22 @@ export class NotificationService {
       delivery.subscription.revokedAt = new Date();
       delivery.status = 'failed';
       delivery.lastError = message;
-      await this.pushSubscriptionRepository.save(delivery.subscription);
-      await this.pushDeliveryRepository.save(delivery);
+      await subscriptionRepository.save(delivery.subscription);
+      await deliveryRepository.save(delivery);
       return;
     }
 
     if (delivery.attemptCount >= MAX_PUSH_DELIVERY_ATTEMPTS) {
       delivery.status = 'failed';
       delivery.lastError = message;
-      await this.pushDeliveryRepository.save(delivery);
+      await deliveryRepository.save(delivery);
       return;
     }
 
     delivery.status = 'pending';
     delivery.availableAt = new Date(Date.now() + PUSH_RETRY_DELAY_MS);
     delivery.lastError = message;
-    await this.pushDeliveryRepository.save(delivery);
+    await deliveryRepository.save(delivery);
   }
 
   private async createNotificationWithPushDeliveries(

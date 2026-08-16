@@ -22,8 +22,11 @@ import type * as SpliceAPI from '../api/clients/spliceAPI'
 
 const mockFns = vi.hoisted(() => ({
   mutateMock: vi.fn(),
+  refetchBalanceHistoryMock: vi.fn(),
   useAccountBalanceHistoryMock: vi.fn(),
   useInvestmentHoldingsMock: vi.fn(),
+  useInvestmentActivityMock: vi.fn(),
+  investmentActivityTableMock: vi.fn(),
   useAccountControllerUpdateMock: vi.fn(),
   notificationsShowMock: vi.fn(),
 }))
@@ -49,6 +52,24 @@ vi.mock('../hooks/useInvestmentHoldings', async () => {
     useInvestmentHoldings: mockFns.useInvestmentHoldingsMock,
   }
 })
+
+vi.mock('../hooks/useInvestmentActivity', () => ({
+  useInvestmentActivity: mockFns.useInvestmentActivityMock,
+}))
+
+vi.mock('./investments/InvestmentActivityTable', () => ({
+  InvestmentActivityTable: (props: {
+    activity: Array<{ id: string }>
+    total: number
+  }) => {
+    mockFns.investmentActivityTableMock(props)
+    return props.activity.length === 0 ? (
+      <div>No investment activity found.</div>
+    ) : (
+      <div data-testid="investment-activity-table" />
+    )
+  },
+}))
 
 vi.mock('../api/clients/spliceAPI', async () => {
   const actual: typeof SpliceAPI = await vi.importActual(
@@ -172,6 +193,33 @@ function createLatestBalance(account: Account): AccountBalanceResult {
   }
 }
 
+function createBalanceHistoryHookState(
+  account: Account,
+  error: Error | null = null,
+) {
+  return {
+    data:
+      error === null
+        ? {
+            chartData: [],
+            latestBalance: createLatestBalance(account),
+            latestSyncedAt: undefined,
+            rawResults: [],
+          }
+        : {
+            chartData: [],
+            latestBalance: undefined,
+            latestSyncedAt: undefined,
+            rawResults: [],
+          },
+    isLoading: false,
+    isFetching: false,
+    isError: error !== null,
+    error,
+    refetch: mockFns.refetchBalanceHistoryMock,
+  }
+}
+
 function renderAccountModal(
   notes: string | null,
   options: {
@@ -180,6 +228,16 @@ function renderAccountModal(
     holdings?: Array<InvestmentHoldingSnapshot>
     holdingsLoading?: boolean
     holdingsError?: boolean
+    balanceHistoryError?: Error | null
+    balanceHistoryEmpty?: boolean
+    balanceHistoryLoading?: boolean
+    investmentActivity?: Array<{ id: string }>
+    investmentActivityTotal?: number
+    hasMoreInvestmentActivity?: boolean
+    loadMoreInvestmentActivity?: ReturnType<typeof vi.fn>
+    investmentActivityLoading?: boolean
+    investmentActivityLoadMoreError?: boolean
+    investmentActivityInitialError?: boolean
   } = {},
 ) {
   const account = createAccount(notes, options.type)
@@ -188,28 +246,42 @@ function renderAccountModal(
     type: options.type ?? AccountType.depository,
   }
 
-  mockFns.useAccountBalanceHistoryMock.mockReturnValue({
-    data: {
+  const balanceHistoryState = createBalanceHistoryHookState(
+    account,
+    options.balanceHistoryError ?? null,
+  )
+  if (options.balanceHistoryEmpty) {
+    balanceHistoryState.data = {
       chartData: [],
-      latestBalance: createLatestBalance(account),
+      latestBalance: undefined,
       latestSyncedAt: undefined,
       rawResults: [],
-    },
-    isLoading: false,
-    error: null,
-  })
+    }
+  }
+  balanceHistoryState.isLoading = options.balanceHistoryLoading ?? false
+  mockFns.useAccountBalanceHistoryMock.mockReturnValue(balanceHistoryState)
   mockFns.useInvestmentHoldingsMock.mockReturnValue({
     holdings: options.holdings ?? [],
     snapshotDate: options.holdings?.length ? '2026-05-20' : null,
     isLoading: options.holdingsLoading ?? false,
     isError: options.holdingsError ?? false,
   })
+  mockFns.useInvestmentActivityMock.mockReturnValue({
+    activity: options.investmentActivity ?? [],
+    total: options.investmentActivityTotal ?? 0,
+    hasMore: options.hasMoreInvestmentActivity ?? false,
+    loadMore: options.loadMoreInvestmentActivity ?? vi.fn(),
+    isLoadingMore: false,
+    isLoading: options.investmentActivityLoading ?? false,
+    isInitialError: options.investmentActivityInitialError ?? false,
+    isLoadMoreError: options.investmentActivityLoadMoreError ?? false,
+  })
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
 
-  return render(
+  const renderModal = () => (
     <QueryClientProvider client={queryClient}>
       <MantineProvider>
         <AccountModal
@@ -220,8 +292,14 @@ function renderAccountModal(
           balancesHidden={options.balancesHidden ?? false}
         />
       </MantineProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
+  const result = render(renderModal())
+
+  return {
+    ...result,
+    rerenderModal: () => result.rerender(renderModal()),
+  }
 }
 
 function getTextarea(element: HTMLElement): HTMLTextAreaElement {
@@ -346,6 +424,64 @@ describe('AccountModal notes', () => {
   })
 })
 
+describe('AccountModal balance history', () => {
+  it('shows a loading state without flashing valid-empty content', () => {
+    renderAccountModal(null, { balanceHistoryLoading: true })
+
+    expect(
+      screen.getByRole('status', { name: 'Loading account history' }),
+    ).toBeTruthy()
+    expect(
+      screen.queryByText('No balance history is available for this account.'),
+    ).toBeNull()
+  })
+
+  it('renders an intentional empty state after a successful empty response', () => {
+    renderAccountModal(null, { balanceHistoryEmpty: true })
+
+    expect(
+      screen.getByText('No balance history is available for this account.'),
+    ).toBeTruthy()
+    expect(screen.queryByText('Unable to load account history')).toBeNull()
+    expect(screen.queryByText('Current Balance')).toBeNull()
+  })
+
+  it('recovers from a balance-history error after Retry', () => {
+    const result = renderAccountModal(null, {
+      balanceHistoryError: new Error('Balance request failed'),
+    })
+
+    expect(screen.getByText('Unable to load account history')).toBeTruthy()
+    expect(screen.queryByText('Current Balance')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(mockFns.refetchBalanceHistoryMock).toHaveBeenCalledTimes(1)
+
+    mockFns.useAccountBalanceHistoryMock.mockReturnValue({
+      ...createBalanceHistoryHookState(
+        createAccount(null),
+        new Error('Balance request failed'),
+      ),
+      isFetching: true,
+    })
+    result.rerenderModal()
+
+    expect(
+      screen.getByRole('button', { name: 'Retry' }).getAttribute('data-loading'),
+    ).toBe('true')
+
+    mockFns.useAccountBalanceHistoryMock.mockReturnValue(
+      createBalanceHistoryHookState(createAccount(null)),
+    )
+    result.rerenderModal()
+
+    expect(screen.queryByText('Unable to load account history')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
+    expect(screen.getByText('Current Balance')).toBeTruthy()
+    expect(screen.getByLabelText('Account notes')).toBeTruthy()
+  })
+})
+
 describe('AccountModal holdings', () => {
   it('fetches and renders holdings for investment accounts', () => {
     renderAccountModal(null, {
@@ -358,9 +494,7 @@ describe('AccountModal holdings', () => {
       true,
     )
     expect(screen.getByText('Holdings')).toBeTruthy()
-    expect(
-      screen.getByText('Vanguard FTSE All-World UCITS ETF'),
-    ).toBeTruthy()
+    expect(screen.getByText('Vanguard FTSE All-World UCITS ETF')).toBeTruthy()
     expect(screen.getByText('VWRA')).toBeTruthy()
   })
 
@@ -394,5 +528,77 @@ describe('AccountModal holdings', () => {
 
     expect(screen.getByText('Holdings unavailable.')).toBeTruthy()
     expect(screen.getByText('Current Balance')).toBeTruthy()
+  })
+
+  it('shows investment activity loading without an empty-state flash', () => {
+    renderAccountModal(null, {
+      type: AccountType.investment,
+      investmentActivityLoading: true,
+    })
+
+    expect(
+      screen.getByRole('status', { name: 'Loading investment activity' }),
+    ).toBeTruthy()
+    expect(screen.queryByText('No investment activity found.')).toBeNull()
+  })
+
+  it('renders an intentional empty state after a successful empty response', () => {
+    renderAccountModal(null, {
+      type: AccountType.investment,
+      investmentActivity: [],
+      investmentActivityTotal: 0,
+    })
+
+    expect(screen.getByText('0 of 0')).toBeTruthy()
+    expect(screen.getByText('No investment activity found.')).toBeTruthy()
+    expect(
+      screen.queryByText('Provider activity is unavailable or incomplete.'),
+    ).toBeNull()
+  })
+
+  it('shows the loaded activity count and allows loading every reported row', () => {
+    const loadMore = vi.fn()
+    renderAccountModal(null, {
+      type: AccountType.investment,
+      investmentActivity: Array.from({ length: 10 }, (_, index) => ({
+        id: `activity-${index}`,
+      })),
+      investmentActivityTotal: 25,
+      hasMoreInvestmentActivity: true,
+      loadMoreInvestmentActivity: loadMore,
+    })
+
+    expect(screen.getByText('10 of 25')).toBeTruthy()
+    expect(mockFns.investmentActivityTableMock).toHaveBeenCalledWith(
+      expect.objectContaining({ total: 25 }),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more activity' }))
+    expect(loadMore).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps loaded rows visible and lets a failed next page be retried', () => {
+    const retry = vi.fn()
+    renderAccountModal(null, {
+      type: AccountType.investment,
+      investmentActivity: Array.from({ length: 10 }, (_, index) => ({
+        id: `activity-${index}`,
+      })),
+      investmentActivityTotal: 25,
+      hasMoreInvestmentActivity: true,
+      loadMoreInvestmentActivity: retry,
+      investmentActivityLoadMoreError: true,
+    })
+
+    expect(screen.getByText('10 of 25')).toBeTruthy()
+    expect(screen.getByTestId('investment-activity-table')).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Unable to load more provider activity.',
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Retry loading activity' }),
+    )
+    expect(retry).toHaveBeenCalledTimes(1)
   })
 })

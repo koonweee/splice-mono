@@ -15,11 +15,13 @@ import {
 } from '../../src/events/account.events';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { UserService } from '../../src/user/user.service';
+import type { CreateAccountDto } from '../../src/types/Account';
 import {
   mockCreateAccountDto,
   mockCreateManualAccountDto,
   mockUserId,
 } from '../mocks/account/account.mock';
+import { mockApiAccount } from '../mocks/bank-link/provider.mock';
 import { mockUserService } from '../mocks/user/user-service.mock';
 
 describe('AccountService', () => {
@@ -127,6 +129,32 @@ describe('AccountService', () => {
       );
     });
 
+    it('should discard provider fields from structurally wider inputs', async () => {
+      mockRepository.save.mockImplementation(async (entity) => entity);
+      const widerDto: CreateAccountDto = {
+        ...mockCreateAccountDto,
+        externalAccountId: 'provider-account-id',
+        bankLinkId: 'bank-link-id',
+        mask: '1234',
+        rawApiAccount: mockApiAccount,
+      };
+
+      await service.create(widerDto, mockUserId);
+
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          externalAccountId: null,
+          bankLinkId: null,
+          mask: null,
+          rawApiAccount: null,
+        }),
+      );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        ManualAccountEvents.CREATED,
+        expect.any(ManualAccountCreatedEvent),
+      );
+    });
+
     it('should create accounts with unique IDs', async () => {
       const mockEntity1 = AccountEntity.fromDto(
         mockCreateAccountDto,
@@ -210,43 +238,6 @@ describe('AccountService', () => {
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         ManualAccountEvents.CREATED,
         expect.any(ManualAccountCreatedEvent),
-      );
-    });
-
-    it('should not emit ManualAccountCreatedEvent for non-manual accounts', async () => {
-      const linkedCreateDto = {
-        ...mockCreateAccountDto,
-        bankLinkId: 'bank-link-123',
-      };
-      const mockEntity = AccountEntity.fromDto(linkedCreateDto, mockUserId);
-      mockEntity.id = 'generated-uuid';
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      await service.create(linkedCreateDto, mockUserId);
-
-      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
-    });
-
-    it('should associate BankLink when bankLinkId is provided', async () => {
-      const createDtoWithBankLink = {
-        ...mockCreateAccountDto,
-        bankLinkId: 'bank-link-123',
-        externalAccountId: 'plaid-acc-123',
-      };
-
-      const mockEntity = AccountEntity.fromDto(
-        createDtoWithBankLink,
-        mockUserId,
-      );
-      mockEntity.id = 'generated-uuid';
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      await service.create(createDtoWithBankLink, mockUserId);
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          bankLinkId: 'bank-link-123',
-        }),
       );
     });
   });
@@ -516,9 +507,42 @@ describe('AccountService', () => {
       expect(result).toBeDefined();
       expect(mockRepository.save).toHaveBeenCalled();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'test-id', userId: mockUserId },
+        where: {
+          id: 'test-id',
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
         relations: ['bankLink'],
       });
+    });
+
+    it('should not update metadata for an archived account', async () => {
+      const archivedEntity = AccountEntity.fromDto(
+        mockCreateAccountDto,
+        mockUserId,
+      );
+      archivedEntity.id = 'archived-id';
+      archivedEntity.archivedAt = new Date('2026-08-15T12:00:00Z');
+      mockRepository.findOne.mockImplementation(async ({ where }) =>
+        where.archivedAt ? null : archivedEntity,
+      );
+
+      const result = await service.update(
+        'archived-id',
+        { customName: 'Hidden rename' },
+        mockUserId,
+      );
+
+      expect(result).toBeNull();
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          id: 'archived-id',
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
+        relations: ['bankLink'],
+      });
+      expect(mockRepository.save).not.toHaveBeenCalled();
     });
 
     it('should return null when account does not exist', async () => {
@@ -547,57 +571,20 @@ describe('AccountService', () => {
       expect(mockRepository.save).not.toHaveBeenCalled();
     });
 
-    it('should update externalAccountId', async () => {
+    it('should reject provider name updates for linked accounts', async () => {
       const mockEntity = AccountEntity.fromDto(
-        mockCreateAccountDto,
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-      mockRepository.save.mockResolvedValue(mockEntity);
-
-      await service.update(
-        'test-id',
-        { externalAccountId: 'plaid-acc-123' },
-        mockUserId,
-      );
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          externalAccountId: 'plaid-acc-123',
-        }),
-      );
-    });
-
-    it('should update bankLink association', async () => {
-      const mockEntity = AccountEntity.fromDto(
-        mockCreateAccountDto,
+        { ...mockCreateAccountDto, bankLinkId: 'bank-link-123' },
         mockUserId,
       );
       mockEntity.id = 'test-id';
       mockRepository.findOne.mockResolvedValue(mockEntity);
 
-      const savedEntity = AccountEntity.fromDto(
-        {
-          ...mockCreateAccountDto,
-          bankLinkId: 'bank-link-123',
-        },
-        mockUserId,
+      await expect(
+        service.update('test-id', { name: 'Forged provider name' }, mockUserId),
+      ).rejects.toThrow(
+        'Linked account provider names cannot be updated directly',
       );
-      savedEntity.id = 'test-id';
-      mockRepository.save.mockResolvedValue(savedEntity);
-
-      await service.update(
-        'test-id',
-        { bankLinkId: 'bank-link-123' },
-        mockUserId,
-      );
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          bankLinkId: 'bank-link-123',
-        }),
-      );
+      expect(mockRepository.save).not.toHaveBeenCalled();
     });
 
     it('should set customName when provided in update DTO', async () => {
@@ -695,33 +682,6 @@ describe('AccountService', () => {
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           customName: 'Keep This',
-        }),
-      );
-    });
-
-    it('should remove bankLink association when bankLinkId is null', async () => {
-      const mockEntity = AccountEntity.fromDto(
-        {
-          ...mockCreateAccountDto,
-          bankLinkId: 'bank-link-123',
-        },
-        mockUserId,
-      );
-      mockEntity.id = 'test-id';
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-
-      const savedEntity = AccountEntity.fromDto(
-        mockCreateAccountDto,
-        mockUserId,
-      );
-      savedEntity.id = 'test-id';
-      mockRepository.save.mockResolvedValue(savedEntity);
-
-      await service.update('test-id', { bankLinkId: null }, mockUserId);
-
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          bankLinkId: null,
         }),
       );
     });
@@ -823,6 +783,32 @@ describe('AccountService', () => {
         service.updateManualBalance('non-existent', mockUserId, newBalance),
       ).rejects.toThrow(NotFoundException);
 
+      expect(mockRepository.save).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should reject balance updates for archived accounts without side effects', async () => {
+      const archivedEntity = AccountEntity.fromDto(
+        mockCreateManualAccountDto,
+        mockUserId,
+      );
+      archivedEntity.id = 'archived-id';
+      archivedEntity.archivedAt = new Date('2026-08-15T12:00:00Z');
+      mockRepository.findOne.mockImplementation(async ({ where }) =>
+        where.archivedAt ? null : archivedEntity,
+      );
+
+      await expect(
+        service.updateManualBalance('archived-id', mockUserId, newBalance),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          id: 'archived-id',
+          userId: mockUserId,
+          archivedAt: expect.objectContaining({ _type: 'isNull' }),
+        },
+      });
       expect(mockRepository.save).not.toHaveBeenCalled();
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });

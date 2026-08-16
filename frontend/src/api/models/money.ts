@@ -8,5 +8,6 @@
 
 export interface Money {
   currency: string
+  /** @minimum 0 */
   amount: number
 }

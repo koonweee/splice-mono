@@ -210,6 +210,7 @@ function installMockLocalStorage() {
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/settings')
+  window.HTMLElement.prototype.scrollIntoView = vi.fn()
   installMockLocalStorage()
 
   queryClientState = {
@@ -272,7 +273,9 @@ beforeEach(() => {
   mockFns.enableCurrentDeviceNotificationsMock.mockResolvedValue(undefined)
   mockFns.disableCurrentDeviceNotificationsMock.mockResolvedValue(undefined)
   mockFns.updateNewSyncedTransactionsPreferenceMock.mockResolvedValue(undefined)
-  mockFns.updateBankLinkNeedsAttentionPreferenceMock.mockResolvedValue(undefined)
+  mockFns.updateBankLinkNeedsAttentionPreferenceMock.mockResolvedValue(
+    undefined,
+  )
 
   Object.defineProperty(window, 'matchMedia', {
     value: vi.fn().mockImplementation(() => ({
@@ -431,6 +434,243 @@ describe('SettingsPage', () => {
       },
     })
   })
+
+  it('preserves a dirty General draft across unrelated preference refetches', async () => {
+    const { rerender } = renderSettingsPage()
+
+    fireEvent.click(screen.getByPlaceholderText('Select currency'))
+    fireEvent.click(screen.getByRole('option', { name: /EUR - Euro/i }))
+
+    fireEvent.click(screen.getByRole('tab', { name: /analysis/i }))
+    fireEvent.click(
+      screen.getByRole('switch', {
+        name: /use sankey diagram on analysis/i,
+      }),
+    )
+    await waitFor(() => {
+      expect(updateAnalysisSankeyState.mutateAsync).toHaveBeenCalled()
+    })
+    meState.data = {
+      settings: {
+        ...meState.data!.settings,
+        analysisSankeyEnabled: true,
+      },
+    }
+    rerender(
+      <MantineProvider>
+        <SettingsPage />
+      </MantineProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: /notifications/i }))
+    await waitFor(() => {
+      expect(
+        screen.getByRole('switch', {
+          name: /enable notifications on this device/i,
+        }),
+      ).toBeTruthy()
+    })
+    fireEvent.click(
+      screen.getByRole('switch', {
+        name: /enable notifications on this device/i,
+      }),
+    )
+    await waitFor(() => {
+      expect(mockFns.enableCurrentDeviceNotificationsMock).toHaveBeenCalled()
+    })
+    meState.data = {
+      settings: { ...meState.data.settings },
+    }
+    rerender(
+      <MantineProvider>
+        <SettingsPage />
+      </MantineProvider>,
+    )
+
+    fireEvent.click(
+      screen.getByRole('switch', { name: /new uncategorized transactions/i }),
+    )
+    await waitFor(() => {
+      expect(
+        mockFns.updateNewSyncedTransactionsPreferenceMock,
+      ).toHaveBeenCalled()
+    })
+    meState.data = {
+      settings: {
+        ...meState.data.settings,
+        notifications: {
+          ...meState.data.settings.notifications,
+          transactions: { newSyncedTransactions: false },
+        },
+      },
+    }
+    rerender(
+      <MantineProvider>
+        <SettingsPage />
+      </MantineProvider>,
+    )
+
+    fireEvent.click(
+      screen.getByRole('switch', {
+        name: /bank connections need attention/i,
+      }),
+    )
+    await waitFor(() => {
+      expect(
+        mockFns.updateBankLinkNeedsAttentionPreferenceMock,
+      ).toHaveBeenCalled()
+    })
+    meState.data = {
+      settings: {
+        ...meState.data.settings,
+        notifications: {
+          ...meState.data.settings.notifications,
+          bankLinks: { needsAttention: false },
+        },
+      },
+    }
+    rerender(
+      <MantineProvider>
+        <SettingsPage />
+      </MantineProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: /general/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect(updateSettingsState.mutate).toHaveBeenCalledWith(
+      {
+        data: {
+          theme: 'splice-dark',
+          currency: 'EUR',
+          timezone: 'UTC',
+          hideZeroBalanceAccounts: false,
+        },
+      },
+      expect.any(Object),
+    )
+  }, 10_000)
+
+  it('establishes a clean General baseline after a successful save', () => {
+    updateSettingsState.mutate.mockImplementation((_variables, options) => {
+      options?.onSuccess?.({}, undefined, undefined)
+    })
+    renderSettingsPage()
+
+    fireEvent.click(
+      screen.getByRole('switch', { name: /hide 0 balance accounts/i }),
+    )
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    fireEvent.click(saveButton)
+
+    expect((saveButton as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('adopts newer server General settings while the form is clean', async () => {
+    const { rerender } = renderSettingsPage()
+    expect(
+      screen.getByRole('radio', { name: /splice dark/i }).getAttribute(
+        'aria-checked',
+      ),
+    ).toBe('true')
+
+    meState.data = {
+      settings: {
+        ...meState.data!.settings,
+        theme: 'dracula',
+        currency: 'EUR',
+        hideZeroBalanceAccounts: true,
+      },
+    }
+    rerender(
+      <MantineProvider>
+        <SettingsPage />
+      </MantineProvider>,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getByRole('radio', { name: /dracula/i })
+          .getAttribute('aria-checked'),
+      ).toBe('true')
+    })
+    const hideZeroSwitch = screen.getByRole('switch', {
+      name: /hide 0 balance accounts/i,
+    })
+    const currencyInput = screen.getByPlaceholderText('Select currency')
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    if (
+      !(hideZeroSwitch instanceof HTMLInputElement) ||
+      !(currencyInput instanceof HTMLInputElement) ||
+      !(saveButton instanceof HTMLButtonElement)
+    ) {
+      throw new Error('Expected native General settings controls')
+    }
+    expect(hideZeroSwitch.checked).toBe(true)
+    expect(currencyInput.value).toMatch(/EUR/)
+    expect(saveButton.disabled).toBe(true)
+  })
+
+  it('adopts a cached server update after a dirty draft is reverted', async () => {
+    const { rerender } = renderSettingsPage()
+
+    fireEvent.click(screen.getByPlaceholderText('Select currency'))
+    fireEvent.click(screen.getByRole('option', { name: /EUR - Euro/i }))
+
+    meState.data = {
+      settings: {
+        ...meState.data!.settings,
+        theme: 'dracula',
+        currency: 'GBP',
+        hideZeroBalanceAccounts: true,
+      },
+    }
+    rerender(
+      <MantineProvider>
+        <SettingsPage />
+      </MantineProvider>,
+    )
+
+    expect(
+      screen
+        .getByRole('radio', { name: /splice dark/i })
+        .getAttribute('aria-checked'),
+    ).toBe('true')
+    const dirtyCurrencyInput = screen.getByPlaceholderText('Select currency')
+    if (!(dirtyCurrencyInput instanceof HTMLInputElement)) {
+      throw new Error('Expected a native currency input')
+    }
+    expect(dirtyCurrencyInput.value).toMatch(/EUR/)
+
+    fireEvent.click(screen.getByPlaceholderText('Select currency'))
+    fireEvent.click(screen.getByRole('option', { name: /USD - US Dollar/i }))
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getByRole('radio', { name: /dracula/i })
+          .getAttribute('aria-checked'),
+      ).toBe('true')
+    })
+    const currencyInput = screen.getByPlaceholderText('Select currency')
+    const hideZeroSwitch = screen.getByRole('switch', {
+      name: /hide 0 balance accounts/i,
+    })
+    const saveButton = screen.getByRole('button', {
+      name: /save changes/i,
+    })
+    if (
+      !(currencyInput instanceof HTMLInputElement) ||
+      !(hideZeroSwitch instanceof HTMLInputElement) ||
+      !(saveButton instanceof HTMLButtonElement)
+    ) {
+      throw new Error('Expected native General settings controls')
+    }
+    expect(currencyInput.value).toMatch(/GBP/)
+    expect(hideZeroSwitch.checked).toBe(true)
+    expect(saveButton.disabled).toBe(true)
+  }, 10_000)
 
   it('saves the selected theme setting', () => {
     renderSettingsPage()

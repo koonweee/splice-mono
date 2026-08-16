@@ -45,7 +45,7 @@ export const MoneySchema = registerSchema(
   z.object({
     currency: z.string(),
     /** Amount in smallest currency unit (e.g., cents for USD) */
-    amount: z.number().int(),
+    amount: z.number().int().nonnegative(),
   }),
 );
 

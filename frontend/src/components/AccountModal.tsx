@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Group,
@@ -64,11 +65,13 @@ export function AccountModal({
     { open: openUpdateModal, close: closeUpdateModal },
   ] = useDisclosure(false)
 
-  const { data: balanceHistory, isLoading } = useAccountBalanceHistory(
-    account?.id,
-    opened && !!account?.id,
-    period,
-  )
+  const {
+    data: balanceHistory,
+    isLoading,
+    isFetching: balanceHistoryFetching,
+    isError: balanceHistoryError,
+    refetch: refetchBalanceHistory,
+  } = useAccountBalanceHistory(account?.id, opened && !!account?.id, period)
   const isInvestmentAccount =
     account?.type === AccountType.investment ||
     account?.type === AccountType.brokerage
@@ -80,8 +83,13 @@ export function AccountModal({
   } = useInvestmentHoldings(account?.id, opened && isInvestmentAccount)
   const {
     activity: investmentActivity,
+    total: investmentActivityTotal,
+    hasMore: hasMoreInvestmentActivity,
+    loadMore: loadMoreInvestmentActivity,
+    isLoadingMore: investmentActivityLoadingMore,
     isLoading: activityLoading,
-    isError: activityError,
+    isInitialError: activityInitialError,
+    isLoadMoreError: investmentActivityLoadMoreError,
   } = useInvestmentActivity(account?.id, opened && isInvestmentAccount)
 
   // Get account from balance history if available
@@ -164,11 +172,36 @@ export function AccountModal({
         transitionProps={{ transition: 'fade', duration: 200 }}
       >
         {isLoading ? (
-          <Group justify="center" py="xl">
+          <Group
+            aria-label="Loading account history"
+            justify="center"
+            py="xl"
+            role="status"
+          >
             <Loader />
           </Group>
+        ) : balanceHistoryError ? (
+          <Alert color="red" title="Unable to load account history" m="lg">
+            <Text size="sm" mb="sm">
+              Balance history for this account could not be loaded.
+            </Text>
+            <Button
+              color="red"
+              loading={balanceHistoryFetching}
+              onClick={() => void refetchBalanceHistory()}
+              size="xs"
+              variant="light"
+            >
+              Retry
+            </Button>
+          </Alert>
         ) : (
           <Stack gap="md" p="lg">
+            {!fullAccount && (
+              <Text c="dimmed" size="sm">
+                No balance history is available for this account.
+              </Text>
+            )}
             {fullAccount && (
               <>
                 <Group justify="space-between">
@@ -280,14 +313,25 @@ export function AccountModal({
                     </Box>
 
                     <Box>
-                      <Text fw={500} mb="sm">
-                        Activity
-                      </Text>
+                      <Group justify="space-between" mb="sm">
+                        <Text fw={500}>Activity</Text>
+                        {!activityLoading && !activityInitialError && (
+                          <Text c="dimmed" size="xs">
+                            {investmentActivity.length} of{' '}
+                            {investmentActivityTotal}
+                          </Text>
+                        )}
+                      </Group>
                       {activityLoading ? (
-                        <Group justify="center" py="md">
+                        <Group
+                          aria-label="Loading investment activity"
+                          justify="center"
+                          py="md"
+                          role="status"
+                        >
                           <Loader size="sm" />
                         </Group>
-                      ) : activityError ? (
+                      ) : activityInitialError ? (
                         <Text c="dimmed" size="sm">
                           Provider activity is unavailable or incomplete.
                         </Text>
@@ -295,8 +339,31 @@ export function AccountModal({
                         <InvestmentActivityTable
                           activity={investmentActivity}
                           balancesHidden={balancesHidden}
+                          total={investmentActivityTotal}
                         />
                       )}
+                      {investmentActivityLoadMoreError && (
+                        <Text c="red" mt="sm" role="alert" size="sm">
+                          Unable to load more provider activity.
+                        </Text>
+                      )}
+                      {!activityLoading &&
+                        !activityInitialError &&
+                        (hasMoreInvestmentActivity ||
+                          investmentActivityLoadMoreError) && (
+                          <Group justify="center" mt="sm">
+                            <Button
+                              loading={investmentActivityLoadingMore}
+                              onClick={() => void loadMoreInvestmentActivity()}
+                              size="xs"
+                              variant="light"
+                            >
+                              {investmentActivityLoadMoreError
+                                ? 'Retry loading activity'
+                                : 'Load more activity'}
+                            </Button>
+                          </Group>
+                        )}
                     </Box>
                   </Stack>
                 )}

@@ -74,6 +74,11 @@ export class BankLinkController {
     status: 404,
     description: 'Provider or LinkedAccount not found',
   })
+  @ApiResponse({
+    status: 503,
+    description:
+      'Matching webhook is still being processed; provider should retry',
+  })
   async handleWebhook(
     @Param('provider') provider: string,
     @Req() req: Request,

@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -26,6 +27,7 @@ const mockFns = vi.hoisted(() => ({
   useTransactionAnalysisControllerGetAnalysisMock: vi.fn(),
   useUserControllerMeMock: vi.fn(),
   categoryModalMock: vi.fn(),
+  dateRangeControlMock: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', async () => {
@@ -107,7 +109,15 @@ vi.mock('../../components/analysis/AnalysisSankeyChart', () => ({
 }))
 
 vi.mock('../../components/DateRangeControl', () => ({
-  DateRangeControl: () => <div data-testid="date-range-control" />,
+  DateRangeControl: (props: { value: [Date | null, Date | null] }) => {
+    mockFns.dateRangeControlMock(props)
+    const [start, end] = props.value
+    return (
+      <div data-testid="date-range-control">
+        {start?.toISOString().slice(0, 10)}:{end?.toISOString().slice(0, 10)}
+      </div>
+    )
+  },
 }))
 
 vi.mock('../../components/PageHeader', () => ({
@@ -121,6 +131,14 @@ vi.mock('../../components/PageHeader', () => ({
 
 const analysisPage = (Route as unknown as { component: ComponentType })
   .component
+const validateAnalysisSearch = (
+  Route as unknown as {
+    validateSearch: (search: Record<string, unknown>) => {
+      startDate?: string
+      endDate?: string
+    }
+  }
+).validateSearch
 
 function mockMatchMedia() {
   Object.defineProperty(window, 'matchMedia', {
@@ -222,6 +240,54 @@ afterEach(() => {
 })
 
 describe('Analysis route', () => {
+  it('rejects impossible and reversed direct-navigation date ranges', () => {
+    expect(
+      validateAnalysisSearch({
+        startDate: '2026-02-30',
+        endDate: '2026-03-31',
+      }),
+    ).toEqual({})
+    expect(
+      validateAnalysisSearch({
+        startDate: '2026-06-30',
+        endDate: '2026-06-01',
+      }),
+    ).toEqual({})
+    expect(
+      validateAnalysisSearch({
+        startDate: '2024-02-29',
+        endDate: '2024-03-01',
+      }),
+    ).toEqual({ startDate: '2024-02-29', endDate: '2024-03-01' })
+  })
+
+  it('synchronizes the picker and query when route search changes', async () => {
+    const { rerender } = renderAnalysisPage()
+
+    expect(screen.getByText('2026-02-01:2026-02-28')).toBeTruthy()
+
+    mockFns.useSearchMock.mockReturnValue({
+      startDate: '2026-06-01',
+      endDate: '2026-06-30',
+    })
+    const AnalysisPage = analysisPage
+    rerender(
+      <MantineProvider>
+        <AnalysisPage />
+      </MantineProvider>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('2026-06-01:2026-06-30')).toBeTruthy()
+    })
+    expect(
+      mockFns.useTransactionAnalysisControllerGetAnalysisMock,
+    ).toHaveBeenLastCalledWith({
+      startDate: '2026-06-01',
+      endDate: '2026-06-30',
+    })
+  })
+
   it('uses API category colors for chart segments and legend markers', () => {
     renderAnalysisPage()
 

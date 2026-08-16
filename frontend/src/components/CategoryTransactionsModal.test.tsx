@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TransactionSource } from '../api/models'
 import { CategoryTransactionsModal } from './CategoryTransactionsModal'
@@ -11,6 +11,9 @@ import type { Transaction } from '../api/models'
 type AnalysisHookState = {
   data?: Array<Transaction>
   isPending: boolean
+  isError: boolean
+  isFetching: boolean
+  refetch: ReturnType<typeof vi.fn>
 }
 
 const mockFns = vi.hoisted(() => ({
@@ -115,7 +118,7 @@ function makeTransaction(
 function renderModal(
   props: Partial<React.ComponentProps<typeof CategoryTransactionsModal>> = {},
 ) {
-  return render(
+  const renderCategoryTransactionsModal = () => (
     <MantineProvider>
       <CategoryTransactionsModal
         opened
@@ -126,14 +129,23 @@ function renderModal(
         flowDirection="outflow"
         {...props}
       />
-    </MantineProvider>,
+    </MantineProvider>
   )
+  const result = render(renderCategoryTransactionsModal())
+
+  return {
+    ...result,
+    rerenderModal: () => result.rerender(renderCategoryTransactionsModal()),
+  }
 }
 
 beforeEach(() => {
   analysisHookState = {
     data: [],
     isPending: false,
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
   }
   mockFns.isMobile = false
 
@@ -202,6 +214,42 @@ describe('CategoryTransactionsModal', () => {
     ).toHaveBeenCalled()
     expect(screen.getByTestId('category-transactions-loader')).toBeTruthy()
     expect(screen.queryByText('No transactions found.')).toBeNull()
+  })
+
+  it('recovers from a drilldown error with populated rows after Retry', () => {
+    analysisHookState.isError = true
+
+    const result = renderModal()
+
+    expect(screen.getByText('Unable to load transactions')).toBeTruthy()
+    expect(screen.queryByText('No transactions found.')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(analysisHookState.refetch).toHaveBeenCalledTimes(1)
+
+    analysisHookState.isFetching = true
+    result.rerenderModal()
+
+    expect(
+      screen.getByRole('button', { name: 'Retry' }).getAttribute('data-loading'),
+    ).toBe('true')
+
+    const transaction = makeTransaction({ id: 'recovered-txn' })
+    analysisHookState.data = [transaction]
+    analysisHookState.isError = false
+    analysisHookState.isFetching = false
+    result.rerenderModal()
+
+    expect(screen.queryByText('Unable to load transactions')).toBeNull()
+    expect(screen.queryByText('No transactions found.')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
+    expect(screen.getByTestId('transactions-table')).toBeTruthy()
+    expect(mockFns.transactionsTableMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: [transaction],
+        totalRows: 1,
+      }),
+    )
   })
 
   it('renders TransactionsTable from the direct transaction array response', () => {

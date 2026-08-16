@@ -175,17 +175,10 @@ describe('BalanceHistorySurfaceService', () => {
     ]);
     expect(result.assets).toHaveLength(2);
     expect(result.assets.map((account) => account.id)).toEqual([
-      'asset-2',
       'asset-1',
+      'asset-2',
     ]);
     expect(result.assets[0]).toMatchObject({
-      id: 'asset-2',
-      displayName: 'Retirement',
-      type: 'investment',
-      groupingLabel: 'Investment',
-      changePercent: 100,
-    });
-    expect(result.assets[1]).toMatchObject({
       id: 'asset-1',
       displayName: 'House Checking',
       type: 'depository',
@@ -193,7 +186,14 @@ describe('BalanceHistorySurfaceService', () => {
       changePercent: 100,
       syncedAt: '2026-03-02T12:00:00.000Z',
     });
-    expect(result.assets[0].convertedEffectiveBalance).toEqual({
+    expect(result.assets[1]).toMatchObject({
+      id: 'asset-2',
+      displayName: 'Retirement',
+      type: 'investment',
+      groupingLabel: 'Investment',
+      changePercent: 100,
+    });
+    expect(result.assets[1].convertedEffectiveBalance).toEqual({
       money: { amount: 10000, currency: 'EUR' },
       sign: MoneySign.POSITIVE,
     });
@@ -218,5 +218,32 @@ describe('BalanceHistorySurfaceService', () => {
       groupingLabel: 'Credit',
       changePercent: 100,
     });
+  });
+
+  it('rejects a summary whose effective balances still use mixed currencies', async () => {
+    mockBalanceQueryService.getAllBalancesForDateRange.mockResolvedValue([
+      {
+        date: '2026-03-02',
+        balances: {
+          'asset-1': createAccountResult(
+            'asset-1',
+            'depository',
+            createBalance(10000, 'USD'),
+          ),
+          'asset-2': createAccountResult(
+            'asset-2',
+            'investment',
+            createBalance(10000, 'EUR'),
+          ),
+        },
+      },
+    ]);
+
+    await expect(
+      service.getBalanceHistorySummary(mockUserId, {
+        startDate: '2026-03-02',
+        endDate: '2026-03-02',
+      }),
+    ).rejects.toThrow('Balance conversion is incomplete');
   });
 });

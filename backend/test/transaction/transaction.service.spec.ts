@@ -548,6 +548,39 @@ describe('TransactionService', () => {
     expect(repository.save).not.toHaveBeenCalled();
   });
 
+  it('updates only the reporting date of an owned provider transaction', async () => {
+    const transaction = buildTransaction({
+      providerDate: '2026-08-10',
+      authorizedDate: '2026-08-09',
+    });
+    repository.findOne.mockResolvedValueOnce(transaction);
+    repository.save.mockImplementationOnce(async (entity) => entity);
+
+    const result = await service.updateReportingDate(
+      transaction.id,
+      { reportingDateOverride: '2026-08-15' },
+      userId,
+    );
+
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: { id: transaction.id, source: 'provider', activity: { userId } },
+      relations: ['activity', 'activity.account', 'category'],
+    });
+    expect(result?.reportingDateOverride).toBe('2026-08-15');
+    expect(transaction.activity.activityDate).toBe('2026-08-15');
+    expect(repository.save).toHaveBeenCalledTimes(1);
+
+    repository.findOne.mockResolvedValueOnce(null);
+    await expect(
+      service.updateReportingDate(
+        transaction.id,
+        { reportingDateOverride: null },
+        'different-user-id',
+      ),
+    ).resolves.toBeNull();
+    expect(repository.save).toHaveBeenCalledTimes(1);
+  });
+
   it('does not remove manual transactions through the generic provider remove path', async () => {
     repository.findOne.mockResolvedValueOnce(null);
 
@@ -639,6 +672,48 @@ describe('TransactionService', () => {
     expect(providerTransaction.categoryId).toBeNull();
     expect(manualTransaction.categoryId).toBe(category.id);
     expect(txnRepo.save).toHaveBeenCalledWith([providerTransaction]);
+  });
+
+  it('does not undo onto a category archived after the bulk update', async () => {
+    const transaction = buildTransaction({
+      categoryId: category.id,
+      category,
+      categoryUpdatedAt: new Date('2026-03-01T00:00:00.000Z'),
+      source: 'provider',
+    });
+    const txnRepo = {
+      find: jest.fn().mockResolvedValue([transaction]),
+      save: jest.fn().mockResolvedValue([transaction]),
+    };
+    repository.manager.transaction.mockImplementation(
+      async (
+        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
+      ) => callback({ getRepository: () => txnRepo }),
+    );
+
+    const update = await service.bulkUpdateCategories(userId, {
+      transactionIds: [transaction.id],
+      categoryId: null,
+    });
+    expect(update?.undo).toEqual(expect.any(String));
+    expect(transaction.categoryId).toBeNull();
+
+    categoryRepository.find.mockResolvedValueOnce([]);
+    const saveCountBeforeUndo = txnRepo.save.mock.calls.length;
+
+    await expect(
+      service.undoBulkUpdateCategories(userId, { undo: update!.undo }),
+    ).resolves.toBeNull();
+
+    expect(categoryRepository.find).toHaveBeenCalledWith({
+      where: {
+        id: expect.any(Object),
+        userId,
+        archivedAt: expect.objectContaining({ _type: 'isNull' }),
+      },
+    });
+    expect(txnRepo.save).toHaveBeenCalledTimes(saveCountBeforeUndo);
+    expect(transaction.categoryId).toBeNull();
   });
 
   it('sync inserts provider hints without resolving provider categories into app categories', async () => {

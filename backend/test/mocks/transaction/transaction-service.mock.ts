@@ -17,6 +17,7 @@ export const mockTransactionService = {
     total: 2,
   }),
   update: jest.fn().mockResolvedValue(mockTransaction),
+  updateReportingDate: jest.fn().mockResolvedValue(mockTransaction),
   updateManual: jest.fn().mockResolvedValue({
     ...mockTransaction,
     source: 'manual',

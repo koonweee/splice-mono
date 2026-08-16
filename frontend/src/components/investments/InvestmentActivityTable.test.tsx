@@ -124,11 +124,9 @@ describe('InvestmentActivityTable', () => {
     expect(screen.getByText('****')).toBeTruthy()
   })
 
-  it('renders incomplete-provider empty state', () => {
+  it('renders a valid empty state', () => {
     renderTable({ activity: [] })
 
-    expect(
-      screen.getByText('Provider activity is unavailable or incomplete.'),
-    ).toBeTruthy()
+    expect(screen.getByText('No investment activity found.')).toBeTruthy()
   })
 })

@@ -26,9 +26,9 @@ import {
   useAccountControllerCreate,
   useBankLinkControllerInitiateLinking,
 } from '../../api/clients/spliceAPI'
-import { CreateAccountDtoType } from '../../api/models/createAccountDtoType'
-import { CreateAccountDtoSubType } from '../../api/models/createAccountDtoSubType'
-import { MoneyWithSignSign } from '../../api/models'
+import { AccountSubType, AccountType } from '../../api/models'
+import { createMoneyWithSign } from '../../lib/balance-utils'
+import { getDecimalPlaces } from '../../lib/format'
 import type { InitiateLinkRequestNetwork } from '../../api/models'
 import type { ComponentType } from 'react'
 
@@ -42,56 +42,56 @@ const MANUAL_ACCOUNT_TYPES = [
   {
     label: 'Cash',
     value: 'cash',
-    type: CreateAccountDtoType.depository,
+    type: AccountType.depository,
     subType: null,
   },
   {
     label: 'Savings',
     value: 'savings',
-    type: CreateAccountDtoType.depository,
-    subType: CreateAccountDtoSubType.savings,
+    type: AccountType.depository,
+    subType: AccountSubType.savings,
   },
   {
     label: 'Checking',
     value: 'checking',
-    type: CreateAccountDtoType.depository,
-    subType: CreateAccountDtoSubType.checking,
+    type: AccountType.depository,
+    subType: AccountSubType.checking,
   },
   {
     label: 'Credit Card',
     value: 'credit_card',
-    type: CreateAccountDtoType.credit,
-    subType: CreateAccountDtoSubType.credit_card,
+    type: AccountType.credit,
+    subType: AccountSubType.credit_card,
   },
   {
     label: 'Loan',
     value: 'loan',
-    type: CreateAccountDtoType.loan,
-    subType: CreateAccountDtoSubType.loan,
+    type: AccountType.loan,
+    subType: AccountSubType.loan,
   },
   {
     label: 'Investment',
     value: 'investment',
-    type: CreateAccountDtoType.investment,
-    subType: CreateAccountDtoSubType.brokerage,
+    type: AccountType.investment,
+    subType: AccountSubType.brokerage,
   },
   {
     label: 'Investment (401k)',
     value: '401k',
-    type: CreateAccountDtoType.investment,
-    subType: CreateAccountDtoSubType['401k'],
+    type: AccountType.investment,
+    subType: AccountSubType['401k'],
   },
   {
     label: 'Investment (HSA)',
     value: 'hsa',
-    type: CreateAccountDtoType.investment,
-    subType: CreateAccountDtoSubType.hsa,
+    type: AccountType.investment,
+    subType: AccountSubType.hsa,
   },
   {
     label: 'Other',
     value: 'other',
-    type: CreateAccountDtoType.other,
-    subType: CreateAccountDtoSubType.other,
+    type: AccountType.other,
+    subType: AccountSubType.other,
   },
 ] as const
 
@@ -211,25 +211,18 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
   }
 
   const handleManualSubmit = () => {
-    const amountInCents = Math.round(Number(manualBalance) * 100)
     const typeDef =
       MANUAL_ACCOUNT_TYPES.find((t) => t.value === manualTypeSelection) ??
       MANUAL_ACCOUNT_TYPES[0]
 
     // For investment/brokerage accounts, effective balance = available + current,
     // so set available to zero to avoid doubling.
-    const isInvestmentType = typeDef.type === CreateAccountDtoType.investment
-    const balancePayload = {
-      money: { amount: amountInCents, currency: manualCurrency },
-      sign:
-        amountInCents >= 0
-          ? MoneyWithSignSign.positive
-          : MoneyWithSignSign.negative,
-    }
-    const zeroBalance = {
-      money: { amount: 0, currency: manualCurrency },
-      sign: MoneyWithSignSign.positive,
-    }
+    const isInvestmentType = typeDef.type === AccountType.investment
+    const balancePayload = createMoneyWithSign(
+      Number(manualBalance),
+      manualCurrency,
+    )
+    const zeroBalance = createMoneyWithSign(0, manualCurrency)
 
     createAccount.mutate(
       {
@@ -297,7 +290,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
 
       <NumberInput
         label="Current Balance"
-        decimalScale={2}
+        decimalScale={getDecimalPlaces(manualCurrency)}
         fixedDecimalScale
         prefix={manualCurrency === 'USD' ? '$' : ''}
         size="md"

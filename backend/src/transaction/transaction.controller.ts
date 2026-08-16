@@ -23,24 +23,22 @@ import type {
   BulkTransactionCategoryUpdateResponse,
   BulkTransactionCategoryUpdateUndoDto,
   CreateManualTransactionDto,
-  CreateTransactionDto,
   PaginatedTransactionResponse,
   Transaction,
   UpdateManualTransactionDto,
   UpdateTransactionCategoryDto,
-  UpdateTransactionDto,
+  UpdateTransactionReportingDateDto,
 } from '../types/Transaction';
 import {
   BulkTransactionCategoryUpdateDtoSchema,
   BulkTransactionCategoryUpdateResponseSchema,
   BulkTransactionCategoryUpdateUndoDtoSchema,
   CreateManualTransactionDtoSchema,
-  CreateTransactionDtoSchema,
   PaginatedTransactionResponseSchema,
   TransactionSchema,
   UpdateManualTransactionDtoSchema,
   UpdateTransactionCategoryDtoSchema,
-  UpdateTransactionDtoSchema,
+  UpdateTransactionReportingDateDtoSchema,
 } from '../types/Transaction';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { TransactionService } from './transaction.service';
@@ -216,22 +214,6 @@ export class TransactionController {
     return { data, total, pageIndex, pageSize };
   }
 
-  @Post()
-  @ApiOperation({ description: 'Create a new transaction' })
-  @ZodApiBody({ schema: CreateTransactionDtoSchema })
-  @ZodApiResponse({
-    status: 201,
-    description: 'Transaction created successfully',
-    schema: TransactionSchema,
-  })
-  async create(
-    @CurrentUser() user: JwtUser,
-    @Body(new ZodValidationPipe(CreateTransactionDtoSchema))
-    createTransactionDto: CreateTransactionDto,
-  ): Promise<Transaction> {
-    return this.transactionService.create(createTransactionDto, user.userId);
-  }
-
   @Post('manual')
   @ApiOperation({ description: 'Create a manual transaction' })
   @ZodApiBody({ schema: CreateManualTransactionDtoSchema })
@@ -396,8 +378,8 @@ export class TransactionController {
   }
 
   @Patch(':id')
-  @ApiOperation({ description: 'Update a transaction' })
-  @ZodApiBody({ schema: UpdateTransactionDtoSchema })
+  @ApiOperation({ description: 'Update a transaction reporting date override' })
+  @ZodApiBody({ schema: UpdateTransactionReportingDateDtoSchema })
   @ZodApiResponse({
     status: 200,
     description: 'Transaction updated successfully',
@@ -407,10 +389,10 @@ export class TransactionController {
   async update(
     @Param('id') id: string,
     @CurrentUser() user: JwtUser,
-    @Body(new ZodValidationPipe(UpdateTransactionDtoSchema))
-    updateTransactionDto: UpdateTransactionDto,
+    @Body(new ZodValidationPipe(UpdateTransactionReportingDateDtoSchema))
+    updateTransactionDto: UpdateTransactionReportingDateDto,
   ): Promise<Transaction> {
-    const transaction = await this.transactionService.update(
+    const transaction = await this.transactionService.updateReportingDate(
       id,
       updateTransactionDto,
       user.userId,
@@ -435,20 +417,6 @@ export class TransactionController {
     const deleted = await this.transactionService.removeManual(id, user.userId);
     if (!deleted) {
       throw new NotFoundException(`Manual transaction with id ${id} not found`);
-    }
-  }
-
-  @Delete(':id')
-  @ApiOperation({ description: 'Delete a transaction' })
-  @ApiResponse({ status: 204, description: 'Transaction deleted successfully' })
-  @ApiResponse({ status: 404, description: 'Transaction not found' })
-  async remove(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtUser,
-  ): Promise<void> {
-    const deleted = await this.transactionService.remove(id, user.userId);
-    if (!deleted) {
-      throw new NotFoundException(`Transaction with id ${id} not found`);
     }
   }
 }

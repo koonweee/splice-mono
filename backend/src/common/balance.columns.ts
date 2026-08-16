@@ -1,5 +1,6 @@
 import { Column } from 'typeorm';
 import {
+  MoneyWithSign,
   MoneySign,
   type SerializedMoneyWithSign,
 } from '../types/MoneyWithSign';
@@ -40,10 +41,11 @@ export class BalanceColumns {
    * Create BalanceColumns from a SerializedMoneyWithSign (domain type)
    */
   static fromMoneyWithSign(data: SerializedMoneyWithSign): BalanceColumns {
+    const canonical = MoneyWithSign.fromSerialized(data).toSerialized();
     const balance = new BalanceColumns();
-    balance.amount = data.money.amount;
-    balance.currency = data.money.currency;
-    balance.sign = data.sign;
+    balance.amount = canonical.money.amount;
+    balance.currency = canonical.money.currency;
+    balance.sign = canonical.sign;
     return balance;
   }
 

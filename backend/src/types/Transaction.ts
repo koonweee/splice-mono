@@ -120,47 +120,42 @@ export const TransactionSchema = registerSchema(
 
 export type Transaction = z.infer<typeof TransactionSchema>;
 
-/**
- * DTO for creating a new Transaction
- */
-export const CreateTransactionDtoSchema = registerSchema(
-  'CreateTransactionDto',
-  z.object({
-    amount: MoneyWithSignSchema,
-    accountId: z.string().uuid(),
-    merchantName: z.string().nullable().optional(),
-    providerTransactionName: z.string().nullable().optional(),
-    originalDescription: z.string().nullable().optional(),
-    pending: z.boolean(),
-    pendingTransactionId: z.string().nullable().optional(),
-    accountOwner: z.string().nullable().optional(),
-    externalTransactionId: z.string().nullable().optional(),
-    logoUrl: z.string().nullable().optional(),
-    website: z.string().nullable().optional(),
-    merchantEntityId: z.string().nullable().optional(),
-    paymentChannel: z.string().nullable().optional(),
-    transactionCode: z.string().nullable().optional(),
-    personalFinanceCategoryIconUrl: z.string().nullable().optional(),
-    personalFinanceCategoryConfidenceLevel: z.string().nullable().optional(),
-    counterparties: z.array(ProviderJsonObjectSchema).nullable().optional(),
-    location: ProviderJsonObjectSchema.nullable().optional(),
-    paymentMeta: ProviderJsonObjectSchema.nullable().optional(),
-    providerPayload: ProviderJsonObjectSchema.nullable().optional(),
-    providerDate: z.string(),
-    providerDatetime: z.string().datetime().nullable().optional(),
-    authorizedDate: z.string().nullable().optional(),
-    authorizedDatetime: z.string().datetime().nullable().optional(),
-    reportingDateOverride: z.string().nullable().optional(),
-    categoryId: z.string().uuid().nullable().optional(),
-    /** Plaid personal_finance_category strings stored as provider guidance */
-    personalFinanceCategory: z
-      .object({
-        primary: z.string().nullable(),
-        detailed: z.string().nullable(),
-      })
-      .optional(),
-  }),
-);
+/** Internal provider-ingestion shape. Never expose this schema on an HTTP route. */
+export const CreateTransactionDtoSchema = z.object({
+  amount: MoneyWithSignSchema,
+  accountId: z.string().uuid(),
+  merchantName: z.string().nullable().optional(),
+  providerTransactionName: z.string().nullable().optional(),
+  originalDescription: z.string().nullable().optional(),
+  pending: z.boolean(),
+  pendingTransactionId: z.string().nullable().optional(),
+  accountOwner: z.string().nullable().optional(),
+  externalTransactionId: z.string().nullable().optional(),
+  logoUrl: z.string().nullable().optional(),
+  website: z.string().nullable().optional(),
+  merchantEntityId: z.string().nullable().optional(),
+  paymentChannel: z.string().nullable().optional(),
+  transactionCode: z.string().nullable().optional(),
+  personalFinanceCategoryIconUrl: z.string().nullable().optional(),
+  personalFinanceCategoryConfidenceLevel: z.string().nullable().optional(),
+  counterparties: z.array(ProviderJsonObjectSchema).nullable().optional(),
+  location: ProviderJsonObjectSchema.nullable().optional(),
+  paymentMeta: ProviderJsonObjectSchema.nullable().optional(),
+  providerPayload: ProviderJsonObjectSchema.nullable().optional(),
+  providerDate: z.string(),
+  providerDatetime: z.string().datetime().nullable().optional(),
+  authorizedDate: z.string().nullable().optional(),
+  authorizedDatetime: z.string().datetime().nullable().optional(),
+  reportingDateOverride: z.string().nullable().optional(),
+  categoryId: z.string().uuid().nullable().optional(),
+  /** Plaid personal_finance_category strings stored as provider guidance */
+  personalFinanceCategory: z
+    .object({
+      primary: z.string().nullable(),
+      detailed: z.string().nullable(),
+    })
+    .optional(),
+});
 
 export type CreateTransactionDto = z.infer<typeof CreateTransactionDtoSchema>;
 
@@ -182,7 +177,7 @@ const ManualTransactionDtoShape = {
 
 export const CreateManualTransactionDtoSchema = registerSchema(
   'CreateManualTransactionDto',
-  z.object(ManualTransactionDtoShape),
+  z.object(ManualTransactionDtoShape).strict(),
 );
 
 export type CreateManualTransactionDto = z.infer<
@@ -191,7 +186,7 @@ export type CreateManualTransactionDto = z.infer<
 
 export const UpdateManualTransactionDtoSchema = registerSchema(
   'UpdateManualTransactionDto',
-  z.object(ManualTransactionDtoShape),
+  z.object(ManualTransactionDtoShape).strict(),
 );
 
 export type UpdateManualTransactionDto = z.infer<
@@ -201,19 +196,35 @@ export type UpdateManualTransactionDto = z.infer<
 /**
  * DTO for updating an existing Transaction
  */
-export const UpdateTransactionDtoSchema = registerSchema(
-  'UpdateTransactionDto',
-  CreateTransactionDtoSchema.partial(),
-);
+/** Internal provider update shape used while applying sync results. */
+export const UpdateTransactionDtoSchema = CreateTransactionDtoSchema.partial();
 
 export type UpdateTransactionDto = z.infer<typeof UpdateTransactionDtoSchema>;
 
+export const UpdateTransactionReportingDateDtoSchema = registerSchema(
+  'UpdateTransactionReportingDateDto',
+  z
+    .object({
+      reportingDateOverride: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .nullable(),
+    })
+    .strict(),
+);
+
+export type UpdateTransactionReportingDateDto = z.infer<
+  typeof UpdateTransactionReportingDateDtoSchema
+>;
+
 export const UpdateTransactionCategoryDtoSchema = registerSchema(
   'UpdateTransactionCategoryDto',
-  z.object({
-    /** Selected category ID. Null clears the user override. */
-    categoryId: z.string().uuid().nullable(),
-  }),
+  z
+    .object({
+      /** Selected category ID. Null clears the user override. */
+      categoryId: z.string().uuid().nullable(),
+    })
+    .strict(),
 );
 
 export type UpdateTransactionCategoryDto = z.infer<
@@ -222,11 +233,13 @@ export type UpdateTransactionCategoryDto = z.infer<
 
 export const BulkTransactionCategoryUpdateDtoSchema = registerSchema(
   'BulkTransactionCategoryUpdateDto',
-  z.object({
-    transactionIds: z.array(z.string().uuid()).min(1),
-    /** Selected user category ID. Null clears the transaction to uncategorized. */
-    categoryId: z.string().uuid().nullable(),
-  }),
+  z
+    .object({
+      transactionIds: z.array(z.string().uuid()).min(1),
+      /** Selected user category ID. Null clears the transaction to uncategorized. */
+      categoryId: z.string().uuid().nullable(),
+    })
+    .strict(),
 );
 
 export type BulkTransactionCategoryUpdateDto = z.infer<
@@ -235,9 +248,11 @@ export type BulkTransactionCategoryUpdateDto = z.infer<
 
 export const BulkTransactionCategoryUpdateUndoDtoSchema = registerSchema(
   'BulkTransactionCategoryUpdateUndoDto',
-  z.object({
-    undo: z.string().min(1),
-  }),
+  z
+    .object({
+      undo: z.string().min(1),
+    })
+    .strict(),
 );
 
 export type BulkTransactionCategoryUpdateUndoDto = z.infer<

@@ -54,8 +54,15 @@ export const HOME_BALANCES_HIDDEN_STORAGE_KEY = 'splice:home-balances-hidden'
 export function HomePage() {
   const { accountId, period = TimePeriod.month } = Route.useSearch()
   const navigate = useNavigate()
-  const { data: dashboard, isLoading, error } = useBalanceData(period)
   const { data: user } = useUserControllerMe()
+  const {
+    data: dashboard,
+    isLoading,
+    error,
+  } = useBalanceData(
+    period,
+    user ? (user.settings.currency ?? 'USD') : undefined,
+  )
   const [balancesHidden, setBalancesHidden] = useLocalStorage<boolean>({
     key: HOME_BALANCES_HIDDEN_STORAGE_KEY,
     defaultValue: false,
@@ -133,7 +140,6 @@ export function HomePage() {
         </Group>
       )}
 
-      {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */}
       {error && (
         <Alert color="red" title="Error" mb="lg">
           Error loading dashboard. Please try again.

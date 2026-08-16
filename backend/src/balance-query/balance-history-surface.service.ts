@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { AccountType } from 'plaid';
 import {
@@ -86,6 +86,7 @@ function getSignedAmount(balance: SerializedMoneyWithSign): number {
 function calculateNetWorthForDate(
   balances: Record<string, AccountBalanceResult>,
 ): number {
+  assertSingleEffectiveCurrency(balances);
   let netWorth = 0;
 
   Object.values(balances).forEach((result) => {
@@ -103,6 +104,32 @@ function calculateNetWorthForDate(
   });
 
   return netWorth;
+}
+
+function assertSingleEffectiveCurrency(
+  balances: Record<string, AccountBalanceResult>,
+): string {
+  let fallbackCurrency: string | undefined;
+  let nonZeroCurrency: string | undefined;
+
+  Object.values(balances).forEach((result) => {
+    const effectiveBalance = resolveEffectiveBalance(result.effectiveBalance);
+    fallbackCurrency ??= effectiveBalance.money.currency;
+    if (effectiveBalance.money.amount === 0) {
+      return;
+    }
+    if (
+      nonZeroCurrency !== undefined &&
+      nonZeroCurrency !== effectiveBalance.money.currency
+    ) {
+      throw new ServiceUnavailableException(
+        'Balance conversion is incomplete; retry after exchange rates are available',
+      );
+    }
+    nonZeroCurrency = effectiveBalance.money.currency;
+  });
+
+  return nonZeroCurrency ?? fallbackCurrency ?? 'USD';
 }
 
 function calculateChangePercent(
@@ -243,11 +270,8 @@ export class BalanceHistorySurfaceService {
     const lastNetWorth = calculateNetWorthForDate(lastResult.balances);
     const changePercent = calculateChangePercent(lastNetWorth, firstNetWorth);
 
-    const firstAccount = lastResult
-      ? Object.values(lastResult.balances)[0]
-      : null;
-    const currency = firstAccount
-      ? resolveEffectiveBalance(firstAccount.effectiveBalance).money.currency
+    const currency = lastResult
+      ? assertSingleEffectiveCurrency(lastResult.balances)
       : 'USD';
 
     const chartData = sortedResults.map((result) => ({
@@ -324,8 +348,10 @@ export class BalanceHistorySurfaceService {
       left: BalanceHistorySurfaceAccountSummary,
       right: BalanceHistorySurfaceAccountSummary,
     ) =>
-      getSignedAmount(right.effectiveBalance) -
-      getSignedAmount(left.effectiveBalance);
+      getSignedAmount(
+        right.convertedEffectiveBalance ?? right.effectiveBalance,
+      ) -
+      getSignedAmount(left.convertedEffectiveBalance ?? left.effectiveBalance);
 
     return {
       netWorth: createMoneyWithSign(lastNetWorth, currency),

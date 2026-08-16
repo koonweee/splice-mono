@@ -595,7 +595,221 @@ describe('BalanceQueryService', () => {
         ).not.toHaveBeenCalled();
       });
 
-      it('should handle exchange rate service errors gracefully', async () => {
+      it('uses a prior snapshot currency after a manual account currency change', async () => {
+        const accountEntity = createMockAccountEntity(
+          'acc-1',
+          AccountType.Depository,
+          'USD',
+          null,
+        );
+        const priorSnapshot = createMockSnapshotEntity(
+          'acc-1',
+          '2024-01-14',
+          100000,
+          100000,
+          'EUR',
+        );
+
+        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockAccountRepository.find.mockResolvedValue([accountEntity]);
+        mockSnapshotRepository.find.mockResolvedValue([]);
+        mockSnapshotRepository.createQueryBuilder
+          .mockReturnValueOnce(createMockQueryBuilder([priorSnapshot]))
+          .mockReturnValueOnce(createMockQueryBuilder([priorSnapshot]));
+        mockCurrencyExchangeService.getRatesForDateRange.mockResolvedValue([
+          {
+            date: '2024-01-15',
+            rates: [
+              {
+                baseCurrency: 'EUR',
+                targetCurrency: 'USD',
+                rate: 1.1,
+                source: 'DB',
+              },
+            ],
+          },
+        ]);
+
+        const result = await service.getSnapshotBalancesForDateRange(
+          ['acc-1'],
+          '2024-01-15',
+          '2024-01-15',
+          mockUserId,
+        );
+
+        expect(
+          mockCurrencyExchangeService.getRatesForDateRange,
+        ).toHaveBeenCalledWith(
+          [{ baseCurrency: 'EUR', targetCurrency: 'USD' }],
+          '2024-01-15',
+          '2024-01-15',
+        );
+        expect(
+          result[0].balances['acc-1'].effectiveBalance.convertedBalance,
+        ).toEqual({
+          money: { amount: 110000, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        });
+      });
+
+      it('ignores a prior currency shadowed by an exact start-date snapshot', async () => {
+        const usdAccount = createMockAccountEntity(
+          'acc-usd',
+          AccountType.Depository,
+          'USD',
+        );
+        const gbpAccount = createMockAccountEntity(
+          'acc-gbp',
+          AccountType.Depository,
+          'GBP',
+        );
+        const unusedPriorEurSnapshot = createMockSnapshotEntity(
+          'acc-usd',
+          '2024-01-14',
+          100000,
+          100000,
+          'EUR',
+        );
+        const exactStartUsdSnapshot = createMockSnapshotEntity(
+          'acc-usd',
+          '2024-01-15',
+          100000,
+          100000,
+          'USD',
+        );
+        const exactStartGbpSnapshot = createMockSnapshotEntity(
+          'acc-gbp',
+          '2024-01-15',
+          100000,
+          100000,
+          'GBP',
+        );
+
+        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockAccountRepository.find.mockResolvedValue([usdAccount, gbpAccount]);
+        mockSnapshotRepository.find.mockResolvedValue([
+          exactStartUsdSnapshot,
+          exactStartGbpSnapshot,
+        ]);
+        mockSnapshotRepository.createQueryBuilder
+          .mockReturnValueOnce(
+            createMockQueryBuilder([
+              exactStartUsdSnapshot,
+              exactStartGbpSnapshot,
+            ]),
+          )
+          .mockReturnValueOnce(
+            createMockQueryBuilder([unusedPriorEurSnapshot]),
+          );
+        mockCurrencyExchangeService.getRatesForDateRange.mockResolvedValue([
+          {
+            date: '2024-01-15',
+            rates: [
+              {
+                baseCurrency: 'GBP',
+                targetCurrency: 'USD',
+                rate: 1.25,
+                source: 'DB',
+              },
+            ],
+          },
+        ]);
+
+        const result = await service.getSnapshotBalancesForDateRange(
+          ['acc-usd', 'acc-gbp'],
+          '2024-01-15',
+          '2024-01-15',
+          mockUserId,
+        );
+
+        expect(
+          mockCurrencyExchangeService.getRatesForDateRange,
+        ).toHaveBeenCalledWith(
+          [{ baseCurrency: 'GBP', targetCurrency: 'USD' }],
+          '2024-01-15',
+          '2024-01-15',
+        );
+        expect(
+          result[0].balances['acc-usd'].effectiveBalance.convertedBalance,
+        ).toBeUndefined();
+        expect(
+          result[0].balances['acc-gbp'].effectiveBalance.convertedBalance,
+        ).toEqual({
+          money: { amount: 125000, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        });
+      });
+
+      it('fails the whole multi-account query when one required pair is missing', async () => {
+        const eurAccount = createMockAccountEntity(
+          'acc-eur',
+          AccountType.Depository,
+          'EUR',
+        );
+        const gbpAccount = createMockAccountEntity(
+          'acc-gbp',
+          AccountType.Depository,
+          'GBP',
+        );
+        const eurSnapshot = createMockSnapshotEntity(
+          'acc-eur',
+          '2024-01-15',
+          100000,
+          100000,
+          'EUR',
+        );
+        const gbpSnapshot = createMockSnapshotEntity(
+          'acc-gbp',
+          '2024-01-15',
+          100000,
+          100000,
+          'GBP',
+        );
+
+        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockAccountRepository.find
+          .mockResolvedValueOnce([eurAccount, gbpAccount])
+          .mockResolvedValueOnce([eurAccount, gbpAccount]);
+        mockSnapshotRepository.find.mockResolvedValue([
+          eurSnapshot,
+          gbpSnapshot,
+        ]);
+        mockCurrencyExchangeService.getRatesForDateRange.mockResolvedValue([
+          {
+            date: '2024-01-15',
+            rates: [
+              {
+                baseCurrency: 'EUR',
+                targetCurrency: 'USD',
+                rate: 1.1,
+                source: 'DB',
+              },
+            ],
+          },
+        ]);
+
+        await expect(
+          service.getAllBalancesForDateRange(
+            '2024-01-15',
+            '2024-01-15',
+            mockUserId,
+          ),
+        ).rejects.toThrow(
+          'Required exchange rate is unavailable for GBP to USD on 2024-01-15',
+        );
+        expect(
+          mockCurrencyExchangeService.getRatesForDateRange,
+        ).toHaveBeenCalledWith(
+          [
+            { baseCurrency: 'EUR', targetCurrency: 'USD' },
+            { baseCurrency: 'GBP', targetCurrency: 'USD' },
+          ],
+          '2024-01-15',
+          '2024-01-15',
+        );
+      });
+
+      it('should fail closed when a required exchange rate cannot be loaded', async () => {
         const accountEntity = createMockAccountEntity(
           'acc-1',
           AccountType.Depository,
@@ -617,6 +831,39 @@ describe('BalanceQueryService', () => {
           new Error('Rate not found'),
         );
 
+        await expect(
+          service.getSnapshotBalancesForDateRange(
+            ['acc-1'],
+            '2024-01-15',
+            '2024-01-15',
+            mockUserId,
+          ),
+        ).rejects.toThrow(
+          'Required exchange rate is unavailable for EUR to USD on 2024-01-15',
+        );
+      });
+
+      it('converts an exact zero without requiring an exchange rate', async () => {
+        const accountEntity = createMockAccountEntity(
+          'acc-1',
+          AccountType.Depository,
+          'EUR',
+        );
+        const snapshotEntity = createMockSnapshotEntity(
+          'acc-1',
+          '2024-01-15',
+          0,
+          0,
+          'EUR',
+        );
+
+        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockAccountRepository.find.mockResolvedValue([accountEntity]);
+        mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
+        mockCurrencyExchangeService.getRatesForDateRange.mockRejectedValue(
+          new Error('Rate not found'),
+        );
+
         const result = await service.getSnapshotBalancesForDateRange(
           ['acc-1'],
           '2024-01-15',
@@ -624,14 +871,15 @@ describe('BalanceQueryService', () => {
           mockUserId,
         );
 
-        // Should still return results without conversion
-        expect(result).toHaveLength(1);
         expect(
-          result[0].balances['acc-1'].availableBalance.balance,
-        ).toBeDefined();
+          result[0].balances['acc-1'].effectiveBalance.convertedBalance,
+        ).toEqual({
+          money: { amount: 0, currency: 'USD' },
+          sign: MoneySign.POSITIVE,
+        });
         expect(
-          result[0].balances['acc-1'].availableBalance.convertedBalance,
-        ).toBeUndefined();
+          mockCurrencyExchangeService.getRatesForDateRange,
+        ).not.toHaveBeenCalled();
       });
 
       it('should correctly handle conversion between currencies with different decimals (ETH to SGD)', async () => {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { MoneyWithSignSign } from '../api/models'
+import { AccountType, MoneyWithSignSign } from '../api/models'
 import {
+  BalanceCurrencyMismatchError,
+  calculateNetWorthForDate,
   createMoneyWithSign,
   getSignedAmount,
   isZeroBalanceAccount,
@@ -113,6 +115,47 @@ describe('balance-utils', () => {
           },
         }),
       ).toBe(false)
+    })
+  })
+
+  describe('calculateNetWorthForDate', () => {
+    const createAccountBalance = (amount: number, currency: string) => ({
+      account: {
+        id: currency,
+        name: `${currency} account`,
+        type: AccountType.depository,
+      },
+      effectiveBalance: {
+        balance: {
+          money: { amount, currency },
+          sign: MoneyWithSignSign.positive,
+        },
+      },
+    })
+
+    it('rejects adding balances with different non-zero currencies', () => {
+      expect(() =>
+        calculateNetWorthForDate(
+          {
+            usd: createAccountBalance(10000, 'USD'),
+            eur: createAccountBalance(5000, 'EUR'),
+          } as any,
+          'USD',
+        ),
+      ).toThrowError(BalanceCurrencyMismatchError)
+    })
+
+    it('preserves same-currency totals and ignores a foreign zero', () => {
+      expect(
+        calculateNetWorthForDate(
+          {
+            usd: createAccountBalance(10000, 'USD'),
+            usdTwo: createAccountBalance(2500, 'USD'),
+            eurZero: createAccountBalance(0, 'EUR'),
+          } as any,
+          'USD',
+        ),
+      ).toBe(125)
     })
   })
 })
