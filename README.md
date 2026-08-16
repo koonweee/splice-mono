@@ -6,6 +6,14 @@
 
 A full-stack personal finance application for tracking net worth across multiple accounts and currencies.
 
+## Screenshots
+
+| Feature | Description | Desktop | Mobile |
+| --- | --- | --- | --- |
+| Home dashboard | Track net worth over time and see assets and liabilities grouped by account type. | <a href="docs/screenshots/home-desktop.png"><img src="docs/screenshots/home-desktop.png" alt="Splice home dashboard on desktop" width="440" /></a> | <a href="docs/screenshots/home-mobile.png"><img src="docs/screenshots/home-mobile.png" alt="Splice home dashboard on mobile" width="180" /></a> |
+| Transactions | Review transactions with dates, statuses, signed amounts, accounts, and categories in a responsive ledger. | <a href="docs/screenshots/transactions-desktop.png"><img src="docs/screenshots/transactions-desktop.png" alt="Splice transactions on desktop" width="440" /></a> | <a href="docs/screenshots/transactions-mobile.png"><img src="docs/screenshots/transactions-mobile.png" alt="Splice transactions on mobile" width="180" /></a> |
+| Cashflow analysis | Compare inflows and outflows with a Sankey diagram on desktop and category breakdowns on mobile. | <a href="docs/screenshots/analysis-desktop.png"><img src="docs/screenshots/analysis-desktop.png" alt="Splice cashflow analysis on desktop" width="440" /></a> | <a href="docs/screenshots/analysis-mobile.png"><img src="docs/screenshots/analysis-mobile.png" alt="Splice cashflow analysis on mobile" width="180" /></a> |
+
 ## Features
 
 ### Multi-Account Financial Management
