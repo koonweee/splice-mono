@@ -1007,6 +1007,7 @@ export function TransactionsTable({
                 <CategorySelect
                   aria-label="Category"
                   autoFocus
+                  classNames={{ input: styles.categorySelectInput }}
                   data={categoryOptions}
                   onChange={(value) =>
                     updateCategory.mutate({
@@ -1021,7 +1022,7 @@ export function TransactionsTable({
                     }
                   }}
                   placeholder="Category"
-                  size="md"
+                  size="sm"
                   value={transaction.categoryId}
                   w={280}
                   comboboxProps={{ withinPortal: true, zIndex: 400 }}
