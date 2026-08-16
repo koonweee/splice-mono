@@ -4,193 +4,137 @@
 
 # Splice
 
-A full-stack personal finance application for tracking net worth across multiple accounts and currencies.
+Splice is a self-hosted personal finance dashboard for net worth, transactions, investments, and cashflow analysis across accounts and currencies.
+
+## Screenshots
+
+| Feature | Description | Desktop | Mobile |
+| --- | --- | --- | --- |
+| Home dashboard | Track net worth over time and see assets and liabilities grouped by account type. | <a href="docs/screenshots/home-desktop.png"><img src="docs/screenshots/home-desktop.png" alt="Splice home dashboard on desktop" width="440" /></a> | <a href="docs/screenshots/home-mobile.png"><img src="docs/screenshots/home-mobile.png" alt="Splice home dashboard on mobile" width="180" /></a> |
+| Transactions | Review transactions with dates, statuses, signed amounts, accounts, and categories in a responsive ledger. | <a href="docs/screenshots/transactions-desktop.png"><img src="docs/screenshots/transactions-desktop.png" alt="Splice transactions on desktop" width="440" /></a> | <a href="docs/screenshots/transactions-mobile.png"><img src="docs/screenshots/transactions-mobile.png" alt="Splice transactions on mobile" width="180" /></a> |
+| Cashflow analysis | Compare inflows and outflows with a Sankey diagram on desktop and category breakdowns on mobile. | <a href="docs/screenshots/analysis-desktop.png"><img src="docs/screenshots/analysis-desktop.png" alt="Splice cashflow analysis on desktop" width="440" /></a> | <a href="docs/screenshots/analysis-mobile.png"><img src="docs/screenshots/analysis-mobile.png" alt="Splice cashflow analysis on mobile" width="180" /></a> |
 
 ## Features
 
-### Multi-Account Financial Management
-- Support for multiple account types: depository, investment, credit, and loans
-- Real-time balance tracking with available and current balances
-- Account metadata including institution names and account masks
+- **Accounts and net worth**<br>
+  Link accounts through Plaid or add them manually, then track cash, credit, loans, investments, and crypto across currencies.
 
-### Bank Account Integration (Plaid)
-- OAuth-based linking with Plaid
-- Webhook-driven account sync for real-time balance updates
-- Extensible provider architecture for adding additional banking providers
+- **Smart transaction management**<br>
+  Review enriched activity, bulk-edit transactions, create custom categories, and automate categorization with reusable rules.
 
-### Net Worth Dashboard
-- Dynamic net worth calculation with period-over-period change tracking
-- Account summaries categorized as assets vs liabilities
-- Historical net worth charting with daily data points
+- **Cashflow analysis**<br>
+  Explore inflows, outflows, and net savings through interactive visualizations, drilldowns, and an audit view.
 
-### Multi-Currency Support
-- User-configurable preferred display currency
-- Historical exchange rate tracking with daily sync
-- Automatic balance conversion across all views
+- **Investments and history**<br>
+  Inspect holdings and investment activity while daily snapshots and CSV backfills preserve historical balances.
 
-### Transaction Management
-- Transaction tracking linked to accounts
-- Merchant information and logos
-- Pending vs posted transaction distinction
-- Transaction categorization
+- **Automation and access**<br>
+  Schedule recurring transactions, receive browser notifications, and connect external tools through personal access tokens and MCP.
 
-### Historical Balance Snapshots
-- Daily balance snapshots for all accounts
-- Automatic gap-filling ensures continuous historical data
-- Powers net worth charts and period comparisons
-
-### User Settings
-- Timezone configuration (IANA timezone strings)
-- Display currency preferences
-
----
-
-## Architecture
-
-### Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Backend | NestJS, TypeORM, PostgreSQL |
-| Frontend | React 19, TanStack Router, TanStack Query, Mantine UI, Tailwind CSS |
-| API Contract | Zod schemas → OpenAPI → Orval-generated client |
-| Auth | Google OAuth browser login, JWT with HTTP-only cookies, personal access tokens for API/MCP access |
-
-### Repository Structure
-
-```
-splice-mono/
-├── backend/     # NestJS API server
-├── frontend/    # React SPA
-└── scripts/     # Operational helper scripts
-```
-
-### Type-Safe API Contract
-
-Types flow end-to-end from backend to frontend:
-
-1. **Define** - Zod schemas in backend define all types and validation
-2. **Generate** - OpenAPI spec auto-generated from Zod schemas
-3. **Consume** - Orval generates React Query hooks and TypeScript types for frontend
-
-```bash
-# After backend API changes, regenerate frontend client:
-cd frontend && yarn orval
-```
-
-### Key Architectural Patterns
-
-#### User-Owned Data Scoping
-All user data operations are automatically scoped by `userId`. A base `OwnedCrudService` class enforces this pattern across all entities (accounts, transactions, snapshots, etc.), preventing cross-user data access.
-
-#### Bank Link Provider Interface
-Banking integrations follow a provider pattern with a standardized 4-step flow:
-1. `initiateLinking()` - Generate link URL, create pending webhook event
-2. User completes OAuth in provider UI
-3. `processWebhook()` - Extract accounts from webhook payload
-4. `getAccounts()` - Fetch updated accounts using stored credentials
-
-New banking providers can be added by implementing the `IBankLinkProvider` interface.
-
-#### Money Handling
-Amounts stored as integer cents to avoid floating-point precision issues.
-
-#### Scheduled Background Tasks
-- **Exchange Rate Sync** - Daily at 6 AM UTC, fetches rates for all currency pairs
-
----
-
-## Development
+## Quick Start
 
 ### Prerequisites
+
 - Node.js 22.13+
 - Yarn
 - Docker (for PostgreSQL)
 
-### Running Locally
+### 1. Configure the environment
 
-Copy `backend/.env.example` and `frontend/.env.example` to local `.env` files before starting the apps.
+From the repository root:
 
 ```bash
-# Start PostgreSQL
-cd backend && docker-compose up -d
-
-# Start backend (port 3000)
-cd backend && yarn start:dev
-
-# Start frontend (port 4000)
-cd frontend && yarn dev
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-### Google OAuth Setup
+Set a non-empty `JWT_SECRET` in `backend/.env`, then configure either Google OAuth or the local development bypass described under [Authentication](#authentication).
 
-Splice uses Google OAuth for browser sign-in. Password login and password registration are intentionally removed. Existing users sign in with a whitelisted, verified Google account that uses the same email address as their existing Splice account.
-
-Create a Google Cloud OAuth 2.0 Web client and configure:
-
-- Authorized JavaScript origin: `http://localhost:4000`
-- Authorized redirect URI: `http://localhost:3000/user/oauth/google/callback`
-
-Set these backend environment variables locally:
+### 2. Start PostgreSQL and the backend
 
 ```bash
+cd backend
+yarn install
+docker compose up -d postgres
+yarn migration:run
+yarn dotenv -- nest start --watch
+```
+
+The API runs on `http://localhost:3000`.
+
+### 3. Start the frontend
+
+In another terminal:
+
+```bash
+cd frontend
+yarn install
+yarn dev
+```
+
+Open `http://localhost:4000`.
+
+### Common commands
+
+Run commands from the project that owns them:
+
+| Project | Commands |
+| --- | --- |
+| Backend | `yarn lint`, `yarn typecheck`, `yarn test`, `yarn test:e2e`, `yarn migration:run` |
+| Frontend | `yarn lint`, `yarn typecheck`, `yarn test`, `yarn build`, `yarn orval` |
+
+## Architecture
+
+| Layer | Technology |
+| --- | --- |
+| Backend | NestJS, TypeORM, PostgreSQL |
+| Frontend | React 19, TanStack Router, TanStack Query, Mantine UI, Tailwind CSS |
+| API contract | Zod schemas → OpenAPI → Orval-generated client |
+| Authentication | Google OAuth, HTTP-only JWT cookies, personal access tokens |
+
+Backend Zod schemas define validation and the OpenAPI contract; `yarn orval` regenerates the frontend client from that contract. See [Architecture](docs/architecture.md) for data ownership, provider integration, money handling, and background jobs.
+
+## Authentication
+
+### Google OAuth
+
+Create a Google OAuth 2.0 web client with:
+
+- JavaScript origin: `http://localhost:4000`
+- Redirect URI: `http://localhost:3000/user/oauth/google/callback`
+
+Then set:
+
+```env
 GOOGLE_OAUTH_CLIENT_ID=<google web client id>
 GOOGLE_OAUTH_CLIENT_SECRET=<google web client secret>
 GOOGLE_OAUTH_CALLBACK_URL=http://localhost:3000/user/oauth/google/callback
 GOOGLE_ALLOWED_EMAILS=alice@example.com,bob@example.com
 ```
 
-`GOOGLE_ALLOWED_EMAILS` is a comma-separated allowlist. Only verified Google accounts whose normalized email appears in that list can sign in or be provisioned. Restart the backend after changing these values.
+Only verified addresses in the comma-separated `GOOGLE_ALLOWED_EMAILS` allowlist can sign in or be provisioned.
 
-### Local Dev Auth Bypass
+### Local development bypass
 
-For local browser automation tools such as Codex agent browser, the backend can create a normal browser session without Google OAuth. This is development-only and is refused in production and for non-local requests.
-
-Set these backend environment variables locally:
-
-```bash
+```env
 LOCAL_AUTH_BYPASS=true
-LOCAL_AUTH_BYPASS_EMAIL=alice@example.com
+LOCAL_AUTH_BYPASS_EMAIL=dev@example.com
 ```
 
-`LOCAL_AUTH_BYPASS_EMAIL` maps the browser session to that Splice user, which controls which accounts and transactions are visible. Start the backend and frontend, then open:
+After both apps are running, open:
 
 ```text
 http://localhost:3000/user/dev/login?redirect=/home
 ```
 
-The endpoint sets the same HTTP-only session cookies as Google OAuth and redirects to the frontend. Do not configure these variables in staging or production.
+This endpoint is restricted to local development. Never enable the bypass in staging or production. External API and MCP clients should use personal access tokens created in Settings.
 
-For staging and production, set `API_DOMAIN` to the public backend origin and `FRONTEND_DOMAIN` to the public frontend origin. Set `GOOGLE_OAUTH_CALLBACK_URL=${API_DOMAIN}/user/oauth/google/callback`, add that exact URL to the Google OAuth client's authorized redirect URIs, and add the frontend origin to authorized JavaScript origins. Store `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `GOOGLE_ALLOWED_EMAILS` in the deployment secret manager or environment configuration before deploying the hard cut.
+## Deployment
 
-Non-browser API and MCP access uses personal access tokens from the Settings page. Do not use browser session login credentials for API automation.
+Production releases are promoted from `main` to the protected `deploy` branch through the [Deploy workflow](.github/workflows/deploy.yml). The workflow creates or updates a deployment PR, validates the exact commit through CI, and merges it after the checks pass.
 
-### Deployment Checklist
+See the [Deployment guide](docs/deployment.md) for production configuration and release steps.
 
-- Google OAuth client exists for each deployed environment.
-- `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_CALLBACK_URL`, and `GOOGLE_ALLOWED_EMAILS` are configured.
-- `GOOGLE_OAUTH_CALLBACK_URL` exactly matches an authorized redirect URI.
-- `FRONTEND_DOMAIN` exactly matches an authorized JavaScript origin and CORS origin.
-- Backend and frontend are deployed together for the password-auth hard cut.
-- Smoke test Google login, token refresh, logout, and PAT-authenticated API/MCP access.
-
-### Commands
-
-```bash
-# Code quality (both projects)
-yarn format     # Prettier
-yarn lint       # ESLint
-yarn test       # Run tests
-
-# Backend-specific
-yarn migration:generate   # Generate TypeORM migration
-yarn migration:run        # Run migrations
-
-# Frontend-specific
-yarn orval      # Regenerate API client from backend OpenAPI
-yarn typecheck  # TypeScript checking
-```
-
-### API Documentation
+## API Documentation
 
 OpenAPI docs available at `http://localhost:3000/api` when backend is running.
