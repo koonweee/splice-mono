@@ -10,7 +10,7 @@ export class ManualBrokerageScheduledService {
     private readonly manualBrokerageService: ManualBrokerageService,
   ) {}
 
-  @Cron('0 30 23 * * 1-5', {
+  @Cron('0 30 * * * 1-5', {
     name: 'refreshManualBrokeragePrices',
     timeZone: 'UTC',
   })
