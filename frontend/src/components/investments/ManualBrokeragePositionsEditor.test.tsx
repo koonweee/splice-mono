@@ -80,6 +80,35 @@ afterEach(() => {
 })
 
 describe('ManualBrokeragePositionsEditor', () => {
+  it('opens delayed search results when they arrive without requiring refocus', async () => {
+    let resolveSearch: (
+      value: Array<ManualBrokerageSecurityResult>,
+    ) => void = () => undefined
+    const searchSecurities = vi.fn(
+      () =>
+        new Promise<Array<ManualBrokerageSecurityResult>>((resolve) => {
+          resolveSearch = resolve
+        }),
+    )
+    render(<TestEditor searchSecurities={searchSecurities} />)
+
+    const searchInput = screen.getByLabelText('Search stocks and ETFs')
+    searchInput.focus()
+    for (const value of ['I', 'IN', 'INT', 'INTC']) {
+      fireEvent.change(searchInput, { target: { value } })
+      expect(screen.queryByLabelText('Security search results')).toBeNull()
+    }
+    await waitFor(() => expect(searchSecurities).toHaveBeenCalledOnce())
+    expect(document.activeElement).toBe(searchInput)
+
+    resolveSearch([{ ...result, symbol: 'INTC', name: 'Intel Corporation' }])
+
+    expect(
+      await screen.findByRole('button', { name: 'Add INTC', hidden: true }),
+    ).toBeTruthy()
+    expect(document.activeElement).toBe(searchInput)
+  })
+
   it('searches, selects an exchange-specific symbol, and preserves fractional quantities', async () => {
     const searchSecurities = vi.fn().mockResolvedValue([result])
     render(<TestEditor searchSecurities={searchSecurities} />)
