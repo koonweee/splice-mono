@@ -140,6 +140,11 @@
   max-width: 100%;
 }
 
+.categorySelectInput {
+  height: 28px;
+  min-height: 28px;
+}
+
 .categoryActions {
   flex: 0 0 auto;
   opacity: 0;
