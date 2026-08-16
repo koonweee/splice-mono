@@ -109,7 +109,7 @@ export function InvestmentActivityTable({
             <Table.Th ta="right">Quantity</Table.Th>
             <Table.Th ta="right">Price</Table.Th>
             <Table.Th ta="right">Fees</Table.Th>
-            <Table.Th ta="right">Cash Impact</Table.Th>
+            <Table.Th ta="right">Cash impact</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>

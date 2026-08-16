@@ -12,4 +12,5 @@ export type InvestmentHoldingSnapshotProvider =
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const InvestmentHoldingSnapshotProvider = {
   plaid: 'plaid',
+  manual: 'manual',
 } as const

@@ -10,7 +10,7 @@ import { AccountEntity } from '../account/account.entity';
 import { OwnedEntity } from '../common/owned.entity';
 import type {
   InvestmentHoldingSnapshot,
-  InvestmentProvider,
+  InvestmentHoldingProvider,
   ProviderInvestmentHolding,
 } from '../types/Investment';
 import { InvestmentSecurityEntity } from './investment-security.entity';
@@ -36,7 +36,7 @@ export class InvestmentHoldingSnapshotEntity extends OwnedEntity {
   security: InvestmentSecurityEntity;
 
   @Column({ type: 'varchar' })
-  provider: InvestmentProvider;
+  provider: InvestmentHoldingProvider;
 
   @Column({ type: 'date' })
   snapshotDate: string;
@@ -65,6 +65,15 @@ export class InvestmentHoldingSnapshotEntity extends OwnedEntity {
   @Column({ type: 'varchar', nullable: true })
   unofficialCurrencyCode: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  accountCurrency: string | null;
+
+  @Column({ type: 'numeric', precision: 30, scale: 12, nullable: true })
+  exchangeRateToAccountCurrency: string | null;
+
+  @Column({ type: 'numeric', precision: 30, scale: 12, nullable: true })
+  accountValue: string | null;
+
   @Column({ type: 'numeric', precision: 30, scale: 12, nullable: true })
   vestedQuantity: string | null;
 
@@ -77,7 +86,7 @@ export class InvestmentHoldingSnapshotEntity extends OwnedEntity {
     accountId: string,
     securityId: string,
     snapshotDate: string,
-    provider: InvestmentProvider = 'plaid',
+    provider: InvestmentHoldingProvider = 'plaid',
   ): InvestmentHoldingSnapshotEntity {
     const entity = new InvestmentHoldingSnapshotEntity();
     entity.userId = userId;
@@ -85,6 +94,9 @@ export class InvestmentHoldingSnapshotEntity extends OwnedEntity {
     entity.securityId = securityId;
     entity.provider = provider;
     entity.snapshotDate = snapshotDate;
+    entity.accountCurrency = null;
+    entity.exchangeRateToAccountCurrency = null;
+    entity.accountValue = null;
     entity.applyProviderHolding(providerHolding);
     return entity;
   }
@@ -118,6 +130,9 @@ export class InvestmentHoldingSnapshotEntity extends OwnedEntity {
       institutionValue: this.institutionValue,
       isoCurrencyCode: this.isoCurrencyCode,
       unofficialCurrencyCode: this.unofficialCurrencyCode,
+      accountCurrency: this.accountCurrency ?? null,
+      exchangeRateToAccountCurrency: this.exchangeRateToAccountCurrency ?? null,
+      accountValue: this.accountValue ?? null,
       vestedQuantity: this.vestedQuantity,
       vestedValue: this.vestedValue,
       security: this.security.toObject(),

@@ -12,7 +12,7 @@ function NotFoundPage() {
       <Stack align="center" gap="lg">
         <AlertCircle size={64} color="var(--mantine-color-gray-5)" />
         <Title order={1} ta="center">
-          Page Not Found
+          Page not found
         </Title>
         <Text c="dimmed" ta="center" size="lg">
           The page you're looking for doesn't exist or has been moved.

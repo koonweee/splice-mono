@@ -664,6 +664,29 @@ describe('BankLinkService', () => {
       expect(mockPlaidProvider.initiateLinking).not.toHaveBeenCalled();
       expect(mockWebhookEventService.createPending).not.toHaveBeenCalled();
     });
+
+    it('rejects conversion initiation for a holdings-valued account', async () => {
+      mockAccountRepository.findOne.mockResolvedValueOnce({
+        id: 'holdings-account',
+        userId: mockUserId,
+        bankLinkId: null,
+        valuationMode: 'holdings',
+      });
+
+      await expect(
+        service.initiateLinking(
+          'plaid',
+          mockUserId,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          'holdings-account',
+        ),
+      ).rejects.toThrow('valued from holdings and cannot be linked');
+
+      expect(mockPlaidProvider.initiateLinking).not.toHaveBeenCalled();
+    });
   });
 
   describe('handleWebhook', () => {
@@ -1052,6 +1075,47 @@ describe('BankLinkService', () => {
       expect(mockWebhookEventService.markFailed).toHaveBeenCalledWith(
         'webhook-mock-123',
         `Account with id ${convertAccountId} not found`,
+        mockParsedPayload,
+      );
+    });
+
+    it('does not persist a link when valuation changed to holdings while Link was open', async () => {
+      const convertAccountId = 'manual-account-mode-changed';
+      mockWebhookEventService.findPendingByWebhookId.mockResolvedValueOnce({
+        id: 'pending-webhook',
+        userId: mockUserId,
+        webhookId: 'webhook-mock-123',
+        webhookContent: null,
+        status: 'pending',
+        providerName: 'plaid',
+        expiresAt: null,
+        completedAt: null,
+        errorMessage: null,
+        context: { mode: 'convert-manual-account', convertAccountId },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+      mockAccountRepository.findOne.mockResolvedValueOnce({
+        id: convertAccountId,
+        userId: mockUserId,
+        bankLinkId: null,
+        valuationMode: 'holdings',
+      });
+
+      await expect(
+        service.handleWebhook(
+          'plaid',
+          mockRawBody,
+          mockHeaders,
+          mockParsedPayload,
+        ),
+      ).rejects.toThrow('valued from holdings and cannot be linked');
+
+      expect(mockBankLinkRepository.save).not.toHaveBeenCalled();
+      expect(mockAccountRepository.save).not.toHaveBeenCalled();
+      expect(mockWebhookEventService.markFailed).toHaveBeenCalledWith(
+        'webhook-mock-123',
+        expect.stringContaining('valued from holdings'),
         mockParsedPayload,
       );
     });

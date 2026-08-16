@@ -14,5 +14,7 @@ export function useInvestmentHoldings(accountId?: string, enabled = true) {
     ...query,
     holdings: query.data?.holdings ?? [],
     snapshotDate: query.data?.snapshotDate ?? null,
+    accountCurrency: query.data?.accountCurrency ?? null,
+    accountValue: query.data?.accountValue ?? null,
   }
 }

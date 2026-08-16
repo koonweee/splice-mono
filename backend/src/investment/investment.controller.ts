@@ -1,29 +1,129 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   CurrentUser,
   type JwtUser,
 } from '../auth/decorators/current-user.decorator';
-import { ZodApiResponse } from '../common/zod-api-response';
+import { ZodApiBody, ZodApiResponse } from '../common/zod-api-response';
 import type {
   InvestmentActivityQuery,
   InvestmentHoldingsDateQuery,
   InvestmentHoldingsResponse,
   PaginatedInvestmentActivityResponse,
+  CreateManualBrokerageAccountDto,
+  ManualBrokeragePortfolioResponse,
+  ReplaceManualBrokerageHoldingsDto,
 } from '../types/Investment';
 import {
   InvestmentActivityQuerySchema,
   InvestmentHoldingsDateQuerySchema,
   InvestmentHoldingsResponseSchema,
   PaginatedInvestmentActivityResponseSchema,
+  CreateManualBrokerageAccountDtoSchema,
+  ManualBrokeragePortfolioResponseSchema,
+  ReplaceManualBrokerageHoldingsDtoSchema,
 } from '../types/Investment';
+import type {
+  MarketSecuritySearchQuery,
+  MarketSecuritySearchResult,
+} from '../types/MarketPrice';
+import {
+  MarketSecuritySearchQuerySchema,
+  MarketSecuritySearchResultSchema,
+} from '../types/MarketPrice';
+import { MarketPriceService } from '../market-price/market-price.service';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { InvestmentService } from './investment.service';
+import { ManualBrokerageService } from './manual-brokerage.service';
 
 @ApiTags('investment')
 @Controller('investment')
 export class InvestmentController {
-  constructor(private readonly investmentService: InvestmentService) {}
+  constructor(
+    private readonly investmentService: InvestmentService,
+    private readonly manualBrokerageService: ManualBrokerageService,
+    private readonly marketPriceService: MarketPriceService,
+  ) {}
+
+  @Get('securities/search')
+  @ApiQuery({ name: 'query', required: true, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Search supported stock and ETF securities',
+    schema: MarketSecuritySearchResultSchema,
+    isArray: true,
+  })
+  async searchSecurities(
+    @Query(new ZodValidationPipe(MarketSecuritySearchQuerySchema))
+    query: MarketSecuritySearchQuery,
+  ): Promise<MarketSecuritySearchResult[]> {
+    return this.marketPriceService.search(query.query, query.limit);
+  }
+
+  @Post('manual-account')
+  @ZodApiBody({ schema: CreateManualBrokerageAccountDtoSchema })
+  @ZodApiResponse({
+    status: 201,
+    description: 'Created manual brokerage and valued its holdings',
+    schema: ManualBrokeragePortfolioResponseSchema,
+  })
+  async createManualBrokerageAccount(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(CreateManualBrokerageAccountDtoSchema))
+    dto: CreateManualBrokerageAccountDto,
+  ): Promise<ManualBrokeragePortfolioResponse> {
+    return this.manualBrokerageService.createManualBrokerageAccount(
+      dto,
+      user.userId,
+    );
+  }
+
+  @Put('account/:accountId/manual-holdings')
+  @ZodApiBody({ schema: ReplaceManualBrokerageHoldingsDtoSchema })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Replaced and revalued a manual brokerage snapshot',
+    schema: ManualBrokeragePortfolioResponseSchema,
+  })
+  async replaceManualBrokerageHoldings(
+    @CurrentUser() user: JwtUser,
+    @Param('accountId') accountId: string,
+    @Body(new ZodValidationPipe(ReplaceManualBrokerageHoldingsDtoSchema))
+    dto: ReplaceManualBrokerageHoldingsDto,
+  ): Promise<ManualBrokeragePortfolioResponse> {
+    return this.manualBrokerageService.replaceManualBrokerageHoldings(
+      accountId,
+      dto,
+      user.userId,
+    );
+  }
+
+  @Post('account/:accountId/refresh-prices')
+  @HttpCode(200)
+  @ZodApiResponse({
+    status: 200,
+    description: 'Refreshed and revalued manual brokerage prices',
+    schema: ManualBrokeragePortfolioResponseSchema,
+  })
+  async refreshManualBrokeragePrices(
+    @CurrentUser() user: JwtUser,
+    @Param('accountId') accountId: string,
+  ): Promise<ManualBrokeragePortfolioResponse> {
+    return this.manualBrokerageService.refreshManualBrokeragePrices(
+      accountId,
+      user.userId,
+    );
+  }
 
   @Get('account/:accountId/activity')
   @ApiOperation({

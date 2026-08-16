@@ -24,6 +24,9 @@ const holding: InvestmentHoldingSnapshot = {
   institutionValue: '1217.345678',
   isoCurrencyCode: 'USD',
   unofficialCurrencyCode: null,
+  accountCurrency: null,
+  exchangeRateToAccountCurrency: null,
+  accountValue: null,
   vestedQuantity: null,
   vestedValue: null,
   createdAt: '2026-05-20T00:00:00.000Z',
@@ -116,13 +119,12 @@ describe('InvestmentHoldingsTable', () => {
   it('renders holding security, ticker, quantity, price, and value', () => {
     renderTable()
 
-    expect(
-      screen.getByText('Vanguard FTSE All-World UCITS ETF'),
-    ).toBeTruthy()
+    expect(screen.getByText('Vanguard FTSE All-World UCITS ETF')).toBeTruthy()
     expect(screen.getByText('VWRA')).toBeTruthy()
     expect(screen.getByText('10.123456')).toBeTruthy()
     expect(screen.getByText('$120.25')).toBeTruthy()
     expect(screen.getByText('$1,217.35')).toBeTruthy()
+    expect(screen.queryByText('Account value')).toBeNull()
   })
 
   it('masks monetary values without hiding ticker or quantity', () => {
@@ -188,5 +190,88 @@ describe('InvestmentHoldingsTable', () => {
     expect(screen.getByText('$120.25')).toBeTruthy()
     expect(screen.getByText('€5.00')).toBeTruthy()
     expect(screen.getByText('€500.00')).toBeTruthy()
+  })
+
+  it('shows the native value without a separate account-value column', () => {
+    renderTable({
+      accountCurrency: 'USD',
+      holdings: [
+        createHolding({
+          id: 'sgd-holding-id',
+          securityId: 'sgd-security-id',
+          quantity: '200',
+          institutionPrice: '7.05',
+          institutionPriceDatetime: null,
+          institutionValue: '1410',
+          isoCurrencyCode: 'SGD',
+          accountCurrency: 'USD',
+          exchangeRateToAccountCurrency: '0.78',
+          accountValue: '1099.8',
+          security: {
+            ...holding.security,
+            id: 'sgd-security-id',
+            name: 'Singapore Airlines Limited',
+            tickerSymbol: 'C6L.SI',
+            isoCurrencyCode: 'SGD',
+            marketIdentifierCode: 'XSES',
+          },
+        }),
+      ],
+    })
+
+    expect(screen.queryByText('Account value')).toBeNull()
+    expect(screen.getByText(/SGD\s+1,410\.00/)).toBeTruthy()
+    expect(screen.queryByText('$1,099.80')).toBeNull()
+    expect(screen.getByText('XSES · Price as of May 20, 2026')).toBeTruthy()
+  })
+
+  it('masks native and normalized values for cross-currency holdings', () => {
+    renderTable({
+      accountCurrency: 'USD',
+      balancesHidden: true,
+      holdings: [
+        createHolding({
+          isoCurrencyCode: 'SGD',
+          accountCurrency: 'USD',
+          exchangeRateToAccountCurrency: '0.78',
+          accountValue: '949.53',
+        }),
+      ],
+    })
+
+    expect(screen.getAllByText('****')).toHaveLength(2)
+  })
+
+  it('renders the normalized holding layout at a mobile width', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn().mockImplementation(() => ({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    })
+
+    renderTable({
+      accountCurrency: 'USD',
+      holdings: [
+        createHolding({
+          quantity: '200',
+          institutionPrice: '7.05',
+          institutionValue: '1410',
+          isoCurrencyCode: 'SGD',
+          accountCurrency: 'USD',
+          exchangeRateToAccountCurrency: '0.78',
+          accountValue: '1099.8',
+        }),
+      ],
+    })
+
+    expect(
+      screen.getByLabelText('Investment holdings list, 1 total'),
+    ).toBeTruthy()
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.getByText(/SGD\s+1,410\.00/)).toBeTruthy()
+    expect(screen.getByText('$1,099.80')).toBeTruthy()
   })
 })

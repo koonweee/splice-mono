@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Not, Repository } from 'typeorm';
 import { AccountActivityService } from '../account-activity/account-activity.service';
 import { AccountEntity } from '../account/account.entity';
+import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
+import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import type {
   InvestmentActivity,
   InvestmentActivityQuery,
@@ -31,6 +33,8 @@ export class InvestmentService {
     private readonly transactionRepository: Repository<InvestmentTransactionEntity>,
     @InjectRepository(AccountEntity)
     private readonly accountRepository: Repository<AccountEntity>,
+    @InjectRepository(BalanceSnapshotEntity)
+    private readonly balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
     private readonly accountActivityService: AccountActivityService,
   ) {}
 
@@ -117,7 +121,32 @@ export class InvestmentService {
     userId: string,
     accountId: string,
   ): Promise<InvestmentHoldingsResponse> {
-    await this.ensureAccountOwned(userId, accountId);
+    const account = await this.ensureAccountOwned(userId, accountId);
+
+    if (account.valuationMode === 'holdings') {
+      const latestBalance = await this.balanceSnapshotRepository.findOne({
+        where: {
+          userId,
+          accountId,
+          snapshotType: Not(BalanceSnapshotType.FORWARD_FILL),
+        },
+        order: { snapshotDate: 'DESC', updatedAt: 'DESC' },
+      });
+      if (!latestBalance) {
+        return {
+          accountId,
+          snapshotDate: null,
+          accountCurrency: account.currentBalance.currency,
+          accountValue: account.currentBalance.toMoneyWithSign(),
+          holdings: [],
+        };
+      }
+      return this.findHoldingsForAccountOnDate(
+        userId,
+        accountId,
+        latestBalance.snapshotDate,
+      );
+    }
 
     const latest = await this.holdingRepository.findOne({
       where: { userId, accountId },
@@ -125,7 +154,13 @@ export class InvestmentService {
     });
 
     if (!latest) {
-      return { accountId, snapshotDate: null, holdings: [] };
+      return {
+        accountId,
+        snapshotDate: null,
+        accountCurrency: null,
+        accountValue: null,
+        holdings: [],
+      };
     }
 
     return this.findHoldingsForAccountOnDate(
@@ -140,7 +175,7 @@ export class InvestmentService {
     accountId: string,
     snapshotDate: string,
   ): Promise<InvestmentHoldingsResponse> {
-    await this.ensureAccountOwned(userId, accountId);
+    const account = await this.ensureAccountOwned(userId, accountId);
 
     const holdings = await this.holdingRepository.find({
       where: { userId, accountId, snapshotDate },
@@ -150,9 +185,20 @@ export class InvestmentService {
       },
     });
 
+    const balanceSnapshot =
+      account.valuationMode === 'holdings'
+        ? await this.balanceSnapshotRepository.findOne({
+            where: { userId, accountId, snapshotDate },
+          })
+        : null;
     return {
       accountId,
       snapshotDate,
+      accountCurrency:
+        account.valuationMode === 'holdings'
+          ? account.currentBalance.currency
+          : null,
+      accountValue: balanceSnapshot?.currentBalance.toMoneyWithSign() ?? null,
       holdings: holdings.map((holding) => holding.toObject()),
     };
   }

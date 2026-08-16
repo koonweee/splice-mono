@@ -5,6 +5,7 @@ import { TimePeriod } from './types'
 import type { ChartDataPoint } from '../components/Chart'
 import type {
   AccountBalanceResult,
+  AccountValuationMode,
   BalanceQueryPerDateResult,
   BalanceWithConvertedBalance,
   MoneyWithSign,
@@ -229,6 +230,7 @@ export interface AccountSummaryData {
   institutionName?: string
   syncedAt?: string
   archivedAt?: string | null
+  valuationMode: AccountValuationMode
 }
 
 /**
@@ -283,10 +285,7 @@ export function transformToDashboardData(
     })
     netWorthByDate.set(
       result.date,
-      calculateNetWorthForDate(
-        result.balances,
-        currency ?? zeroOnlyCurrency,
-      ),
+      calculateNetWorthForDate(result.balances, currency ?? zeroOnlyCurrency),
     )
   })
 
@@ -369,8 +368,8 @@ export function transformToDashboardData(
             sortedResults,
             accountId,
           )?.toISOString(),
-          archivedAt: (accountResult.account as { archivedAt?: string | null })
-            .archivedAt,
+          archivedAt: accountResult.account.archivedAt,
+          valuationMode: accountResult.account.valuationMode,
         }
 
         if (isLiabilityType(accountResult.account.type)) {

@@ -15,6 +15,8 @@ export enum BalanceSnapshotType {
   FORWARD_FILL = 'FORWARD_FILL',
   /** Balance imported from CSV */
   CSV_IMPORT = 'CSV_IMPORT',
+  /** Balance recalculated from the latest market quotes for manual holdings. */
+  MARKET_REFRESH = 'MARKET_REFRESH',
 }
 
 export const BalanceSnapshotTypeSchema = z.nativeEnum(BalanceSnapshotType);

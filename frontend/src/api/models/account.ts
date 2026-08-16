@@ -7,6 +7,7 @@
  */
 import type { AccountType } from './accountType'
 import type { AccountSubType } from './accountSubType'
+import type { AccountValuationMode } from './accountValuationMode'
 import type { AccountBankLink } from './accountBankLink'
 import type { MoneyWithSign } from './moneyWithSign'
 
@@ -23,6 +24,7 @@ export interface Account {
   type: (typeof AccountType)[keyof typeof AccountType]
   /** @nullable */
   subType: AccountSubType
+  valuationMode: AccountValuationMode
   /** @nullable */
   externalAccountId?: string | null
   /** @nullable */

@@ -1,4 +1,8 @@
+import { types as pgTypes } from 'pg';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { parsePostgresUtcTimestamp } from './common/postgres-timestamp';
+
+pgTypes.setTypeParser(1114, parsePostgresUtcTimestamp);
 
 /**
  * Shared database configuration for app and migrations CLI.
@@ -11,6 +15,7 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.POSTGRES_USER ?? 'postgres',
   password: process.env.POSTGRES_PASSWORD ?? 'postgres',
   database: process.env.POSTGRES_DB ?? 'splice',
+  extra: { options: '-c timezone=UTC' },
   // Auto-load all entity files
   entities: [__dirname + '/**/*.entity{.ts,.js}'],
   synchronize: false,
