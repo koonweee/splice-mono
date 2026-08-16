@@ -6,9 +6,7 @@
 
 A full-stack personal finance application for tracking net worth across multiple accounts and currencies.
 
-## Product Tour
-
-Screenshots use anonymized demo data.
+## Screenshots
 
 | Feature | Description | Desktop | Mobile |
 | --- | --- | --- | --- |
