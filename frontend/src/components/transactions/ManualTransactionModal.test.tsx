@@ -412,6 +412,7 @@ function makeAccount(id: string, name: string, currency: string): Account {
       sign: MoneyWithSignSign.positive,
     },
     type: AccountType.depository,
+    valuationMode: 'balance',
     subType: null,
     externalAccountId: null,
     bankLinkId: null,

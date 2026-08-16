@@ -74,7 +74,7 @@ export function BackfillModal({ opened, onClose }: BackfillModalProps) {
             queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
           })
           notifications.show({
-            title: 'Import Successful',
+            title: 'Import successful',
             message: `Successfully imported ${data.imported} balance snapshots.`,
             color: 'green',
           })
@@ -83,7 +83,7 @@ export function BackfillModal({ opened, onClose }: BackfillModalProps) {
         },
         onError: (error: any) => {
           notifications.show({
-            title: 'Import Failed',
+            title: 'Import failed',
             message: error?.response?.data?.message || 'Failed to import CSV',
             color: 'red',
           })
@@ -96,7 +96,7 @@ export function BackfillModal({ opened, onClose }: BackfillModalProps) {
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Manual Backfill via CSV"
+      title="Manual backfill via CSV"
       centered
       size="lg"
     >
@@ -115,13 +115,13 @@ export function BackfillModal({ opened, onClose }: BackfillModalProps) {
         </Text>
 
         <Button variant="light" onClick={handleDownloadTemplate}>
-          Download Template
+          Download template
         </Button>
 
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack>
             <FileInput
-              label="Upload Filled CSV"
+              label="Upload filled CSV"
               placeholder="Select CSV file"
               accept=".csv"
               leftSection={<IconUpload size={14} />}

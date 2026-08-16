@@ -1,0 +1,52 @@
+.positionHeader,
+.positionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 8rem 44px;
+  column-gap: var(--mantine-spacing-sm);
+  align-items: center;
+}
+
+.positionHeader {
+  padding: 0 4px 7px;
+  color: var(--mantine-color-dimmed);
+}
+
+.positionRow {
+  min-height: 66px;
+  border-top: 1px solid var(--mantine-color-default-border);
+  padding: 7px 4px;
+}
+
+.positionDetails {
+  min-width: 0;
+}
+
+.quantityInput {
+  width: 100%;
+}
+
+@media (max-width: 48em) {
+  .positionHeader,
+  .positionRow {
+    grid-template-columns: minmax(0, 1fr) 6.5rem 44px;
+    column-gap: var(--mantine-spacing-xs);
+  }
+
+  .positionHeader {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .positionRow {
+    min-height: 72px;
+    padding-right: 0;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 23.125em) {
+  .positionHeader,
+  .positionRow {
+    grid-template-columns: minmax(0, 1fr) 5.75rem 44px;
+  }
+}

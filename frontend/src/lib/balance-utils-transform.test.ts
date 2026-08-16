@@ -85,6 +85,18 @@ describe('balance-utils transform', () => {
       expect(data.assets[0].syncedAt).toBe('2026-05-25T07:06:11.560Z')
     })
 
+    it('carries the account valuation mode into account summaries', () => {
+      const result = createMockResult('2026-06-15', 100)
+      result.balances.acc1.account = {
+        ...result.balances.acc1.account,
+        valuationMode: 'holdings',
+      } as typeof result.balances.acc1.account
+
+      const data = transformToDashboardData([result] as never, TimePeriod.month)
+
+      expect(data.assets[0].valuationMode).toBe('holdings')
+    })
+
     it('orders assets and liabilities by converted values when present', () => {
       const makeBalance = (amount: number, currency = 'USD') => ({
         money: { amount, currency },
@@ -263,10 +275,7 @@ describe('balance-utils transform', () => {
         },
       }
 
-      const data = transformToDashboardData(
-        [result] as any,
-        TimePeriod.month,
-      )
+      const data = transformToDashboardData([result] as any, TimePeriod.month)
 
       expect(data.netWorth.money).toEqual({ amount: 0, currency: 'EUR' })
       expect(data.changeAmount?.money).toEqual({ amount: 0, currency: 'EUR' })
@@ -305,10 +314,7 @@ describe('balance-utils transform', () => {
         },
       }
 
-      const data = transformToDashboardData(
-        [result] as any,
-        TimePeriod.month,
-      )
+      const data = transformToDashboardData([result] as any, TimePeriod.month)
 
       expect(data.netWorth.money).toEqual({ amount: 10000, currency: 'USD' })
       expect(data.changeAmount?.money).toEqual({

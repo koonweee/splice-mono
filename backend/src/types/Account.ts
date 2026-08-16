@@ -16,6 +16,9 @@ export const AccountTypeSchema = z.union([
 
 export const AccountSubTypeSchema = z.nativeEnum(AccountSubtype);
 
+export const AccountValuationModeSchema = z.enum(['balance', 'holdings']);
+export type AccountValuationMode = z.infer<typeof AccountValuationModeSchema>;
+
 export const AccountSchema = registerSchema(
   'Account',
   z
@@ -28,6 +31,7 @@ export const AccountSchema = registerSchema(
       mask: z.string().nullable().optional(),
       type: AccountTypeSchema,
       subType: AccountSubTypeSchema.nullable(),
+      valuationMode: AccountValuationModeSchema,
       /** External account ID from bank provider (e.g., Plaid account_id) */
       externalAccountId: z.string().nullable().optional(),
       /** ID of linked BankLink (optional 1-to-1 relationship) */
@@ -63,6 +67,7 @@ export const CreateAccountDtoSchema = z
     bankLinkId: z.string().nullable().optional(),
     /** Raw API account data from provider */
     rawApiAccount: APIAccountSchema.nullable().optional(),
+    valuationMode: AccountValuationModeSchema.optional(),
   })
   .merge(CurrentAndAvailableBalanceSchema);
 

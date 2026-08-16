@@ -401,7 +401,7 @@ function definePreset(config: Omit<ThemePreset, 'theme'> & {
 export const THEME_PRESETS = [
   definePreset({
     id: 'splice-light',
-    label: 'Splice Light',
+    label: 'Splice light',
     description: 'Current Splice palette with a light surface.',
     colorScheme: 'light',
     swatches: ['#f5f8f7', spliceBrand[6], spliceTeal[5], spliceRed[5]],
@@ -418,7 +418,7 @@ export const THEME_PRESETS = [
   }),
   definePreset({
     id: 'splice-dark',
-    label: 'Splice Dark',
+    label: 'Splice dark',
     description: 'Current Splice palette with the existing dark surface.',
     colorScheme: 'dark',
     swatches: [spliceDark[8], spliceBrand[6], spliceTeal[5], spliceRed[5]],
@@ -485,7 +485,7 @@ export const THEME_PRESETS = [
   }),
   definePreset({
     id: 'oled-black',
-    label: 'OLED Black',
+    label: 'OLED black',
     description: 'True-black surfaces with electric teal accents.',
     colorScheme: 'dark',
     swatches: ['#000000', oledBrand[5], '#52ff80', '#ff4f67'],

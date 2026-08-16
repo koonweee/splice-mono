@@ -15,4 +15,5 @@ export const BalanceSnapshotSnapshotType = {
   SYNC: 'SYNC',
   FORWARD_FILL: 'FORWARD_FILL',
   CSV_IMPORT: 'CSV_IMPORT',
+  MARKET_REFRESH: 'MARKET_REFRESH',
 } as const

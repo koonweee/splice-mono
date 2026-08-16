@@ -7,7 +7,7 @@ const statusConfig: Record<string, { color: string; label: string }> = {
   [SanitizedBankLinkStatus.ERROR]: { color: 'red', label: 'Error' },
   [SanitizedBankLinkStatus.PENDING_REAUTH]: {
     color: 'yellow',
-    label: 'Needs Reauth',
+    label: 'Needs reauthentication',
   },
 }
 

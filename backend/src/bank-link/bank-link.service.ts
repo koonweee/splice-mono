@@ -226,6 +226,11 @@ export class BankLinkService extends OwnedCrudService<
           `Account with id ${convertAccountId} is already linked`,
         );
       }
+      if (accountToConvert.valuationMode === 'holdings') {
+        throw new BadRequestException(
+          `Account with id ${convertAccountId} is valued from holdings and cannot be linked`,
+        );
+      }
 
       linkFlowContext = {
         mode: 'convert-manual-account',
@@ -2316,6 +2321,11 @@ export class BankLinkService extends OwnedCrudService<
         if (targetAccount.bankLinkId) {
           throw new BadRequestException(
             `Account with id ${conversionContext.convertAccountId} is already linked`,
+          );
+        }
+        if (targetAccount.valuationMode === 'holdings') {
+          throw new BadRequestException(
+            `Account with id ${conversionContext.convertAccountId} is valued from holdings and cannot be linked`,
           );
         }
 

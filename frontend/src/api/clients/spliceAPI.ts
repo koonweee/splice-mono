@@ -51,6 +51,7 @@ import type {
   CreateCategorizationRuleDto,
   CreateCustomCategoryDto,
   CreateManualAccountDto,
+  CreateManualBrokerageAccountDto,
   CreateManualTransactionDto,
   CreatePersonalAccessTokenDto,
   CreatePersonalAccessTokenResponse,
@@ -62,7 +63,10 @@ import type {
   InvestmentControllerFindActivityForAccountParams,
   InvestmentControllerFindActivityParams,
   InvestmentControllerFindHoldingsForAccountOnDateParams,
+  InvestmentControllerSearchSecuritiesParams,
   InvestmentHoldingsResponse,
+  ManualBrokeragePortfolioResponse,
+  MarketSecuritySearchResult,
   NotificationControllerGetCurrentSubscriptionStatusParams,
   PaginatedInvestmentActivityResponse,
   PaginatedTransactionResponse,
@@ -76,6 +80,7 @@ import type {
   RecurringManualTransactionSchedule,
   RefreshTokenDto,
   RegisterPushSubscriptionDto,
+  ReplaceManualBrokerageHoldingsDto,
   TestNotificationResponse,
   TokenResponse,
   Transaction,
@@ -3550,6 +3555,437 @@ export const useBankLinkControllerUpdateWebhookUrls = <
 > => {
   const mutationOptions =
     getBankLinkControllerUpdateWebhookUrlsMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+export const investmentControllerSearchSecurities = (
+  params: InvestmentControllerSearchSecuritiesParams,
+  signal?: AbortSignal,
+) => {
+  return axios<MarketSecuritySearchResult[]>({
+    url: `/investment/securities/search`,
+    method: 'GET',
+    params,
+    signal,
+  })
+}
+
+export const getInvestmentControllerSearchSecuritiesQueryKey = (
+  params?: InvestmentControllerSearchSecuritiesParams,
+) => {
+  return [`/investment/securities/search`, ...(params ? [params] : [])] as const
+}
+
+export const getInvestmentControllerSearchSecuritiesQueryOptions = <
+  TData = Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+  TError = unknown,
+>(
+  params: InvestmentControllerSearchSecuritiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+        TError,
+        TData
+      >
+    >
+  },
+) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getInvestmentControllerSearchSecuritiesQueryKey(params)
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof investmentControllerSearchSecurities>>
+  > = ({ signal }) => investmentControllerSearchSecurities(params, signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type InvestmentControllerSearchSecuritiesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof investmentControllerSearchSecurities>>
+>
+export type InvestmentControllerSearchSecuritiesQueryError = unknown
+
+export function useInvestmentControllerSearchSecurities<
+  TData = Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+  TError = unknown,
+>(
+  params: InvestmentControllerSearchSecuritiesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+          TError,
+          Awaited<ReturnType<typeof investmentControllerSearchSecurities>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useInvestmentControllerSearchSecurities<
+  TData = Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+  TError = unknown,
+>(
+  params: InvestmentControllerSearchSecuritiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+          TError,
+          Awaited<ReturnType<typeof investmentControllerSearchSecurities>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useInvestmentControllerSearchSecurities<
+  TData = Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+  TError = unknown,
+>(
+  params: InvestmentControllerSearchSecuritiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useInvestmentControllerSearchSecurities<
+  TData = Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+  TError = unknown,
+>(
+  params: InvestmentControllerSearchSecuritiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof investmentControllerSearchSecurities>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getInvestmentControllerSearchSecuritiesQueryOptions(
+    params,
+    options,
+  )
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
+}
+
+export const investmentControllerCreateManualBrokerageAccount = (
+  createManualBrokerageAccountDto: CreateManualBrokerageAccountDto,
+  signal?: AbortSignal,
+) => {
+  return axios<ManualBrokeragePortfolioResponse>({
+    url: `/investment/manual-account`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: createManualBrokerageAccountDto,
+    signal,
+  })
+}
+
+export const getInvestmentControllerCreateManualBrokerageAccountMutationOptions =
+  <TError = unknown, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof investmentControllerCreateManualBrokerageAccount>
+      >,
+      TError,
+      { data: CreateManualBrokerageAccountDto },
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<
+      ReturnType<typeof investmentControllerCreateManualBrokerageAccount>
+    >,
+    TError,
+    { data: CreateManualBrokerageAccountDto },
+    TContext
+  > => {
+    const mutationKey = ['investmentControllerCreateManualBrokerageAccount']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof investmentControllerCreateManualBrokerageAccount>
+      >,
+      { data: CreateManualBrokerageAccountDto }
+    > = (props) => {
+      const { data } = props ?? {}
+
+      return investmentControllerCreateManualBrokerageAccount(data)
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type InvestmentControllerCreateManualBrokerageAccountMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof investmentControllerCreateManualBrokerageAccount>>
+  >
+export type InvestmentControllerCreateManualBrokerageAccountMutationBody =
+  CreateManualBrokerageAccountDto
+export type InvestmentControllerCreateManualBrokerageAccountMutationError =
+  unknown
+
+export const useInvestmentControllerCreateManualBrokerageAccount = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof investmentControllerCreateManualBrokerageAccount>
+      >,
+      TError,
+      { data: CreateManualBrokerageAccountDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof investmentControllerCreateManualBrokerageAccount>>,
+  TError,
+  { data: CreateManualBrokerageAccountDto },
+  TContext
+> => {
+  const mutationOptions =
+    getInvestmentControllerCreateManualBrokerageAccountMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+export const investmentControllerReplaceManualBrokerageHoldings = (
+  accountId: string,
+  replaceManualBrokerageHoldingsDto: ReplaceManualBrokerageHoldingsDto,
+) => {
+  return axios<ManualBrokeragePortfolioResponse>({
+    url: `/investment/account/${accountId}/manual-holdings`,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    data: replaceManualBrokerageHoldingsDto,
+  })
+}
+
+export const getInvestmentControllerReplaceManualBrokerageHoldingsMutationOptions =
+  <TError = unknown, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof investmentControllerReplaceManualBrokerageHoldings>
+      >,
+      TError,
+      { accountId: string; data: ReplaceManualBrokerageHoldingsDto },
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<
+      ReturnType<typeof investmentControllerReplaceManualBrokerageHoldings>
+    >,
+    TError,
+    { accountId: string; data: ReplaceManualBrokerageHoldingsDto },
+    TContext
+  > => {
+    const mutationKey = ['investmentControllerReplaceManualBrokerageHoldings']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof investmentControllerReplaceManualBrokerageHoldings>
+      >,
+      { accountId: string; data: ReplaceManualBrokerageHoldingsDto }
+    > = (props) => {
+      const { accountId, data } = props ?? {}
+
+      return investmentControllerReplaceManualBrokerageHoldings(accountId, data)
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type InvestmentControllerReplaceManualBrokerageHoldingsMutationResult =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof investmentControllerReplaceManualBrokerageHoldings>
+    >
+  >
+export type InvestmentControllerReplaceManualBrokerageHoldingsMutationBody =
+  ReplaceManualBrokerageHoldingsDto
+export type InvestmentControllerReplaceManualBrokerageHoldingsMutationError =
+  unknown
+
+export const useInvestmentControllerReplaceManualBrokerageHoldings = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof investmentControllerReplaceManualBrokerageHoldings>
+      >,
+      TError,
+      { accountId: string; data: ReplaceManualBrokerageHoldingsDto },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<
+    ReturnType<typeof investmentControllerReplaceManualBrokerageHoldings>
+  >,
+  TError,
+  { accountId: string; data: ReplaceManualBrokerageHoldingsDto },
+  TContext
+> => {
+  const mutationOptions =
+    getInvestmentControllerReplaceManualBrokerageHoldingsMutationOptions(
+      options,
+    )
+
+  return useMutation(mutationOptions, queryClient)
+}
+
+export const investmentControllerRefreshManualBrokeragePrices = (
+  accountId: string,
+  signal?: AbortSignal,
+) => {
+  return axios<ManualBrokeragePortfolioResponse>({
+    url: `/investment/account/${accountId}/refresh-prices`,
+    method: 'POST',
+    signal,
+  })
+}
+
+export const getInvestmentControllerRefreshManualBrokeragePricesMutationOptions =
+  <TError = unknown, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof investmentControllerRefreshManualBrokeragePrices>
+      >,
+      TError,
+      { accountId: string },
+      TContext
+    >
+  }): UseMutationOptions<
+    Awaited<
+      ReturnType<typeof investmentControllerRefreshManualBrokeragePrices>
+    >,
+    TError,
+    { accountId: string },
+    TContext
+  > => {
+    const mutationKey = ['investmentControllerRefreshManualBrokeragePrices']
+    const { mutation: mutationOptions } = options
+      ? options.mutation &&
+        'mutationKey' in options.mutation &&
+        options.mutation.mutationKey
+        ? options
+        : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey } }
+
+    const mutationFn: MutationFunction<
+      Awaited<
+        ReturnType<typeof investmentControllerRefreshManualBrokeragePrices>
+      >,
+      { accountId: string }
+    > = (props) => {
+      const { accountId } = props ?? {}
+
+      return investmentControllerRefreshManualBrokeragePrices(accountId)
+    }
+
+    return { mutationFn, ...mutationOptions }
+  }
+
+export type InvestmentControllerRefreshManualBrokeragePricesMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof investmentControllerRefreshManualBrokeragePrices>>
+  >
+
+export type InvestmentControllerRefreshManualBrokeragePricesMutationError =
+  unknown
+
+export const useInvestmentControllerRefreshManualBrokeragePrices = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<typeof investmentControllerRefreshManualBrokeragePrices>
+      >,
+      TError,
+      { accountId: string },
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof investmentControllerRefreshManualBrokeragePrices>>,
+  TError,
+  { accountId: string },
+  TContext
+> => {
+  const mutationOptions =
+    getInvestmentControllerRefreshManualBrokeragePricesMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
 }

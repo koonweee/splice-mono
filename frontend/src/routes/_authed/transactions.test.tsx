@@ -310,6 +310,7 @@ const account: Account = {
     sign: MoneyWithSignSign.positive,
   },
   type: AccountType.depository,
+  valuationMode: 'balance',
   subType: null,
   externalAccountId: null,
   bankLinkId: null,

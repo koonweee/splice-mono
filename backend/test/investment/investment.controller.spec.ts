@@ -1,9 +1,17 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { IS_PUBLIC_KEY } from '../../src/auth/decorators/public.decorator';
 import type { JwtUser } from '../../src/auth/decorators/current-user.decorator';
 import { InvestmentController } from '../../src/investment/investment.controller';
 import { InvestmentService } from '../../src/investment/investment.service';
+import { ManualBrokerageService } from '../../src/investment/manual-brokerage.service';
+import { MarketPriceService } from '../../src/market-price/market-price.service';
+import {
+  CreateManualBrokerageAccountDtoSchema,
+  ReplaceManualBrokerageHoldingsDtoSchema,
+} from '../../src/types/Investment';
+import { MarketSecuritySearchQuerySchema } from '../../src/types/MarketPrice';
+import { ZodValidationPipe } from '../../src/zod-validation/zod-validation.pipe';
 
 const userId = '11111111-1111-1111-1111-111111111111';
 const accountId = '22222222-2222-2222-2222-222222222222';
@@ -15,6 +23,8 @@ const currentUser: JwtUser = {
 const holdingsResponse = {
   accountId,
   snapshotDate: '2026-05-20',
+  accountCurrency: null,
+  accountValue: null,
   holdings: [],
 };
 
@@ -33,6 +43,12 @@ describe('InvestmentController', () => {
     findActivityForAccount: jest.fn(),
     findActivity: jest.fn(),
   };
+  const manualBrokerageService = {
+    createManualBrokerageAccount: jest.fn(),
+    replaceManualBrokerageHoldings: jest.fn(),
+    refreshManualBrokeragePrices: jest.fn(),
+  };
+  const marketPriceService = { search: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -54,6 +70,14 @@ describe('InvestmentController', () => {
           provide: InvestmentService,
           useValue: investmentService,
         },
+        {
+          provide: ManualBrokerageService,
+          useValue: manualBrokerageService,
+        },
+        {
+          provide: MarketPriceService,
+          useValue: marketPriceService,
+        },
       ],
     }).compile();
 
@@ -71,6 +95,84 @@ describe('InvestmentController', () => {
       accountId,
     );
     expect(result).toEqual(holdingsResponse);
+  });
+
+  it('searches securities with the validated query', async () => {
+    const searchResults = [
+      {
+        symbol: 'C6L.SI',
+        name: 'Singapore Airlines Limited',
+        quoteType: 'EQUITY',
+        exchangeCode: 'SES',
+        exchangeName: 'SES',
+        currency: 'SGD',
+        marketIdentifierCode: 'XSES',
+      },
+    ];
+    marketPriceService.search.mockResolvedValueOnce(searchResults);
+
+    await expect(
+      controller.searchSecurities({ query: 'sia', limit: 10 }),
+    ).resolves.toEqual(searchResults);
+    expect(marketPriceService.search).toHaveBeenCalledWith('sia', 10);
+  });
+
+  it('delegates manual brokerage create, replace, and refresh operations', async () => {
+    const portfolioResponse = { staleSymbols: [] };
+    manualBrokerageService.createManualBrokerageAccount.mockResolvedValueOnce(
+      portfolioResponse,
+    );
+    manualBrokerageService.replaceManualBrokerageHoldings.mockResolvedValueOnce(
+      portfolioResponse,
+    );
+    manualBrokerageService.refreshManualBrokeragePrices.mockResolvedValueOnce(
+      portfolioResponse,
+    );
+    const createDto = {
+      name: 'Prime Account',
+      accountCurrency: 'USD',
+      positions: [{ symbol: 'AAPL', quantity: '2' }],
+    };
+    const replaceDto = { positions: [] };
+
+    await controller.createManualBrokerageAccount(currentUser, createDto);
+    await controller.replaceManualBrokerageHoldings(
+      currentUser,
+      accountId,
+      replaceDto,
+    );
+    await controller.refreshManualBrokeragePrices(currentUser, accountId);
+
+    expect(
+      manualBrokerageService.createManualBrokerageAccount,
+    ).toHaveBeenCalledWith(createDto, userId);
+    expect(
+      manualBrokerageService.replaceManualBrokerageHoldings,
+    ).toHaveBeenCalledWith(accountId, replaceDto, userId);
+    expect(
+      manualBrokerageService.refreshManualBrokeragePrices,
+    ).toHaveBeenCalledWith(accountId, userId);
+  });
+
+  it('rejects invalid search and manual brokerage request payloads', () => {
+    expect(() =>
+      new ZodValidationPipe(MarketSecuritySearchQuerySchema).transform({
+        query: 'x',
+        limit: 100,
+      }),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      new ZodValidationPipe(CreateManualBrokerageAccountDtoSchema).transform({
+        name: 'Empty brokerage',
+        accountCurrency: 'USD',
+        positions: [],
+      }),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      new ZodValidationPipe(ReplaceManualBrokerageHoldingsDtoSchema).transform({
+        positions: [{ symbol: 'AAPL', quantity: '-1' }],
+      }),
+    ).toThrow(BadRequestException);
   });
 
   it('gets date-specific holdings for the current user account', async () => {
@@ -135,30 +237,20 @@ describe('InvestmentController', () => {
     ).rejects.toThrow(NotFoundException);
   });
 
-  it('requires authenticated access for holdings routes', () => {
-    expect(
-      Reflect.getMetadata(
-        IS_PUBLIC_KEY,
-        InvestmentController.prototype.findLatestHoldingsForAccount,
-      ),
-    ).toBeUndefined();
-    expect(
-      Reflect.getMetadata(
-        IS_PUBLIC_KEY,
-        InvestmentController.prototype.findHoldingsForAccountOnDate,
-      ),
-    ).toBeUndefined();
-    expect(
-      Reflect.getMetadata(
-        IS_PUBLIC_KEY,
-        InvestmentController.prototype.findActivityForAccount,
-      ),
-    ).toBeUndefined();
-    expect(
-      Reflect.getMetadata(
-        IS_PUBLIC_KEY,
-        InvestmentController.prototype.findActivity,
-      ),
-    ).toBeUndefined();
+  it('requires authenticated access for every investment route', () => {
+    const routeMethods = [
+      InvestmentController.prototype.searchSecurities,
+      InvestmentController.prototype.createManualBrokerageAccount,
+      InvestmentController.prototype.replaceManualBrokerageHoldings,
+      InvestmentController.prototype.refreshManualBrokeragePrices,
+      InvestmentController.prototype.findLatestHoldingsForAccount,
+      InvestmentController.prototype.findHoldingsForAccountOnDate,
+      InvestmentController.prototype.findActivityForAccount,
+      InvestmentController.prototype.findActivity,
+    ];
+
+    for (const routeMethod of routeMethods) {
+      expect(Reflect.getMetadata(IS_PUBLIC_KEY, routeMethod)).toBeUndefined();
+    }
   });
 });
