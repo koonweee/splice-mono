@@ -62,8 +62,14 @@ export function ManualBrokeragePositionsEditor({
     enabled: searchEnabled,
     staleTime: 5 * 60 * 1000,
   })
+  const settledSearchMatchesInput =
+    debouncedSearch === trimmedSearchInput &&
+    !searchQuery.isFetching &&
+    (searchQuery.isSuccess || searchQuery.isError)
   const searchPopoverOpened =
-    searchFocused && trimmedSearchInput.length > 0 && !searchQuery.isFetching
+    searchFocused &&
+    trimmedSearchInput.length >= 2 &&
+    settledSearchMatchesInput
 
   const positionSymbols = useMemo(
     () => new Set(positions.map((position) => position.symbol.toUpperCase())),
@@ -138,11 +144,7 @@ export function ManualBrokeragePositionsEditor({
             />
           </Popover.Target>
           <Popover.Dropdown aria-label="Security search results" p="xs">
-            {trimmedSearchInput.length < 2 ? (
-              <Text c="dimmed" size="sm">
-                Enter at least 2 characters.
-              </Text>
-            ) : searchQuery.isError ? (
+            {searchQuery.isError ? (
               <Text c="red" role="alert" size="sm">
                 Stock search failed. Try again in a moment.
               </Text>
