@@ -1,5 +1,5 @@
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ COPY . .
 RUN yarn build
 
 # Production stage
-FROM node:22-alpine AS production
+FROM node:24-alpine AS production
 
 WORKDIR /app
 
@@ -51,8 +51,8 @@ RUN chown -R nestjs:nodejs /app
 # Switch to non-root user
 USER nestjs
 
-# Expose port
-EXPOSE 3000
+# The API remains on 3000. The opt-in MCP listener uses 3001.
+EXPOSE 3000 3001
 
 # Start the application. Run migrations explicitly as a separate deploy step.
 ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -1,18 +1,43 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
-  ElicitRequestSchema,
+  createMcpServer,
+  createRequestContext,
+  silentLogger,
+} from '@koonweee/mcp-kit';
+import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
+import {
   type CallToolResult,
-} from '@modelcontextprotocol/sdk/types.js';
-import { SpliceMcpService } from '../../src/mcp/mcp.service';
+  type McpServer,
+} from '@modelcontextprotocol/server';
+import { BadRequestException } from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import {
+  SPLICE_MCP_TOOL_NAMES,
+  createSpliceMcpDependencies,
+  spliceMcpDefinition,
+} from '../../src/mcp/mcp.definition';
 import { MoneySign } from '../../src/types/MoneyWithSign';
+import { PRE_PORT_MCP_CONTRACT } from './fixtures/pre-port-contract';
 
 const mockUserId = '00000000-0000-0000-0000-000000000001';
 const mockAccountId = '11111111-1111-4111-8111-111111111111';
 const mockCategoryId = '22222222-2222-4222-8222-222222222222';
 
-describe('SpliceMcpService', () => {
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalJson(item)).join(',')}]`;
+  }
+  if (typeof value === 'object' && value !== null) {
+    const entries = Object.entries(value)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right));
+    return `{${entries
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+describe('Splice MCP definition', () => {
   const userService = {
     findOne: jest.fn(),
   };
@@ -50,28 +75,15 @@ describe('SpliceMcpService', () => {
     getAnalysisAudit: jest.fn(),
   };
 
-  let service: SpliceMcpService;
-
-  beforeEach(() => {
-    service = new SpliceMcpService(
-      userService as never,
-      accountsSurfaceService as never,
-      balanceHistorySurfaceService as never,
-      transactionsSurfaceService as never,
-      mcpReadService as never,
-      mcpCategorizationService as never,
-      transactionAnalysisService as never,
-    );
-  });
-
   afterEach(() => {
     jest.clearAllMocks();
   });
 
   async function connect(
-    server: McpServer,
+    serverOrPromise: McpServer | Promise<McpServer>,
     options?: ConstructorParameters<typeof Client>[1],
   ) {
+    const server = await serverOrPromise;
     const client = new Client(
       {
         name: 'splice-mcp-test-client',
@@ -94,8 +106,34 @@ describe('SpliceMcpService', () => {
     };
   }
 
+  function createServer(
+    userId: string,
+    scopes: readonly string[] = ['splice:read', 'splice:write'],
+  ): Promise<McpServer> {
+    return createMcpServer(
+      spliceMcpDefinition,
+      createRequestContext({
+        requestId: 'mcp-service-spec',
+        principal: {
+          subject: `google-oauth2|${userId}`,
+          scopes: new Set(scopes),
+        },
+        logger: silentLogger,
+        dependencies: createSpliceMcpDependencies(userId, {
+          userService: userService as never,
+          accountsSurfaceService: accountsSurfaceService as never,
+          balanceHistorySurfaceService: balanceHistorySurfaceService as never,
+          transactionsSurfaceService: transactionsSurfaceService as never,
+          mcpReadService: mcpReadService as never,
+          mcpCategorizationService: mcpCategorizationService as never,
+          transactionAnalysisService: transactionAnalysisService as never,
+        }),
+      }),
+    );
+  }
+
   it('registers MCP tools with read and write annotations', async () => {
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       const result = await client.listTools();
@@ -159,6 +197,13 @@ describe('SpliceMcpService', () => {
         'show_portfolio_viewer',
         'show_projection_scenario_modeler',
       ]);
+      expect(result.tools.map((tool) => tool.name)).toEqual([
+        ...SPLICE_MCP_TOOL_NAMES,
+      ]);
+
+      const definitionsByName = new Map(
+        spliceMcpDefinition.tools.map((tool) => [tool.name, tool]),
+      );
       for (const name of readOnlyToolNames) {
         expect(toolsByName.get(name)).toMatchObject({
           outputSchema: expect.any(Object),
@@ -168,6 +213,10 @@ describe('SpliceMcpService', () => {
             idempotentHint: true,
             openWorldHint: false,
           },
+        });
+        expect(definitionsByName.get(name)).toMatchObject({
+          requiredScopes: ['splice:read'],
+          risk: { kind: 'read' },
         });
       }
       expect(toolsByName.get('create_categorization_rule')).toMatchObject({
@@ -179,6 +228,12 @@ describe('SpliceMcpService', () => {
           openWorldHint: false,
         },
       });
+      expect(definitionsByName.get('create_categorization_rule')).toMatchObject(
+        {
+          requiredScopes: ['splice:write'],
+          risk: { kind: 'mutating' },
+        },
+      );
       expect(toolsByName.get('apply_categorization_rule')).toMatchObject({
         outputSchema: expect.any(Object),
         annotations: {
@@ -188,13 +243,105 @@ describe('SpliceMcpService', () => {
           openWorldHint: false,
         },
       });
+      expect(definitionsByName.get('apply_categorization_rule')).toMatchObject({
+        requiredScopes: ['splice:write'],
+        risk: { kind: 'destructive', idempotent: true },
+      });
+    } finally {
+      await close();
+    }
+  });
+
+  it('matches the frozen pre-port MCP contract parity oracle', async () => {
+    const { client, close } = await connect(createServer(mockUserId));
+
+    try {
+      expect(SPLICE_MCP_TOOL_NAMES).toEqual(PRE_PORT_MCP_CONTRACT.tools);
+      const listedTools = await client.listTools();
+      expect(listedTools.tools.map((tool) => tool.name)).toEqual(
+        PRE_PORT_MCP_CONTRACT.tools,
+      );
+      expect(
+        listedTools.tools.map((tool) => ({
+          name: tool.name,
+          sha256: createHash('sha256')
+            .update(canonicalJson(tool))
+            .digest('hex'),
+        })),
+      ).toEqual(PRE_PORT_MCP_CONTRACT.toolContractSha256);
+
+      const listedResources = await client.listResources();
+      expect(
+        listedResources.resources.map((resource) => resource.uri).sort(),
+      ).toEqual([...PRE_PORT_MCP_CONTRACT.fixedResources].sort());
+      const templates = await client.listResourceTemplates();
+      expect(
+        templates.resourceTemplates.map((template) => template.uriTemplate),
+      ).toEqual(PRE_PORT_MCP_CONTRACT.resourceTemplates);
+      const prompts = await client.listPrompts();
+      expect(prompts.prompts.map((prompt) => prompt.name).sort()).toEqual(
+        [...PRE_PORT_MCP_CONTRACT.prompts].sort(),
+      );
+
+      const toolsByName = new Map(
+        listedTools.tools.map((tool) => [tool.name, tool]),
+      );
+      for (const [toolName, resourceUri] of Object.entries(
+        PRE_PORT_MCP_CONTRACT.apps,
+      )) {
+        expect(toolsByName.get(toolName)?._meta).toMatchObject({
+          ui: { resourceUri },
+        });
+      }
+      for (const [toolName, fields] of Object.entries(
+        PRE_PORT_MCP_CONTRACT.paginatedOutputs,
+      )) {
+        const outputSchema = JSON.stringify(
+          toolsByName.get(toolName)?.outputSchema,
+        );
+        for (const field of fields)
+          expect(outputSchema).toContain(`"${field}"`);
+      }
+      for (const toolName of ['get_cashflow_analysis']) {
+        const outputSchema = JSON.stringify(
+          toolsByName.get(toolName)?.outputSchema,
+        );
+        for (const field of PRE_PORT_MCP_CONTRACT.moneyFields) {
+          expect(outputSchema).toContain(`"${field}"`);
+        }
+      }
+      for (const [toolName, write] of Object.entries(
+        PRE_PORT_MCP_CONTRACT.writes,
+      )) {
+        expect(
+          JSON.stringify(toolsByName.get(toolName)?.inputSchema),
+        ).toContain(`"${write.requiredInput}"`);
+        expect(toolsByName.has(write.preview)).toBe(true);
+        const definition = spliceMcpDefinition.tools.find(
+          (tool) => tool.name === toolName,
+        );
+        expect(definition?.risk.kind).toBe(write.risk);
+        if ('idempotent' in write) {
+          expect(definition?.risk).toMatchObject({ idempotent: true });
+        }
+      }
+      const projection = (await client.callTool({
+        name: 'collect_projection_assumptions',
+        arguments: {},
+      })) as CallToolResult;
+      expect(projection.structuredContent).toMatchObject({
+        source: 'fallback',
+        inputRequired: {
+          fields: PRE_PORT_MCP_CONTRACT.projection.fields,
+        },
+      });
     } finally {
       await close();
     }
   });
 
   it('exposes calling-LLM guidance as a resource', async () => {
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       const resources = await client.listResources();
@@ -235,7 +382,7 @@ describe('SpliceMcpService', () => {
       ).toContain('monthly_cashflow_review');
       expect(
         'text' in guide.contents[0] ? guide.contents[0].text : '',
-      ).toContain('full-scope automation keys');
+      ).toContain('OAuth access uses splice:read');
       expect(
         'text' in guide.contents[0] ? guide.contents[0].text : '',
       ).toContain('preview a proposed categorization rule draft');
@@ -277,7 +424,7 @@ describe('SpliceMcpService', () => {
       query: { latestOnly: true },
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       const resources = await client.listResources();
@@ -377,8 +524,73 @@ describe('SpliceMcpService', () => {
     }
   });
 
+  it('requires splice:read before every guide, App, and data resource read', async () => {
+    const { client, close } = await connect(createServer(mockUserId, []));
+    const resourceUris = [
+      'splice://mcp-guide',
+      'ui://splice/cashflow-explorer.html',
+      'splice://reports/cashflow/2026-03-01/2026-03-31',
+      `splice://accounts/${mockAccountId}/snapshot`,
+      'splice://categories/taxonomy',
+      'splice://rules/analysis',
+      'splice://portfolio/holdings/latest',
+    ];
+
+    try {
+      for (const uri of resourceUris) {
+        await expect(client.readResource({ uri })).rejects.toThrow(
+          'Insufficient scope',
+        );
+      }
+
+      expect(transactionAnalysisService.getAnalysis).not.toHaveBeenCalled();
+      expect(accountsSurfaceService.getAccountsSnapshot).not.toHaveBeenCalled();
+      expect(mcpReadService.listCategories).not.toHaveBeenCalled();
+      expect(mcpReadService.listAnalysisRules).not.toHaveBeenCalled();
+      expect(mcpReadService.listCategorizationRules).not.toHaveBeenCalled();
+      expect(mcpReadService.listInvestmentHoldings).not.toHaveBeenCalled();
+    } finally {
+      await close();
+    }
+  });
+
+  it('sanitizes unexpected extension failures and preserves approved public errors', async () => {
+    mcpReadService.listCategories.mockRejectedValue(
+      new Error('PRIVATE_RESOURCE_DB_FAILURE'),
+    );
+    accountsSurfaceService.getAccountsSnapshot.mockResolvedValue({
+      accounts: [],
+    });
+    const { client, close } = await connect(createServer(mockUserId));
+
+    try {
+      await expect(
+        client.readResource({ uri: 'splice://categories/taxonomy' }),
+      ).rejects.toThrow('The MCP request could not be completed');
+      await expect(
+        client.readResource({ uri: 'splice://categories/taxonomy' }),
+      ).rejects.not.toThrow('PRIVATE_RESOURCE_DB_FAILURE');
+      await expect(
+        client.readResource({
+          uri: `splice://accounts/${mockAccountId}/snapshot`,
+        }),
+      ).rejects.toThrow('Account not found');
+      await expect(
+        client.getPrompt({
+          name: 'monthly_cashflow_review',
+          arguments: {
+            startDate: '2026-04-01',
+            endDate: '2026-03-01',
+          },
+        }),
+      ).rejects.toThrow('startDate must be before or equal to endDate');
+    } finally {
+      await close();
+    }
+  });
+
   it('exposes workflow prompts with deterministic tool guidance', async () => {
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       const prompts = await client.listPrompts();
@@ -420,7 +632,7 @@ describe('SpliceMcpService', () => {
       },
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       const result = (await client.callTool({
@@ -434,7 +646,10 @@ describe('SpliceMcpService', () => {
         currency: 'SGD',
         timezone: 'Asia/Singapore',
       });
-      expect(result.structuredContent?.today).toEqual(expect.any(String));
+      expect(result.structuredContent).toHaveProperty(
+        'today',
+        expect.any(String),
+      );
     } finally {
       await close();
     }
@@ -459,7 +674,7 @@ describe('SpliceMcpService', () => {
       ],
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       const result = (await client.callTool({
@@ -497,7 +712,7 @@ describe('SpliceMcpService', () => {
       liabilities: [],
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -528,7 +743,7 @@ describe('SpliceMcpService', () => {
       transactions: [],
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -562,7 +777,7 @@ describe('SpliceMcpService', () => {
       },
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -602,7 +817,7 @@ describe('SpliceMcpService', () => {
       },
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -636,7 +851,7 @@ describe('SpliceMcpService', () => {
       },
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -664,7 +879,7 @@ describe('SpliceMcpService', () => {
       query: { latestOnly: true },
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -697,7 +912,7 @@ describe('SpliceMcpService', () => {
       },
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -732,7 +947,7 @@ describe('SpliceMcpService', () => {
       query: { includePaused: false },
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -762,7 +977,7 @@ describe('SpliceMcpService', () => {
       suggestions: [],
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -846,7 +1061,7 @@ describe('SpliceMcpService', () => {
       skippedManual: 1,
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -952,6 +1167,56 @@ describe('SpliceMcpService', () => {
     }
   });
 
+  it('preserves safe domain validation errors and sanitizes unknown write failures', async () => {
+    const conditions = [
+      {
+        field: 'merchantName' as const,
+        operator: 'contains' as const,
+        value: 'uber',
+      },
+    ];
+    const ruleId = '33333333-3333-4333-8333-333333333333';
+    mcpCategorizationService.createRule.mockRejectedValueOnce(
+      new BadRequestException('Preview token is invalid or expired'),
+    );
+    mcpCategorizationService.applyRule.mockRejectedValueOnce(
+      new Error('PRIVATE_WRITE_DB_FAILURE'),
+    );
+    const { client, close } = await connect(createServer(mockUserId));
+
+    try {
+      const invalidPreview = (await client.callTool({
+        name: 'create_categorization_rule',
+        arguments: {
+          name: 'Uber rides',
+          targetCategoryId: mockCategoryId,
+          conditions,
+          previewToken: 'expired-token',
+        },
+      })) as CallToolResult;
+      expect(invalidPreview).toMatchObject({ isError: true });
+      expect(invalidPreview.content[0]).toMatchObject({
+        type: 'text',
+        text: 'Preview token is invalid or expired',
+      });
+
+      const internalFailure = (await client.callTool({
+        name: 'apply_categorization_rule',
+        arguments: { ruleId, previewToken: 'valid-looking-token' },
+      })) as CallToolResult;
+      expect(internalFailure).toMatchObject({ isError: true });
+      expect(internalFailure.content[0]).toMatchObject({
+        type: 'text',
+        text: 'The tool could not be completed',
+      });
+      expect(JSON.stringify(internalFailure)).not.toContain(
+        'PRIVATE_WRITE_DB_FAILURE',
+      );
+    } finally {
+      await close();
+    }
+  });
+
   it('returns cashflow analysis with MCP major-unit money', async () => {
     transactionAnalysisService.getAnalysis.mockResolvedValue({
       startDate: '2026-03-01',
@@ -982,7 +1247,7 @@ describe('SpliceMcpService', () => {
       uncategorizedOutflow: 1200,
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       const result = (await client.callTool({
@@ -1050,7 +1315,7 @@ describe('SpliceMcpService', () => {
   it('delegates cashflow category transaction drilldowns to the analysis service', async () => {
     transactionAnalysisService.getCategoryTransactions.mockResolvedValue([]);
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -1085,7 +1350,7 @@ describe('SpliceMcpService', () => {
       rows: [],
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       await client.callTool({
@@ -1129,7 +1394,7 @@ describe('SpliceMcpService', () => {
       query: {},
     });
 
-    const { client, close } = await connect(service.createServer(mockUserId));
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       const tools = await client.listTools();
@@ -1208,34 +1473,75 @@ describe('SpliceMcpService', () => {
     }
   });
 
-  it('falls back when projection elicitation is unsupported', async () => {
-    const { client, close } = await connect(service.createServer(mockUserId));
+  it('returns a useful ordinary fallback when the client lacks elicitation', async () => {
+    const { client, close } = await connect(createServer(mockUserId));
 
     try {
       const result = (await client.callTool({
         name: 'collect_projection_assumptions',
-        arguments: {},
+        arguments: {
+          suggestedHorizonDate: '2027-12-31',
+        },
       })) as CallToolResult;
 
+      expect(result.isError).not.toBe(true);
       expect(result.structuredContent).toMatchObject({
         source: 'fallback',
-        inputRequired: expect.objectContaining({
-          fields: expect.arrayContaining(['horizonDate']),
-        }),
+        inputRequired: {
+          action: 'unsupported',
+          fields: expect.arrayContaining(['horizonDate', 'goalName']),
+          suggestions: {
+            horizonDate: '2027-12-31',
+          },
+        },
       });
     } finally {
       await close();
     }
   });
 
-  it('collects projection assumptions with supported elicitation', async () => {
-    const server = service.createServer(mockUserId);
-    const { client, close } = await connect(server, {
+  it.each(['cancel', 'decline'] as const)(
+    'returns a non-persistent ordinary fallback when projection input is %s',
+    async (action) => {
+      const { client, close } = await connect(createServer(mockUserId), {
+        capabilities: {
+          elicitation: {},
+        },
+      });
+      client.setRequestHandler('elicitation/create', () => ({
+        action,
+      }));
+
+      try {
+        const result = (await client.callTool({
+          name: 'collect_projection_assumptions',
+          arguments: {
+            suggestedHorizonDate: '2027-12-31',
+          },
+        })) as CallToolResult;
+
+        expect(result.structuredContent).toMatchObject({
+          source: 'fallback',
+          inputRequired: expect.objectContaining({
+            action,
+            fields: expect.arrayContaining(['horizonDate']),
+          }),
+        });
+        expect(mcpCategorizationService.createRule).not.toHaveBeenCalled();
+        expect(mcpCategorizationService.applyRule).not.toHaveBeenCalled();
+      } finally {
+        await close();
+      }
+    },
+  );
+
+  it('collects projection assumptions with the SDK v2 resume flow', async () => {
+    const { client, close } = await connect(createServer(mockUserId), {
       capabilities: {
         elicitation: {},
       },
     });
-    client.setRequestHandler(ElicitRequestSchema, (request) => {
+    client.setRequestHandler('elicitation/create', (request) => {
       if (request.params.mode === 'url') {
         throw new Error('Expected form elicitation');
       }
@@ -1274,6 +1580,42 @@ describe('SpliceMcpService', () => {
           horizonDate: '2027-12-31',
           goalName: 'Runway',
         },
+      });
+    } finally {
+      await close();
+    }
+  });
+
+  it('reissues projection input after invalid accepted content', async () => {
+    const { client, close } = await connect(createServer(mockUserId), {
+      capabilities: {
+        elicitation: {},
+      },
+    });
+    let round = 0;
+    client.setRequestHandler('elicitation/create', () => {
+      round += 1;
+
+      return round === 1
+        ? {
+            action: 'accept' as const,
+            content: { horizonDate: 'not-a-date' },
+          }
+        : {
+            action: 'cancel' as const,
+          };
+    });
+
+    try {
+      const result = (await client.callTool({
+        name: 'collect_projection_assumptions',
+        arguments: {},
+      })) as CallToolResult;
+
+      expect(round).toBe(2);
+      expect(result.structuredContent).toMatchObject({
+        source: 'fallback',
+        inputRequired: expect.objectContaining({ action: 'cancel' }),
       });
     } finally {
       await close();

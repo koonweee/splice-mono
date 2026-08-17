@@ -44,7 +44,7 @@ function isSupportedQuoteType(value: string): value is MarketSecurityQuoteType {
 export class YahooFinanceMarketPriceProvider implements MarketPriceProvider {
   private readonly logger = new Logger(YahooFinanceMarketPriceProvider.name);
   private readonly client = new YahooFinance({
-    queue: { concurrency: 2, interval: 250 },
+    queue: { concurrency: 2 },
     quoteCombine: { maxSymbolsPerRequest: 50 },
     suppressNotices: ['yahooSurvey'],
     versionCheck: false,

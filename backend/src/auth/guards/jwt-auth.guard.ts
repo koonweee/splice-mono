@@ -8,7 +8,6 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Request } from 'express';
 import { ExtractJwt } from 'passport-jwt';
 import type { JwtUser } from '../decorators/current-user.decorator';
-import { PERSONAL_ACCESS_TOKEN_ONLY_KEY } from '../decorators/personal-access-token-only.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { SESSION_JWT_ONLY_KEY } from '../decorators/session-jwt-only.decorator';
 import { PersonalAccessTokenService } from '../personal-access-token.service';
@@ -45,21 +44,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       SESSION_JWT_ONLY_KEY,
       [context.getHandler(), context.getClass()],
     );
-    const personalAccessTokenOnly = this.reflector.getAllAndOverride<boolean>(
-      PERSONAL_ACCESS_TOKEN_ONLY_KEY,
-      [context.getHandler(), context.getClass()],
-    );
-
     if (rawBearer && this.patService.isPersonalAccessToken(rawBearer)) {
       if (sessionJwtOnly && hasSessionCookie) {
         return super.canActivate(context);
       }
 
       return this.handlePersonalAccessToken(context, rawBearer);
-    }
-
-    if (personalAccessTokenOnly) {
-      throw new UnauthorizedException();
     }
 
     return super.canActivate(context);

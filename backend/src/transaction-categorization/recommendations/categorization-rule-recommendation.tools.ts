@@ -89,9 +89,11 @@ export class CategorizationRuleRecommendationTools {
           'Preview an unsaved categorization rule draft without mutating data.',
         inputSchema: PreviewDraftCategorizationRuleInputSchema,
         outputSchema: CategorizationRuleDraftPreviewSchema,
-        execute: (input) =>
-          handlers.previewDraftCategorizationRule(
-            PreviewDraftCategorizationRuleInputSchema.parse(input),
+        execute: async (input) =>
+          CategorizationRuleDraftPreviewSchema.parse(
+            await handlers.previewDraftCategorizationRule(
+              PreviewDraftCategorizationRuleInputSchema.parse(input),
+            ),
           ),
       }),
     };

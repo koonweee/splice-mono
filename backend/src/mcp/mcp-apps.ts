@@ -1,8 +1,9 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { mcpExtensionErrorBoundary } from '@koonweee/mcp-kit';
 import type {
   CallToolResult,
+  McpServer,
   ReadResourceResult,
-} from '@modelcontextprotocol/sdk/types.js';
+} from '@modelcontextprotocol/server';
 import { normalizeMcpMoney } from './mcp-money';
 import { renderCashflowExplorerApp } from './apps/cashflow-explorer';
 import { renderCategoryRuleWorkbenchApp } from './apps/category-rule-workbench';
@@ -89,12 +90,22 @@ export function appToolResult(
   app: SpliceMcpAppDefinition,
   fallback: string,
   data?: unknown,
-): CallToolResult {
+): CallToolResult & {
+  readonly structuredContent: {
+    readonly app: SpliceMcpAppDefinition;
+    readonly data?: unknown;
+    readonly fallback: string;
+  };
+} {
   const structuredContent = normalizeMcpMoney({
     app,
     data,
     fallback,
-  }) as Record<string, unknown>;
+  }) as {
+    app: SpliceMcpAppDefinition;
+    data?: unknown;
+    fallback: string;
+  };
 
   return {
     content: [
@@ -107,7 +118,10 @@ export function appToolResult(
   };
 }
 
-export function registerMcpAppResources(server: McpServer): void {
+export function registerMcpAppResources(
+  server: McpServer,
+  authorizeRead: () => void,
+): void {
   Object.values(APP_RESOURCES).forEach((app) => {
     server.registerResource(
       app.resourceName,
@@ -117,7 +131,11 @@ export function registerMcpAppResources(server: McpServer): void {
         description: app.description,
         mimeType: MCP_APP_MIME_TYPE,
       },
-      (uri) => readMcpAppResource(uri, app),
+      mcpExtensionErrorBoundary.resource((uri) => {
+        authorizeRead();
+
+        return readMcpAppResource(uri, app);
+      }),
     );
   });
 }
