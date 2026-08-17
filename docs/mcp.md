@@ -41,9 +41,65 @@ providers fail closed; MCP never creates or links a user and never selects a
 user from client input.
 
 Reuse the tenant's existing Google social connection. Splice does not need an
-Auth0 client secret. Client registration remains an Auth0/client concern: verify
-current CIMD support at rollout time and enable DCR only if the selected client
-requires it.
+Auth0 client secret. Production uses Client Identifier Metadata Document (CIMD)
+registration for ChatGPT; Dynamic Client Registration (DCR) remains disabled.
+
+### Production Auth0 and ChatGPT registration
+
+The production Auth0 API/resource is configured with:
+
+- identifier/audience `https://splice-mcp.kw0.dev/mcp`, RS256, and token dialect
+  `rfc9068_profile_authz`;
+- RBAC, permission inclusion, and offline access enabled;
+- exact API permissions `splice:read` and `splice:write`, both allowed as the
+  default third-party delegated permissions;
+- client access denied by default; and
+- an allowed-user role containing both permissions, assigned to the existing
+  Google-linked Splice user.
+
+The Auth0 tenant has Resource Parameter Compatibility, issuer-in-authorization-
+responses, signing-algorithm JWKS, and CIMD enabled. Leave DCR disabled. Promote
+the existing Google social connection to the domain level and save it; Auth0
+warns that this makes the connection available to every third-party application
+in the tenant. Do not broaden the Google connection beyond the basic profile
+scopes Splice already uses. Auth0 discovery currently still publishes an
+`oidc/register` registration endpoint when the dashboard DCR toggle is off; do
+not infer from that metadata field that DCR is the selected or enabled ChatGPT
+registration path.
+
+For each ChatGPT developer-mode plugin instance:
+
+1. In ChatGPT, use the canonical server URL, choose OAuth plus CIMD, select
+   `splice:read` and `splice:write`, leave Base scopes empty, and keep OIDC
+   enabled. Discovery should resolve the issuer, authorization endpoint, token
+   endpoint, OpenID configuration, and user-info endpoint from
+   `https://auth.kw0.dev/`.
+2. Copy the instance-specific client metadata URL that ChatGPT uses as its
+   `client_id`. In the first production instance it was
+   `https://chatgpt.com/oauth/-Kx1UAuUs4T9/client.json`; a replacement plugin
+   instance will have a different URL.
+3. In Auth0 Applications, import that URL. Verify the preview before creating
+   the third-party Regular Web Application: its external client ID must be the
+   full metadata URL, the redirect URI must be the ChatGPT connector callback,
+   the token endpoint authentication method must be `private_key_jwt`, and the
+   signing key must come from ChatGPT's public JWKS. Preview warnings that
+   `response_types` is not persisted and informational client metadata is
+   ignored are expected.
+4. Verify the imported application has both Splice API permissions and the
+   domain-level Google connection. Then complete ChatGPT login and consent. The
+   authorization request should include `openid`, `email`, `offline_access`,
+   `splice:read`, and `splice:write`, PKCE S256, and the exact MCP resource.
+5. Open the plugin in ChatGPT and select **Refresh**. Confirm that ChatGPT
+   discovers exactly 27 tools before testing a prompt.
+
+For developer-mode testing, start a new supported Work conversation and attach
+Splice from the Tools/Plugins menu. Once attached, follow-up prompts in that
+conversation can reuse it. During the 2026-08-16 rollout, ChatGPT's specialized
+Finance conversation could see the installed app and its permission setting but
+did not expose developer-MCP tool calls; searching for a plugin or inserting an
+app mention did not substitute for attaching the MCP connection in a supported
+conversation. Treat that as observed ChatGPT client behavior, not an MCP server
+health signal.
 
 Production listener configuration is identifier-only and contains no Auth0
 secret:
@@ -216,11 +272,37 @@ Repeat for `projection-scenario-modeler.html`, `portfolio-viewer.html`, and
 fixture fallbacks, read-only interactions, and no console errors. Always close
 the named browser session when finished.
 
-## First production deployment
+## Production rollout and recreation
 
 These steps intentionally separate repository automation from Auth0, DNS, and
 live deployment mutations. Do not put a real bearer token in shell history,
 fixtures, documentation, screenshots, or chat.
+
+### 2026-08-16 rollout record
+
+- Splice application commit: `487fbb68b617b744e237c9a91db311c0d74ab65d`;
+  protected deploy revision: `219fbc9f2c80d704c718830f2ce4c74e32e45177`;
+  deploy workflow run: `31984304428`.
+- Stack commit: `a9d4b12`; targeted `splice-app-sf` deployment update:
+  `6a8265b2d28c58b2ef3bd508`.
+- Backend image digest:
+  `sha256:61ff8f214325bc5a68fc5bce5fcc8711935fd8726aad60605da4fd19c5ec7715`;
+  runtime Node version: `v24.19.0`; installed mcp-kit: `0.2.3`.
+- DNS: `splice-mcp.kw0.dev` resolves to `192.184.248.77` as a DNS-only record.
+- Public health, protected-resource discovery, and the sanitized unauthenticated
+  `401` boundary passed. The existing frontend/API remained healthy and the old
+  API-origin `/mcp` route returned `404`.
+- ChatGPT CIMD/OIDC login passed. Sanitized production logs confirm successful
+  `get_user_context` and `get_balance_history` calls without claims, arguments,
+  results, or financial values.
+- Still pending before declaring the entire production validation complete: a
+  deterministic external OAuth client/Inspector pass and a controlled,
+  preview-token-backed ChatGPT write smoke. Local protocol/write-parity suites
+  already cover both writes; do not represent that as a live production write.
+
+The steps below are the recreation and future-rollout procedure. Use the exact
+recorded values above only to audit or roll back this deployment; obtain fresh
+revisions, image digests, and ChatGPT client metadata for a later rollout.
 
 1. Record rollback inputs before changing production: the known-good Splice
    application revision, stack revision, and backend image digest.
@@ -254,15 +336,14 @@ fixtures, documentation, screenshots, or chat.
    The merged render must attach only `splice-backend` to `external-web`, apply
    `traefik.scope=external`, route `splice-mcp.kw0.dev`, and target port `3001`
    without publishing that port on the host.
-4. In Auth0, configure one API/resource whose identifier is exactly
-   `https://splice-mcp.kw0.dev/mcp`, uses RS256 and the current recommended Auth0
-   MCP token dialect, and defines `splice:read` plus `splice:write`. Reuse the
-   existing Google social connection, grant the allowed Google user the needed
-   permissions, and verify Resource Parameter Compatibility Profile and
-   issuer-in-authorization-response settings. Reconfirm CIMD/DCR requirements
-   for the selected client. Agent check: use the Auth0 configuration export or
-   read-only API to compare identifier, algorithm, dialect, scopes, and tenant
-   settings; never print client credentials or tokens.
+4. Configure Auth0 exactly as described in **Production Auth0 and ChatGPT
+   registration**: API identifier, RS256/RFC 9068 dialect, RBAC and permission
+   inclusion, offline access, both delegated scopes, allowed-user role, tenant
+   compatibility settings, CIMD enabled, DCR disabled, and the Google connection
+   promoted to domain level. Import the current ChatGPT client metadata URL and
+   verify its callback, `private_key_jwt` method, JWKS, permissions, and Google
+   connection. Agent check: use the Auth0 configuration export or read-only API
+   to compare non-secret settings; never print client credentials or tokens.
 5. Create `splice-mcp.kw0.dev` DNS for the SF public ingress and verify TCP
    `80/443` forwarding to the SF external Traefik host. Keep the database, API
    admin surface, and Komodo off this hostname. Agent check:
@@ -293,14 +374,24 @@ fixtures, documentation, screenshots, or chat.
    opaque request ID, tool name, timing, outcome, and safe error code; they must
    not contain bearer tokens, subjects or other claims, arguments, structured
    results, internal errors, or financial values.
-10. Connect ChatGPT only after the deterministic smoke passes. Verify OAuth
-    login, visible scopes/annotations, one read, and one previewed write. Whether
-    ChatGPT displays a confirmation is client behavior, not a server guarantee.
+10. Connect ChatGPT only after the deterministic smoke passes. Refresh plugin
+    metadata, confirm 27 tools, attach Splice to a new supported Work
+    conversation, and verify OAuth login, visible scopes/annotations, one read,
+    and one previewed write. A Finance or other specialized conversation that
+    does not expose developer MCPs is not a valid server smoke environment.
+    Whether ChatGPT displays a confirmation is client behavior, not a server
+    guarantee.
 
 ## Rollback
 
-Redeploy the recorded known-good backend image/application revision and the
-prior stack revision. Verify the existing frontend, API login, PAT-backed REST
+For the 2026-08-16 rollout, the recorded rollback inputs are Splice `main`
+`5a35640`, Splice `deploy` `4e3ad53`, stack `0e19c2b` (deployed stack source
+`758e75a`), and backend image
+`sha256:d881a9bbd395c7919326b13667c3ce841e53a8e29a872763bd4159a8e0aa4151`.
+For later rollouts, replace these with newly recorded values before deploying.
+
+Redeploy the recorded known-good backend image/application revision and prior
+stack revision. Verify the existing frontend, API login, PAT-backed REST
 automation, transaction flows, and scheduled work. Auth0 and DNS configuration
 may remain unused; no database rollback or data transformation is required.
 
