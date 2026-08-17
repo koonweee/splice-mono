@@ -23,6 +23,16 @@ import { PRE_PORT_MCP_CONTRACT } from './fixtures/pre-port-contract';
 const mockUserId = '00000000-0000-0000-0000-000000000001';
 const mockAccountId = '11111111-1111-4111-8111-111111111111';
 const mockCategoryId = '22222222-2222-4222-8222-222222222222';
+const RETIRED_APP_TOOL_NAMES = new Set([
+  'show_projection_scenario_modeler',
+  'show_category_rule_workbench',
+]);
+const RETIRED_APP_RESOURCE_URIS = new Set([
+  'ui://splice/projection-scenario-modeler.html',
+  'ui://splice/category-rule-workbench.html',
+]);
+const REPLACED_CASH_FLOW_TOOL = 'show_cashflow_explorer';
+const REPLACED_CASH_FLOW_RESOURCE = 'ui://splice/cashflow-explorer.html';
 
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) {
@@ -50,7 +60,7 @@ function normalizeVersionedAppUris(value: unknown): unknown {
     );
   }
   if (typeof value === 'string') {
-    return value.replace(/\/v2\.html$/, '.html');
+    return value.replace(/\/v\d+\.html$/, '.html');
   }
   return value;
 }
@@ -181,10 +191,8 @@ describe('Splice MCP definition', () => {
         'preview_categorization_rule_application',
         'preview_categorization_rule_draft',
         'search_transactions',
-        'show_cashflow_explorer',
-        'show_category_rule_workbench',
         'show_portfolio_viewer',
-        'show_projection_scenario_modeler',
+        'visualize_cash_flow',
       ];
 
       expect(result.tools.map((tool) => tool.name).sort()).toEqual([
@@ -211,14 +219,28 @@ describe('Splice MCP definition', () => {
         'preview_categorization_rule_application',
         'preview_categorization_rule_draft',
         'search_transactions',
-        'show_cashflow_explorer',
-        'show_category_rule_workbench',
         'show_portfolio_viewer',
-        'show_projection_scenario_modeler',
+        'visualize_cash_flow',
       ]);
       expect(result.tools.map((tool) => tool.name)).toEqual([
         ...SPLICE_MCP_TOOL_NAMES,
       ]);
+      expect(result.tools).toHaveLength(25);
+      expect(toolsByName.has('show_cashflow_explorer')).toBe(false);
+      expect(toolsByName.get('visualize_cash_flow')).toMatchObject({
+        title: 'Visualize Cash Flow',
+        description: expect.stringContaining('Do not call for capability'),
+        inputSchema: {
+          required: ['startDate', 'endDate'],
+          properties: {
+            direction: expect.any(Object),
+            focusCategoryPrimary: expect.any(Object),
+            comparison: expect.objectContaining({
+              required: ['startDate', 'endDate'],
+            }),
+          },
+        },
+      });
 
       const definitionsByName = new Map(
         spliceMcpDefinition.tools.map((tool) => [tool.name, tool]),
@@ -277,7 +299,7 @@ describe('Splice MCP definition', () => {
         profile: 'openai-submission',
       }),
     ).not.toThrow();
-    expect(spliceMcpDefinition.apps?.resources).toHaveLength(4);
+    expect(spliceMcpDefinition.apps?.resources).toHaveLength(2);
     expect(
       spliceMcpDefinition.apps?.resources.map((resource) => ({
         uri: resource.uri,
@@ -285,48 +307,68 @@ describe('Splice MCP definition', () => {
       })),
     ).toEqual([
       {
-        uri: 'ui://splice/cashflow-explorer/v2.html',
-        requiredScopes: ['splice:read'],
-      },
-      {
-        uri: 'ui://splice/projection-scenario-modeler/v2.html',
+        uri: 'ui://splice/cash-flow/v3.html',
         requiredScopes: ['splice:read'],
       },
       {
         uri: 'ui://splice/portfolio-viewer/v2.html',
         requiredScopes: ['splice:read'],
       },
-      {
-        uri: 'ui://splice/category-rule-workbench/v2.html',
-        requiredScopes: ['splice:read'],
-      },
     ]);
   });
 
-  it('matches the frozen pre-port MCP contract parity oracle', async () => {
+  it('matches the retained pre-port contract after intentional App retirement', async () => {
     const { client, close } = await connect(createServer(mockUserId));
 
     try {
-      expect(SPLICE_MCP_TOOL_NAMES).toEqual(PRE_PORT_MCP_CONTRACT.tools);
-      const listedTools = await client.listTools();
-      expect(listedTools.tools.map((tool) => tool.name)).toEqual(
-        PRE_PORT_MCP_CONTRACT.tools,
+      const retainedTools = PRE_PORT_MCP_CONTRACT.tools.filter(
+        (name) =>
+          !RETIRED_APP_TOOL_NAMES.has(name) && name !== REPLACED_CASH_FLOW_TOOL,
       );
+      const retainedToolContracts =
+        PRE_PORT_MCP_CONTRACT.toolContractSha256.filter(
+          ({ name }) =>
+            !RETIRED_APP_TOOL_NAMES.has(name) &&
+            name !== REPLACED_CASH_FLOW_TOOL,
+        );
+      const retainedResources = PRE_PORT_MCP_CONTRACT.fixedResources.filter(
+        (uri) =>
+          !RETIRED_APP_RESOURCE_URIS.has(uri) &&
+          uri !== REPLACED_CASH_FLOW_RESOURCE,
+      );
+
+      const listedTools = await client.listTools();
+      expect(SPLICE_MCP_TOOL_NAMES).toHaveLength(retainedTools.length + 1);
       expect(
-        listedTools.tools.map((tool) => ({
-          name: tool.name,
-          sha256: createHash('sha256')
-            .update(canonicalJson(normalizeVersionedAppUris(tool)))
-            .digest('hex'),
-        })),
-      ).toEqual(PRE_PORT_MCP_CONTRACT.toolContractSha256);
+        listedTools.tools
+          .map((tool) => tool.name)
+          .filter((name) => name !== 'visualize_cash_flow'),
+      ).toEqual(retainedTools);
+      expect(
+        listedTools.tools
+          .filter((tool) => tool.name !== 'visualize_cash_flow')
+          .map((tool) => ({
+            name: tool.name,
+            sha256: createHash('sha256')
+              .update(canonicalJson(normalizeVersionedAppUris(tool)))
+              .digest('hex'),
+          })),
+      ).toEqual(retainedToolContracts);
+      for (const retiredTool of RETIRED_APP_TOOL_NAMES) {
+        expect(
+          listedTools.tools.some((tool) => tool.name === retiredTool),
+        ).toBe(false);
+      }
 
       const listedResources = await client.listResources();
       expect(
         listedResources.resources
+          .filter(
+            (resource) => resource.uri !== 'ui://splice/cash-flow/v3.html',
+          )
           .map((resource) => normalizeVersionedAppUris(resource.uri))
           .sort(),
-      ).toEqual([...PRE_PORT_MCP_CONTRACT.fixedResources].sort());
+      ).toEqual([...retainedResources].sort());
       const templates = await client.listResourceTemplates();
       expect(
         templates.resourceTemplates.map((template) => template.uriTemplate),
@@ -342,6 +384,11 @@ describe('Splice MCP definition', () => {
       for (const [toolName, resourceUri] of Object.entries(
         PRE_PORT_MCP_CONTRACT.apps,
       )) {
+        if (
+          RETIRED_APP_TOOL_NAMES.has(toolName) ||
+          toolName === REPLACED_CASH_FLOW_TOOL
+        )
+          continue;
         expect(toolsByName.get(toolName)?._meta).toMatchObject({
           ui: {
             resourceUri: expect.stringMatching(
@@ -490,29 +537,19 @@ describe('Splice MCP definition', () => {
       expect(resources.resources).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            uri: 'ui://splice/cashflow-explorer/v2.html',
-            mimeType: 'text/html;profile=mcp-app',
-          }),
-          expect.objectContaining({
-            uri: 'ui://splice/projection-scenario-modeler/v2.html',
+            uri: 'ui://splice/cash-flow/v3.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
           expect.objectContaining({
             uri: 'ui://splice/portfolio-viewer/v2.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
-          expect.objectContaining({
-            uri: 'ui://splice/category-rule-workbench/v2.html',
-            mimeType: 'text/html;profile=mcp-app',
-          }),
         ]),
       );
 
       const appUris = [
-        'ui://splice/cashflow-explorer/v2.html',
-        'ui://splice/projection-scenario-modeler/v2.html',
+        'ui://splice/cash-flow/v3.html',
         'ui://splice/portfolio-viewer/v2.html',
-        'ui://splice/category-rule-workbench/v2.html',
       ];
       for (const uri of appUris) {
         expect(
@@ -613,10 +650,8 @@ describe('Splice MCP definition', () => {
     );
     const resourceUris = [
       'splice://mcp-guide',
-      'ui://splice/cashflow-explorer/v2.html',
-      'ui://splice/projection-scenario-modeler/v2.html',
+      'ui://splice/cash-flow/v3.html',
       'ui://splice/portfolio-viewer/v2.html',
-      'ui://splice/category-rule-workbench/v2.html',
       'splice://reports/cashflow/2026-03-01/2026-03-31',
       `splice://accounts/${mockAccountId}/snapshot`,
       'splice://categories/taxonomy',
@@ -1460,6 +1495,263 @@ describe('Splice MCP definition', () => {
     }
   });
 
+  it('returns a typed Cash Flow App payload with safe adjustment counts and defaults', async () => {
+    transactionAnalysisService.getAnalysis.mockResolvedValue({
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+      currency: 'USD',
+      inflows: [
+        {
+          primaryCategory: 'INCOME',
+          totalAmount: 250000,
+          currency: 'USD',
+          transactionCount: 2,
+          color: '#2f9e44',
+        },
+      ],
+      outflows: [
+        {
+          primaryCategory: 'FOOD_AND_DRINK',
+          totalAmount: 4200,
+          currency: 'USD',
+          transactionCount: 3,
+          color: '#f59f00',
+        },
+      ],
+      totalInflow: 250000,
+      totalOutflow: 4200,
+      netFlow: 245800,
+      uncategorizedInflow: 0,
+      uncategorizedOutflow: 1200,
+    });
+    transactionAnalysisService.getAnalysisAudit.mockResolvedValue({
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+      neutralizationLookaroundDays: 3,
+      rows: [
+        { type: 'excluded', private: 'must not escape' },
+        { type: 'excluded', private: 'must not escape' },
+        { type: 'neutralized', private: 'must not escape' },
+      ],
+    });
+    const { client, close } = await connect(createServer(mockUserId));
+
+    try {
+      const result = (await client.callTool({
+        name: 'visualize_cash_flow',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          focusCategoryPrimary: 'NOT_PRESENT',
+        },
+      })) as CallToolResult;
+
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent).toMatchObject({
+        app: {
+          id: 'cash_flow',
+          title: 'Cash Flow',
+          resourceUri: 'ui://splice/cash-flow/v3.html',
+          initialToolName: 'visualize_cash_flow',
+        },
+        data: {
+          presentation: { direction: 'outflow' },
+          current: {
+            analysis: {
+              startDate: '2026-03-01',
+              endDate: '2026-03-31',
+              currency: 'USD',
+            },
+            adjustments: {
+              affected: true,
+              excludedTransactionCount: 2,
+              neutralizedPairCount: 1,
+            },
+          },
+        },
+      });
+      expect(
+        (result.structuredContent as { data: { presentation: object } }).data
+          .presentation,
+      ).not.toHaveProperty('focusCategoryPrimary');
+      expect(JSON.stringify(result.structuredContent)).not.toContain(
+        'must not escape',
+      );
+      const text = result.content.find(
+        (content): content is Extract<typeof content, { type: 'text' }> =>
+          content.type === 'text',
+      )?.text;
+      expect(JSON.parse(text ?? '{}')).toEqual(result.structuredContent);
+    } finally {
+      await close();
+    }
+  });
+
+  it('loads complete current and comparison periods concurrently and preserves an inflow focus', async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const started: string[] = [];
+    transactionAnalysisService.getAnalysis.mockImplementation(
+      async (startDate: string, endDate: string) => {
+        started.push(`analysis:${startDate}:${endDate}`);
+        await gate;
+        return {
+          startDate,
+          endDate,
+          currency: 'USD',
+          inflows: [
+            {
+              primaryCategory: 'INCOME',
+              totalAmount: 100000,
+              currency: 'USD',
+              transactionCount: 1,
+              color: '#2f9e44',
+            },
+          ],
+          outflows: [],
+          totalInflow: 100000,
+          totalOutflow: 0,
+          netFlow: 100000,
+          uncategorizedInflow: 0,
+          uncategorizedOutflow: 0,
+        };
+      },
+    );
+    transactionAnalysisService.getAnalysisAudit.mockImplementation(
+      async (startDate: string, endDate: string) => {
+        started.push(`audit:${startDate}:${endDate}`);
+        await gate;
+        return {
+          startDate,
+          endDate,
+          neutralizationLookaroundDays: 3,
+          rows: [],
+        };
+      },
+    );
+    const { client, close } = await connect(createServer(mockUserId));
+
+    try {
+      const resultPromise = client.callTool({
+        name: 'visualize_cash_flow',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          direction: 'inflow',
+          focusCategoryPrimary: 'INCOME',
+          comparison: {
+            startDate: '2026-02-01',
+            endDate: '2026-02-28',
+          },
+        },
+      });
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(started.sort()).toEqual(
+        [
+          'analysis:2026-02-01:2026-02-28',
+          'analysis:2026-03-01:2026-03-31',
+          'audit:2026-02-01:2026-02-28',
+          'audit:2026-03-01:2026-03-31',
+        ].sort(),
+      );
+
+      release?.();
+      const result = (await resultPromise) as CallToolResult;
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent).toMatchObject({
+        data: {
+          presentation: {
+            direction: 'inflow',
+            focusCategoryPrimary: 'INCOME',
+          },
+          current: {
+            analysis: {
+              startDate: '2026-03-01',
+              endDate: '2026-03-31',
+            },
+          },
+          comparison: {
+            analysis: {
+              startDate: '2026-02-01',
+              endDate: '2026-02-28',
+            },
+          },
+        },
+      });
+    } finally {
+      release?.();
+      await close();
+    }
+  });
+
+  it('fails requested comparisons atomically and validates their exact range before loading', async () => {
+    transactionAnalysisService.getAnalysis.mockResolvedValue({
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+      currency: 'USD',
+      inflows: [],
+      outflows: [],
+      totalInflow: 0,
+      totalOutflow: 0,
+      netFlow: 0,
+      uncategorizedInflow: 0,
+      uncategorizedOutflow: 0,
+    });
+    transactionAnalysisService.getAnalysisAudit.mockRejectedValue(
+      new Error('PRIVATE_COMPARISON_FAILURE'),
+    );
+    const { client, close } = await connect(createServer(mockUserId));
+
+    try {
+      const invalidCurrentRange = (await client.callTool({
+        name: 'visualize_cash_flow',
+        arguments: {
+          startDate: '2026-03-31',
+          endDate: '2026-03-01',
+        },
+      })) as CallToolResult;
+      expect(invalidCurrentRange).toMatchObject({ isError: true });
+
+      const invalidRange = (await client.callTool({
+        name: 'visualize_cash_flow',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          comparison: {
+            startDate: '2026-02-28',
+            endDate: '2026-02-01',
+          },
+        },
+      })) as CallToolResult;
+      expect(invalidRange).toMatchObject({ isError: true });
+      expect(transactionAnalysisService.getAnalysis).not.toHaveBeenCalled();
+      expect(
+        transactionAnalysisService.getAnalysisAudit,
+      ).not.toHaveBeenCalled();
+
+      const failedComparison = (await client.callTool({
+        name: 'visualize_cash_flow',
+        arguments: {
+          startDate: '2026-03-01',
+          endDate: '2026-03-31',
+          comparison: {
+            startDate: '2026-02-01',
+            endDate: '2026-02-28',
+          },
+        },
+      })) as CallToolResult;
+      expect(failedComparison).toMatchObject({ isError: true });
+      expect(failedComparison).not.toHaveProperty('structuredContent');
+      expect(JSON.stringify(failedComparison)).not.toContain(
+        'PRIVATE_COMPARISON_FAILURE',
+      );
+    } finally {
+      await close();
+    }
+  });
+
   it('returns app-backed fallback data for MCP Apps tools', async () => {
     transactionAnalysisService.getAnalysis.mockResolvedValue({
       startDate: '2026-03-01',
@@ -1472,6 +1764,12 @@ describe('Splice MCP definition', () => {
       netFlow: 0,
       uncategorizedInflow: 0,
       uncategorizedOutflow: 0,
+    });
+    transactionAnalysisService.getAnalysisAudit.mockResolvedValue({
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+      neutralizationLookaroundDays: 3,
+      rows: [],
     });
     mcpReadService.listInvestmentHoldings.mockResolvedValue({
       data: [],
@@ -1507,26 +1805,13 @@ describe('Splice MCP definition', () => {
     try {
       const tools = await client.listTools();
       expect(
-        tools.tools.find((tool) => tool.name === 'show_cashflow_explorer')
-          ?._meta,
+        tools.tools.find((tool) => tool.name === 'visualize_cash_flow')?._meta,
       ).toMatchObject({
         ui: {
-          resourceUri: 'ui://splice/cashflow-explorer/v2.html',
+          resourceUri: 'ui://splice/cash-flow/v3.html',
           visibility: ['model', 'app'],
         },
-        'openai/outputTemplate': 'ui://splice/cashflow-explorer/v2.html',
-      });
-      expect(
-        tools.tools.find(
-          (tool) => tool.name === 'show_projection_scenario_modeler',
-        )?._meta,
-      ).toMatchObject({
-        ui: {
-          resourceUri: 'ui://splice/projection-scenario-modeler/v2.html',
-          visibility: ['model', 'app'],
-        },
-        'openai/outputTemplate':
-          'ui://splice/projection-scenario-modeler/v2.html',
+        'openai/outputTemplate': 'ui://splice/cash-flow/v3.html',
       });
       expect(
         tools.tools.find((tool) => tool.name === 'show_portfolio_viewer')
@@ -1538,35 +1823,17 @@ describe('Splice MCP definition', () => {
         },
         'openai/outputTemplate': 'ui://splice/portfolio-viewer/v2.html',
       });
-      expect(
-        tools.tools.find((tool) => tool.name === 'show_category_rule_workbench')
-          ?._meta,
-      ).toMatchObject({
-        ui: {
-          resourceUri: 'ui://splice/category-rule-workbench/v2.html',
-          visibility: ['model', 'app'],
-        },
-        'openai/outputTemplate': 'ui://splice/category-rule-workbench/v2.html',
-      });
 
       const appCalls = [
         {
-          name: 'show_cashflow_explorer',
+          name: 'visualize_cash_flow',
           arguments: {
             startDate: '2026-03-01',
             endDate: '2026-03-31',
           },
           app: {
-            id: 'cashflow_explorer',
-            resourceUri: 'ui://splice/cashflow-explorer/v2.html',
-          },
-        },
-        {
-          name: 'show_projection_scenario_modeler',
-          arguments: {},
-          app: {
-            id: 'projection_scenario_modeler',
-            resourceUri: 'ui://splice/projection-scenario-modeler/v2.html',
+            id: 'cash_flow',
+            resourceUri: 'ui://splice/cash-flow/v3.html',
           },
         },
         {
@@ -1575,14 +1842,6 @@ describe('Splice MCP definition', () => {
           app: {
             id: 'portfolio_viewer',
             resourceUri: 'ui://splice/portfolio-viewer/v2.html',
-          },
-        },
-        {
-          name: 'show_category_rule_workbench',
-          arguments: {},
-          app: {
-            id: 'category_rule_workbench',
-            resourceUri: 'ui://splice/category-rule-workbench/v2.html',
           },
         },
       ] as const;

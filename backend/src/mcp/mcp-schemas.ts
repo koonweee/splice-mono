@@ -199,6 +199,76 @@ export const CashflowAnalysisOutputSchema = z
   })
   .passthrough();
 
+const CashFlowCategoryAggregateSchema = z
+  .object({
+    primaryCategory: z.string(),
+    totalAmount: McpMoneySchema,
+    currency: z.string(),
+    transactionCount: z.number().int().nonnegative(),
+    color: z.string(),
+  })
+  .strict();
+
+const CashFlowPresentationAnalysisSchema = CashflowAnalysisOutputSchema.extend({
+  inflows: z.array(CashFlowCategoryAggregateSchema),
+  outflows: z.array(CashFlowCategoryAggregateSchema),
+}).strict();
+
+export const CashFlowAdjustmentSummarySchema = z
+  .object({
+    affected: z.boolean(),
+    excludedTransactionCount: z.number().int().nonnegative(),
+    neutralizedPairCount: z.number().int().nonnegative(),
+  })
+  .strict();
+export type CashFlowAdjustmentSummary = z.infer<
+  typeof CashFlowAdjustmentSummarySchema
+>;
+
+export const CashFlowPeriodSchema = z
+  .object({
+    analysis: CashFlowPresentationAnalysisSchema,
+    adjustments: CashFlowAdjustmentSummarySchema,
+  })
+  .strict();
+export type CashFlowPeriod = z.infer<typeof CashFlowPeriodSchema>;
+
+export const CashFlowVisualizationDataSchema = z
+  .object({
+    presentation: z
+      .object({
+        direction: z.enum(['outflow', 'inflow']),
+        focusCategoryPrimary: z.string().optional(),
+      })
+      .strict(),
+    current: CashFlowPeriodSchema,
+    comparison: CashFlowPeriodSchema.optional(),
+  })
+  .strict();
+export type CashFlowVisualizationData = z.infer<
+  typeof CashFlowVisualizationDataSchema
+>;
+
+export const CashFlowVisualizationOutputSchema = z
+  .object({
+    app: z
+      .object({
+        id: z.literal('cash_flow'),
+        title: z.literal('Cash Flow'),
+        description: z.string(),
+        resourceName: z.string(),
+        resourceUri: z.literal('ui://splice/cash-flow/v3.html'),
+        initialToolName: z.literal('visualize_cash_flow'),
+      })
+      .strict(),
+    data: CashFlowVisualizationDataSchema,
+    fallback: z.string(),
+  })
+  .strict();
+export type CashFlowVisualizationOutput = z.infer<
+  typeof CashFlowVisualizationOutputSchema
+>;
+
 export const CashflowCategoryTransactionsOutputSchema = z
   .object({
     data: z.array(z.unknown()),

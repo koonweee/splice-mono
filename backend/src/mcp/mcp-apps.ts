@@ -1,44 +1,30 @@
 import { defineAppResource } from '@koonweee/mcp-kit';
 import type { CallToolResult } from '@modelcontextprotocol/server';
 import { normalizeMcpMoney } from './mcp-money';
-import { renderCashflowExplorerApp } from './apps/cashflow-explorer';
-import { renderCategoryRuleWorkbenchApp } from './apps/category-rule-workbench';
+import { renderCashFlowApp } from './apps/cash-flow';
 import { renderPortfolioViewerApp } from './apps/portfolio-viewer';
-import { renderProjectionScenarioModelerApp } from './apps/projection-scenario-modeler';
 import type { SpliceMcpDependencies } from './mcp.definition';
 
 export const MCP_APP_DOMAIN = 'https://splice-mcp.kw0.dev';
 
 export interface SpliceMcpAppDefinition {
-  id:
-    | 'cashflow_explorer'
-    | 'projection_scenario_modeler'
-    | 'portfolio_viewer'
-    | 'category_rule_workbench';
+  id: 'cash_flow' | 'portfolio_viewer';
   title: string;
   description: string;
   resourceName: string;
-  resourceUri: `ui://splice/${string}/v2.html`;
+  resourceUri: `ui://splice/${string}/v${number}.html`;
   initialToolName: string;
 }
 
 export const APP_RESOURCES = {
-  cashflowExplorer: {
-    id: 'cashflow_explorer',
-    title: 'Cashflow Explorer',
-    description: 'Interactive cash-flow chart and category drilldown UI.',
-    resourceName: 'splice_cashflow_explorer_app',
-    resourceUri: 'ui://splice/cashflow-explorer/v2.html',
-    initialToolName: 'show_cashflow_explorer',
-  },
-  projectionScenarioModeler: {
-    id: 'projection_scenario_modeler',
-    title: 'Projection Scenario Modeler',
+  cashFlow: {
+    id: 'cash_flow',
+    title: 'Cash Flow',
     description:
-      'Interactive projection assumption UI for non-persistent scenarios.',
-    resourceName: 'splice_projection_scenario_modeler_app',
-    resourceUri: 'ui://splice/projection-scenario-modeler/v2.html',
-    initialToolName: 'show_projection_scenario_modeler',
+      'Mobile-first cash-flow visualization with ranked category evidence.',
+    resourceName: 'splice_cash_flow_app',
+    resourceUri: 'ui://splice/cash-flow/v3.html',
+    initialToolName: 'visualize_cash_flow',
   },
   portfolioViewer: {
     id: 'portfolio_viewer',
@@ -47,15 +33,6 @@ export const APP_RESOURCES = {
     resourceName: 'splice_portfolio_viewer_app',
     resourceUri: 'ui://splice/portfolio-viewer/v2.html',
     initialToolName: 'show_portfolio_viewer',
-  },
-  categoryRuleWorkbench: {
-    id: 'category_rule_workbench',
-    title: 'Category Rule Workbench',
-    description:
-      'Interactive category, analysis rule, and categorization recommendation UI.',
-    resourceName: 'splice_category_rule_workbench_app',
-    resourceUri: 'ui://splice/category-rule-workbench/v2.html',
-    initialToolName: 'show_category_rule_workbench',
   },
 } as const satisfies Record<string, SpliceMcpAppDefinition>;
 
@@ -122,13 +99,9 @@ export function appToolResult(
 
 export function renderMcpAppHtml(app: SpliceMcpAppDefinition): string {
   switch (app.id) {
-    case 'cashflow_explorer':
-      return renderCashflowExplorerApp(app);
-    case 'projection_scenario_modeler':
-      return renderProjectionScenarioModelerApp(app);
+    case 'cash_flow':
+      return renderCashFlowApp(app);
     case 'portfolio_viewer':
       return renderPortfolioViewerApp(app);
-    case 'category_rule_workbench':
-      return renderCategoryRuleWorkbenchApp(app);
   }
 }

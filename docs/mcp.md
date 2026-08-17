@@ -23,13 +23,13 @@ under `control-plane/komodo/resources/apps/splice/` and
 
 The production OAuth contract is:
 
-| Setting | Value |
-| --- | --- |
-| MCP resource/audience | `https://splice-mcp.kw0.dev/mcp` |
-| Auth0 issuer | `https://auth.kw0.dev/` |
-| Signing algorithm | RS256 |
-| Read scope | `splice:read` |
-| Write scope | `splice:write` |
+| Setting                     | Value                                                                 |
+| --------------------------- | --------------------------------------------------------------------- |
+| MCP resource/audience       | `https://splice-mcp.kw0.dev/mcp`                                      |
+| Auth0 issuer                | `https://auth.kw0.dev/`                                               |
+| Signing algorithm           | RS256                                                                 |
+| Read scope                  | `splice:read`                                                         |
+| Write scope                 | `splice:write`                                                        |
 | Protected-resource metadata | `https://splice-mcp.kw0.dev/.well-known/oauth-protected-resource/mcp` |
 
 Auth0 is the authorization server; Splice is only the protected resource.
@@ -90,7 +90,7 @@ For each ChatGPT developer-mode plugin instance:
    authorization request should include `openid`, `email`, `offline_access`,
    `splice:read`, and `splice:write`, PKCE S256, and the exact MCP resource.
 5. Open the plugin in ChatGPT and select **Refresh**. Confirm that ChatGPT
-   discovers exactly 27 tools before testing a prompt.
+   discovers exactly 25 tools before testing a prompt.
 6. Change the Splice app/plugin permission mode so mutating actions are allowed
    or require an explicit prompt. The **Allow low-risk actions** mode is
    sufficient for reads and previews but may prevent ChatGPT from dispatching
@@ -188,7 +188,7 @@ listener-specific values and remain disabled.
 
 ## Capability and safety contract
 
-The server exposes 27 tools. All return validated `structuredContent` and a
+The server exposes 25 tools. All return validated `structuredContent` and a
 JSON-equivalent text fallback.
 
 - Context, accounts, balances, and transactions: `get_user_context`,
@@ -203,15 +203,17 @@ JSON-equivalent text fallback.
 - Investments and projections: `list_investment_holdings`,
   `list_investment_activity`, `list_recurring_manual_transaction_schedules`,
   and `collect_projection_assumptions`.
-- Read-only MCP App launchers: `show_cashflow_explorer`,
-  `show_projection_scenario_modeler`, `show_portfolio_viewer`, and
-  `show_category_rule_workbench`.
+- Read-only MCP App launchers: `visualize_cash_flow` and
+  `show_portfolio_viewer`. `visualize_cash_flow` is selective: use it for real
+  cash-flow, spending, income, or period-comparison questions that benefit from
+  visual evidence, not for capability discovery, hypothetical discussion,
+  metadata questions, or simple facts that prose answers clearly.
 - Categorization workflow: `preview_categorization_rule_draft` and
   `preview_categorization_rule_application` are reads;
   `create_categorization_rule` is a real non-idempotent, non-destructive write;
   `apply_categorization_rule` is a real destructive, idempotent write.
 
-The 25 non-mutating tools require `splice:read`. Both writes require
+The 23 non-mutating tools require `splice:read`. Both writes require
 `splice:write`. Creation and application must receive the matching preview
 token produced for the authenticated user and current input. Stale, mismatched,
 or cross-user tokens are rejected. Application preserves existing protections
@@ -234,9 +236,9 @@ The server also exposes:
 - Five prompts: `monthly_cashflow_review`, `projection_builder`,
   `category_cleanup_audit`, `portfolio_snapshot`, and
   `tax_or_refund_anomaly_review`.
-- Four self-contained, cache-versioned `ui://splice/.../v2.html` MCP App
-  resources for cash flow, projections, portfolio, and category-rule
-  workbench views.
+- Two self-contained, cache-versioned MCP App resources:
+  `ui://splice/cash-flow/v3.html` for the Cash Flow visualization and
+  `ui://splice/portfolio-viewer/v2.html` for portfolio exploration.
 
 MCP Apps are progressive enhancement. Clients without App support still receive
 usable structured and text results. Projection assumption collection is
@@ -246,7 +248,7 @@ fallback and can ask the user for the same non-sensitive fields.
 
 ### MCP App widget origin and ChatGPT refresh
 
-All four App resources advertise the same canonical widget origin,
+Both App resources advertise the same canonical widget origin,
 `https://splice-mcp.kw0.dev`, in resource-content `_meta.ui.domain`. The value is
 an HTTPS origin only: do not append `/mcp`, a path, query, or fragment. Each App
 also advertises its empty external-resource CSP and border preference through
@@ -257,29 +259,34 @@ reads require `splice:read`, just like the guide and data resources.
 The browser runtime is progressive enhancement over the official
 `@modelcontextprotocol/ext-apps` bridge. Every App starts in a neutral
 `loading` state with no financial or identifying values. A `ready` state means
-the host delivered the authenticated tool result for this invocation. An
-`error` state means initialization, transport, cancellation, teardown, or a
-read-only helper call failed; it must show `Unable to load live Splice data.`
-and must not retain or substitute business data. Production HTML contains no
-demo or fixture envelope. Deterministic sample data exists only in test-owned
-host fixtures and reaches the production browser bundle through simulated
-official host notifications.
+the host delivered the authenticated tool result for this invocation. A
+primary `error` state means initialization, transport, cancellation, teardown,
+or the primary visualization failed; it must show
+`Unable to load live Splice data.` and must not retain or substitute business
+data. A Cash Flow drilldown or model-context helper failure stays localized to
+the selected category and does not discard the valid primary visualization.
+Production HTML contains no demo or fixture envelope. Deterministic sample data
+exists only in test-owned host fixtures and reaches the production browser
+bundle through simulated official host notifications.
 
-The `v2` suffix is a client cache key, not an API version. Change it only when
-the embedded browser resource changes incompatibly enough that hosts must stop
-using cached HTML; keep each linked `show_*` descriptor and resource URI exact.
+The `v3` and `v2` suffixes are client cache keys, not API versions. Change one
+only when that embedded browser resource changes incompatibly enough that hosts
+must stop using cached HTML; keep each linked tool descriptor and resource URI
+exact.
 
 After deploying a metadata or resource change, open the existing ChatGPT
 developer plugin and run **Refresh** or **Scan Tools** before rechecking its
 templates. A cached
 template descriptor can continue to show an old widget-domain warning or run an
-older embedded resource even when the live server is correct. Confirm all four
-templates show the shared widget origin, use the exact `v2` URIs, and retain
-both JSON text and `structuredContent` fallbacks. Then start a fresh
-conversation and attach Splice; an already-open conversation can retain old
-tool descriptors. No new DNS record, Auth0 application, consent configuration,
-plugin recreation, or Traefik route is required because the canonical MCP
-origin is already public with valid TLS.
+older embedded resource even when the live server is correct. Confirm the Cash
+Flow template uses `ui://splice/cash-flow/v3.html`, Portfolio uses its exact
+`v2` URI, both show the shared widget origin, and both retain JSON text plus
+`structuredContent` fallbacks. Confirm discovery contains
+`visualize_cash_flow` exactly once and no `show_cashflow_explorer`. Then start a
+fresh conversation and attach Splice; an already-open conversation can retain
+the retired descriptor or resource. No OAuth reconnect, new DNS record, Auth0
+application, consent configuration, plugin recreation, or Traefik route is
+required because the canonical MCP origin is unchanged.
 
 Domain verification in the OpenAI submission portal is a separate operator
 workflow. Add a challenge response only if the portal supplies a token and
@@ -301,9 +308,8 @@ for service-owned resource and prompt callbacks. It also provides first-class
 typed MCP App resources and tool linkage, OpenAI-submission validation, optional
 legacy ChatGPT aliases, and request-local `requiredScopes` enforcement before
 static or dynamic App HTML is returned. The fifth `/apps` browser entrypoint
-composes the official ext-apps `App` and `PostMessageTransport`, owns lifecycle,
-host context, teardown, and safe state transitions, and exposes the official
-typed model-context update used by Projection Scenario Modeler. Splice uses the
+composes the official ext-apps `App` and `PostMessageTransport` and owns
+lifecycle, host context, teardown, and safe state transitions. Splice uses the
 CommonJS branch for its NodeNext Nest server and bundles only `/apps` into the
 self-contained browser resource.
 
@@ -314,13 +320,13 @@ Splice does not reimplement its bridge protocol and does not import ext-apps
 directly in production source.
 Splice consumes only these declared public entrypoints:
 
-| Entrypoint | Splice use |
-| --- | --- |
-| `@koonweee/mcp-kit` | `defineTool`, `defineServer`, scope/risk policy, typed outputs, SDK v2 handler context and input-required result |
-| `@koonweee/mcp-kit/node` | Stateless Node Streamable HTTP listener through `serveNode` |
-| `@koonweee/mcp-kit/auth0` | Auth0 JWT verifier, bearer gate, principal conversion, and protected-resource discovery |
-| `@koonweee/mcp-kit/test` | Deterministic in-memory/JWT test helpers without a live Auth0 tenant |
-| `@koonweee/mcp-kit/apps` | Browser-only official ext-apps lifecycle, tool calls, host context, model-context updates, and teardown |
+| Entrypoint                | Splice use                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `@koonweee/mcp-kit`       | `defineTool`, `defineServer`, scope/risk policy, typed outputs, SDK v2 handler context and input-required result |
+| `@koonweee/mcp-kit/node`  | Stateless Node Streamable HTTP listener through `serveNode`                                                      |
+| `@koonweee/mcp-kit/auth0` | Auth0 JWT verifier, bearer gate, principal conversion, and protected-resource discovery                          |
+| `@koonweee/mcp-kit/test`  | Deterministic in-memory/JWT test helpers without a live Auth0 tenant                                             |
+| `@koonweee/mcp-kit/apps`  | Browser-only official ext-apps lifecycle, tool calls, host context, model-context updates, and teardown          |
 
 Recheck the pin and export map after installing dependencies:
 
@@ -374,6 +380,116 @@ legacy elicitation escape hatch, and API-origin MCP controller must be absent.
 
 ## Local MCP App standard-host validation
 
+Product and interaction decisions for Splice MCP Apps are governed by
+[MCP App Product and UX Guidance](./mcp-app-product-guidance.md). Resolve that
+guide's product checklist before expanding a surface; use the workflow below to
+validate the resulting implementation.
+
+For a new App or material redesign, begin with one constrained ImageGen contact
+sheet containing three or four mobile concepts. Critique it against the product
+contract and representative real tool-result shapes, then record the selected
+and rejected ideas in the owning plan. Generated mock data and layout are not
+implementation truth or validation evidence; the official-host captures below
+remain the acceptance boundary.
+
+Use the repository-owned loop for normal MCP App product and UI iteration. It
+pins and verifies the official `modelcontextprotocol/ext-apps` host, rebuilds
+the embedded browser bundle, starts Splice's authenticated real MCP runtime
+fixture, and tears down every process it starts:
+
+```bash
+cd backend
+yarn mcp-apps:setup # one-time; exact ext-apps v1.7.5 checkout/build
+yarn mcp-apps:dev
+```
+
+Open `http://127.0.0.1:8080`. Edits under `backend/src/mcp/apps/**` rebuild the
+bundle and restart the fixture automatically; reload the host page to see the
+new resource. The default deterministic data scenario is `populated`. Exercise
+other truthful states with:
+
+```bash
+yarn mcp-apps:dev --scenario empty
+yarn mcp-apps:dev --scenario helper-error
+yarn mcp-apps:dev --scenario primary-error
+```
+
+Only one development loop should own ports `3102`, `8080`, and `8081` at a
+time. The fixture port may be changed with `--fixture-port`; the exact tagged
+official host hard-codes its isolated origins to `8080` and `8081`, so those two
+ports are intentionally fixed. Press Ctrl+C once to close the Splice fixture
+and both official-host origins.
+
+Run the visual regression workflow before handing off an App UI change:
+
+```bash
+cd backend
+yarn test:mcp-apps
+yarn mcp-apps:visual
+yarn mcp-apps:visual --app cash-flow --scenario populated
+```
+
+The unfiltered command covers both Apps. `--app cash-flow` or
+`--app portfolio` narrows the loop, and `--case overview|inflow|comparison|focus`
+selects one Cash Flow invocation. The populated Cash Flow default covers all
+four cases; `empty` and `primary-error` use the overview, while `helper-error`
+uses the focused-category case so the localized helper state is exercised.
+
+Every selected case invokes the real tool through the authenticated MCP
+connection and official host. It captures desktop dark, iPhone dark/light, and
+a 320 px dark boundary, captures loading and transport-ready iPhone frames from
+the same official-host browser session and encodes them as a WebM, saves
+console/page-error/network evidence, rejects non-loopback requests, and renders
+self-contained contact sheets. Evidence is written beneath
+`tmp/recordings/mcp-apps/<timestamp>-<scenario>-<app>/`; use
+`--output <directory>` for a stable refinement pass. The video transition is
+gated on the observed tool call, resource read, sandbox load, and focused helper
+call when applicable; do not replace this with a fixed sleep or an outer-host
+text query because the App runs in a sandboxed iframe. The command always closes
+its agent-browser session and local fixture processes, including after failure.
+Contact-sheet generation uses the installed `ui-change-contact-sheet` Codex
+skill; set `MCP_APP_CONTACT_SHEET_BUILDER` when Codex skills live outside the
+default home directory.
+
+The deterministic capture matrix is:
+
+| Tool                    | App              | Cases                                        | Primary responsive review focus                                                  |
+| ----------------------- | ---------------- | -------------------------------------------- | -------------------------------------------------------------------------------- |
+| `visualize_cash_flow`   | Cash Flow        | Overview, income, comparison, category focus | Period/net hierarchy, ranked contributors, disclosure, long labels, local errors |
+| `show_portfolio_viewer` | Portfolio Viewer | Overview                                     | Holdings, account filter, activity paging, and long security names               |
+
+Inspect the generated contact sheets at 100%, with special attention to iPhone
+horizontal overflow, value/label wrapping, readable density, 44 px touch
+targets, keyboard focus, theme, and safe-area padding. Review every WebM when
+motion or loading transitions changed. Also inspect every per-capture JSON
+file: page errors and unexpected console errors must be empty for successful
+cases, and finance data requests must stay on the official host/sandbox and
+`127.0.0.1:3102` fixture. The official host's nested origin can limit outer
+automation of App controls, so keep selection, model-context, helper failure,
+and stale-generation behavior covered by focused runtime tests and manually
+exercise the real sandbox when needed. A final ChatGPT Web and mobile smoke is
+still required for host-specific presentation.
+
+For a material Cash Flow UI change, preserve three stable evidence directories
+and record each one in the owning plan:
+
+1. **Information hierarchy:** overview plus income/comparison captures; remove
+   anything that delays period, net movement, flow relationship, or first
+   contributors on a phone.
+2. **Exploration:** focused category plus helper-error captures; inspect
+   `Other`, `Uncategorized`, transaction expansion, close/return state, and
+   localized retry behavior.
+3. **Responsive/accessibility polish:** inspect every case at desktop, iPhone
+   dark/light, and 320 px; include long labels, positive/negative/zero values,
+   focus order, touch targets, safe areas, and reduced motion.
+
+After each pass, run focused tests and `yarn build:mcp-apps`, capture through the
+official host, inspect contact sheets at 100%, review every WebM and JSON file,
+record findings, and fix all major issues before beginning the next pass. Do not
+promote fixture screenshots or fixture data into the production resource.
+
+### Manual fixture and artifact troubleshooting
+
 The standalone resource extractor is an artifact inspection tool, not an MCP
 Apps host. It must render the neutral loading shell and contain no fixture
 business data:
@@ -384,16 +500,16 @@ yarn build:mcp-apps
 yarn ts-node -r tsconfig-paths/register \
   test/mcp/fixtures/render-mcp-app-resource.ts \
   /tmp/splice-mcp-app-resources
-rg -n "splice-mcp-app-fixture|fixture-account-|fixture-transaction-|2026-03-31|6,250|3,120|3,130" \
-  /tmp/splice-mcp-app-resources
+rg -n "Fixture Corner Market|Fixture Brokerage|fixture-audit-|6,250|3,120|3,130|show_cashflow_explorer|cashflow-explorer/v2" \
+  /tmp/splice-mcp-app-resources src/mcp/apps/app-runtime.generated.ts
 ```
 
 The final search must return no match. Do not treat directly opening those HTML
 files as a successful host test: without an official parent bridge, the correct
 terminal state is `Unable to load live Splice data.`
 
-For a real local host, use the exact upstream ext-apps tag recorded below. From
-a clean checkout, install and build the official package and `basic-host`:
+`yarn mcp-apps:setup` automates the following exact checkout and build. These
+manual commands are retained for diagnosing setup failures:
 
 ```bash
 git clone --branch v1.7.5 --depth 1 \
@@ -412,7 +528,8 @@ The pinned upstream build invokes Bun from its npm dependency. Running the
 installer explicitly after the script-free dependency install keeps this
 fixture reproducible without installing a moving global Bun release.
 
-Start the test-owned authenticated Splice runtime in one terminal. It uses the
+Start the test-owned authenticated Splice runtime in one terminal for manual
+host debugging. It uses the
 real `SpliceMcpRuntimeService`, ephemeral signing material, deterministic mock
 services, and a loopback CORS proxy that only injects the in-memory bearer
 token; it does not parse or implement MCP:
@@ -420,7 +537,7 @@ token; it does not parse or implement MCP:
 ```bash
 cd backend
 yarn ts-node -r tsconfig-paths/register \
-  test/mcp/fixtures/serve-mcp-app-fixture.ts 3102
+  test/mcp/fixtures/serve-mcp-app-fixture.ts 3102 populated
 ```
 
 Start the tagged official host in a second terminal:
@@ -430,19 +547,133 @@ cd /tmp/mcp-ext-apps/examples/basic-host
 SERVERS='["http://127.0.0.1:3102/mcp"]' npm run serve
 ```
 
-Open `http://127.0.0.1:8080`, invoke all four `show_*` tools, and validate the
-rendered Apps at desktop and mobile sizes. Check the loading-to-ready
-transition, read-only helper controls, truthful helper-error behavior, theme
-and safe-area response, browser console, and network log. Finance requests must
-flow only through the host-mediated MCP connection to `127.0.0.1:3102`; the App
-iframe must not call Splice REST endpoints directly. Always stop both fixture
-processes and close every agent-browser session when finished.
+Open `http://127.0.0.1:8080`, invoke `visualize_cash_flow` and
+`show_portfolio_viewer`, and validate the rendered Apps at desktop and mobile
+sizes. Check the loading-to-ready transition, read-only helper controls,
+truthful helper-error behavior, theme and safe-area response, browser console,
+and network log. Finance requests must flow only through the host-mediated MCP
+connection to `127.0.0.1:3102`; the App iframe must not call Splice REST
+endpoints directly. Always stop both fixture processes and close every
+agent-browser session when finished.
 
 ## Production rollout and recreation
 
 These steps intentionally separate repository automation from Auth0, DNS, and
 live deployment mutations. Do not put a real bearer token in shell history,
 fixtures, documentation, screenshots, or chat.
+
+### Cash Flow v3 rollout and ChatGPT smoke
+
+The Cash Flow launcher rename and `v3` resource are an application-only
+cutover. They do not require an Auth0, DNS, ingress, stack, scope, consent, or
+database change.
+
+1. Before promotion, record the current protected deploy revision and deployed
+   backend image digest as rollback inputs. Finish backend validation, Node 24
+   image inspection, fixture/stale-contract scans, three official-host visual
+   passes, and independent review.
+2. Promote the reviewed `main` revision only through the protected `main` to
+   `deploy` workflow. Confirm the exact reviewed image is healthy on
+   `splice-app-sf`; do not restart or reconfigure unrelated replicas.
+3. Use the existing OAuth-capable deterministic client to initialize production
+   and confirm exactly 25 tools. Discovery must contain
+   `visualize_cash_flow` once, omit `show_cashflow_explorer`, and link the tool
+   to `ui://splice/cash-flow/v3.html`. Read that resource and verify
+   `splice:read`, canonical widget origin/CSP/border metadata, HTML MIME type,
+   structured data, and the JSON-equivalent text fallback.
+4. In the existing ChatGPT developer plugin, run **Refresh** or **Scan Tools**,
+   then attach Splice in a fresh conversation. Reconnection and OAuth consent
+   are not expected. Record the refresh time because old conversations can keep
+   the retired descriptor or cached `v2` HTML.
+5. Smoke on ChatGPT Web and mobile/iOS with a real-period cash-flow question,
+   income-focused question, explicit period comparison, and category selection
+   followed by “why is this so high?”. Verify loading-to-ready, exact
+   period/currency, net, inflow/outflow, ranked categories, `Other`, explicit
+   `Uncategorized`, comparison deltas, largest-first detail, model-context
+   follow-up, theme, and safe areas.
+6. Also ask a simple finance fact and a capability/meta question. Those should
+   remain prose or use ordinary headless tools; they must not launch Cash Flow.
+   Record screenshots/videos and sanitized smoke results, then inspect logs for
+   successful App calls without claims, arguments, results, financial values,
+   raw transaction data, or internal errors.
+7. Record the application revision, protected deploy revision, image digest,
+   ChatGPT refresh time, evidence paths, and smoke result in a dated rollout
+   record below. If primary loading, authorization, money correctness,
+   stale-data privacy, or host compatibility fails, redeploy the recorded prior
+   backend revision through the protected path and run **Refresh** or
+   **Scan Tools** again. No database, Auth0, DNS, ingress, or stack rollback is
+   needed for this cutover.
+
+### 2026-08-17 standardized four-App runtime rollout record (historical)
+
+- Splice application commit:
+  `0206798032a46f27abc5f70153e5406fcc233100`; protected deploy revision:
+  `ea08ad9585792a354e8ad4acd0a36da4ffead1bc`; protected PR: `#246`.
+- GitHub had a declared major outage affecting API, Actions, and pull requests
+  during promotion. Deploy workflow attempts `32049151165`, `32049200167`, and
+  `32049472867` failed before mutation on HTTP `503`. Run `32049693812` created
+  the deploy PR and dispatched exact-head comparison CI `32049708220`, which
+  passed on `0206798`, but its post-CI GraphQL lookup received another `503`.
+  The same workflow's guarded merge command was then run against that exact
+  validated head; PR #246 merged as `ea08ad9`. Synchronization run
+  `32050656693` subsequently passed and confirmed `main` and `deploy` match.
+- Registry dependency: `@koonweee/mcp-kit@0.4.1`, release commit
+  `aac0673a25b361a8bd2468bd6451f3c2dd556d16`, npm integrity
+  `sha512-zMi4zQfAoBUVBfoa4Y1MZcdEDk3jqgMcxjNcx5L23PzCd8spC/gXdN4xR9C4h+AeN0GKEM/cmd25/vcWc2Nj2Q==`.
+  Its browser runtime directly composes exact
+  `@modelcontextprotocol/ext-apps@1.7.5`; Splice does not implement the bridge
+  protocol or ship a production fixture fallback.
+- Komodo build update `6a8342d1d28c58b2ef3c01d0` published backend version
+  `0.0.96` and commit tag `ea08ad9`. The production build used Node 24 Alpine
+  and published manifest-list digest
+  `sha256:73b72b8a57083bc3a67162dd08cad52cab06c03b72ef730aaada0da2356473f5`.
+- Targeted deployment update `6a834475d28c58b2ef3c0227` completed
+  successfully for `splice-app-sf`; no VPS or SG stack was redeployed. The
+  declarative stack remained `605ec5a`. The SF backend is one healthy instance
+  on the default and `external-web` networks with no host port publication;
+  its deployed image ID is the same `sha256:73b72b8a...` digest.
+- Local release gates passed: backend typecheck/lint/build, 8 focused MCP suites
+  with 106 tests, 83 full backend suites with 874 tests, frontend
+  typecheck/lint/build and 45 suites with 285 tests, deterministic browser
+  bundle generation, Node `v24.19.0` production-image inspection, both SF
+  Compose renders, and clean diff/fixture-leak scans. The final generated App
+  bundle SHA-256 was
+  `7bec14883623bcf860c571fd13247078eef889bf06b0ff16daad8fb11b4dc68a`.
+- Tagged official ext-apps `basic-host` validation rendered all four Apps at
+  desktop and mobile sizes. Cashflow displayed only host-delivered test values
+  (`$4,100`, `-$1,750`, `$2,350`) rather than the removed production demo
+  values; Portfolio, Projection, and Category Rules also reached ready state.
+  Browser console/network checks found no App error and no direct REST request.
+  An independent review/fix loop closed stale derived-data, late-helper,
+  account-identity, primary-reload, and safe-area regressions, then reported no
+  remaining major issue.
+- Post-deploy public checks returned `200` for API health, frontend, and the
+  canonical protected-resource document. Discovery advertised exactly the
+  canonical resource, `https://auth.kw0.dev/`, `splice:read`, and
+  `splice:write`; unauthenticated `/mcp` returned the sanitized `401` bearer
+  challenge; the old API-origin `/mcp` returned `404`. Startup logs showed both
+  listeners ready with no error.
+- Authenticated production calls succeeded for `show_cashflow_explorer`,
+  `show_projection_scenario_modeler`, `show_portfolio_viewer`, and
+  `show_category_rule_workbench`. Each returned its exact
+  `ui://splice/.../v2.html` URI, structured data, and JSON/text fallback.
+  Sanitized production logs contain matching started/completed success events
+  and no claims, arguments, results, or financial values.
+- After deploying the later two-App product scope, open the existing developer
+  plugin, run **Refresh** or **Scan Tools**, and confirm only the Cashflow
+  Explorer and Portfolio Viewer `v2` templates remain. No reconnect, plugin
+  recreation, Auth0 mutation, DNS change, or ingress change is required. This
+  host refresh is necessary because existing conversations may retain cached
+  descriptors for the retired Projection Scenario Modeler and Category Rule
+  Workbench.
+
+Immediate rollback inputs for this runtime rollout are protected deploy
+revision `2a8d9350c701914f52580fe281a944d41e649ec8`, stack revision `605ec5a`,
+and backend image
+`sha256:c8633213a86eebd7d45309ba00df65fcacdc3a564691f697201c626442dde6ab`
+(`@koonweee/mcp-kit@0.3.1`). No database, Auth0, DNS, or stack-schema change was
+part of the rollout. Roll back only `splice-app-sf`, then Refresh/Scan Tools so
+ChatGPT stops using the `v2` descriptors.
 
 ### 2026-08-17 MCP App widget-domain rollout record
 
@@ -531,6 +762,7 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
    Agent check: run the local commands above, inspect the image's
    `node --version`, and wait for the protected `main` to `deploy` workflow to
    finish successfully.
+
 3. Land the declarative `koonweee/stack` change. In that repository, render both
    the shared base Compose and the SF external override using the commands in its
    colocated Splice operations note. Sync/verify `external-routing` first so
@@ -547,6 +779,7 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
    The merged render must attach only `splice-backend` to `external-web`, apply
    `traefik.scope=external`, route `splice-mcp.kw0.dev`, and target port `3001`
    without publishing that port on the host.
+
 4. Configure Auth0 exactly as described in **Production Auth0 and ChatGPT
    registration**: API identifier, RS256/RFC 9068 dialect, RBAC and permission
    inclusion, offline access, both delegated scopes, allowed-user role, tenant
@@ -573,9 +806,10 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
    Metadata must advertise the exact resource, issuer, and two scopes. The final
    request must return a sanitized `401` OAuth bearer challenge, not anonymous
    MCP access. The old `https://splice-api.kw0.dev/mcp` route must be absent.
+
 8. Use MCP Inspector or another deterministic OAuth-capable client before
    ChatGPT. Log in with the allowed Google account, initialize, confirm exactly
-   27 tools, read the guide/resource and one prompt, call a representative read,
+   25 tools, read the guide/resource and one prompt, call a representative read,
    complete projection input-required/resume, and verify an App result plus its
    structured fallback. Use a controlled categorization sample to preview and
    execute both creation and application, checking preview-token rejection and
@@ -586,7 +820,7 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
    not contain bearer tokens, subjects or other claims, arguments, structured
    results, internal errors, or financial values.
 10. Connect ChatGPT only after the deterministic smoke passes. Refresh plugin
-    metadata, confirm 27 tools, attach Splice to a new supported Work
+    metadata, confirm 25 tools, attach Splice to a new supported Work
     conversation, set its permission mode to allow or prompt for mutating
     actions rather than **Allow low-risk actions**, and verify OAuth login,
     visible scopes/annotations, one read, and one previewed write. A Finance or
@@ -596,6 +830,15 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
     `tool.started` event before diagnosing any downstream failure.
 
 ## Rollback
+
+For the 2026-08-17 standardized Apps runtime rollout, the immediate known-good
+rollback inputs are protected deploy revision
+`2a8d9350c701914f52580fe281a944d41e649ec8`, stack `605ec5a`, and backend image
+`sha256:c8633213a86eebd7d45309ba00df65fcacdc3a564691f697201c626442dde6ab`.
+That image uses mcp-kit `0.3.1` and the prior App resources. Redeploy only
+`splice-app-sf`; no database, Auth0, DNS, or topology rollback is required.
+Afterward, Refresh/Scan Tools in ChatGPT so cached `v2` descriptors are not
+reused.
 
 For the 2026-08-17 App metadata rollout, the immediate known-good rollback
 inputs are Splice protected deploy revision

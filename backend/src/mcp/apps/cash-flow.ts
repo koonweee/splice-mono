@@ -1,8 +1,6 @@
 import { renderMcpAppHtml } from './app-shell';
 import type { SpliceMcpAppDefinition } from '../mcp-apps';
 
-export function renderProjectionScenarioModelerApp(
-  app: SpliceMcpAppDefinition,
-): string {
+export function renderCashFlowApp(app: SpliceMcpAppDefinition): string {
   return renderMcpAppHtml(app);
 }

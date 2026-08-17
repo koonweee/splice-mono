@@ -28,6 +28,15 @@ yarn format             # Prettier formatting
 
 ## Architecture
 
+### MCP Apps
+
+Before changing an MCP App product surface, read
+[`docs/mcp-app-product-guidance.md`](../docs/mcp-app-product-guidance.md) and the
+scoped [`src/mcp/AGENTS.md`](src/mcp/AGENTS.md). The product guide is
+authoritative for App purpose, selective invocation, interaction density,
+mobile behavior, current-data boundaries, and visual validation. Technical
+operation and production procedures remain in [`docs/mcp.md`](../docs/mcp.md).
+
 ### Module Structure
 
 Each feature module follows a consistent pattern in `src/{module}/`:
