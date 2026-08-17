@@ -21,7 +21,7 @@ yarn build
 
 The web app uses backend-owned Google OAuth for browser login. The frontend does not receive Google secrets or tokens. The login button sends the browser to the API at `/user/oauth/google/start` and the backend returns with Splice session cookies.
 
-Password login and registration are intentionally removed. Existing users sign in with a whitelisted, verified Google account whose email matches their Splice account. Non-browser API and MCP access uses personal access tokens from Settings, not session login credentials.
+Password login and registration are intentionally removed. Existing users sign in with a whitelisted, verified Google account whose email matches their Splice account. Non-browser REST API automation uses personal access tokens from Settings, not session login credentials. MCP clients connect to the OAuth-protected public MCP endpoint documented in [`docs/mcp.md`](../docs/mcp.md).
 
 Local Google OAuth setup is owned by the backend environment:
 
@@ -36,7 +36,7 @@ Restart the backend after changing Google OAuth environment variables.
 
 - The frontend supports an optional `VITE_API_BASE_URL` override for the browser-reachable API origin.
 - If `VITE_API_BASE_URL` is unset, the app derives the API hostname by adding `-api` to the first host label.
-- The Settings page shows the MCP endpoint as `<resolved-api-base>/mcp` and uses personal access tokens for bearer auth.
+- The Settings Access tab manages personal access tokens for ordinary REST API automation. MCP connection and OAuth setup are backend-owned and documented in [`docs/mcp.md`](../docs/mcp.md).
 - For the current deployment model, use split origins:
   - frontend: `https://splice.<base-domain>`
   - API: `https://splice-api.<base-domain>`

@@ -19,7 +19,6 @@ const mockFns = vi.hoisted(() => ({
   categorizationRulesSectionMock: vi.fn(),
   customCategoriesSectionMock: vi.fn(),
   personalAccessTokenSectionMock: vi.fn(),
-  mcpConnectionSectionMock: vi.fn(),
   recurringManualTransactionsSectionMock: vi.fn(),
   loadCurrentDeviceNotificationStateMock: vi.fn(),
   enableCurrentDeviceNotificationsMock: vi.fn(),
@@ -99,18 +98,6 @@ vi.mock('../../components/settings/CategorizationRulesSection', () => ({
 
     return (
       <div data-testid="categorization-rules-section">Categorization rules</div>
-    )
-  },
-}))
-
-vi.mock('../../components/settings/McpConnectionSection', () => ({
-  McpConnectionSection: () => {
-    mockFns.mcpConnectionSectionMock()
-
-    return (
-      <div data-testid="mcp-section">
-        <Title order={3}>MCP connection</Title>
-      </div>
     )
   },
 }))
@@ -406,14 +393,20 @@ describe('SettingsPage', () => {
     ).toBeTruthy()
     expect(window.location.search).toBe('?tab=recurring')
 
-    fireEvent.click(screen.getByRole('tab', { name: /mcp/i }))
+    expect(screen.queryByRole('tab', { name: /mcp/i })).toBeNull()
+  })
+
+  it('falls back to General for the removed MCP tab URL', () => {
+    window.history.replaceState(null, '', '/settings?tab=mcp')
+
+    renderSettingsPage()
+
     expect(
-      screen.getByRole('tab', { name: /mcp/i }).getAttribute('aria-selected'),
+      screen
+        .getByRole('tab', { name: /general/i })
+        .getAttribute('aria-selected'),
     ).toBe('true')
-    expect(
-      screen.getByRole('heading', { name: /mcp connection/i, level: 3 }),
-    ).toBeTruthy()
-    expect(window.location.search).toBe('?tab=mcp')
+    expect(screen.queryByRole('tab', { name: /mcp/i })).toBeNull()
   })
 
   it('saves the hide zero balance accounts setting', () => {

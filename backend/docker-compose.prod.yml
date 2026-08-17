@@ -40,6 +40,12 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       API_DOMAIN: ${API_DOMAIN}
       FRONTEND_DOMAIN: ${FRONTEND_DOMAIN}
+      MCP_ENABLED: ${MCP_ENABLED:-false}
+      MCP_PORT: ${MCP_PORT:-3001}
+      MCP_SERVER_URL: ${MCP_SERVER_URL:-}
+      AUTH0_ISSUER: ${AUTH0_ISSUER:-}
+      MCP_ALLOWED_HOSTNAMES: ${MCP_ALLOWED_HOSTNAMES:-}
+      MCP_ALLOWED_ORIGIN_HOSTNAMES: ${MCP_ALLOWED_ORIGIN_HOSTNAMES:-}
       SEQ_SERVER_URL: ${SEQ_SERVER_URL}
       SEQ_API_KEY: ${SEQ_API_KEY}
     depends_on:
@@ -55,4 +61,3 @@ services:
 volumes:
   postgres_data:
     driver: local
-

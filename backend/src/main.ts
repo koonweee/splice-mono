@@ -5,6 +5,8 @@ import cookieParser from 'cookie-parser';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { generateSchemaComponents } from './common/zod-api-response';
+import { parseMcpRuntimeConfig } from './mcp/mcp.config';
+import { SpliceMcpRuntimeService } from './mcp/mcp.runtime';
 
 /**
  * Transform nullable $ref patterns in OpenAPI spec for better orval compatibility.
@@ -61,6 +63,8 @@ function fixNullableRefs(obj: unknown): unknown {
 }
 
 async function bootstrap() {
+  // Parse the complete MCP configuration before Nest initializes either listener.
+  const mcpConfig = parseMcpRuntimeConfig();
   const app = await NestFactory.create(AppModule, {
     // Enable raw body for webhook signature verification
     rawBody: true,
@@ -161,8 +165,40 @@ async function bootstrap() {
     `,
   });
 
-  const port = process.env.PORT ?? 3000;
-  await app.listen(port);
-  logger.log({ port }, 'Server started');
+  let mcpRuntime: SpliceMcpRuntimeService | undefined;
+  try {
+    await app.init();
+    const resolvedMcpRuntime = app.get(SpliceMcpRuntimeService);
+    mcpRuntime = resolvedMcpRuntime;
+    await resolvedMcpRuntime.start(mcpConfig);
+
+    const port = process.env.PORT ?? 3000;
+    await app.listen(port);
+    logger.log({ port }, 'Server started');
+
+    let shuttingDown = false;
+    const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      logger.log({ signal }, 'Server shutdown requested');
+      try {
+        await mcpRuntime?.close();
+        await app.close();
+      } catch {
+        logger.error({}, 'Server shutdown failed');
+        process.exitCode = 1;
+      }
+    };
+
+    process.once('SIGTERM', () => void shutdown('SIGTERM'));
+    process.once('SIGINT', () => void shutdown('SIGINT'));
+  } catch (error) {
+    await mcpRuntime?.close().catch(() => undefined);
+    await app.close().catch(() => undefined);
+    throw error;
+  }
 }
-void bootstrap();
+void bootstrap().catch(() => {
+  process.stderr.write('{"level":"error","event":"startup_failed"}\n');
+  process.exitCode = 1;
+});

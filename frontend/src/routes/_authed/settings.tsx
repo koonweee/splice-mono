@@ -27,7 +27,6 @@ import {
 import { AnalysisRulesSection } from '../../components/settings/AnalysisRulesSection'
 import { CategorizationRulesSection } from '../../components/settings/CategorizationRulesSection'
 import { CustomCategoriesSection } from '../../components/settings/CustomCategoriesSection'
-import { McpConnectionSection } from '../../components/settings/McpConnectionSection'
 import { PageHeader } from '../../components/PageHeader'
 import { PersonalAccessTokenSection } from '../../components/settings/PersonalAccessTokenSection'
 import { RecurringManualTransactionsSection } from '../../components/settings/RecurringManualTransactionsSection'
@@ -56,7 +55,6 @@ type SettingsTab =
   | 'analysis'
   | 'categorization'
   | 'recurring'
-  | 'mcp'
 
 type GeneralSettingsValues = {
   theme: ThemePresetId
@@ -74,8 +72,7 @@ export const Route = createFileRoute('/_authed/settings')({
       tab === 'categories' ||
       tab === 'analysis' ||
       tab === 'categorization' ||
-      tab === 'recurring' ||
-      tab === 'mcp'
+      tab === 'recurring'
       ? { tab }
       : {}
   },
@@ -117,8 +114,7 @@ function getInitialSettingsTab(): SettingsTab {
     tab === 'categories' ||
     tab === 'analysis' ||
     tab === 'categorization' ||
-    tab === 'recurring' ||
-    tab === 'mcp'
+    tab === 'recurring'
     ? tab
     : 'general'
 }
@@ -607,7 +603,6 @@ export function SettingsPage() {
             <Tabs.Tab value="analysis">Analysis</Tabs.Tab>
             <Tabs.Tab value="categorization">Categorization</Tabs.Tab>
             <Tabs.Tab value="recurring">Recurring</Tabs.Tab>
-            <Tabs.Tab value="mcp">MCP</Tabs.Tab>
           </Tabs.List>
         </div>
 
@@ -843,10 +838,6 @@ export function SettingsPage() {
 
         <Tabs.Panel className={styles.categoriesPanel} value="recurring">
           <RecurringManualTransactionsSection />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="mcp">
-          <McpConnectionSection />
         </Tabs.Panel>
       </Tabs>
     </Box>

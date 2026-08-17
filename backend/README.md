@@ -24,7 +24,7 @@ That's it! Your application will be running at `http://localhost:3000` 🚀
 
 - [Docker](https://www.docker.com/get-started) installed on your machine
 - [Docker Compose](https://docs.docker.com/compose/install/) installed
-- (Optional) [Node.js 22.13+](https://nodejs.org/) and [Yarn](https://yarnpkg.com/) for local development
+- (Optional) [Node.js 24+](https://nodejs.org/) and [Yarn](https://yarnpkg.com/) for local development
 
 ## Development Setup
 
@@ -121,91 +121,18 @@ If you prefer to run the application locally without Docker:
 
 > When updating or installing new dependencies, do `yarn docker:down` then `yarn docker:up:build`
 
-## MCP Configuration
+## MCP
 
-Splice exposes an MCP endpoint at `/mcp` for compatible AI tools. Authenticate
-with a personal access token:
+The standalone MCP resource is `https://splice-mcp.kw0.dev/mcp`. It uses Auth0
+OAuth with `splice:read` and `splice:write`; it does not accept Splice personal
+access tokens and is not mounted on the Nest API origin. The listener is
+disabled by default for ordinary local API development.
 
-```http
-Authorization: Bearer splice_pat_...
-```
-
-The MCP surface includes user context, account snapshots, balance history,
-paginated transaction listing, paginated balance snapshot listing, category
-discovery with exact category IDs, legacy transaction search, investment
-holdings, investment activity, recurring manual transaction schedules, analysis
-rule reads, categorization rule reads, categorization rule recommendation reads,
-categorization rule evidence, categorization rule draft previews, guarded
-categorization rule creation/application, cash-flow analysis, cash-flow category
-transaction drilldowns, and analysis audits. MCP tools declare structured output
-schemas and annotations. Personal access tokens used with MCP are full-scope
-automation keys; trusted clients can modify categorization rules and apply them
-to existing non-manual transactions.
-
-Analysis rules are persisted per user and are applied inside the backend
-transaction-analysis service before summary aggregation or real-transaction
-drilldowns are returned. Pending transactions are treated the same as settled
-transactions in these analysis flows. Neutralization uses the user's
-`neutralizationLookaroundDays` setting to find candidate matches around the
-selected range, while summaries and drilldowns still report only selected-range
-rows. The HTTP `GET /transaction-analysis/audit`
-endpoint returns compact rows explaining in-range exclusions and neutralized
-pairs that affect the selected report. MCP cash-flow tools delegate to the same
-backend analysis service and return money in major units with explicit signs.
-
-Compatible clients can read `splice://mcp-guide` for tool-use guidance. In
-short: call `get_user_context` first, use `get_cashflow_analysis` for
-rule-adjusted totals and category breakdowns, page through `list_transactions`
-until `pageInfo.hasMore` is false for custom spending-pattern analysis, use
-`list_investment_holdings` and `list_investment_activity` for portfolio
-positions and investment transactions, use
-`list_recurring_manual_transaction_schedules` for known projection assumptions,
-use `get_accounts_snapshot` plus `list_balance_snapshots` for projection
-baselines, inspect rule context with `list_analysis_rules`,
-`list_categorization_rules`, and `list_categorization_rule_recommendations`,
-use manual examples and candidate patterns as evidence for proposed
-categorization rules, preview a draft before creating it, preview a saved rule
-before applying it, and compare transaction amounts with `convertedAmount` in
-the requested `reportingCurrency`. Investment activity is separate from
-banking/manual cash-flow analysis. Categorization rule application never
-overwrites manual transactions or manual category assignments.
-
-The MCP server also exposes workflow prompts (`monthly_cashflow_review`,
-`projection_builder`, `category_cleanup_audit`, `portfolio_snapshot`, and
-`tax_or_refund_anomaly_review`), report resource templates such as
-`splice://reports/cashflow/{startDate}/{endDate}`, MCP Apps resources for
-interactive cash-flow/projection/portfolio/category views, and optional
-elicitation for non-sensitive projection assumptions. App and elicitation
-support are progressive enhancements; clients without those capabilities can use
-the structured fallback responses.
-
-MCP Apps-capable hosts can render four interactive, read-only panes through
-`ui://splice/...` resources:
-
-- `show_cashflow_explorer` renders `ui://splice/cashflow-explorer.html` for
-  date range refreshes, category search, category transaction drilldowns, and
-  cash-flow audit effects.
-- `show_projection_scenario_modeler` renders
-  `ui://splice/projection-scenario-modeler.html` for local scenario assumptions,
-  one-time events, account inclusion, and projected summary estimates. These
-  values are in-session only and are not persisted.
-- `show_portfolio_viewer` renders `ui://splice/portfolio-viewer.html` for
-  investment holdings search/sort/filtering and investment activity pagination.
-- `show_category_rule_workbench` renders
-  `ui://splice/category-rule-workbench.html` for category/rule/recommendation
-  inspection and date-ranged audit effects. It intentionally omits mutating
-  controls such as accept, dismiss, apply, create, edit, or archive.
-
-Each app tool still returns `structuredContent` fallback data for non-App
-clients. The app resources are self-contained HTML, declare
-`text/html;profile=mcp-app`, include restrictive `_meta.ui.csp` resource
-metadata with no external domains, and call only existing read-only MCP tools
-through the host bridge. Local browser smoke fixtures can be generated with:
-
-```bash
-cd backend
-npx ts-node -r tsconfig-paths/register test/mcp/fixtures/render-mcp-app-resource.ts
-```
+The surface contains 27 tools, typed structured/text results, data resources,
+workflow prompts, four progressive-enhancement MCP Apps, SDK v2 projection
+input/resume, and preview-token-protected categorization writes. See the
+[canonical MCP runbook](../docs/mcp.md) for the complete contract, local tests,
+fixture validation, production rollout, smoke tests, and rollback.
 
 ## API Documentation
 

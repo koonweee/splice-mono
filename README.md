@@ -29,13 +29,13 @@ Splice is a self-hosted personal finance dashboard for net worth, transactions, 
   Inspect holdings and investment activity while daily snapshots and CSV backfills preserve historical balances.
 
 - **Automation and access**<br>
-  Schedule recurring transactions, receive browser notifications, and connect external tools through personal access tokens and MCP.
+  Schedule recurring transactions, receive browser notifications, and connect external tools through REST API personal access tokens or OAuth-secured MCP.
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js 22.13+
+- Node.js 24+
 - Yarn
 - Docker (for PostgreSQL)
 
@@ -127,7 +127,7 @@ After both apps are running, open:
 http://localhost:3000/user/dev/login?redirect=/home
 ```
 
-This endpoint is restricted to local development. Never enable the bypass in staging or production. External API and MCP clients should use personal access tokens created in Settings.
+This endpoint is restricted to local development. Never enable the bypass in staging or production. External REST API clients can use personal access tokens created in Settings. MCP clients use OAuth at the public endpoint documented in the [MCP guide](docs/mcp.md).
 
 ## Deployment
 

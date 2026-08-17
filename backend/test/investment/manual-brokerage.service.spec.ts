@@ -162,6 +162,10 @@ describe('ManualBrokerageService', () => {
     });
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('atomically creates and values mixed USD/SGD positions', async () => {
     const response = await service.createManualBrokerageAccount(
       {
@@ -426,6 +430,7 @@ describe('ManualBrokerageService', () => {
   });
 
   it('clears a same-day snapshot, deletes omitted rows, and records zero', async () => {
+    jest.useFakeTimers({ now: new Date('2026-08-16T12:00:00.000Z') });
     const account = buildAccount();
     account.currentBalance = BalanceColumns.fromMoneyWithSign({
       money: { currency: 'USD', amount: 20000 },

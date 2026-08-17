@@ -204,7 +204,8 @@ export function PersonalAccessTokenSection() {
         <Stack gap={4}>
           <Title order={3}>Personal access tokens</Title>
           <Text size="sm" c="dimmed">
-            Create tokens for API access. The token is shown only once.
+            Create tokens for REST API automation. The token is shown only
+            once.
           </Text>
         </Stack>
 

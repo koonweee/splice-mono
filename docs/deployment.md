@@ -12,6 +12,12 @@ Start from the backend and frontend `.env.example` files and store production va
 - Google OAuth client credentials, callback URL, and allowed email addresses
 - optional VAPID keys for browser push notifications
 
+Personal access tokens remain available for ordinary REST API automation. MCP
+is a separate Auth0 OAuth resource at `https://splice-mcp.kw0.dev/mcp`; it does
+not accept PATs and is not mounted on `API_DOMAIN`. Keep MCP disabled on normal
+API replicas. The SF-only listener, Auth0 contract, ingress ordering, smoke
+tests, and rollback are documented in the [canonical MCP runbook](mcp.md).
+
 Set the Google callback URL to `${API_DOMAIN}/user/oauth/google/callback`, register that exact redirect URI with Google, and register `FRONTEND_DOMAIN` as an authorized JavaScript origin. Keep `LOCAL_AUTH_BYPASS=false` in every deployed environment.
 
 ## Release workflow
@@ -37,5 +43,6 @@ After deployment:
 - confirm the backend health endpoint responds successfully
 - smoke test Google login, token refresh, and logout
 - verify account sync and transaction refresh
-- verify a personal-access-token request and MCP connection
+- verify a personal-access-token request against an ordinary REST endpoint
+- follow the separate deterministic OAuth MCP smoke in the [MCP runbook](mcp.md)
 - verify browser push notifications when VAPID is configured

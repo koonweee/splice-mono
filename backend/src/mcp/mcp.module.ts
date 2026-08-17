@@ -15,10 +15,9 @@ import { TransactionCategorizationModule } from '../transaction-categorization/t
 import { TransactionModule } from '../transaction/transaction.module';
 import { TransactionEntity } from '../transaction/transaction.entity';
 import { UserModule } from '../user/user.module';
-import { McpController } from './mcp.controller';
 import { McpCategorizationService } from './mcp-categorization.service';
 import { McpReadService } from './mcp-read.service';
-import { SpliceMcpService } from './mcp.service';
+import { SpliceMcpRuntimeService } from './mcp.runtime';
 
 @Module({
   imports: [
@@ -40,8 +39,11 @@ import { SpliceMcpService } from './mcp.service';
     TransactionModule,
     UserModule,
   ],
-  controllers: [McpController],
-  providers: [SpliceMcpService, McpReadService, McpCategorizationService],
-  exports: [SpliceMcpService],
+  providers: [
+    SpliceMcpRuntimeService,
+    McpReadService,
+    McpCategorizationService,
+  ],
+  exports: [SpliceMcpRuntimeService],
 })
 export class McpModule {}
