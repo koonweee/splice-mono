@@ -346,6 +346,23 @@ describe('TransactionAnalysisService', () => {
   });
 
   describe('getAnalysis', () => {
+    it('logs only safe analysis lifecycle messages', async () => {
+      mockTransactionRepository.find.mockResolvedValue([]);
+      const logger = (
+        service as unknown as {
+          logger: { log: (message: string) => void };
+        }
+      ).logger;
+      const logSpy = jest.spyOn(logger, 'log');
+
+      await service.getAnalysis('2026-08-01', '2026-08-17', mockUserId);
+
+      expect(logSpy.mock.calls).toEqual([
+        ['Getting transaction analysis'],
+        ['Transaction analysis rows loaded'],
+      ]);
+    });
+
     it('includes pending transactions in analysis', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
