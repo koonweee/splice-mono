@@ -1,16 +1,13 @@
-import { mcpExtensionErrorBoundary } from '@koonweee/mcp-kit';
-import type {
-  CallToolResult,
-  McpServer,
-  ReadResourceResult,
-} from '@modelcontextprotocol/server';
+import { defineAppResource } from '@koonweee/mcp-kit';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { normalizeMcpMoney } from './mcp-money';
 import { renderCashflowExplorerApp } from './apps/cashflow-explorer';
 import { renderCategoryRuleWorkbenchApp } from './apps/category-rule-workbench';
 import { renderPortfolioViewerApp } from './apps/portfolio-viewer';
 import { renderProjectionScenarioModelerApp } from './apps/projection-scenario-modeler';
+import type { SpliceMcpDependencies } from './mcp.definition';
 
-export const MCP_APP_MIME_TYPE = 'text/html;profile=mcp-app';
+export const MCP_APP_DOMAIN = 'https://splice-mcp.kw0.dev';
 
 export interface SpliceMcpAppDefinition {
   id:
@@ -62,29 +59,34 @@ export const APP_RESOURCES = {
   },
 } as const satisfies Record<string, SpliceMcpAppDefinition>;
 
-const APP_RESOURCE_META = {
-  ui: {
-    csp: {
-      connectDomains: [],
-      resourceDomains: [],
-      frameDomains: [],
-      baseUriDomains: [],
-    },
-    prefersBorder: true,
-  },
-} as const;
+const defineSpliceAppResource = defineAppResource<SpliceMcpDependencies>();
 
-export function appToolMeta(app: SpliceMcpAppDefinition): {
-  ui: { resourceUri: string; visibility: Array<'model' | 'app'> };
-  'ui/resourceUri': string;
-  'openai/outputTemplate': string;
-} {
-  return {
-    ui: { resourceUri: app.resourceUri, visibility: ['model', 'app'] },
-    'ui/resourceUri': app.resourceUri,
-    'openai/outputTemplate': app.resourceUri,
-  };
+export function createSpliceMcpAppResources(
+  renderHtml: (app: SpliceMcpAppDefinition) => string = renderMcpAppHtml,
+) {
+  return Object.values(APP_RESOURCES).map((app) =>
+    defineSpliceAppResource({
+      name: app.resourceName,
+      uri: app.resourceUri,
+      title: app.title,
+      description: app.description,
+      requiredScopes: ['splice:read'],
+      ui: {
+        domain: MCP_APP_DOMAIN,
+        csp: {
+          connectDomains: [],
+          resourceDomains: [],
+          frameDomains: [],
+          baseUriDomains: [],
+        },
+        prefersBorder: true,
+      },
+      html: () => renderHtml(app),
+    }),
+  );
 }
+
+export const MCP_APP_RESOURCES = createSpliceMcpAppResources();
 
 export function appToolResult(
   app: SpliceMcpAppDefinition,
@@ -118,45 +120,7 @@ export function appToolResult(
   };
 }
 
-export function registerMcpAppResources(
-  server: McpServer,
-  authorizeRead: () => void,
-): void {
-  Object.values(APP_RESOURCES).forEach((app) => {
-    server.registerResource(
-      app.resourceName,
-      app.resourceUri,
-      {
-        title: app.title,
-        description: app.description,
-        mimeType: MCP_APP_MIME_TYPE,
-      },
-      mcpExtensionErrorBoundary.resource((uri) => {
-        authorizeRead();
-
-        return readMcpAppResource(uri, app);
-      }),
-    );
-  });
-}
-
-export function readMcpAppResource(
-  uri: URL,
-  app: SpliceMcpAppDefinition,
-): ReadResourceResult {
-  return {
-    contents: [
-      {
-        uri: uri.href,
-        mimeType: MCP_APP_MIME_TYPE,
-        text: renderApp(app),
-        _meta: APP_RESOURCE_META,
-      },
-    ],
-  };
-}
-
-function renderApp(app: SpliceMcpAppDefinition): string {
+export function renderMcpAppHtml(app: SpliceMcpAppDefinition): string {
   switch (app.id) {
     case 'cashflow_explorer':
       return renderCashflowExplorerApp(app);

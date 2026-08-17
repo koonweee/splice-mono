@@ -15,7 +15,6 @@ import type {
   CategoryAggregate,
   TransactionAnalysisResponse,
 } from '../types/TransactionAnalysis';
-import { registerMcpAppResources } from './mcp-apps';
 import { normalizeMcpMoney, type McpMoney } from './mcp-money';
 import type { SpliceMcpDependencies } from './mcp.definition';
 
@@ -240,8 +239,6 @@ export function registerSpliceMcpExtensions(
       };
     }),
   );
-
-  registerMcpAppResources(server, () => requireReadScope(context));
 
   server.registerResource(
     'cashflow_report',

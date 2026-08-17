@@ -91,6 +91,12 @@ For each ChatGPT developer-mode plugin instance:
    `splice:read`, and `splice:write`, PKCE S256, and the exact MCP resource.
 5. Open the plugin in ChatGPT and select **Refresh**. Confirm that ChatGPT
    discovers exactly 27 tools before testing a prompt.
+6. Change the Splice app/plugin permission mode so mutating actions are allowed
+   or require an explicit prompt. The **Allow low-risk actions** mode is
+   sufficient for reads and previews but may prevent ChatGPT from dispatching
+   `create_categorization_rule` or `apply_categorization_rule` at all. Keep both
+   OAuth scopes selected; the permission mode and `splice:write` scope are
+   separate gates.
 
 For developer-mode testing, start a new supported Work conversation and attach
 Splice from the Tools/Plugins menu. Once attached, follow-up prompts in that
@@ -100,6 +106,70 @@ did not expose developer-MCP tool calls; searching for a plugin or inserting an
 app mention did not substitute for attaching the MCP connection in a supported
 conversation. Treat that as observed ChatGPT client behavior, not an MCP server
 health signal.
+
+### Diagnosing a ChatGPT write that never reaches Splice
+
+Every accepted tool call emits a privacy-safe `tool.started` event before scope
+enforcement or application logic. Use the opaque request ID and exact tool name
+to correlate a failed attempt. If a read or preview has `tool.started` and
+`tool.completed` events but the corresponding write has no `tool.started` event,
+the write did not reach the registered Splice tool handler. Check the ChatGPT
+conversation type, whether Splice is attached, the refreshed tool metadata, and
+the app/plugin permission mode before investigating preview-token verification
+or persistence. Transport authentication or input-schema rejection can also
+occur before this event, so reproduce the exact payload with MCP Inspector or
+the HTTP integration test when the client-side cause remains ambiguous.
+
+During the categorization-rule smoke on 2026-08-16, the single production MCP
+process logged seven successful `preview_categorization_rule_draft` calls and no
+`create_categorization_rule` event of any kind. The live image contained the
+registered create handler and the same process served preview and create, so
+preview-token verification, domain creation, and response serialization were
+not entered. The observed ChatGPT permission setting was **Allow low-risk
+actions**, while the create tool is intentionally advertised as mutating and
+non-idempotent. The corrective action is to permit or explicitly confirm
+mutating actions in ChatGPT, refresh the plugin, and retry in a new supported
+Chat or Work conversation. Do not weaken the server's risk annotation or add a
+server-side approval bypass.
+
+Logs must remain limited to request ID, tool name, timing, outcome, and safe
+error code. Do not log OAuth subjects, arguments, preview tokens or token
+payloads, draft contents, financial results, exception messages, or stacks.
+
+### Personal plugin packaging experiment
+
+The temporary local `splice@personal` package and its personal marketplace were
+removed after testing. The package referenced the same underlying developer app
+ID as the remote connection, so it did not provide an independent MCP backend.
+While both registrations were present, the Codex app bridge forwarded
+namespaced names such as `splice.get_user_context`, while the MCP server
+correctly registered and advertised `get_user_context`; the server returned
+`Unknown tool` before application logic.
+
+Removing the local package alone did not refresh the active host catalog. After
+removing both the local package and its personal marketplace, fully restarting
+the desktop app, and retrying the remote plugin, `get_user_context` and
+`list_categories` both dispatched successfully. The same restarted remote
+plugin subsequently completed the production
+`preview_categorization_rule_draft` -> `create_categorization_rule` ->
+`list_categorization_rules` sequence: the preview matched the earlier result,
+the write returned the created rule, and the follow-up list contained it. This
+confirms that the earlier failure was host/plugin dispatch state rather than
+Splice registration, OAuth scope enforcement, preview-token verification,
+persistence, or response serialization.
+
+Treat an `Unknown tool` error whose name is prefixed with `splice.` as stale or
+duplicate plugin state first:
+
+1. Remove or disable duplicate local/repository Splice packages and marketplace
+   entries.
+2. Keep the developer-mode remote connection enabled.
+3. Fully restart the host application and test from a fresh task.
+4. Confirm at least two remote read tools dispatch before testing writes.
+
+Do not add `splice.*` aliases to the Splice server or change its canonical tool
+names. If the namespaced error survives the cleanup and full restart, capture a
+minimal sanitized reproduction and escalate it as a plugin-host dispatch issue.
 
 Production listener configuration is identifier-only and contains no Auth0
 secret:
@@ -173,18 +243,46 @@ non-persistent: capable clients use the SDK v2 input-required/resume flow;
 clients without that capability receive an ordinary structured `inputRequired`
 fallback and can ask the user for the same non-sensitive fields.
 
+### MCP App widget origin and ChatGPT refresh
+
+All four App resources advertise the same canonical widget origin,
+`https://splice-mcp.kw0.dev`, in resource-content `_meta.ui.domain`. The value is
+an HTTPS origin only: do not append `/mcp`, a path, query, or fragment. Each App
+also advertises its empty external-resource CSP and border preference through
+the standard `_meta.ui` object. ChatGPT compatibility aliases remain enabled
+during the migration, but the standard fields are authoritative. App resource
+reads require `splice:read`, just like the guide and data resources.
+
+After deploying a metadata change, open the existing ChatGPT developer plugin
+and run **Refresh** or **Scan Tools** before rechecking its templates. A cached
+template descriptor can continue to show the old “Widget domain is not set”
+warning even when the live server is correct. Confirm all four templates show
+the shared widget origin and that their `show_*` tools still expose both JSON
+text and `structuredContent` fallbacks. No new DNS record, Auth0 application, or
+Traefik route is required for this metadata because the canonical MCP origin is
+already public with valid TLS.
+
+Domain verification in the OpenAI submission portal is a separate operator
+workflow. Add a challenge response only if the portal supplies a token and
+explicitly requests one; never invent or preconfigure a challenge value. The
+challenge path does not belong in the MCP metadata and is not needed for normal
+developer-mode use.
+
 ## Pinned server library
 
-The backend pins public registry package `@koonweee/mcp-kit` exactly to `0.2.3`.
+The backend pins public registry package `@koonweee/mcp-kit` exactly to `0.3.1`.
 The registry artifact and public declarations were independently verified
-against release commit `3203ecc113b94f1b21266296f44b1953ba5967f2`
-and annotated tag `v0.2.3`. Its npm integrity is
-`sha512-IK8efs+MarqfTNiBVTbjqYQKdtK7IUvE72NzMhNSEX4l52aLaFxeuVk6S2GjnvKsdpUEOUTnnV1WPDK7YjxZVw==`.
+against release commit `fa9b75054761e17dc4e00cc40f4af546fecbca56`
+and annotated tag `v0.3.1`. Its npm integrity is
+`sha512-sBrV+sVsfu0oZ9xcb5ejEuCxXuG8Lv0AkK3Fd5npMC2FfkezRvBnQs+DMf6dnt8E8kF7dTMIb5hPcsnOWe52bg==`.
 This release provides verified ESM and CommonJS consumption for all four public
 entrypoints, safe claim-free logging, ordinary CommonJS Jest authentication,
 a typed client input-required capability signal, and typed safe error boundaries
-for service-owned resource and prompt callbacks. Splice uses the CommonJS branch
-selected by its NodeNext Nest build.
+for service-owned resource and prompt callbacks. It also provides first-class
+typed MCP App resources and tool linkage, OpenAI-submission validation, optional
+legacy ChatGPT aliases, and request-local `requiredScopes` enforcement before
+static or dynamic App HTML is returned. Splice uses the CommonJS branch selected
+by its NodeNext Nest build.
 Splice consumes only these declared public entrypoints:
 
 | Entrypoint | Splice use |
@@ -202,7 +300,7 @@ yarn why @koonweee/mcp-kit
 node -e "const p=require('./node_modules/@koonweee/mcp-kit/package.json'); console.log(p.version, Object.keys(p.exports))"
 ```
 
-Expected version: `0.2.3`. Expected export keys: `.`, `./node`, `./auth0`, and
+Expected version: `0.3.1`. Expected export keys: `.`, `./node`, `./auth0`, and
 `./test`. Do not replace the pin with a Git, file, or sibling-checkout reference.
 
 The backend lockfile intentionally contains no SDK v1 package. Mastra is pinned
@@ -295,10 +393,16 @@ fixtures, documentation, screenshots, or chat.
 - ChatGPT CIMD/OIDC login passed. Sanitized production logs confirm successful
   `get_user_context` and `get_balance_history` calls without claims, arguments,
   results, or financial values.
-- Still pending before declaring the entire production validation complete: a
-  deterministic external OAuth client/Inspector pass and a controlled,
-  preview-token-backed ChatGPT write smoke. Local protocol/write-parity suites
-  already cover both writes; do not represent that as a live production write.
+- An initial ChatGPT categorization attempt completed its reads and seven draft
+  previews but never dispatched the create call. After removing the duplicate
+  local plugin package, restarting the host, and using the remote connection,
+  the production preview -> create -> list sequence passed and the created rule
+  was visible in the follow-up list.
+- Still pending from the original port's broad live-validation matrix: a
+  deterministic external OAuth client/Inspector pass and a controlled
+  production `apply_categorization_rule` smoke. Local protocol/write-parity
+  suites cover both write workflows; do not represent the application workflow
+  as a live production result until that separate destructive smoke is run.
 
 The steps below are the recreation and future-rollout procedure. Use the exact
 recorded values above only to audit or roll back this deployment; obtain fresh
@@ -376,11 +480,13 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
    results, internal errors, or financial values.
 10. Connect ChatGPT only after the deterministic smoke passes. Refresh plugin
     metadata, confirm 27 tools, attach Splice to a new supported Work
-    conversation, and verify OAuth login, visible scopes/annotations, one read,
-    and one previewed write. A Finance or other specialized conversation that
-    does not expose developer MCPs is not a valid server smoke environment.
-    Whether ChatGPT displays a confirmation is client behavior, not a server
-    guarantee.
+    conversation, set its permission mode to allow or prompt for mutating
+    actions rather than **Allow low-risk actions**, and verify OAuth login,
+    visible scopes/annotations, one read, and one previewed write. A Finance or
+    other specialized conversation that does not expose developer MCPs is not a
+    valid server smoke environment. Whether ChatGPT displays a confirmation is
+    client behavior, not a server guarantee. Confirm the write produced a
+    `tool.started` event before diagnosing any downstream failure.
 
 ## Rollback
 

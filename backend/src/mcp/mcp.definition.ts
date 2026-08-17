@@ -2,9 +2,11 @@ import {
   defineServer,
   defineTool,
   McpPublicError,
+  validateMcpApps,
   type McpToolRequestContext,
   type McpToolResult,
   type McpToolRisk,
+  type McpUiToolMetadata,
 } from '@koonweee/mcp-kit';
 import {
   acceptedContent,
@@ -32,7 +34,7 @@ import { MoneySign } from '../types/MoneyWithSign';
 import type { UserService } from '../user/user.service';
 import { normalizeMcpMoney } from './mcp-money';
 import type { McpReadService } from './mcp-read.service';
-import { APP_RESOURCES, appToolMeta, appToolResult } from './mcp-apps';
+import { APP_RESOURCES, MCP_APP_RESOURCES, appToolResult } from './mcp-apps';
 import {
   ApplyCategorizationRuleOutputSchema,
   AccountsSnapshotOutputSchema,
@@ -187,6 +189,7 @@ type SpliceToolConfig<
   readonly requiredScopes: readonly string[];
   readonly risk: McpToolRisk;
   readonly _meta?: MetaObject;
+  readonly ui?: McpUiToolMetadata;
 };
 
 type SpliceToolHandler<TInputShape extends z.ZodRawShape> = (
@@ -325,6 +328,10 @@ export const SPLICE_MCP_TOOL_NAMES = [
 export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
   name: 'splice',
   version: '1.0.0',
+  apps: {
+    resources: MCP_APP_RESOURCES,
+    compatibility: { openaiLegacyAliases: true },
+  },
   tools: [
     createSpliceTool(
       'get_user_context',
@@ -1067,7 +1074,10 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
         outputSchema: AppToolOutputSchema,
         requiredScopes: ['splice:read'],
         risk: { kind: 'read' },
-        _meta: appToolMeta(APP_RESOURCES.cashflowExplorer),
+        ui: {
+          resourceUri: APP_RESOURCES.cashflowExplorer.resourceUri,
+          visibility: ['model', 'app'],
+        },
       },
       async (input, dependencies) => {
         assertDateRange(input.startDate, input.endDate);
@@ -1097,7 +1107,10 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
         outputSchema: AppToolOutputSchema,
         requiredScopes: ['splice:read'],
         risk: { kind: 'read' },
-        _meta: appToolMeta(APP_RESOURCES.projectionScenarioModeler),
+        ui: {
+          resourceUri: APP_RESOURCES.projectionScenarioModeler.resourceUri,
+          visibility: ['model', 'app'],
+        },
       },
       async (_input, dependencies) =>
         appToolResult(
@@ -1129,7 +1142,10 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
         outputSchema: AppToolOutputSchema,
         requiredScopes: ['splice:read'],
         risk: { kind: 'read' },
-        _meta: appToolMeta(APP_RESOURCES.portfolioViewer),
+        ui: {
+          resourceUri: APP_RESOURCES.portfolioViewer.resourceUri,
+          visibility: ['model', 'app'],
+        },
       },
       async (input, dependencies) =>
         appToolResult(
@@ -1163,7 +1179,10 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
         outputSchema: AppToolOutputSchema,
         requiredScopes: ['splice:read'],
         risk: { kind: 'read' },
-        _meta: appToolMeta(APP_RESOURCES.categoryRuleWorkbench),
+        ui: {
+          resourceUri: APP_RESOURCES.categoryRuleWorkbench.resourceUri,
+          visibility: ['model', 'app'],
+        },
       },
       async (_input, dependencies) =>
         appToolResult(
@@ -1275,3 +1294,5 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
   ],
   extend: registerSpliceMcpExtensions,
 });
+
+validateMcpApps(spliceMcpDefinition, { profile: 'openai-submission' });

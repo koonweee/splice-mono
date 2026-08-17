@@ -3,10 +3,14 @@ import {
   StreamableHTTPClientTransport,
 } from '@modelcontextprotocol/client';
 import { createTestJwtAuthority } from '@koonweee/mcp-kit/test';
+import { ConflictException } from '@nestjs/common';
 import { createServer, request as httpRequest } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { McpCategorizationService } from '../../src/mcp/mcp-categorization.service';
 import type { EnabledMcpRuntimeConfig } from '../../src/mcp/mcp.config';
 import { SpliceMcpRuntimeService } from '../../src/mcp/mcp.runtime';
+import { RuleBasedCategorizationEngine } from '../../src/transaction-categorization/rule-based-categorization.engine';
+import type { CategorizationRuleCondition } from '../../src/types/CategorizationRule';
 
 const RESOURCE_SERVER_URL = new URL('https://splice-mcp.kw0.dev/mcp');
 const USER_ID = '00000000-0000-4000-8000-000000000001';
@@ -331,6 +335,201 @@ describe('SpliceMcpRuntimeService', () => {
     });
     expect(harness.mcpCategorizationService.applyRule).not.toHaveBeenCalled();
     await readOnly.client.close();
+  });
+
+  it('previews, creates, serializes, and lists the exact ChatGPT categorization rule over HTTP', async () => {
+    const originalJwtSecret = process.env.JWT_SECRET;
+    process.env.JWT_SECRET = 'mcp-runtime-categorization-test-secret';
+
+    try {
+      const harness = await trackedRuntime();
+      const categoryId = '986b13a3-4c76-4b21-92a2-174ad702218e';
+      const ruleId = '33333333-3333-4333-8333-333333333333';
+      const conditions: CategorizationRuleCondition[] = [
+        {
+          field: 'providerCategoryDetailed',
+          operator: 'equals',
+          value: 'food_and_drink_beer_wine_and_liquor',
+        },
+        { field: 'amountSign', operator: 'equals', value: 'negative' },
+      ];
+      const rules: Array<Record<string, unknown>> = [];
+      const transactionCategorizationService = {
+        previewDraftRuleApplication: jest.fn().mockResolvedValue({
+          matched: 4,
+          updated: 4,
+          skippedManual: 0,
+          manualAgreement: 4,
+          manualConflicts: 0,
+          existingRuleOverlap: 0,
+          transactions: [],
+        }),
+        create: jest.fn(
+          async (
+            _userId: string,
+            input: {
+              readonly name: string;
+              readonly priority?: number;
+              readonly targetCategoryId: string;
+              readonly conditions: CategorizationRuleCondition[];
+            },
+          ) => {
+            if (rules.length > 0) {
+              throw new ConflictException(
+                'An active categorization rule with the same conditions already exists',
+              );
+            }
+            const rule = {
+              id: ruleId,
+              name: input.name,
+              priority: input.priority ?? 10,
+              targetCategoryId: input.targetCategoryId,
+              conditions: input.conditions,
+              targetCategory: {
+                id: categoryId,
+                primary: 'Food',
+                detailed: 'Eating out',
+                color: '#f59f00',
+                archivedAt: null,
+              },
+              archivedAt: null,
+              createdAt: new Date('2026-08-17T03:40:00.000Z'),
+              updatedAt: new Date('2026-08-17T03:40:00.000Z'),
+            };
+            rules.push(rule);
+            return rule;
+          },
+        ),
+        previewRuleApplication: jest.fn(),
+        applyRuleToExisting: jest.fn(),
+      };
+      const realCategorizationService = new McpCategorizationService(
+        transactionCategorizationService as never,
+        {} as never,
+        new RuleBasedCategorizationEngine(),
+      );
+      harness.mcpCategorizationService.previewDraft.mockImplementation(
+        realCategorizationService.previewDraft.bind(realCategorizationService),
+      );
+      harness.mcpCategorizationService.createRule.mockImplementation(
+        realCategorizationService.createRule.bind(realCategorizationService),
+      );
+      harness.mcpReadService.listCategorizationRules.mockImplementation(
+        async (_userId: string, input: { readonly archived?: boolean }) => ({
+          data: rules,
+          query: { archived: input.archived ?? false },
+        }),
+      );
+
+      const connection = clientFor(
+        harness.url,
+        await harness.authority.sign({
+          subject: 'google-oauth2|google-123',
+          scope: 'splice:read splice:write',
+        }),
+      );
+      await connection.client.connect(connection.transport);
+
+      const discovered = await connection.client.listTools();
+      expect(discovered.tools).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'create_categorization_rule',
+            annotations: expect.objectContaining({
+              readOnlyHint: false,
+              destructiveHint: false,
+              idempotentHint: false,
+            }),
+          }),
+        ]),
+      );
+
+      const preview = await connection.client.callTool({
+        name: 'preview_categorization_rule_draft',
+        arguments: { targetCategoryId: categoryId, conditions },
+      });
+      expect(preview.isError).not.toBe(true);
+      const previewContent = preview.structuredContent as {
+        readonly normalizedDraft: {
+          readonly targetCategoryId: string;
+          readonly priority?: number;
+          readonly conditions: CategorizationRuleCondition[];
+        };
+        readonly previewToken: string;
+      };
+      expect(previewContent.normalizedDraft).toEqual({
+        targetCategoryId: categoryId,
+        conditions,
+      });
+      expect(previewContent.previewToken).toEqual(expect.any(String));
+
+      const create = await connection.client.callTool({
+        name: 'create_categorization_rule',
+        arguments: {
+          name: 'Beer wine liquor Eating out',
+          ...previewContent.normalizedDraft,
+          previewToken: previewContent.previewToken,
+        },
+      });
+      expect(create.isError).not.toBe(true);
+      expect(create.structuredContent).toMatchObject({
+        rule: {
+          id: ruleId,
+          name: 'Beer wine liquor Eating out',
+          targetCategoryId: categoryId,
+          conditions,
+          createdAt: '2026-08-17T03:40:00.000Z',
+        },
+      });
+
+      const listed = await connection.client.callTool({
+        name: 'list_categorization_rules',
+        arguments: {},
+      });
+      expect(listed.isError).not.toBe(true);
+      expect(listed.structuredContent).toMatchObject({
+        data: [expect.objectContaining({ id: ruleId })],
+        query: { archived: false },
+      });
+
+      const duplicate = await connection.client.callTool({
+        name: 'create_categorization_rule',
+        arguments: {
+          name: 'Beer wine liquor Eating out',
+          ...previewContent.normalizedDraft,
+          previewToken: previewContent.previewToken,
+        },
+      });
+      expect(duplicate).toMatchObject({ isError: true });
+      expect(duplicate.content[0]).toMatchObject({
+        type: 'text',
+        text: 'An active categorization rule with the same conditions already exists',
+      });
+      expect(rules).toHaveLength(1);
+      expect(harness.logger.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'tool.started',
+          toolName: 'create_categorization_rule',
+        }),
+        'MCP tool event',
+      );
+      expect(harness.logger.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'tool.completed',
+          toolName: 'create_categorization_rule',
+          outcome: 'success',
+        }),
+        'MCP tool event',
+      );
+
+      await connection.client.close();
+    } finally {
+      if (originalJwtSecret === undefined) {
+        delete process.env.JWT_SECRET;
+      } else {
+        process.env.JWT_SECRET = originalJwtSecret;
+      }
+    }
   });
 
   it('fails closed for unknown and malformed provider identities over HTTP', async () => {
