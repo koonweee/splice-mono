@@ -1,5 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unused-vars, no-var */
+/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, no-var */
 import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
+import {
+  cashFlowSelectionContext,
+  cashFlowTransactionAmount,
+  createCashFlowPresentation,
+  moneyMagnitude,
+  sortCashFlowTransactions,
+  type CashFlowCategory,
+  type CashFlowPresentation,
+} from './cash-flow-model';
 
 (function () {
   'use strict';
@@ -8,16 +17,19 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
   var appRoot: any = uiDocument.getElementById('splice-mcp-app-root');
   var safeAreaRoot: any = uiDocument.getElementById('splice-mcp-app-safe-area');
   var appId = appRoot ? appRoot.getAttribute('data-app-id') : '';
-  var toolInput: any = null;
   var envelope: any = null;
   var businessDataGeneration = 0;
   var state: any = {
-    selectedFlow: 'outflow',
     selectedCategory: null,
-    categorySearch: '',
-    summaryMode: 'net',
+    cashFlowOtherExpanded: false,
+    cashFlowDrilldownStatus: 'idle',
     drilldownRows: [],
-    audit: null,
+    drilldownVisibleCount: 3,
+    modelContextError: false,
+    modelContextRequestId: 0,
+    cashFlowPublishContext: false,
+    cashFlowContextPublished: false,
+    cashFlowSelectionScroll: 0,
     portfolioSort: 'value',
     portfolioSearch: '',
     portfolioAccount: 'all',
@@ -25,30 +37,7 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
     portfolioDateMode: 'latest',
     portfolioSnapshotDate: '',
     portfolioCursor: null,
-    activeTab: 'categories',
-    ruleSearch: '',
-    ruleStatus: 'all',
-    includeArchived: false,
-    detail: null,
-    scenario: {
-      name: 'Runway scenario',
-      horizonDate: '',
-      incomeAdjustment: 0,
-      expenseAdjustment: 0,
-      expectedReturn: 5,
-      selectedAccounts: {},
-      events: [],
-    },
   };
-
-  function parseJson(value): any {
-    if (!value) return null;
-    try {
-      return JSON.parse(value);
-    } catch (_error) {
-      return null;
-    }
-  }
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -107,17 +96,6 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
     );
   }
 
-  function formatCategory(value) {
-    return String(value || 'Uncategorized')
-      .toLowerCase()
-      .split('_')
-      .filter(Boolean)
-      .map(function (part) {
-        return part.charAt(0).toUpperCase() + part.slice(1);
-      })
-      .join(' ');
-  }
-
   function readEnvelopeData(): any {
     var content =
       envelope && envelope.structuredContent
@@ -135,6 +113,12 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
     return result;
   }
 
+  function isToolErrorResult(result): boolean {
+    return Boolean(
+      result && (result.isError || (result.result && result.result.isError)),
+    );
+  }
+
   function setStatus(message, kind) {
     var status = uiDocument.getElementById('app-status');
     if (!status) return;
@@ -145,23 +129,11 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
   function callTool(name, args) {
     return mcpRuntime.app
       .callServerTool({ name: name, arguments: args || {} })
-      .then(structuredResult);
-  }
-
-  function updateModelContext(text, structuredContent) {
-    var requestGeneration = businessDataGeneration;
-    return mcpRuntime.app
-      .updateModelContext({
-        content: [{ type: 'text', text: text }],
-        structuredContent: structuredContent || {},
-      })
-      .then(function () {
-        if (requestGeneration !== businessDataGeneration) return;
-        setStatus('Scenario summary sent to model context.', 'success');
-      })
-      .catch(function () {
-        if (requestGeneration !== businessDataGeneration) return;
-        renderLiveDataError();
+      .then(function (result) {
+        if (isToolErrorResult(result)) {
+          throw new Error('MCP tool returned an error result');
+        }
+        return structuredResult(result);
       });
   }
 
@@ -174,18 +146,41 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
       '<div class="status-pill" id="app-status" data-kind="info">Connecting</div></section>';
   }
 
+  function clearPublishedCashFlowContext() {
+    if (appId !== 'cash_flow' || !state.cashFlowContextPublished) return;
+    state.cashFlowContextPublished = false;
+    state.cashFlowPublishContext = false;
+    state.modelContextError = false;
+    state.modelContextRequestId += 1;
+    mcpRuntime.app
+      .updateModelContext({
+        structuredContent: {
+          visualization: 'cash_flow',
+          selection: null,
+        },
+      })
+      .catch(function () {
+        // Clearing stale host context is best-effort during lifecycle changes.
+      });
+  }
+
   function clearDerivedBusinessData() {
+    clearPublishedCashFlowContext();
     businessDataGeneration += 1;
     state.selectedCategory = null;
+    state.cashFlowOtherExpanded = false;
+    state.cashFlowDrilldownStatus = 'idle';
     state.drilldownRows = [];
-    state.audit = null;
-    state.detail = null;
+    state.drilldownVisibleCount = 3;
+    state.modelContextError = false;
+    state.modelContextRequestId += 1;
+    state.cashFlowPublishContext = false;
+    state.cashFlowSelectionScroll = 0;
     state.portfolioCursor = null;
   }
 
   function renderLiveDataError() {
     envelope = null;
-    toolInput = null;
     clearDerivedBusinessData();
     if (!appRoot) return;
     appRoot.innerHTML =
@@ -196,12 +191,13 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
   }
 
   function appTitle() {
-    if (appId === 'cashflow_explorer') return 'Cashflow Explorer';
-    if (appId === 'projection_scenario_modeler')
-      return 'Projection Scenario Modeler';
+    if (appId === 'cash_flow') return 'Cash Flow';
     if (appId === 'portfolio_viewer') return 'Portfolio Viewer';
-    if (appId === 'category_rule_workbench') return 'Category Rule Workbench';
     return 'Splice';
+  }
+
+  function appVersion() {
+    return appId === 'cash_flow' ? '3.0.0' : '2.0.0';
   }
 
   function isValidInitialResult(result) {
@@ -215,13 +211,12 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
   }
 
   var mcpRuntime = createMcpAppRuntime({
-    appInfo: { name: 'Splice ' + appTitle(), version: '2.0.0' },
+    appInfo: { name: 'Splice ' + appTitle(), version: appVersion() },
     capabilities: { availableDisplayModes: ['inline', 'fullscreen'] },
     safeAreaElement: safeAreaRoot || undefined,
     onStateChange: function (runtimeState) {
       if (runtimeState.status === 'loading') {
         envelope = null;
-        toolInput = null;
         clearDerivedBusinessData();
         renderLoading();
         return;
@@ -237,9 +232,7 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
       clearDerivedBusinessData();
       envelope = runtimeState.result;
       render();
-    },
-    onToolInput: function (input) {
-      toolInput = input.arguments || {};
+      initializeFocusedCashFlowCategory();
     },
     onTeardown: function () {
       renderLiveDataError();
@@ -269,462 +262,552 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
     return '<div class="empty">' + escapeHtml(message) + '</div>';
   }
 
-  function renderCashflow() {
-    var data = readEnvelopeData();
-    var totals = data.totals || {};
-    var currency = data.currency || 'USD';
-    var startDate = (toolInput && toolInput.startDate) || data.startDate || '';
-    var endDate = (toolInput && toolInput.endDate) || data.endDate || '';
-    var inflows = toArray(data.inflows);
-    var outflows = toArray(data.outflows);
-    var categories = state.selectedFlow === 'inflow' ? inflows : outflows;
-    var query = state.categorySearch.trim().toLowerCase();
-    var filtered = categories.filter(function (category) {
-      return (
-        formatCategory(category.primaryCategory).toLowerCase().indexOf(query) >=
-        0
-      );
-    });
-    var maxAmount = Math.max.apply(
-      null,
-      filtered
-        .map(function (category) {
-          return Math.abs(moneyAmount(category.totalAmount));
-        })
-        .concat([1]),
+  function formatPeriodRange(startDate, endDate) {
+    function dateLabel(value) {
+      var parts = String(value).split('-').map(Number);
+      if (parts.length !== 3 || parts.some(Number.isNaN)) return String(value);
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }).format(new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])));
+    }
+    return dateLabel(startDate) + ' – ' + dateLabel(endDate);
+  }
+
+  function formatMagnitude(value, currency) {
+    return formatMoney(
+      {
+        amount: moneyMagnitude(value),
+        currency: moneyCurrency(value, currency),
+        sign: 'positive',
+      },
+      currency,
     );
+  }
 
-    var categoryHtml = filtered.length
-      ? filtered
-          .map(function (category, index) {
-            var primary = category.primaryCategory || 'UNCATEGORIZED';
-            var width = Math.max(
-              4,
-              Math.round(
-                (Math.abs(moneyAmount(category.totalAmount)) / maxAmount) * 100,
-              ),
-            );
-            var selected =
-              state.selectedCategory === primary ? 'true' : 'false';
-            var color = category.color || colorForIndex(index);
-            return (
-              '<button class="category-row" data-action="select-category" data-category="' +
-              escapeHtml(primary) +
-              '" aria-pressed="' +
-              selected +
-              '">' +
-              '<span class="swatch" style="background:' +
-              escapeHtml(color) +
-              '"></span>' +
-              '<span class="category-main"><span>' +
-              escapeHtml(formatCategory(primary)) +
-              '</span><span class="bar-track"><span class="bar-fill" style="width:' +
-              width +
-              '%;background:' +
-              escapeHtml(color) +
-              '"></span></span></span>' +
-              '<span class="number-stack"><strong>' +
-              escapeHtml(formatMoney(category.totalAmount, currency)) +
-              '</strong><small>' +
-              escapeHtml(String(category.transactionCount || 0)) +
-              ' txns</small></span>' +
-              '</button>'
-            );
-          })
-          .join('')
-      : rowsEmpty('No matching categories.');
+  function formatDelta(value, currency) {
+    if (value == null) return '';
+    if (value === 0) return 'No change';
+    return (
+      (value > 0 ? '+' : '−') +
+      formatMagnitude(
+        { amount: Math.abs(value), currency: currency, sign: 'positive' },
+        currency,
+      )
+    );
+  }
 
-    var drilldown = renderCashflowDrilldown(currency);
-    var audit = state.audit
-      ? renderAuditRows(state.audit.rows || state.audit.data || [])
-      : rowsEmpty(
-          'Open audit effects to inspect rule and neutralization impact.',
-        );
+  function safeCategoryColor(value, index) {
+    return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
+      ? value
+      : colorForIndex(index);
+  }
 
-    appRoot.innerHTML =
-      '<section class="hero">' +
-      '<div><h1>Cashflow Explorer</h1><p>Rule-adjusted cash-flow totals, category drilldowns, and audit effects.</p></div>' +
-      '<div class="status-pill" id="app-status" data-kind="info"></div>' +
-      '</section>' +
-      '<section class="toolbar" aria-label="Cashflow controls">' +
-      '<label>Start<input id="cashflow-start" type="date" value="' +
-      escapeHtml(startDate) +
-      '"></label>' +
-      '<label>End<input id="cashflow-end" type="date" value="' +
-      escapeHtml(endDate) +
-      '"></label>' +
-      button('data-action="preset-month"', 'This month') +
-      button('data-action="reload-cashflow"', 'Reload') +
-      button('data-action="load-audit"', 'Audit effects') +
-      '</section>' +
-      '<section class="metrics">' +
-      metric('Inflow', formatMoney(totals.totalInflow, currency), 'positive') +
-      metric(
-        'Outflow',
-        formatMoney(totals.totalOutflow, currency),
-        'negative',
-      ) +
-      metric(
-        'Net flow',
-        formatMoney(totals.netFlow, currency),
-        moneySign(totals.netFlow),
-      ) +
-      metric(
-        'Uncategorized outflow',
-        formatMoney(totals.uncategorizedOutflow, currency),
-        'neutral',
-      ) +
-      '</section>' +
-      '<section class="split">' +
-      '<div class="panel">' +
-      '<div class="panel-head"><h2>Categories</h2><div class="segmented">' +
-      '<button data-action="set-flow" data-flow="outflow" aria-pressed="' +
-      String(state.selectedFlow === 'outflow') +
-      '">Outflows</button>' +
-      '<button data-action="set-flow" data-flow="inflow" aria-pressed="' +
-      String(state.selectedFlow === 'inflow') +
-      '">Inflows</button>' +
-      '</div></div>' +
-      '<label class="search">Search<input id="cashflow-search" type="search" value="' +
-      escapeHtml(state.categorySearch) +
-      '" placeholder="Category"></label>' +
-      '<div class="category-list">' +
-      categoryHtml +
-      '</div>' +
-      '</div>' +
-      '<div class="panel">' +
-      '<div class="panel-head"><h2>Drilldown</h2><span class="muted">' +
+  function cashFlowCategoryByIdentity(presentation, identity) {
+    if (!identity) return null;
+    var allCategories = presentation.topCategories
+      .concat(presentation.remainingCategories)
+      .concat(presentation.uncategorized ? [presentation.uncategorized] : []);
+    return (
+      allCategories.find(function (category) {
+        return category.primaryCategory === identity;
+      }) || null
+    );
+  }
+
+  function renderCashFlowCategoryRow(category, presentation, index, rowKind) {
+    var color = safeCategoryColor(category.color, index);
+    var amount = moneyMagnitude(category.totalAmount);
+    var width = Math.max(
+      amount > 0 ? 3 : 0,
+      Math.round((amount / presentation.maxCategoryAmount) * 100),
+    );
+    var selected = state.selectedCategory === category.primaryCategory;
+    var comparison = presentation.comparison
+      ? '<small class="category-comparison">Compared with ' +
+        escapeHtml(
+          formatMagnitude(
+            {
+              amount: category.comparisonAmount || 0,
+              currency: presentation.current.currency,
+              sign: 'positive',
+            },
+            presentation.current.currency,
+          ),
+        ) +
+        ' <span data-delta-tone="' +
+        (category.delta > 0
+          ? presentation.direction === 'outflow'
+            ? 'negative'
+            : 'positive'
+          : category.delta < 0
+            ? presentation.direction === 'outflow'
+              ? 'positive'
+              : 'negative'
+            : 'neutral') +
+        '">' +
+        escapeHtml(formatDelta(category.delta, presentation.current.currency)) +
+        '</span></small>'
+      : '';
+    return (
+      '<button class="cash-flow-category" data-row-kind="' +
+      escapeHtml(rowKind || 'ranked') +
+      '" data-action="select-category" data-category="' +
+      escapeHtml(category.primaryCategory) +
+      '" aria-expanded="' +
+      String(selected) +
+      '" aria-controls="cash-flow-detail">' +
+      '<span class="category-rank" aria-hidden="true">' +
+      (rowKind === 'uncategorized' ? '!' : String(index + 1)) +
+      '</span>' +
+      '<span class="cash-flow-category-main"><span class="category-label">' +
+      escapeHtml(category.label) +
+      '</span><span class="cash-flow-bar" aria-hidden="true"><span style="width:' +
+      width +
+      '%;background:' +
+      escapeHtml(color) +
+      '"></span></span>' +
+      comparison +
+      '</span><span class="cash-flow-category-value"><strong>' +
       escapeHtml(
-        state.selectedCategory
-          ? formatCategory(state.selectedCategory)
-          : 'Select a category',
+        formatMagnitude(category.totalAmount, presentation.current.currency),
       ) +
-      '</span></div>' +
-      drilldown +
-      '</div>' +
-      '</section>' +
-      '<section class="panel"><div class="panel-head"><h2>Audit Effects</h2><span class="muted">Selected range</span></div>' +
-      audit +
-      '</section>';
-  }
-
-  function renderCashflowDrilldown(currency) {
-    if (!state.selectedCategory)
-      return rowsEmpty('Select a category to inspect transactions.');
-    var rows = state.drilldownRows;
-    if (!rows.length)
-      return rowsEmpty('No transactions returned for this category.');
-    return (
-      '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Merchant</th><th>Amount</th></tr></thead><tbody>' +
-      rows
-        .map(function (row) {
-          return (
-            '<tr><td>' +
-            escapeHtml(row.activityDate || row.date || '') +
-            '</td><td>' +
-            escapeHtml(row.merchantName || row.name || 'Transaction') +
-            '</td><td class="num">' +
-            escapeHtml(
-              formatMoney(
-                row.amount || row.convertedAmount || row.totalAmount,
-                currency,
-              ),
-            ) +
-            '</td></tr>'
-          );
-        })
-        .join('') +
-      '</tbody></table></div>'
+      '</strong>' +
+      (category.transactionCountKnown === false
+        ? ''
+        : '<small>' +
+          escapeHtml(String(category.transactionCount)) +
+          (category.transactionCount === 1 ? ' transaction' : ' transactions') +
+          '</small>') +
+      '</span></button>'
     );
   }
 
-  function renderAuditRows(rows) {
-    rows = toArray(rows);
-    if (!rows.length)
-      return rowsEmpty('No audit effects returned for this range.');
+  function renderCashFlowCategoryAndDetail(
+    category,
+    presentation,
+    index,
+    rowKind,
+  ) {
     return (
-      '<div class="detail-list">' +
-      rows
-        .map(function (row) {
-          return (
-            '<button class="detail-row" data-detail="' +
-            escapeHtml(JSON.stringify(row)) +
-            '">' +
-            '<strong>' +
-            escapeHtml(row.ruleName || row.effect || row.type || 'Audit row') +
-            '</strong>' +
-            '<span>' +
-            escapeHtml(
-              [
-                row.activityDate,
-                row.merchantName || row.description,
-                row.reason,
-              ]
-                .filter(Boolean)
-                .join(' - '),
-            ) +
-            '</span>' +
-            '</button>'
-          );
-        })
-        .join('') +
+      renderCashFlowCategoryRow(category, presentation, index, rowKind) +
+      (state.selectedCategory === category.primaryCategory
+        ? renderCashFlowDrilldown(presentation)
+        : '')
+    );
+  }
+
+  function renderCashFlowOther(presentation) {
+    if (!presentation.remainingCategories.length) return '';
+    var expanded = state.cashFlowOtherExpanded;
+    return (
+      '<button class="cash-flow-category cash-flow-other" data-action="toggle-other" aria-expanded="' +
+      String(expanded) +
+      '" aria-controls="cash-flow-other-rows">' +
+      '<span class="category-rank" aria-hidden="true">' +
+      (expanded ? '−' : '+') +
+      '</span><span class="cash-flow-category-main"><span class="category-label">Other</span><small>' +
+      escapeHtml(String(presentation.remainingCategories.length)) +
+      ' more categories</small></span><span class="cash-flow-category-value"><strong>' +
+      escapeHtml(
+        formatMagnitude(
+          {
+            amount: presentation.otherAmount,
+            currency: presentation.current.currency,
+            sign: 'positive',
+          },
+          presentation.current.currency,
+        ),
+      ) +
+      '</strong><small>' +
+      escapeHtml(String(presentation.otherTransactionCount)) +
+      ' transactions</small></span></button>' +
+      '<div id="cash-flow-other-rows"' +
+      (expanded ? '' : ' hidden') +
+      '>' +
+      (expanded
+        ? presentation.remainingCategories
+            .map(function (category, index) {
+              return renderCashFlowCategoryAndDetail(
+                category,
+                presentation,
+                index + 5,
+                'expanded',
+              );
+            })
+            .join('')
+        : '') +
       '</div>'
     );
   }
 
-  function renderProjection() {
-    var data = readEnvelopeData();
-    var accounts = toArray(
-      data.accounts && data.accounts.accounts
-        ? data.accounts.accounts
-        : data.accounts,
+  function renderCashFlowDrilldown(presentation) {
+    var category = cashFlowCategoryByIdentity(
+      presentation,
+      state.selectedCategory,
     );
-    var schedules = toArray(
-      data.recurringSchedules && data.recurringSchedules.data
-        ? data.recurringSchedules.data
-        : data.recurringSchedules,
-    );
-    var previousSelectedAccounts = state.scenario.selectedAccounts;
-    var currentSelectedAccounts: Record<string, boolean> = {};
-    accounts.forEach(function (account) {
-      var id = account.id || account.displayName;
-      currentSelectedAccounts[id] = Object.prototype.hasOwnProperty.call(
-        previousSelectedAccounts,
-        id,
-      )
-        ? Boolean(previousSelectedAccounts[id])
-        : true;
-    });
-    state.scenario.selectedAccounts = currentSelectedAccounts;
-    var validation = validateScenario();
-    var summary = calculateScenario(accounts);
-    var scheduleRows = schedules.length
-      ? schedules
-          .map(function (schedule) {
-            return (
-              '<tr><td>' +
-              escapeHtml(schedule.description || schedule.name || 'Schedule') +
-              '</td><td>' +
-              escapeHtml(schedule.frequency || '') +
-              '</td><td class="num">' +
-              escapeHtml(
-                formatMoney(
-                  schedule.amount || schedule.convertedAmount,
-                  summary.currency,
-                ),
-              ) +
-              '</td><td>' +
-              escapeHtml(schedule.status || 'active') +
-              '</td></tr>'
+    if (!category) return '';
+    var detailTransactionCount =
+      category.transactionCountKnown === false
+        ? state.cashFlowDrilldownStatus === 'ready'
+          ? state.drilldownRows.length
+          : null
+        : category.transactionCount;
+    var heading =
+      '<div class="cash-flow-detail-head"><div><p class="eyebrow">Selected category</p><h3>' +
+      escapeHtml(category.label) +
+      '</h3><p>' +
+      escapeHtml(
+        formatMagnitude(category.totalAmount, presentation.current.currency),
+      ) +
+      (detailTransactionCount == null
+        ? ''
+        : ' across ' +
+          escapeHtml(String(detailTransactionCount)) +
+          (detailTransactionCount === 1 ? ' transaction' : ' transactions')) +
+      '</p></div><button class="text-button" data-action="close-category">Back to categories</button></div>';
+    var body = '';
+    if (state.cashFlowDrilldownStatus === 'loading') {
+      body =
+        '<div class="cash-flow-detail-state" role="status"><span class="spinner" aria-hidden="true"></span>Loading transaction evidence…</div>';
+    } else if (state.cashFlowDrilldownStatus === 'error') {
+      body =
+        '<div class="cash-flow-detail-state" role="alert"><p>Transaction details are unavailable. The cash-flow summary is still current.</p><div class="button-row"><button data-action="retry-category">Retry</button><button data-action="close-category">Close</button></div></div>';
+    } else if (!state.drilldownRows.length) {
+      body =
+        '<div class="cash-flow-detail-state">No transactions were returned for this category.</div>';
+    } else {
+      var visibleRows = state.drilldownRows.slice(
+        0,
+        state.drilldownVisibleCount,
+      );
+      body =
+        '<ol class="transaction-evidence">' +
+        visibleRows
+          .map(function (row) {
+            var displayAmount = cashFlowTransactionAmount(
+              row,
+              presentation.current.currency,
             );
-          })
-          .join('')
-      : '<tr><td colspan="4">No recurring schedules returned.</td></tr>';
-    var accountRows = accounts.length
-      ? accounts
-          .map(function (account) {
-            var id = account.id || account.displayName;
             return (
-              '<label class="check-row"><input type="checkbox" data-action="toggle-account" data-account="' +
-              escapeHtml(id) +
-              '"' +
-              (state.scenario.selectedAccounts[id] ? ' checked' : '') +
-              '><span><strong>' +
-              escapeHtml(account.displayName || account.name || 'Account') +
+              '<li><span class="transaction-copy"><strong>' +
+              escapeHtml(
+                row.merchantName || row.originalDescription || 'Transaction',
+              ) +
               '</strong><small>' +
-              escapeHtml(account.groupingLabel || account.grouping || '') +
-              '</small></span><span>' +
+              escapeHtml(row.activityDate || '') +
+              '</small></span><span class="transaction-amount">' +
               escapeHtml(
-                formatMoney(
-                  account.balance || account.currentBalance,
-                  summary.currency,
-                ),
+                displayAmount
+                  ? formatMoney(displayAmount, presentation.current.currency)
+                  : 'Amount unavailable',
               ) +
-              '</span></label>'
+              '</span></li>'
             );
           })
-          .join('')
-      : rowsEmpty('No account baseline returned.');
-    var eventRows = state.scenario.events.length
-      ? state.scenario.events
-          .map(function (event, index) {
-            return (
-              '<tr><td><input data-event-field="date" data-event-index="' +
-              index +
-              '" type="date" value="' +
-              escapeHtml(event.date) +
-              '"></td><td><input data-event-field="label" data-event-index="' +
-              index +
-              '" value="' +
-              escapeHtml(event.label) +
-              '"></td><td><select data-event-field="sign" data-event-index="' +
-              index +
-              '"><option value="positive"' +
-              (event.sign === 'positive' ? ' selected' : '') +
-              '>Inflow</option><option value="negative"' +
-              (event.sign === 'negative' ? ' selected' : '') +
-              '>Outflow</option></select></td><td><input data-event-field="amount" data-event-index="' +
-              index +
-              '" inputmode="decimal" value="' +
-              escapeHtml(event.amount) +
-              '"></td><td><button data-action="remove-event" data-event-index="' +
-              index +
-              '">Remove</button></td></tr>'
-            );
-          })
-          .join('')
-      : '<tr><td colspan="5">No one-time events.</td></tr>';
+          .join('') +
+        '</ol>' +
+        (state.drilldownVisibleCount < state.drilldownRows.length
+          ? '<button class="show-more" data-action="show-more-transactions">Show 3 more</button>'
+          : '');
+    }
+    return (
+      '<section class="cash-flow-detail" id="cash-flow-detail" aria-live="polite">' +
+      heading +
+      body +
+      (state.modelContextError
+        ? '<p class="cash-flow-context-note" role="status">This selection could not be shared with the conversation. The visualization is unaffected.</p>'
+        : '') +
+      '</section>'
+    );
+  }
+
+  function renderCashFlowAdjustments(presentation) {
+    var current = presentation.current.adjustments;
+    var comparison = presentation.comparison
+      ? presentation.comparison.adjustments
+      : null;
+    if (!current.affected && !(comparison && comparison.affected)) return '';
+    function periodAdjustmentLine(label, adjustments) {
+      if (!adjustments || !adjustments.affected) return '';
+      return (
+        '<p><strong>' +
+        escapeHtml(label) +
+        ':</strong> ' +
+        escapeHtml(String(adjustments.excludedTransactionCount)) +
+        ' excluded ' +
+        (adjustments.excludedTransactionCount === 1
+          ? 'transaction'
+          : 'transactions') +
+        ' and ' +
+        escapeHtml(String(adjustments.neutralizedPairCount)) +
+        ' neutralized ' +
+        (adjustments.neutralizedPairCount === 1 ? 'pair' : 'pairs') +
+        '.</p>'
+      );
+    }
+    return (
+      '<details class="cash-flow-adjustments"><summary>How this was calculated</summary><div><p>' +
+      'Excluded transactions are left out by your analysis rules. Neutralized transfer or refund pairs keep money moving between accounts from being counted twice.</p>' +
+      periodAdjustmentLine('Current period', current) +
+      periodAdjustmentLine('Comparison period', comparison) +
+      '</div></details>'
+    );
+  }
+
+  function renderCashflow() {
+    var presentation = createCashFlowPresentation(readEnvelopeData());
+    if (!presentation) {
+      renderLiveDataError();
+      return;
+    }
+    var currency = presentation.current.currency;
+    var netDelta = presentation.netDelta || 0;
+    var inflowDelta = presentation.inflowDelta || 0;
+    var outflowDelta = presentation.outflowDelta || 0;
+    var comparison = presentation.comparison
+      ? '<p class="comparison-period">Compared with ' +
+        escapeHtml(
+          formatPeriodRange(
+            presentation.comparison.startDate,
+            presentation.comparison.endDate,
+          ),
+        ) +
+        '. Exact ranges; values are not normalized for period length.</p>'
+      : '';
+    var categories = presentation.topCategories
+      .map(function (category, index) {
+        return renderCashFlowCategoryAndDetail(
+          category,
+          presentation,
+          index,
+          'ranked',
+        );
+      })
+      .join('');
+    var categorySection = presentation.isEmpty
+      ? '<div class="cash-flow-empty"><h2>No ' +
+        (presentation.direction === 'outflow' ? 'spending' : 'income') +
+        ' activity</h2><p>Splice found no ' +
+        (presentation.direction === 'outflow' ? 'outflows' : 'inflows') +
+        ' in this exact period.</p></div>'
+      : '<section class="cash-flow-categories" aria-labelledby="cash-flow-categories-title"><div class="section-heading"><div><p class="eyebrow">Largest contributors</p><h2 id="cash-flow-categories-title">' +
+        (presentation.direction === 'outflow'
+          ? 'Top spending categories'
+          : 'Income sources') +
+        '</h2></div><span>' +
+        escapeHtml(
+          presentation.direction === 'outflow' ? 'Outflow' : 'Inflow',
+        ) +
+        '</span></div><div class="cash-flow-category-list">' +
+        categories +
+        renderCashFlowOther(presentation) +
+        (presentation.uncategorized
+          ? '<div class="uncategorized-separator"><span>Data quality</span></div>' +
+            renderCashFlowCategoryAndDetail(
+              presentation.uncategorized,
+              presentation,
+              presentation.topCategories.length +
+                presentation.remainingCategories.length,
+              'uncategorized',
+            )
+          : '') +
+        '</div></section>';
 
     appRoot.innerHTML =
-      '<section class="hero">' +
-      '<div><h1>Projection Scenario Modeler</h1><p>In-session estimates from account baselines, recurring schedules, and explicit assumptions.</p></div>' +
-      '<div class="status-pill" id="app-status" data-kind="info"></div>' +
-      '</section>' +
-      '<section class="metrics">' +
-      metric(
-        'Selected baseline',
-        formatMoney(
-          {
-            amount: summary.baseline,
-            currency: summary.currency,
-            sign: 'positive',
-          },
-          summary.currency,
+      '<article class="cash-flow-view">' +
+      '<header class="cash-flow-header"><div><p class="eyebrow">' +
+      escapeHtml(currency) +
+      ' · ' +
+      escapeHtml(
+        formatPeriodRange(
+          presentation.current.startDate,
+          presentation.current.endDate,
         ),
-        'positive',
       ) +
-      metric('Months', String(summary.months), 'neutral') +
-      metric(
-        'Estimated ending',
-        formatMoney(
-          {
-            amount: summary.ending,
-            currency: summary.currency,
-            sign: summary.ending < 0 ? 'negative' : 'positive',
-          },
-          summary.currency,
-        ),
-        summary.ending < 0 ? 'negative' : 'positive',
-      ) +
-      metric(
-        'Monthly delta',
-        formatMoney(
-          {
-            amount: summary.monthlyDelta,
-            currency: summary.currency,
-            sign: summary.monthlyDelta < 0 ? 'negative' : 'positive',
-          },
-          summary.currency,
-        ),
-        summary.monthlyDelta < 0 ? 'negative' : 'positive',
-      ) +
+      '</p><h1>Cash Flow</h1></div></header>' +
+      '<section class="net-flow" data-tone="' +
+      escapeHtml(moneySign(presentation.current.netFlow)) +
+      '"><p>Net cash flow</p><strong>' +
+      escapeHtml(formatMoney(presentation.current.netFlow, currency)) +
+      '</strong>' +
+      (presentation.comparison
+        ? '<small><span data-delta-tone="' +
+          (netDelta > 0 ? 'positive' : netDelta < 0 ? 'negative' : 'neutral') +
+          '">' +
+          escapeHtml(formatDelta(netDelta, currency)) +
+          '</span> vs comparison</small>'
+        : '') +
       '</section>' +
-      '<section class="split">' +
-      '<div class="panel"><h2>Assumptions</h2>' +
-      '<div class="form-grid">' +
-      '<label>Scenario<input data-scenario-field="name" value="' +
-      escapeHtml(state.scenario.name) +
-      '"></label>' +
-      '<label>Horizon<input data-scenario-field="horizonDate" type="date" value="' +
-      escapeHtml(state.scenario.horizonDate) +
-      '"></label>' +
-      '<label>Monthly income change<input data-scenario-field="incomeAdjustment" inputmode="decimal" value="' +
-      escapeHtml(state.scenario.incomeAdjustment) +
-      '"></label>' +
-      '<label>Monthly expense change<input data-scenario-field="expenseAdjustment" inputmode="decimal" value="' +
-      escapeHtml(state.scenario.expenseAdjustment) +
-      '"></label>' +
-      '<label>Expected annual return %<input data-scenario-field="expectedReturn" inputmode="decimal" value="' +
-      escapeHtml(state.scenario.expectedReturn) +
-      '"></label>' +
-      '</div>' +
-      (validation.length
-        ? '<div class="error-list">' +
-          validation.map(escapeHtml).join('<br>') +
-          '</div>'
-        : '<div class="hint">Assumptions are not persisted and do not create transactions.</div>') +
-      '<div class="button-row">' +
-      button('data-action="add-event"', 'Add event') +
-      button('data-action="send-scenario"', 'Send summary') +
-      '</div>' +
-      '</div>' +
-      '<div class="panel"><h2>Account Baseline</h2><div class="check-list">' +
-      accountRows +
-      '</div></div>' +
-      '</section>' +
-      '<section class="panel"><div class="panel-head"><h2>One-Time Events</h2><span class="muted">Scenario only</span></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Label</th><th>Flow</th><th>Amount</th><th></th></tr></thead><tbody>' +
-      eventRows +
-      '</tbody></table></div></section>' +
-      '<section class="panel"><div class="panel-head"><h2>Recurring Inputs</h2><span class="muted">Read-only from Splice</span></div><div class="table-wrap"><table><thead><tr><th>Description</th><th>Frequency</th><th>Amount</th><th>Status</th></tr></thead><tbody>' +
-      scheduleRows +
-      '</tbody></table></div></section>';
+      '<section class="flow-pair" aria-label="Inflow and outflow"><div><span>Inflow</span><strong>' +
+      escapeHtml(formatMagnitude(presentation.current.totalInflow, currency)) +
+      '</strong>' +
+      (presentation.comparison
+        ? '<small data-delta-tone="' +
+          (inflowDelta > 0
+            ? 'positive'
+            : inflowDelta < 0
+              ? 'negative'
+              : 'neutral') +
+          '">' +
+          escapeHtml(formatDelta(inflowDelta, currency)) +
+          '</small>'
+        : '') +
+      '</div><div><span>Outflow</span><strong>' +
+      escapeHtml(formatMagnitude(presentation.current.totalOutflow, currency)) +
+      '</strong>' +
+      (presentation.comparison
+        ? '<small data-delta-tone="' +
+          (outflowDelta > 0
+            ? 'negative'
+            : outflowDelta < 0
+              ? 'positive'
+              : 'neutral') +
+          '">' +
+          escapeHtml(formatDelta(outflowDelta, currency)) +
+          '</small>'
+        : '') +
+      '</div></section>' +
+      comparison +
+      categorySection +
+      renderCashFlowAdjustments(presentation) +
+      '</article>';
   }
 
-  function validateScenario(): string[] {
-    var errors: string[] = [];
+  function currentCashFlowPresentation(): CashFlowPresentation | null {
+    if (appId !== 'cash_flow' || !envelope) return null;
+    return createCashFlowPresentation(readEnvelopeData());
+  }
+
+  function publishCashFlowContext(
+    presentation: CashFlowPresentation,
+    category: CashFlowCategory | null,
+    generation: number,
+  ) {
+    state.modelContextError = false;
+    state.cashFlowContextPublished = Boolean(category);
+    var contextRequestId = ++state.modelContextRequestId;
+    mcpRuntime.app
+      .updateModelContext({
+        structuredContent: cashFlowSelectionContext(presentation, category),
+      })
+      .catch(function () {
+        if (contextRequestId !== state.modelContextRequestId) return;
+        if (generation !== businessDataGeneration) return;
+        if (category && state.selectedCategory !== category.primaryCategory) {
+          return;
+        }
+        if (!category && state.selectedCategory) return;
+        state.modelContextError = true;
+        render();
+      });
+  }
+
+  function selectCashFlowCategory(
+    categoryPrimary,
+    shouldPublishContext = true,
+  ) {
+    var presentation = currentCashFlowPresentation();
+    if (!presentation) return;
+    var category = cashFlowCategoryByIdentity(presentation, categoryPrimary);
+    if (!category) return;
+    var publishSelectionContext = shouldPublishContext !== false;
+    var selectedPresentation: CashFlowPresentation = presentation;
+    if (state.selectedCategory !== category.primaryCategory) {
+      state.cashFlowSelectionScroll =
+        typeof window.scrollY === 'number' ? window.scrollY : 0;
+    }
+    state.selectedCategory = category.primaryCategory;
+    state.cashFlowDrilldownStatus = 'loading';
+    state.drilldownRows = [];
+    state.drilldownVisibleCount = 3;
+    state.modelContextError = false;
+    state.cashFlowPublishContext = publishSelectionContext;
     if (
-      !state.scenario.horizonDate ||
-      Number.isNaN(Date.parse(state.scenario.horizonDate))
-    )
-      errors.push('Horizon date is required.');
-    ['incomeAdjustment', 'expenseAdjustment', 'expectedReturn'].forEach(
-      function (field) {
+      presentation.remainingCategories.some(function (candidate) {
+        return candidate.primaryCategory === category.primaryCategory;
+      })
+    ) {
+      state.cashFlowOtherExpanded = true;
+    }
+    render();
+
+    var generation = businessDataGeneration;
+    var selectedIdentity = category.primaryCategory;
+    if (publishSelectionContext) {
+      publishCashFlowContext(selectedPresentation, category, generation);
+    }
+    callTool('list_cashflow_category_transactions', {
+      startDate: selectedPresentation.current.startDate,
+      endDate: selectedPresentation.current.endDate,
+      categoryPrimary: category.primaryCategory,
+      flowDirection: selectedPresentation.direction,
+    })
+      .then(function (result) {
         if (
-          String(state.scenario[field]).trim() === '' ||
-          !Number.isFinite(Number(state.scenario[field]))
-        )
-          errors.push(field + ' must be numeric.');
-      },
-    );
-    state.scenario.events.forEach(function (event, index) {
-      if (!event.date || Number.isNaN(Date.parse(event.date)))
-        errors.push('Event ' + (index + 1) + ' needs a valid date.');
-      if (
-        String(event.amount).trim() === '' ||
-        !Number.isFinite(Number(event.amount))
-      )
-        errors.push('Event ' + (index + 1) + ' amount must be numeric.');
-    });
-    return errors;
+          generation !== businessDataGeneration ||
+          state.selectedCategory !== selectedIdentity
+        ) {
+          return;
+        }
+        state.drilldownRows = sortCashFlowTransactions(
+          result,
+          selectedPresentation.current.currency,
+        );
+        state.cashFlowDrilldownStatus = 'ready';
+        if (state.cashFlowPublishContext) {
+          publishCashFlowContext(
+            selectedPresentation,
+            {
+              ...category,
+              transactionCount: state.drilldownRows.length,
+              transactionCountKnown: true,
+            },
+            generation,
+          );
+        }
+        render();
+      })
+      .catch(function () {
+        if (
+          generation !== businessDataGeneration ||
+          state.selectedCategory !== selectedIdentity
+        ) {
+          return;
+        }
+        state.drilldownRows = [];
+        state.cashFlowDrilldownStatus = 'error';
+        render();
+      });
   }
 
-  function calculateScenario(accounts) {
-    var currency = 'USD';
-    var baseline = toArray(accounts).reduce(function (total, account) {
-      var id = account.id || account.displayName;
-      if (!state.scenario.selectedAccounts[id]) return total;
-      currency = moneyCurrency(
-        account.balance || account.currentBalance,
-        currency,
-      );
-      return total + moneyAmount(account.balance || account.currentBalance);
-    }, 0);
-    var now = new Date();
-    var horizon = new Date(state.scenario.horizonDate);
-    var months = Number.isNaN(horizon.getTime())
-      ? 0
-      : Math.max(
-          0,
-          Math.ceil(
-            (horizon.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30),
-          ),
-        );
-    var income = Number(state.scenario.incomeAdjustment) || 0;
-    var expense = Number(state.scenario.expenseAdjustment) || 0;
-    var monthlyDelta = income - expense;
-    var eventTotal = state.scenario.events.reduce(function (total, event) {
-      var amount = Number(event.amount) || 0;
-      return total + (event.sign === 'negative' ? -amount : amount);
-    }, 0);
-    var annualReturn = (Number(state.scenario.expectedReturn) || 0) / 100;
-    var estimatedReturn = baseline * annualReturn * (months / 12);
-    return {
-      currency: currency,
-      baseline: baseline,
-      months: months,
-      monthlyDelta: monthlyDelta,
-      ending: baseline + months * monthlyDelta + eventTotal + estimatedReturn,
-    };
+  function closeCashFlowCategory() {
+    var presentation = currentCashFlowPresentation();
+    if (!presentation) return;
+    var restoreScroll = state.cashFlowSelectionScroll;
+    state.selectedCategory = null;
+    state.cashFlowDrilldownStatus = 'idle';
+    state.drilldownRows = [];
+    state.drilldownVisibleCount = 3;
+    state.cashFlowPublishContext = false;
+    render();
+    var generation = businessDataGeneration;
+    publishCashFlowContext(presentation, null, generation);
+    if (typeof window.scrollTo === 'function') {
+      window.requestAnimationFrame(function () {
+        if (generation === businessDataGeneration) {
+          window.scrollTo({ top: restoreScroll, behavior: 'auto' });
+        }
+      });
+    }
+  }
+
+  function initializeFocusedCashFlowCategory() {
+    var presentation = currentCashFlowPresentation();
+    if (!presentation || !presentation.focusedCategory) return;
+    selectCashFlowCategory(presentation.focusedCategory.primaryCategory, false);
   }
 
   function renderPortfolio() {
@@ -985,198 +1068,6 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
     );
   }
 
-  function renderRules() {
-    var data = readEnvelopeData();
-    var tabs = [
-      ['categories', 'Categories'],
-      ['analysis', 'Analysis Rules'],
-      ['categorization', 'Categorization Rules'],
-      ['recommendations', 'Recommendations'],
-      ['audit', 'Audit Effects'],
-    ];
-    var body = renderRuleTab(data);
-    appRoot.innerHTML =
-      '<section class="hero"><div><h1>Category Rule Workbench</h1><p>Read-only category metadata, rules, recommendations, and audit effects.</p></div><div class="status-pill" id="app-status" data-kind="info"></div></section>' +
-      '<section class="toolbar">' +
-      '<label>Search<input id="rule-search" type="search" value="' +
-      escapeHtml(state.ruleSearch) +
-      '" placeholder="Category, rule, condition"></label>' +
-      '<label>Status<select id="rule-status"><option value="all">All statuses</option><option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>' +
-      '<label class="checkbox-inline"><input id="include-archived" type="checkbox"' +
-      (state.includeArchived ? ' checked' : '') +
-      '> Include archived</label>' +
-      '<label>Audit start<input id="audit-start" type="date" value="' +
-      escapeHtml((toolInput && toolInput.startDate) || '') +
-      '"></label>' +
-      '<label>Audit end<input id="audit-end" type="date" value="' +
-      escapeHtml((toolInput && toolInput.endDate) || '') +
-      '"></label>' +
-      button('data-action="load-rule-audit"', 'Load audit') +
-      '</section>' +
-      '<section class="tabs">' +
-      tabs
-        .map(function (tab) {
-          return (
-            '<button data-action="set-tab" data-tab="' +
-            tab[0] +
-            '" aria-pressed="' +
-            String(state.activeTab === tab[0]) +
-            '">' +
-            escapeHtml(tab[1]) +
-            '</button>'
-          );
-        })
-        .join('') +
-      '</section>' +
-      '<section class="split"><div class="panel">' +
-      body +
-      '</div><div class="panel"><h2>Detail</h2>' +
-      renderDetail() +
-      '</div></section>';
-    var status = uiDocument.getElementById('rule-status');
-    if (status) status.value = state.ruleStatus;
-  }
-
-  function renderRuleTab(data) {
-    if (state.activeTab === 'categories')
-      return renderObjectList(
-        'Categories',
-        toArray((data.categories || {}).data || data.categories),
-        categorySummary,
-      );
-    if (state.activeTab === 'analysis')
-      return renderObjectList(
-        'Analysis Rules',
-        toArray((data.analysisRules || {}).data || data.analysisRules),
-        ruleSummary,
-      );
-    if (state.activeTab === 'categorization')
-      return renderObjectList(
-        'Categorization Rules',
-        toArray(
-          (data.categorizationRules || {}).data || data.categorizationRules,
-        ),
-        ruleSummary,
-      );
-    if (state.activeTab === 'recommendations')
-      return renderObjectList(
-        'Recommendations',
-        toArray(
-          (data.recommendations || {}).suggestions || data.recommendations,
-        ),
-        recommendationSummary,
-      );
-    var auditRows = state.audit
-      ? toArray(state.audit.rows || state.audit.data)
-      : [];
-    return renderObjectList('Audit Effects', auditRows, auditSummary);
-  }
-
-  function renderObjectList(title, rows, summaryFn) {
-    var filtered = toArray(rows).filter(function (row) {
-      var haystack = JSON.stringify(row).toLowerCase();
-      var status = String(
-        row.status || (row.archived || row.archivedAt ? 'archived' : 'active'),
-      ).toLowerCase();
-      if (!state.includeArchived && status === 'archived') return false;
-      if (state.ruleStatus !== 'all' && status !== state.ruleStatus)
-        return false;
-      return haystack.indexOf(state.ruleSearch.toLowerCase()) >= 0;
-    });
-    var list = filtered.length
-      ? filtered
-          .map(function (row) {
-            var summary = summaryFn(row);
-            return (
-              '<button class="detail-row" data-detail="' +
-              escapeHtml(JSON.stringify(row)) +
-              '"><strong>' +
-              escapeHtml(summary.title) +
-              '</strong><span>' +
-              escapeHtml(summary.subtitle) +
-              '</span></button>'
-            );
-          })
-          .join('')
-      : rowsEmpty('No rows match the current filters.');
-    return (
-      '<div class="panel-head"><h2>' +
-      escapeHtml(title) +
-      '</h2><span class="muted">' +
-      filtered.length +
-      ' rows</span></div><div class="detail-list">' +
-      list +
-      '</div>'
-    );
-  }
-
-  function renderDetail() {
-    if (!state.detail)
-      return rowsEmpty(
-        'Select a row to inspect details. Mutating actions are intentionally not available in MCP.',
-      );
-    return (
-      '<pre class="detail-json">' +
-      escapeHtml(JSON.stringify(state.detail, null, 2)) +
-      '</pre><div class="hint">Read-only pane: no accept, dismiss, apply, create, edit, or archive actions are exposed.</div>'
-    );
-  }
-
-  function categorySummary(row) {
-    return {
-      title:
-        row.label ||
-        [row.primary, row.detailed].filter(Boolean).join(' / ') ||
-        row.primaryCategory ||
-        'Category',
-      subtitle: [
-        row.status || (row.archived || row.archivedAt ? 'archived' : 'active'),
-        row.color,
-      ]
-        .filter(Boolean)
-        .join(' - '),
-    };
-  }
-
-  function ruleSummary(row) {
-    return {
-      title: row.name || row.ruleName || 'Rule',
-      subtitle: [
-        row.type || row.itemType,
-        row.status || (row.archived || row.archivedAt ? 'archived' : 'active'),
-        row.scopeSummary || row.targetCategory,
-      ]
-        .filter(Boolean)
-        .join(' - '),
-    };
-  }
-
-  function recommendationSummary(row) {
-    return {
-      title: row.name || row.title || 'Recommendation',
-      subtitle: [
-        row.proposedCategory || row.targetCategory,
-        row.reason,
-        row.confidence != null ? 'confidence ' + row.confidence : '',
-      ]
-        .filter(Boolean)
-        .join(' - '),
-    };
-  }
-
-  function auditSummary(row) {
-    return {
-      title: row.ruleName || row.effect || row.type || 'Audit effect',
-      subtitle: [
-        row.activityDate,
-        row.merchantName || row.description,
-        row.reason,
-      ]
-        .filter(Boolean)
-        .join(' - '),
-    };
-  }
-
   function securityLabel(row) {
     var security = row.security || {};
     return (
@@ -1245,17 +1136,17 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
       renderLoading();
       return;
     }
-    if (appId === 'cashflow_explorer') renderCashflow();
-    if (appId === 'projection_scenario_modeler') renderProjection();
+    if (appId === 'cash_flow') {
+      renderCashflow();
+      if (!envelope) return;
+    }
     if (appId === 'portfolio_viewer') renderPortfolio();
-    if (appId === 'category_rule_workbench') renderRules();
     setStatus('Connected to live Splice data.', 'success');
   }
 
   function handleControlInput(event) {
     var target = event.target;
     if (!target) return;
-    if (target.id === 'cashflow-search') state.categorySearch = target.value;
     if (target.id === 'portfolio-search') state.portfolioSearch = target.value;
     if (target.id === 'portfolio-account')
       state.portfolioAccount = target.value;
@@ -1265,16 +1156,6 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
       state.portfolioDateMode = target.value;
     if (target.id === 'portfolio-snapshot-date')
       state.portfolioSnapshotDate = target.value;
-    if (target.id === 'rule-search') state.ruleSearch = target.value;
-    if (target.id === 'rule-status') state.ruleStatus = target.value;
-    if (target.id === 'include-archived')
-      state.includeArchived = target.checked;
-    if (target.dataset && target.dataset.scenarioField)
-      state.scenario[target.dataset.scenarioField] = target.value;
-    if (target.dataset && target.dataset.eventField) {
-      var eventRow = state.scenario.events[Number(target.dataset.eventIndex)];
-      if (eventRow) eventRow[target.dataset.eventField] = target.value;
-    }
     render();
   }
 
@@ -1282,163 +1163,32 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
   uiDocument.addEventListener('change', handleControlInput);
 
   uiDocument.addEventListener('click', function (event) {
-    var target = event.target.closest('[data-action], [data-detail]');
+    var target = event.target.closest('[data-action]');
     if (!target) return;
     var action = target.dataset.action;
-    if (target.dataset.detail) {
-      state.detail = parseJson(target.dataset.detail);
-      render();
-      return;
-    }
-    if (action === 'set-flow') {
-      state.selectedFlow = target.dataset.flow;
-      state.selectedCategory = null;
-      state.drilldownRows = [];
-      render();
-    }
     if (action === 'select-category') {
-      state.selectedCategory = target.dataset.category;
-      state.drilldownRows = [];
-      render();
-      var start = uiDocument.getElementById('cashflow-start');
-      var end = uiDocument.getElementById('cashflow-end');
-      var drilldownGeneration = businessDataGeneration;
-      callTool('list_cashflow_category_transactions', {
-        startDate: start ? start.value : undefined,
-        endDate: end ? end.value : undefined,
-        categoryPrimary: state.selectedCategory,
-        flowDirection: state.selectedFlow,
-      })
-        .then(function (result) {
-          if (drilldownGeneration !== businessDataGeneration) return;
-          state.drilldownRows = toArray(
-            result.data || result.transactions || result,
-          );
-          render();
-        })
-        .catch(function () {
-          if (drilldownGeneration !== businessDataGeneration) return;
-          renderLiveDataError();
-        });
-    }
-    if (action === 'reload-cashflow') {
-      var cashflowStart = uiDocument.getElementById('cashflow-start');
-      var cashflowEnd = uiDocument.getElementById('cashflow-end');
-      if (
-        cashflowStart &&
-        cashflowEnd &&
-        cashflowStart.value > cashflowEnd.value
-      ) {
-        setStatus('Start date must be before end date.', 'error');
-        return;
+      if (state.selectedCategory === target.dataset.category) {
+        closeCashFlowCategory();
+      } else {
+        selectCashFlowCategory(target.dataset.category);
       }
-      var cashflowArgs = {
-        startDate: cashflowStart ? cashflowStart.value : undefined,
-        endDate: cashflowEnd ? cashflowEnd.value : undefined,
-      };
-      envelope = null;
-      toolInput = cashflowArgs;
-      clearDerivedBusinessData();
-      renderLoading();
-      var cashflowGeneration = businessDataGeneration;
-      callTool('get_cashflow_analysis', cashflowArgs)
-        .then(function (result) {
-          if (cashflowGeneration !== businessDataGeneration) return;
-          envelope = { data: result };
-          render();
-        })
-        .catch(function () {
-          if (cashflowGeneration !== businessDataGeneration) return;
-          renderLiveDataError();
-        });
     }
-    if (action === 'preset-month') {
-      var now = new Date();
-      var month = String(now.getMonth() + 1).padStart(2, '0');
-      uiDocument.getElementById('cashflow-start').value =
-        now.getFullYear() + '-' + month + '-01';
-      uiDocument.getElementById('cashflow-end').value =
-        now.getFullYear() +
-        '-' +
-        month +
-        '-' +
-        String(
-          new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(),
-        ).padStart(2, '0');
-    }
-    if (action === 'load-audit') {
-      var auditStart =
-        uiDocument.getElementById('cashflow-start') ||
-        uiDocument.getElementById('audit-start');
-      var auditEnd =
-        uiDocument.getElementById('cashflow-end') ||
-        uiDocument.getElementById('audit-end');
-      var auditGeneration = businessDataGeneration;
-      callTool('get_cashflow_analysis_audit', {
-        startDate: auditStart ? auditStart.value : undefined,
-        endDate: auditEnd ? auditEnd.value : undefined,
-      })
-        .then(function (result) {
-          if (auditGeneration !== businessDataGeneration) return;
-          state.audit = result;
-          render();
-        })
-        .catch(function () {
-          if (auditGeneration !== businessDataGeneration) return;
-          state.audit = null;
-          renderLiveDataError();
-        });
-    }
-    if (action === 'add-event') {
-      state.scenario.events.push({
-        date: state.scenario.horizonDate,
-        label: 'One-time event',
-        sign: 'negative',
-        amount: 0,
-      });
+    if (action === 'toggle-other') {
+      state.cashFlowOtherExpanded = !state.cashFlowOtherExpanded;
       render();
     }
-    if (action === 'remove-event') {
-      state.scenario.events.splice(Number(target.dataset.eventIndex), 1);
-      render();
+    if (action === 'close-category') {
+      closeCashFlowCategory();
     }
-    if (action === 'toggle-account') {
-      state.scenario.selectedAccounts[target.dataset.account] = target.checked;
-      render();
+    if (action === 'retry-category' && state.selectedCategory) {
+      selectCashFlowCategory(state.selectedCategory);
     }
-    if (action === 'send-scenario') {
-      var validation = validateScenario();
-      if (validation.length) {
-        setStatus(
-          'Fix scenario validation errors before sending summary.',
-          'error',
-        );
-        return;
-      }
-      var data = readEnvelopeData();
-      var accounts = toArray(
-        data.accounts && data.accounts.accounts
-          ? data.accounts.accounts
-          : data.accounts,
+    if (action === 'show-more-transactions') {
+      state.drilldownVisibleCount = Math.min(
+        state.drilldownVisibleCount + 3,
+        state.drilldownRows.length,
       );
-      var summary = calculateScenario(accounts);
-      void updateModelContext(
-        'Projection scenario "' +
-          state.scenario.name +
-          '" estimates an ending balance of ' +
-          formatMoney(
-            {
-              amount: summary.ending,
-              currency: summary.currency,
-              sign: summary.ending < 0 ? 'negative' : 'positive',
-            },
-            summary.currency,
-          ) +
-          ' by ' +
-          state.scenario.horizonDate +
-          '.',
-        { scenario: state.scenario, summary: summary },
-      );
+      render();
     }
     if (action === 'reload-portfolio') {
       var accountArgs: any =
@@ -1496,32 +1246,6 @@ import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
         })
         .catch(function () {
           if (activityGeneration !== businessDataGeneration) return;
-          renderLiveDataError();
-        });
-    }
-    if (action === 'set-tab') {
-      state.activeTab = target.dataset.tab;
-      state.detail = null;
-      render();
-    }
-    if (action === 'load-rule-audit') {
-      var start = uiDocument.getElementById('audit-start');
-      var end = uiDocument.getElementById('audit-end');
-      var ruleAuditGeneration = businessDataGeneration;
-      callTool('get_cashflow_analysis_audit', {
-        startDate: start ? start.value : undefined,
-        endDate: end ? end.value : undefined,
-      })
-        .then(function (result) {
-          if (ruleAuditGeneration !== businessDataGeneration) return;
-          state.audit = result;
-          state.activeTab = 'audit';
-          render();
-        })
-        .catch(function () {
-          if (ruleAuditGeneration !== businessDataGeneration) return;
-          state.audit = null;
-          state.activeTab = 'audit';
           renderLiveDataError();
         });
     }

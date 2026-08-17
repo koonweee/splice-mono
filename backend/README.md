@@ -128,11 +128,27 @@ OAuth with `splice:read` and `splice:write`; it does not accept Splice personal
 access tokens and is not mounted on the Nest API origin. The listener is
 disabled by default for ordinary local API development.
 
-The surface contains 27 tools, typed structured/text results, data resources,
-workflow prompts, four progressive-enhancement MCP Apps, SDK v2 projection
+The surface contains 25 tools, typed structured/text results, data resources,
+workflow prompts, two progressive-enhancement MCP Apps, SDK v2 projection
 input/resume, and preview-token-protected categorization writes. See the
 [canonical MCP runbook](../docs/mcp.md) for the complete contract, local tests,
 fixture validation, production rollout, smoke tests, and rollback.
+
+The Cash Flow App is the selectively invoked `visualize_cash_flow` tool linked
+to `ui://splice/cash-flow/v3.html`; it is a mobile-first visual answer rather
+than a general dashboard. For MCP App UI work, run `yarn mcp-apps:dev` for the
+live official-host loop and `yarn mcp-apps:visual --app cash-flow` for the
+overview, income, comparison, and category-focus matrix. The visual loop
+captures desktop dark, iPhone dark/light, a 320 px boundary,
+loading-to-ready videos, browser evidence, and contact sheets. Add
+`--scenario empty`, `--scenario helper-error`, or
+`--scenario primary-error` for truthful alternate states; use `--case` to
+isolate one presentation. The first run prepares the exact pinned official host
+automatically; `yarn mcp-apps:setup` may also be run explicitly. Run
+`yarn test:mcp-apps` for the focused browser-runtime, App contract, and real
+loopback MCP listener suite. Record three explicit refinement passes and final
+ChatGPT Web/mobile smoke as described in the
+[canonical runbook](../docs/mcp.md#local-mcp-app-standard-host-validation).
 
 ## API Documentation
 

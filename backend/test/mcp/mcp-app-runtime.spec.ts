@@ -51,7 +51,7 @@ jest.mock('@koonweee/mcp-kit/apps', () => ({
     const runtime = {
       options,
       callServerTool: jest.fn(),
-      updateModelContext: jest.fn(),
+      updateModelContext: jest.fn().mockResolvedValue({}),
       connect: rejectNextConnect
         ? jest.fn().mockRejectedValue(new Error('host unavailable'))
         : jest.fn().mockResolvedValue(undefined),
@@ -92,8 +92,6 @@ function runRuntime(
     'splice-mcp-app-root': appRoot,
     'splice-mcp-app-safe-area': safeAreaRoot,
     'app-status': status,
-    'cashflow-start': { value: '2026-04-01' },
-    'cashflow-end': { value: '2026-04-30' },
     'portfolio-snapshot-date': { value: '2026-04-30' },
   };
   const documentListeners: Record<
@@ -164,13 +162,89 @@ function actionTarget(action: string, dataset: Record<string, string> = {}) {
   return target;
 }
 
+function mcpMoney(amount: number, sign: 'positive' | 'negative' = 'positive') {
+  return { amount, currency: 'USD', sign };
+}
+
+function cashFlowPeriod(
+  categories: Array<{
+    primaryCategory: string;
+    amount: number;
+    transactionCount?: number;
+    color?: string;
+  }> = [],
+) {
+  return {
+    analysis: {
+      startDate: '2026-04-01',
+      endDate: '2026-04-30',
+      currency: 'USD',
+      totals: {
+        totalInflow: mcpMoney(1200),
+        totalOutflow: mcpMoney(450, 'negative'),
+        netFlow: mcpMoney(750),
+        uncategorizedInflow: mcpMoney(0),
+        uncategorizedOutflow: mcpMoney(25, 'negative'),
+      },
+      inflows: [],
+      outflows: categories.map((category) => ({
+        primaryCategory: category.primaryCategory,
+        totalAmount: mcpMoney(category.amount, 'negative'),
+        transactionCount: category.transactionCount ?? 1,
+        color: category.color ?? '#2563eb',
+      })),
+    },
+    adjustments: {
+      affected: true,
+      excludedTransactionCount: 2,
+      neutralizedPairCount: 1,
+    },
+  };
+}
+
+function cashFlowResult(
+  categories: Array<{
+    primaryCategory: string;
+    amount: number;
+    transactionCount?: number;
+    color?: string;
+  }> = [
+    {
+      primaryCategory: 'FOOD_AND_DRINK',
+      amount: 450,
+      transactionCount: 2,
+    },
+  ],
+  options: {
+    direction?: 'outflow' | 'inflow';
+    focusCategoryPrimary?: string;
+  } = {},
+) {
+  return {
+    app: { id: 'cash_flow' },
+    data: {
+      presentation: {
+        direction: options.direction ?? 'outflow',
+        ...(options.focusCategoryPrimary
+          ? { focusCategoryPrimary: options.focusCategoryPrimary }
+          : {}),
+      },
+      current: cashFlowPeriod(categories),
+    },
+  };
+}
+
+async function flushPromises() {
+  await new Promise<void>((resolve) => setImmediate(resolve));
+}
+
 describe('Splice MCP App runtime integration', () => {
   it('starts with a neutral loading state and no business data', () => {
-    const harness = runRuntime('cashflow_explorer');
+    const harness = runRuntime('cash_flow');
 
     expect(harness.connect).toHaveBeenCalledTimes(1);
     expect(harness.options).toMatchObject({
-      appInfo: { name: 'Splice Cashflow Explorer', version: '2.0.0' },
+      appInfo: { name: 'Splice Cash Flow', version: '3.0.0' },
       capabilities: { availableDisplayModes: ['inline', 'fullscreen'] },
     });
     expect(harness.options.safeAreaElement).toBe(harness.safeAreaRoot);
@@ -180,7 +254,7 @@ describe('Splice MCP App runtime integration', () => {
   });
 
   it('shows a truthful error when the host connection fails', async () => {
-    const harness = runRuntime('cashflow_explorer', {
+    const harness = runRuntime('cash_flow', {
       connectFailure: true,
     });
     await Promise.resolve();
@@ -190,36 +264,20 @@ describe('Splice MCP App runtime integration', () => {
     expect(harness.html()).not.toContain('host unavailable');
   });
 
-  it('renders only a host-delivered cashflow result and uses the typed helper client', async () => {
-    const harness = runRuntime('cashflow_explorer');
+  it('renders only current Cash Flow data and calls the helper with immutable result identity', async () => {
+    const harness = runRuntime('cash_flow');
     harness.sendToolInput({
       startDate: '2026-04-01',
       endDate: '2026-04-30',
     });
-    harness.sendToolResult({
-      app: { id: 'cashflow_explorer' },
-      data: {
-        startDate: '2026-04-01',
-        endDate: '2026-04-30',
-        currency: 'USD',
-        totals: {
-          totalInflow: { amount: 1200, currency: 'USD' },
-          totalOutflow: { amount: 450, currency: 'USD' },
-          netFlow: { amount: 750, currency: 'USD' },
-        },
-        inflows: [],
-        outflows: [
-          {
-            primaryCategory: 'FOOD_AND_DRINK',
-            totalAmount: { amount: 450, currency: 'USD' },
-            transactionCount: 2,
-          },
-        ],
-      },
-    });
+    harness.sendToolResult(cashFlowResult());
 
-    expect(harness.html()).toContain('2026-04-01');
+    expect(harness.html()).toContain('Apr 1, 2026');
     expect(harness.html()).toContain('$1,200.00');
+    expect(harness.html()).toContain('Top spending categories');
+    expect(harness.html()).not.toMatch(
+      /type="date"|Reload|Search|Audit effects|This month/,
+    );
 
     harness.callServerTool.mockResolvedValue({
       structuredContent: { data: [] },
@@ -234,50 +292,48 @@ describe('Splice MCP App runtime integration', () => {
       arguments: expect.objectContaining({
         categoryPrimary: 'FOOD_AND_DRINK',
         flowDirection: 'outflow',
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
       }),
     });
+    expect(harness.updateModelContext).toHaveBeenCalledWith({
+      structuredContent: {
+        visualization: 'cash_flow',
+        selection: expect.objectContaining({
+          categoryPrimary: 'FOOD_AND_DRINK',
+          categoryLabel: 'Food And Drink',
+          startDate: '2026-04-01',
+          endDate: '2026-04-30',
+          direction: 'outflow',
+          transactionCount: 2,
+        }),
+      },
+    });
+    expect(JSON.stringify(harness.updateModelContext.mock.calls)).not.toMatch(
+      /accountId|merchantName|transactionRows/,
+    );
   });
 
-  it('renders all four views from host-delivered structured results', () => {
+  it('renders both supported views from host-delivered structured results', () => {
     const cases = [
       {
-        id: 'cashflow_explorer',
-        expected: 'Cashflow Explorer',
-        data: {
-          currency: 'USD',
-          totals: {},
-          inflows: [],
-          outflows: [],
-        },
-      },
-      {
-        id: 'projection_scenario_modeler',
-        expected: 'Projection Scenario Modeler',
-        data: { accounts: [], recurringSchedules: [] },
+        id: 'cash_flow',
+        expected: 'Cash Flow',
+        structuredContent: cashFlowResult([]),
       },
       {
         id: 'portfolio_viewer',
         expected: 'Portfolio Viewer',
-        data: { holdings: { data: [] }, activity: { data: [] } },
-      },
-      {
-        id: 'category_rule_workbench',
-        expected: 'Category Rule Workbench',
-        data: {
-          categories: [],
-          analysisRules: [],
-          categorizationRules: [],
-          recommendations: [],
+        structuredContent: {
+          app: { id: 'portfolio_viewer' },
+          data: { holdings: { data: [] }, activity: { data: [] } },
         },
       },
     ];
 
     for (const testCase of cases) {
       const harness = runRuntime(testCase.id);
-      harness.sendToolResult({
-        app: { id: testCase.id },
-        data: testCase.data,
-      });
+      harness.sendToolResult(testCase.structuredContent);
       expect(harness.html()).toContain(testCase.expected);
       expect(harness.status).toMatchObject({
         textContent: 'Connected to live Splice data.',
@@ -316,132 +372,192 @@ describe('Splice MCP App runtime integration', () => {
     expect(harness.html()).toContain('Unable to load live Splice data');
   });
 
-  it('never restores helper, audit, or detail data across primary lifecycle boundaries', async () => {
-    const cashflow = runRuntime('cashflow_explorer');
-    cashflow.sendToolResult({
-      app: { id: 'cashflow_explorer' },
-      data: {
-        currency: 'USD',
-        totals: {},
-        inflows: [],
-        outflows: [
-          {
-            primaryCategory: 'PRIVATE_CATEGORY',
-            totalAmount: { amount: 10, currency: 'USD' },
-          },
-        ],
+  it('shows three largest transactions, expands by three, and clears model context on close', async () => {
+    const harness = runRuntime('cash_flow');
+    harness.sendToolResult(cashFlowResult());
+    harness.callServerTool.mockResolvedValue({
+      structuredContent: {
+        data: Array.from({ length: 7 }, (_, index) => ({
+          activityDate: `2026-04-${String(index + 1).padStart(2, '0')}`,
+          merchantName: `Merchant ${index + 1}`,
+          convertedAmount: mcpMoney(index + 1, 'negative'),
+          accountId: `private-account-${index + 1}`,
+        })),
       },
     });
-    cashflow.callServerTool
-      .mockResolvedValueOnce({
-        structuredContent: {
-          data: [
-            {
-              merchantName: 'Private Drilldown Merchant',
-              amount: { amount: 10, currency: 'USD' },
-            },
-          ],
-        },
-      })
-      .mockResolvedValueOnce({
-        structuredContent: {
-          rows: [{ merchantName: 'Private Audit Row', effect: 'private' }],
-        },
-      });
 
-    cashflow.dispatchClick(
-      actionTarget('select-category', { category: 'PRIVATE_CATEGORY' }),
+    harness.dispatchClick(
+      actionTarget('select-category', { category: 'FOOD_AND_DRINK' }),
     );
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    cashflow.dispatchClick(actionTarget('load-audit'));
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    expect(cashflow.html()).toContain('Private Drilldown Merchant');
-    expect(cashflow.html()).toContain('Private Audit Row');
+    await flushPromises();
 
-    cashflow.sendToolInput({ startDate: '2026-05-01' });
-    expect(cashflow.html()).not.toMatch(
-      /Private Drilldown Merchant|Private Audit Row/,
-    );
-    cashflow.sendToolResult({
-      app: { id: 'cashflow_explorer' },
-      data: {
-        currency: 'USD',
-        totals: {},
-        inflows: [],
-        outflows: [],
+    expect(harness.html()).toContain('Merchant 7');
+    expect(harness.html()).toContain('Merchant 5');
+    expect(harness.html()).not.toContain('Merchant 4');
+    expect(harness.html()).toContain('Show 3 more');
+
+    harness.dispatchClick(actionTarget('show-more-transactions'));
+    expect(harness.html()).toContain('Merchant 4');
+    expect(harness.html()).toContain('Merchant 2');
+    expect(harness.html()).not.toContain('Merchant 1');
+
+    harness.dispatchClick(actionTarget('close-category'));
+    expect(harness.html()).not.toContain('Merchant 7');
+    expect(harness.html()).toContain('Top spending categories');
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: {
+        visualization: 'cash_flow',
+        selection: null,
       },
     });
-    expect(cashflow.html()).not.toMatch(
-      /Private Drilldown Merchant|Private Audit Row/,
+  });
+
+  it('keeps primary data visible when helper or model-context updates fail', async () => {
+    const harness = runRuntime('cash_flow');
+    harness.sendToolResult(cashFlowResult());
+    harness.callServerTool.mockRejectedValue(
+      new Error('private helper failure'),
+    );
+    harness.updateModelContext.mockRejectedValue(
+      new Error('private context failure'),
     );
 
-    const rules = runRuntime('category_rule_workbench');
-    rules.sendToolResult({
-      app: { id: 'category_rule_workbench' },
-      data: {
-        categories: [{ label: 'Private Category Detail' }],
-        analysisRules: [],
-        categorizationRules: [],
-        recommendations: [],
-      },
-    });
-    rules.dispatchClick({
-      dataset: { detail: JSON.stringify({ secret: 'Private Detail Value' }) },
-      closest() {
-        return this;
-      },
-    });
-    expect(rules.html()).toContain('Private Detail Value');
+    harness.dispatchClick(
+      actionTarget('select-category', { category: 'FOOD_AND_DRINK' }),
+    );
+    await flushPromises();
 
-    rules.sendToolResult({
-      app: { id: 'category_rule_workbench' },
-      data: {
-        categories: [{ label: 'Different Category' }],
-        analysisRules: [],
-        categorizationRules: [],
-        recommendations: [],
-      },
+    expect(harness.html()).toContain('Food And Drink');
+    expect(harness.html()).toContain('Transaction details are unavailable');
+    expect(harness.html()).toContain(
+      'This selection could not be shared with the conversation',
+    );
+    expect(harness.html()).toContain('$750.00');
+    expect(harness.html()).not.toMatch(
+      /Unable to load live Splice data|private helper|private context/,
+    );
+  });
+
+  it('treats a resolved MCP helper error result as locally unavailable', async () => {
+    const harness = runRuntime('cash_flow');
+    harness.sendToolResult(cashFlowResult());
+    harness.callServerTool.mockResolvedValue({
+      isError: true,
+      content: [{ type: 'text', text: 'private protocol error' }],
     });
-    expect(rules.html()).toContain('Different Category');
-    expect(rules.html()).not.toMatch(
-      /Private Category Detail|Private Detail Value/,
+
+    harness.dispatchClick(
+      actionTarget('select-category', { category: 'FOOD_AND_DRINK' }),
+    );
+    await flushPromises();
+
+    expect(harness.html()).toContain('Food And Drink');
+    expect(harness.html()).toContain('Transaction details are unavailable');
+    expect(harness.html()).toContain('$750.00');
+    expect(harness.html()).not.toMatch(
+      /No transactions were returned|Unable to load live Splice data|private protocol error/,
+    );
+  });
+
+  it('clears published selection context when a replacement result arrives', () => {
+    const harness = runRuntime('cash_flow');
+    harness.sendToolResult(cashFlowResult());
+    harness.callServerTool.mockReturnValue(new Promise(() => undefined));
+    harness.dispatchClick(
+      actionTarget('select-category', { category: 'FOOD_AND_DRINK' }),
     );
 
-    rules.dispatchClick({
-      dataset: { detail: JSON.stringify({ secret: 'Second Private Detail' }) },
-      closest() {
-        return this;
+    harness.sendToolResult(
+      cashFlowResult([{ primaryCategory: 'REPLACEMENT', amount: 25 }]),
+    );
+
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: {
+        visualization: 'cash_flow',
+        selection: null,
       },
     });
-    expect(rules.html()).toContain('Second Private Detail');
-    rules.sendRuntimeError();
-    expect(rules.html()).not.toContain('Second Private Detail');
-    rules.sendToolResult({
-      app: { id: 'category_rule_workbench' },
-      data: {
-        categories: [{ label: 'Final Category' }],
-        analysisRules: [],
-        categorizationRules: [],
-        recommendations: [],
+    expect(harness.html()).toContain('Replacement');
+    expect(harness.html()).not.toContain('Selected category');
+  });
+
+  it('clears published selection context when primary data errors', () => {
+    const harness = runRuntime('cash_flow');
+    harness.sendToolResult(cashFlowResult());
+    harness.callServerTool.mockReturnValue(new Promise(() => undefined));
+    harness.dispatchClick(
+      actionTarget('select-category', { category: 'FOOD_AND_DRINK' }),
+    );
+
+    harness.sendRuntimeError();
+
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: {
+        visualization: 'cash_flow',
+        selection: null,
       },
     });
-    expect(rules.html()).toContain('Final Category');
-    expect(rules.html()).not.toMatch(
-      /Private Category Detail|Private Detail Value|Second Private Detail/,
+    expect(harness.html()).toContain('Unable to load live Splice data');
+  });
+
+  it('clears published selection context during teardown', () => {
+    const harness = runRuntime('cash_flow');
+    harness.sendToolResult(cashFlowResult());
+    harness.callServerTool.mockReturnValue(new Promise(() => undefined));
+    harness.dispatchClick(
+      actionTarget('select-category', { category: 'FOOD_AND_DRINK' }),
+    );
+
+    harness.teardown();
+
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: {
+        visualization: 'cash_flow',
+        selection: null,
+      },
+    });
+  });
+
+  it('ignores a deferred old context failure after clearing for a new result', async () => {
+    const harness = runRuntime('cash_flow');
+    harness.sendToolResult(cashFlowResult());
+    harness.callServerTool.mockReturnValue(new Promise(() => undefined));
+    let rejectOldContext: ((reason?: unknown) => void) | undefined;
+    harness.updateModelContext
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            rejectOldContext = reject;
+          }),
+      )
+      .mockResolvedValue({});
+    harness.dispatchClick(
+      actionTarget('select-category', { category: 'FOOD_AND_DRINK' }),
+    );
+    harness.sendToolResult(
+      cashFlowResult([{ primaryCategory: 'CURRENT_RESULT', amount: 25 }]),
+    );
+
+    rejectOldContext?.(new Error('late private context failure'));
+    await flushPromises();
+
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: {
+        visualization: 'cash_flow',
+        selection: null,
+      },
+    });
+    expect(harness.html()).toContain('Current Result');
+    expect(harness.html()).not.toMatch(
+      /Selected category|could not be shared|late private context failure/,
     );
   });
 
   it('ignores an in-flight helper result from an earlier primary result', async () => {
-    const harness = runRuntime('cashflow_explorer');
-    harness.sendToolResult({
-      app: { id: 'cashflow_explorer' },
-      data: {
-        currency: 'USD',
-        totals: {},
-        inflows: [],
-        outflows: [{ primaryCategory: 'OLD_CATEGORY', totalAmount: 1 }],
-      },
-    });
+    const harness = runRuntime('cash_flow');
+    harness.sendToolResult(
+      cashFlowResult([{ primaryCategory: 'OLD_CATEGORY', amount: 10 }]),
+    );
 
     let resolveHelper: ((value: unknown) => void) | undefined;
     harness.callServerTool.mockReturnValue(
@@ -453,21 +569,17 @@ describe('Splice MCP App runtime integration', () => {
       actionTarget('select-category', { category: 'OLD_CATEGORY' }),
     );
 
-    harness.sendToolResult({
-      app: { id: 'cashflow_explorer' },
-      data: {
-        currency: 'USD',
-        totals: {},
-        inflows: [],
-        outflows: [{ primaryCategory: 'NEW_CATEGORY', totalAmount: 2 }],
-      },
-    });
+    harness.sendToolInput({ startDate: '2026-05-01' });
+    expect(harness.html()).toContain('Loading live Splice data');
+    harness.sendToolResult(
+      cashFlowResult([{ primaryCategory: 'NEW_CATEGORY', amount: 20 }]),
+    );
     resolveHelper?.({
       structuredContent: {
         data: [{ merchantName: 'Private Late Helper Result' }],
       },
     });
-    await new Promise<void>((resolve) => setImmediate(resolve));
+    await flushPromises();
 
     expect(harness.html()).toContain('New Category');
     expect(harness.html()).not.toMatch(
@@ -475,68 +587,154 @@ describe('Splice MCP App runtime integration', () => {
     );
   });
 
-  it('starts cashflow reload as a boundary and ignores older helper results', async () => {
-    const harness = runRuntime('cashflow_explorer');
+  it('opens a valid model-supplied category focus and ignores a missing focus', async () => {
+    const focused = runRuntime('cash_flow');
+    focused.callServerTool.mockResolvedValue({
+      structuredContent: { data: [] },
+    });
+    focused.sendToolResult(
+      cashFlowResult(undefined, {
+        focusCategoryPrimary: 'FOOD_AND_DRINK',
+      }),
+    );
+    await flushPromises();
+    expect(focused.callServerTool).toHaveBeenCalledTimes(1);
+    expect(focused.updateModelContext).not.toHaveBeenCalled();
+    expect(focused.html()).toContain('Selected category');
+
+    const missing = runRuntime('cash_flow');
+    missing.sendToolResult(
+      cashFlowResult(undefined, {
+        focusCategoryPrimary: 'MISSING_CATEGORY',
+      }),
+    );
+    expect(missing.callServerTool).not.toHaveBeenCalled();
+    expect(missing.html()).not.toContain('Selected category');
+  });
+
+  it('keeps the overview visible while a focused helper loads and places detail after the selected row', async () => {
+    const harness = runRuntime('cash_flow');
+    let resolveHelper: ((value: unknown) => void) | undefined;
+    harness.callServerTool.mockReturnValue(
+      new Promise((resolve) => {
+        resolveHelper = resolve;
+      }),
+    );
+    harness.sendToolResult(
+      cashFlowResult(
+        [
+          { primaryCategory: 'RENT', amount: 1080 },
+          { primaryCategory: 'GROCERIES', amount: 540 },
+          { primaryCategory: 'FOOD_AND_DRINK', amount: 430 },
+        ],
+        { focusCategoryPrimary: 'GROCERIES' },
+      ),
+    );
+
+    const loadingHtml = harness.html();
+    const groceriesRow = loadingHtml.indexOf('data-category="GROCERIES"');
+    const inlineDetail = loadingHtml.indexOf('id="cash-flow-detail"');
+    const nextCategory = loadingHtml.indexOf('Food And Drink');
+    expect(loadingHtml).toContain('$750.00');
+    expect(loadingHtml).toContain('Top spending categories');
+    expect(loadingHtml).toContain('Loading transaction evidence');
+    expect(groceriesRow).toBeGreaterThan(-1);
+    expect(inlineDetail).toBeGreaterThan(groceriesRow);
+    expect(inlineDetail).toBeLessThan(nextCategory);
+    expect(harness.updateModelContext).not.toHaveBeenCalled();
+
+    resolveHelper?.({
+      structuredContent: {
+        data: [
+          {
+            merchantName: 'Focused Test Merchant',
+            activityDate: '2026-04-10',
+            convertedAmount: mcpMoney(50, 'negative'),
+          },
+        ],
+      },
+    });
+    await flushPromises();
+    expect(harness.html()).toContain('Focused Test Merchant');
+    expect(harness.html()).toContain('Top spending categories');
+    expect(harness.updateModelContext).not.toHaveBeenCalled();
+  });
+
+  it('expands Other when a model-supplied focus is in the long tail', () => {
+    const harness = runRuntime('cash_flow');
+    harness.callServerTool.mockReturnValue(new Promise(() => undefined));
+    harness.sendToolResult(
+      cashFlowResult(
+        Array.from({ length: 6 }, (_, index) => ({
+          primaryCategory: `CATEGORY_${index + 1}`,
+          amount: 100 - index * 10,
+        })),
+        { focusCategoryPrimary: 'CATEGORY_6' },
+      ),
+    );
+
+    expect(harness.html()).toContain('id="cash-flow-other-rows"');
+    expect(harness.html()).toContain('data-category="CATEGORY_6"');
+    expect(harness.html()).toContain('id="cash-flow-detail"');
+  });
+
+  it('renders a purposeful empty state without controls or stale values', () => {
+    const harness = runRuntime('cash_flow');
+    const result = cashFlowResult([]);
+    result.data.current.analysis.totals = {
+      totalInflow: mcpMoney(0),
+      totalOutflow: mcpMoney(0, 'negative'),
+      netFlow: mcpMoney(0),
+      uncategorizedInflow: mcpMoney(0),
+      uncategorizedOutflow: mcpMoney(0, 'negative'),
+    };
+    harness.sendToolResult(result);
+
+    expect(harness.html()).toContain('No spending activity');
+    expect(harness.html()).not.toMatch(/Reload|Search|Audit|type="date"/);
+  });
+
+  it('renders comparison and adjustment evidence while keeping the long tail disclosed', () => {
+    const harness = runRuntime('cash_flow');
+    const categories = Array.from({ length: 7 }, (_, index) => ({
+      primaryCategory: `TEST_CATEGORY_${index + 1}`,
+      amount: 70 - index * 5,
+      transactionCount: index + 1,
+    }));
+    const result = cashFlowResult(categories);
+    const comparison = cashFlowPeriod(
+      categories.map((category) => ({
+        ...category,
+        amount: category.amount - 10,
+      })),
+    );
+    comparison.analysis.startDate = '2026-03-01';
+    comparison.analysis.endDate = '2026-03-31';
+    comparison.adjustments = {
+      affected: true,
+      excludedTransactionCount: 4,
+      neutralizedPairCount: 2,
+    };
     harness.sendToolResult({
-      app: { id: 'cashflow_explorer' },
-      data: {
-        currency: 'USD',
-        totals: {},
-        inflows: [],
-        outflows: [{ primaryCategory: 'OLD_CATEGORY', totalAmount: 1 }],
-      },
+      ...result,
+      data: { ...result.data, comparison },
     });
 
-    let resolveDrilldown: ((value: unknown) => void) | undefined;
-    let resolveAudit: ((value: unknown) => void) | undefined;
-    harness.callServerTool.mockImplementation(({ name }: { name: string }) => {
-      if (name === 'list_cashflow_category_transactions') {
-        return new Promise((resolve) => {
-          resolveDrilldown = resolve;
-        });
-      }
-      if (name === 'get_cashflow_analysis_audit') {
-        return new Promise((resolve) => {
-          resolveAudit = resolve;
-        });
-      }
-      return Promise.resolve({
-        structuredContent: {
-          startDate: '2026-06-01',
-          endDate: '2026-06-30',
-          currency: 'USD',
-          totals: {},
-          inflows: [],
-          outflows: [
-            { primaryCategory: 'NEW_RELOAD_CATEGORY', totalAmount: 2 },
-          ],
-        },
-      });
-    });
-    harness.dispatchClick(
-      actionTarget('select-category', { category: 'OLD_CATEGORY' }),
+    expect(harness.html()).toContain('Mar 1, 2026');
+    expect(harness.html()).toContain(
+      'Exact ranges; values are not normalized for period length',
     );
-    harness.dispatchClick(actionTarget('load-audit'));
-    harness.dispatchClick(actionTarget('reload-cashflow'));
-
-    expect(harness.html()).toContain('Loading live Splice data');
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    resolveDrilldown?.({
-      structuredContent: {
-        data: [{ merchantName: 'Private Late Drilldown' }],
-      },
-    });
-    resolveAudit?.({
-      structuredContent: {
-        rows: [{ merchantName: 'Private Late Audit' }],
-      },
-    });
-    await new Promise<void>((resolve) => setImmediate(resolve));
-
-    expect(harness.html()).toContain('New Reload Category');
+    expect(harness.html()).toContain('Other');
+    expect(harness.html()).not.toContain('Test Category 6');
+    expect(harness.html()).toContain('Current period:');
+    expect(harness.html()).toContain('Comparison period:');
     expect(harness.html()).not.toMatch(
-      /Old Category|Private Late Drilldown|Private Late Audit/,
+      /Uncategorized[\s\S]{0,240}0 transactions/,
     );
+
+    harness.dispatchClick(actionTarget('toggle-other'));
+    expect(harness.html()).toContain('Test Category 6');
+    expect(harness.html()).toContain('Test Category 7');
   });
 
   it('starts portfolio reload as a boundary and ignores older pagination', async () => {
@@ -600,35 +798,6 @@ describe('Splice MCP App runtime integration', () => {
 
     expect(harness.html()).toContain('New Holding');
     expect(harness.html()).not.toMatch(/Old Holding|Private Late Activity/);
-  });
-
-  it('clears live data when a read-only helper tool fails', async () => {
-    const harness = runRuntime('cashflow_explorer');
-    harness.sendToolResult({
-      app: { id: 'cashflow_explorer' },
-      data: {
-        currency: 'USD',
-        totals: {},
-        inflows: [],
-        outflows: [
-          {
-            primaryCategory: 'TEST_CATEGORY',
-            totalAmount: { amount: 42, currency: 'USD' },
-          },
-        ],
-      },
-    });
-    expect(harness.html()).toContain('Test Category');
-    harness.callServerTool.mockRejectedValue(new Error('private helper error'));
-
-    harness.dispatchClick(
-      actionTarget('select-category', { category: 'TEST_CATEGORY' }),
-    );
-    await new Promise<void>((resolve) => setImmediate(resolve));
-
-    expect(harness.html()).toContain('Unable to load live Splice data');
-    expect(harness.html()).not.toContain('private helper error');
-    expect(harness.html()).not.toContain('Test Category');
   });
 
   it('uses snapshotDate, not latestOnly=false, for date-specific holdings reloads', async () => {
@@ -700,96 +869,6 @@ describe('Splice MCP App runtime integration', () => {
       expect.objectContaining({
         arguments: expect.objectContaining({ accountIds: ['old-account'] }),
       }),
-    );
-  });
-
-  it('sends valid projection summaries through the typed runtime API', async () => {
-    const harness = runRuntime('projection_scenario_modeler');
-    harness.sendToolResult({
-      app: { id: 'projection_scenario_modeler' },
-      data: {
-        accounts: [
-          {
-            id: 'account-test',
-            displayName: 'Test Account',
-            balance: { amount: 1000, currency: 'USD' },
-          },
-        ],
-        recurringSchedules: [],
-      },
-    });
-    harness.updateModelContext.mockResolvedValue(undefined);
-    harness.dispatchInput({
-      dataset: { scenarioField: 'horizonDate' },
-      value: '2027-04-30',
-    });
-    harness.dispatchClick(actionTarget('send-scenario'));
-    await Promise.resolve();
-
-    expect(harness.updateModelContext).toHaveBeenCalledWith({
-      content: [expect.objectContaining({ type: 'text' })],
-      structuredContent: expect.objectContaining({
-        scenario: expect.any(Object),
-        summary: expect.any(Object),
-      }),
-    });
-  });
-
-  it('rebases projection account choices before sending model context', async () => {
-    const harness = runRuntime('projection_scenario_modeler');
-    harness.sendToolResult({
-      app: { id: 'projection_scenario_modeler' },
-      data: {
-        accounts: [
-          {
-            id: 'old-account',
-            displayName: 'Old Account',
-            balance: { amount: 1000, currency: 'USD' },
-          },
-        ],
-        recurringSchedules: [],
-      },
-    });
-    harness.dispatchClick({
-      checked: false,
-      dataset: { action: 'toggle-account', account: 'old-account' },
-      closest() {
-        return this;
-      },
-    });
-
-    harness.sendToolResult({
-      app: { id: 'projection_scenario_modeler' },
-      data: {
-        accounts: [
-          {
-            id: 'new-account',
-            displayName: 'New Account',
-            balance: { amount: 2000, currency: 'USD' },
-          },
-        ],
-        recurringSchedules: [],
-      },
-    });
-    harness.updateModelContext.mockResolvedValue(undefined);
-    harness.dispatchInput({
-      dataset: { scenarioField: 'horizonDate' },
-      value: '2027-04-30',
-    });
-    harness.dispatchClick(actionTarget('send-scenario'));
-    await Promise.resolve();
-
-    expect(harness.updateModelContext).toHaveBeenCalledWith(
-      expect.objectContaining({
-        structuredContent: expect.objectContaining({
-          scenario: expect.objectContaining({
-            selectedAccounts: { 'new-account': true },
-          }),
-        }),
-      }),
-    );
-    expect(JSON.stringify(harness.updateModelContext.mock.calls)).not.toContain(
-      'old-account',
     );
   });
 });

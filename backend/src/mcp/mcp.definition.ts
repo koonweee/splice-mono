@@ -43,6 +43,7 @@ import {
   CashflowAnalysisOutputSchema,
   CashflowAuditOutputSchema,
   CashflowCategoryTransactionsOutputSchema,
+  CashFlowVisualizationOutputSchema,
   CategoriesOutputSchema,
   CategorizationRuleApplicationPreviewOutputSchema,
   CategorizationRuleDraftPreviewOutputSchema,
@@ -64,6 +65,7 @@ import {
   DateStringSchema,
   UuidSchema,
   assertDateRange,
+  mcpCashFlowAdjustmentSummary,
   mcpCashflowAnalysis,
   registerSpliceMcpExtensions,
 } from './mcp.extensions';
@@ -318,10 +320,8 @@ export const SPLICE_MCP_TOOL_NAMES = [
   'get_cashflow_analysis',
   'list_cashflow_category_transactions',
   'get_cashflow_analysis_audit',
-  'show_cashflow_explorer',
-  'show_projection_scenario_modeler',
+  'visualize_cash_flow',
   'show_portfolio_viewer',
-  'show_category_rule_workbench',
   'collect_projection_assumptions',
 ] as const;
 
@@ -1062,72 +1062,111 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
     ),
 
     createSpliceTool(
-      'show_cashflow_explorer',
+      'visualize_cash_flow',
       {
-        title: 'Show Cashflow Explorer',
+        title: 'Visualize Cash Flow',
         description:
-          'Return an MCP Apps UI for exploring rule-adjusted cash-flow totals and category drilldowns, with structured fallback data.',
+          'Render a concise Cash Flow visualization for an actual user question about cash flow, spending, income, or comparing exact periods when visual evidence adds value. Do not call for capability discovery, hypothetical discussion, metadata questions, or simple facts that prose answers clearly.',
         inputSchema: {
-          startDate: DateStringSchema,
-          endDate: DateStringSchema,
+          startDate: DateStringSchema.describe(
+            'Inclusive current-period start date in YYYY-MM-DD.',
+          ),
+          endDate: DateStringSchema.describe(
+            'Inclusive current-period end date in YYYY-MM-DD.',
+          ),
+          direction: z
+            .enum(['outflow', 'inflow'])
+            .optional()
+            .default('outflow')
+            .describe(
+              'Category direction to emphasize. Defaults to outflow; use inflow for income questions.',
+            ),
+          focusCategoryPrimary: z
+            .string()
+            .trim()
+            .min(1)
+            .optional()
+            .describe(
+              'Optional exact primary category identity to focus when it exists in the selected direction.',
+            ),
+          comparison: z
+            .object({
+              startDate: DateStringSchema.describe(
+                'Inclusive comparison-period start date in YYYY-MM-DD.',
+              ),
+              endDate: DateStringSchema.describe(
+                'Inclusive comparison-period end date in YYYY-MM-DD.',
+              ),
+            })
+            .strict()
+            .optional()
+            .describe(
+              'Optional exact comparison range. Both dates are required; no period is inferred.',
+            ),
         },
-        outputSchema: AppToolOutputSchema,
+        outputSchema: CashFlowVisualizationOutputSchema,
         requiredScopes: ['splice:read'],
         risk: { kind: 'read' },
         ui: {
-          resourceUri: APP_RESOURCES.cashflowExplorer.resourceUri,
+          resourceUri: APP_RESOURCES.cashFlow.resourceUri,
           visibility: ['model', 'app'],
         },
       },
       async (input, dependencies) => {
         assertDateRange(input.startDate, input.endDate);
-        const analysis = mcpCashflowAnalysis(
-          await dependencies.transactionAnalysisService.getAnalysis(
-            input.startDate,
-            input.endDate,
-            dependencies.userId,
-          ),
-        );
+        if (input.comparison) {
+          assertDateRange(input.comparison.startDate, input.comparison.endDate);
+        }
+
+        const loadPeriod = async (startDate: string, endDate: string) => {
+          const [analysis, audit] = await Promise.all([
+            dependencies.transactionAnalysisService.getAnalysis(
+              startDate,
+              endDate,
+              dependencies.userId,
+            ),
+            dependencies.transactionAnalysisService.getAnalysisAudit(
+              startDate,
+              endDate,
+              dependencies.userId,
+            ),
+          ]);
+
+          return {
+            analysis: mcpCashflowAnalysis(analysis),
+            adjustments: mcpCashFlowAdjustmentSummary(audit),
+          };
+        };
+
+        const [current, comparison] = await Promise.all([
+          loadPeriod(input.startDate, input.endDate),
+          input.comparison
+            ? loadPeriod(input.comparison.startDate, input.comparison.endDate)
+            : Promise.resolve(undefined),
+        ]);
+        const categories =
+          input.direction === 'inflow'
+            ? current.analysis.inflows
+            : current.analysis.outflows;
+        const focusCategoryPrimary = categories.some(
+          (category) => category.primaryCategory === input.focusCategoryPrimary,
+        )
+          ? input.focusCategoryPrimary
+          : undefined;
 
         return appToolResult(
-          APP_RESOURCES.cashflowExplorer,
-          'Use the structured cash-flow analysis data to summarize income, outflows, categories, and rule-adjusted totals.',
-          analysis,
+          APP_RESOURCES.cashFlow,
+          'Use the exact current and optional comparison periods, presentation focus, category breakdowns, and adjustment counts to answer the cash-flow question when the App cannot render.',
+          {
+            presentation: {
+              direction: input.direction,
+              ...(focusCategoryPrimary ? { focusCategoryPrimary } : undefined),
+            },
+            current,
+            comparison,
+          },
         );
       },
-    ),
-
-    createSpliceTool(
-      'show_projection_scenario_modeler',
-      {
-        title: 'Show Projection Scenario Modeler',
-        description:
-          'Return an MCP Apps UI for collecting non-persistent projection assumptions and reviewing current projection baselines.',
-        inputSchema: {},
-        outputSchema: AppToolOutputSchema,
-        requiredScopes: ['splice:read'],
-        risk: { kind: 'read' },
-        ui: {
-          resourceUri: APP_RESOURCES.projectionScenarioModeler.resourceUri,
-          visibility: ['model', 'app'],
-        },
-      },
-      async (_input, dependencies) =>
-        appToolResult(
-          APP_RESOURCES.projectionScenarioModeler,
-          'Collect non-sensitive projection assumptions, then use get_accounts_snapshot, list_balance_snapshots, and list_recurring_manual_transaction_schedules for baselines.',
-          {
-            accounts:
-              await dependencies.accountsSurfaceService.getAccountsSnapshot(
-                dependencies.userId,
-              ),
-            recurringSchedules:
-              await dependencies.mcpReadService.listRecurringManualTransactionSchedules(
-                dependencies.userId,
-                {},
-              ),
-          },
-        ),
     ),
 
     createSpliceTool(
@@ -1165,47 +1204,6 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
                 pageSize: 25,
               },
             ),
-          },
-        ),
-    ),
-
-    createSpliceTool(
-      'show_category_rule_workbench',
-      {
-        title: 'Show Category Rule Workbench',
-        description:
-          'Return an MCP Apps UI for read-only category, analysis rule, categorization rule, and recommendation context.',
-        inputSchema: {},
-        outputSchema: AppToolOutputSchema,
-        requiredScopes: ['splice:read'],
-        risk: { kind: 'read' },
-        ui: {
-          resourceUri: APP_RESOURCES.categoryRuleWorkbench.resourceUri,
-          visibility: ['model', 'app'],
-        },
-      },
-      async (_input, dependencies) =>
-        appToolResult(
-          APP_RESOURCES.categoryRuleWorkbench,
-          'Use category and rule fallback data to explain category metadata, cash-flow rules, categorization automation, and pending recommendations.',
-          {
-            categories: await dependencies.mcpReadService.listCategories(
-              dependencies.userId,
-              {},
-            ),
-            analysisRules: await dependencies.mcpReadService.listAnalysisRules(
-              dependencies.userId,
-              {},
-            ),
-            categorizationRules:
-              await dependencies.mcpReadService.listCategorizationRules(
-                dependencies.userId,
-                {},
-              ),
-            recommendations:
-              await dependencies.mcpReadService.listCategorizationRuleRecommendations(
-                dependencies.userId,
-              ),
           },
         ),
     ),

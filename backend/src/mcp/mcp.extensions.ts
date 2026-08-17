@@ -13,9 +13,11 @@ import { z } from 'zod';
 import { getDecimalPlaces, MoneySign } from '../types/MoneyWithSign';
 import type {
   CategoryAggregate,
+  TransactionAnalysisAuditResponse,
   TransactionAnalysisResponse,
 } from '../types/TransactionAnalysis';
 import { normalizeMcpMoney, type McpMoney } from './mcp-money';
+import type { CashFlowAdjustmentSummary } from './mcp-schemas';
 import type { SpliceMcpDependencies } from './mcp.definition';
 
 export const DateStringSchema = z
@@ -46,7 +48,7 @@ Available prompts: monthly_cashflow_review, projection_builder, category_cleanup
 
 Prefer resource templates for reusable report reads when a client asks for a durable report URI: splice://reports/cashflow/{startDate}/{endDate}, splice://accounts/{accountId}/snapshot, splice://categories/taxonomy, splice://rules/analysis, and splice://portfolio/holdings/latest.
 
-MCP Apps are progressive enhancement. Use app-backed show_* tools when the host supports MCP Apps; otherwise use each tool's fallback structuredContent and continue with text. App panes are interactive and read-only: Cashflow Explorer can refresh date ranges, drill into categories, and load audit effects; Projection Scenario Modeler can calculate in-session assumptions without saving them; Portfolio Viewer can filter, sort, and page investment reads; Category Rule Workbench can search, filter, inspect details, and load audit effects without accepting, dismissing, applying, creating, editing, or archiving rules. App resources declare restrictive CSP metadata and call only existing read-only MCP tools through the host bridge.
+MCP Apps are progressive enhancement. Use visualize_cash_flow selectively when an actual spending, income, cash-flow, or comparison question benefits from concise visual evidence; do not use it for capability discovery, metadata, hypotheticals, or simple facts that prose communicates clearly. The Cash Flow App is read-only and receives its exact period, direction, optional focus, and optional comparison from the conversation. Portfolio Viewer remains an interactive, read-only view for filtering, sorting, and paging investment reads. Every App-backed tool preserves complete fallback structuredContent for hosts without App support.
 
 Projection assumption input is optional and non-persistent. collect_projection_assumptions uses the official input-required/resume flow. Clients that decline or cancel receive a structured fallback describing the fields they can ask about normally.
 
@@ -144,6 +146,24 @@ export function mcpCashflowAnalysis(analysis: TransactionAnalysisResponse) {
     outflows: analysis.outflows.map((category) =>
       mcpCategoryAggregate(category, MoneySign.NEGATIVE),
     ),
+  };
+}
+
+export function mcpCashFlowAdjustmentSummary(
+  audit: TransactionAnalysisAuditResponse,
+): CashFlowAdjustmentSummary {
+  let excludedTransactionCount = 0;
+  let neutralizedPairCount = 0;
+
+  for (const row of audit.rows) {
+    if (row.type === 'excluded') excludedTransactionCount += 1;
+    else if (row.type === 'neutralized') neutralizedPairCount += 1;
+  }
+
+  return {
+    affected: excludedTransactionCount > 0 || neutralizedPairCount > 0,
+    excludedTransactionCount,
+    neutralizedPairCount,
   };
 }
 
@@ -433,7 +453,6 @@ export function registerSpliceMcpExtensions(
   3. Call list_balance_snapshots for historical baselines and page when needed.
   4. Call list_recurring_manual_transaction_schedules for known recurring assumptions.
   5. Call collect_projection_assumptions if the host supports elicitation, or ask the user for the returned inputRequired fields.
-  6. Use show_projection_scenario_modeler when MCP Apps are supported.
 
   Do not invent future income, expense, return, allocation, or one-time-event assumptions.`);
     }),
@@ -459,7 +478,6 @@ export function registerSpliceMcpExtensions(
   2. Call list_categories with includeArchived when historical context is needed.
   3. Call list_transactions with categoryId UNCATEGORIZED and page fully for uncategorized rows.
   4. Call list_categorization_rules and list_categorization_rule_recommendations.
-  5. Use show_category_rule_workbench when MCP Apps are supported.
 
   Provider category hints are guidance only; category filters are user-category filters.`);
     }),

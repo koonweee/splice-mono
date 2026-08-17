@@ -11,6 +11,10 @@
   "scripts": {
     "build": "yarn build:mcp-apps && nest build",
     "build:mcp-apps": "node src/mcp/apps/build-app-runtime.mjs",
+    "mcp-apps:setup": "node scripts/mcp-apps/prepare-host.mjs --install",
+    "mcp-apps:dev": "node scripts/mcp-apps/dev.mjs",
+    "mcp-apps:visual": "node scripts/mcp-apps/visual.mjs",
+    "test:mcp-apps": "jest --runInBand test/mcp/mcp-cash-flow-model.spec.ts test/mcp/mcp-app-runtime.spec.ts test/mcp/mcp.service.spec.ts test/mcp/mcp.runtime.spec.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
