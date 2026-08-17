@@ -376,6 +376,41 @@ These steps intentionally separate repository automation from Auth0, DNS, and
 live deployment mutations. Do not put a real bearer token in shell history,
 fixtures, documentation, screenshots, or chat.
 
+### 2026-08-17 MCP App widget-domain rollout record
+
+- Splice application commit: `e6be8c3b8638524e56209a312d928f11876e0217`;
+  protected deploy revision: `2a8d9350c701914f52580fe281a944d41e649ec8`;
+  deploy workflow run: `32010686463`.
+- The declarative stack remained unchanged at `605ec5a`: the existing
+  `splice-mcp.kw0.dev` HTTPS router, TLS, port `3001`, and `external-web`
+  attachment are sufficient because `_meta.ui.domain` reuses that canonical
+  origin. Both the base and merged SF Compose configurations rendered cleanly.
+- Komodo build update `6a82c6f9d28c58b2ef3be8d9` published backend
+  version `0.0.95`; targeted `splice-app-sf` deployment update
+  `6a82c876d28c58b2ef3be929` completed successfully.
+- Deployed backend image digest:
+  `sha256:c8633213a86eebd7d45309ba00df65fcacdc3a564691f697201c626442dde6ab`;
+  installed mcp-kit: `0.3.1`. The SF backend was healthy as a single instance
+  on the default and `external-web` networks with no host port publication.
+- Public health and protected-resource discovery returned `200`; discovery
+  advertised the canonical resource, `https://auth.kw0.dev/`, and exactly
+  `splice:read` plus `splice:write`. Unauthenticated MCP returned the sanitized
+  `401` bearer challenge, the old API-origin `/mcp` returned `404`, and the
+  existing frontend returned `200`.
+- Authenticated remote calls passed for `get_user_context` and all four
+  `show_*` App tools. Each App result retained its JSON/text fallback and linked
+  the expected `ui://splice/...` resource. Production startup logs showed the
+  MCP and Nest listeners starting successfully without an error.
+- ChatGPT's existing installed plugin continued to display the cached
+  pre-deploy template descriptors until an explicit **Refresh**. This is
+  expected client caching, not a server or deployment failure.
+
+Immediate rollback inputs for this metadata rollout are protected deploy
+revision `219fbc9f2c80d704c718830f2ce4c74e32e45177`, stack revision `605ec5a`,
+and backend image
+`sha256:61ff8f214325bc5a68fc5bce5fcc8711935fd8726aad60605da4fd19c5ec7715`.
+No database, Auth0, DNS, or stack-schema change was part of this rollout.
+
 ### 2026-08-16 rollout record
 
 - Splice application commit: `487fbb68b617b744e237c9a91db311c0d74ab65d`;
@@ -490,17 +525,28 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
 
 ## Rollback
 
-For the 2026-08-16 rollout, the recorded rollback inputs are Splice `main`
-`5a35640`, Splice `deploy` `4e3ad53`, stack `0e19c2b` (deployed stack source
-`758e75a`), and backend image
+For the 2026-08-17 App metadata rollout, the immediate known-good rollback
+inputs are Splice protected deploy revision
+`219fbc9f2c80d704c718830f2ce4c74e32e45177`, stack `605ec5a`, and backend image
+`sha256:61ff8f214325bc5a68fc5bce5fcc8711935fd8726aad60605da4fd19c5ec7715`.
+That image is the successful 2026-08-16 OAuth MCP deployment; rolling back to it
+removes the submission-ready App widget metadata while preserving the OAuth
+endpoint and all domain data.
+
+For a full rollback behind the OAuth cutover, the older recorded inputs are
+Splice `main` `5a35640`, Splice `deploy` `4e3ad53`, stack `0e19c2b` (deployed
+stack source `758e75a`), and backend image
 `sha256:d881a9bbd395c7919326b13667c3ce841e53a8e29a872763bd4159a8e0aa4151`.
-For later rollouts, replace these with newly recorded values before deploying.
+Use that larger rollback only when intentionally reverting the OAuth MCP
+cutover. For later rollouts, replace these values with newly recorded inputs
+before deploying.
 
 Redeploy the recorded known-good backend image/application revision and prior
 stack revision. Verify the existing frontend, API login, PAT-backed REST
 automation, transaction flows, and scheduled work. Auth0 and DNS configuration
 may remain unused; no database rollback or data transformation is required.
 
-After rollback, confirm the public MCP hostname no longer reaches the failed
-listener and record whether DNS should remain for a retry or be removed. Never
-point `splice-mcp.kw0.dev` at the API-origin PAT service as a compatibility path.
+After a full cutover rollback, confirm the public MCP hostname no longer reaches
+the failed listener and record whether DNS should remain for a retry or be
+removed. An App-metadata-only rollback keeps that hostname live. Never point
+`splice-mcp.kw0.dev` at the API-origin PAT service as a compatibility path.
