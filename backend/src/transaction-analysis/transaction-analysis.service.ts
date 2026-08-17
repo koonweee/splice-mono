@@ -74,10 +74,7 @@ export class TransactionAnalysisService {
     endDate: string,
     userId: string,
   ): Promise<TransactionAnalysisResponse> {
-    this.logger.log(
-      { startDate, endDate, userId },
-      'Getting transaction analysis',
-    );
+    this.logger.log('Getting transaction analysis');
 
     // 1. Get user's preferred currency
     const preferredCurrency =
@@ -98,9 +95,6 @@ export class TransactionAnalysisService {
       candidateEndDate,
       userId,
     );
-    const reportTransactions = candidateTransactions.filter((transaction) =>
-      this.isTransactionInDateRange(transaction, startDate, endDate),
-    );
     const { remainingReportTransactions } = await this.applyAnalysisRules(
       candidateTransactions,
       userId,
@@ -108,16 +102,7 @@ export class TransactionAnalysisService {
       endDate,
     );
 
-    this.logger.log(
-      {
-        candidateTransactionCount: candidateTransactions.length,
-        reportTransactionCount: reportTransactions.length,
-        unmatchedTransactionCount: remainingReportTransactions.length,
-        preferredCurrency,
-        neutralizationLookaroundDays,
-      },
-      'Transaction analysis rows loaded',
-    );
+    this.logger.log('Transaction analysis rows loaded');
 
     // 3. Identify currencies that need conversion and fetch rates
     const foreignCurrencies = [
