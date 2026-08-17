@@ -402,8 +402,12 @@ fixtures, documentation, screenshots, or chat.
   the expected `ui://splice/...` resource. Production startup logs showed the
   MCP and Nest listeners starting successfully without an error.
 - ChatGPT's existing installed plugin continued to display the cached
-  pre-deploy template descriptors until an explicit **Refresh**. This is
-  expected client caching, not a server or deployment failure.
+  pre-deploy template descriptors until an explicit **Refresh**. After refresh,
+  all four templates advertised `https://splice-mcp.kw0.dev` through both the
+  standard `ui.domain` field and the enabled `openai/widgetDomain` compatibility
+  alias; the “Widget domain is not set” warning count was zero and the browser
+  console contained no error. This confirms the earlier warning was expected
+  client caching, not a server or deployment failure.
 
 Immediate rollback inputs for this metadata rollout are protected deploy
 revision `219fbc9f2c80d704c718830f2ce4c74e32e45177`, stack revision `605ec5a`,
