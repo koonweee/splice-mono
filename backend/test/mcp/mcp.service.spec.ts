@@ -2,6 +2,7 @@ import {
   createMcpServer,
   createRequestContext,
   silentLogger,
+  validateMcpApps,
 } from '@koonweee/mcp-kit';
 import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
 import {
@@ -15,6 +16,7 @@ import {
   createSpliceMcpDependencies,
   spliceMcpDefinition,
 } from '../../src/mcp/mcp.definition';
+import { createSpliceMcpAppResources } from '../../src/mcp/mcp-apps';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import { PRE_PORT_MCP_CONTRACT } from './fixtures/pre-port-contract';
 
@@ -109,9 +111,10 @@ describe('Splice MCP definition', () => {
   function createServer(
     userId: string,
     scopes: readonly string[] = ['splice:read', 'splice:write'],
+    definition: typeof spliceMcpDefinition = spliceMcpDefinition,
   ): Promise<McpServer> {
     return createMcpServer(
-      spliceMcpDefinition,
+      definition,
       createRequestContext({
         requestId: 'mcp-service-spec',
         principal: {
@@ -250,6 +253,38 @@ describe('Splice MCP definition', () => {
     } finally {
       await close();
     }
+  });
+
+  it('passes the OpenAI submission profile with scoped App resources', () => {
+    expect(() =>
+      validateMcpApps(spliceMcpDefinition, {
+        profile: 'openai-submission',
+      }),
+    ).not.toThrow();
+    expect(spliceMcpDefinition.apps?.resources).toHaveLength(4);
+    expect(
+      spliceMcpDefinition.apps?.resources.map((resource) => ({
+        uri: resource.uri,
+        requiredScopes: resource.requiredScopes,
+      })),
+    ).toEqual([
+      {
+        uri: 'ui://splice/cashflow-explorer.html',
+        requiredScopes: ['splice:read'],
+      },
+      {
+        uri: 'ui://splice/projection-scenario-modeler.html',
+        requiredScopes: ['splice:read'],
+      },
+      {
+        uri: 'ui://splice/portfolio-viewer.html',
+        requiredScopes: ['splice:read'],
+      },
+      {
+        uri: 'ui://splice/category-rule-workbench.html',
+        requiredScopes: ['splice:read'],
+      },
+    ]);
   });
 
   it('matches the frozen pre-port MCP contract parity oracle', async () => {
@@ -449,23 +484,51 @@ describe('Splice MCP definition', () => {
         ]),
       );
 
-      const app = await client.readResource({
-        uri: 'ui://splice/cashflow-explorer.html',
-      });
-      expect(app.contents[0]).toMatchObject({
-        mimeType: 'text/html;profile=mcp-app',
-        _meta: {
-          ui: {
-            csp: {
-              connectDomains: [],
-              resourceDomains: [],
-              frameDomains: [],
-              baseUriDomains: [],
-            },
-            prefersBorder: true,
+      const appUris = [
+        'ui://splice/cashflow-explorer.html',
+        'ui://splice/projection-scenario-modeler.html',
+        'ui://splice/portfolio-viewer.html',
+        'ui://splice/category-rule-workbench.html',
+      ];
+      for (const uri of appUris) {
+        expect(
+          resources.resources.find((resource) => resource.uri === uri),
+        ).toMatchObject({
+          _meta: {
+            ui: { domain: 'https://splice-mcp.kw0.dev' },
+            'openai/widgetDomain': 'https://splice-mcp.kw0.dev',
           },
-        },
-      });
+        });
+      }
+      const appReads = await Promise.all(
+        appUris.map((uri) => client.readResource({ uri })),
+      );
+      for (const [index, appRead] of appReads.entries()) {
+        expect(appRead.contents[0]).toMatchObject({
+          uri: appUris[index],
+          mimeType: 'text/html;profile=mcp-app',
+          _meta: {
+            ui: {
+              domain: 'https://splice-mcp.kw0.dev',
+              csp: {
+                connectDomains: [],
+                resourceDomains: [],
+                frameDomains: [],
+                baseUriDomains: [],
+              },
+              prefersBorder: true,
+            },
+            'openai/widgetDomain': 'https://splice-mcp.kw0.dev',
+            'openai/widgetCSP': {
+              connect_domains: [],
+              resource_domains: [],
+              frame_domains: [],
+            },
+            'openai/widgetPrefersBorder': true,
+          },
+        });
+      }
+      const app = appReads[0];
       expect('text' in app.contents[0] ? app.contents[0].text : '').toContain(
         'data-splice-mcp-app',
       );
@@ -525,10 +588,23 @@ describe('Splice MCP definition', () => {
   });
 
   it('requires splice:read before every guide, App, and data resource read', async () => {
-    const { client, close } = await connect(createServer(mockUserId, []));
+    const renderApp = jest.fn(() => '<html>scope check failed</html>');
+    const scopedDefinition = {
+      ...spliceMcpDefinition,
+      apps: {
+        ...spliceMcpDefinition.apps,
+        resources: createSpliceMcpAppResources(renderApp),
+      },
+    };
+    const { client, close } = await connect(
+      createServer(mockUserId, [], scopedDefinition),
+    );
     const resourceUris = [
       'splice://mcp-guide',
       'ui://splice/cashflow-explorer.html',
+      'ui://splice/projection-scenario-modeler.html',
+      'ui://splice/portfolio-viewer.html',
+      'ui://splice/category-rule-workbench.html',
       'splice://reports/cashflow/2026-03-01/2026-03-31',
       `splice://accounts/${mockAccountId}/snapshot`,
       'splice://categories/taxonomy',
@@ -549,6 +625,7 @@ describe('Splice MCP definition', () => {
       expect(mcpReadService.listAnalysisRules).not.toHaveBeenCalled();
       expect(mcpReadService.listCategorizationRules).not.toHaveBeenCalled();
       expect(mcpReadService.listInvestmentHoldings).not.toHaveBeenCalled();
+      expect(renderApp).not.toHaveBeenCalled();
     } finally {
       await close();
     }
@@ -1393,6 +1470,25 @@ describe('Splice MCP definition', () => {
       pageInfo: { nextCursor: null, hasMore: false },
       query: {},
     });
+    accountsSurfaceService.getAccountsSnapshot.mockResolvedValue({
+      accounts: [],
+    });
+    mcpReadService.listRecurringManualTransactionSchedules.mockResolvedValue({
+      data: [],
+      query: {},
+    });
+    mcpReadService.listCategories.mockResolvedValue({ data: [], query: {} });
+    mcpReadService.listAnalysisRules.mockResolvedValue({
+      data: [],
+      query: {},
+    });
+    mcpReadService.listCategorizationRules.mockResolvedValue({
+      data: [],
+      query: {},
+    });
+    mcpReadService.listCategorizationRuleRecommendations.mockResolvedValue({
+      data: [],
+    });
 
     const { client, close } = await connect(createServer(mockUserId));
 
@@ -1406,7 +1502,6 @@ describe('Splice MCP definition', () => {
           resourceUri: 'ui://splice/cashflow-explorer.html',
           visibility: ['model', 'app'],
         },
-        'ui/resourceUri': 'ui://splice/cashflow-explorer.html',
         'openai/outputTemplate': 'ui://splice/cashflow-explorer.html',
       });
       expect(
@@ -1418,7 +1513,7 @@ describe('Splice MCP definition', () => {
           resourceUri: 'ui://splice/projection-scenario-modeler.html',
           visibility: ['model', 'app'],
         },
-        'ui/resourceUri': 'ui://splice/projection-scenario-modeler.html',
+        'openai/outputTemplate': 'ui://splice/projection-scenario-modeler.html',
       });
       expect(
         tools.tools.find((tool) => tool.name === 'show_portfolio_viewer')
@@ -1428,7 +1523,7 @@ describe('Splice MCP definition', () => {
           resourceUri: 'ui://splice/portfolio-viewer.html',
           visibility: ['model', 'app'],
         },
-        'ui/resourceUri': 'ui://splice/portfolio-viewer.html',
+        'openai/outputTemplate': 'ui://splice/portfolio-viewer.html',
       });
       expect(
         tools.tools.find((tool) => tool.name === 'show_category_rule_workbench')
@@ -1438,32 +1533,60 @@ describe('Splice MCP definition', () => {
           resourceUri: 'ui://splice/category-rule-workbench.html',
           visibility: ['model', 'app'],
         },
-        'ui/resourceUri': 'ui://splice/category-rule-workbench.html',
+        'openai/outputTemplate': 'ui://splice/category-rule-workbench.html',
       });
 
-      const cashflow = (await client.callTool({
-        name: 'show_cashflow_explorer',
-        arguments: {
-          startDate: '2026-03-01',
-          endDate: '2026-03-31',
+      const appCalls = [
+        {
+          name: 'show_cashflow_explorer',
+          arguments: {
+            startDate: '2026-03-01',
+            endDate: '2026-03-31',
+          },
+          app: {
+            id: 'cashflow_explorer',
+            resourceUri: 'ui://splice/cashflow-explorer.html',
+          },
         },
-      })) as CallToolResult;
-      expect(cashflow.structuredContent).toMatchObject({
-        app: {
-          id: 'cashflow_explorer',
-          resourceUri: 'ui://splice/cashflow-explorer.html',
+        {
+          name: 'show_projection_scenario_modeler',
+          arguments: {},
+          app: {
+            id: 'projection_scenario_modeler',
+            resourceUri: 'ui://splice/projection-scenario-modeler.html',
+          },
         },
-      });
+        {
+          name: 'show_portfolio_viewer',
+          arguments: { accountIds: [mockAccountId] },
+          app: {
+            id: 'portfolio_viewer',
+            resourceUri: 'ui://splice/portfolio-viewer.html',
+          },
+        },
+        {
+          name: 'show_category_rule_workbench',
+          arguments: {},
+          app: {
+            id: 'category_rule_workbench',
+            resourceUri: 'ui://splice/category-rule-workbench.html',
+          },
+        },
+      ] as const;
 
-      const portfolio = (await client.callTool({
-        name: 'show_portfolio_viewer',
-        arguments: {
-          accountIds: [mockAccountId],
-        },
-      })) as CallToolResult;
-      expect(portfolio.structuredContent).toMatchObject({
-        app: { id: 'portfolio_viewer' },
-      });
+      for (const appCall of appCalls) {
+        const result = (await client.callTool({
+          name: appCall.name,
+          arguments: appCall.arguments,
+        })) as CallToolResult;
+        expect(result.structuredContent).toMatchObject({ app: appCall.app });
+        const text = result.content.find(
+          (content): content is Extract<typeof content, { type: 'text' }> =>
+            content.type === 'text',
+        )?.text;
+        expect(JSON.parse(text ?? '{}')).toEqual(result.structuredContent);
+      }
+
       expect(mcpReadService.listInvestmentHoldings).toHaveBeenCalledWith(
         mockUserId,
         { accountIds: [mockAccountId] },

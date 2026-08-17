@@ -1,6 +1,8 @@
 import {
+  defineAppResource,
   defineServer,
   defineTool,
+  validateMcpApps,
   type McpToolResult,
 } from '@koonweee/mcp-kit';
 import {
@@ -25,6 +27,21 @@ const ContractFixtureConfirmationSchema = z.object({
   confirmed: z.boolean(),
 });
 
+export const mcpKitContractFixtureApp =
+  defineAppResource<ContractFixtureDependencies>()({
+    name: 'mcp_kit_contract_fixture_app',
+    uri: 'ui://fixture/contract.html',
+    title: 'MCP Kit Contract Fixture App',
+    requiredScopes: ['fixture:read'],
+    ui: {
+      domain: 'https://fixture.example.com',
+      csp: { connectDomains: [], resourceDomains: [] },
+      prefersBorder: true,
+    },
+    html: async (context) =>
+      `<p>${await context.dependencies.lookup('fixture-app')}</p>`,
+  });
+
 export const mcpKitContractFixtureTool =
   defineTool<ContractFixtureDependencies>()({
     name: 'mcp_kit_contract_fixture',
@@ -35,10 +52,9 @@ export const mcpKitContractFixtureTool =
     outputSchema: ContractFixtureOutputSchema,
     requiredScopes: ['fixture:read'],
     risk: { kind: 'read' },
-    _meta: {
-      ui: {
-        resourceUri: 'ui://fixture/contract.html',
-      },
+    ui: {
+      resourceUri: mcpKitContractFixtureApp.uri,
+      visibility: ['model', 'app'],
     },
     handler: async (
       input,
@@ -86,5 +102,13 @@ export const mcpKitContractFixtureDefinition =
   defineServer<ContractFixtureDependencies>()({
     name: 'mcp-kit-contract-fixture',
     version: '1.0.0',
+    apps: {
+      resources: [mcpKitContractFixtureApp],
+      compatibility: { openaiLegacyAliases: true },
+    },
     tools: [mcpKitContractFixtureTool],
   });
+
+validateMcpApps(mcpKitContractFixtureDefinition, {
+  profile: 'openai-submission',
+});

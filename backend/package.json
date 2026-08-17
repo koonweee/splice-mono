@@ -48,7 +48,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.65",
     "@asteasolutions/zod-to-openapi": "^8.1.0",
-    "@koonweee/mcp-kit": "0.2.3",
+    "@koonweee/mcp-kit": "0.3.1",
     "@mastra/core": "1.58.0",
     "@modelcontextprotocol/server": "2.0.0",
     "@nestjs/common": "^11.0.1",

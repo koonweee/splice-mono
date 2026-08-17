@@ -168,6 +168,96 @@ describe('McpCategorizationService', () => {
     expect(created.rule).toMatchObject({ id: ruleId });
   });
 
+  it('accepts reordered normalized conditions and an omitted priority', async () => {
+    const draftConditions: CategorizationRuleCondition[] = [
+      {
+        field: 'providerCategoryDetailed',
+        operator: 'equals',
+        value: ' FOOD_AND_DRINK_BEER_WINE_AND_LIQUOR ',
+      },
+      { field: 'amountSign', operator: 'equals', value: 'negative' },
+    ];
+    transactionCategorizationService.previewDraftRuleApplication.mockResolvedValue(
+      {
+        matched: 4,
+        updated: 4,
+        skippedManual: 0,
+        manualAgreement: 4,
+        manualConflicts: 0,
+        existingRuleOverlap: 0,
+        transactions: [],
+      },
+    );
+    transactionCategorizationService.create.mockResolvedValue({ id: ruleId });
+
+    const preview = await service.previewDraft(userId, {
+      targetCategoryId: categoryId,
+      conditions: draftConditions,
+    });
+    await service.createRule(userId, {
+      name: 'Eating out',
+      targetCategoryId: categoryId,
+      priority: undefined,
+      conditions: [
+        { field: 'amountSign', operator: 'equals', value: 'negative' },
+        {
+          field: 'providerCategoryDetailed',
+          operator: 'equals',
+          value: 'food_and_drink_beer_wine_and_liquor',
+        },
+      ],
+      previewToken: preview.previewToken,
+    });
+
+    expect(transactionCategorizationService.create).toHaveBeenCalledWith(
+      userId,
+      expect.objectContaining({
+        priority: undefined,
+        conditions: [
+          { field: 'amountSign', operator: 'equals', value: 'negative' },
+          {
+            field: 'providerCategoryDetailed',
+            operator: 'equals',
+            value: 'food_and_drink_beer_wine_and_liquor',
+          },
+        ],
+      }),
+    );
+  });
+
+  it('accepts the same explicit priority used for the preview', async () => {
+    transactionCategorizationService.previewDraftRuleApplication.mockResolvedValue(
+      {
+        matched: 1,
+        updated: 1,
+        skippedManual: 0,
+        manualAgreement: 1,
+        manualConflicts: 0,
+        existingRuleOverlap: 0,
+        transactions: [],
+      },
+    );
+    transactionCategorizationService.create.mockResolvedValue({ id: ruleId });
+
+    const preview = await service.previewDraft(userId, {
+      targetCategoryId: categoryId,
+      priority: 10,
+      conditions,
+    });
+    await service.createRule(userId, {
+      name: 'Explicit priority',
+      targetCategoryId: categoryId,
+      priority: 10,
+      conditions,
+      previewToken: preview.previewToken,
+    });
+
+    expect(transactionCategorizationService.create).toHaveBeenCalledWith(
+      userId,
+      expect.objectContaining({ priority: 10 }),
+    );
+  });
+
   it('rejects draft preview tokens for a different user, draft, or expiry', async () => {
     jest.useFakeTimers({
       now: new Date('2026-02-14T00:00:00.000Z'),
@@ -198,6 +288,14 @@ describe('McpCategorizationService', () => {
       }),
     ).rejects.toThrow('Preview token is invalid or expired');
     await expect(
+      service.createRule(userId, {
+        name: 'Malformed token',
+        targetCategoryId: categoryId,
+        conditions,
+        previewToken: 'not-a-preview-token',
+      }),
+    ).rejects.toThrow('Preview token is invalid or expired');
+    await expect(
       service.createRule(otherUserId, {
         name: 'Wrong user',
         targetCategoryId: categoryId,
@@ -209,6 +307,29 @@ describe('McpCategorizationService', () => {
       service.createRule(userId, {
         name: 'Different category',
         targetCategoryId: otherCategoryId,
+        conditions,
+        previewToken: preview.previewToken,
+      }),
+    ).rejects.toThrow(
+      'Preview token does not match the categorization rule draft',
+    );
+    await expect(
+      service.createRule(userId, {
+        name: 'Modified condition',
+        targetCategoryId: categoryId,
+        conditions: [
+          { field: 'merchantName', operator: 'contains', value: 'lyft' },
+        ],
+        previewToken: preview.previewToken,
+      }),
+    ).rejects.toThrow(
+      'Preview token does not match the categorization rule draft',
+    );
+    await expect(
+      service.createRule(userId, {
+        name: 'Changed priority',
+        targetCategoryId: categoryId,
+        priority: 10,
         conditions,
         previewToken: preview.previewToken,
       }),

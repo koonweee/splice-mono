@@ -125,19 +125,19 @@ export const PRE_PORT_MCP_CONTRACT = {
     ],
     [
       'show_cashflow_explorer',
-      '5a81247e502bb66a0b8a57bbbb93c412a18c5238a51af42036bbf37844f84855',
+      'e22c1792a6bc5decf19617bea90be0ac133edbe437c7f10cc44f213a68d58f7b',
     ],
     [
       'show_projection_scenario_modeler',
-      '0c2527a1c4e02271596698857607588801e9c0e975fa8d7e6cda0bf0625c2567',
+      'd5cf76564075a6055f4b2b8c193351e1450cfef1dde68c1da2b8fb14de23c489',
     ],
     [
       'show_portfolio_viewer',
-      'cfb9998990d0688720b8ecb2f8cc975d7f0a92d7a57f01328dff2f9c3a710976',
+      '82200f94100da7fb08aea0bd2fd2d6bb5be0091cd351bc0cfe9097b1323b6684',
     ],
     [
       'show_category_rule_workbench',
-      'dad71fdaf1ac1093711c4ffee776c3eb41b34c890e94b02533013ac6e91c631b',
+      'e4d7d189eb392be8ba55ad1f36fb4cdb79f8008be19823c5eaf078c4dcc9f500',
     ],
     [
       'collect_projection_assumptions',

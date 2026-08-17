@@ -1403,10 +1403,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@koonweee/mcp-kit@0.2.3":
-  version "0.2.3"
-  resolved "https://registry.yarnpkg.com/@koonweee/mcp-kit/-/mcp-kit-0.2.3.tgz#58a1a637a2677db59025e6c6830ad829a2aa181e"
-  integrity sha512-IK8efs+MarqfTNiBVTbjqYQKdtK7IUvE72NzMhNSEX4l52aLaFxeuVk6S2GjnvKsdpUEOUTnnV1WPDK7YjxZVw==
+"@koonweee/mcp-kit@0.3.1":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@koonweee/mcp-kit/-/mcp-kit-0.3.1.tgz#30cb99013db0f6f1843bfb5e7d53e4c7343a1ef9"
+  integrity sha512-sBrV+sVsfu0oZ9xcb5ejEuCxXuG8Lv0AkK3Fd5npMC2FfkezRvBnQs+DMf6dnt8E8kF7dTMIb5hPcsnOWe52bg==
   dependencies:
     "@modelcontextprotocol/client" "2.0.0"
     "@modelcontextprotocol/node" "2.0.0"

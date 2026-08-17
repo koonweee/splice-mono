@@ -3,8 +3,11 @@
 ## Status
 
 Implementation complete and locally validated on 2026-08-16. Production Auth0,
-DNS, stack sync/deploy, and external smoke testing remain explicit operator-gated
-steps.
+DNS, stack sync/deploy, CIMD/OIDC login, and representative ChatGPT reads are
+complete. A deterministic external OAuth client/Inspector pass and a controlled,
+preview-token-backed production write smoke remain before the entire production
+validation can be marked complete. See `docs/mcp.md` for the deployment record
+and exact operator procedure.
 
 ## Goal
 
