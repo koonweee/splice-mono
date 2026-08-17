@@ -234,8 +234,9 @@ The server also exposes:
 - Five prompts: `monthly_cashflow_review`, `projection_builder`,
   `category_cleanup_audit`, `portfolio_snapshot`, and
   `tax_or_refund_anomaly_review`.
-- Four self-contained `ui://splice/...` MCP App resources for cash flow,
-  projections, portfolio, and category-rule workbench views.
+- Four self-contained, cache-versioned `ui://splice/.../v2.html` MCP App
+  resources for cash flow, projections, portfolio, and category-rule
+  workbench views.
 
 MCP Apps are progressive enhancement. Clients without App support still receive
 usable structured and text results. Projection assumption collection is
@@ -253,14 +254,32 @@ the standard `_meta.ui` object. ChatGPT compatibility aliases remain enabled
 during the migration, but the standard fields are authoritative. App resource
 reads require `splice:read`, just like the guide and data resources.
 
-After deploying a metadata change, open the existing ChatGPT developer plugin
-and run **Refresh** or **Scan Tools** before rechecking its templates. A cached
-template descriptor can continue to show the old “Widget domain is not set”
-warning even when the live server is correct. Confirm all four templates show
-the shared widget origin and that their `show_*` tools still expose both JSON
-text and `structuredContent` fallbacks. No new DNS record, Auth0 application, or
-Traefik route is required for this metadata because the canonical MCP origin is
-already public with valid TLS.
+The browser runtime is progressive enhancement over the official
+`@modelcontextprotocol/ext-apps` bridge. Every App starts in a neutral
+`loading` state with no financial or identifying values. A `ready` state means
+the host delivered the authenticated tool result for this invocation. An
+`error` state means initialization, transport, cancellation, teardown, or a
+read-only helper call failed; it must show `Unable to load live Splice data.`
+and must not retain or substitute business data. Production HTML contains no
+demo or fixture envelope. Deterministic sample data exists only in test-owned
+host fixtures and reaches the production browser bundle through simulated
+official host notifications.
+
+The `v2` suffix is a client cache key, not an API version. Change it only when
+the embedded browser resource changes incompatibly enough that hosts must stop
+using cached HTML; keep each linked `show_*` descriptor and resource URI exact.
+
+After deploying a metadata or resource change, open the existing ChatGPT
+developer plugin and run **Refresh** or **Scan Tools** before rechecking its
+templates. A cached
+template descriptor can continue to show an old widget-domain warning or run an
+older embedded resource even when the live server is correct. Confirm all four
+templates show the shared widget origin, use the exact `v2` URIs, and retain
+both JSON text and `structuredContent` fallbacks. Then start a fresh
+conversation and attach Splice; an already-open conversation can retain old
+tool descriptors. No new DNS record, Auth0 application, consent configuration,
+plugin recreation, or Traefik route is required because the canonical MCP
+origin is already public with valid TLS.
 
 Domain verification in the OpenAI submission portal is a separate operator
 workflow. Add a challenge response only if the portal supplies a token and
@@ -270,19 +289,29 @@ developer-mode use.
 
 ## Pinned server library
 
-The backend pins public registry package `@koonweee/mcp-kit` exactly to `0.3.1`.
+The backend pins public registry package `@koonweee/mcp-kit` exactly to `0.4.1`.
 The registry artifact and public declarations were independently verified
-against release commit `fa9b75054761e17dc4e00cc40f4af546fecbca56`
-and annotated tag `v0.3.1`. Its npm integrity is
-`sha512-sBrV+sVsfu0oZ9xcb5ejEuCxXuG8Lv0AkK3Fd5npMC2FfkezRvBnQs+DMf6dnt8E8kF7dTMIb5hPcsnOWe52bg==`.
+against release commit `aac0673a25b361a8bd2468bd6451f3c2dd556d16`
+and annotated tag `v0.4.1`. Its npm integrity is
+`sha512-zMi4zQfAoBUVBfoa4Y1MZcdEDk3jqgMcxjNcx5L23PzCd8spC/gXdN4xR9C4h+AeN0GKEM/cmd25/vcWc2Nj2Q==`.
 This release provides verified ESM and CommonJS consumption for all four public
-entrypoints, safe claim-free logging, ordinary CommonJS Jest authentication,
+server entrypoints, safe claim-free logging, ordinary CommonJS Jest authentication,
 a typed client input-required capability signal, and typed safe error boundaries
 for service-owned resource and prompt callbacks. It also provides first-class
 typed MCP App resources and tool linkage, OpenAI-submission validation, optional
 legacy ChatGPT aliases, and request-local `requiredScopes` enforcement before
-static or dynamic App HTML is returned. Splice uses the CommonJS branch selected
-by its NodeNext Nest build.
+static or dynamic App HTML is returned. The fifth `/apps` browser entrypoint
+composes the official ext-apps `App` and `PostMessageTransport`, owns lifecycle,
+host context, teardown, and safe state transitions, and exposes the official
+typed model-context update used by Projection Scenario Modeler. Splice uses the
+CommonJS branch for its NodeNext Nest server and bundles only `/apps` into the
+self-contained browser resource.
+
+The runtime depends exactly on `@modelcontextprotocol/ext-apps@1.7.5`, upstream
+commit `92f46a574568a3ddac7600343b7d3c4c4ed7b588`, with registry integrity
+`sha512-TjPH2S2y5UEGKhmI6+XGFuqfqOV4ppe1x6DA3txnUaEWkgtA4G5vo14jGKFZmegdkZ1H4QMLyujLvoU1BEdnAg==`.
+Splice does not reimplement its bridge protocol and does not import ext-apps
+directly in production source.
 Splice consumes only these declared public entrypoints:
 
 | Entrypoint | Splice use |
@@ -291,6 +320,7 @@ Splice consumes only these declared public entrypoints:
 | `@koonweee/mcp-kit/node` | Stateless Node Streamable HTTP listener through `serveNode` |
 | `@koonweee/mcp-kit/auth0` | Auth0 JWT verifier, bearer gate, principal conversion, and protected-resource discovery |
 | `@koonweee/mcp-kit/test` | Deterministic in-memory/JWT test helpers without a live Auth0 tenant |
+| `@koonweee/mcp-kit/apps` | Browser-only official ext-apps lifecycle, tool calls, host context, model-context updates, and teardown |
 
 Recheck the pin and export map after installing dependencies:
 
@@ -300,8 +330,9 @@ yarn why @koonweee/mcp-kit
 node -e "const p=require('./node_modules/@koonweee/mcp-kit/package.json'); console.log(p.version, Object.keys(p.exports))"
 ```
 
-Expected version: `0.3.1`. Expected export keys: `.`, `./node`, `./auth0`, and
-`./test`. Do not replace the pin with a Git, file, or sibling-checkout reference.
+Expected version: `0.4.1`. Expected export keys: `.`, `./node`, `./auth0`,
+`./test`, and `./apps`. Do not replace the pin with a Git, file, or
+sibling-checkout reference.
 
 The backend lockfile intentionally contains no SDK v1 package. Mastra is pinned
 to `1.58.0`, its first compatible split-SDK release, and `yahoo-finance2` is
@@ -341,40 +372,116 @@ rg -n "@modelcontextprotocol/sdk" backend/src
 Both searches should return no production-source match. The old SDK v1 package,
 legacy elicitation escape hatch, and API-origin MCP controller must be absent.
 
-## Local MCP App browser fixtures
+## Local MCP App standard-host validation
 
-Generate and serve all four self-contained fixtures:
+The standalone resource extractor is an artifact inspection tool, not an MCP
+Apps host. It must render the neutral loading shell and contain no fixture
+business data:
 
 ```bash
 cd backend
-npx ts-node -r tsconfig-paths/register test/mcp/fixtures/render-mcp-app-resource.ts /tmp/splice-mcp-app-resource-fixtures
-python3 -m http.server 4173 --directory /tmp/splice-mcp-app-resource-fixtures
+yarn build:mcp-apps
+yarn ts-node -r tsconfig-paths/register \
+  test/mcp/fixtures/render-mcp-app-resource.ts \
+  /tmp/splice-mcp-app-resources
+rg -n "splice-mcp-app-fixture|fixture-account-|fixture-transaction-|2026-03-31|6,250|3,120|3,130" \
+  /tmp/splice-mcp-app-resources
 ```
 
-In another terminal, inspect each generated HTML file at desktop and mobile
-sizes. The agent-equivalent flow is:
+The final search must return no match. Do not treat directly opening those HTML
+files as a successful host test: without an official parent bridge, the correct
+terminal state is `Unable to load live Splice data.`
+
+For a real local host, use the exact upstream ext-apps tag recorded below. From
+a clean checkout, install and build the official package and `basic-host`:
 
 ```bash
-export AGENT_BROWSER_SESSION="$(agent-browser session id --scope worktree --prefix splice-mcp-fixtures)"
-agent-browser open http://127.0.0.1:4173/cashflow-explorer.html
-agent-browser snapshot -i
-agent-browser console
-agent-browser set viewport 390 844
-agent-browser snapshot -i
-agent-browser screenshot /tmp/splice-mcp-cashflow-mobile.png
-agent-browser close
+git clone --branch v1.7.5 --depth 1 \
+  https://github.com/modelcontextprotocol/ext-apps.git \
+  /tmp/mcp-ext-apps
+cd /tmp/mcp-ext-apps
+npm ci --ignore-scripts --include=dev
+node node_modules/bun/install.js
+npm run build
+cd examples/basic-host
+npm install --ignore-scripts --include=dev
+npm run build
 ```
 
-Repeat for `projection-scenario-modeler.html`, `portfolio-viewer.html`, and
-`category-rule-workbench.html`. Verify readable desktop/mobile layout, local
-fixture fallbacks, read-only interactions, and no console errors. Always close
-the named browser session when finished.
+The pinned upstream build invokes Bun from its npm dependency. Running the
+installer explicitly after the script-free dependency install keeps this
+fixture reproducible without installing a moving global Bun release.
+
+Start the test-owned authenticated Splice runtime in one terminal. It uses the
+real `SpliceMcpRuntimeService`, ephemeral signing material, deterministic mock
+services, and a loopback CORS proxy that only injects the in-memory bearer
+token; it does not parse or implement MCP:
+
+```bash
+cd backend
+yarn ts-node -r tsconfig-paths/register \
+  test/mcp/fixtures/serve-mcp-app-fixture.ts 3102
+```
+
+Start the tagged official host in a second terminal:
+
+```bash
+cd /tmp/mcp-ext-apps/examples/basic-host
+SERVERS='["http://127.0.0.1:3102/mcp"]' npm run serve
+```
+
+Open `http://127.0.0.1:8080`, invoke all four `show_*` tools, and validate the
+rendered Apps at desktop and mobile sizes. Check the loading-to-ready
+transition, read-only helper controls, truthful helper-error behavior, theme
+and safe-area response, browser console, and network log. Finance requests must
+flow only through the host-mediated MCP connection to `127.0.0.1:3102`; the App
+iframe must not call Splice REST endpoints directly. Always stop both fixture
+processes and close every agent-browser session when finished.
 
 ## Production rollout and recreation
 
 These steps intentionally separate repository automation from Auth0, DNS, and
 live deployment mutations. Do not put a real bearer token in shell history,
 fixtures, documentation, screenshots, or chat.
+
+### 2026-08-17 MCP App widget-domain rollout record
+
+- Splice application commit: `e6be8c3b8638524e56209a312d928f11876e0217`;
+  protected deploy revision: `2a8d9350c701914f52580fe281a944d41e649ec8`;
+  deploy workflow run: `32010686463`.
+- The declarative stack remained unchanged at `605ec5a`: the existing
+  `splice-mcp.kw0.dev` HTTPS router, TLS, port `3001`, and `external-web`
+  attachment are sufficient because `_meta.ui.domain` reuses that canonical
+  origin. Both the base and merged SF Compose configurations rendered cleanly.
+- Komodo build update `6a82c6f9d28c58b2ef3be8d9` published backend
+  version `0.0.95`; targeted `splice-app-sf` deployment update
+  `6a82c876d28c58b2ef3be929` completed successfully.
+- Deployed backend image digest:
+  `sha256:c8633213a86eebd7d45309ba00df65fcacdc3a564691f697201c626442dde6ab`;
+  installed mcp-kit: `0.3.1`. The SF backend was healthy as a single instance
+  on the default and `external-web` networks with no host port publication.
+- Public health and protected-resource discovery returned `200`; discovery
+  advertised the canonical resource, `https://auth.kw0.dev/`, and exactly
+  `splice:read` plus `splice:write`. Unauthenticated MCP returned the sanitized
+  `401` bearer challenge, the old API-origin `/mcp` returned `404`, and the
+  existing frontend returned `200`.
+- Authenticated remote calls passed for `get_user_context` and all four
+  `show_*` App tools. Each App result retained its JSON/text fallback and linked
+  the expected `ui://splice/...` resource. Production startup logs showed the
+  MCP and Nest listeners starting successfully without an error.
+- ChatGPT's existing installed plugin continued to display the cached
+  pre-deploy template descriptors until an explicit **Refresh**. After refresh,
+  all four templates advertised `https://splice-mcp.kw0.dev` through both the
+  standard `ui.domain` field and the enabled `openai/widgetDomain` compatibility
+  alias; the “Widget domain is not set” warning count was zero and the browser
+  console contained no error. This confirms the earlier warning was expected
+  client caching, not a server or deployment failure.
+
+Immediate rollback inputs for this metadata rollout are protected deploy
+revision `219fbc9f2c80d704c718830f2ce4c74e32e45177`, stack revision `605ec5a`,
+and backend image
+`sha256:61ff8f214325bc5a68fc5bce5fcc8711935fd8726aad60605da4fd19c5ec7715`.
+No database, Auth0, DNS, or stack-schema change was part of this rollout.
 
 ### 2026-08-16 rollout record
 
@@ -490,17 +597,28 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
 
 ## Rollback
 
-For the 2026-08-16 rollout, the recorded rollback inputs are Splice `main`
-`5a35640`, Splice `deploy` `4e3ad53`, stack `0e19c2b` (deployed stack source
-`758e75a`), and backend image
+For the 2026-08-17 App metadata rollout, the immediate known-good rollback
+inputs are Splice protected deploy revision
+`219fbc9f2c80d704c718830f2ce4c74e32e45177`, stack `605ec5a`, and backend image
+`sha256:61ff8f214325bc5a68fc5bce5fcc8711935fd8726aad60605da4fd19c5ec7715`.
+That image is the successful 2026-08-16 OAuth MCP deployment; rolling back to it
+removes the submission-ready App widget metadata while preserving the OAuth
+endpoint and all domain data.
+
+For a full rollback behind the OAuth cutover, the older recorded inputs are
+Splice `main` `5a35640`, Splice `deploy` `4e3ad53`, stack `0e19c2b` (deployed
+stack source `758e75a`), and backend image
 `sha256:d881a9bbd395c7919326b13667c3ce841e53a8e29a872763bd4159a8e0aa4151`.
-For later rollouts, replace these with newly recorded values before deploying.
+Use that larger rollback only when intentionally reverting the OAuth MCP
+cutover. For later rollouts, replace these values with newly recorded inputs
+before deploying.
 
 Redeploy the recorded known-good backend image/application revision and prior
 stack revision. Verify the existing frontend, API login, PAT-backed REST
 automation, transaction flows, and scheduled work. Auth0 and DNS configuration
 may remain unused; no database rollback or data transformation is required.
 
-After rollback, confirm the public MCP hostname no longer reaches the failed
-listener and record whether DNS should remain for a retry or be removed. Never
-point `splice-mcp.kw0.dev` at the API-origin PAT service as a compatibility path.
+After a full cutover rollback, confirm the public MCP hostname no longer reaches
+the failed listener and record whether DNS should remain for a retry or be
+removed. An App-metadata-only rollback keeps that hostname live. Never point
+`splice-mcp.kw0.dev` at the API-origin PAT service as a compatibility path.

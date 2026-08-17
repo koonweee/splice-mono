@@ -39,6 +39,22 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function normalizeVersionedAppUris(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizeVersionedAppUris);
+  if (typeof value === 'object' && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        normalizeVersionedAppUris(item),
+      ]),
+    );
+  }
+  if (typeof value === 'string') {
+    return value.replace(/\/v2\.html$/, '.html');
+  }
+  return value;
+}
+
 describe('Splice MCP definition', () => {
   const userService = {
     findOne: jest.fn(),
@@ -269,19 +285,19 @@ describe('Splice MCP definition', () => {
       })),
     ).toEqual([
       {
-        uri: 'ui://splice/cashflow-explorer.html',
+        uri: 'ui://splice/cashflow-explorer/v2.html',
         requiredScopes: ['splice:read'],
       },
       {
-        uri: 'ui://splice/projection-scenario-modeler.html',
+        uri: 'ui://splice/projection-scenario-modeler/v2.html',
         requiredScopes: ['splice:read'],
       },
       {
-        uri: 'ui://splice/portfolio-viewer.html',
+        uri: 'ui://splice/portfolio-viewer/v2.html',
         requiredScopes: ['splice:read'],
       },
       {
-        uri: 'ui://splice/category-rule-workbench.html',
+        uri: 'ui://splice/category-rule-workbench/v2.html',
         requiredScopes: ['splice:read'],
       },
     ]);
@@ -300,14 +316,16 @@ describe('Splice MCP definition', () => {
         listedTools.tools.map((tool) => ({
           name: tool.name,
           sha256: createHash('sha256')
-            .update(canonicalJson(tool))
+            .update(canonicalJson(normalizeVersionedAppUris(tool)))
             .digest('hex'),
         })),
       ).toEqual(PRE_PORT_MCP_CONTRACT.toolContractSha256);
 
       const listedResources = await client.listResources();
       expect(
-        listedResources.resources.map((resource) => resource.uri).sort(),
+        listedResources.resources
+          .map((resource) => normalizeVersionedAppUris(resource.uri))
+          .sort(),
       ).toEqual([...PRE_PORT_MCP_CONTRACT.fixedResources].sort());
       const templates = await client.listResourceTemplates();
       expect(
@@ -325,7 +343,13 @@ describe('Splice MCP definition', () => {
         PRE_PORT_MCP_CONTRACT.apps,
       )) {
         expect(toolsByName.get(toolName)?._meta).toMatchObject({
-          ui: { resourceUri },
+          ui: {
+            resourceUri: expect.stringMatching(
+              new RegExp(
+                `^${resourceUri.replace('.html', '(?:/v2)?\\.html')}$`,
+              ),
+            ),
+          },
         });
       }
       for (const [toolName, fields] of Object.entries(
@@ -466,29 +490,29 @@ describe('Splice MCP definition', () => {
       expect(resources.resources).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            uri: 'ui://splice/cashflow-explorer.html',
+            uri: 'ui://splice/cashflow-explorer/v2.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
           expect.objectContaining({
-            uri: 'ui://splice/projection-scenario-modeler.html',
+            uri: 'ui://splice/projection-scenario-modeler/v2.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
           expect.objectContaining({
-            uri: 'ui://splice/portfolio-viewer.html',
+            uri: 'ui://splice/portfolio-viewer/v2.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
           expect.objectContaining({
-            uri: 'ui://splice/category-rule-workbench.html',
+            uri: 'ui://splice/category-rule-workbench/v2.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
         ]),
       );
 
       const appUris = [
-        'ui://splice/cashflow-explorer.html',
-        'ui://splice/projection-scenario-modeler.html',
-        'ui://splice/portfolio-viewer.html',
-        'ui://splice/category-rule-workbench.html',
+        'ui://splice/cashflow-explorer/v2.html',
+        'ui://splice/projection-scenario-modeler/v2.html',
+        'ui://splice/portfolio-viewer/v2.html',
+        'ui://splice/category-rule-workbench/v2.html',
       ];
       for (const uri of appUris) {
         expect(
@@ -528,28 +552,16 @@ describe('Splice MCP definition', () => {
           },
         });
       }
-      const app = appReads[0];
-      expect('text' in app.contents[0] ? app.contents[0].text : '').toContain(
-        'data-splice-mcp-app',
-      );
-      expect('text' in app.contents[0] ? app.contents[0].text : '').toContain(
-        'splice-mcp-app-fixture',
-      );
-      expect('text' in app.contents[0] ? app.contents[0].text : '').toContain(
-        'tools/call',
-      );
-      const fixtureJson = (
-        'text' in app.contents[0] ? app.contents[0].text : ''
-      ).match(
-        /<script id="splice-mcp-app-fixture" type="application\/json">(?<fixture>.*?)<\/script>/s,
-      )?.groups?.fixture;
-      expect(JSON.parse(fixtureJson ?? '{}')).toMatchObject({
-        app: { id: 'cashflow_explorer' },
-        data: { startDate: '2026-03-01' },
-      });
-      expect('text' in app.contents[0] ? app.contents[0].text : '').not.toMatch(
-        /splice_pat_|password|access_token/i,
-      );
+      for (const app of appReads) {
+        const html = 'text' in app.contents[0] ? app.contents[0].text : '';
+        expect(html).toContain('data-splice-mcp-app');
+        expect(html).toContain('id="splice-mcp-app-safe-area"');
+        expect(html).toContain('Loading live Splice data');
+        expect(html).not.toMatch(
+          /splice-mcp-app-fixture|Rendering local fixture|fixture-(?:account|activity|audit|category|holding|income|recommendation|rule|schedule|transaction)|2026-03-31|6250|3120|3130/i,
+        );
+        expect(html).not.toMatch(/splice_pat_|password|access_token/i);
+      }
 
       const templates = await client.listResourceTemplates();
       expect(
@@ -601,10 +613,10 @@ describe('Splice MCP definition', () => {
     );
     const resourceUris = [
       'splice://mcp-guide',
-      'ui://splice/cashflow-explorer.html',
-      'ui://splice/projection-scenario-modeler.html',
-      'ui://splice/portfolio-viewer.html',
-      'ui://splice/category-rule-workbench.html',
+      'ui://splice/cashflow-explorer/v2.html',
+      'ui://splice/projection-scenario-modeler/v2.html',
+      'ui://splice/portfolio-viewer/v2.html',
+      'ui://splice/category-rule-workbench/v2.html',
       'splice://reports/cashflow/2026-03-01/2026-03-31',
       `splice://accounts/${mockAccountId}/snapshot`,
       'splice://categories/taxonomy',
@@ -1499,10 +1511,10 @@ describe('Splice MCP definition', () => {
           ?._meta,
       ).toMatchObject({
         ui: {
-          resourceUri: 'ui://splice/cashflow-explorer.html',
+          resourceUri: 'ui://splice/cashflow-explorer/v2.html',
           visibility: ['model', 'app'],
         },
-        'openai/outputTemplate': 'ui://splice/cashflow-explorer.html',
+        'openai/outputTemplate': 'ui://splice/cashflow-explorer/v2.html',
       });
       expect(
         tools.tools.find(
@@ -1510,30 +1522,31 @@ describe('Splice MCP definition', () => {
         )?._meta,
       ).toMatchObject({
         ui: {
-          resourceUri: 'ui://splice/projection-scenario-modeler.html',
+          resourceUri: 'ui://splice/projection-scenario-modeler/v2.html',
           visibility: ['model', 'app'],
         },
-        'openai/outputTemplate': 'ui://splice/projection-scenario-modeler.html',
+        'openai/outputTemplate':
+          'ui://splice/projection-scenario-modeler/v2.html',
       });
       expect(
         tools.tools.find((tool) => tool.name === 'show_portfolio_viewer')
           ?._meta,
       ).toMatchObject({
         ui: {
-          resourceUri: 'ui://splice/portfolio-viewer.html',
+          resourceUri: 'ui://splice/portfolio-viewer/v2.html',
           visibility: ['model', 'app'],
         },
-        'openai/outputTemplate': 'ui://splice/portfolio-viewer.html',
+        'openai/outputTemplate': 'ui://splice/portfolio-viewer/v2.html',
       });
       expect(
         tools.tools.find((tool) => tool.name === 'show_category_rule_workbench')
           ?._meta,
       ).toMatchObject({
         ui: {
-          resourceUri: 'ui://splice/category-rule-workbench.html',
+          resourceUri: 'ui://splice/category-rule-workbench/v2.html',
           visibility: ['model', 'app'],
         },
-        'openai/outputTemplate': 'ui://splice/category-rule-workbench.html',
+        'openai/outputTemplate': 'ui://splice/category-rule-workbench/v2.html',
       });
 
       const appCalls = [
@@ -1545,7 +1558,7 @@ describe('Splice MCP definition', () => {
           },
           app: {
             id: 'cashflow_explorer',
-            resourceUri: 'ui://splice/cashflow-explorer.html',
+            resourceUri: 'ui://splice/cashflow-explorer/v2.html',
           },
         },
         {
@@ -1553,7 +1566,7 @@ describe('Splice MCP definition', () => {
           arguments: {},
           app: {
             id: 'projection_scenario_modeler',
-            resourceUri: 'ui://splice/projection-scenario-modeler.html',
+            resourceUri: 'ui://splice/projection-scenario-modeler/v2.html',
           },
         },
         {
@@ -1561,7 +1574,7 @@ describe('Splice MCP definition', () => {
           arguments: { accountIds: [mockAccountId] },
           app: {
             id: 'portfolio_viewer',
-            resourceUri: 'ui://splice/portfolio-viewer.html',
+            resourceUri: 'ui://splice/portfolio-viewer/v2.html',
           },
         },
         {
@@ -1569,7 +1582,7 @@ describe('Splice MCP definition', () => {
           arguments: {},
           app: {
             id: 'category_rule_workbench',
-            resourceUri: 'ui://splice/category-rule-workbench.html',
+            resourceUri: 'ui://splice/category-rule-workbench/v2.html',
           },
         },
       ] as const;

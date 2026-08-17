@@ -4,6 +4,17 @@
 
 Done
 
+## Production data-integrity follow-up
+
+This completed plan records the original interactive-pane implementation, but
+its local bridge and embedded production fixture fallback were later found to
+render sample financial data when a host result was delayed or unavailable.
+The corrective migration, standardized runtime, cache-versioned resources,
+validation, and rollout are tracked in
+[MCP App Host Data Integrity And Standard Runtime](./mcp-app-host-data-integrity.md).
+That follow-up is authoritative for current MCP Apps runtime and fixture
+guidance; the historical milestones below are intentionally unchanged.
+
 ## Goal
 
 Turn the four current Splice MCP App panes into genuinely interactive, read-only app surfaces that can be rendered by MCP Apps-capable hosts while continuing to return useful structured fallback data to non-App clients.

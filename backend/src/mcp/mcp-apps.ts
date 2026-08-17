@@ -18,7 +18,7 @@ export interface SpliceMcpAppDefinition {
   title: string;
   description: string;
   resourceName: string;
-  resourceUri: `ui://splice/${string}.html`;
+  resourceUri: `ui://splice/${string}/v2.html`;
   initialToolName: string;
 }
 
@@ -28,7 +28,7 @@ export const APP_RESOURCES = {
     title: 'Cashflow Explorer',
     description: 'Interactive cash-flow chart and category drilldown UI.',
     resourceName: 'splice_cashflow_explorer_app',
-    resourceUri: 'ui://splice/cashflow-explorer.html',
+    resourceUri: 'ui://splice/cashflow-explorer/v2.html',
     initialToolName: 'show_cashflow_explorer',
   },
   projectionScenarioModeler: {
@@ -37,7 +37,7 @@ export const APP_RESOURCES = {
     description:
       'Interactive projection assumption UI for non-persistent scenarios.',
     resourceName: 'splice_projection_scenario_modeler_app',
-    resourceUri: 'ui://splice/projection-scenario-modeler.html',
+    resourceUri: 'ui://splice/projection-scenario-modeler/v2.html',
     initialToolName: 'show_projection_scenario_modeler',
   },
   portfolioViewer: {
@@ -45,7 +45,7 @@ export const APP_RESOURCES = {
     title: 'Portfolio Viewer',
     description: 'Interactive portfolio holdings and activity UI.',
     resourceName: 'splice_portfolio_viewer_app',
-    resourceUri: 'ui://splice/portfolio-viewer.html',
+    resourceUri: 'ui://splice/portfolio-viewer/v2.html',
     initialToolName: 'show_portfolio_viewer',
   },
   categoryRuleWorkbench: {
@@ -54,7 +54,7 @@ export const APP_RESOURCES = {
     description:
       'Interactive category, analysis rule, and categorization recommendation UI.',
     resourceName: 'splice_category_rule_workbench_app',
-    resourceUri: 'ui://splice/category-rule-workbench.html',
+    resourceUri: 'ui://splice/category-rule-workbench/v2.html',
     initialToolName: 'show_category_rule_workbench',
   },
 } as const satisfies Record<string, SpliceMcpAppDefinition>;

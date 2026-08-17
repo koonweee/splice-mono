@@ -1,5 +1,4 @@
-import { MCP_APP_FIXTURES } from './app-fixtures';
-import { getMcpAppRuntimeScript } from './app-runtime';
+import { MCP_APP_RUNTIME_SCRIPT } from './app-runtime.generated';
 import type { SpliceMcpAppDefinition } from '../mcp-apps';
 
 const APP_CSS = `
@@ -22,7 +21,8 @@ const APP_CSS = `
   * { box-sizing: border-box; }
   html { min-width: 320px; background: var(--color-background-primary); }
   body { margin: 0; background: var(--color-background-primary); color: var(--color-text-primary); font-family: var(--font-sans); }
-  main { min-height: 100vh; padding: 18px; display: grid; gap: 14px; align-content: start; }
+  #splice-mcp-app-safe-area { min-height: 100vh; }
+  main { min-height: 100%; padding: 18px; display: grid; gap: 14px; align-content: start; }
   h1, h2 { margin: 0; line-height: 1.2; letter-spacing: 0; }
   h1 { font-size: 21px; }
   h2 { font-size: 15px; }
@@ -92,19 +92,7 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function escapeScriptJson(value: unknown): string {
-  return JSON.stringify(value)
-    .replace(/</g, '\\u003c')
-    .replace(/>/g, '\\u003e')
-    .replace(/&/g, '\\u0026')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
-}
-
 export function renderMcpAppHtml(app: SpliceMcpAppDefinition): string {
-  const fixture =
-    MCP_APP_FIXTURES[app.id] ?? MCP_APP_FIXTURES.cashflow_explorer;
-
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -114,17 +102,18 @@ export function renderMcpAppHtml(app: SpliceMcpAppDefinition): string {
   <style>${APP_CSS}</style>
 </head>
 <body>
-  <main id="splice-mcp-app-root" data-splice-mcp-app="${escapeHtml(app.title)}" data-app-id="${escapeHtml(app.id)}">
-    <section class="hero">
-      <div>
-        <h1>${escapeHtml(app.title)}</h1>
-        <p>Loading Splice MCP App...</p>
-      </div>
-      <div class="status-pill" id="app-status" data-kind="info">Initializing</div>
-    </section>
-  </main>
-  <script id="splice-mcp-app-fixture" type="application/json">${escapeScriptJson(fixture)}</script>
-  <script>${getMcpAppRuntimeScript()}</script>
+  <div id="splice-mcp-app-safe-area">
+    <main id="splice-mcp-app-root" data-splice-mcp-app="${escapeHtml(app.title)}" data-app-id="${escapeHtml(app.id)}">
+      <section class="hero">
+        <div>
+          <h1>${escapeHtml(app.title)}</h1>
+          <p>Loading live Splice data...</p>
+        </div>
+        <div class="status-pill" id="app-status" data-kind="info">Connecting</div>
+      </section>
+    </main>
+  </div>
+  <script>${MCP_APP_RUNTIME_SCRIPT}</script>
 </body>
 </html>`;
 }
