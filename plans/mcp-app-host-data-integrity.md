@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+Done
 
 ## Goal
 
@@ -23,7 +23,37 @@ the separate mcp-kit implementation/release task, adopting the release in
 Splice, validating the production image, deploying only `splice-app-sf`, and
 recording exact rollout and rollback evidence.
 
-## Current Behavior
+## Completion Record
+
+Completed on 2026-08-17. Splice pins registry-verified
+`@koonweee/mcp-kit@0.4.1`, whose `/apps` entrypoint composes official
+`@modelcontextprotocol/ext-apps@1.7.5`. The production browser bundle has no
+fixture/default-data path, all four resources use versioned `v2` URIs, and
+loading, authenticated result, helper, error, teardown, safe-area, and stale
+business-data boundaries are covered by focused regressions.
+
+Local validation passed backend typecheck/lint/build, 106 focused MCP tests,
+874 full backend tests, frontend typecheck/lint/build and 285 tests, a Node 24
+production image, both SF Compose renders, and the tagged official ext-apps
+basic-host at desktop and mobile sizes. An independent review/fix loop found
+and closed stale cache, late-helper, account-identity, primary-reload, and
+safe-area issues; the final review found no major issue.
+
+Application commit `0206798032a46f27abc5f70153e5406fcc233100` was validated by
+deploy-comparison CI run `32049708220` and merged through protected PR #246 as
+deploy revision `ea08ad9585792a354e8ad4acd0a36da4ffead1bc`. Komodo build
+update `6a8342d1d28c58b2ef3c01d0` published backend `0.0.96` with image digest
+`sha256:73b72b8a57083bc3a67162dd08cad52cab06c03b72ef730aaada0da2356473f5`.
+Targeted deployment update `6a834475d28c58b2ef3c0227` redeployed only
+`splice-app-sf`; the stack source remained `605ec5a`. Both SF app containers
+became healthy, public API/frontend/discovery and the sanitized OAuth boundary
+passed, the old API-origin MCP route remained absent, and authenticated
+production calls to all four `show_*` tools returned the exact `v2` resource
+URIs with structured and text fallbacks. The only ChatGPT-side follow-up is
+Refresh/Scan Tools and a fresh attached conversation; Auth0, DNS, plugin
+registration, and ingress do not change.
+
+## Pre-Implementation Behavior
 
 - `backend/src/mcp/apps/app-runtime.ts` implements the MCP Apps JSON-RPC bridge
   manually with `window.parent.postMessage`. It initializes its render envelope
@@ -547,19 +577,18 @@ relied on embedded production fixtures.
 - Confirm frontend/API health, discovery, bearer challenge, 27-tool inventory,
   representative reads, and the four text/structured fallbacks after rollback.
 
-## Risks And Open Questions
+## Risks And Operator Notes
 
 - ChatGPT web and mobile can implement the same standard with different timing
-  or lifecycle behavior. The official basic-host is necessary but not
-  sufficient; both real hosts remain rollout gates.
-- A new mcp-kit browser entrypoint changes the package's deliberate historical
-  exclusion of MCP UI. The mcp-kit task must update architecture boundaries and
-  keep browser code out of Node/Auth0/core imports.
-- Depending on how mcp-kit exposes the client layer, Splice may need a direct
-  ext-apps dependency for bundling. Resolve this through the public package API
-  and peer dependency contract, not a local alias or duplicate version.
-- Versioned resource URIs require ChatGPT metadata refresh. Reusing current URIs
-  risks cached broken HTML and is not acceptable.
+  or lifecycle behavior. The tagged official basic-host passed at desktop and
+  mobile sizes; after deployment, Refresh/Scan Tools and a fresh attached
+  ChatGPT conversation remain the client-cache verification step.
+- mcp-kit `0.4.1` isolates the browser entrypoint from Node/Auth0/core imports,
+  and its packed browser and Node consumers passed. Splice therefore needs no
+  direct ext-apps production dependency or local bridge adapter.
+- Versioned resource URIs intentionally require a ChatGPT metadata refresh.
+  Do not revert to unversioned URIs merely to accommodate an old conversation's
+  cached descriptor.
 - Production fixture removal makes bridge failures visually less impressive but
   more truthful. An error view is the required behavior; never restore demo
   finance data as an availability workaround.

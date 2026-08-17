@@ -444,6 +444,75 @@ These steps intentionally separate repository automation from Auth0, DNS, and
 live deployment mutations. Do not put a real bearer token in shell history,
 fixtures, documentation, screenshots, or chat.
 
+### 2026-08-17 standardized MCP Apps runtime rollout record
+
+- Splice application commit:
+  `0206798032a46f27abc5f70153e5406fcc233100`; protected deploy revision:
+  `ea08ad9585792a354e8ad4acd0a36da4ffead1bc`; protected PR: `#246`.
+- GitHub had a declared major outage affecting API, Actions, and pull requests
+  during promotion. Deploy workflow attempts `32049151165`, `32049200167`, and
+  `32049472867` failed before mutation on HTTP `503`. Run `32049693812` created
+  the deploy PR and dispatched exact-head comparison CI `32049708220`, which
+  passed on `0206798`, but its post-CI GraphQL lookup received another `503`.
+  The same workflow's guarded merge command was then run against that exact
+  validated head; PR #246 merged as `ea08ad9`. Synchronization run
+  `32050656693` subsequently passed and confirmed `main` and `deploy` match.
+- Registry dependency: `@koonweee/mcp-kit@0.4.1`, release commit
+  `aac0673a25b361a8bd2468bd6451f3c2dd556d16`, npm integrity
+  `sha512-zMi4zQfAoBUVBfoa4Y1MZcdEDk3jqgMcxjNcx5L23PzCd8spC/gXdN4xR9C4h+AeN0GKEM/cmd25/vcWc2Nj2Q==`.
+  Its browser runtime directly composes exact
+  `@modelcontextprotocol/ext-apps@1.7.5`; Splice does not implement the bridge
+  protocol or ship a production fixture fallback.
+- Komodo build update `6a8342d1d28c58b2ef3c01d0` published backend version
+  `0.0.96` and commit tag `ea08ad9`. The production build used Node 24 Alpine
+  and published manifest-list digest
+  `sha256:73b72b8a57083bc3a67162dd08cad52cab06c03b72ef730aaada0da2356473f5`.
+- Targeted deployment update `6a834475d28c58b2ef3c0227` completed
+  successfully for `splice-app-sf`; no VPS or SG stack was redeployed. The
+  declarative stack remained `605ec5a`. The SF backend is one healthy instance
+  on the default and `external-web` networks with no host port publication;
+  its deployed image ID is the same `sha256:73b72b8a...` digest.
+- Local release gates passed: backend typecheck/lint/build, 8 focused MCP suites
+  with 106 tests, 83 full backend suites with 874 tests, frontend
+  typecheck/lint/build and 45 suites with 285 tests, deterministic browser
+  bundle generation, Node `v24.19.0` production-image inspection, both SF
+  Compose renders, and clean diff/fixture-leak scans. The final generated App
+  bundle SHA-256 was
+  `7bec14883623bcf860c571fd13247078eef889bf06b0ff16daad8fb11b4dc68a`.
+- Tagged official ext-apps `basic-host` validation rendered all four Apps at
+  desktop and mobile sizes. Cashflow displayed only host-delivered test values
+  (`$4,100`, `-$1,750`, `$2,350`) rather than the removed production demo
+  values; Portfolio, Projection, and Category Rules also reached ready state.
+  Browser console/network checks found no App error and no direct REST request.
+  An independent review/fix loop closed stale derived-data, late-helper,
+  account-identity, primary-reload, and safe-area regressions, then reported no
+  remaining major issue.
+- Post-deploy public checks returned `200` for API health, frontend, and the
+  canonical protected-resource document. Discovery advertised exactly the
+  canonical resource, `https://auth.kw0.dev/`, `splice:read`, and
+  `splice:write`; unauthenticated `/mcp` returned the sanitized `401` bearer
+  challenge; the old API-origin `/mcp` returned `404`. Startup logs showed both
+  listeners ready with no error.
+- Authenticated production calls succeeded for `show_cashflow_explorer`,
+  `show_projection_scenario_modeler`, `show_portfolio_viewer`, and
+  `show_category_rule_workbench`. Each returned its exact
+  `ui://splice/.../v2.html` URI, structured data, and JSON/text fallback.
+  Sanitized production logs contain matching started/completed success events
+  and no claims, arguments, results, or financial values.
+- ChatGPT operator follow-up: open the existing developer plugin, run
+  **Refresh** or **Scan Tools**, confirm the four `v2` templates, and attach
+  Splice to a fresh supported conversation. No reconnect, plugin recreation,
+  Auth0 mutation, DNS change, or ingress change is required. This host refresh
+  is necessary because existing conversations may retain cached descriptors.
+
+Immediate rollback inputs for this runtime rollout are protected deploy
+revision `2a8d9350c701914f52580fe281a944d41e649ec8`, stack revision `605ec5a`,
+and backend image
+`sha256:c8633213a86eebd7d45309ba00df65fcacdc3a564691f697201c626442dde6ab`
+(`@koonweee/mcp-kit@0.3.1`). No database, Auth0, DNS, or stack-schema change was
+part of the rollout. Roll back only `splice-app-sf`, then Refresh/Scan Tools so
+ChatGPT stops using the `v2` descriptors.
+
 ### 2026-08-17 MCP App widget-domain rollout record
 
 - Splice application commit: `e6be8c3b8638524e56209a312d928f11876e0217`;
@@ -596,6 +665,15 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
     `tool.started` event before diagnosing any downstream failure.
 
 ## Rollback
+
+For the 2026-08-17 standardized Apps runtime rollout, the immediate known-good
+rollback inputs are protected deploy revision
+`2a8d9350c701914f52580fe281a944d41e649ec8`, stack `605ec5a`, and backend image
+`sha256:c8633213a86eebd7d45309ba00df65fcacdc3a564691f697201c626442dde6ab`.
+That image uses mcp-kit `0.3.1` and the prior App resources. Redeploy only
+`splice-app-sf`; no database, Auth0, DNS, or topology rollback is required.
+Afterward, Refresh/Scan Tools in ChatGPT so cached `v2` descriptors are not
+reused.
 
 For the 2026-08-17 App metadata rollout, the immediate known-good rollback
 inputs are Splice protected deploy revision
