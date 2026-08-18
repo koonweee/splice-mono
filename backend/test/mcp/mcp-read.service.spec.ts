@@ -292,6 +292,32 @@ describe('McpReadService', () => {
     });
   });
 
+  it('rejects unowned investment account IDs before reading holdings', async () => {
+    const ownedAccountId = '11111111-1111-4111-8111-111111111111';
+    const foreignAccountId = '99999999-9999-4999-8999-999999999999';
+    accountService.findAll.mockResolvedValue([
+      {
+        id: ownedAccountId,
+        name: 'Owned brokerage',
+        customName: null,
+        type: 'investment',
+        subType: 'brokerage',
+      },
+    ]);
+
+    await expect(
+      service.listInvestmentHoldings('user-1', {
+        accountIds: [ownedAccountId, foreignAccountId],
+        latestOnly: true,
+      }),
+    ).rejects.toThrow(`Unknown accountIds: ${foreignAccountId}`);
+
+    expect(investmentHoldingRepository.findOne).not.toHaveBeenCalled();
+    expect(
+      investmentHoldingRepository.createQueryBuilder,
+    ).not.toHaveBeenCalled();
+  });
+
   it('rejects ambiguous investment holdings query options', async () => {
     await expect(
       service.listInvestmentHoldings('user-1', {

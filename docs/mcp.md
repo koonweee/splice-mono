@@ -204,10 +204,14 @@ JSON-equivalent text fallback.
   `list_investment_activity`, `list_recurring_manual_transaction_schedules`,
   and `collect_projection_assumptions`.
 - Read-only MCP App launchers: `visualize_cash_flow` and
-  `show_portfolio_viewer`. `visualize_cash_flow` is selective: use it for real
+  `visualize_portfolio`. `visualize_cash_flow` is selective: use it for real
   cash-flow, spending, income, or period-comparison questions that benefit from
   visual evidence, not for capability discovery, hypothetical discussion,
   metadata questions, or simple facts that prose answers clearly.
+  `visualize_portfolio` is similarly selective: use it for current portfolio
+  value, ownership, allocation, exposure, or concentration questions that
+  benefit from ranked visual evidence, not for activity, performance,
+  capability discovery, or simple holding facts that prose answers clearly.
 - Categorization workflow: `preview_categorization_rule_draft` and
   `preview_categorization_rule_application` are reads;
   `create_categorization_rule` is a real non-idempotent, non-destructive write;
@@ -238,7 +242,7 @@ The server also exposes:
   `tax_or_refund_anomaly_review`.
 - Two self-contained, cache-versioned MCP App resources:
   `ui://splice/cash-flow/v3.html` for the Cash Flow visualization and
-  `ui://splice/portfolio-viewer/v2.html` for portfolio exploration.
+  `ui://splice/portfolio/v3.html` for the Portfolio visualization.
 
 MCP Apps are progressive enhancement. Clients without App support still receive
 usable structured and text results. Projection assumption collection is
@@ -269,7 +273,7 @@ Production HTML contains no demo or fixture envelope. Deterministic sample data
 exists only in test-owned host fixtures and reaches the production browser
 bundle through simulated official host notifications.
 
-The `v3` and `v2` suffixes are client cache keys, not API versions. Change one
+The `v3` suffixes are client cache keys, not API versions. Change one
 only when that embedded browser resource changes incompatibly enough that hosts
 must stop using cached HTML; keep each linked tool descriptor and resource URI
 exact.
@@ -279,12 +283,13 @@ developer plugin and run **Refresh** or **Scan Tools** before rechecking its
 templates. A cached
 template descriptor can continue to show an old widget-domain warning or run an
 older embedded resource even when the live server is correct. Confirm the Cash
-Flow template uses `ui://splice/cash-flow/v3.html`, Portfolio uses its exact
-`v2` URI, both show the shared widget origin, and both retain JSON text plus
-`structuredContent` fallbacks. Confirm discovery contains
-`visualize_cash_flow` exactly once and no `show_cashflow_explorer`. Then start a
-fresh conversation and attach Splice; an already-open conversation can retain
-the retired descriptor or resource. No OAuth reconnect, new DNS record, Auth0
+Flow template uses `ui://splice/cash-flow/v3.html`, Portfolio uses
+`ui://splice/portfolio/v3.html`, both show the shared widget origin, and both
+retain JSON text plus `structuredContent` fallbacks. Confirm discovery contains
+`visualize_cash_flow` and `visualize_portfolio` exactly once and contains
+neither `show_cashflow_explorer` nor `show_portfolio_viewer`. Then start a fresh
+conversation and attach Splice; an already-open conversation can retain the
+retired descriptor or resource. No OAuth reconnect, new DNS record, Auth0
 application, consent configuration, plugin recreation, or Traefik route is
 required because the canonical MCP origin is unchanged.
 
@@ -434,6 +439,11 @@ The unfiltered command covers both Apps. `--app cash-flow` or
 selects one Cash Flow invocation. The populated Cash Flow default covers all
 four cases; `empty` and `primary-error` use the overview, while `helper-error`
 uses the focused-category case so the localized helper state is exercised.
+Portfolio accepts `--case concentrated|even|two-position|long-labels` and runs
+all four populated cases by default. The implementation-time ranked-versus-
+donut comparison used a temporary test-only input hint over identical fixture
+results. That selector and the losing chart branch were removed after the
+ranked composition won; neither is a supported harness or public-tool option.
 
 Every selected case invokes the real tool through the authenticated MCP
 connection and official host. It captures desktop dark, iPhone dark/light, and
@@ -447,16 +457,19 @@ gated on the observed tool call, resource read, sandbox load, and focused helper
 call when applicable; do not replace this with a fixed sleep or an outer-host
 text query because the App runs in a sandboxed iframe. The command always closes
 its agent-browser session and local fixture processes, including after failure.
+The final still is captured from the visible App region after the responsive
+settle; this avoids Chromium full-page screenshot artifacts for the nested
+out-of-process iframe without bypassing the official host or sandbox.
 Contact-sheet generation uses the installed `ui-change-contact-sheet` Codex
 skill; set `MCP_APP_CONTACT_SHEET_BUILDER` when Codex skills live outside the
 default home directory.
 
 The deterministic capture matrix is:
 
-| Tool                    | App              | Cases                                        | Primary responsive review focus                                                  |
-| ----------------------- | ---------------- | -------------------------------------------- | -------------------------------------------------------------------------------- |
-| `visualize_cash_flow`   | Cash Flow        | Overview, income, comparison, category focus | Period/net hierarchy, ranked contributors, disclosure, long labels, local errors |
-| `show_portfolio_viewer` | Portfolio Viewer | Overview                                     | Holdings, account filter, activity paging, and long security names               |
+| Tool                  | App       | Cases                                                | Primary responsive review focus                                                  |
+| --------------------- | --------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `visualize_cash_flow` | Cash Flow | Overview, income, comparison, category focus         | Period/net hierarchy, ranked contributors, disclosure, long labels, local errors |
+| `visualize_portfolio` | Portfolio | Concentrated, nearly even, two-position, long labels | Total/ranking hierarchy, `Other`, inline evidence, chart cost, and long names    |
 
 Inspect the generated contact sheets at 100%, with special attention to iPhone
 horizontal overflow, value/label wrapping, readable density, 44 px touch
@@ -482,6 +495,21 @@ and record each one in the owning plan:
 3. **Responsive/accessibility polish:** inspect every case at desktop, iPhone
    dark/light, and 320 px; include long labels, positive/negative/zero values,
    focus order, touch targets, safe areas, and reduced motion.
+
+For a material Portfolio composition change, compare constrained alternatives
+over identical concentrated, nearly-even, two-position, and long-label fixture
+results. Record the winner against comprehension, duplicated information,
+phone-fold cost, label/color dependence, and screenshot usefulness; retain only
+the winning composition in production. Then preserve three stable passes:
+
+1. **Information hierarchy:** total and largest concentrations scan immediately
+   on a phone, with useful ranked evidence above the fold.
+2. **Exploration:** position selection, compact account contributions, `Other`
+   expansion, return state, and nonfatal model-context failure remain local and
+   truthful.
+3. **Responsive/accessibility polish:** desktop, iPhone dark/light, and 320 px
+   layouts handle large values, long security/account names, touch/focus order,
+   safe areas, and reduced motion without horizontal overflow.
 
 After each pass, run focused tests and `yarn build:mcp-apps`, capture through the
 official host, inspect contact sheets at 100%, review every WebM and JSON file,
@@ -548,7 +576,7 @@ SERVERS='["http://127.0.0.1:3102/mcp"]' npm run serve
 ```
 
 Open `http://127.0.0.1:8080`, invoke `visualize_cash_flow` and
-`show_portfolio_viewer`, and validate the rendered Apps at desktop and mobile
+`visualize_portfolio`, and validate the rendered Apps at desktop and mobile
 sizes. Check the loading-to-ready transition, read-only helper controls,
 truthful helper-error behavior, theme and safe-area response, browser console,
 and network log. Finance requests must flow only through the host-mediated MCP
@@ -561,6 +589,52 @@ agent-browser session when finished.
 These steps intentionally separate repository automation from Auth0, DNS, and
 live deployment mutations. Do not put a real bearer token in shell history,
 fixtures, documentation, screenshots, or chat.
+
+### Portfolio v3 rollout and ChatGPT smoke
+
+The Portfolio launcher rename and v3 resource are an application-only cutover.
+They do not require a database migration or Auth0, DNS, ingress, scope, consent,
+or stack configuration change.
+
+1. Record the known-good protected deploy revision and deployed backend image
+   digest. Complete focused/full validation, Node 24 image inspection,
+   deterministic App builds, stale-contract/fixture scans, the visual-variant
+   comparison, three official-host refinement passes, and independent review.
+2. Promote only the reviewed `main` revision through the protected `main` to
+   `deploy` workflow. Confirm the reviewed image is healthy on `splice-app-sf`;
+   do not restart or reconfigure unrelated replicas.
+3. Through an authenticated production MCP client, confirm exactly 25 tools,
+   `visualize_portfolio` exactly once, no `show_portfolio_viewer`, and linkage
+   to `ui://splice/portfolio/v3.html`. Read the resource and verify
+   `splice:read`, canonical domain/CSP/border metadata, HTML MIME type, strict
+   USD structured data, and JSON-equivalent text fallback.
+4. In the existing ChatGPT developer plugin, run **Refresh** or **Scan Tools**
+   and attach Splice in a fresh conversation. OAuth reconnect and renewed
+   consent are not expected. Record the refresh time because old conversations
+   may retain the retired descriptor or cached v2 HTML.
+5. Smoke ChatGPT Web and mobile/iOS with portfolio value/concentration, an
+   account-scoped portfolio, `Other` expansion, and a selected holding followed
+   by “tell me more about this holding.” Verify total/ranking, inline detail,
+   snapshot range, one `All values in USD` footer, model context, themes, safe
+   areas, and loading/error boundaries.
+6. Ask separately for a simple holding fact, investment activity, and available
+   capabilities. Those should remain prose or use headless tools; they must not
+   invoke Portfolio merely because they concern investments. Record sanitized
+   screenshots/videos and inspect logs for successful calls without user IDs,
+   arguments, results, financial values, holdings, or internal errors.
+7. Record application/deploy revisions, image digest, refresh time, resource
+   URI, evidence paths, smoke result, and rollback inputs below. If
+   authorization, USD completeness, stale-data privacy, or host compatibility
+   fails, redeploy the recorded prior backend revision through the protected
+   path and **Refresh**/**Scan Tools** again. No database, Auth0, DNS, ingress,
+   or stack rollback is needed.
+
+### Portfolio v3 rollout record
+
+- Pending deployment. Populate only after protected promotion and ChatGPT
+  Web/mobile smoke with the exact reviewed application revision, deploy
+  revision, backend image digest, refresh time, evidence directories, sanitized
+  log result, and known-good rollback revision/image.
 
 ### Cash Flow v3 rollout and ChatGPT smoke
 

@@ -22,6 +22,7 @@ import {
 } from './mcp.definition';
 import { resolveSpliceMcpUserId } from './mcp.identity';
 import { McpReadService } from './mcp-read.service';
+import { McpPortfolioVisualizationService } from './mcp-portfolio-visualization.service';
 
 export type SpliceMcpStartOptions = {
   readonly hostname?: string;
@@ -38,6 +39,7 @@ export class SpliceMcpRuntimeService {
     private readonly balanceHistorySurfaceService: BalanceHistorySurfaceService,
     private readonly transactionsSurfaceService: TransactionsSurfaceService,
     private readonly mcpReadService: McpReadService,
+    private readonly mcpPortfolioVisualizationService: McpPortfolioVisualizationService,
     private readonly mcpCategorizationService: McpCategorizationService,
     private readonly transactionAnalysisService: TransactionAnalysisService,
     private readonly logger: Logger,
@@ -103,6 +105,8 @@ export class SpliceMcpRuntimeService {
           balanceHistorySurfaceService: this.balanceHistorySurfaceService,
           transactionsSurfaceService: this.transactionsSurfaceService,
           mcpReadService: this.mcpReadService,
+          mcpPortfolioVisualizationService:
+            this.mcpPortfolioVisualizationService,
           mcpCategorizationService: this.mcpCategorizationService,
           transactionAnalysisService: this.transactionAnalysisService,
         });

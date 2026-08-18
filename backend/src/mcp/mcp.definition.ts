@@ -34,11 +34,11 @@ import { MoneySign } from '../types/MoneyWithSign';
 import type { UserService } from '../user/user.service';
 import { normalizeMcpMoney } from './mcp-money';
 import type { McpReadService } from './mcp-read.service';
+import type { McpPortfolioVisualizationService } from './mcp-portfolio-visualization.service';
 import { APP_RESOURCES, MCP_APP_RESOURCES, appToolResult } from './mcp-apps';
 import {
   ApplyCategorizationRuleOutputSchema,
   AccountsSnapshotOutputSchema,
-  AppToolOutputSchema,
   BalanceHistoryOutputSchema,
   CashflowAnalysisOutputSchema,
   CashflowAuditOutputSchema,
@@ -53,6 +53,7 @@ import {
   InvestmentHoldingsOutputSchema,
   ManualCategorizedExamplesOutputSchema,
   PaginatedListOutputSchema,
+  PortfolioVisualizationOutputSchema,
   ProjectionAssumptionsOutputSchema,
   RecurringSchedulesOutputSchema,
   RuleCandidatePatternsOutputSchema,
@@ -77,6 +78,7 @@ export interface SpliceMcpDependencies {
   readonly balanceHistorySurfaceService: BalanceHistorySurfaceService;
   readonly transactionsSurfaceService: TransactionsSurfaceService;
   readonly mcpReadService: McpReadService;
+  readonly mcpPortfolioVisualizationService: McpPortfolioVisualizationService;
   readonly mcpCategorizationService: McpCategorizationService;
   readonly transactionAnalysisService: TransactionAnalysisService;
 }
@@ -321,7 +323,7 @@ export const SPLICE_MCP_TOOL_NAMES = [
   'list_cashflow_category_transactions',
   'get_cashflow_analysis_audit',
   'visualize_cash_flow',
-  'show_portfolio_viewer',
+  'visualize_portfolio',
   'collect_projection_assumptions',
 ] as const;
 
@@ -1170,41 +1172,37 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
     ),
 
     createSpliceTool(
-      'show_portfolio_viewer',
+      'visualize_portfolio',
       {
-        title: 'Show Portfolio Viewer',
+        title: 'Visualize Portfolio',
         description:
-          'Return an MCP Apps UI for latest holdings and investment activity, with structured fallback data.',
+          'Visualize current portfolio value, ownership, allocation, exposure, and concentration when a visual answer materially helps. Do not call for capability discovery, metadata questions, hypothetical discussion, investment activity, or simple holding facts that prose answers clearly.',
         inputSchema: {
-          accountIds: z.array(UuidSchema).optional(),
+          accountIds: z
+            .array(UuidSchema)
+            .min(1)
+            .max(100)
+            .optional()
+            .describe(
+              'Optional non-empty subset of user-owned investment account IDs selected by the conversation.',
+            ),
         },
-        outputSchema: AppToolOutputSchema,
+        outputSchema: PortfolioVisualizationOutputSchema,
         requiredScopes: ['splice:read'],
         risk: { kind: 'read' },
         ui: {
-          resourceUri: APP_RESOURCES.portfolioViewer.resourceUri,
+          resourceUri: APP_RESOURCES.portfolio.resourceUri,
           visibility: ['model', 'app'],
         },
       },
       async (input, dependencies) =>
         appToolResult(
-          APP_RESOURCES.portfolioViewer,
-          'Use holdings and investment activity fallback data to summarize portfolio positions and recent investment transactions.',
-          {
-            holdings: await dependencies.mcpReadService.listInvestmentHoldings(
-              dependencies.userId,
-              {
-                accountIds: input.accountIds,
-              },
-            ),
-            activity: await dependencies.mcpReadService.listInvestmentActivity(
-              dependencies.userId,
-              {
-                accountIds: input.accountIds,
-                pageSize: 25,
-              },
-            ),
-          },
+          APP_RESOURCES.portfolio,
+          'Use the complete current USD portfolio total, ranked security positions, allocation basis points, contributing-account evidence, and snapshot range to answer the portfolio question when the App cannot render.',
+          await dependencies.mcpPortfolioVisualizationService.visualize(
+            dependencies.userId,
+            input.accountIds,
+          ),
         ),
     ),
 

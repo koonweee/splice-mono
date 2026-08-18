@@ -48,7 +48,7 @@ Available prompts: monthly_cashflow_review, projection_builder, category_cleanup
 
 Prefer resource templates for reusable report reads when a client asks for a durable report URI: splice://reports/cashflow/{startDate}/{endDate}, splice://accounts/{accountId}/snapshot, splice://categories/taxonomy, splice://rules/analysis, and splice://portfolio/holdings/latest.
 
-MCP Apps are progressive enhancement. Use visualize_cash_flow selectively when an actual spending, income, cash-flow, or comparison question benefits from concise visual evidence; do not use it for capability discovery, metadata, hypotheticals, or simple facts that prose communicates clearly. The Cash Flow App is read-only and receives its exact period, direction, optional focus, and optional comparison from the conversation. Portfolio Viewer remains an interactive, read-only view for filtering, sorting, and paging investment reads. Every App-backed tool preserves complete fallback structuredContent for hosts without App support.
+MCP Apps are progressive enhancement. Use visualize_cash_flow selectively when an actual spending, income, cash-flow, or comparison question benefits from concise visual evidence; do not use it for capability discovery, metadata, hypotheticals, or simple facts that prose communicates clearly. Use visualize_portfolio selectively for current portfolio value, ownership, allocation, exposure, or concentration questions that benefit from visual evidence; do not use it for investment activity, performance, capability discovery, hypotheticals, or simple holding facts. Both Apps are read-only and receive their scope from the conversation. Every App-backed tool preserves complete fallback structuredContent for hosts without App support.
 
 Projection assumption input is optional and non-persistent. collect_projection_assumptions uses the official input-required/resume flow. Clients that decline or cancel receive a structured fallback describing the fields they can ask about normally.
 
@@ -488,7 +488,7 @@ export function registerSpliceMcpExtensions(
     {
       title: 'Portfolio Snapshot',
       description:
-        'Summarize latest holdings, date-specific positions, and recent investment activity.',
+        'Summarize current portfolio ownership and concentration, with investment activity kept separate.',
       argsSchema: workflowPromptArgs,
     },
     mcpExtensionErrorBoundary.prompt(workflowPromptArgs, (input) => {
@@ -503,7 +503,7 @@ export function registerSpliceMcpExtensions(
   2. Call list_investment_holdings for latest positions or date-specific positions when requested.
   3. Call list_investment_activity for investment transactions and page until pageInfo.hasMore is false if the full period matters.
   4. Call get_accounts_snapshot for account balance context.
-  5. Use show_portfolio_viewer when MCP Apps are supported.
+  5. Use visualize_portfolio for current ownership or concentration when MCP Apps are supported; pass an account subset only when the conversation requests one.
 
   Keep investment activity separate from banking/manual cash-flow analysis.`);
     }),

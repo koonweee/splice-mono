@@ -134,11 +134,19 @@ input/resume, and preview-token-protected categorization writes. See the
 [canonical MCP runbook](../docs/mcp.md) for the complete contract, local tests,
 fixture validation, production rollout, smoke tests, and rollback.
 
-The Cash Flow App is the selectively invoked `visualize_cash_flow` tool linked
-to `ui://splice/cash-flow/v3.html`; it is a mobile-first visual answer rather
-than a general dashboard. For MCP App UI work, run `yarn mcp-apps:dev` for the
-live official-host loop and `yarn mcp-apps:visual --app cash-flow` for the
-overview, income, comparison, and category-focus matrix. The visual loop
+Cash Flow and Portfolio are selectively invoked mobile-first visual answers,
+not general dashboards. Cash Flow uses `visualize_cash_flow` linked to
+`ui://splice/cash-flow/v3.html`. Portfolio uses `visualize_portfolio` linked to
+`ui://splice/portfolio/v3.html`; it shows latest ownership and concentration in
+one server-normalized USD view, with top-five plus `Other` evidence and compact
+inline position detail.
+
+For MCP App UI work, run `yarn mcp-apps:dev` for the live official-host loop.
+Use `yarn mcp-apps:visual --app cash-flow` for the overview, income,
+comparison, and category-focus matrix, or `yarn mcp-apps:visual --app portfolio`
+for concentrated, nearly-even, two-position, and long-label portfolios. The
+ranked composition was selected through a one-time official-host comparison
+against a compact donut; no chart mode or selector ships. The visual loop
 captures desktop dark, iPhone dark/light, a 320 px boundary,
 loading-to-ready videos, browser evidence, and contact sheets. Add
 `--scenario empty`, `--scenario helper-error`, or

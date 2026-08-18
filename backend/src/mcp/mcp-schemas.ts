@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import Decimal from 'decimal.js';
 import { MoneySign } from '../types/MoneyWithSign';
 
 const DateStringSchema = z
@@ -91,6 +92,90 @@ export const InvestmentHoldingsOutputSchema = z
       .passthrough(),
   })
   .passthrough();
+
+const PortfolioUsdMoneySchema = z
+  .object({
+    amount: z
+      .number()
+      .nonnegative()
+      .finite()
+      .max(Number.MAX_SAFE_INTEGER / 100)
+      .refine(
+        (amount) => {
+          const decimal = new Decimal(amount);
+          return decimal.decimalPlaces() <= 2 && decimal.mul(100).isInteger();
+        },
+        { message: 'Must be a USD amount in whole cents.' },
+      )
+      .describe('USD major-unit amount rounded to whole cents.'),
+    currency: z.literal('USD'),
+    sign: z.literal(MoneySign.POSITIVE),
+  })
+  .strict();
+
+const PortfolioAccountContributionSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    accountName: z.string().nullable(),
+    snapshotDate: DateStringSchema,
+    quantity: z.string().nullable(),
+    valueUsd: PortfolioUsdMoneySchema,
+    priceUsd: PortfolioUsdMoneySchema.nullable(),
+  })
+  .strict();
+
+const PortfolioPositionSchema = z
+  .object({
+    securityId: z.string().uuid(),
+    securityName: z.string().nullable(),
+    tickerSymbol: z.string().nullable(),
+    type: z.string().nullable(),
+    subtype: z.string().nullable(),
+    quantity: z.string().nullable(),
+    valueUsd: PortfolioUsdMoneySchema,
+    allocationBps: z.number().int().min(0).max(10_000),
+    contributions: z.array(PortfolioAccountContributionSchema),
+  })
+  .strict();
+
+export const PortfolioVisualizationDataSchema = z
+  .object({
+    reportingCurrency: z.literal('USD'),
+    totalValueUsd: PortfolioUsdMoneySchema,
+    snapshotRange: z
+      .object({
+        earliest: DateStringSchema,
+        latest: DateStringSchema,
+      })
+      .strict()
+      .nullable(),
+    selectedAccountIds: z.array(z.string().uuid()).optional(),
+    positions: z.array(PortfolioPositionSchema),
+  })
+  .strict();
+export type PortfolioVisualizationData = z.infer<
+  typeof PortfolioVisualizationDataSchema
+>;
+
+export const PortfolioVisualizationOutputSchema = z
+  .object({
+    app: z
+      .object({
+        id: z.literal('portfolio'),
+        title: z.literal('Portfolio'),
+        description: z.string(),
+        resourceName: z.string(),
+        resourceUri: z.literal('ui://splice/portfolio/v3.html'),
+        initialToolName: z.literal('visualize_portfolio'),
+      })
+      .strict(),
+    data: PortfolioVisualizationDataSchema,
+    fallback: z.string(),
+  })
+  .strict();
+export type PortfolioVisualizationOutput = z.infer<
+  typeof PortfolioVisualizationOutputSchema
+>;
 
 export const RecurringSchedulesOutputSchema = z
   .object({
