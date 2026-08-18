@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+Implementation Complete — Explicit Follow-up Deployment Pending
 
 ## Goal
 
@@ -24,6 +24,9 @@ The completed App must:
   accounts, quantity, value, and available price/snapshot evidence;
 - update model context minimally when a position is selected so conversational
   follow-ups such as “tell me more about this holding” resolve correctly;
+- provide a user-initiated **Ask about this holding** fallback through the
+  standard `ui/message` bridge when the host advertises text-message support,
+  without automatically sending anything on selection;
 - remain read-only, truthful across lifecycle transitions, and complete through
   text/structured fallback when MCP Apps UI is unavailable;
 - use the official MCP Apps bridge through the pinned
@@ -414,11 +417,22 @@ Implementation tasks:
   generation/request identity.
 - Add regressions for select, deselect, replacement, primary error, context
   rejection, late resolution/rejection, and teardown.
+- Keep passive model context as the standards-first selection mechanism. When a
+  host advertises text-message capability, show one compact **Ask about this
+  holding** action inside expanded selected detail. Its deliberate click sends
+  only the security name/ticker and a concise Splice-backed follow-up request;
+  no value, allocation, account name/ID, security ID, or raw result is included.
+- Hide the action when text messages are unsupported. Treat thrown and
+  `isError` host responses as localized, retryable UI failure. Guard late
+  completions by selection and lifecycle generation so they cannot update a
+  replacement result.
 
 Exit criteria:
 
 - A follow-up such as “tell me more about this holding” resolves to the selected
-  security without leaking unnecessary account or portfolio data.
+  security without leaking unnecessary account or portfolio data. If a host
+  does not apply passive context to a manually typed turn, the explicit action
+  sends that same intent through standard `ui/message`.
 - Selection context cannot outlive the current authenticated primary result.
 - No App interaction invokes a write tool or mutates Splice data.
 
@@ -647,8 +661,13 @@ decision, three refinement passes, and final independent review.
   recording and exact selected/cleared host model-context observations. Its
   evidence summary pins the final deterministic bundle SHA.
 - Every responsive still, contact sheet, WebM, and browser JSON artifact in the
-  final directories was inspected. Protected deployment and ChatGPT Web/mobile
-  smoke remain operator work after promotion and must be recorded separately.
+  final directories was inspected. Protected deployment, metadata refresh,
+  live ChatGPT Web rendering, selective prose routing, and sanitized production
+  logging now pass and are recorded in `docs/mcp.md`. ChatGPT Web still ignores
+  the standards-based selected-holding model context on the next manually typed
+  turn. The explicit `ui/message` fallback is implemented and locally verified;
+  protected deployment, live ChatGPT Web action smoke, and native ChatGPT iOS
+  smoke remain.
 
 ## Risks And Deferred Work
 
@@ -676,6 +695,10 @@ decision, three refinement passes, and final independent review.
 - **Host automation boundary:** preserve the official sandbox. Use protocol
   tests and same-session evidence rather than adding bridge workarounds if outer
   automation cannot click cross-origin controls.
+- **Host capability variance:** passive model context remains portable and the
+  explicit follow-up action is progressive enhancement. A host that does not
+  advertise text-message support receives no action and keeps the normal
+  read-only visualization.
 - **Cash Flow isolation:** the Apps share a runtime and shell. Preserve the
   current Cash Flow contract and run its focused tests/capture after shared
   changes.
@@ -693,6 +716,9 @@ decision, three refinement passes, and final independent review.
   one evidence-backed composition ships.
 - Selection updates only minimum model context and cannot leak across result,
   error, cancellation, or teardown boundaries.
+- Supported hosts expose one explicit selected-holding follow-up action through
+  standard `ui/message`; unsupported hosts hide it, and selection never sends a
+  message automatically.
 - Authorization, fallback, safe-error, stale-data, fixture-exclusion, and
   deterministic-build invariants hold.
 - Three refinement passes and final independent review leave no major product,

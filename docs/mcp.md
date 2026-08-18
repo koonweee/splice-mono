@@ -613,10 +613,13 @@ or stack configuration change.
    consent are not expected. Record the refresh time because old conversations
    may retain the retired descriptor or cached v2 HTML.
 5. Smoke ChatGPT Web and mobile/iOS with portfolio value/concentration, an
-   account-scoped portfolio, `Other` expansion, and a selected holding followed
-   by “tell me more about this holding.” Verify total/ranking, inline detail,
-   snapshot range, one `All values in USD` footer, model context, themes, safe
-   areas, and loading/error boundaries.
+   account-scoped portfolio, `Other` expansion, and a selected holding. Verify
+   total/ranking, inline detail, snapshot range, one `All values in USD` footer,
+   model context, themes, safe areas, and loading/error boundaries. Selection
+   alone must not send a message. When the host advertises text `ui/message`,
+   click **Ask about this holding** and confirm the resulting user message and
+   response identify the selected security. If the host does not advertise the
+   capability, the action must be absent and the App must remain usable.
 6. Ask separately for a simple holding fact, investment activity, and available
    capabilities. Those should remain prose or use headless tools; they must not
    invoke Portfolio merely because they concern investments. Record sanitized
@@ -631,10 +634,75 @@ or stack configuration change.
 
 ### Portfolio v3 rollout record
 
-- Pending deployment. Populate only after protected promotion and ChatGPT
-  Web/mobile smoke with the exact reviewed application revision, deploy
-  revision, backend image digest, refresh time, evidence directories, sanitized
-  log result, and known-good rollback revision/image.
+- Implementation commit `2b5df89f2d97edd28944e77eaecdb4e60c4ca631`
+  shipped through protected PR `#250` to deploy revision
+  `157625fbcc1f19cb2c1ffdffb0c9a2a1cd768dd6` (workflow
+  `32090810576`). Production exposed a Nest decorator-metadata error caused by
+  a type-only dependency import; hotfix commit
+  `07406c7` added a runtime value import and decorator-metadata regression, then
+  shipped through PR `#251` to deploy revision
+  `3739b143ba80fc675f89f0d94f013f14d2fc844f` (workflow
+  `32091535674`).
+- The initial Komodo backend build/update was
+  `6a83bf21d28c58b2ef3c1b09` (`0.0.100`); targeted SF deployment
+  `6a83c0cfd28c58b2ef3c1b65` exposed the DI restart loop. The corrected build
+  `6a83c1f3d28c58b2ef3c1bab` (`0.0.101`) and targeted SF deployment
+  `6a83c30ad28c58b2ef3c1beb` restored a healthy MCP listener. No VPS or SG
+  stack was redeployed.
+- ChatGPT Web discovery was refreshed at `2026-08-18T02:34:18.983Z` and
+  confirmed exactly 25 tools, `visualize_portfolio`,
+  `ui://splice/portfolio/v3.html`, and no retired Portfolio launcher/resource.
+  A fresh Work conversation rendered the live ranked Portfolio UI, exact total,
+  top five plus `Other`, USD disclosure, and inline SGOV detail. Simple-largest-
+  holding and investment-activity prompts correctly stayed prose/headless.
+- That smoke also found that ChatGPT Web did not use a selected holding on the
+  next manually typed turn even though the App visibly selected SGOV and the
+  standards-first official-host harness had accepted
+  `ui/update-model-context`. Commit `17ff79d` therefore added a concise text
+  content block alongside the existing structured context and expanded the
+  lifecycle regressions. The fix passed 111 MCP App tests, typecheck, lint,
+  build, and two byte-identical App builds with SHA-256
+  `a287674eba2af947bc6efdd42b19fd6976b93537a500661fce4b200ed7661485`.
+  It shipped through PR `#252` to deploy revision
+  `5800c93cbe88c21bed4b8e2e8f50fd86bddc4e57` (workflow
+  `32092848466`). Webhook build `6a83c70ed28c58b2ef3c1cc5` published
+  backend `0.0.102`; targeted SF deployment
+  `6a83c826d28c58b2ef3c1d0b` completed successfully.
+- Final production backend image:
+  `sha256:b374b1080989cd8975a8b4445d3644f0fe864b564b90b53a1994f54a0cc2b7ef`.
+  The final ChatGPT metadata refresh was `2026-08-18T02:50:46.335Z`.
+  The live `visualize_portfolio` call completed successfully in `443 ms`; the
+  sanitized backend event contained only request ID, tool name, duration, and
+  success outcome, with no arguments, identities, holdings, values, claims, or
+  internal errors.
+- Remaining host-compatibility finding: after the final refresh and text plus
+  structured model-context deployment, ChatGPT Web still answered `VFAWF`
+  rather than the visibly selected `SGOV`. The App showed no context-error
+  state and production logged no server failure. Treat manual typed-turn
+  selection context as an unresolved ChatGPT host interoperability limitation;
+  do not describe it as passing. The same interaction still passes the official
+  MCP Apps host harness. Native ChatGPT iOS smoke also remains an operator step.
+- Follow-up remediation pins `@koonweee/mcp-kit@0.4.2` and adds an explicit,
+  user-initiated **Ask about this holding** action backed by the standard
+  `ui/message` bridge. The action is feature-detected, hidden in the tagged
+  neutral host that does not advertise text messages, and never fires merely
+  because a holding was selected. Its payload contains only the selected
+  security name/ticker and an instruction to use Splice; financial values,
+  allocation, account names/IDs, and security IDs remain out of the message.
+  Local focused Apps validation passes; protected deployment and live ChatGPT
+  Web/mobile action smoke are pending in this rollout record.
+- Official-host evidence remains under
+  `tmp/recordings/mcp-apps/portfolio-v3-information-hierarchy-final/`,
+  `portfolio-v3-exploration-final-d986/`,
+  `portfolio-v3-responsive-polish-final/`, `portfolio-v3-empty-final/`,
+  `portfolio-v3-primary-error-final/`, and
+  `portfolio-v3-cash-flow-isolation-final/`. The final independent review of
+  the implementation reported: “No major issues remain.”
+- Rollback inputs: backend image
+  `sha256:48c8f6cf929271dcaf4d6a0d5229442fcf8dc621606cfa0d405c1e516c4227b9`
+  and deploy revision
+  `9610330acf9b126c8d33b89a9b5e2a872b94a60f`. This cutover requires no
+  database, Auth0, DNS, ingress, or stack-schema rollback.
 
 ### Cash Flow v3 rollout and ChatGPT smoke
 
