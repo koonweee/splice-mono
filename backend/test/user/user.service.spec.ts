@@ -180,6 +180,35 @@ describe('UserService', () => {
   });
 
   describe('findOne', () => {
+    it('logs only safe user lookup lifecycle messages', async () => {
+      const mockEntity = new UserEntity();
+      mockEntity.id = 'private-user-uuid';
+      mockEntity.email = 'private@example.com';
+      mockEntity.hashedPassword = 'hashed';
+      mockEntity.settings = defaultSettings;
+      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockEntity)
+        .mockResolvedValueOnce(null);
+      const logger = (
+        service as unknown as {
+          logger: {
+            log: (message: string) => void;
+            warn: (message: string) => void;
+          };
+        }
+      ).logger;
+      const logSpy = jest.spyOn(logger, 'log');
+      const warnSpy = jest.spyOn(logger, 'warn');
+
+      await service.findOne('private-user-uuid');
+      await service.findOne('missing-private-user-uuid');
+
+      expect(logSpy.mock.calls).toEqual([['Finding user'], ['Finding user']]);
+      expect(warnSpy.mock.calls).toEqual([['User not found']]);
+    });
+
     it('should return a user when found', async () => {
       const mockEntity = new UserEntity();
       mockEntity.id = 'user-uuid-123';

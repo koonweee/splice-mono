@@ -47,13 +47,13 @@ export class UserService {
   }
 
   async findOne(id: string): Promise<User | null> {
-    this.logger.log({ id }, 'Finding user');
+    this.logger.log('Finding user');
     const entity = await this.repository.findOne({
       where: { id },
     });
 
     if (!entity) {
-      this.logger.warn({ id }, 'User not found');
+      this.logger.warn('User not found');
       return null;
     }
 
