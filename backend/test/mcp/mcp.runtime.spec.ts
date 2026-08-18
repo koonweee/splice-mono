@@ -101,6 +101,7 @@ async function startRuntime(
     listCategorizationRules: jest.fn(),
     listCategorizationRuleRecommendations: jest.fn(),
   };
+  const mcpPortfolioVisualizationService = { visualize: jest.fn() };
   const mcpCategorizationService = {
     listManualCategorizedTransactionExamples: jest.fn(),
     listRuleCandidatePatterns: jest.fn(),
@@ -121,6 +122,7 @@ async function startRuntime(
     balanceHistorySurfaceService as never,
     transactionsSurfaceService as never,
     mcpReadService as never,
+    mcpPortfolioVisualizationService as never,
     mcpCategorizationService as never,
     transactionAnalysisService as never,
     logger as never,
@@ -175,6 +177,7 @@ describe('SpliceMcpRuntimeService', () => {
   it('keeps the standalone listener opt-in and close idempotent', async () => {
     const logger = { log: jest.fn(), error: jest.fn() };
     const runtime = new SpliceMcpRuntimeService(
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -673,6 +676,7 @@ describe('SpliceMcpRuntimeService', () => {
     });
     const logger = { log: jest.fn(), error: jest.fn() };
     const runtime = new SpliceMcpRuntimeService(
+      {} as never,
       {} as never,
       {} as never,
       {} as never,

@@ -17,6 +17,7 @@ import { TransactionEntity } from '../transaction/transaction.entity';
 import { UserModule } from '../user/user.module';
 import { McpCategorizationService } from './mcp-categorization.service';
 import { McpReadService } from './mcp-read.service';
+import { McpPortfolioVisualizationService } from './mcp-portfolio-visualization.service';
 import { SpliceMcpRuntimeService } from './mcp.runtime';
 
 @Module({
@@ -42,6 +43,7 @@ import { SpliceMcpRuntimeService } from './mcp.runtime';
   providers: [
     SpliceMcpRuntimeService,
     McpReadService,
+    McpPortfolioVisualizationService,
     McpCategorizationService,
   ],
   exports: [SpliceMcpRuntimeService],

@@ -8,7 +8,7 @@ import type { SpliceMcpDependencies } from './mcp.definition';
 export const MCP_APP_DOMAIN = 'https://splice-mcp.kw0.dev';
 
 export interface SpliceMcpAppDefinition {
-  id: 'cash_flow' | 'portfolio_viewer';
+  id: 'cash_flow' | 'portfolio';
   title: string;
   description: string;
   resourceName: string;
@@ -26,13 +26,14 @@ export const APP_RESOURCES = {
     resourceUri: 'ui://splice/cash-flow/v3.html',
     initialToolName: 'visualize_cash_flow',
   },
-  portfolioViewer: {
-    id: 'portfolio_viewer',
-    title: 'Portfolio Viewer',
-    description: 'Interactive portfolio holdings and activity UI.',
-    resourceName: 'splice_portfolio_viewer_app',
-    resourceUri: 'ui://splice/portfolio-viewer/v2.html',
-    initialToolName: 'show_portfolio_viewer',
+  portfolio: {
+    id: 'portfolio',
+    title: 'Portfolio',
+    description:
+      'Mobile-first visualization of current portfolio value and concentration.',
+    resourceName: 'splice_portfolio_app',
+    resourceUri: 'ui://splice/portfolio/v3.html',
+    initialToolName: 'visualize_portfolio',
   },
 } as const satisfies Record<string, SpliceMcpAppDefinition>;
 
@@ -101,7 +102,7 @@ export function renderMcpAppHtml(app: SpliceMcpAppDefinition): string {
   switch (app.id) {
     case 'cash_flow':
       return renderCashFlowApp(app);
-    case 'portfolio_viewer':
+    case 'portfolio':
       return renderPortfolioViewerApp(app);
   }
 }

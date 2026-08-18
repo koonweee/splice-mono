@@ -2,6 +2,7 @@ import { createTestJwtAuthority } from '@koonweee/mcp-kit/test';
 import { createServer, request as httpRequest } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { EnabledMcpRuntimeConfig } from '../../../src/mcp/mcp.config';
+import { McpPortfolioVisualizationService } from '../../../src/mcp/mcp-portfolio-visualization.service';
 import { SpliceMcpRuntimeService } from '../../../src/mcp/mcp.runtime';
 
 const USER_ID = '00000000-0000-4000-8000-000000000099';
@@ -39,6 +40,188 @@ const primaryShouldFail = scenario === 'primary-error';
 
 const COMPARISON_START_DATE = '2026-03-01';
 const COMPARISON_END_DATE = '2026-03-31';
+
+const PORTFOLIO_CASE_ACCOUNTS = {
+  even: '00000000-0000-4000-8000-000000000411',
+  two: '00000000-0000-4000-8000-000000000412',
+  longLabels: '00000000-0000-4000-8000-000000000413',
+} as const;
+
+type PortfolioFixtureHolding = {
+  id: string;
+  accountId: string;
+  accountName: string;
+  snapshotDate: string;
+  provider: string;
+  securityId: string;
+  securityName: string;
+  tickerSymbol: string | null;
+  type: string;
+  subtype: string;
+  quantity: string | null;
+  costBasis: string | null;
+  institutionPrice: string | null;
+  institutionValue: {
+    amount: number;
+    currency: string;
+    sign: 'positive';
+  };
+  currency: string;
+  vestedQuantity: null;
+  vestedValue: null;
+};
+
+function portfolioHolding(
+  sequence: number,
+  value: number,
+  options: {
+    accountId?: string;
+    accountName?: string;
+    currency?: string;
+    date?: string;
+    name?: string;
+    price?: string | null;
+    quantity?: string | null;
+    securityId?: string;
+    ticker?: string | null;
+  } = {},
+): PortfolioFixtureHolding {
+  const currency = options.currency ?? 'USD';
+  return {
+    id: `00000000-0000-4000-8000-${String(500 + sequence).padStart(12, '0')}`,
+    accountId: options.accountId ?? '00000000-0000-4000-8000-000000000401',
+    accountName: options.accountName ?? 'Fixture Brokerage',
+    snapshotDate: options.date ?? '2026-08-14',
+    provider: 'fixture',
+    securityId:
+      options.securityId ??
+      `00000000-0000-4000-8000-${String(600 + sequence).padStart(12, '0')}`,
+    securityName: options.name ?? `Fixture Security ${sequence}`,
+    tickerSymbol: options.ticker ?? `FX${sequence}`,
+    type: 'equity',
+    subtype: 'etf',
+    quantity:
+      options.quantity === undefined ? String(sequence * 10) : options.quantity,
+    costBasis: null,
+    institutionPrice:
+      options.price === undefined
+        ? String(value / (sequence * 10))
+        : options.price,
+    institutionValue: { amount: value, currency, sign: 'positive' },
+    currency,
+    vestedQuantity: null,
+    vestedValue: null,
+  };
+}
+
+function concentratedPortfolio(): PortfolioFixtureHolding[] {
+  const sharedSecurityId = '00000000-0000-4000-8000-000000000601';
+  return [
+    portfolioHolding(1, 37_500, {
+      name: 'Fixture Global Market Index',
+      securityId: sharedSecurityId,
+      ticker: 'GMI',
+      quantity: '150',
+      price: '250',
+    }),
+    portfolioHolding(2, 22_727.27, {
+      accountId: '00000000-0000-4000-8000-000000000402',
+      accountName: 'Fixture Retirement Account',
+      currency: 'EUR',
+      date: '2026-08-15',
+      name: 'Fixture Global Market Index',
+      securityId: sharedSecurityId,
+      ticker: 'GMI',
+      quantity: '100',
+      price: '227.2727',
+    }),
+    portfolioHolding(3, 40_000, {
+      currency: 'SGD',
+      name: 'Fixture Technology Leaders Fund',
+      ticker: 'TECH',
+    }),
+    portfolioHolding(4, 18_000, {
+      name: 'Fixture Short Treasury Fund',
+      ticker: 'UST',
+    }),
+    portfolioHolding(5, 8_000, {
+      currency: 'GBP',
+      date: '2026-08-13',
+      name: 'Fixture Developed Markets Fund',
+      ticker: 'DEV',
+    }),
+    portfolioHolding(6, 7_000, {
+      name: 'Fixture Gold Trust',
+      ticker: 'GLD',
+    }),
+    portfolioHolding(7, 5_000, {
+      name: 'Fixture Healthcare Fund',
+      ticker: 'HLTH',
+    }),
+    portfolioHolding(8, 4_000, {
+      name: 'Fixture Small Cap Fund',
+      ticker: 'SMCP',
+      price: null,
+    }),
+    portfolioHolding(9, 3_500, {
+      name: 'Fixture Cash Equivalent',
+      ticker: null,
+      quantity: null,
+    }),
+  ];
+}
+
+function evenPortfolio(): PortfolioFixtureHolding[] {
+  return [14_000, 13_500, 13_000, 12_500, 12_000, 11_500, 11_000, 10_500].map(
+    (value, index) =>
+      portfolioHolding(index + 20, value, {
+        accountId: PORTFOLIO_CASE_ACCOUNTS.even,
+        accountName: 'Fixture Even Allocation Account',
+        name: `Fixture Even Position ${index + 1}`,
+        ticker: `EVN${index + 1}`,
+      }),
+  );
+}
+
+function twoPositionPortfolio(): PortfolioFixtureHolding[] {
+  return [
+    portfolioHolding(31, 62_000, {
+      accountId: PORTFOLIO_CASE_ACCOUNTS.two,
+      accountName: 'Fixture Two Position Account',
+      name: 'Fixture Broad Market Fund',
+      ticker: 'BROAD',
+    }),
+    portfolioHolding(32, 38_000, {
+      accountId: PORTFOLIO_CASE_ACCOUNTS.two,
+      accountName: 'Fixture Two Position Account',
+      name: 'Fixture Bond Market Fund',
+      ticker: 'BOND',
+    }),
+  ];
+}
+
+function longLabelPortfolio(): PortfolioFixtureHolding[] {
+  return concentratedPortfolio().map((holding, index) => ({
+    ...holding,
+    accountId: PORTFOLIO_CASE_ACCOUNTS.longLabels,
+    accountName:
+      'Fixture International Retirement Brokerage Account With A Deliberately Long Name',
+    securityName:
+      index === 0
+        ? 'Fixture Globally Diversified Sustainable Market Capitalization Weighted Index Fund With A Deliberately Long Name'
+        : holding.securityName,
+  }));
+}
+
+function portfolioFixtureFor(accountIds?: readonly string[]) {
+  const selected = accountIds?.[0];
+  if (selected === PORTFOLIO_CASE_ACCOUNTS.even) return evenPortfolio();
+  if (selected === PORTFOLIO_CASE_ACCOUNTS.two) return twoPositionPortfolio();
+  if (selected === PORTFOLIO_CASE_ACCOUNTS.longLabels) {
+    return longLabelPortfolio();
+  }
+  return concentratedPortfolio();
+}
 
 type FixtureCategory = {
   primaryCategory: string;
@@ -410,23 +593,21 @@ async function main(): Promise<void> {
         : [],
       query: { includeArchived: false },
     }),
-    listInvestmentHoldings: async () => ({
-      data: hasPopulatedData
-        ? [
-            {
-              id: 'fixture-ui-holding',
-              accountId: '00000000-0000-4000-8000-000000000103',
-              accountName: 'Fixture Brokerage',
-              quantity: '4',
-              institutionPrice: '125',
-              institutionValue: '500',
-              isoCurrencyCode: 'USD',
-              security: { name: 'Fixture Index Fund', tickerSymbol: 'FIX' },
-            },
-          ]
-        : [],
-      query: { latestOnly: true },
-    }),
+    listInvestmentHoldings: async (
+      _userId: string,
+      options: { accountIds?: string[] },
+    ) => {
+      if (primaryShouldFail) {
+        throw new Error('Fixture primary portfolio valuation failure.');
+      }
+      return {
+        data: hasPopulatedData ? portfolioFixtureFor(options.accountIds) : [],
+        query: {
+          ...(options.accountIds ? { accountIds: options.accountIds } : {}),
+          latestOnly: true,
+        },
+      };
+    },
     listInvestmentActivity: async () => {
       investmentActivityCalls += 1;
       if (helperShouldFail && investmentActivityCalls > 1) {
@@ -518,6 +699,25 @@ async function main(): Promise<void> {
     log: () => undefined,
     error: () => undefined,
   };
+  const currencyConversionService = {
+    getRateMap: async (currencies: string[]) => {
+      const fixtureRates = new Map([
+        ['EUR', 1.1],
+        ['GBP', 1.25],
+        ['SGD', 0.75],
+      ]);
+      return new Map(
+        currencies.flatMap((currency) => {
+          const rate = fixtureRates.get(currency);
+          return rate === undefined ? [] : [[currency, rate] as const];
+        }),
+      );
+    },
+  };
+  const mcpPortfolioVisualizationService = new McpPortfolioVisualizationService(
+    mcpReadService as never,
+    currencyConversionService as never,
+  );
 
   const runtime = new SpliceMcpRuntimeService(
     userService as never,
@@ -525,6 +725,7 @@ async function main(): Promise<void> {
     balanceHistorySurfaceService as never,
     transactionsSurfaceService as never,
     mcpReadService as never,
+    mcpPortfolioVisualizationService,
     mcpCategorizationService as never,
     transactionAnalysisService as never,
     logger as never,

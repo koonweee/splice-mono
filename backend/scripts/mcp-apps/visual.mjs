@@ -47,7 +47,6 @@ if (!supportedAppFilters.has(appFilter)) {
     `App must be one of: ${[...supportedAppFilters].join(', ')}.`,
   );
 }
-
 const stamp = new Date()
   .toISOString()
   .replaceAll(':', '-')
@@ -108,26 +107,50 @@ const appDefinitions = [
     ],
   },
   {
-    key: 'portfolio-viewer',
+    key: 'portfolio',
     filter: 'portfolio',
-    tool: 'show_portfolio_viewer',
-    resource: 'ui://splice/portfolio-viewer/v2.html',
-    title: 'Portfolio Viewer',
-    cases: [{ key: 'overview', title: 'Overview', input: {} }],
+    tool: 'visualize_portfolio',
+    resource: 'ui://splice/portfolio/v3.html',
+    title: 'Portfolio',
+    cases: [
+      { key: 'concentrated', title: 'Concentrated', input: {} },
+      {
+        key: 'even',
+        title: 'Nearly even',
+        input: {
+          accountIds: ['00000000-0000-4000-8000-000000000411'],
+        },
+      },
+      {
+        key: 'two-position',
+        title: 'Two positions',
+        input: {
+          accountIds: ['00000000-0000-4000-8000-000000000412'],
+        },
+      },
+      {
+        key: 'long-labels',
+        title: 'Long labels',
+        input: {
+          accountIds: ['00000000-0000-4000-8000-000000000413'],
+        },
+      },
+    ],
   },
 ];
 
 function defaultCaseKeys(app) {
-  if (app.key !== 'cash-flow') {
-    return new Set(['overview']);
-  }
-  if (scenario === 'populated') {
+  if (app.key === 'cash-flow' && scenario === 'populated') {
     return new Set(['overview', 'inflow', 'comparison', 'focus']);
   }
-  if (scenario === 'helper-error') {
+  if (app.key === 'cash-flow' && scenario === 'helper-error') {
     return new Set(['focus']);
   }
-  return new Set(['overview']);
+  if (app.key === 'cash-flow') return new Set(['overview']);
+  if (scenario === 'populated') {
+    return new Set(['concentrated', 'even', 'two-position', 'long-labels']);
+  }
+  return new Set(['concentrated']);
 }
 
 const selectedCaptures = appDefinitions
@@ -140,7 +163,8 @@ const selectedCaptures = appDefinitions
         app,
         captureCase,
         expectAppResource: !(
-          scenario === 'primary-error' && app.key === 'cash-flow'
+          scenario === 'primary-error' &&
+          (app.key === 'cash-flow' || app.key === 'portfolio')
         ),
       }));
   });
@@ -169,6 +193,43 @@ async function clearBrowserEvidence() {
   await browser(['network', 'requests', '--clear']);
   await browser(['console', '--clear']);
   await browser(['errors', '--clear']);
+}
+
+async function settleResponsiveResize() {
+  // The official host animates MCP App size-change notifications for 300 ms.
+  // Wait for that host-owned transition after changing viewport/device so the
+  // capture cannot preserve a stale desktop iframe height and clip phone UI.
+  await browser(['wait', '450']);
+}
+
+async function focusAppFrameForCapture() {
+  // Chrome may preserve the previous full-page screenshot's scroll position
+  // across same-URL host navigations. Cross-origin iframe contents that are
+  // completely outside the live viewport are then omitted from a full-page
+  // screenshot even though the App initialized successfully. Return the App
+  // panel to the viewport so every sandbox is painted before capture.
+  await browser(['eval', 'window.scrollTo(0, 0)']);
+  await browser(['wait', '100']);
+}
+
+async function prepareDirectAppCapture() {
+  await focusAppFrameForCapture();
+  const { stdout } = await browser(
+    ['eval', '({ width: window.innerWidth, height: window.innerHeight })'],
+    { capture: true },
+  );
+  const viewport = JSON.parse(stdout);
+  // Element screenshots of an out-of-process iframe only paint the portion
+  // intersecting the live viewport. Keep the responsive width and make the
+  // host viewport tall enough to paint the host-sized App region reliably.
+  await browser([
+    'set',
+    'viewport',
+    String(viewport.width),
+    String(Math.max(viewport.height, 1800)),
+  ]);
+  await settleResponsiveResize();
+  await focusAppFrameForCapture();
 }
 
 async function waitForCaptureReady({ app, captureCase, expectAppResource }) {
@@ -228,6 +289,7 @@ async function callTool({ app, captureCase, expectAppResource }) {
   const url = `${hostUrl}/?tool=${encodeURIComponent(app.tool)}&theme=hide`;
   browserOpened = true;
   await browser(['open', url]);
+  await focusAppFrameForCapture();
   await browser(['wait', '1000']);
   await clearBrowserEvidence();
   await browser([
@@ -250,10 +312,16 @@ async function callTool({ app, captureCase, expectAppResource }) {
 }
 
 async function collectEvidence(capture, viewport) {
-  const { app, captureCase } = capture;
+  const { app, captureCase, expectAppResource } = capture;
   const prefix = `${app.key}-${captureCase.key}-${viewport}`;
   const screenshot = resolve(outputDirectory, `${prefix}.png`);
-  await browser(['screenshot', '--full', screenshot]);
+  if (expectAppResource) {
+    await prepareDirectAppCapture();
+    await browser(['screenshot', 'iframe', screenshot]);
+  } else {
+    await focusAppFrameForCapture();
+    await browser(['screenshot', '--full', screenshot]);
+  }
   const { stdout: errors } = await browser(['errors', '--json'], {
     capture: true,
   });
@@ -432,6 +500,7 @@ async function recordInteraction({ app, captureCase, expectAppResource }) {
   await browser(['set', 'device', 'iPhone 12']);
   await browser(['set', 'media', 'dark']);
   await browser(['open', `${hostUrl}/?tool=${app.tool}&theme=hide`]);
+  await focusAppFrameForCapture();
   await browser(['wait', '1000']);
   await browser([
     'find',
@@ -533,13 +602,16 @@ async function main() {
 
     await browser(['set', 'device', 'iPhone 12']);
     await browser(['set', 'media', 'dark']);
+    await settleResponsiveResize();
     await collectEvidence(capture, 'mobile-dark');
 
     await browser(['set', 'media', 'light']);
+    await settleResponsiveResize();
     await collectEvidence(capture, 'mobile-light');
 
     await browser(['set', 'viewport', '320', '900']);
     await browser(['set', 'media', 'dark']);
+    await settleResponsiveResize();
     await collectEvidence(capture, 'narrow-320-dark');
 
     videos.push(await recordInteraction(capture));

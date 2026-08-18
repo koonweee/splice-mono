@@ -1,6 +1,7 @@
 import {
   createMcpServer,
   createRequestContext,
+  McpPublicError,
   silentLogger,
   validateMcpApps,
 } from '@koonweee/mcp-kit';
@@ -33,6 +34,8 @@ const RETIRED_APP_RESOURCE_URIS = new Set([
 ]);
 const REPLACED_CASH_FLOW_TOOL = 'show_cashflow_explorer';
 const REPLACED_CASH_FLOW_RESOURCE = 'ui://splice/cashflow-explorer.html';
+const REPLACED_PORTFOLIO_TOOL = 'show_portfolio_viewer';
+const REPLACED_PORTFOLIO_RESOURCE = 'ui://splice/portfolio-viewer.html';
 
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) {
@@ -88,6 +91,9 @@ describe('Splice MCP definition', () => {
     listAnalysisRules: jest.fn(),
     listCategorizationRules: jest.fn(),
     listCategorizationRuleRecommendations: jest.fn(),
+  };
+  const mcpPortfolioVisualizationService = {
+    visualize: jest.fn(),
   };
   const mcpCategorizationService = {
     listManualCategorizedTransactionExamples: jest.fn(),
@@ -154,6 +160,8 @@ describe('Splice MCP definition', () => {
           balanceHistorySurfaceService: balanceHistorySurfaceService as never,
           transactionsSurfaceService: transactionsSurfaceService as never,
           mcpReadService: mcpReadService as never,
+          mcpPortfolioVisualizationService:
+            mcpPortfolioVisualizationService as never,
           mcpCategorizationService: mcpCategorizationService as never,
           transactionAnalysisService: transactionAnalysisService as never,
         }),
@@ -191,8 +199,8 @@ describe('Splice MCP definition', () => {
         'preview_categorization_rule_application',
         'preview_categorization_rule_draft',
         'search_transactions',
-        'show_portfolio_viewer',
         'visualize_cash_flow',
+        'visualize_portfolio',
       ];
 
       expect(result.tools.map((tool) => tool.name).sort()).toEqual([
@@ -219,14 +227,15 @@ describe('Splice MCP definition', () => {
         'preview_categorization_rule_application',
         'preview_categorization_rule_draft',
         'search_transactions',
-        'show_portfolio_viewer',
         'visualize_cash_flow',
+        'visualize_portfolio',
       ]);
       expect(result.tools.map((tool) => tool.name)).toEqual([
         ...SPLICE_MCP_TOOL_NAMES,
       ]);
       expect(result.tools).toHaveLength(25);
       expect(toolsByName.has('show_cashflow_explorer')).toBe(false);
+      expect(toolsByName.has('show_portfolio_viewer')).toBe(false);
       expect(toolsByName.get('visualize_cash_flow')).toMatchObject({
         title: 'Visualize Cash Flow',
         description: expect.stringContaining('Do not call for capability'),
@@ -238,6 +247,17 @@ describe('Splice MCP definition', () => {
             comparison: expect.objectContaining({
               required: ['startDate', 'endDate'],
             }),
+          },
+        },
+      });
+      expect(toolsByName.get('visualize_portfolio')).toMatchObject({
+        title: 'Visualize Portfolio',
+        description: expect.stringContaining(
+          'Do not call for capability discovery',
+        ),
+        inputSchema: {
+          properties: {
+            accountIds: expect.objectContaining({ minItems: 1, maxItems: 100 }),
           },
         },
       });
@@ -311,7 +331,7 @@ describe('Splice MCP definition', () => {
         requiredScopes: ['splice:read'],
       },
       {
-        uri: 'ui://splice/portfolio-viewer/v2.html',
+        uri: 'ui://splice/portfolio/v3.html',
         requiredScopes: ['splice:read'],
       },
     ]);
@@ -323,30 +343,41 @@ describe('Splice MCP definition', () => {
     try {
       const retainedTools = PRE_PORT_MCP_CONTRACT.tools.filter(
         (name) =>
-          !RETIRED_APP_TOOL_NAMES.has(name) && name !== REPLACED_CASH_FLOW_TOOL,
+          !RETIRED_APP_TOOL_NAMES.has(name) &&
+          name !== REPLACED_CASH_FLOW_TOOL &&
+          name !== REPLACED_PORTFOLIO_TOOL,
       );
       const retainedToolContracts =
         PRE_PORT_MCP_CONTRACT.toolContractSha256.filter(
           ({ name }) =>
             !RETIRED_APP_TOOL_NAMES.has(name) &&
-            name !== REPLACED_CASH_FLOW_TOOL,
+            name !== REPLACED_CASH_FLOW_TOOL &&
+            name !== REPLACED_PORTFOLIO_TOOL,
         );
       const retainedResources = PRE_PORT_MCP_CONTRACT.fixedResources.filter(
         (uri) =>
           !RETIRED_APP_RESOURCE_URIS.has(uri) &&
-          uri !== REPLACED_CASH_FLOW_RESOURCE,
+          uri !== REPLACED_CASH_FLOW_RESOURCE &&
+          uri !== REPLACED_PORTFOLIO_RESOURCE,
       );
 
       const listedTools = await client.listTools();
-      expect(SPLICE_MCP_TOOL_NAMES).toHaveLength(retainedTools.length + 1);
+      expect(SPLICE_MCP_TOOL_NAMES).toHaveLength(retainedTools.length + 2);
       expect(
         listedTools.tools
           .map((tool) => tool.name)
-          .filter((name) => name !== 'visualize_cash_flow'),
+          .filter(
+            (name) =>
+              name !== 'visualize_cash_flow' && name !== 'visualize_portfolio',
+          ),
       ).toEqual(retainedTools);
       expect(
         listedTools.tools
-          .filter((tool) => tool.name !== 'visualize_cash_flow')
+          .filter(
+            (tool) =>
+              tool.name !== 'visualize_cash_flow' &&
+              tool.name !== 'visualize_portfolio',
+          )
           .map((tool) => ({
             name: tool.name,
             sha256: createHash('sha256')
@@ -364,7 +395,9 @@ describe('Splice MCP definition', () => {
       expect(
         listedResources.resources
           .filter(
-            (resource) => resource.uri !== 'ui://splice/cash-flow/v3.html',
+            (resource) =>
+              resource.uri !== 'ui://splice/cash-flow/v3.html' &&
+              resource.uri !== 'ui://splice/portfolio/v3.html',
           )
           .map((resource) => normalizeVersionedAppUris(resource.uri))
           .sort(),
@@ -386,7 +419,8 @@ describe('Splice MCP definition', () => {
       )) {
         if (
           RETIRED_APP_TOOL_NAMES.has(toolName) ||
-          toolName === REPLACED_CASH_FLOW_TOOL
+          toolName === REPLACED_CASH_FLOW_TOOL ||
+          toolName === REPLACED_PORTFOLIO_TOOL
         )
           continue;
         expect(toolsByName.get(toolName)?._meta).toMatchObject({
@@ -541,7 +575,7 @@ describe('Splice MCP definition', () => {
             mimeType: 'text/html;profile=mcp-app',
           }),
           expect.objectContaining({
-            uri: 'ui://splice/portfolio-viewer/v2.html',
+            uri: 'ui://splice/portfolio/v3.html',
             mimeType: 'text/html;profile=mcp-app',
           }),
         ]),
@@ -549,7 +583,7 @@ describe('Splice MCP definition', () => {
 
       const appUris = [
         'ui://splice/cash-flow/v3.html',
-        'ui://splice/portfolio-viewer/v2.html',
+        'ui://splice/portfolio/v3.html',
       ];
       for (const uri of appUris) {
         expect(
@@ -651,7 +685,7 @@ describe('Splice MCP definition', () => {
     const resourceUris = [
       'splice://mcp-guide',
       'ui://splice/cash-flow/v3.html',
-      'ui://splice/portfolio-viewer/v2.html',
+      'ui://splice/portfolio/v3.html',
       'splice://reports/cashflow/2026-03-01/2026-03-31',
       `splice://accounts/${mockAccountId}/snapshot`,
       'splice://categories/taxonomy',
@@ -1771,14 +1805,49 @@ describe('Splice MCP definition', () => {
       neutralizationLookaroundDays: 3,
       rows: [],
     });
-    mcpReadService.listInvestmentHoldings.mockResolvedValue({
-      data: [],
-      query: { latestOnly: true },
-    });
-    mcpReadService.listInvestmentActivity.mockResolvedValue({
-      data: [],
-      pageInfo: { nextCursor: null, hasMore: false },
-      query: {},
+    mcpPortfolioVisualizationService.visualize.mockResolvedValue({
+      reportingCurrency: 'USD',
+      totalValueUsd: {
+        amount: 125.5,
+        currency: 'USD',
+        sign: MoneySign.POSITIVE,
+      },
+      snapshotRange: { earliest: '2026-08-15', latest: '2026-08-16' },
+      selectedAccountIds: [mockAccountId],
+      positions: [
+        {
+          securityId: '33333333-3333-4333-8333-333333333333',
+          securityName: 'Test Index Fund',
+          tickerSymbol: 'TEST',
+          type: 'equity',
+          subtype: 'etf',
+          quantity: '2.5',
+          valueUsd: {
+            amount: 125.5,
+            currency: 'USD',
+            sign: MoneySign.POSITIVE,
+          },
+          allocationBps: 10_000,
+          contributions: [
+            {
+              accountId: mockAccountId,
+              accountName: 'Test Brokerage',
+              snapshotDate: '2026-08-16',
+              quantity: '2.5',
+              valueUsd: {
+                amount: 125.5,
+                currency: 'USD',
+                sign: MoneySign.POSITIVE,
+              },
+              priceUsd: {
+                amount: 45.83,
+                currency: 'USD',
+                sign: MoneySign.POSITIVE,
+              },
+            },
+          ],
+        },
+      ],
     });
     accountsSurfaceService.getAccountsSnapshot.mockResolvedValue({
       accounts: [],
@@ -1814,14 +1883,13 @@ describe('Splice MCP definition', () => {
         'openai/outputTemplate': 'ui://splice/cash-flow/v3.html',
       });
       expect(
-        tools.tools.find((tool) => tool.name === 'show_portfolio_viewer')
-          ?._meta,
+        tools.tools.find((tool) => tool.name === 'visualize_portfolio')?._meta,
       ).toMatchObject({
         ui: {
-          resourceUri: 'ui://splice/portfolio-viewer/v2.html',
+          resourceUri: 'ui://splice/portfolio/v3.html',
           visibility: ['model', 'app'],
         },
-        'openai/outputTemplate': 'ui://splice/portfolio-viewer/v2.html',
+        'openai/outputTemplate': 'ui://splice/portfolio/v3.html',
       });
 
       const appCalls = [
@@ -1837,11 +1905,11 @@ describe('Splice MCP definition', () => {
           },
         },
         {
-          name: 'show_portfolio_viewer',
+          name: 'visualize_portfolio',
           arguments: { accountIds: [mockAccountId] },
           app: {
-            id: 'portfolio_viewer',
-            resourceUri: 'ui://splice/portfolio-viewer/v2.html',
+            id: 'portfolio',
+            resourceUri: 'ui://splice/portfolio/v3.html',
           },
         },
       ] as const;
@@ -1852,6 +1920,22 @@ describe('Splice MCP definition', () => {
           arguments: appCall.arguments,
         })) as CallToolResult;
         expect(result.structuredContent).toMatchObject({ app: appCall.app });
+        if (appCall.name === 'visualize_portfolio') {
+          expect(result.structuredContent).toMatchObject({
+            data: {
+              reportingCurrency: 'USD',
+              totalValueUsd: { amount: 125.5, currency: 'USD' },
+              positions: [
+                {
+                  tickerSymbol: 'TEST',
+                  allocationBps: 10_000,
+                  contributions: [{ accountName: 'Test Brokerage' }],
+                },
+              ],
+            },
+            fallback: expect.stringContaining('complete current USD portfolio'),
+          });
+        }
         const text = result.content.find(
           (content): content is Extract<typeof content, { type: 'text' }> =>
             content.type === 'text',
@@ -1859,12 +1943,83 @@ describe('Splice MCP definition', () => {
         expect(JSON.parse(text ?? '{}')).toEqual(result.structuredContent);
       }
 
-      expect(mcpReadService.listInvestmentHoldings).toHaveBeenCalledWith(
+      expect(mcpPortfolioVisualizationService.visualize).toHaveBeenCalledWith(
         mockUserId,
-        { accountIds: [mockAccountId] },
+        [mockAccountId],
       );
+      expect(mcpReadService.listInvestmentActivity).not.toHaveBeenCalled();
     } finally {
       await close();
+    }
+  });
+
+  it('enforces the Portfolio input/scope boundary and exposes only a safe atomic valuation failure', async () => {
+    const withoutScope = await connect(createServer(mockUserId, []));
+    try {
+      const denied = (await withoutScope.client.callTool({
+        name: 'visualize_portfolio',
+        arguments: { accountIds: [mockAccountId] },
+      })) as CallToolResult;
+      expect(denied).toMatchObject({ isError: true });
+      expect(mcpPortfolioVisualizationService.visualize).not.toHaveBeenCalled();
+    } finally {
+      await withoutScope.close();
+    }
+
+    const withScope = await connect(createServer(mockUserId, ['splice:read']));
+    try {
+      const invalid = (await withScope.client.callTool({
+        name: 'visualize_portfolio',
+        arguments: { accountIds: [] },
+      })) as CallToolResult;
+      expect(invalid).toMatchObject({ isError: true });
+      expect(mcpPortfolioVisualizationService.visualize).not.toHaveBeenCalled();
+
+      const invalidUuid = (await withScope.client.callTool({
+        name: 'visualize_portfolio',
+        arguments: { accountIds: ['not-a-uuid'] },
+      })) as CallToolResult;
+      expect(invalidUuid).toMatchObject({ isError: true });
+      expect(invalidUuid).not.toHaveProperty('structuredContent');
+      expect(mcpPortfolioVisualizationService.visualize).not.toHaveBeenCalled();
+
+      mcpPortfolioVisualizationService.visualize.mockResolvedValue({
+        reportingCurrency: 'USD',
+        totalValueUsd: {
+          amount: 0.001,
+          currency: 'USD',
+          sign: MoneySign.POSITIVE,
+        },
+        snapshotRange: null,
+        positions: [],
+      });
+      const invalidCents = (await withScope.client.callTool({
+        name: 'visualize_portfolio',
+        arguments: {},
+      })) as CallToolResult;
+      expect(invalidCents).toMatchObject({ isError: true });
+      expect(invalidCents).not.toHaveProperty('structuredContent');
+
+      mcpPortfolioVisualizationService.visualize.mockRejectedValue(
+        new McpPublicError(
+          'portfolio_valuation_unavailable',
+          'Portfolio values are temporarily unavailable.',
+          { cause: new Error('PRIVATE_FX_PROVIDER_FAILURE') },
+        ),
+      );
+      const unavailable = (await withScope.client.callTool({
+        name: 'visualize_portfolio',
+        arguments: { accountIds: [mockAccountId] },
+      })) as CallToolResult;
+      expect(unavailable).toMatchObject({ isError: true });
+      expect(JSON.stringify(unavailable)).toContain(
+        'Portfolio values are temporarily unavailable.',
+      );
+      expect(JSON.stringify(unavailable)).not.toContain(
+        'PRIVATE_FX_PROVIDER_FAILURE',
+      );
+    } finally {
+      await withScope.close();
     }
   });
 

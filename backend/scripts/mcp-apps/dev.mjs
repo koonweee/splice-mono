@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import { watch } from 'node:fs';
+import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   BACKEND_ROOT,
@@ -38,9 +40,33 @@ if (!supportedScenarios.has(scenario)) {
 let fixture;
 let host;
 let rebuilding = false;
-let rebuildQueued = false;
 let stopping = false;
 let debounce;
+let watchedSourceFingerprint;
+
+const appSourceDirectory = resolve(BACKEND_ROOT, 'src/mcp/apps');
+const watchedSourceFiles = [
+  resolve(BACKEND_ROOT, 'src/mcp/mcp-apps.ts'),
+  resolve(BACKEND_ROOT, 'src/mcp/mcp.definition.ts'),
+];
+
+async function sourceFingerprint() {
+  const appSourceFiles = (
+    await readdir(appSourceDirectory, { recursive: true })
+  )
+    .filter(
+      (filename) =>
+        (filename.endsWith('.ts') || filename.endsWith('.mjs')) &&
+        !filename.endsWith('app-runtime.generated.ts'),
+    )
+    .map((filename) => resolve(appSourceDirectory, filename));
+  const hash = createHash('sha256');
+  for (const path of [...appSourceFiles, ...watchedSourceFiles].sort()) {
+    hash.update(path);
+    hash.update(await readFile(path));
+  }
+  return hash.digest('hex');
+}
 
 async function startFixture() {
   const nextFixture = startProcess(
@@ -71,7 +97,6 @@ async function startFixture() {
 
 async function rebuild() {
   if (rebuilding) {
-    rebuildQueued = true;
     return;
   }
   rebuilding = true;
@@ -85,10 +110,19 @@ async function rebuild() {
     console.error(error instanceof Error ? error.message : error);
   } finally {
     rebuilding = false;
-    if (rebuildQueued && !stopping) {
-      rebuildQueued = false;
-      await rebuild();
+  }
+}
+
+async function rebuildIfSourcesChanged() {
+  try {
+    const nextFingerprint = await sourceFingerprint();
+    if (nextFingerprint === watchedSourceFingerprint) {
+      return;
     }
+    watchedSourceFingerprint = nextFingerprint;
+    await rebuild();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
   }
 }
 
@@ -127,8 +161,10 @@ try {
   throw error;
 }
 
+watchedSourceFingerprint = await sourceFingerprint();
+
 const watchedPaths = [
-  { path: resolve(BACKEND_ROOT, 'src/mcp/apps'), recursive: true },
+  { path: appSourceDirectory, recursive: true },
   { path: resolve(BACKEND_ROOT, 'src/mcp/mcp-apps.ts'), recursive: false },
   {
     path: resolve(BACKEND_ROOT, 'src/mcp/mcp.definition.ts'),
@@ -139,6 +175,7 @@ const watchers = watchedPaths.map(({ path, recursive }) =>
   watch(path, { recursive }, (_event, filename) => {
     if (
       stopping ||
+      rebuilding ||
       !filename ||
       filename.endsWith('app-runtime.generated.ts')
     ) {
@@ -147,7 +184,7 @@ const watchers = watchedPaths.map(({ path, recursive }) =>
     if (debounce) {
       clearTimeout(debounce);
     }
-    debounce = setTimeout(() => void rebuild(), 150);
+    debounce = setTimeout(() => void rebuildIfSourcesChanged(), 150);
   }),
 );
 

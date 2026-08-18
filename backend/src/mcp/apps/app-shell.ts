@@ -137,7 +137,53 @@ const APP_CSS = `
   .cash-flow-adjustments summary { min-height: 44px; display: flex; align-items: center; padding: 10px 12px; cursor: pointer; font-weight: 650; }
   .cash-flow-adjustments > div { padding: 0 12px 12px; }
   .cash-flow-adjustments p { font-size: 12px; }
+  .cash-flow-currency-note { margin: -6px 2px 0; color: var(--color-text-secondary); font-size: 11px; text-align: right; }
   .cash-flow-empty { padding: 20px; border: 1px dashed var(--color-border-primary); border-radius: 12px; text-align: center; }
+
+  .portfolio-view { width: min(100%, 720px); margin: 0 auto; display: grid; gap: 18px; min-width: 0; }
+  .portfolio-header { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+  .portfolio-header h1 { font-size: clamp(22px, 5vw, 30px); }
+  .portfolio-total { min-width: 0; display: grid; gap: 4px; padding: 18px; border: 1px solid var(--color-border-primary); border-radius: 14px; background: var(--color-background-secondary); }
+  .portfolio-total p { margin: 0; font-size: 13px; }
+  .portfolio-total strong { min-width: 0; font-size: clamp(32px, 10vw, 48px); line-height: 1.05; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .portfolio-allocation { min-width: 0; display: grid; gap: 10px; }
+  .portfolio-position-list { display: grid; overflow: hidden; border: 1px solid var(--color-border-primary); border-radius: 12px; background: var(--color-background-secondary); }
+  .portfolio-position { width: 100%; min-height: 58px; display: grid; grid-template-columns: 24px minmax(0, 1fr) minmax(74px, auto); gap: 10px; align-items: center; padding: 10px 12px; border: 0; border-radius: 0; border-bottom: 1px solid var(--color-border-secondary); text-align: left; }
+  .portfolio-position:last-child { border-bottom: 0; }
+  .portfolio-position[aria-expanded="true"] { background: var(--color-background-tertiary); box-shadow: inset 3px 0 0 #2563eb; }
+  .portfolio-rank { width: 24px; color: var(--color-text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
+  .portfolio-position-main { min-width: 0; display: grid; gap: 6px; }
+  .portfolio-position-main > span:first-child { min-width: 0; }
+  .portfolio-position-main strong { display: block; line-height: 1.25; overflow-wrap: anywhere; }
+  .portfolio-position-main small { font-size: 10px; }
+  .portfolio-bar { width: 100%; height: 5px; overflow: hidden; border-radius: 999px; background: var(--color-background-tertiary); }
+  .portfolio-bar > span { display: block; height: 100%; border-radius: inherit; }
+  .portfolio-position-value { min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .portfolio-position-value strong { display: block; overflow-wrap: anywhere; }
+  .portfolio-position-value small { margin-top: 2px; font-size: 10px; }
+  .portfolio-other { border-bottom: 1px solid var(--color-border-secondary); }
+  #portfolio-other-rows { display: grid; background: light-dark(#f8fafc, #172033); }
+  #portfolio-other-rows .portfolio-position { padding-left: 18px; }
+  .portfolio-detail { min-width: 0; display: grid; gap: 14px; margin: 12px; padding: 15px; border: 1px solid var(--color-border-primary); border-radius: 12px; background: var(--color-background-secondary); }
+  .portfolio-detail-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+  .portfolio-detail-head h3 { margin: 0; font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }
+  .portfolio-detail-head p:not(.eyebrow) { font-size: 12px; }
+  .portfolio-detail-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; }
+  .portfolio-detail-summary > span { min-width: 0; padding: 10px; border-radius: 8px; background: var(--color-background-tertiary); }
+  .portfolio-detail-summary small { margin: 0 0 3px; font-size: 10px; }
+  .portfolio-detail-summary strong { display: block; font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .portfolio-contributions { margin: 0; padding: 0; list-style: none; display: grid; }
+  .portfolio-contributions li { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(74px, auto); gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--color-border-secondary); }
+  .portfolio-contributions li:last-child { border-bottom: 0; }
+  .portfolio-contributions li > span { min-width: 0; }
+  .portfolio-contributions li strong { overflow-wrap: anywhere; }
+  .portfolio-contributions li > strong { text-align: right; font-variant-numeric: tabular-nums; }
+  .portfolio-contributions small { font-size: 10px; overflow-wrap: anywhere; }
+  .portfolio-context-note { margin: 0; padding: 9px 10px; border-radius: 7px; background: var(--color-background-tertiary); font-size: 11px; }
+  .portfolio-show-contributions { min-height: 44px; justify-self: start; }
+  .portfolio-empty { padding: 20px; border: 1px dashed var(--color-border-primary); border-radius: 12px; text-align: center; }
+  .portfolio-empty h2 { font-size: 16px; }
+  .portfolio-disclosure { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: -6px 2px 0; color: var(--color-text-secondary); font-size: 11px; }
 
   @media (prefers-reduced-motion: reduce) {
     .spinner { animation: none; }
@@ -162,6 +208,16 @@ const APP_CSS = `
     .cash-flow-category-value { font-size: 12px; }
     .cash-flow-detail-head { display: grid; }
     .text-button { justify-self: start; padding-left: 0; }
+    .portfolio-view { gap: 14px; }
+    .portfolio-total { padding: 15px; }
+    .portfolio-position { grid-template-columns: 20px minmax(0, 1fr) minmax(66px, auto); gap: 8px; padding: 9px 10px; }
+    .portfolio-rank { width: 20px; }
+    .portfolio-position-value { font-size: 12px; }
+    .portfolio-detail-head { display: grid; }
+    .portfolio-detail-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .portfolio-contributions li { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+    .portfolio-contributions li > strong { text-align: left; }
+    .portfolio-disclosure { display: grid; }
   }
 `;
 

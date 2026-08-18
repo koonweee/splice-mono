@@ -35,6 +35,7 @@ interface RuntimeHarness {
   sendToolInput: (arguments_: Record<string, unknown>) => void;
   sendToolResult: (structuredContent: Record<string, unknown>) => void;
   sendRuntimeError: () => void;
+  sendCancelled: () => void;
   teardown: () => void;
 }
 
@@ -152,6 +153,12 @@ function runRuntime(
         error: { kind: 'transport', message: 'sensitive transport failure' },
       });
     },
+    sendCancelled: () => {
+      runtime.options.onStateChange?.({
+        status: 'error',
+        error: { kind: 'cancelled', message: 'cancelled by host' },
+      });
+    },
     teardown: () => runtime.options.onTeardown?.(),
   };
 }
@@ -230,6 +237,72 @@ function cashFlowResult(
           : {}),
       },
       current: cashFlowPeriod(categories),
+    },
+  };
+}
+
+function portfolioPosition(
+  index: number,
+  options: {
+    amount?: number;
+    allocationBps?: number;
+    name?: string;
+    accountName?: string | null;
+    quantity?: string | null;
+    price?: number | null;
+  } = {},
+) {
+  const amount = options.amount ?? 1000 - index * 100;
+  const securityId = `security-${index}`;
+  return {
+    securityId,
+    securityName: options.name ?? `Holding ${index}`,
+    tickerSymbol: `H${index}`,
+    type: 'equity',
+    subtype: null,
+    quantity:
+      options.quantity === undefined ? String(index + 1) : options.quantity,
+    valueUsd: mcpMoney(amount),
+    allocationBps: options.allocationBps ?? 1000,
+    contributions: [
+      {
+        accountId: `account-${index}`,
+        accountName:
+          options.accountName === undefined
+            ? `Investment account ${index}`
+            : options.accountName,
+        snapshotDate: '2026-08-16',
+        quantity:
+          options.quantity === undefined ? String(index + 1) : options.quantity,
+        valueUsd: mcpMoney(amount),
+        priceUsd:
+          options.price === null
+            ? null
+            : mcpMoney(options.price === undefined ? amount : options.price),
+      },
+    ],
+  };
+}
+
+function portfolioResult(
+  positions = Array.from({ length: 7 }, (_, index) =>
+    portfolioPosition(index, {
+      allocationBps: index < 5 ? 1800 - index * 100 : 1000,
+    }),
+  ),
+) {
+  return {
+    app: { id: 'portfolio' },
+    data: {
+      reportingCurrency: 'USD',
+      totalValueUsd: mcpMoney(
+        positions.reduce((sum, item) => sum + item.valueUsd.amount, 0),
+      ),
+      snapshotRange: {
+        earliest: '2026-08-15',
+        latest: '2026-08-16',
+      },
+      positions,
     },
   };
 }
@@ -322,12 +395,9 @@ describe('Splice MCP App runtime integration', () => {
         structuredContent: cashFlowResult([]),
       },
       {
-        id: 'portfolio_viewer',
-        expected: 'Portfolio Viewer',
-        structuredContent: {
-          app: { id: 'portfolio_viewer' },
-          data: { holdings: { data: [] }, activity: { data: [] } },
-        },
+        id: 'portfolio',
+        expected: 'Portfolio',
+        structuredContent: portfolioResult([]),
       },
     ];
 
@@ -343,22 +413,12 @@ describe('Splice MCP App runtime integration', () => {
   });
 
   it('clears stale data on malformed results, runtime errors, and teardown', () => {
-    const harness = runRuntime('portfolio_viewer');
-    harness.sendToolResult({
-      app: { id: 'portfolio_viewer' },
-      data: {
-        holdings: {
-          data: [
-            {
-              security: { name: 'Private Test Holding' },
-              institutionValue: 777,
-              isoCurrencyCode: 'USD',
-            },
-          ],
-        },
-        activity: { data: [] },
-      },
-    });
+    const harness = runRuntime('portfolio');
+    harness.sendToolResult(
+      portfolioResult([
+        portfolioPosition(1, { name: 'Private Test Holding', amount: 777 }),
+      ]),
+    );
     expect(harness.html()).toContain('Private Test Holding');
 
     harness.sendToolResult({});
@@ -410,6 +470,26 @@ describe('Splice MCP App runtime integration', () => {
         selection: null,
       },
     });
+  });
+
+  it('uses compact currency symbols with one reporting-currency note', () => {
+    const harness = runRuntime('cash_flow');
+    const result = cashFlowResult();
+    const analysis = result.data.current.analysis;
+    analysis.currency = 'SGD';
+    Object.values(analysis.totals).forEach((money) => {
+      money.currency = 'SGD';
+    });
+    analysis.outflows.forEach((category) => {
+      category.totalAmount.currency = 'SGD';
+    });
+
+    harness.sendToolResult(result);
+
+    expect(harness.html()).toContain('$1,200.00');
+    expect(harness.html()).toContain('$750.00');
+    expect(harness.html()).toContain('All values in SGD.');
+    expect(harness.html()).not.toContain('SGD ');
   });
 
   it('keeps primary data visible when helper or model-context updates fail', async () => {
@@ -737,138 +817,313 @@ describe('Splice MCP App runtime integration', () => {
     expect(harness.html()).toContain('Test Category 7');
   });
 
-  it('starts portfolio reload as a boundary and ignores older pagination', async () => {
-    const harness = runRuntime('portfolio_viewer');
-    harness.sendToolResult({
-      app: { id: 'portfolio_viewer' },
-      data: {
-        holdings: {
-          data: [
-            {
-              accountId: 'old-account',
-              security: { name: 'Old Holding' },
-              institutionValue: 10,
-            },
-          ],
-        },
-        activity: {
-          data: [],
-          pageInfo: { nextCursor: 'old-cursor', hasMore: true },
-        },
-      },
-    });
+  it('renders a concise top-five Portfolio with exact Other and no dashboard controls', () => {
+    const harness = runRuntime('portfolio');
+    harness.sendToolResult(portfolioResult());
 
-    let resolveOldPage: ((value: unknown) => void) | undefined;
-    harness.callServerTool.mockImplementation(
-      ({ name, arguments: args }: { name: string; arguments?: object }) => {
-        if (name === 'list_investment_activity' && args && 'cursor' in args) {
-          return new Promise((resolve) => {
-            resolveOldPage = resolve;
-          });
-        }
-        if (name === 'list_investment_holdings') {
-          return Promise.resolve({
-            structuredContent: {
-              data: [
-                {
-                  accountId: 'new-account',
-                  security: { name: 'New Holding' },
-                  institutionValue: 20,
-                },
-              ],
-            },
-          });
-        }
-        return Promise.resolve({
-          structuredContent: { data: [], pageInfo: { hasMore: false } },
-        });
-      },
+    expect(harness.html()).toContain('Total portfolio value');
+    expect(harness.html()).toContain('Largest holdings');
+    expect(harness.html()).toContain('Holding 0');
+    expect(harness.html()).toContain('Holding 4');
+    expect(harness.html()).not.toContain('Holding 5');
+    expect(harness.html()).toContain('2 more holdings');
+    expect(harness.html()).toContain('$900.00');
+    expect(harness.html()).toContain('20%');
+    expect(harness.html()).toContain('All values in USD.');
+    expect(harness.html()).toContain(
+      'Latest holdings span 2026-08-15 to 2026-08-16',
     );
-    harness.dispatchClick(actionTarget('next-activity'));
-    harness.dispatchClick(actionTarget('reload-portfolio'));
-
-    expect(harness.html()).toContain('Loading live Splice data');
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    resolveOldPage?.({
-      structuredContent: {
-        data: [{ security: { name: 'Private Late Activity' } }],
-      },
-    });
-    await new Promise<void>((resolve) => setImmediate(resolve));
-
-    expect(harness.html()).toContain('New Holding');
-    expect(harness.html()).not.toMatch(/Old Holding|Private Late Activity/);
+    expect(harness.html()).not.toMatch(
+      /Reload|Search|Activity|Holdings mode|type="date"|<table|<select/,
+    );
   });
 
-  it('uses snapshotDate, not latestOnly=false, for date-specific holdings reloads', async () => {
-    const harness = runRuntime('portfolio_viewer');
-    harness.sendToolResult({
-      app: { id: 'portfolio_viewer' },
-      data: {
-        holdings: { data: [], query: { latestOnly: true } },
-        activity: { data: [], pageInfo: { nextCursor: null, hasMore: false } },
-      },
-    });
-    harness.callServerTool.mockResolvedValue({
-      structuredContent: { data: [] },
-    });
+  it('expands Other and opens inline evidence with minimum model context', async () => {
+    const harness = runRuntime('portfolio');
+    harness.sendToolResult(portfolioResult());
 
-    harness.dispatchChange({ id: 'portfolio-date-mode', value: 'date' });
-    harness.dispatchInput({
-      id: 'portfolio-snapshot-date',
-      value: '2026-04-30',
-    });
-    harness.dispatchClick(actionTarget('reload-portfolio'));
+    harness.dispatchClick(actionTarget('toggle-portfolio-other'));
+    expect(harness.html()).toContain('Holding 5');
+    expect(harness.html()).toContain('Holding 6');
+
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-5' }),
+    );
     await Promise.resolve();
 
-    expect(harness.callServerTool).toHaveBeenCalledWith({
-      name: 'list_investment_holdings',
-      arguments: { snapshotDate: '2026-04-30' },
+    expect(harness.html()).toContain('Selected holding');
+    expect(harness.html()).toContain('Investment account 5');
+    expect(harness.html()).toContain('Combined quantity');
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: {
+        visualization: 'portfolio',
+        reportingCurrency: 'USD',
+        selection: expect.objectContaining({
+          securityId: 'security-5',
+          displayName: 'Holding 5',
+          tickerSymbol: 'H5',
+          allocationBps: 1000,
+          accountNames: ['Investment account 5'],
+          snapshotRange: {
+            earliest: '2026-08-15',
+            latest: '2026-08-16',
+          },
+        }),
+      },
     });
-    expect(harness.callServerTool).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'list_investment_holdings',
-        arguments: expect.objectContaining({ latestOnly: false }),
+    expect(JSON.stringify(harness.updateModelContext.mock.calls)).not.toMatch(
+      /accountId|positions|contributions|quantity|priceUsd/,
+    );
+
+    harness.dispatchClick(actionTarget('toggle-portfolio-other'));
+    expect(harness.html()).not.toMatch(/Holding 5|Selected holding/);
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: { visualization: 'portfolio', selection: null },
+    });
+  });
+
+  it('keeps multi-account position evidence concise until requested', () => {
+    const harness = runRuntime('portfolio');
+    const base = portfolioPosition(0, { amount: 5000, allocationBps: 10_000 });
+    const contributions = Array.from({ length: 5 }, (_, index) => ({
+      ...base.contributions[0],
+      accountId: `contribution-${index}`,
+      accountName: `Contribution account ${index}`,
+      valueUsd: mcpMoney(1000),
+    }));
+    harness.sendToolResult(portfolioResult([{ ...base, contributions }]));
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+
+    expect(harness.html()).toContain('Contribution account 2');
+    expect(harness.html()).not.toContain('Contribution account 3');
+    expect(harness.html()).toContain('Show 2 more accounts');
+
+    harness.dispatchClick(actionTarget('toggle-portfolio-contributions'));
+    expect(harness.html()).toContain('Contribution account 4');
+    expect(harness.html()).toContain('Show fewer accounts');
+  });
+
+  it('clears Portfolio context on close, replacement, errors, cancellation, and teardown', () => {
+    const harness = runRuntime('portfolio');
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+    harness.dispatchClick(actionTarget('close-position'));
+
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: { visualization: 'portfolio', selection: null },
+    });
+    expect(harness.html()).not.toContain('Selected holding');
+
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-1' }),
+    );
+    harness.sendToolResult(
+      portfolioResult([portfolioPosition(9, { name: 'Replacement Holding' })]),
+    );
+    expect(harness.html()).toContain('Replacement Holding');
+    expect(harness.html()).not.toMatch(/Holding 1|Selected holding/);
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: { visualization: 'portfolio', selection: null },
+    });
+
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-9' }),
+    );
+    harness.sendRuntimeError();
+    expect(harness.html()).toContain('Unable to load live Splice data');
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: { visualization: 'portfolio', selection: null },
+    });
+
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+    harness.sendCancelled();
+    expect(harness.html()).toContain('Unable to load live Splice data');
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: { visualization: 'portfolio', selection: null },
+    });
+
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+    harness.teardown();
+    expect(harness.html()).not.toContain('Holding 0');
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: { visualization: 'portfolio', selection: null },
+    });
+  });
+
+  it('clears Portfolio data and selection context at a loading boundary', () => {
+    const harness = runRuntime('portfolio');
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+
+    harness.sendToolInput({ accountIds: ['replacement-account'] });
+
+    expect(harness.html()).toContain('Loading live Splice data');
+    expect(harness.html()).not.toMatch(/Holding 0|Selected holding/);
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: { visualization: 'portfolio', selection: null },
+    });
+  });
+
+  it('retries a rejected Portfolio lifecycle clear at the next boundary', async () => {
+    const harness = runRuntime('portfolio');
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+    await flushPromises();
+
+    harness.updateModelContext.mockRejectedValueOnce(
+      new Error('lifecycle clear rejected'),
+    );
+    harness.sendToolInput({ accountIds: ['replacement-account'] });
+    await flushPromises();
+    expect(harness.updateModelContext).toHaveBeenCalledTimes(2);
+
+    harness.sendRuntimeError();
+    await flushPromises();
+    expect(harness.updateModelContext).toHaveBeenCalledTimes(3);
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: { visualization: 'portfolio', selection: null },
+    });
+
+    harness.sendCancelled();
+    expect(harness.updateModelContext).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps valid Portfolio data visible when model context rejects', async () => {
+    const harness = runRuntime('portfolio');
+    harness.updateModelContext.mockRejectedValue(
+      new Error('private host context failure'),
+    );
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+    await flushPromises();
+
+    expect(harness.html()).toContain('Holding 0');
+    expect(harness.html()).toContain(
+      'selection could not be shared with the conversation',
+    );
+    expect(harness.html()).not.toContain('private host context failure');
+  });
+
+  it('clears the prior successful Portfolio identity when a replacement publish rejects', async () => {
+    const harness = runRuntime('portfolio');
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+    await flushPromises();
+
+    harness.updateModelContext.mockRejectedValueOnce(
+      new Error('replacement context rejected'),
+    );
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-1' }),
+    );
+    await flushPromises();
+
+    expect(harness.updateModelContext).toHaveBeenNthCalledWith(2, {
+      structuredContent: expect.objectContaining({
+        selection: expect.objectContaining({ securityId: 'security-1' }),
       }),
+    });
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: { visualization: 'portfolio', selection: null },
+    });
+    expect(harness.html()).toContain('Holding 1');
+    expect(harness.html()).toContain(
+      'selection could not be shared with the conversation',
     );
   });
 
-  it('drops a portfolio account selection that is absent from new holdings', async () => {
-    const harness = runRuntime('portfolio_viewer');
-    harness.sendToolResult({
-      app: { id: 'portfolio_viewer' },
-      data: {
-        holdings: {
-          data: [{ accountId: 'old-account', institutionValue: 10 }],
-        },
-        activity: { data: [] },
-      },
-    });
-    harness.dispatchChange({ id: 'portfolio-account', value: 'old-account' });
-
-    harness.sendToolResult({
-      app: { id: 'portfolio_viewer' },
-      data: {
-        holdings: {
-          data: [{ accountId: 'new-account', institutionValue: 20 }],
-        },
-        activity: { data: [] },
-      },
-    });
-    harness.callServerTool.mockResolvedValue({
-      structuredContent: { data: [] },
-    });
-    harness.dispatchClick(actionTarget('reload-portfolio'));
-    await new Promise<void>((resolve) => setImmediate(resolve));
-
-    expect(harness.callServerTool).toHaveBeenCalledWith({
-      name: 'list_investment_holdings',
-      arguments: { latestOnly: true },
-    });
-    expect(harness.callServerTool).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        arguments: expect.objectContaining({ accountIds: ['old-account'] }),
-      }),
+  it('ignores a late replacement clear after a newer Portfolio selection publishes', async () => {
+    const harness = runRuntime('portfolio');
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
     );
+    await flushPromises();
+
+    let resolveClear: (() => void) | undefined;
+    harness.updateModelContext
+      .mockRejectedValueOnce(new Error('replacement context rejected'))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveClear = () => resolve({});
+          }),
+      );
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-1' }),
+    );
+    await flushPromises();
+
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-2' }),
+    );
+    await flushPromises();
+    resolveClear?.();
+    await flushPromises();
+
+    expect(harness.updateModelContext).toHaveBeenCalledTimes(5);
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
+      structuredContent: expect.objectContaining({
+        selection: expect.objectContaining({ securityId: 'security-2' }),
+      }),
+    });
+    expect(harness.html()).toContain('Holding 2');
+    expect(harness.html()).not.toContain(
+      'selection could not be shared with the conversation',
+    );
+  });
+
+  it('ignores late Portfolio context rejection after a primary replacement', async () => {
+    const harness = runRuntime('portfolio');
+    let rejectContext: ((error: Error) => void) | undefined;
+    harness.updateModelContext.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectContext = reject;
+        }),
+    );
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+    harness.sendToolResult(
+      portfolioResult([portfolioPosition(8, { name: 'Current Holding' })]),
+    );
+    rejectContext?.(new Error('late private failure'));
+    await flushPromises();
+
+    expect(harness.html()).toContain('Current Holding');
+    expect(harness.html()).not.toMatch(
+      /Holding 0|could not be shared|late private failure/,
+    );
+  });
+
+  it('renders a purposeful Portfolio empty state and rejects malformed data', () => {
+    const harness = runRuntime('portfolio');
+    harness.sendToolResult(portfolioResult([]));
+    expect(harness.html()).toContain('No investment holdings');
+    expect(harness.html()).toContain('$0.00');
+
+    harness.sendToolResult({ app: { id: 'portfolio' }, data: {} });
+    expect(harness.html()).toContain('Unable to load live Splice data');
+    expect(harness.html()).not.toContain('$0.00');
   });
 });

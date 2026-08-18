@@ -145,8 +145,10 @@ largest contributors.**
   other product surfaces.
 - The model supplies the period conversationally. The App has no date picker,
   preset, or reload control in the target design.
-- Use one consistent composition: period and currency, net cash flow, compact
-  inflow versus outflow, and a ranked category breakdown.
+- Use one consistent composition: period, net cash flow, compact inflow versus
+  outflow, and a ranked category breakdown. Format amounts with the currency's
+  compact local symbol and disclose the reporting currency once in subdued text
+  at the bottom instead of repeating its ISO code beside every value.
 - Default the category focus to outflows; use inflows when the question is about
   income.
 - Show the top five categories, aggregate the remainder as `Other`, and keep
@@ -163,6 +165,41 @@ largest contributors.**
 - Do not include generated insights, editing, recategorization, rule management,
   dashboard configuration, multiple chart families, or in-App period
   navigation in the initial design.
+
+## Current Portfolio contract
+
+Portfolio's product job is: **show what the user owns now and where the current
+portfolio is concentrated.**
+
+- User-facing name: **Portfolio**.
+- Public tool name: `visualize_portfolio`; invoke it selectively for actual
+  portfolio value, holdings, allocation, exposure, or concentration questions.
+  Capability discovery, hypothetical discussion, investment activity, and
+  simple holding facts should normally remain prose or use a headless tool.
+- Use the latest available holding for each selected investment account. The
+  model may supply an account subset conversationally; the App has no account
+  picker, date mode, search, sort, reload, activity panel, or configuration
+  toolbar.
+- Normalize every valued contribution to USD on the server at its snapshot
+  date. Fail the whole visualization safely when normalization is incomplete;
+  never mix currencies, omit an unconvertible position, or show a partial
+  total. Use compact `$` amounts and disclose `All values in USD` once.
+- Combine the same stable security across accounts after normalization. Account
+  contributions are supporting evidence in inline detail, not competing
+  initial rows.
+- Show one headline total followed by the top five positions and exact `Other`
+  remainder. Expand `Other` in place. Selecting a position reveals compact
+  value, allocation, quantity/price when available, contributing accounts, and
+  snapshot evidence.
+- Share only the selected security's minimum semantic context with the model so
+  follow-ups such as “tell me more about this holding” resolve correctly.
+- Keep the App latest-only and read-only. Performance, gain/loss, historical
+  comparison, investment activity, trading, and account administration are
+  separate product questions.
+- Use the ranked-only composition. Its official-host comparison against a
+  compact donut showed the chart duplicated exact evidence, depended on color,
+  and pushed useful holdings lower on a phone. Do not restore an end-user chart
+  toggle or dormant chart variant without a new product question and evidence.
 
 ## Validation expectation
 

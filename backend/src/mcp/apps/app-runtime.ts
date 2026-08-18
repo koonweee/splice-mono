@@ -9,6 +9,18 @@ import {
   type CashFlowCategory,
   type CashFlowPresentation,
 } from './cash-flow-model';
+import {
+  createPortfolioPresentation,
+  formatPortfolioMoney,
+  formatPortfolioPercentage,
+  portfolioAccountLabel,
+  portfolioPositionById,
+  portfolioPositionLabel,
+  portfolioSelectionContext,
+  portfolioSnapshotLabel,
+  type PortfolioPosition,
+  type PortfolioPresentation,
+} from './portfolio-model';
 
 (function () {
   'use strict';
@@ -30,13 +42,13 @@ import {
     cashFlowPublishContext: false,
     cashFlowContextPublished: false,
     cashFlowSelectionScroll: 0,
-    portfolioSort: 'value',
-    portfolioSearch: '',
-    portfolioAccount: 'all',
-    portfolioType: 'all',
-    portfolioDateMode: 'latest',
-    portfolioSnapshotDate: '',
-    portfolioCursor: null,
+    selectedPortfolioSecurityId: null,
+    portfolioOtherExpanded: false,
+    portfolioContributionsExpanded: false,
+    portfolioContextPublished: false,
+    portfolioPublishedSecurityId: null,
+    portfolioContextRequestId: 0,
+    portfolioContextError: false,
   };
 
   function escapeHtml(value) {
@@ -46,10 +58,6 @@ import {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
-  }
-
-  function toArray(value): any[] {
-    return Array.isArray(value) ? value : [];
   }
 
   function moneyAmount(value) {
@@ -81,18 +89,18 @@ import {
     return moneyAmount(value) < 0 ? 'negative' : 'positive';
   }
 
-  function formatMoney(value, fallbackCurrency) {
+  function formatCashFlowMoney(value, fallbackCurrency) {
     var amount = Math.abs(moneyAmount(value));
     var currency = moneyCurrency(value, fallbackCurrency);
     var sign = moneySign(value) === 'negative' ? '-' : '';
     return (
       sign +
       new Intl.NumberFormat('en-US', {
-        style: currency.length === 3 ? 'currency' : 'decimal',
-        currency: currency.length === 3 ? currency : 'USD',
+        style: 'currency',
+        currency: currency,
+        currencyDisplay: 'narrowSymbol',
         maximumFractionDigits: 2,
-      }).format(amount) +
-      (currency.length === 3 ? '' : ' ' + currency)
+      }).format(amount)
     );
   }
 
@@ -164,8 +172,40 @@ import {
       });
   }
 
+  function clearPublishedPortfolioContext() {
+    if (appId !== 'portfolio') return;
+    var shouldClear = Boolean(
+      state.portfolioContextPublished ||
+        state.portfolioPublishedSecurityId ||
+        state.selectedPortfolioSecurityId,
+    );
+    state.portfolioContextError = false;
+    var requestId = ++state.portfolioContextRequestId;
+    if (!shouldClear) return;
+    mcpRuntime.app
+      .updateModelContext({
+        structuredContent: {
+          visualization: 'portfolio',
+          selection: null,
+        },
+      })
+      .then(function () {
+        if (requestId !== state.portfolioContextRequestId) {
+          republishCurrentPortfolioContext();
+          return;
+        }
+        state.portfolioContextPublished = false;
+        state.portfolioPublishedSecurityId = null;
+      })
+      .catch(function () {
+        // Retain the last successful identity so the next lifecycle boundary
+        // retries this best-effort clear.
+      });
+  }
+
   function clearDerivedBusinessData() {
     clearPublishedCashFlowContext();
+    clearPublishedPortfolioContext();
     businessDataGeneration += 1;
     state.selectedCategory = null;
     state.cashFlowOtherExpanded = false;
@@ -176,7 +216,10 @@ import {
     state.modelContextRequestId += 1;
     state.cashFlowPublishContext = false;
     state.cashFlowSelectionScroll = 0;
-    state.portfolioCursor = null;
+    state.selectedPortfolioSecurityId = null;
+    state.portfolioOtherExpanded = false;
+    state.portfolioContributionsExpanded = false;
+    state.portfolioContextError = false;
   }
 
   function renderLiveDataError() {
@@ -192,12 +235,12 @@ import {
 
   function appTitle() {
     if (appId === 'cash_flow') return 'Cash Flow';
-    if (appId === 'portfolio_viewer') return 'Portfolio Viewer';
+    if (appId === 'portfolio') return 'Portfolio';
     return 'Splice';
   }
 
   function appVersion() {
-    return appId === 'cash_flow' ? '3.0.0' : '2.0.0';
+    return '3.0.0';
   }
 
   function isValidInitialResult(result) {
@@ -239,29 +282,6 @@ import {
     },
   });
 
-  function button(attrs, text) {
-    return '<button ' + attrs + '>' + escapeHtml(text) + '</button>';
-  }
-
-  function metric(label, value, tone) {
-    return (
-      '<div class="metric" data-tone="' +
-      escapeHtml(tone || 'neutral') +
-      '">' +
-      '<div class="label">' +
-      escapeHtml(label) +
-      '</div>' +
-      '<div class="value">' +
-      escapeHtml(value) +
-      '</div>' +
-      '</div>'
-    );
-  }
-
-  function rowsEmpty(message) {
-    return '<div class="empty">' + escapeHtml(message) + '</div>';
-  }
-
   function formatPeriodRange(startDate, endDate) {
     function dateLabel(value) {
       var parts = String(value).split('-').map(Number);
@@ -277,7 +297,7 @@ import {
   }
 
   function formatMagnitude(value, currency) {
-    return formatMoney(
+    return formatCashFlowMoney(
       {
         amount: moneyMagnitude(value),
         currency: moneyCurrency(value, currency),
@@ -303,6 +323,20 @@ import {
     return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
       ? value
       : colorForIndex(index);
+  }
+
+  function colorForIndex(index) {
+    var colors = [
+      '#2563eb',
+      '#0f766e',
+      '#7c3aed',
+      '#dc2626',
+      '#ca8a04',
+      '#0891b2',
+      '#be185d',
+      '#16a34a',
+    ];
+    return colors[index % colors.length];
   }
 
   function cashFlowCategoryByIdentity(presentation, identity) {
@@ -501,7 +535,10 @@ import {
               '</small></span><span class="transaction-amount">' +
               escapeHtml(
                 displayAmount
-                  ? formatMoney(displayAmount, presentation.current.currency)
+                  ? formatCashFlowMoney(
+                      displayAmount,
+                      presentation.current.currency,
+                    )
                   : 'Amount unavailable',
               ) +
               '</span></li>'
@@ -619,8 +656,6 @@ import {
     appRoot.innerHTML =
       '<article class="cash-flow-view">' +
       '<header class="cash-flow-header"><div><p class="eyebrow">' +
-      escapeHtml(currency) +
-      ' · ' +
       escapeHtml(
         formatPeriodRange(
           presentation.current.startDate,
@@ -631,7 +666,7 @@ import {
       '<section class="net-flow" data-tone="' +
       escapeHtml(moneySign(presentation.current.netFlow)) +
       '"><p>Net cash flow</p><strong>' +
-      escapeHtml(formatMoney(presentation.current.netFlow, currency)) +
+      escapeHtml(formatCashFlowMoney(presentation.current.netFlow, currency)) +
       '</strong>' +
       (presentation.comparison
         ? '<small><span data-delta-tone="' +
@@ -673,6 +708,9 @@ import {
       comparison +
       categorySection +
       renderCashFlowAdjustments(presentation) +
+      '<p class="cash-flow-currency-note">All values in ' +
+      escapeHtml(currency) +
+      '.</p>' +
       '</article>';
   }
 
@@ -810,324 +848,348 @@ import {
     selectCashFlowCategory(presentation.focusedCategory.primaryCategory, false);
   }
 
-  function renderPortfolio() {
-    var data = readEnvelopeData();
-    var holdingsResult = data.holdings || {};
-    var activityResult = data.activity || {};
-    var holdings = toArray(holdingsResult.data || holdingsResult.holdings);
-    var activity = toArray(activityResult.data || activityResult.activity);
-    var accounts = unique(
-      holdings.map(function (holding) {
-        return {
-          id: holding.accountId || holding.accountName || 'unknown',
-          label:
-            holding.accountName ||
-            holding.accountDisplayName ||
-            holding.accountId ||
-            'Unknown account',
-        };
-      }),
-      'id',
-    );
-    if (
-      state.portfolioAccount !== 'all' &&
-      !accounts.some(function (account) {
-        return account.id === state.portfolioAccount;
-      })
-    ) {
-      state.portfolioAccount = 'all';
-    }
-    var visibleHoldings = holdings
-      .filter(function (holding) {
-        var accountMatch =
-          state.portfolioAccount === 'all' ||
-          (holding.accountId || holding.accountName) === state.portfolioAccount;
-        var label = securityLabel(holding).toLowerCase();
-        return (
-          accountMatch &&
-          label.indexOf(state.portfolioSearch.toLowerCase()) >= 0
-        );
-      })
-      .sort(function (left, right) {
-        return compareHolding(left, right, state.portfolioSort);
-      });
-    var visibleActivity = activity.filter(function (row) {
-      if (
-        state.portfolioAccount !== 'all' &&
-        (row.accountId || row.accountName) !== state.portfolioAccount
-      )
-        return false;
-      if (
-        state.portfolioType !== 'all' &&
-        String(row.investmentType || row.type || '').toLowerCase() !==
-          state.portfolioType
-      )
-        return false;
-      return true;
-    });
-    var total = visibleHoldings.reduce(function (sum, holding) {
-      return sum + moneyAmount(holding.institutionValue || holding.value);
-    }, 0);
-    var currency = visibleHoldings[0]
-      ? moneyCurrency(
-          {
-            currency:
-              visibleHoldings[0].isoCurrencyCode ||
-              visibleHoldings[0].unofficialCurrencyCode ||
-              (visibleHoldings[0].security || {}).isoCurrencyCode,
-          },
-          'USD',
-        )
-      : 'USD';
-    var accountOptions =
-      '<option value="all">All accounts</option>' +
-      accounts
-        .map(function (account) {
-          return (
-            '<option value="' +
-            escapeHtml(account.id) +
-            '"' +
-            (state.portfolioAccount === account.id ? ' selected' : '') +
-            '>' +
-            escapeHtml(account.label) +
-            '</option>'
-          );
-        })
-        .join('');
-    var typeOptions = unique(
-      activity.map(function (row) {
-        return {
-          id: String(row.investmentType || row.type || 'other').toLowerCase(),
-          label: String(row.investmentType || row.type || 'Other'),
-        };
-      }),
-      'id',
-    );
-    var activityTypeOptions =
-      '<option value="all">All activity</option>' +
-      typeOptions
-        .map(function (item) {
-          return (
-            '<option value="' +
-            escapeHtml(item.id) +
-            '"' +
-            (state.portfolioType === item.id ? ' selected' : '') +
-            '>' +
-            escapeHtml(item.label) +
-            '</option>'
-          );
-        })
-        .join('');
-    var holdingRows = visibleHoldings.length
-      ? visibleHoldings
-          .map(function (holding) {
-            return (
-              '<tr><td><strong>' +
-              escapeHtml(securityLabel(holding)) +
-              '</strong><small>' +
-              escapeHtml((holding.security && holding.security.type) || '') +
-              '</small></td><td>' +
-              escapeHtml(
-                (holding.security && holding.security.tickerSymbol) || '--',
-              ) +
-              '</td><td class="num">' +
-              escapeHtml(formatDecimal(holding.quantity)) +
-              '</td><td class="num">' +
-              escapeHtml(
-                formatMoney(
-                  { amount: holding.institutionPrice, currency: currency },
-                  currency,
-                ),
-              ) +
-              '</td><td class="num">' +
-              escapeHtml(
-                formatMoney(
-                  { amount: holding.institutionValue, currency: currency },
-                  currency,
-                ),
-              ) +
-              '</td></tr>'
-            );
-          })
-          .join('')
-      : '<tr><td colspan="5">No holdings match the current filters.</td></tr>';
-    var activityRows = visibleActivity.length
-      ? visibleActivity
-          .map(function (row) {
-            return (
-              '<tr><td>' +
-              escapeHtml(row.activityDate || row.date || '') +
-              '</td><td><strong>' +
-              escapeHtml(securityLabel(row)) +
-              '</strong><small>' +
-              escapeHtml(
-                [row.investmentType, row.investmentSubtype]
-                  .filter(Boolean)
-                  .join(' / '),
-              ) +
-              '</small></td><td class="num">' +
-              escapeHtml(formatDecimal(row.quantity)) +
-              '</td><td class="num">' +
-              escapeHtml(formatMoney(row.amount || row.cashImpact, currency)) +
-              '</td></tr>'
-            );
-          })
-          .join('')
-      : '<tr><td colspan="4">No activity matches the current filters.</td></tr>';
-    var allocation = renderAllocation(visibleHoldings, total, currency);
-
-    appRoot.innerHTML =
-      '<section class="hero"><div><h1>Portfolio Viewer</h1><p>Latest or date-specific holdings, allocation, and investment activity.</p></div><div class="status-pill" id="app-status" data-kind="info"></div></section>' +
-      '<section class="toolbar">' +
-      '<label>Account<select id="portfolio-account">' +
-      accountOptions +
-      '</select></label>' +
-      '<label>Holdings mode<select id="portfolio-date-mode"><option value="latest"' +
-      (state.portfolioDateMode === 'latest' ? ' selected' : '') +
-      '>Latest</option><option value="date"' +
-      (state.portfolioDateMode === 'date' ? ' selected' : '') +
-      '>Specific date</option></select></label>' +
-      '<label>Snapshot date<input id="portfolio-snapshot-date" type="date" value="' +
-      escapeHtml(state.portfolioSnapshotDate) +
-      '"' +
-      (state.portfolioDateMode === 'latest' ? ' disabled' : '') +
-      '></label>' +
-      '<label>Search<input id="portfolio-search" type="search" value="' +
-      escapeHtml(state.portfolioSearch) +
-      '" placeholder="Security or ticker"></label>' +
-      '<label>Sort<select id="portfolio-sort"><option value="value">Value</option><option value="security">Security</option><option value="ticker">Ticker</option><option value="quantity">Quantity</option><option value="price">Price</option></select></label>' +
-      '<label>Activity<select id="portfolio-type">' +
-      activityTypeOptions +
-      '</select></label>' +
-      button('data-action="reload-portfolio"', 'Reload') +
-      '</section>' +
-      '<section class="metrics">' +
-      metric(
-        'Visible value',
-        formatMoney(
-          { amount: total, currency: currency, sign: 'positive' },
-          currency,
-        ),
-        'positive',
-      ) +
-      metric('Holdings', String(visibleHoldings.length), 'neutral') +
-      metric('Activity rows', String(visibleActivity.length), 'neutral') +
-      metric(
-        'Next page',
-        activityResult.pageInfo && activityResult.pageInfo.hasMore
-          ? 'Available'
-          : 'None',
-        'neutral',
-      ) +
-      '</section>' +
-      '<section class="split"><div class="panel"><h2>Allocation</h2>' +
-      allocation +
-      '</div><div class="panel"><div class="panel-head"><h2>Activity</h2>' +
-      button('data-action="next-activity"', 'Next page') +
-      '</div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Security</th><th>Qty</th><th>Cash Impact</th></tr></thead><tbody>' +
-      activityRows +
-      '</tbody></table></div></div></section>' +
-      '<section class="panel"><h2>Holdings</h2><div class="table-wrap"><table><thead><tr><th>Security</th><th>Ticker</th><th>Quantity</th><th>Price</th><th>Value</th></tr></thead><tbody>' +
-      holdingRows +
-      '</tbody></table></div></section>';
-    var sort = uiDocument.getElementById('portfolio-sort');
-    if (sort) sort.value = state.portfolioSort;
-  }
-
-  function renderAllocation(holdings, total, currency) {
-    if (!holdings.length) return rowsEmpty('No holdings to allocate.');
-    return (
-      '<div class="category-list">' +
-      holdings
-        .map(function (holding, index) {
-          var value = moneyAmount(holding.institutionValue || holding.value);
-          var width = total
-            ? Math.max(4, Math.round((value / total) * 100))
-            : 0;
-          var color = colorForIndex(index);
-          return (
-            '<div class="allocation-row"><span class="swatch" style="background:' +
-            color +
-            '"></span><span class="category-main"><span>' +
-            escapeHtml(securityLabel(holding)) +
-            '</span><span class="bar-track"><span class="bar-fill" style="width:' +
-            width +
-            '%;background:' +
-            color +
-            '"></span></span></span><span class="number-stack"><strong>' +
-            escapeHtml(
-              formatMoney({ amount: value, currency: currency }, currency),
-            ) +
-            '</strong><small>' +
-            width +
-            '%</small></span></div>'
-          );
-        })
-        .join('') +
-      '</div>'
-    );
-  }
-
-  function securityLabel(row) {
-    var security = row.security || {};
-    return (
-      security.tickerSymbol ||
-      security.name ||
-      row.name ||
-      row.securityName ||
-      'Unknown security'
-    );
-  }
-
-  function formatDecimal(value) {
-    var parsed = Number(value);
-    if (!Number.isFinite(parsed)) return value == null ? '--' : String(value);
-    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(
-      parsed,
-    );
-  }
-
-  function compareHolding(left, right, sort) {
-    if (sort === 'security')
-      return securityLabel(left).localeCompare(securityLabel(right));
-    if (sort === 'ticker')
-      return String((left.security || {}).tickerSymbol || '').localeCompare(
-        String((right.security || {}).tickerSymbol || ''),
-      );
-    if (sort === 'quantity')
-      return moneyAmount(right.quantity) - moneyAmount(left.quantity);
-    if (sort === 'price')
-      return (
-        moneyAmount(right.institutionPrice) - moneyAmount(left.institutionPrice)
-      );
-    return (
-      moneyAmount(right.institutionValue || right.value) -
-      moneyAmount(left.institutionValue || left.value)
-    );
-  }
-
-  function unique(rows, key) {
-    var seen = {};
-    return rows.filter(function (row) {
-      var value = row[key];
-      if (seen[value]) return false;
-      seen[value] = true;
-      return true;
-    });
-  }
-
-  function colorForIndex(index) {
+  function portfolioColor(index) {
     var colors = [
       '#2563eb',
       '#0f766e',
       '#7c3aed',
-      '#dc2626',
-      '#ca8a04',
+      '#c2410c',
+      '#a16207',
       '#0891b2',
       '#be185d',
       '#16a34a',
     ];
     return colors[index % colors.length];
+  }
+
+  function formatPortfolioDecimal(value) {
+    var parsed = Number(value);
+    if (!Number.isFinite(parsed)) return '';
+    return new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: 6,
+    }).format(parsed);
+  }
+
+  function renderPortfolioDetail(
+    presentation: PortfolioPresentation,
+    position: PortfolioPosition,
+  ) {
+    var metadata = [position.tickerSymbol, position.type, position.subtype]
+      .filter(Boolean)
+      .join(' · ');
+    var visibleContributions = state.portfolioContributionsExpanded
+      ? position.contributions
+      : position.contributions.slice(0, 3);
+    var contributions = visibleContributions
+      .map(function (contribution) {
+        var details = [
+          contribution.quantity
+            ? formatPortfolioDecimal(contribution.quantity) + ' units'
+            : '',
+          contribution.priceUsd
+            ? formatPortfolioMoney(contribution.priceUsd) + ' per unit'
+            : '',
+          contribution.snapshotDate,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+        return (
+          '<li><span><strong>' +
+          escapeHtml(portfolioAccountLabel(contribution)) +
+          '</strong><small>' +
+          escapeHtml(details) +
+          '</small></span><strong>' +
+          escapeHtml(formatPortfolioMoney(contribution.valueUsd)) +
+          '</strong></li>'
+        );
+      })
+      .join('');
+    return (
+      '<section class="portfolio-detail" id="portfolio-detail-' +
+      escapeHtml(position.securityId) +
+      '" aria-live="polite"><div class="portfolio-detail-head"><div><p class="eyebrow">Selected holding</p><h3>' +
+      escapeHtml(portfolioPositionLabel(position)) +
+      '</h3>' +
+      (metadata ? '<p>' + escapeHtml(metadata) + '</p>' : '') +
+      '</div><button class="text-button" data-action="close-position">Close</button></div><div class="portfolio-detail-summary"><span><small>Position value</small><strong>' +
+      escapeHtml(formatPortfolioMoney(position.valueUsd)) +
+      '</strong></span><span><small>Portfolio share</small><strong>' +
+      escapeHtml(formatPortfolioPercentage(position.allocationBps)) +
+      '</strong></span>' +
+      (position.quantity
+        ? '<span><small>Combined quantity</small><strong>' +
+          escapeHtml(formatPortfolioDecimal(position.quantity)) +
+          '</strong></span>'
+        : '') +
+      '</div><div><p class="eyebrow">Contributing accounts</p><ul class="portfolio-contributions" id="portfolio-contributions-' +
+      escapeHtml(position.securityId) +
+      '">' +
+      contributions +
+      '</ul></div>' +
+      (position.contributions.length > 3
+        ? '<button class="show-more portfolio-show-contributions" data-action="toggle-portfolio-contributions" aria-controls="portfolio-contributions-' +
+          escapeHtml(position.securityId) +
+          '" aria-expanded="' +
+          String(state.portfolioContributionsExpanded) +
+          '">' +
+          (state.portfolioContributionsExpanded
+            ? 'Show fewer accounts'
+            : 'Show ' +
+              String(position.contributions.length - 3) +
+              ' more accounts') +
+          '</button>'
+        : '') +
+      (state.portfolioContextError
+        ? '<p class="portfolio-context-note" role="status">This selection could not be shared with the conversation. The visualization is unaffected.</p>'
+        : '') +
+      '</section>'
+    );
+  }
+
+  function renderPortfolioPositionRow(
+    position: PortfolioPosition,
+    presentation: PortfolioPresentation,
+    index: number,
+  ) {
+    var selected = state.selectedPortfolioSecurityId === position.securityId;
+    var barWidth = Math.max(
+      position.allocationBps > 0 ? 2 : 0,
+      Math.min(100, position.allocationBps / 100),
+    );
+    var secondary = position.tickerSymbol || position.type || 'Holding';
+    return (
+      '<button class="portfolio-position" data-action="select-position" data-security-id="' +
+      escapeHtml(position.securityId) +
+      '" aria-expanded="' +
+      String(selected) +
+      '" aria-controls="portfolio-detail-' +
+      escapeHtml(position.securityId) +
+      '"><span class="portfolio-rank" aria-hidden="true">' +
+      String(index + 1) +
+      '</span><span class="portfolio-position-main"><span><strong>' +
+      escapeHtml(portfolioPositionLabel(position)) +
+      '</strong><small>' +
+      escapeHtml(secondary) +
+      '</small></span><span class="portfolio-bar" aria-hidden="true"><span style="width:' +
+      barWidth +
+      '%;background:' +
+      portfolioColor(index) +
+      '"></span></span></span><span class="portfolio-position-value"><strong>' +
+      escapeHtml(formatPortfolioMoney(position.valueUsd)) +
+      '</strong><small>' +
+      escapeHtml(formatPortfolioPercentage(position.allocationBps)) +
+      '</small></span></button>' +
+      (selected ? renderPortfolioDetail(presentation, position) : '')
+    );
+  }
+
+  function renderPortfolioOther(presentation: PortfolioPresentation) {
+    if (!presentation.remainingPositions.length) return '';
+    var expanded = state.portfolioOtherExpanded;
+    return (
+      '<button class="portfolio-position portfolio-other" data-action="toggle-portfolio-other" aria-expanded="' +
+      String(expanded) +
+      '" aria-controls="portfolio-other-rows"><span class="portfolio-rank" aria-hidden="true">' +
+      (expanded ? '−' : '+') +
+      '</span><span class="portfolio-position-main"><span><strong>Other</strong><small>' +
+      escapeHtml(String(presentation.remainingPositions.length)) +
+      ' more holdings</small></span></span><span class="portfolio-position-value"><strong>' +
+      escapeHtml(formatPortfolioMoney(presentation.otherValueUsd)) +
+      '</strong><small>' +
+      escapeHtml(formatPortfolioPercentage(presentation.otherAllocationBps)) +
+      '</small></span></button><div id="portfolio-other-rows"' +
+      (expanded ? '' : ' hidden') +
+      '>' +
+      (expanded
+        ? presentation.remainingPositions
+            .map(function (position, index) {
+              return renderPortfolioPositionRow(
+                position,
+                presentation,
+                index + 5,
+              );
+            })
+            .join('')
+        : '') +
+      '</div>'
+    );
+  }
+
+  function currentPortfolioPresentation(): PortfolioPresentation | null {
+    return appId === 'portfolio'
+      ? createPortfolioPresentation(readEnvelopeData())
+      : null;
+  }
+
+  function republishCurrentPortfolioContext() {
+    if (!state.selectedPortfolioSecurityId) return;
+    var presentation = currentPortfolioPresentation();
+    if (!presentation) return;
+    var position = portfolioPositionById(
+      presentation,
+      state.selectedPortfolioSecurityId,
+    );
+    if (!position) return;
+    publishPortfolioContext(presentation, position, businessDataGeneration);
+  }
+
+  function publishPortfolioContext(
+    presentation: PortfolioPresentation,
+    position: PortfolioPosition | null,
+    generation: number,
+  ) {
+    state.portfolioContextError = false;
+    var securityId = position ? position.securityId : null;
+    var requestId = ++state.portfolioContextRequestId;
+    mcpRuntime.app
+      .updateModelContext({
+        structuredContent: portfolioSelectionContext(presentation, position),
+      })
+      .then(function () {
+        if (
+          requestId !== state.portfolioContextRequestId ||
+          generation !== businessDataGeneration ||
+          state.selectedPortfolioSecurityId !== securityId
+        ) {
+          return;
+        }
+        state.portfolioContextPublished = Boolean(securityId);
+        state.portfolioPublishedSecurityId = securityId;
+      })
+      .catch(function () {
+        if (
+          requestId !== state.portfolioContextRequestId ||
+          generation !== businessDataGeneration ||
+          state.selectedPortfolioSecurityId !== securityId
+        ) {
+          return;
+        }
+        state.portfolioContextError = true;
+        if (securityId) {
+          var clearRequestId = ++state.portfolioContextRequestId;
+          mcpRuntime.app
+            .updateModelContext({
+              structuredContent: {
+                visualization: 'portfolio',
+                selection: null,
+              },
+            })
+            .then(function () {
+              if (
+                clearRequestId !== state.portfolioContextRequestId ||
+                generation !== businessDataGeneration ||
+                state.selectedPortfolioSecurityId !== securityId
+              ) {
+                republishCurrentPortfolioContext();
+                return;
+              }
+              state.portfolioContextPublished = false;
+              state.portfolioPublishedSecurityId = null;
+            })
+            .catch(function () {
+              // The prior successful identity remains tracked so a later
+              // lifecycle boundary can retry the best-effort clear.
+            });
+        }
+        render();
+      });
+  }
+
+  function selectPortfolioPosition(securityId) {
+    var presentation = currentPortfolioPresentation();
+    if (!presentation) return;
+    var position = portfolioPositionById(presentation, securityId);
+    if (!position) return;
+    var selectedPosition: PortfolioPosition = position;
+    state.selectedPortfolioSecurityId = selectedPosition.securityId;
+    state.portfolioContributionsExpanded = false;
+    state.portfolioContextError = false;
+    if (
+      presentation.remainingPositions.some(function (candidate) {
+        return candidate.securityId === selectedPosition.securityId;
+      })
+    ) {
+      state.portfolioOtherExpanded = true;
+    }
+    render();
+    publishPortfolioContext(
+      presentation,
+      selectedPosition,
+      businessDataGeneration,
+    );
+  }
+
+  function closePortfolioPosition() {
+    var presentation = currentPortfolioPresentation();
+    if (!presentation) return;
+    state.selectedPortfolioSecurityId = null;
+    state.portfolioContributionsExpanded = false;
+    state.portfolioContextError = false;
+    render();
+    publishPortfolioContext(presentation, null, businessDataGeneration);
+  }
+
+  function togglePortfolioOther() {
+    var presentation = currentPortfolioPresentation();
+    if (!presentation) return;
+    var expanding = !state.portfolioOtherExpanded;
+    state.portfolioOtherExpanded = expanding;
+    if (
+      !expanding &&
+      state.selectedPortfolioSecurityId &&
+      presentation.remainingPositions.some(function (position) {
+        return position.securityId === state.selectedPortfolioSecurityId;
+      })
+    ) {
+      state.selectedPortfolioSecurityId = null;
+      state.portfolioContributionsExpanded = false;
+      state.portfolioContextError = false;
+      render();
+      publishPortfolioContext(presentation, null, businessDataGeneration);
+      return;
+    }
+    render();
+  }
+
+  function renderPortfolio() {
+    var presentation = currentPortfolioPresentation();
+    if (!presentation) {
+      renderLiveDataError();
+      return;
+    }
+    var readyPresentation: PortfolioPresentation = presentation;
+    if (
+      state.selectedPortfolioSecurityId &&
+      !portfolioPositionById(presentation, state.selectedPortfolioSecurityId)
+    ) {
+      state.selectedPortfolioSecurityId = null;
+    }
+    var body = readyPresentation.isEmpty
+      ? '<section class="portfolio-empty"><h2>No investment holdings</h2><p>Splice found no current holdings for the selected accounts.</p></section>'
+      : '<section class="portfolio-allocation" aria-labelledby="portfolio-allocation-title"><div class="section-heading"><div><p class="eyebrow">Concentration</p><h2 id="portfolio-allocation-title">Largest holdings</h2></div><span>' +
+        escapeHtml(String(readyPresentation.positions.length)) +
+        (readyPresentation.positions.length === 1 ? ' holding' : ' holdings') +
+        '</span></div>' +
+        '<div class="portfolio-position-list">' +
+        readyPresentation.topPositions
+          .map(function (position, index) {
+            return renderPortfolioPositionRow(
+              position,
+              readyPresentation,
+              index,
+            );
+          })
+          .join('') +
+        renderPortfolioOther(readyPresentation) +
+        '</div></section>';
+    appRoot.innerHTML =
+      '<article class="portfolio-view"><header class="portfolio-header"><div><p class="eyebrow">Latest available holdings</p><h1>Portfolio</h1></div></header><section class="portfolio-total"><p>Total portfolio value</p><strong>' +
+      escapeHtml(formatPortfolioMoney(presentation.totalValueUsd)) +
+      '</strong></section>' +
+      body +
+      '<footer class="portfolio-disclosure"><span>' +
+      escapeHtml(portfolioSnapshotLabel(presentation.snapshotRange)) +
+      '</span><span>All values in USD.</span></footer></article>';
   }
 
   function render() {
@@ -1140,27 +1202,9 @@ import {
       renderCashflow();
       if (!envelope) return;
     }
-    if (appId === 'portfolio_viewer') renderPortfolio();
+    if (appId === 'portfolio') renderPortfolio();
     setStatus('Connected to live Splice data.', 'success');
   }
-
-  function handleControlInput(event) {
-    var target = event.target;
-    if (!target) return;
-    if (target.id === 'portfolio-search') state.portfolioSearch = target.value;
-    if (target.id === 'portfolio-account')
-      state.portfolioAccount = target.value;
-    if (target.id === 'portfolio-sort') state.portfolioSort = target.value;
-    if (target.id === 'portfolio-type') state.portfolioType = target.value;
-    if (target.id === 'portfolio-date-mode')
-      state.portfolioDateMode = target.value;
-    if (target.id === 'portfolio-snapshot-date')
-      state.portfolioSnapshotDate = target.value;
-    render();
-  }
-
-  uiDocument.addEventListener('input', handleControlInput);
-  uiDocument.addEventListener('change', handleControlInput);
 
   uiDocument.addEventListener('click', function (event) {
     var target = event.target.closest('[data-action]');
@@ -1190,64 +1234,23 @@ import {
       );
       render();
     }
-    if (action === 'reload-portfolio') {
-      var accountArgs: any =
-        state.portfolioAccount === 'all'
-          ? {}
-          : { accountIds: [state.portfolioAccount] };
-      var holdingsArgs: any = Object.assign({}, accountArgs);
-      if (state.portfolioDateMode === 'latest') {
-        holdingsArgs.latestOnly = true;
-      } else if (state.portfolioSnapshotDate) {
-        holdingsArgs.snapshotDate = state.portfolioSnapshotDate;
+    if (action === 'select-position') {
+      if (state.selectedPortfolioSecurityId === target.dataset.securityId) {
+        closePortfolioPosition();
       } else {
-        setStatus(
-          'Snapshot date is required for date-specific holdings.',
-          'error',
-        );
-        return;
+        selectPortfolioPosition(target.dataset.securityId);
       }
-      envelope = null;
-      clearDerivedBusinessData();
-      renderLoading();
-      var portfolioGeneration = businessDataGeneration;
-      Promise.all([
-        callTool('list_investment_holdings', holdingsArgs),
-        callTool(
-          'list_investment_activity',
-          Object.assign({}, accountArgs, { pageSize: 25 }),
-        ),
-      ])
-        .then(function (results) {
-          if (portfolioGeneration !== businessDataGeneration) return;
-          envelope = { data: { holdings: results[0], activity: results[1] } };
-          render();
-        })
-        .catch(function () {
-          if (portfolioGeneration !== businessDataGeneration) return;
-          renderLiveDataError();
-        });
     }
-    if (action === 'next-activity') {
-      var current = readEnvelopeData().activity || {};
-      var cursor = current.pageInfo && current.pageInfo.nextCursor;
-      if (!cursor) {
-        setStatus('No additional activity page is available.', 'info');
-        return;
-      }
-      var activityGeneration = businessDataGeneration;
-      callTool('list_investment_activity', { cursor: cursor, pageSize: 25 })
-        .then(function (result) {
-          if (activityGeneration !== businessDataGeneration) return;
-          var data = readEnvelopeData();
-          data.activity = result;
-          envelope = { data: data };
-          render();
-        })
-        .catch(function () {
-          if (activityGeneration !== businessDataGeneration) return;
-          renderLiveDataError();
-        });
+    if (action === 'close-position') {
+      closePortfolioPosition();
+    }
+    if (action === 'toggle-portfolio-other') {
+      togglePortfolioOther();
+    }
+    if (action === 'toggle-portfolio-contributions') {
+      state.portfolioContributionsExpanded =
+        !state.portfolioContributionsExpanded;
+      render();
     }
   });
 
