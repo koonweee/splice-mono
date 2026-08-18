@@ -47,6 +47,16 @@ const runtimes: Array<{
 }> = [];
 let rejectNextConnect = false;
 
+const PORTFOLIO_CLEAR_MODEL_CONTEXT = {
+  content: [
+    {
+      type: 'text',
+      text: 'No portfolio holding is currently selected.',
+    },
+  ],
+  structuredContent: { visualization: 'portfolio', selection: null },
+};
+
 jest.mock('@koonweee/mcp-kit/apps', () => ({
   createMcpAppRuntime: (options: RuntimeOptions) => {
     const runtime = {
@@ -854,32 +864,42 @@ describe('Splice MCP App runtime integration', () => {
     expect(harness.html()).toContain('Selected holding');
     expect(harness.html()).toContain('Investment account 5');
     expect(harness.html()).toContain('Combined quantity');
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: {
-        visualization: 'portfolio',
-        reportingCurrency: 'USD',
-        selection: expect.objectContaining({
-          securityId: 'security-5',
-          displayName: 'Holding 5',
-          tickerSymbol: 'H5',
-          allocationBps: 1000,
-          accountNames: ['Investment account 5'],
-          snapshotRange: {
-            earliest: '2026-08-15',
-            latest: '2026-08-16',
-          },
-        }),
-      },
-    });
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        content: [
+          expect.objectContaining({
+            type: 'text',
+            text: expect.stringMatching(
+              /Holding 5 \(H5\).*\$500\.00.*10%.*this holding/,
+            ),
+          }),
+        ],
+        structuredContent: {
+          visualization: 'portfolio',
+          reportingCurrency: 'USD',
+          selection: expect.objectContaining({
+            securityId: 'security-5',
+            displayName: 'Holding 5',
+            tickerSymbol: 'H5',
+            allocationBps: 1000,
+            accountNames: ['Investment account 5'],
+            snapshotRange: {
+              earliest: '2026-08-15',
+              latest: '2026-08-16',
+            },
+          }),
+        },
+      }),
+    );
     expect(JSON.stringify(harness.updateModelContext.mock.calls)).not.toMatch(
       /accountId|positions|contributions|quantity|priceUsd/,
     );
 
     harness.dispatchClick(actionTarget('toggle-portfolio-other'));
     expect(harness.html()).not.toMatch(/Holding 5|Selected holding/);
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: { visualization: 'portfolio', selection: null },
-    });
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      PORTFOLIO_CLEAR_MODEL_CONTEXT,
+    );
   });
 
   it('keeps multi-account position evidence concise until requested', () => {
@@ -913,9 +933,9 @@ describe('Splice MCP App runtime integration', () => {
     );
     harness.dispatchClick(actionTarget('close-position'));
 
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: { visualization: 'portfolio', selection: null },
-    });
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      PORTFOLIO_CLEAR_MODEL_CONTEXT,
+    );
     expect(harness.html()).not.toContain('Selected holding');
 
     harness.dispatchClick(
@@ -926,18 +946,18 @@ describe('Splice MCP App runtime integration', () => {
     );
     expect(harness.html()).toContain('Replacement Holding');
     expect(harness.html()).not.toMatch(/Holding 1|Selected holding/);
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: { visualization: 'portfolio', selection: null },
-    });
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      PORTFOLIO_CLEAR_MODEL_CONTEXT,
+    );
 
     harness.dispatchClick(
       actionTarget('select-position', { securityId: 'security-9' }),
     );
     harness.sendRuntimeError();
     expect(harness.html()).toContain('Unable to load live Splice data');
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: { visualization: 'portfolio', selection: null },
-    });
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      PORTFOLIO_CLEAR_MODEL_CONTEXT,
+    );
 
     harness.sendToolResult(portfolioResult());
     harness.dispatchClick(
@@ -945,9 +965,9 @@ describe('Splice MCP App runtime integration', () => {
     );
     harness.sendCancelled();
     expect(harness.html()).toContain('Unable to load live Splice data');
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: { visualization: 'portfolio', selection: null },
-    });
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      PORTFOLIO_CLEAR_MODEL_CONTEXT,
+    );
 
     harness.sendToolResult(portfolioResult());
     harness.dispatchClick(
@@ -955,9 +975,9 @@ describe('Splice MCP App runtime integration', () => {
     );
     harness.teardown();
     expect(harness.html()).not.toContain('Holding 0');
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: { visualization: 'portfolio', selection: null },
-    });
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      PORTFOLIO_CLEAR_MODEL_CONTEXT,
+    );
   });
 
   it('clears Portfolio data and selection context at a loading boundary', () => {
@@ -971,9 +991,9 @@ describe('Splice MCP App runtime integration', () => {
 
     expect(harness.html()).toContain('Loading live Splice data');
     expect(harness.html()).not.toMatch(/Holding 0|Selected holding/);
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: { visualization: 'portfolio', selection: null },
-    });
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      PORTFOLIO_CLEAR_MODEL_CONTEXT,
+    );
   });
 
   it('retries a rejected Portfolio lifecycle clear at the next boundary', async () => {
@@ -994,9 +1014,9 @@ describe('Splice MCP App runtime integration', () => {
     harness.sendRuntimeError();
     await flushPromises();
     expect(harness.updateModelContext).toHaveBeenCalledTimes(3);
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: { visualization: 'portfolio', selection: null },
-    });
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      PORTFOLIO_CLEAR_MODEL_CONTEXT,
+    );
 
     harness.sendCancelled();
     expect(harness.updateModelContext).toHaveBeenCalledTimes(3);
@@ -1036,14 +1056,17 @@ describe('Splice MCP App runtime integration', () => {
     );
     await flushPromises();
 
-    expect(harness.updateModelContext).toHaveBeenNthCalledWith(2, {
-      structuredContent: expect.objectContaining({
-        selection: expect.objectContaining({ securityId: 'security-1' }),
+    expect(harness.updateModelContext).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        structuredContent: expect.objectContaining({
+          selection: expect.objectContaining({ securityId: 'security-1' }),
+        }),
       }),
-    });
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: { visualization: 'portfolio', selection: null },
-    });
+    );
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      PORTFOLIO_CLEAR_MODEL_CONTEXT,
+    );
     expect(harness.html()).toContain('Holding 1');
     expect(harness.html()).toContain(
       'selection could not be shared with the conversation',
@@ -1080,11 +1103,13 @@ describe('Splice MCP App runtime integration', () => {
     await flushPromises();
 
     expect(harness.updateModelContext).toHaveBeenCalledTimes(5);
-    expect(harness.updateModelContext).toHaveBeenLastCalledWith({
-      structuredContent: expect.objectContaining({
-        selection: expect.objectContaining({ securityId: 'security-2' }),
+    expect(harness.updateModelContext).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        structuredContent: expect.objectContaining({
+          selection: expect.objectContaining({ securityId: 'security-2' }),
+        }),
       }),
-    });
+    );
     expect(harness.html()).toContain('Holding 2');
     expect(harness.html()).not.toContain(
       'selection could not be shared with the conversation',

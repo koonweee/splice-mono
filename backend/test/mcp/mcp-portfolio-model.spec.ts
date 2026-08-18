@@ -5,6 +5,7 @@ import {
   portfolioAccountLabel,
   portfolioPositionById,
   portfolioSelectionContext,
+  portfolioSelectionModelContext,
   portfolioSnapshotLabel,
   type PortfolioPosition,
 } from '../../src/mcp/apps/portfolio-model';
@@ -152,6 +153,18 @@ describe('portfolio presentation model', () => {
         }),
       }),
     );
+    expect(portfolioSelectionModelContext(presentation, selected)).toEqual(
+      expect.objectContaining({
+        content: [
+          expect.objectContaining({
+            type: 'text',
+            text: expect.stringMatching(
+              /A deliberately long security name.*\$1,250\.00.*100%.*this holding/,
+            ),
+          }),
+        ],
+      }),
+    );
   });
 
   it('formats percentages and snapshot ranges concisely', () => {
@@ -220,6 +233,18 @@ describe('portfolio presentation model', () => {
     expect(portfolioSelectionContext(presentation!, null)).toEqual({
       visualization: 'portfolio',
       selection: null,
+    });
+    expect(portfolioSelectionModelContext(null, null)).toEqual({
+      content: [
+        {
+          type: 'text',
+          text: 'No portfolio holding is currently selected.',
+        },
+      ],
+      structuredContent: {
+        visualization: 'portfolio',
+        selection: null,
+      },
     });
   });
 });

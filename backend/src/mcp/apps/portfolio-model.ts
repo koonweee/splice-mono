@@ -277,3 +277,34 @@ export function portfolioSelectionContext(
     },
   };
 }
+
+export function portfolioSelectionModelContext(
+  presentation: PortfolioPresentation | null,
+  position: PortfolioPosition | null,
+) {
+  if (!position || !presentation) {
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: 'No portfolio holding is currently selected.',
+        },
+      ],
+      structuredContent: {
+        visualization: 'portfolio',
+        selection: null,
+      },
+    };
+  }
+
+  const ticker = position.tickerSymbol ? ` (${position.tickerSymbol})` : '';
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: `The user selected ${portfolioPositionLabel(position)}${ticker} in the Splice Portfolio visualization. Its position value is ${formatPortfolioMoney(position.valueUsd)} and its portfolio share is ${formatPortfolioPercentage(position.allocationBps)}. Resolve follow-up references such as "this holding" to this security.`,
+      },
+    ],
+    structuredContent: portfolioSelectionContext(presentation, position),
+  };
+}
