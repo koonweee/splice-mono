@@ -604,6 +604,77 @@ database change.
    **Scan Tools** again. No database, Auth0, DNS, ingress, or stack rollback is
    needed for this cutover.
 
+### 2026-08-17 Cash Flow v3 rollout record
+
+- Splice application commit:
+  `4094cd35bc2ffc09c2c569bfebc5cf72b0195a17`; protected deploy revision:
+  `7d7fc6faff7e425a78529318a8cf0519ce4a8c63`; protected PR: `#247`;
+  successful deploy workflow: `32080447590`.
+- Komodo build update `6a839909d28c58b2ef3c1326` published backend
+  version `0.0.97`. Targeted deployment update
+  `6a839aa1d28c58b2ef3c137b` completed successfully for only
+  `splice-app-sf`; no VPS or SG stack was redeployed.
+- The initial v3 image was
+  `sha256:9af1ad8a69207f2f75330926edcd91ec5b869a09d7b58ea30dd9f388584f2d5b`.
+  Production smoke then exposed two logging-privacy gaps. Application commits
+  `b38da6347f7ac088a205bf2b94592988e743e2d3` and
+  `cdc81c18fd6becac7b4d8cebc1c9ad9bb401f903` removed financial query metadata
+  from transaction-analysis logs and user identifiers from lookup logs. The
+  fixes shipped through protected PRs `#248` and `#249` (final comparison CI
+  `32083285510`) to deploy revisions
+  `2cd0ab9dcbed12fb1cba6999657a52f85cc7a314` and
+  `9610330acf9b126c8d33b89a9b5e2a872b94a60f`.
+- Komodo build update `6a83a29dd28c58b2ef3c1532` published final backend
+  version `0.0.99`; targeted deployment update
+  `6a83a3c5d28c58b2ef3c1571` completed for only `splice-app-sf`. The healthy
+  final image is
+  `sha256:48c8f6cf929271dcaf4d6a0d5229442fcf8dc621606cfa0d405c1e516c4227b9`.
+  Immediate rollback is deploy revision
+  `2cd0ab9dcbed12fb1cba6999657a52f85cc7a314` with image
+  `sha256:06aaaceb0f61944579401bde36fd93ce25cbb6a5ddc4be2e2d6ac961692637e6`;
+  pre-v3 rollback is deploy revision
+  `ea08ad9585792a354e8ad4acd0a36da4ffead1bc` with image
+  `sha256:73b72b8a57083bc3a67162dd08cad52cab06c03b72ef730aaada0da2356473f5`.
+  This rollout made no database, Auth0, DNS, ingress, scope, consent, or stack
+  schema change.
+- Local release gates passed backend typecheck, lint, build, 9 focused MCP
+  suites with 129 tests, all 84 backend suites with 893 tests, deterministic
+  browser-bundle generation, final Node 24 production-image inspection, and
+  clean diff/fixture/stale-contract scans. The final generated App bundle
+  SHA-256 was
+  `241ce12ff1337dd7d5a543031b19187f22b6603d6ea5f44aee0dec994975308f`.
+- Three official ext-apps host refinement passes covered desktop dark,
+  iPhone dark/light, and 320 px dark layouts. They exercised overview, inflow,
+  comparison, focused drilldown, empty, localized helper failure, safe primary
+  failure, and unchanged Portfolio behavior, with loading-to-terminal-state
+  recordings. No unexpected external HTTP, page error, warning/error console
+  entry, stale private data, or 320 px Cash Flow overflow remained. Stable
+  evidence lives under `tmp/recordings/mcp-apps/cash-flow-v3-*`; the ImageGen
+  contact sheet informed hierarchy and inline evidence but is not a production
+  asset.
+- Public health, protected-resource discovery, the sanitized unauthenticated
+  `401` boundary, the adjacent REST API/frontend, and the retired API-origin
+  `/mcp` `404` boundary passed. Startup logs show the MCP listener and Nest app
+  ready without an error.
+- At approximately `2026-08-17T23:37Z`, the existing ChatGPT developer plugin
+  was refreshed without reconnecting or changing OAuth. The refreshed surface
+  contains `visualize_cash_flow` linked to
+  `ui://splice/cash-flow/v3.html`, retains `show_portfolio_viewer`, and omits
+  `show_cashflow_explorer`, `show_projection_scenario_modeler`, and
+  `show_category_rule_workbench`.
+- With explicit real-financial-data consent, ChatGPT Web rendered current-period,
+  income-focused, comparison, and category-focused Cash Flow answers. A selected
+  category supported a conversational “why is this so high?” follow-up. Generic
+  finance and capability-meta prompts did not render the App. Desktop and
+  390×844 mobile-width presentation were correct. The initial matrix completed
+  four visualizations and five detail calls with zero MCP failures; each privacy
+  fix deployment repeated the current-period call successfully.
+- The final `0.0.99` production event completed `visualize_cash_flow` in 238 ms.
+  Logs contain only sanitized request metadata plus fixed lifecycle messages;
+  they contain no claims, user UUID, tool dates, currency, counts, financial
+  values/results, stack trace, or internal failure. Production screenshots live
+  under `tmp/recordings/mcp-apps/cash-flow-v3-production-chatgpt-web/`.
+
 ### 2026-08-17 standardized four-App runtime rollout record (historical)
 
 - Splice application commit:
