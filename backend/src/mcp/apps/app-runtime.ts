@@ -16,7 +16,7 @@ import {
   portfolioAccountLabel,
   portfolioPositionById,
   portfolioPositionLabel,
-  portfolioSelectionContext,
+  portfolioSelectionModelContext,
   portfolioSnapshotLabel,
   type PortfolioPosition,
   type PortfolioPresentation,
@@ -183,12 +183,7 @@ import {
     var requestId = ++state.portfolioContextRequestId;
     if (!shouldClear) return;
     mcpRuntime.app
-      .updateModelContext({
-        structuredContent: {
-          visualization: 'portfolio',
-          selection: null,
-        },
-      })
+      .updateModelContext(portfolioSelectionModelContext(null, null))
       .then(function () {
         if (requestId !== state.portfolioContextRequestId) {
           republishCurrentPortfolioContext();
@@ -1042,9 +1037,9 @@ import {
     var securityId = position ? position.securityId : null;
     var requestId = ++state.portfolioContextRequestId;
     mcpRuntime.app
-      .updateModelContext({
-        structuredContent: portfolioSelectionContext(presentation, position),
-      })
+      .updateModelContext(
+        portfolioSelectionModelContext(presentation, position),
+      )
       .then(function () {
         if (
           requestId !== state.portfolioContextRequestId ||
@@ -1068,12 +1063,7 @@ import {
         if (securityId) {
           var clearRequestId = ++state.portfolioContextRequestId;
           mcpRuntime.app
-            .updateModelContext({
-              structuredContent: {
-                visualization: 'portfolio',
-                selection: null,
-              },
-            })
+            .updateModelContext(portfolioSelectionModelContext(null, null))
             .then(function () {
               if (
                 clearRequestId !== state.portfolioContextRequestId ||
