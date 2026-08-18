@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress
+Implementation Complete — ChatGPT Host Follow-up Pending
 
 ## Goal
 
@@ -647,8 +647,11 @@ decision, three refinement passes, and final independent review.
   recording and exact selected/cleared host model-context observations. Its
   evidence summary pins the final deterministic bundle SHA.
 - Every responsive still, contact sheet, WebM, and browser JSON artifact in the
-  final directories was inspected. Protected deployment and ChatGPT Web/mobile
-  smoke remain operator work after promotion and must be recorded separately.
+  final directories was inspected. Protected deployment, metadata refresh,
+  live ChatGPT Web rendering, selective prose routing, and sanitized production
+  logging now pass and are recorded in `docs/mcp.md`. ChatGPT Web still ignores
+  the standards-based selected-holding model context on the next manually typed
+  turn, and native ChatGPT iOS smoke remains operator work.
 
 ## Risks And Deferred Work
 
