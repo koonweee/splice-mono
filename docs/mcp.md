@@ -689,8 +689,28 @@ or stack configuration change.
   because a holding was selected. Its payload contains only the selected
   security name/ticker and an instruction to use Splice; financial values,
   allocation, account names/IDs, and security IDs remain out of the message.
-  Local focused Apps validation passes; protected deployment and live ChatGPT
-  Web/mobile action smoke are pending in this rollout record.
+  It passed 117 focused MCP App tests, the full 934-test backend suite,
+  typecheck, lint, build, deterministic App bundling (final SHA-256
+  `e427ceda6be445849003064e4cafe22dbff155addd415309b00db0778c9c3aab`),
+  responsive official-host captures, Compose rendering, a Node `24.19.0`
+  production-image build, and independent review with no major findings.
+- Follow-up application commit
+  `4523668d49eb5a9cb03d2b6ad6c831f1faa884c3` shipped through protected PR
+  `#253` to deploy revision
+  `f187b2b195aa24a28efbeec7880b5a12c14a5d2d` (workflow
+  `32096332751`). Webhook build update
+  `6a83d497d28c58b2ef3c1faa` published backend `0.0.103` from that exact
+  revision; targeted SF deployment `6a83d685d28c58b2ef3c2010` completed
+  successfully. No VPS/SG replica, database, Auth0, DNS, ingress, scope, or
+  stack configuration was changed.
+- The deployed backend is healthy on image
+  `sha256:fac0b111656047a1811b1be0df22784b2b9bb80d24075ce6686a2fa2e424502c`.
+  Public discovery returns the canonical resource, Auth0 issuer, and exact
+  `splice:read`/`splice:write` scopes; an unauthenticated MCP call returns the
+  sanitized bearer challenge. Startup logs contain the MCP listener event and
+  no error event. The refreshed ChatGPT Web action smoke and native iOS action
+  smoke remain pending because they intentionally transmit private portfolio
+  data and require action-time operator confirmation.
 - Official-host evidence remains under
   `tmp/recordings/mcp-apps/portfolio-v3-information-hierarchy-final/`,
   `portfolio-v3-exploration-final-d986/`,
@@ -698,10 +718,15 @@ or stack configuration change.
   `portfolio-v3-primary-error-final/`, and
   `portfolio-v3-cash-flow-isolation-final/`. The final independent review of
   the implementation reported: “No major issues remain.”
-- Rollback inputs: backend image
+- Immediate rollback inputs for the explicit-action follow-up are backend
+  image
+  `sha256:b374b1080989cd8975a8b4445d3644f0fe864b564b90b53a1994f54a0cc2b7ef`
+  and protected deploy revision
+  `5800c93cbe88c21bed4b8e2e8f50fd86bddc4e57`. The older v3 rollback inputs
+  remain backend image
   `sha256:48c8f6cf929271dcaf4d6a0d5229442fcf8dc621606cfa0d405c1e516c4227b9`
   and deploy revision
-  `9610330acf9b126c8d33b89a9b5e2a872b94a60f`. This cutover requires no
+  `9610330acf9b126c8d33b89a9b5e2a872b94a60f`. Neither path requires a
   database, Auth0, DNS, ingress, or stack-schema rollback.
 
 ### Cash Flow v3 rollout and ChatGPT smoke
