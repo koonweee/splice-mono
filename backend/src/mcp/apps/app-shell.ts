@@ -181,6 +181,9 @@ const APP_CSS = `
   .portfolio-contributions small { font-size: 10px; overflow-wrap: anywhere; }
   .portfolio-context-note { margin: 0; padding: 9px 10px; border-radius: 7px; background: var(--color-background-tertiary); font-size: 11px; }
   .portfolio-show-contributions { min-height: 44px; justify-self: start; }
+  .portfolio-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .portfolio-detail-actions button { min-height: 44px; }
+  .portfolio-detail-actions p { margin: 0; font-size: 11px; }
   .portfolio-empty { padding: 20px; border: 1px dashed var(--color-border-primary); border-radius: 12px; text-align: center; }
   .portfolio-empty h2 { font-size: 16px; }
   .portfolio-disclosure { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: -6px 2px 0; color: var(--color-text-secondary); font-size: 11px; }

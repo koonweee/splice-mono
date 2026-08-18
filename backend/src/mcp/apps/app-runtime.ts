@@ -13,6 +13,7 @@ import {
   createPortfolioPresentation,
   formatPortfolioMoney,
   formatPortfolioPercentage,
+  portfolioHoldingFollowUpMessage,
   portfolioAccountLabel,
   portfolioPositionById,
   portfolioPositionLabel,
@@ -49,6 +50,8 @@ import {
     portfolioPublishedSecurityId: null,
     portfolioContextRequestId: 0,
     portfolioContextError: false,
+    portfolioFollowUpStatus: 'idle',
+    portfolioFollowUpRequestId: 0,
   };
 
   function escapeHtml(value) {
@@ -215,6 +218,8 @@ import {
     state.portfolioOtherExpanded = false;
     state.portfolioContributionsExpanded = false;
     state.portfolioContextError = false;
+    state.portfolioFollowUpStatus = 'idle';
+    state.portfolioFollowUpRequestId += 1;
   }
 
   function renderLiveDataError() {
@@ -934,6 +939,23 @@ import {
               ' more accounts') +
           '</button>'
         : '') +
+      (portfolioFollowUpSupported()
+        ? '<div class="portfolio-detail-actions"><button data-action="ask-about-position"' +
+          (state.portfolioFollowUpStatus === 'sending' ? ' disabled' : '') +
+          '>' +
+          (state.portfolioFollowUpStatus === 'sending'
+            ? 'Asking…'
+            : state.portfolioFollowUpStatus === 'sent'
+              ? 'Ask again'
+              : 'Ask about this holding') +
+          '</button>' +
+          (state.portfolioFollowUpStatus === 'sent'
+            ? '<p role="status">Question sent to the conversation.</p>'
+            : state.portfolioFollowUpStatus === 'error'
+              ? '<p role="alert">Could not send this question. Try again.</p>'
+              : '') +
+          '</div>'
+        : '') +
       (state.portfolioContextError
         ? '<p class="portfolio-context-note" role="status">This selection could not be shared with the conversation. The visualization is unaffected.</p>'
         : '') +
@@ -1016,6 +1038,52 @@ import {
       : null;
   }
 
+  function portfolioFollowUpSupported() {
+    var capabilities = mcpRuntime.app.getHostCapabilities();
+    return Boolean(
+      capabilities && capabilities.message && capabilities.message.text,
+    );
+  }
+
+  function askAboutSelectedPortfolioPosition() {
+    var presentation = currentPortfolioPresentation();
+    if (!presentation || !portfolioFollowUpSupported()) return;
+    var position = portfolioPositionById(
+      presentation,
+      state.selectedPortfolioSecurityId,
+    );
+    if (!position) return;
+    var securityId = position.securityId;
+    var generation = businessDataGeneration;
+    var requestId = ++state.portfolioFollowUpRequestId;
+    state.portfolioFollowUpStatus = 'sending';
+    render();
+    mcpRuntime.app
+      .sendMessage(portfolioHoldingFollowUpMessage(position))
+      .then(function (result) {
+        if (
+          requestId !== state.portfolioFollowUpRequestId ||
+          generation !== businessDataGeneration ||
+          state.selectedPortfolioSecurityId !== securityId
+        ) {
+          return;
+        }
+        state.portfolioFollowUpStatus = result.isError ? 'error' : 'sent';
+        render();
+      })
+      .catch(function () {
+        if (
+          requestId !== state.portfolioFollowUpRequestId ||
+          generation !== businessDataGeneration ||
+          state.selectedPortfolioSecurityId !== securityId
+        ) {
+          return;
+        }
+        state.portfolioFollowUpStatus = 'error';
+        render();
+      });
+  }
+
   function republishCurrentPortfolioContext() {
     if (!state.selectedPortfolioSecurityId) return;
     var presentation = currentPortfolioPresentation();
@@ -1094,6 +1162,8 @@ import {
     state.selectedPortfolioSecurityId = selectedPosition.securityId;
     state.portfolioContributionsExpanded = false;
     state.portfolioContextError = false;
+    state.portfolioFollowUpStatus = 'idle';
+    state.portfolioFollowUpRequestId += 1;
     if (
       presentation.remainingPositions.some(function (candidate) {
         return candidate.securityId === selectedPosition.securityId;
@@ -1115,6 +1185,8 @@ import {
     state.selectedPortfolioSecurityId = null;
     state.portfolioContributionsExpanded = false;
     state.portfolioContextError = false;
+    state.portfolioFollowUpStatus = 'idle';
+    state.portfolioFollowUpRequestId += 1;
     render();
     publishPortfolioContext(presentation, null, businessDataGeneration);
   }
@@ -1241,6 +1313,9 @@ import {
       state.portfolioContributionsExpanded =
         !state.portfolioContributionsExpanded;
       render();
+    }
+    if (action === 'ask-about-position') {
+      askAboutSelectedPortfolioPosition();
     }
   });
 

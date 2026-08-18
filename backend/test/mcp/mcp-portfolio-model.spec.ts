@@ -2,6 +2,7 @@ import {
   createPortfolioPresentation,
   formatPortfolioMoney,
   formatPortfolioPercentage,
+  portfolioHoldingFollowUpMessage,
   portfolioAccountLabel,
   portfolioPositionById,
   portfolioSelectionContext,
@@ -246,5 +247,34 @@ describe('portfolio presentation model', () => {
         selection: null,
       },
     });
+  });
+
+  it('creates a concise explicit follow-up without embedding portfolio values', () => {
+    const selected = position('selected', 12_345.67, 4321, {
+      securityName: 'Selected Fund',
+      tickerSymbol: 'SLCT',
+    });
+
+    expect(portfolioHoldingFollowUpMessage(selected)).toEqual({
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: "Tell me more about Selected Fund (SLCT) in my Splice portfolio. Use Splice to explain this holding's current portfolio value, allocation, and account breakdown.",
+        },
+      ],
+    });
+    expect(
+      JSON.stringify(portfolioHoldingFollowUpMessage(selected)),
+    ).not.toMatch(/12,?345|43\.21|account-selected/);
+
+    expect(
+      portfolioHoldingFollowUpMessage(
+        position('ticker-only', 10, 100, {
+          securityName: null,
+          tickerSymbol: 'SGOV',
+        }),
+      ).content[0].text,
+    ).toContain('Tell me more about SGOV in my Splice portfolio');
   });
 });

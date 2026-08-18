@@ -51,6 +51,12 @@ need an App merely because its data can be rendered.
   context with the minimum semantic state needed to resolve references such as
   “this” or “that category.” Do not automatically send a message or perform a
   write because the user selected something.
+- Treat an explicit App-to-conversation action as an opt-in fallback, not a
+  substitute for passive selection context. It may be shown only after a user
+  selects an item, only when the host advertises text-message support, and only
+  when the user must click it deliberately. The sent message should identify
+  the selected item with the minimum useful label, contain no financial values
+  or internal identifiers, and fail locally without exposing host errors.
 - Do not put model-generated conclusions inside the App when the surrounding
   response already owns interpretation. Factual labels, exact deltas,
   provenance, and data-quality warnings are appropriate.
@@ -193,6 +199,11 @@ portfolio is concentrated.**
   snapshot evidence.
 - Share only the selected security's minimum semantic context with the model so
   follow-ups such as “tell me more about this holding” resolve correctly.
+- Because some hosts accept passive model context without applying it to the
+  next manually typed turn, selected detail may additionally offer **Ask about
+  this holding**. Feature-detect text `ui/message`; never auto-send on
+  selection, hide the action when unsupported, and send only the selected
+  security name/ticker plus a concise request for Splice-backed explanation.
 - Keep the App latest-only and read-only. Performance, gain/loss, historical
   comparison, investment activity, trading, and account administration are
   separate product questions.

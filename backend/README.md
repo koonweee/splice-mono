@@ -139,7 +139,10 @@ not general dashboards. Cash Flow uses `visualize_cash_flow` linked to
 `ui://splice/cash-flow/v3.html`. Portfolio uses `visualize_portfolio` linked to
 `ui://splice/portfolio/v3.html`; it shows latest ownership and concentration in
 one server-normalized USD view, with top-five plus `Other` evidence and compact
-inline position detail.
+inline position detail. Selection publishes minimal passive model context. On
+hosts that advertise text `ui/message`, selected detail also offers one
+deliberate **Ask about this holding** action; it is hidden when unsupported and
+never sends automatically.
 
 For MCP App UI work, run `yarn mcp-apps:dev` for the live official-host loop.
 Use `yarn mcp-apps:visual --app cash-flow` for the overview, income,

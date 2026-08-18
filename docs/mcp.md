@@ -613,10 +613,13 @@ or stack configuration change.
    consent are not expected. Record the refresh time because old conversations
    may retain the retired descriptor or cached v2 HTML.
 5. Smoke ChatGPT Web and mobile/iOS with portfolio value/concentration, an
-   account-scoped portfolio, `Other` expansion, and a selected holding followed
-   by “tell me more about this holding.” Verify total/ranking, inline detail,
-   snapshot range, one `All values in USD` footer, model context, themes, safe
-   areas, and loading/error boundaries.
+   account-scoped portfolio, `Other` expansion, and a selected holding. Verify
+   total/ranking, inline detail, snapshot range, one `All values in USD` footer,
+   model context, themes, safe areas, and loading/error boundaries. Selection
+   alone must not send a message. When the host advertises text `ui/message`,
+   click **Ask about this holding** and confirm the resulting user message and
+   response identify the selected security. If the host does not advertise the
+   capability, the action must be absent and the App must remain usable.
 6. Ask separately for a simple holding fact, investment activity, and available
    capabilities. Those should remain prose or use headless tools; they must not
    invoke Portfolio merely because they concern investments. Record sanitized
@@ -679,6 +682,15 @@ or stack configuration change.
   selection context as an unresolved ChatGPT host interoperability limitation;
   do not describe it as passing. The same interaction still passes the official
   MCP Apps host harness. Native ChatGPT iOS smoke also remains an operator step.
+- Follow-up remediation pins `@koonweee/mcp-kit@0.4.2` and adds an explicit,
+  user-initiated **Ask about this holding** action backed by the standard
+  `ui/message` bridge. The action is feature-detected, hidden in the tagged
+  neutral host that does not advertise text messages, and never fires merely
+  because a holding was selected. Its payload contains only the selected
+  security name/ticker and an instruction to use Splice; financial values,
+  allocation, account names/IDs, and security IDs remain out of the message.
+  Local focused Apps validation passes; protected deployment and live ChatGPT
+  Web/mobile action smoke are pending in this rollout record.
 - Official-host evidence remains under
   `tmp/recordings/mcp-apps/portfolio-v3-information-hierarchy-final/`,
   `portfolio-v3-exploration-final-d986/`,

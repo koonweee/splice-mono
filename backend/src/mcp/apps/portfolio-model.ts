@@ -308,3 +308,23 @@ export function portfolioSelectionModelContext(
     structuredContent: portfolioSelectionContext(presentation, position),
   };
 }
+
+export function portfolioHoldingFollowUpMessage(position: PortfolioPosition) {
+  const label = portfolioPositionLabel(position);
+  const ticker =
+    position.tickerSymbol &&
+    position.tickerSymbol.localeCompare(label, undefined, {
+      sensitivity: 'accent',
+    }) !== 0
+      ? ` (${position.tickerSymbol})`
+      : '';
+  return {
+    role: 'user' as const,
+    content: [
+      {
+        type: 'text' as const,
+        text: `Tell me more about ${label}${ticker} in my Splice portfolio. Use Splice to explain this holding's current portfolio value, allocation, and account breakdown.`,
+      },
+    ],
+  };
+}

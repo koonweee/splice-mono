@@ -28,6 +28,8 @@ interface RuntimeHarness {
   options: RuntimeOptions;
   callServerTool: jest.Mock;
   updateModelContext: jest.Mock;
+  sendMessage: jest.Mock;
+  getHostCapabilities: jest.Mock;
   connect: jest.Mock;
   dispatchInput: (target: RuntimeTarget) => void;
   dispatchChange: (target: RuntimeTarget) => void;
@@ -43,6 +45,8 @@ const runtimes: Array<{
   options: RuntimeOptions;
   callServerTool: jest.Mock;
   updateModelContext: jest.Mock;
+  sendMessage: jest.Mock;
+  getHostCapabilities: jest.Mock;
   connect: jest.Mock;
 }> = [];
 let rejectNextConnect = false;
@@ -63,6 +67,8 @@ jest.mock('@koonweee/mcp-kit/apps', () => ({
       options,
       callServerTool: jest.fn(),
       updateModelContext: jest.fn().mockResolvedValue({}),
+      sendMessage: jest.fn().mockResolvedValue({}),
+      getHostCapabilities: jest.fn(() => ({ message: { text: {} } })),
       connect: rejectNextConnect
         ? jest.fn().mockRejectedValue(new Error('host unavailable'))
         : jest.fn().mockResolvedValue(undefined),
@@ -72,6 +78,8 @@ jest.mock('@koonweee/mcp-kit/apps', () => ({
       app: {
         callServerTool: runtime.callServerTool,
         updateModelContext: runtime.updateModelContext,
+        sendMessage: runtime.sendMessage,
+        getHostCapabilities: runtime.getHostCapabilities,
       },
       connect: runtime.connect,
       close: jest.fn().mockResolvedValue(undefined),
@@ -140,6 +148,8 @@ function runRuntime(
     options: runtime.options,
     callServerTool: runtime.callServerTool,
     updateModelContext: runtime.updateModelContext,
+    sendMessage: runtime.sendMessage,
+    getHostCapabilities: runtime.getHostCapabilities,
     connect: runtime.connect,
     dispatchInput: (target) => documentListeners.input?.({ target }),
     dispatchChange: (target) => documentListeners.change?.({ target }),
@@ -900,6 +910,105 @@ describe('Splice MCP App runtime integration', () => {
     expect(harness.updateModelContext).toHaveBeenLastCalledWith(
       PORTFOLIO_CLEAR_MODEL_CONTEXT,
     );
+  });
+
+  it('sends an explicit selected-holding follow-up through ui/message', async () => {
+    const harness = runRuntime('portfolio');
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+
+    expect(harness.html()).toContain('Ask about this holding');
+    expect(harness.sendMessage).not.toHaveBeenCalled();
+    harness.dispatchClick(actionTarget('ask-about-position'));
+    expect(harness.sendMessage).toHaveBeenCalledWith({
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: "Tell me more about Holding 0 (H0) in my Splice portfolio. Use Splice to explain this holding's current portfolio value, allocation, and account breakdown.",
+        },
+      ],
+    });
+    await flushPromises();
+
+    expect(harness.html()).toContain('Question sent to the conversation');
+    expect(JSON.stringify(harness.sendMessage.mock.calls)).not.toMatch(
+      /security-0|account-0|\$|allocationBps|valueUsd/,
+    );
+  });
+
+  it('keeps a ui/message rejection local and exposes no host error', async () => {
+    const harness = runRuntime('portfolio');
+    harness.sendMessage.mockResolvedValueOnce({
+      isError: true,
+      reason: 'private host rejection',
+    });
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+    harness.dispatchClick(actionTarget('ask-about-position'));
+    await flushPromises();
+
+    expect(harness.html()).toContain('Could not send this question. Try again');
+    expect(harness.html()).not.toContain('private host rejection');
+  });
+
+  it('keeps a rejected ui/message promise local', async () => {
+    const harness = runRuntime('portfolio');
+    harness.sendMessage.mockRejectedValueOnce(
+      new Error('private transport failure'),
+    );
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+    harness.dispatchClick(actionTarget('ask-about-position'));
+    await flushPromises();
+
+    expect(harness.html()).toContain('Could not send this question. Try again');
+    expect(harness.html()).not.toContain('private transport failure');
+  });
+
+  it('ignores a late ui/message result after the selected holding changes', async () => {
+    const harness = runRuntime('portfolio');
+    let resolveMessage: ((result: Record<string, unknown>) => void) | undefined;
+    harness.sendMessage.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveMessage = resolve;
+        }),
+    );
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+    harness.dispatchClick(actionTarget('ask-about-position'));
+
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-1' }),
+    );
+    resolveMessage?.({});
+    await flushPromises();
+
+    expect(harness.html()).toContain('Holding 1');
+    expect(harness.html()).toContain('Ask about this holding');
+    expect(harness.html()).not.toContain('Question sent to the conversation');
+  });
+
+  it('omits the follow-up action when the host lacks ui/message support', () => {
+    const harness = runRuntime('portfolio');
+    harness.getHostCapabilities.mockReturnValue({});
+    harness.sendToolResult(portfolioResult());
+    harness.dispatchClick(
+      actionTarget('select-position', { securityId: 'security-0' }),
+    );
+
+    expect(harness.html()).not.toContain('Ask about this holding');
+    harness.dispatchClick(actionTarget('ask-about-position'));
+    expect(harness.sendMessage).not.toHaveBeenCalled();
   });
 
   it('keeps multi-account position evidence concise until requested', () => {
