@@ -4,7 +4,7 @@ import Decimal from 'decimal.js';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import { getDecimalPlaces, MoneySign } from '../types/MoneyWithSign';
 import type { McpMoney } from './mcp-money';
-import type { McpInvestmentHolding, McpReadService } from './mcp-read.service';
+import { type McpInvestmentHolding, McpReadService } from './mcp-read.service';
 import type { PortfolioVisualizationData } from './mcp-schemas';
 
 const REPORTING_CURRENCY = 'USD' as const;

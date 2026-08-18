@@ -1,6 +1,10 @@
 import { McpPublicError } from '@koonweee/mcp-kit';
+import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { McpPortfolioVisualizationService } from '../../src/mcp/mcp-portfolio-visualization.service';
-import type { McpInvestmentHolding } from '../../src/mcp/mcp-read.service';
+import {
+  type McpInvestmentHolding,
+  McpReadService,
+} from '../../src/mcp/mcp-read.service';
 import { PortfolioVisualizationDataSchema } from '../../src/mcp/mcp-schemas';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 
@@ -43,6 +47,15 @@ describe('McpPortfolioVisualizationService', () => {
   const mcpReadService = { listInvestmentHoldings: jest.fn() };
   const currencyConversionService = { getRateMap: jest.fn() };
   let service: McpPortfolioVisualizationService;
+
+  it('emits the concrete Nest provider types for production dependency injection', () => {
+    expect(
+      Reflect.getMetadata(
+        'design:paramtypes',
+        McpPortfolioVisualizationService,
+      ),
+    ).toEqual([McpReadService, CurrencyConversionService]);
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
