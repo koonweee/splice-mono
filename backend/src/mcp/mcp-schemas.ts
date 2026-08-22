@@ -256,6 +256,29 @@ export const CreateCategorizationRuleOutputSchema = z
   })
   .passthrough();
 
+export const CategorizationRuleChangePreviewOutputSchema = z
+  .object({
+    action: z.enum(['edit', 'archive', 'restore']),
+    currentRule: z.unknown(),
+    proposedRule: z.unknown(),
+    impact: z.object({
+      matchedBefore: z.number().int(),
+      matchedAfter: z.number().int(),
+      newlyMatched: z.number().int(),
+      noLongerMatched: z.number().int(),
+      winningBefore: z.number().int(),
+      winningAfter: z.number().int(),
+      winnerChanged: z.number().int(),
+      skippedManual: z.number().int(),
+      historicalAssignments: z.number().int(),
+      historicalAssignmentsUntouched: z.literal(true),
+    }),
+    transactions: z.array(z.unknown()),
+    normalizedChanges: z.record(z.string(), z.unknown()).optional(),
+    previewToken: z.string(),
+  })
+  .passthrough();
+
 export const CategorizationRuleApplicationPreviewOutputSchema =
   CategorizationPreviewCountsSchema.extend({
     transactions: z.array(z.unknown()),

@@ -145,8 +145,15 @@ largest contributors.**
 - User-facing name: **Cash Flow**.
 - Public tool name: `visualize_cash_flow`; avoid implying a general dashboard
   or open-ended explorer.
-- Invoke it selectively for actual cash-flow, spending, income, or comparison
-  questions that benefit from a visual answer.
+- Invoke it by default for broad questions about the user's actual cash flow,
+  spending, expenses, income, or period comparisons. Resolve relative dates
+  first and make the App the primary response; concise prose may follow.
+- Keep invocation selective outside that overview job: explicit prose/no-UI
+  requests, narrow merchant or raw-transaction facts, conceptual or
+  hypothetical questions, and capability discovery should not launch it.
+- Rendering is not an endpoint for reasoning. Follow-up questions may use a
+  category focus, category drilldown, audit, structured analysis, or raw rows
+  when the conversation needs deeper evidence.
 - Visualize period movement only. Balances, net worth, and holdings belong to
   other product surfaces.
 - The model supplies the period conversationally. The App has no date picker,

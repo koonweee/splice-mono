@@ -90,11 +90,11 @@ For each ChatGPT developer-mode plugin instance:
    authorization request should include `openid`, `email`, `offline_access`,
    `splice:read`, and `splice:write`, PKCE S256, and the exact MCP resource.
 5. Open the plugin in ChatGPT and select **Refresh**. Confirm that ChatGPT
-   discovers exactly 25 tools before testing a prompt.
+   discovers exactly 32 tools before testing a prompt.
 6. Change the Splice app/plugin permission mode so mutating actions are allowed
    or require an explicit prompt. The **Allow low-risk actions** mode is
    sufficient for reads and previews but may prevent ChatGPT from dispatching
-   `create_categorization_rule` or `apply_categorization_rule` at all. Keep both
+   categorization mutation tools at all. Keep both
    OAuth scopes selected; the permission mode and `splice:write` scope are
    separate gates.
 
@@ -188,7 +188,7 @@ listener-specific values and remain disabled.
 
 ## Capability and safety contract
 
-The server exposes 25 tools. All return validated `structuredContent` and a
+The server exposes 32 tools. All return validated `structuredContent` and a
 JSON-equivalent text fallback.
 
 - Context, accounts, balances, and transactions: `get_user_context`,
@@ -197,6 +197,7 @@ JSON-equivalent text fallback.
 - Cash flow and rule context: `get_cashflow_analysis`,
   `get_cashflow_analysis_audit`, `list_cashflow_category_transactions`,
   `list_analysis_rules`, `list_categorization_rules`,
+  `get_categorization_rule`,
   `list_categorization_rule_recommendations`,
   `list_manual_categorized_transaction_examples`, and
   `list_rule_candidate_patterns`.
@@ -204,28 +205,52 @@ JSON-equivalent text fallback.
   `list_investment_activity`, `list_recurring_manual_transaction_schedules`,
   and `collect_projection_assumptions`.
 - Read-only MCP App launchers: `visualize_cash_flow` and
-  `visualize_portfolio`. `visualize_cash_flow` is selective: use it for real
-  cash-flow, spending, income, or period-comparison questions that benefit from
-  visual evidence, not for capability discovery, hypothetical discussion,
-  metadata questions, or simple facts that prose answers clearly.
+  `visualize_portfolio`. `visualize_cash_flow` is the preferred/default tool for
+  broad questions about the user's actual spending, expenses, income, cash
+  flow, or period comparisons. Resolve relative dates with `get_user_context`,
+  use `outflow` for spending/expenses and `inflow` for income, and make the App
+  the primary response. Explicit prose/no-UI requests, narrow merchant or raw
+  transaction facts, conceptual/hypothetical questions, and capability
+  discovery remain non-App cases. `get_cashflow_analysis` is the structured
+  primitive for those prose-only or deeper-reasoning paths; focused category,
+  audit, and raw-row follow-ups remain available after rendering.
   `visualize_portfolio` is similarly selective: use it for current portfolio
   value, ownership, allocation, exposure, or concentration questions that
   benefit from ranked visual evidence, not for activity, performance,
   capability discovery, or simple holding facts that prose answers clearly.
-- Categorization workflow: `preview_categorization_rule_draft` and
-  `preview_categorization_rule_application` are reads;
-  `create_categorization_rule` is a real non-idempotent, non-destructive write;
-  `apply_categorization_rule` is a real destructive, idempotent write.
+- Categorization workflow: draft, edit, archive, restore, and historical
+  application previews are reads. `create_categorization_rule` and
+  `edit_categorization_rule` are non-idempotent, non-destructive writes;
+  `archive_categorization_rule` is destructive/idempotent;
+  `restore_categorization_rule` is mutating/idempotent; and
+  `apply_categorization_rule` is the separate destructive/idempotent historical
+  write.
 
-The 23 non-mutating tools require `splice:read`. Both writes require
-`splice:write`. Creation and application must receive the matching preview
-token produced for the authenticated user and current input. Stale, mismatched,
-or cross-user tokens are rejected. Application preserves existing protections
-for manual transactions and manual category assignments.
+The 27 non-mutating tools require `splice:read`. The five categorization writes
+require `splice:write`. Every write must receive the matching preview token
+produced for the authenticated user and exact normalized input. Rule edits and
+status changes also bind the preview to the rule's `updatedAt` version, so
+stale, mismatched, concurrent, or cross-user changes are rejected. Tokens are
+opaque HMAC-authenticated values with a ten-minute lifetime; harmless leading
+or trailing whitespace is ignored, and a freshly returned token is immediately
+consumable.
+
+Rule edits, archive, and restore affect future categorization only. They leave
+all historical transaction categories and `categoryAssignmentRuleId` values
+untouched. Archiving removes the rule from the future matcher; restoring puts
+it back after active-category and duplicate checks. Historical changes remain
+explicit: preview and call `apply_categorization_rule`. That operation never
+overwrites manual transactions or manual category assignments and only applies
+the selected rule where it wins active-rule precedence. Lower numeric priority
+wins; equal priorities resolve by earlier `createdAt`, then lexicographic rule
+ID. A transaction assigned by a rule that is later edited or archived keeps
+its assignment until an explicit historical operation or manual recategorization
+changes it. Historical application updates current matches only; it does not
+clear older assignments that no longer match an edited rule.
 
 Client-native MCP risk annotations are the accepted confirmation mechanism:
-reads are marked read-only/idempotent, creation is marked mutating, and
-application is marked destructive/idempotent. Splice intentionally has no
+reads are marked read-only/idempotent, creation/edit/restore are marked
+mutating, and archive/application are marked destructive/idempotent. Splice intentionally has no
 server-side approval queue. A client may choose not to display a confirmation,
 so operators and clients must treat Splice preview counts—not the UI prompt—as
 the mutation boundary.
@@ -584,6 +609,21 @@ connection to `127.0.0.1:3102`; the App iframe must not call Splice REST
 endpoints directly. Always stop both fixture processes and close every
 agent-browser session when finished.
 
+Run the live general-purpose-agent selection eval after changing Cash Flow tool
+descriptions or schema guidance. It reads the current tool definition, uses
+no financial data, and requires `OPENAI_API_KEY`; override the default model
+with `MCP_TOOL_SELECTION_EVAL_MODEL` when needed:
+
+```bash
+cd backend
+yarn eval:mcp-tool-selection
+```
+
+The eval covers broad conversational spending/income/cash-flow prompts,
+relative-date ordering through `get_user_context`, outflow/inflow direction,
+explicit prose/no-UI exclusions, raw largest-transaction selection, conceptual
+questions, and capability discovery.
+
 ## Production rollout and recreation
 
 These steps intentionally separate repository automation from Auth0, DNS, and
@@ -603,7 +643,7 @@ or stack configuration change.
 2. Promote only the reviewed `main` revision through the protected `main` to
    `deploy` workflow. Confirm the reviewed image is healthy on `splice-app-sf`;
    do not restart or reconfigure unrelated replicas.
-3. Through an authenticated production MCP client, confirm exactly 25 tools,
+3. Through an authenticated production MCP client, confirm exactly 32 tools,
    `visualize_portfolio` exactly once, no `show_portfolio_viewer`, and linkage
    to `ui://splice/portfolio/v3.html`. Read the resource and verify
    `splice:read`, canonical domain/CSP/border metadata, HTML MIME type, strict
@@ -743,7 +783,7 @@ database change.
    `deploy` workflow. Confirm the exact reviewed image is healthy on
    `splice-app-sf`; do not restart or reconfigure unrelated replicas.
 3. Use the existing OAuth-capable deterministic client to initialize production
-   and confirm exactly 25 tools. Discovery must contain
+   and confirm exactly 32 tools. Discovery must contain
    `visualize_cash_flow` once, omit `show_cashflow_explorer`, and link the tool
    to `ui://splice/cash-flow/v3.html`. Read that resource and verify
    `splice:read`, canonical widget origin/CSP/border metadata, HTML MIME type,
@@ -1047,18 +1087,19 @@ revisions, image digests, and ChatGPT client metadata for a later rollout.
 
 8. Use MCP Inspector or another deterministic OAuth-capable client before
    ChatGPT. Log in with the allowed Google account, initialize, confirm exactly
-   25 tools, read the guide/resource and one prompt, call a representative read,
+   32 tools, read the guide/resource and one prompt, call a representative read,
    complete projection input-required/resume, and verify an App result plus its
    structured fallback. Use a controlled categorization sample to preview and
-   execute both creation and application, checking preview-token rejection and
-   resulting ownership/counts. Also verify a read-only grant cannot invoke a
-   write. Keep the token inside the client, not a command line.
+   execute creation, edit, archive/restore, and historical application,
+   checking preview-token rejection, stale-version rejection, and resulting
+   ownership/counts. Also verify a read-only grant cannot invoke a write. Keep
+   the token inside the client, not a command line.
 9. Inspect sanitized MCP events after the smoke. Logs may include only an
    opaque request ID, tool name, timing, outcome, and safe error code; they must
    not contain bearer tokens, subjects or other claims, arguments, structured
    results, internal errors, or financial values.
 10. Connect ChatGPT only after the deterministic smoke passes. Refresh plugin
-    metadata, confirm 25 tools, attach Splice to a new supported Work
+    metadata, confirm 32 tools, attach Splice to a new supported Work
     conversation, set its permission mode to allow or prompt for mutating
     actions rather than **Allow low-risk actions**, and verify OAuth login,
     visible scopes/annotations, one read, and one previewed write. A Finance or

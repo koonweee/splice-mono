@@ -129,6 +129,14 @@ export type UpdateCategorizationRuleDto = z.infer<
   typeof UpdateCategorizationRuleDtoSchema
 >;
 
+export const EditCategorizationRuleDtoSchema = registerSchema(
+  'EditCategorizationRuleDto',
+  UpdateCategorizationRuleDtoSchema.omit({ archived: true }),
+);
+export type EditCategorizationRuleDto = z.infer<
+  typeof EditCategorizationRuleDtoSchema
+>;
+
 export const CategorizationRuleViewSchema = registerSchema(
   'CategorizationRuleView',
   z
@@ -205,4 +213,37 @@ export const CategorizationRuleDraftPreviewSchema = registerSchema(
 );
 export type CategorizationRuleDraftPreview = z.infer<
   typeof CategorizationRuleDraftPreviewSchema
+>;
+
+export const CategorizationRuleChangeImpactSchema = registerSchema(
+  'CategorizationRuleChangeImpact',
+  z.object({
+    matchedBefore: z.number().int(),
+    matchedAfter: z.number().int(),
+    newlyMatched: z.number().int(),
+    noLongerMatched: z.number().int(),
+    winningBefore: z.number().int(),
+    winningAfter: z.number().int(),
+    winnerChanged: z.number().int(),
+    skippedManual: z.number().int(),
+    historicalAssignments: z.number().int(),
+    historicalAssignmentsUntouched: z.literal(true),
+  }),
+);
+export type CategorizationRuleChangeImpact = z.infer<
+  typeof CategorizationRuleChangeImpactSchema
+>;
+
+export const CategorizationRuleChangePreviewSchema = registerSchema(
+  'CategorizationRuleChangePreview',
+  z.object({
+    action: z.enum(['edit', 'archive', 'restore']),
+    currentRule: CategorizationRuleViewSchema,
+    proposedRule: CategorizationRuleViewSchema,
+    impact: CategorizationRuleChangeImpactSchema,
+    transactions: z.array(TransactionSchema),
+  }),
+);
+export type CategorizationRuleChangePreview = z.infer<
+  typeof CategorizationRuleChangePreviewSchema
 >;

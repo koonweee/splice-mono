@@ -15,9 +15,11 @@ import type {
   CategorizationRuleCategoryView,
   CategorizationRuleCondition,
   CategorizationRuleConflict,
+  CategorizationRuleChangePreview,
   CategorizationRuleDraftPreview,
   CategorizationRuleView,
   CreateCategorizationRuleDto,
+  EditCategorizationRuleDto,
   PreviewCategorizationRuleDraftDto,
   PreviewCategorizationRuleApplicationResponse,
   UpdateCategorizationRuleDto,
@@ -73,12 +75,21 @@ export class TransactionCategorizationService {
     return this.toViews(rules, userId);
   }
 
+  async findOne(
+    id: string,
+    userId: string,
+  ): Promise<CategorizationRuleView | null> {
+    const rule = await this.ruleRepository.findOne({ where: { id, userId } });
+    return rule ? this.toView(rule, userId) : null;
+  }
+
   async create(
     userId: string,
     dto: CreateCategorizationRuleDto,
   ): Promise<CategorizationRuleView> {
     const next = await this.normalizeCreateDto(userId, dto);
     await this.validateActiveTargetCategory(userId, next.targetCategoryId);
+    await this.validateOwnedAccountConditions(userId, next.conditions);
     await this.assertNoDuplicate(userId, next);
 
     const entity = this.ruleRepository.create({ userId, ...next });
@@ -90,10 +101,18 @@ export class TransactionCategorizationService {
     id: string,
     userId: string,
     dto: UpdateCategorizationRuleDto,
+    options: { expectedUpdatedAt?: Date } = {},
   ): Promise<CategorizationRuleView | null> {
     const entity = await this.ruleRepository.findOne({ where: { id, userId } });
     if (!entity) {
       return null;
+    }
+
+    if (
+      options.expectedUpdatedAt &&
+      entity.updatedAt.getTime() !== options.expectedUpdatedAt.getTime()
+    ) {
+      throw this.staleRuleConflict(id);
     }
 
     const next = this.buildUpdatedState(entity, dto);
@@ -102,6 +121,7 @@ export class TransactionCategorizationService {
     } else {
       await this.validateOwnedTargetCategory(userId, next.targetCategoryId);
     }
+    await this.validateOwnedAccountConditions(userId, next.conditions);
 
     const isRestoring = entity.archivedAt !== null && next.archivedAt === null;
     const mutatesIdentity =
@@ -112,14 +132,49 @@ export class TransactionCategorizationService {
       await this.assertNoDuplicate(userId, next, id);
     }
 
-    entity.name = next.name;
-    entity.priority = next.priority;
-    entity.targetCategoryId = next.targetCategoryId;
-    entity.conditions = next.conditions;
-    entity.archivedAt = next.archivedAt;
+    if (options.expectedUpdatedAt) {
+      const updateResult = await this.ruleRepository.update(
+        { id, userId, updatedAt: options.expectedUpdatedAt },
+        next,
+      );
+      if (updateResult.affected !== 1) {
+        throw this.staleRuleConflict(id);
+      }
 
+      const saved = await this.ruleRepository.findOne({
+        where: { id, userId },
+      });
+      if (!saved) {
+        return null;
+      }
+      return this.toView(saved, userId);
+    }
+
+    Object.assign(entity, next);
     const saved = await this.ruleRepository.save(entity);
     return this.toView(saved, userId);
+  }
+
+  async previewRuleEdit(
+    id: string,
+    userId: string,
+    dto: EditCategorizationRuleDto,
+  ): Promise<CategorizationRuleChangePreview | null> {
+    return this.previewRuleChange(id, userId, 'edit', dto);
+  }
+
+  async previewRuleArchive(
+    id: string,
+    userId: string,
+  ): Promise<CategorizationRuleChangePreview | null> {
+    return this.previewRuleChange(id, userId, 'archive', { archived: true });
+  }
+
+  async previewRuleRestore(
+    id: string,
+    userId: string,
+  ): Promise<CategorizationRuleChangePreview | null> {
+    return this.previewRuleChange(id, userId, 'restore', { archived: false });
   }
 
   async findFirstMatch(
@@ -173,7 +228,10 @@ export class TransactionCategorizationService {
     userId: string,
     transaction: TransactionEntity,
   ): Promise<boolean> {
-    if (transaction.categoryAssignmentSource === 'manual') {
+    if (
+      transaction.categoryAssignmentSource === 'manual' ||
+      transaction.categoryAssignmentSource === 'rule'
+    ) {
       return false;
     }
 
@@ -204,11 +262,13 @@ export class TransactionCategorizationService {
   async applyRuleToExisting(
     id: string,
     userId: string,
+    options: { expectedUpdatedAt?: Date } = {},
   ): Promise<ApplyCategorizationRuleResponse | null> {
     return this.transactionRepository.manager.transaction(async (manager) => {
       const result = await this.evaluateRuleApplication(id, userId, {
         manager,
         persist: true,
+        expectedUpdatedAt: options.expectedUpdatedAt,
       });
 
       if (result) {
@@ -251,17 +311,159 @@ export class TransactionCategorizationService {
       persist: boolean;
       manager?: EntityManager;
       previewLimit?: number;
+      expectedUpdatedAt?: Date;
     },
   ): Promise<RuleApplicationEvaluation | null> {
     const manager = options.manager ?? this.transactionRepository.manager;
     const rule = await manager.getRepository(CategorizationRuleEntity).findOne({
       where: { id, userId, archivedAt: IsNull() },
+      ...(options.persist ? { lock: { mode: 'pessimistic_read' } } : {}),
     });
     if (!rule) {
       return null;
     }
+    if (
+      options.expectedUpdatedAt &&
+      rule.updatedAt.getTime() !== options.expectedUpdatedAt.getTime()
+    ) {
+      throw this.staleRuleConflict(id);
+    }
 
-    return this.evaluateRuleLikeApplication(rule, userId, options);
+    return this.evaluateRuleLikeApplication(rule, userId, {
+      ...options,
+      respectActiveRulePrecedence: true,
+    });
+  }
+
+  private async previewRuleChange(
+    id: string,
+    userId: string,
+    action: 'edit' | 'archive' | 'restore',
+    dto: UpdateCategorizationRuleDto,
+  ): Promise<CategorizationRuleChangePreview | null> {
+    const current = await this.ruleRepository.findOne({
+      where: { id, userId },
+    });
+    if (!current) {
+      return null;
+    }
+    if (action === 'archive' && current.archivedAt !== null) {
+      throw new BadRequestException('Categorization rule is already archived');
+    }
+    if (action === 'restore' && current.archivedAt === null) {
+      throw new BadRequestException('Categorization rule is already active');
+    }
+
+    const next = this.buildUpdatedState(current, dto);
+    if (next.archivedAt === null) {
+      await this.validateActiveTargetCategory(userId, next.targetCategoryId);
+    } else {
+      await this.validateOwnedTargetCategory(userId, next.targetCategoryId);
+    }
+    await this.validateOwnedAccountConditions(userId, next.conditions);
+    const isRestoring = current.archivedAt !== null && next.archivedAt === null;
+    const mutatesIdentity =
+      current.targetCategoryId !== next.targetCategoryId ||
+      this.engine.canonicalConditionsKey(current.conditions) !==
+        this.engine.canonicalConditionsKey(next.conditions);
+    if (isRestoring || mutatesIdentity) {
+      await this.assertNoDuplicate(userId, next, id);
+    }
+
+    const proposed = this.ruleRepository.create({
+      ...current,
+      ...next,
+    });
+    const [currentRule, proposedRule, activeRules, transactions] =
+      await Promise.all([
+        this.toView(current, userId),
+        this.toView(proposed, userId),
+        this.ruleRepository.find({
+          where: { userId, archivedAt: IsNull() },
+          order: { priority: 'ASC', createdAt: 'ASC', id: 'ASC' },
+        }),
+        this.transactionRepository.find({
+          where: { activity: { userId } },
+          relations: ['activity', 'activity.account', 'category'],
+        }),
+      ]);
+    const activeRulesWithoutCurrent = activeRules.filter(
+      (rule) => rule.id !== current.id,
+    );
+    const rulesAfter =
+      proposed.archivedAt === null
+        ? [...activeRulesWithoutCurrent, proposed]
+        : activeRulesWithoutCurrent;
+
+    let matchedBefore = 0;
+    let matchedAfter = 0;
+    let newlyMatched = 0;
+    let noLongerMatched = 0;
+    let winningBefore = 0;
+    let winningAfter = 0;
+    let winnerChanged = 0;
+    let skippedManual = 0;
+    let historicalAssignments = 0;
+    const changedTransactions: TransactionEntity[] = [];
+
+    transactions.forEach((transaction) => {
+      const matchesBefore =
+        current.archivedAt === null &&
+        this.engine.findFirstMatch([current], transaction) !== null;
+      const matchesAfter =
+        proposed.archivedAt === null &&
+        this.engine.findFirstMatch([proposed], transaction) !== null;
+      const before = this.engine.findFirstMatch(activeRules, transaction);
+      const after = this.engine.findFirstMatch(rulesAfter, transaction);
+      const isManual =
+        transaction.source === 'manual' ||
+        transaction.categoryAssignmentSource === 'manual';
+      const outcomeChanged =
+        before?.rule.id !== after?.rule.id ||
+        before?.targetCategoryId !== after?.targetCategoryId;
+
+      matchedBefore += matchesBefore ? 1 : 0;
+      matchedAfter += matchesAfter ? 1 : 0;
+      newlyMatched += !matchesBefore && matchesAfter ? 1 : 0;
+      noLongerMatched += matchesBefore && !matchesAfter ? 1 : 0;
+      winningBefore += before?.rule.id === current.id ? 1 : 0;
+      winningAfter += after?.rule.id === current.id ? 1 : 0;
+      historicalAssignments +=
+        transaction.categoryAssignmentRuleId === current.id ? 1 : 0;
+
+      if (!outcomeChanged) {
+        return;
+      }
+      if (isManual) {
+        skippedManual += 1;
+        return;
+      }
+
+      winnerChanged += 1;
+      changedTransactions.push(transaction);
+    });
+
+    return {
+      action,
+      currentRule,
+      proposedRule,
+      impact: {
+        matchedBefore,
+        matchedAfter,
+        newlyMatched,
+        noLongerMatched,
+        winningBefore,
+        winningAfter,
+        winnerChanged,
+        skippedManual,
+        historicalAssignments,
+        historicalAssignmentsUntouched: true,
+      },
+      transactions: changedTransactions
+        .sort(compareTransactionsByActivityDateDesc)
+        .slice(0, 10)
+        .map((transaction) => transaction.toObject()),
+    };
   }
 
   private async evaluateRuleLikeApplication(
@@ -272,6 +474,7 @@ export class TransactionCategorizationService {
       manager?: EntityManager;
       previewLimit?: number;
       includeExistingRuleOverlap?: boolean;
+      respectActiveRulePrecedence?: boolean;
       ignoredManualCategoryIds?: string[];
     },
   ): Promise<RuleApplicationEvaluation> {
@@ -299,12 +502,13 @@ export class TransactionCategorizationService {
     const ignoredManualCategoryIds = new Set(
       options.ignoredManualCategoryIds ?? [],
     );
-    const activeRules = options.includeExistingRuleOverlap
-      ? await manager.getRepository(CategorizationRuleEntity).find({
-          where: { userId, archivedAt: IsNull() },
-          order: { priority: 'ASC', createdAt: 'ASC', id: 'ASC' },
-        })
-      : [];
+    const activeRules =
+      options.includeExistingRuleOverlap || options.respectActiveRulePrecedence
+        ? await manager.getRepository(CategorizationRuleEntity).find({
+            where: { userId, archivedAt: IsNull() },
+            order: { priority: 'ASC', createdAt: 'ASC', id: 'ASC' },
+          })
+        : [];
 
     for (const transaction of transactions) {
       const match = this.engine.findFirstMatch([rule], transaction);
@@ -336,6 +540,14 @@ export class TransactionCategorizationService {
         } else {
           manualConflicts += 1;
         }
+        continue;
+      }
+
+      if (
+        options.respectActiveRulePrecedence &&
+        this.engine.findFirstMatch(activeRules, transaction)?.rule.id !==
+          rule.id
+      ) {
         continue;
       }
 
@@ -647,6 +859,14 @@ export class TransactionCategorizationService {
       label: rule.name,
       archivedAt: rule.archivedAt,
     };
+  }
+
+  private staleRuleConflict(id: string): ConflictException {
+    return new ConflictException({
+      message:
+        'Categorization rule changed after it was previewed; inspect and preview it again',
+      ruleId: id,
+    });
   }
 }
 

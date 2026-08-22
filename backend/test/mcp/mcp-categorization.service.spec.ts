@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { McpCategorizationService } from '../../src/mcp/mcp-categorization.service';
 import { RuleBasedCategorizationEngine } from '../../src/transaction-categorization/rule-based-categorization.engine';
 import type { CategorizationRuleCondition } from '../../src/types/CategorizationRule';
@@ -12,11 +13,76 @@ const conditions: CategorizationRuleCondition[] = [
   { field: 'merchantName', operator: 'contains', value: ' UBER ' },
 ];
 
+function buildRuleView(overrides: Record<string, unknown> = {}) {
+  return {
+    id: ruleId,
+    name: 'Broad income',
+    priority: 10,
+    targetCategoryId: categoryId,
+    conditions: [
+      {
+        field: 'providerCategoryDetailed',
+        operator: 'equals',
+        value: 'income_wages',
+      },
+    ],
+    targetCategory: {
+      id: categoryId,
+      primary: 'Income',
+      detailed: 'Salary',
+      color: '#228be6',
+      archivedAt: null,
+    },
+    archivedAt: null,
+    createdAt: new Date('2026-02-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-02-14T00:00:00.000Z'),
+    ...overrides,
+  };
+}
+
+function buildChangePreview(
+  action: 'edit' | 'archive' | 'restore',
+  overrides: Record<string, unknown> = {},
+) {
+  const currentRule = buildRuleView(
+    action === 'restore'
+      ? { archivedAt: new Date('2026-02-10T00:00:00.000Z') }
+      : {},
+  );
+  return {
+    action,
+    currentRule,
+    proposedRule: buildRuleView({
+      archivedAt:
+        action === 'archive' ? new Date('2026-02-14T00:01:00.000Z') : null,
+    }),
+    impact: {
+      matchedBefore: 3,
+      matchedAfter: 1,
+      newlyMatched: 0,
+      noLongerMatched: 2,
+      winningBefore: 3,
+      winningAfter: 1,
+      winnerChanged: 2,
+      skippedManual: 1,
+      historicalAssignments: 2,
+      historicalAssignmentsUntouched: true,
+    },
+    transactions: [],
+    ...overrides,
+  };
+}
+
 describe('McpCategorizationService', () => {
   const originalJwtSecret = process.env.JWT_SECRET;
   const transactionCategorizationService = {
+    findOne: jest.fn(),
     previewDraftRuleApplication: jest.fn(),
     create: jest.fn(),
+    previewRuleEdit: jest.fn(),
+    previewRuleArchive: jest.fn(),
+    previewRuleRestore: jest.fn(),
+    update: jest.fn(),
     previewRuleApplication: jest.fn(),
     applyRuleToExisting: jest.fn(),
   };
@@ -28,6 +94,9 @@ describe('McpCategorizationService', () => {
 
   beforeEach(() => {
     process.env.JWT_SECRET = 'mcp-categorization-test-secret';
+    transactionCategorizationService.findOne.mockResolvedValue({
+      ...buildRuleView(),
+    });
     service = new McpCategorizationService(
       transactionCategorizationService as never,
       recommendationService as never,
@@ -350,6 +419,180 @@ describe('McpCategorizationService', () => {
     expect(transactionCategorizationService.create).not.toHaveBeenCalled();
   });
 
+  it('accepts a freshly issued draft token with harmless surrounding whitespace', async () => {
+    transactionCategorizationService.previewDraftRuleApplication.mockResolvedValue(
+      {
+        matched: 1,
+        updated: 1,
+        skippedManual: 0,
+        manualAgreement: 0,
+        manualConflicts: 0,
+        existingRuleOverlap: 0,
+        transactions: [],
+      },
+    );
+    transactionCategorizationService.create.mockResolvedValue(buildRuleView());
+
+    const preview = await service.previewDraft(userId, {
+      targetCategoryId: categoryId,
+      conditions,
+    });
+    await service.createRule(userId, {
+      name: 'Fresh token',
+      targetCategoryId: categoryId,
+      conditions,
+      previewToken: ` \n${preview.previewToken}\t`,
+    });
+
+    expect(transactionCategorizationService.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('edits only the exact normalized change that was previewed', async () => {
+    const previewResult = buildChangePreview('edit', {
+      proposedRule: buildRuleView({
+        name: 'Narrow income',
+        priority: 5,
+        conditions: [
+          {
+            field: 'merchantName',
+            operator: 'contains',
+            value: 'payroll',
+          },
+        ],
+      }),
+    });
+    transactionCategorizationService.previewRuleEdit.mockResolvedValue(
+      previewResult,
+    );
+    transactionCategorizationService.update.mockResolvedValue(
+      previewResult.proposedRule,
+    );
+
+    const preview = await service.previewRuleEdit(userId, {
+      ruleId,
+      name: ' Narrow income ',
+      priority: 5,
+      conditions: [
+        {
+          field: 'merchantName',
+          operator: 'contains',
+          value: ' PAYROLL ',
+        },
+      ],
+    });
+    const edited = await service.editRule(userId, {
+      ruleId,
+      name: 'Narrow income',
+      priority: 5,
+      conditions: [
+        {
+          field: 'merchantName',
+          operator: 'contains',
+          value: 'payroll',
+        },
+      ],
+      previewToken: preview.previewToken,
+    });
+
+    expect(preview.normalizedChanges).toEqual({
+      name: 'Narrow income',
+      priority: 5,
+      conditions: [
+        {
+          field: 'merchantName',
+          operator: 'contains',
+          value: 'payroll',
+        },
+      ],
+    });
+    expect(transactionCategorizationService.update).toHaveBeenCalledWith(
+      ruleId,
+      userId,
+      preview.normalizedChanges,
+      { expectedUpdatedAt: new Date('2026-02-14T00:00:00.000Z') },
+    );
+    expect(edited.rule).toBe(previewResult.proposedRule);
+
+    await expect(
+      service.editRule(userId, {
+        ruleId,
+        priority: 6,
+        previewToken: preview.previewToken,
+      }),
+    ).rejects.toThrow(
+      'Preview token does not match the categorization rule change',
+    );
+  });
+
+  it('archives and restores only after the matching status preview', async () => {
+    const archivePreview = buildChangePreview('archive');
+    const restorePreview = buildChangePreview('restore');
+    transactionCategorizationService.previewRuleArchive.mockResolvedValue(
+      archivePreview,
+    );
+    transactionCategorizationService.previewRuleRestore.mockResolvedValue(
+      restorePreview,
+    );
+    transactionCategorizationService.update
+      .mockResolvedValueOnce(archivePreview.proposedRule)
+      .mockResolvedValueOnce(restorePreview.proposedRule);
+
+    const archive = await service.previewRuleArchive(userId, ruleId);
+    await service.archiveRule(userId, {
+      ruleId,
+      previewToken: archive.previewToken,
+    });
+    const restore = await service.previewRuleRestore(userId, ruleId);
+    await service.restoreRule(userId, {
+      ruleId,
+      previewToken: restore.previewToken,
+    });
+
+    expect(transactionCategorizationService.update).toHaveBeenNthCalledWith(
+      1,
+      ruleId,
+      userId,
+      { archived: true },
+      { expectedUpdatedAt: new Date('2026-02-14T00:00:00.000Z') },
+    );
+    expect(transactionCategorizationService.update).toHaveBeenNthCalledWith(
+      2,
+      ruleId,
+      userId,
+      { archived: false },
+      { expectedUpdatedAt: new Date('2026-02-14T00:00:00.000Z') },
+    );
+    await expect(
+      service.restoreRule(userId, {
+        ruleId,
+        previewToken: archive.previewToken,
+      }),
+    ).rejects.toThrow('Preview token is invalid or expired');
+  });
+
+  it('surfaces stale concurrent edits from the guarded domain update', async () => {
+    transactionCategorizationService.previewRuleEdit.mockResolvedValue(
+      buildChangePreview('edit'),
+    );
+    transactionCategorizationService.update.mockRejectedValue(
+      new ConflictException(
+        'Categorization rule changed after it was previewed',
+      ),
+    );
+    const preview = await service.previewRuleEdit(userId, {
+      ruleId,
+      priority: 5,
+    });
+
+    await expect(
+      service.editRule(userId, {
+        ruleId,
+        priority: 5,
+        previewToken: preview.previewToken,
+      }),
+    ).rejects.toThrow('changed after it was previewed');
+  });
+
   it('applies a saved rule only with a matching application preview token', async () => {
     transactionCategorizationService.previewRuleApplication.mockResolvedValue({
       matched: 3,
@@ -381,7 +624,9 @@ describe('McpCategorizationService', () => {
     ).toHaveBeenCalledWith(ruleId, userId);
     expect(
       transactionCategorizationService.applyRuleToExisting,
-    ).toHaveBeenCalledWith(ruleId, userId);
+    ).toHaveBeenCalledWith(ruleId, userId, {
+      expectedUpdatedAt: new Date('2026-02-14T00:00:00.000Z'),
+    });
     expect(applied).toEqual({
       matched: 3,
       updated: 2,
@@ -423,6 +668,7 @@ describe('McpCategorizationService', () => {
   });
 
   it('turns missing saved rules into MCP-facing not found errors', async () => {
+    transactionCategorizationService.findOne.mockResolvedValue(null);
     transactionCategorizationService.previewRuleApplication.mockResolvedValue(
       null,
     );
@@ -437,6 +683,11 @@ describe('McpCategorizationService', () => {
     const previewService = new McpCategorizationService(
       {
         ...transactionCategorizationService,
+        findOne: jest.fn().mockResolvedValue({
+          id: ruleId,
+          archivedAt: null,
+          updatedAt: new Date('2026-02-14T00:00:00.000Z'),
+        }),
         previewRuleApplication: jest.fn().mockResolvedValue({
           matched: 0,
           updated: 0,
