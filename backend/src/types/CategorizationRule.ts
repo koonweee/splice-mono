@@ -148,6 +148,7 @@ export const CategorizationRuleViewSchema = registerSchema(
       targetCategory: CategorizationRuleCategoryViewSchema,
       conditions: z.array(CategorizationRuleConditionSchema),
       archivedAt: z.coerce.date().nullable().default(null),
+      revision: z.number().int().positive(),
     })
     .merge(TimestampsSchema),
 );

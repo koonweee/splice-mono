@@ -43,6 +43,7 @@ function buildRule(
       },
     ],
     archivedAt: null,
+    revision: 1,
     createdAt: new Date('2026-02-01T00:00:00.000Z'),
     updatedAt: new Date('2026-02-14T00:00:00.000Z'),
     ...overrides,
@@ -139,20 +140,21 @@ function createHarness(
     save: jest.fn(async (rule: CategorizationRuleEntity) => rule),
     update: jest.fn(
       async (
-        criteria: { id: string; userId: string; updatedAt: Date },
+        criteria: { id: string; userId: string; revision: number },
         next: Partial<CategorizationRuleEntity>,
       ) => {
         const rule = rules.find(
           (candidate) =>
             candidate.id === criteria.id &&
             candidate.userId === criteria.userId &&
-            candidate.updatedAt.getTime() === criteria.updatedAt.getTime(),
+            candidate.revision === criteria.revision,
         );
         if (!rule) {
           return { affected: 0 };
         }
         Object.assign(rule, next, {
-          updatedAt: new Date(criteria.updatedAt.getTime() + 1_000),
+          revision: criteria.revision + 1,
+          updatedAt: new Date(rule.updatedAt.getTime() + 1_000),
         });
         return { affected: 1 };
       },
@@ -245,7 +247,7 @@ describe('TransactionCategorizationService rule lifecycle', () => {
       [rule],
       [payroll, reimbursement, manual],
     );
-    const expectedUpdatedAt = rule.updatedAt;
+    const expectedRevision = rule.revision;
 
     const preview = await service.previewRuleEdit(rule.id, userId, {
       name: 'Payroll income only',
@@ -264,7 +266,7 @@ describe('TransactionCategorizationService rule lifecycle', () => {
           { field: 'merchantName', operator: 'contains', value: 'payroll' },
         ],
       },
-      { expectedUpdatedAt },
+      { expectedRevision },
     );
 
     expect(preview?.impact).toMatchObject({
@@ -294,6 +296,10 @@ describe('TransactionCategorizationService rule lifecycle', () => {
       categoryAssignmentSource: 'manual',
     });
     expect(transactionRepoForManager.save).not.toHaveBeenCalled();
+
+    await expect(
+      service.update(rule.id, userId, { priority: 1 }, { expectedRevision }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('previews target-category and priority changes using deterministic overlap precedence', async () => {
@@ -322,7 +328,7 @@ describe('TransactionCategorizationService rule lifecycle', () => {
       broadRule.id,
       userId,
       { priority: 1, targetCategoryId: reimbursementCategoryId },
-      { expectedUpdatedAt: broadRule.updatedAt },
+      { expectedRevision: broadRule.revision },
     );
 
     expect(preview?.proposedRule).toMatchObject({
@@ -364,7 +370,7 @@ describe('TransactionCategorizationService rule lifecycle', () => {
       rule.id,
       userId,
       { archived: true },
-      { expectedUpdatedAt: rule.updatedAt },
+      { expectedRevision: rule.revision },
     );
 
     expect(archivePreview?.impact).toMatchObject({
@@ -386,13 +392,13 @@ describe('TransactionCategorizationService rule lifecycle', () => {
       categoryAssignmentRuleId: broadRuleId,
     });
 
-    const restoreVersion = rule.updatedAt;
+    const restoreVersion = rule.revision;
     const restorePreview = await service.previewRuleRestore(rule.id, userId);
     await service.update(
       rule.id,
       userId,
       { archived: false },
-      { expectedUpdatedAt: restoreVersion },
+      { expectedRevision: restoreVersion },
     );
 
     expect(restorePreview?.impact).toMatchObject({
@@ -407,15 +413,15 @@ describe('TransactionCategorizationService rule lifecycle', () => {
   it('rejects stale concurrent mutation state', async () => {
     const rule = buildRule();
     const { service, ruleRepository } = createHarness([rule], []);
-    const previewVersion = rule.updatedAt;
-    rule.updatedAt = new Date('2026-02-14T00:05:00.000Z');
+    const previewVersion = rule.revision;
+    rule.revision += 1;
 
     await expect(
       service.update(
         rule.id,
         userId,
         { priority: 1 },
-        { expectedUpdatedAt: previewVersion },
+        { expectedRevision: previewVersion },
       ),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(ruleRepository.update).not.toHaveBeenCalled();

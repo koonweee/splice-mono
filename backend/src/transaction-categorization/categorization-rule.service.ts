@@ -101,7 +101,7 @@ export class TransactionCategorizationService {
     id: string,
     userId: string,
     dto: UpdateCategorizationRuleDto,
-    options: { expectedUpdatedAt?: Date } = {},
+    options: { expectedRevision?: number } = {},
   ): Promise<CategorizationRuleView | null> {
     const entity = await this.ruleRepository.findOne({ where: { id, userId } });
     if (!entity) {
@@ -109,8 +109,8 @@ export class TransactionCategorizationService {
     }
 
     if (
-      options.expectedUpdatedAt &&
-      entity.updatedAt.getTime() !== options.expectedUpdatedAt.getTime()
+      options.expectedRevision !== undefined &&
+      entity.revision !== options.expectedRevision
     ) {
       throw this.staleRuleConflict(id);
     }
@@ -132,9 +132,9 @@ export class TransactionCategorizationService {
       await this.assertNoDuplicate(userId, next, id);
     }
 
-    if (options.expectedUpdatedAt) {
+    if (options.expectedRevision !== undefined) {
       const updateResult = await this.ruleRepository.update(
-        { id, userId, updatedAt: options.expectedUpdatedAt },
+        { id, userId, revision: options.expectedRevision },
         next,
       );
       if (updateResult.affected !== 1) {
@@ -262,13 +262,13 @@ export class TransactionCategorizationService {
   async applyRuleToExisting(
     id: string,
     userId: string,
-    options: { expectedUpdatedAt?: Date } = {},
+    options: { expectedRevision?: number } = {},
   ): Promise<ApplyCategorizationRuleResponse | null> {
     return this.transactionRepository.manager.transaction(async (manager) => {
       const result = await this.evaluateRuleApplication(id, userId, {
         manager,
         persist: true,
-        expectedUpdatedAt: options.expectedUpdatedAt,
+        expectedRevision: options.expectedRevision,
       });
 
       if (result) {
@@ -311,7 +311,7 @@ export class TransactionCategorizationService {
       persist: boolean;
       manager?: EntityManager;
       previewLimit?: number;
-      expectedUpdatedAt?: Date;
+      expectedRevision?: number;
     },
   ): Promise<RuleApplicationEvaluation | null> {
     const manager = options.manager ?? this.transactionRepository.manager;
@@ -323,8 +323,8 @@ export class TransactionCategorizationService {
       return null;
     }
     if (
-      options.expectedUpdatedAt &&
-      rule.updatedAt.getTime() !== options.expectedUpdatedAt.getTime()
+      options.expectedRevision !== undefined &&
+      rule.revision !== options.expectedRevision
     ) {
       throw this.staleRuleConflict(id);
     }
@@ -833,6 +833,7 @@ export class TransactionCategorizationService {
       targetCategory: this.toCategoryView(category),
       conditions: rule.conditions,
       archivedAt: rule.archivedAt,
+      revision: rule.revision,
       createdAt: rule.createdAt,
       updatedAt: rule.updatedAt,
     };

@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import type {
   CategorizationRuleCondition,
   CategorizationRuleChangePreview,
@@ -19,6 +19,7 @@ import { RuleBasedCategorizationEngine } from '../transaction-categorization/rul
 import { CategorizationRuleRecommendationService } from '../transaction-categorization/recommendations/categorization-rule-recommendation.service';
 
 const PREVIEW_TOKEN_TTL_MS = 10 * 60 * 1000;
+const PREVIEW_TOKEN_VERSION = 2 as const;
 
 type PreviewTokenPurpose =
   | 'categorization-rule-draft'
@@ -37,15 +38,15 @@ type PreviewCounts = {
 };
 
 type PreviewTokenPayload = {
+  version: typeof PREVIEW_TOKEN_VERSION;
   purpose: PreviewTokenPurpose;
   userId: string;
   exp: number;
   iat: number;
-  draftKey?: string;
+  draftHash?: string;
   ruleId?: string;
-  ruleUpdatedAt?: string;
-  changeKey?: string;
-  preview?: PreviewCounts;
+  ruleRevision?: number;
+  changeHash?: string;
 };
 
 export type McpNormalizedCategorizationRuleDraft = {
@@ -177,16 +178,17 @@ export class McpCategorizationService {
         },
       );
 
+    const now = Date.now();
     return {
       ...preview,
       normalizedDraft,
       previewToken: this.signToken({
+        version: PREVIEW_TOKEN_VERSION,
         purpose: 'categorization-rule-draft',
         userId,
-        iat: Date.now(),
-        exp: Date.now() + PREVIEW_TOKEN_TTL_MS,
-        draftKey: this.draftKey(normalizedDraft),
-        preview: this.previewCounts(preview),
+        iat: now,
+        exp: now + PREVIEW_TOKEN_TTL_MS,
+        draftHash: this.bindingHash(this.draftKey(normalizedDraft)),
       }),
     };
   }
@@ -252,7 +254,7 @@ export class McpCategorizationService {
       input.ruleId,
       userId,
       normalizedChanges,
-      { expectedUpdatedAt: new Date(payload.ruleUpdatedAt ?? '') },
+      { expectedRevision: payload.ruleRevision },
     );
     if (!rule) {
       throw new NotFoundException(
@@ -323,16 +325,17 @@ export class McpCategorizationService {
       throw new NotFoundException(`Categorization rule ${ruleId} not found`);
     }
 
+    const now = Date.now();
     return {
       ...preview,
       previewToken: this.signToken({
+        version: PREVIEW_TOKEN_VERSION,
         purpose: 'categorization-rule-application',
         userId,
-        iat: Date.now(),
-        exp: Date.now() + PREVIEW_TOKEN_TTL_MS,
+        iat: now,
+        exp: now + PREVIEW_TOKEN_TTL_MS,
         ruleId,
-        ruleUpdatedAt: rule.updatedAt.toISOString(),
-        preview: this.previewCounts(preview),
+        ruleRevision: rule.revision,
       }),
     };
   }
@@ -351,7 +354,7 @@ export class McpCategorizationService {
       await this.transactionCategorizationService.applyRuleToExisting(
         input.ruleId,
         userId,
-        { expectedUpdatedAt: new Date(payload.ruleUpdatedAt ?? '') },
+        { expectedRevision: payload.ruleRevision },
       );
     if (!result) {
       throw new NotFoundException(
@@ -409,23 +412,6 @@ export class McpCategorizationService {
     });
   }
 
-  private previewCounts(preview: PreviewCounts): PreviewCounts {
-    return {
-      matched: preview.matched,
-      updated: preview.updated,
-      skippedManual: preview.skippedManual,
-      ...(preview.manualAgreement !== undefined
-        ? { manualAgreement: preview.manualAgreement }
-        : {}),
-      ...(preview.manualConflicts !== undefined
-        ? { manualConflicts: preview.manualConflicts }
-        : {}),
-      ...(preview.existingRuleOverlap !== undefined
-        ? { existingRuleOverlap: preview.existingRuleOverlap }
-        : {}),
-    };
-  }
-
   private verifyDraftPreviewToken(
     token: string,
     userId: string,
@@ -436,7 +422,7 @@ export class McpCategorizationService {
       'categorization-rule-draft',
       userId,
     );
-    if (payload.draftKey !== this.draftKey(draft)) {
+    if (payload.draftHash !== this.bindingHash(this.draftKey(draft))) {
       throw new BadRequestException(
         'Preview token does not match the categorization rule draft',
       );
@@ -453,7 +439,7 @@ export class McpCategorizationService {
       'categorization-rule-application',
       userId,
     );
-    if (payload.ruleId !== ruleId || !payload.ruleUpdatedAt) {
+    if (payload.ruleId !== ruleId || !Number.isInteger(payload.ruleRevision)) {
       throw new BadRequestException(
         'Preview token does not match the categorization rule',
       );
@@ -507,7 +493,7 @@ export class McpCategorizationService {
       input.ruleId,
       userId,
       { archived },
-      { expectedUpdatedAt: new Date(payload.ruleUpdatedAt ?? '') },
+      { expectedRevision: payload.ruleRevision },
     );
     if (!rule) {
       throw new NotFoundException(
@@ -529,13 +515,16 @@ export class McpCategorizationService {
   ): string {
     const now = Date.now();
     return this.signToken({
+      version: PREVIEW_TOKEN_VERSION,
       purpose,
       userId,
       iat: now,
       exp: now + PREVIEW_TOKEN_TTL_MS,
       ruleId: rule.id,
-      ruleUpdatedAt: rule.updatedAt.toISOString(),
-      changeKey,
+      ruleRevision: rule.revision,
+      ...(changeKey === undefined
+        ? {}
+        : { changeHash: this.bindingHash(changeKey) }),
     });
   }
 
@@ -552,8 +541,9 @@ export class McpCategorizationService {
     const payload = this.verifyToken(token, purpose, userId);
     if (
       payload.ruleId !== ruleId ||
-      !payload.ruleUpdatedAt ||
-      payload.changeKey !== changeKey
+      !Number.isInteger(payload.ruleRevision) ||
+      payload.changeHash !==
+        (changeKey === undefined ? undefined : this.bindingHash(changeKey))
     ) {
       throw new BadRequestException(
         'Preview token does not match the categorization rule change',
@@ -583,14 +573,20 @@ export class McpCategorizationService {
     purpose: PreviewTokenPurpose,
     userId: string,
   ): PreviewTokenPayload {
-    const payload = this.decodeToken(token.trim());
-    if (
-      !payload ||
-      payload.purpose !== purpose ||
-      payload.userId !== userId ||
-      payload.exp < Date.now()
-    ) {
-      throw new BadRequestException('Preview token is invalid or expired');
+    const payload = this.decodeToken(token.replace(/\s/gu, ''));
+    if (!payload) {
+      throw new BadRequestException('Preview token is invalid');
+    }
+    if (payload.exp < Date.now()) {
+      throw new BadRequestException('Preview token has expired');
+    }
+    if (payload.purpose !== purpose) {
+      throw new BadRequestException(
+        'Preview token is not valid for this operation',
+      );
+    }
+    if (payload.userId !== userId) {
+      throw new BadRequestException('Preview token is not valid for this user');
     }
 
     return payload;
@@ -624,12 +620,42 @@ export class McpCategorizationService {
     }
 
     try {
-      return JSON.parse(
+      const payload: unknown = JSON.parse(
         Buffer.from(body, 'base64url').toString('utf8'),
-      ) as PreviewTokenPayload;
+      );
+      return this.isPreviewTokenPayload(payload) ? payload : null;
     } catch {
       return null;
     }
+  }
+
+  private bindingHash(value: string): string {
+    return createHash('sha256').update(value).digest('base64url');
+  }
+
+  private isPreviewTokenPayload(value: unknown): value is PreviewTokenPayload {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+
+    const payload = value as Record<string, unknown>;
+    return (
+      payload.version === PREVIEW_TOKEN_VERSION &&
+      typeof payload.purpose === 'string' &&
+      typeof payload.userId === 'string' &&
+      typeof payload.iat === 'number' &&
+      Number.isFinite(payload.iat) &&
+      typeof payload.exp === 'number' &&
+      Number.isFinite(payload.exp) &&
+      (payload.draftHash === undefined ||
+        typeof payload.draftHash === 'string') &&
+      (payload.ruleId === undefined || typeof payload.ruleId === 'string') &&
+      (payload.ruleRevision === undefined ||
+        (typeof payload.ruleRevision === 'number' &&
+          Number.isInteger(payload.ruleRevision))) &&
+      (payload.changeHash === undefined ||
+        typeof payload.changeHash === 'string')
+    );
   }
 
   private getSigningSecret(): string {

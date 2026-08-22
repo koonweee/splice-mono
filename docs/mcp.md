@@ -229,11 +229,18 @@ JSON-equivalent text fallback.
 The 27 non-mutating tools require `splice:read`. The five categorization writes
 require `splice:write`. Every write must receive the matching preview token
 produced for the authenticated user and exact normalized input. Rule edits and
-status changes also bind the preview to the rule's `updatedAt` version, so
+status changes also bind the preview to the rule's integer `revision`, so
 stale, mismatched, concurrent, or cross-user changes are rejected. Tokens are
-opaque HMAC-authenticated values with a ten-minute lifetime; harmless leading
-or trailing whitespace is ignored, and a freshly returned token is immediately
-consumable.
+compact opaque HMAC-authenticated values with a ten-minute lifetime. They bind
+normalized drafts and edits by SHA-256 digest instead of embedding those
+potentially long values. Harmless transport whitespace is ignored, and a
+freshly returned token is immediately consumable.
+
+Preview tokens are stateless rather than globally single-use. A successful
+edit, archive, or restore increments the rule revision, so replaying its token
+fails with the stale-preview error. Replaying a create is stopped by duplicate
+rule validation, while historical application is intentionally idempotent and
+may be repeated.
 
 Rule edits, archive, and restore affect future categorization only. They leave
 all historical transaction categories and `categoryAssignmentRuleId` values
