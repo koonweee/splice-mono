@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, VersionColumn } from 'typeorm';
 import { TimestampedEntity } from '../common/base.entity';
 import type { CategorizationRuleCondition } from '../types/CategorizationRule';
 
@@ -24,4 +24,7 @@ export class CategorizationRuleEntity extends TimestampedEntity {
 
   @Column({ type: 'timestamptz', nullable: true })
   archivedAt: Date | null;
+
+  @VersionColumn()
+  revision: number;
 }

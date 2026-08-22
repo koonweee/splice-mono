@@ -812,7 +812,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'Get Categorization Rule',
         description:
-          'Inspect one active or archived categorization rule, including its conditions, target category, priority, archive state, and updatedAt concurrency version. This read does not preview or mutate anything.',
+          'Inspect one active or archived categorization rule, including its conditions, target category, priority, archive state, timestamps, and integer revision used for optimistic concurrency. This read does not preview or mutate anything.',
         inputSchema: {
           ruleId: UuidSchema,
         },

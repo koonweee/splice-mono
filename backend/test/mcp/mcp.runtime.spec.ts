@@ -107,6 +107,12 @@ async function startRuntime(
     listRuleCandidatePatterns: jest.fn(),
     previewDraft: jest.fn(),
     createRule: jest.fn(),
+    previewRuleEdit: jest.fn(),
+    editRule: jest.fn(),
+    previewRuleArchive: jest.fn(),
+    archiveRule: jest.fn(),
+    previewRuleRestore: jest.fn(),
+    restoreRule: jest.fn(),
     previewRuleApplication: jest.fn(),
     applyRule: jest.fn(),
   };
@@ -340,7 +346,7 @@ describe('SpliceMcpRuntimeService', () => {
     await readOnly.client.close();
   });
 
-  it('previews, creates, serializes, and lists the exact ChatGPT categorization rule over HTTP', async () => {
+  it('round-trips categorization create, edit, archive, and restore tokens over HTTP', async () => {
     const originalJwtSecret = process.env.JWT_SECRET;
     process.env.JWT_SECRET = 'mcp-runtime-categorization-test-secret';
 
@@ -399,10 +405,114 @@ describe('SpliceMcpRuntimeService', () => {
                 archivedAt: null,
               },
               archivedAt: null,
+              revision: 1,
               createdAt: new Date('2026-08-17T03:40:00.000Z'),
               updatedAt: new Date('2026-08-17T03:40:00.000Z'),
             };
             rules.push(rule);
+            return rule;
+          },
+        ),
+        previewRuleEdit: jest.fn(
+          async (
+            _ruleId: string,
+            _userId: string,
+            changes: Record<string, unknown>,
+          ) => {
+            const currentRule = rules.find((rule) => rule.id === _ruleId);
+            if (!currentRule) return null;
+            return {
+              action: 'edit' as const,
+              currentRule: { ...currentRule },
+              proposedRule: { ...currentRule, ...changes },
+              impact: {
+                matchedBefore: 4,
+                matchedAfter: 2,
+                newlyMatched: 0,
+                noLongerMatched: 2,
+                winningBefore: 4,
+                winningAfter: 2,
+                winnerChanged: 2,
+                skippedManual: 0,
+                historicalAssignments: 0,
+                historicalAssignmentsUntouched: true as const,
+              },
+              transactions: [],
+            };
+          },
+        ),
+        previewRuleArchive: jest.fn(async (_ruleId: string) => {
+          const currentRule = rules.find((rule) => rule.id === _ruleId);
+          if (!currentRule) return null;
+          return {
+            action: 'archive' as const,
+            currentRule: { ...currentRule },
+            proposedRule: {
+              ...currentRule,
+              archivedAt: new Date('2026-08-17T03:42:00.000Z'),
+            },
+            impact: {
+              matchedBefore: 2,
+              matchedAfter: 0,
+              newlyMatched: 0,
+              noLongerMatched: 2,
+              winningBefore: 2,
+              winningAfter: 0,
+              winnerChanged: 2,
+              skippedManual: 0,
+              historicalAssignments: 0,
+              historicalAssignmentsUntouched: true as const,
+            },
+            transactions: [],
+          };
+        }),
+        previewRuleRestore: jest.fn(async (_ruleId: string) => {
+          const currentRule = rules.find((rule) => rule.id === _ruleId);
+          if (!currentRule) return null;
+          return {
+            action: 'restore' as const,
+            currentRule: { ...currentRule },
+            proposedRule: { ...currentRule, archivedAt: null },
+            impact: {
+              matchedBefore: 0,
+              matchedAfter: 2,
+              newlyMatched: 2,
+              noLongerMatched: 0,
+              winningBefore: 0,
+              winningAfter: 2,
+              winnerChanged: 2,
+              skippedManual: 0,
+              historicalAssignments: 0,
+              historicalAssignmentsUntouched: true as const,
+            },
+            transactions: [],
+          };
+        }),
+        update: jest.fn(
+          async (
+            _ruleId: string,
+            _userId: string,
+            changes: Record<string, unknown>,
+            options: { expectedRevision?: number },
+          ) => {
+            const rule = rules.find((candidate) => candidate.id === _ruleId);
+            if (!rule) return null;
+            if (rule.revision !== options.expectedRevision) {
+              throw new ConflictException(
+                'Categorization rule changed after it was previewed',
+              );
+            }
+            if (changes.archived === true) {
+              rule.archivedAt = new Date('2026-08-17T03:42:00.000Z');
+            } else if (changes.archived === false) {
+              rule.archivedAt = null;
+            } else {
+              Object.assign(rule, changes);
+            }
+            rule.revision = Number(rule.revision) + 1;
+            rule.updatedAt = new Date(
+              (rule.updatedAt as Date).getTime() + 1_000,
+            );
             return rule;
           },
         ),
@@ -419,6 +529,30 @@ describe('SpliceMcpRuntimeService', () => {
       );
       harness.mcpCategorizationService.createRule.mockImplementation(
         realCategorizationService.createRule.bind(realCategorizationService),
+      );
+      harness.mcpCategorizationService.previewRuleEdit.mockImplementation(
+        realCategorizationService.previewRuleEdit.bind(
+          realCategorizationService,
+        ),
+      );
+      harness.mcpCategorizationService.editRule.mockImplementation(
+        realCategorizationService.editRule.bind(realCategorizationService),
+      );
+      harness.mcpCategorizationService.previewRuleArchive.mockImplementation(
+        realCategorizationService.previewRuleArchive.bind(
+          realCategorizationService,
+        ),
+      );
+      harness.mcpCategorizationService.archiveRule.mockImplementation(
+        realCategorizationService.archiveRule.bind(realCategorizationService),
+      );
+      harness.mcpCategorizationService.previewRuleRestore.mockImplementation(
+        realCategorizationService.previewRuleRestore.bind(
+          realCategorizationService,
+        ),
+      );
+      harness.mcpCategorizationService.restoreRule.mockImplementation(
+        realCategorizationService.restoreRule.bind(realCategorizationService),
       );
       harness.mcpReadService.listCategorizationRules.mockImplementation(
         async (_userId: string, input: { readonly archived?: boolean }) => ({
@@ -512,6 +646,67 @@ describe('SpliceMcpRuntimeService', () => {
         text: 'An active categorization rule with the same conditions already exists',
       });
       expect(rules).toHaveLength(1);
+
+      const editPreview = await connection.client.callTool({
+        name: 'preview_categorization_rule_edit',
+        arguments: {
+          ruleId,
+          changes: { name: 'Narrow beer and wine', priority: 5 },
+        },
+      });
+      expect(editPreview.isError).not.toBe(true);
+      const editPreviewContent = editPreview.structuredContent as {
+        readonly normalizedChanges: Record<string, unknown>;
+        readonly previewToken: string;
+      };
+      const edit = await connection.client.callTool({
+        name: 'edit_categorization_rule',
+        arguments: {
+          ruleId,
+          changes: editPreviewContent.normalizedChanges,
+          previewToken: editPreviewContent.previewToken,
+        },
+      });
+      expect(edit.isError).not.toBe(true);
+      expect(edit.structuredContent).toMatchObject({
+        rule: { name: 'Narrow beer and wine', priority: 5, revision: 2 },
+      });
+
+      const archivePreview = await connection.client.callTool({
+        name: 'preview_categorization_rule_archive',
+        arguments: { ruleId },
+      });
+      const archive = await connection.client.callTool({
+        name: 'archive_categorization_rule',
+        arguments: {
+          ruleId,
+          previewToken: (
+            archivePreview.structuredContent as { previewToken: string }
+          ).previewToken,
+        },
+      });
+      expect(archive.isError).not.toBe(true);
+      expect(archive.structuredContent).toMatchObject({
+        rule: { revision: 3, archivedAt: '2026-08-17T03:42:00.000Z' },
+      });
+
+      const restorePreview = await connection.client.callTool({
+        name: 'preview_categorization_rule_restore',
+        arguments: { ruleId },
+      });
+      const restore = await connection.client.callTool({
+        name: 'restore_categorization_rule',
+        arguments: {
+          ruleId,
+          previewToken: (
+            restorePreview.structuredContent as { previewToken: string }
+          ).previewToken,
+        },
+      });
+      expect(restore.isError).not.toBe(true);
+      expect(restore.structuredContent).toMatchObject({
+        rule: { revision: 4, archivedAt: null },
+      });
       expect(harness.logger.log).toHaveBeenCalledWith(
         expect.objectContaining({
           event: 'tool.started',

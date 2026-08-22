@@ -34,6 +34,7 @@ function buildRuleView(overrides: Record<string, unknown> = {}) {
       archivedAt: null,
     },
     archivedAt: null,
+    revision: 1,
     createdAt: new Date('2026-02-01T00:00:00.000Z'),
     updatedAt: new Date('2026-02-14T00:00:00.000Z'),
     ...overrides,
@@ -355,7 +356,7 @@ describe('McpCategorizationService', () => {
         conditions,
         previewToken: '',
       }),
-    ).rejects.toThrow('Preview token is invalid or expired');
+    ).rejects.toThrow('Preview token is invalid');
     await expect(
       service.createRule(userId, {
         name: 'Malformed token',
@@ -363,7 +364,7 @@ describe('McpCategorizationService', () => {
         conditions,
         previewToken: 'not-a-preview-token',
       }),
-    ).rejects.toThrow('Preview token is invalid or expired');
+    ).rejects.toThrow('Preview token is invalid');
     await expect(
       service.createRule(otherUserId, {
         name: 'Wrong user',
@@ -371,7 +372,7 @@ describe('McpCategorizationService', () => {
         conditions,
         previewToken: preview.previewToken,
       }),
-    ).rejects.toThrow('Preview token is invalid or expired');
+    ).rejects.toThrow('Preview token is not valid for this user');
     await expect(
       service.createRule(userId, {
         name: 'Different category',
@@ -415,11 +416,11 @@ describe('McpCategorizationService', () => {
         conditions,
         previewToken: preview.previewToken,
       }),
-    ).rejects.toThrow('Preview token is invalid or expired');
+    ).rejects.toThrow('Preview token has expired');
     expect(transactionCategorizationService.create).not.toHaveBeenCalled();
   });
 
-  it('accepts a freshly issued draft token with harmless surrounding whitespace', async () => {
+  it('accepts a freshly issued compact draft token through harmless transport whitespace', async () => {
     transactionCategorizationService.previewDraftRuleApplication.mockResolvedValue(
       {
         matched: 1,
@@ -437,13 +438,17 @@ describe('McpCategorizationService', () => {
       targetCategoryId: categoryId,
       conditions,
     });
+    const transportedToken = preview.previewToken
+      .match(/.{1,40}/g)
+      ?.join(' \n\t');
     await service.createRule(userId, {
       name: 'Fresh token',
       targetCategoryId: categoryId,
       conditions,
-      previewToken: ` \n${preview.previewToken}\t`,
+      previewToken: ` \n${transportedToken}\t`,
     });
 
+    expect(preview.previewToken.length).toBeLessThan(400);
     expect(transactionCategorizationService.create).toHaveBeenCalledTimes(1);
   });
 
@@ -509,9 +514,43 @@ describe('McpCategorizationService', () => {
       ruleId,
       userId,
       preview.normalizedChanges,
-      { expectedUpdatedAt: new Date('2026-02-14T00:00:00.000Z') },
+      { expectedRevision: 1 },
     );
     expect(edited.rule).toBe(previewResult.proposedRule);
+
+    await expect(
+      service.editRule(otherUserId, {
+        ruleId,
+        name: 'Narrow income',
+        priority: 5,
+        conditions: [
+          {
+            field: 'merchantName',
+            operator: 'contains',
+            value: 'payroll',
+          },
+        ],
+        previewToken: preview.previewToken,
+      }),
+    ).rejects.toThrow('Preview token is not valid for this user');
+
+    await expect(
+      service.editRule(userId, {
+        ruleId: otherCategoryId,
+        name: 'Narrow income',
+        priority: 5,
+        conditions: [
+          {
+            field: 'merchantName',
+            operator: 'contains',
+            value: 'payroll',
+          },
+        ],
+        previewToken: preview.previewToken,
+      }),
+    ).rejects.toThrow(
+      'Preview token does not match the categorization rule change',
+    );
 
     await expect(
       service.editRule(userId, {
@@ -553,21 +592,21 @@ describe('McpCategorizationService', () => {
       ruleId,
       userId,
       { archived: true },
-      { expectedUpdatedAt: new Date('2026-02-14T00:00:00.000Z') },
+      { expectedRevision: 1 },
     );
     expect(transactionCategorizationService.update).toHaveBeenNthCalledWith(
       2,
       ruleId,
       userId,
       { archived: false },
-      { expectedUpdatedAt: new Date('2026-02-14T00:00:00.000Z') },
+      { expectedRevision: 1 },
     );
     await expect(
       service.restoreRule(userId, {
         ruleId,
         previewToken: archive.previewToken,
       }),
-    ).rejects.toThrow('Preview token is invalid or expired');
+    ).rejects.toThrow('Preview token is not valid for this operation');
   });
 
   it('surfaces stale concurrent edits from the guarded domain update', async () => {
@@ -593,6 +632,60 @@ describe('McpCategorizationService', () => {
     ).rejects.toThrow('changed after it was previewed');
   });
 
+  it('rejects an archive token after a concurrent edit changes the rule revision', async () => {
+    transactionCategorizationService.previewRuleArchive.mockResolvedValue(
+      buildChangePreview('archive'),
+    );
+    transactionCategorizationService.update.mockRejectedValue(
+      new ConflictException(
+        'Categorization rule changed after it was previewed',
+      ),
+    );
+    const preview = await service.previewRuleArchive(userId, ruleId);
+
+    await expect(
+      service.archiveRule(userId, {
+        ruleId,
+        previewToken: preview.previewToken,
+      }),
+    ).rejects.toThrow('changed after it was previewed');
+    expect(transactionCategorizationService.update).toHaveBeenCalledWith(
+      ruleId,
+      userId,
+      { archived: true },
+      { expectedRevision: 1 },
+    );
+  });
+
+  it('accepts a fresh edit token immediately and expires it deterministically', async () => {
+    jest.useFakeTimers({ now: new Date('2026-08-22T20:46:13.138Z') });
+    transactionCategorizationService.previewRuleEdit.mockResolvedValue(
+      buildChangePreview('edit'),
+    );
+    transactionCategorizationService.update.mockResolvedValue(buildRuleView());
+    const preview = await service.previewRuleEdit(userId, {
+      ruleId,
+      priority: 5,
+    });
+
+    await expect(
+      service.editRule(userId, {
+        ruleId,
+        priority: 5,
+        previewToken: preview.previewToken,
+      }),
+    ).resolves.toMatchObject({ rule: { id: ruleId } });
+
+    jest.advanceTimersByTime(10 * 60 * 1000 + 1);
+    await expect(
+      service.editRule(userId, {
+        ruleId,
+        priority: 5,
+        previewToken: preview.previewToken,
+      }),
+    ).rejects.toThrow('Preview token has expired');
+  });
+
   it('applies a saved rule only with a matching application preview token', async () => {
     transactionCategorizationService.previewRuleApplication.mockResolvedValue({
       matched: 3,
@@ -612,7 +705,7 @@ describe('McpCategorizationService', () => {
         ruleId,
         previewToken: '',
       }),
-    ).rejects.toThrow('Preview token is invalid or expired');
+    ).rejects.toThrow('Preview token is invalid');
 
     const applied = await service.applyRule(userId, {
       ruleId,
@@ -625,7 +718,7 @@ describe('McpCategorizationService', () => {
     expect(
       transactionCategorizationService.applyRuleToExisting,
     ).toHaveBeenCalledWith(ruleId, userId, {
-      expectedUpdatedAt: new Date('2026-02-14T00:00:00.000Z'),
+      expectedRevision: 1,
     });
     expect(applied).toEqual({
       matched: 3,
@@ -661,7 +754,7 @@ describe('McpCategorizationService', () => {
         ruleId,
         previewToken: preview.previewToken,
       }),
-    ).rejects.toThrow('Preview token is invalid or expired');
+    ).rejects.toThrow('Preview token has expired');
     expect(
       transactionCategorizationService.applyRuleToExisting,
     ).not.toHaveBeenCalled();
@@ -686,6 +779,7 @@ describe('McpCategorizationService', () => {
         findOne: jest.fn().mockResolvedValue({
           id: ruleId,
           archivedAt: null,
+          revision: 1,
           updatedAt: new Date('2026-02-14T00:00:00.000Z'),
         }),
         previewRuleApplication: jest.fn().mockResolvedValue({
