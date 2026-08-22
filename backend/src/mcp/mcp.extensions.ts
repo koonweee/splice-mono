@@ -36,7 +36,9 @@ export const MCP_GUIDE = `# Splice MCP Guide
 
 Use get_user_context first to get today, timezone, and the user's preferred currency.
 
-For cash-flow totals and category breakdowns, call get_cashflow_analysis. The summary applies the user's analysis rules and neutralization lookaround setting.
+For broad user-facing questions about the user's actual spending, expenses, income, or cash flow over a period, call get_user_context to resolve relative dates and then call visualize_cash_flow by default. Use outflow for spending/expenses and inflow for income. Make the Cash Flow UI the primary response and optionally add concise prose afterward. Do not render it when the user explicitly requests prose only/no UI, asks a narrow factual question, asks a conceptual or hypothetical question, or asks what Splice can render.
+
+Use get_cashflow_analysis as a structured data/analysis primitive for calculations, deeper reasoning, prose-only answers, or analysis beyond the visualization. Rendering the UI never prevents follow-up calls. Use list_cashflow_category_transactions for a selected/specific category, get_cashflow_analysis_audit to explain exclusions or neutralization, and list_transactions only when raw rows or a custom pattern are needed.
 
 For custom spending patterns not covered by get_cashflow_analysis, call list_transactions for the full date range and keep paging until pageInfo.hasMore is false. Do not infer totals from a partial page unless you clearly say it is a sample.
 
@@ -48,7 +50,7 @@ Available prompts: monthly_cashflow_review, projection_builder, category_cleanup
 
 Prefer resource templates for reusable report reads when a client asks for a durable report URI: splice://reports/cashflow/{startDate}/{endDate}, splice://accounts/{accountId}/snapshot, splice://categories/taxonomy, splice://rules/analysis, and splice://portfolio/holdings/latest.
 
-MCP Apps are progressive enhancement. Use visualize_cash_flow selectively when an actual spending, income, cash-flow, or comparison question benefits from concise visual evidence; do not use it for capability discovery, metadata, hypotheticals, or simple facts that prose communicates clearly. Use visualize_portfolio selectively for current portfolio value, ownership, allocation, exposure, or concentration questions that benefit from visual evidence; do not use it for investment activity, performance, capability discovery, hypotheticals, or simple holding facts. Both Apps are read-only and receive their scope from the conversation. Every App-backed tool preserves complete fallback structuredContent for hosts without App support.
+MCP Apps are progressive enhancement. Prefer visualize_cash_flow by default for broad actual spending, expense, income, cash-flow, and exact-period comparison questions; the explicit prose/no-UI, narrow-fact, conceptual/hypothetical, and capability-discovery exclusions above still apply. Use visualize_portfolio selectively for current portfolio value, ownership, allocation, exposure, or concentration questions that benefit from visual evidence; do not use it for investment activity, performance, capability discovery, hypotheticals, or simple holding facts. Both Apps are read-only and receive their scope from the conversation. Every App-backed tool preserves complete fallback structuredContent for hosts without App support.
 
 Projection assumption input is optional and non-persistent. collect_projection_assumptions uses the official input-required/resume flow. Clients that decline or cancel receive a structured fallback describing the fields they can ask about normally.
 
@@ -56,7 +58,7 @@ Use list_investment_holdings for current or date-specific investment positions. 
 
 Use list_recurring_manual_transaction_schedules as user-known projection assumptions before asking the user to restate recurring income or expenses. Schedules are projection inputs, not generated future transactions.
 
-Use list_analysis_rules to explain configured cash-flow rules, then get_cashflow_analysis_audit for date-range-specific rule effects. Use list_categorization_rules and list_categorization_rule_recommendations to explain category automation context. OAuth access uses splice:read for reads and splice:write for both real categorization writes. Tool annotations are client presentation hints and do not guarantee confirmation. Trusted clients can inspect manual examples and candidate patterns, preview a proposed categorization rule draft, create the user-approved rule with the matching preview token, preview a saved rule application, and apply it with the matching preview token. Treat Splice preview counts and preview-token validation as authoritative; do not rely on client-estimated impact or a confirmation prompt. Rule application never overwrites manual transactions or manual category assignments.
+Use list_analysis_rules to explain configured cash-flow rules, then get_cashflow_analysis_audit for date-range-specific rule effects. Use list_categorization_rules and list_categorization_rule_recommendations to explain category automation context, and get_categorization_rule to inspect one exact active or archived rule. OAuth access uses splice:read for reads and splice:write for categorization mutations. Tool annotations are client presentation hints and do not guarantee confirmation. Trusted clients can inspect manual examples and candidate patterns; preview then create a new rule; preview then edit an existing rule; preview then archive or restore a rule; and separately preview then apply a saved rule to historical transactions. Always use the matching Splice preview token and normalized input. Treat Splice impact counts and token validation as authoritative; do not rely on client-estimated impact or a confirmation prompt. Edits, archive, and restore affect future matching only and leave historical assignments untouched. Historical application follows active-rule priority and never overwrites manual transactions or manual category assignments.
 
 Use reportingCurrency from get_user_context.currency unless the user asks for another currency. Compare amounts using convertedAmount. Native amount preserves the original transaction currency.
 
@@ -423,10 +425,11 @@ export function registerSpliceMcpExtensions(
 
   Tool sequence:
   1. Call get_user_context.
-  2. Call get_cashflow_analysis for the requested range.
-  3. Call get_cashflow_analysis_audit to explain rule and neutralization effects.
-  4. Use list_cashflow_category_transactions for important categories that need drilldown.
-  5. If custom patterns are requested, call list_transactions and page until pageInfo.hasMore is false.
+  2. Unless the user explicitly requests prose/no UI, call visualize_cash_flow for the requested range as the primary presentation.
+  3. Call get_cashflow_analysis when deeper calculations, structured reasoning, or a prose-only answer is needed.
+  4. Call get_cashflow_analysis_audit to explain rule and neutralization effects.
+  5. Use list_cashflow_category_transactions for important categories that need drilldown.
+  6. If custom patterns are requested, call list_transactions and page until pageInfo.hasMore is false.
 
   State whether pending transactions are included, use structuredContent, and do not infer totals from partial pages.`);
     }),

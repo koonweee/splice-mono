@@ -6,9 +6,11 @@ import {
 import { createHmac, timingSafeEqual } from 'crypto';
 import type {
   CategorizationRuleCondition,
+  CategorizationRuleChangePreview,
   CategorizationRuleDraftPreview,
   CategorizationRuleView,
   CreateCategorizationRuleDto,
+  EditCategorizationRuleDto,
   PreviewCategorizationRuleApplicationResponse,
   PreviewCategorizationRuleDraftDto,
 } from '../types/CategorizationRule';
@@ -20,7 +22,10 @@ const PREVIEW_TOKEN_TTL_MS = 10 * 60 * 1000;
 
 type PreviewTokenPurpose =
   | 'categorization-rule-draft'
-  | 'categorization-rule-application';
+  | 'categorization-rule-application'
+  | 'categorization-rule-edit'
+  | 'categorization-rule-archive'
+  | 'categorization-rule-restore';
 
 type PreviewCounts = {
   matched: number;
@@ -35,9 +40,12 @@ type PreviewTokenPayload = {
   purpose: PreviewTokenPurpose;
   userId: string;
   exp: number;
+  iat: number;
   draftKey?: string;
   ruleId?: string;
-  preview: PreviewCounts;
+  ruleUpdatedAt?: string;
+  changeKey?: string;
+  preview?: PreviewCounts;
 };
 
 export type McpNormalizedCategorizationRuleDraft = {
@@ -70,6 +78,22 @@ export type McpApplyCategorizationRuleInput = {
   previewToken: string;
 };
 
+export type McpCategorizationRuleChangePreview =
+  CategorizationRuleChangePreview & {
+    normalizedChanges?: EditCategorizationRuleDto;
+    previewToken: string;
+  };
+
+export type McpEditCategorizationRuleInput = EditCategorizationRuleDto & {
+  ruleId: string;
+  previewToken: string;
+};
+
+export type McpCategorizationRuleStatusInput = {
+  ruleId: string;
+  previewToken: string;
+};
+
 @Injectable()
 export class McpCategorizationService {
   constructor(
@@ -77,6 +101,13 @@ export class McpCategorizationService {
     private readonly recommendationService: CategorizationRuleRecommendationService,
     private readonly engine: RuleBasedCategorizationEngine,
   ) {}
+
+  async getRule(
+    userId: string,
+    ruleId: string,
+  ): Promise<CategorizationRuleView> {
+    return this.requireRule(userId, ruleId);
+  }
 
   async listManualCategorizedTransactionExamples(
     userId: string,
@@ -152,6 +183,7 @@ export class McpCategorizationService {
       previewToken: this.signToken({
         purpose: 'categorization-rule-draft',
         userId,
+        iat: Date.now(),
         exp: Date.now() + PREVIEW_TOKEN_TTL_MS,
         draftKey: this.draftKey(normalizedDraft),
         preview: this.previewCounts(preview),
@@ -176,10 +208,112 @@ export class McpCategorizationService {
     return { rule };
   }
 
+  async previewRuleEdit(
+    userId: string,
+    input: { ruleId: string } & EditCategorizationRuleDto,
+  ): Promise<McpCategorizationRuleChangePreview> {
+    const normalizedChanges = this.normalizeEdit(input);
+    const preview = await this.transactionCategorizationService.previewRuleEdit(
+      input.ruleId,
+      userId,
+      normalizedChanges,
+    );
+    if (!preview) {
+      throw new NotFoundException(
+        `Categorization rule ${input.ruleId} not found`,
+      );
+    }
+
+    return {
+      ...preview,
+      normalizedChanges,
+      previewToken: this.signRuleChangeToken(
+        'categorization-rule-edit',
+        userId,
+        preview.currentRule,
+        this.editKey(normalizedChanges),
+      ),
+    };
+  }
+
+  async editRule(
+    userId: string,
+    input: McpEditCategorizationRuleInput,
+  ): Promise<McpCreateCategorizationRuleOutput> {
+    const normalizedChanges = this.normalizeEdit(input);
+    const payload = this.verifyRuleChangeToken(
+      input.previewToken,
+      'categorization-rule-edit',
+      userId,
+      input.ruleId,
+      this.editKey(normalizedChanges),
+    );
+    const rule = await this.transactionCategorizationService.update(
+      input.ruleId,
+      userId,
+      normalizedChanges,
+      { expectedUpdatedAt: new Date(payload.ruleUpdatedAt ?? '') },
+    );
+    if (!rule) {
+      throw new NotFoundException(
+        `Categorization rule ${input.ruleId} not found`,
+      );
+    }
+
+    return { rule };
+  }
+
+  async previewRuleArchive(
+    userId: string,
+    ruleId: string,
+  ): Promise<McpCategorizationRuleChangePreview> {
+    return this.previewRuleStatusChange(
+      userId,
+      ruleId,
+      'categorization-rule-archive',
+    );
+  }
+
+  async archiveRule(
+    userId: string,
+    input: McpCategorizationRuleStatusInput,
+  ): Promise<McpCreateCategorizationRuleOutput> {
+    return this.changeRuleStatus(
+      userId,
+      input,
+      'categorization-rule-archive',
+      true,
+    );
+  }
+
+  async previewRuleRestore(
+    userId: string,
+    ruleId: string,
+  ): Promise<McpCategorizationRuleChangePreview> {
+    return this.previewRuleStatusChange(
+      userId,
+      ruleId,
+      'categorization-rule-restore',
+    );
+  }
+
+  async restoreRule(
+    userId: string,
+    input: McpCategorizationRuleStatusInput,
+  ): Promise<McpCreateCategorizationRuleOutput> {
+    return this.changeRuleStatus(
+      userId,
+      input,
+      'categorization-rule-restore',
+      false,
+    );
+  }
+
   async previewRuleApplication(
     userId: string,
     ruleId: string,
   ): Promise<McpCategorizationRuleApplicationPreview> {
+    const rule = await this.requireRule(userId, ruleId);
     const preview =
       await this.transactionCategorizationService.previewRuleApplication(
         ruleId,
@@ -194,8 +328,10 @@ export class McpCategorizationService {
       previewToken: this.signToken({
         purpose: 'categorization-rule-application',
         userId,
+        iat: Date.now(),
         exp: Date.now() + PREVIEW_TOKEN_TTL_MS,
         ruleId,
+        ruleUpdatedAt: rule.updatedAt.toISOString(),
         preview: this.previewCounts(preview),
       }),
     };
@@ -205,7 +341,7 @@ export class McpCategorizationService {
     userId: string,
     input: McpApplyCategorizationRuleInput,
   ): Promise<PreviewCounts> {
-    this.verifyRuleApplicationPreviewToken(
+    const payload = this.verifyRuleApplicationPreviewToken(
       input.previewToken,
       userId,
       input.ruleId,
@@ -215,6 +351,7 @@ export class McpCategorizationService {
       await this.transactionCategorizationService.applyRuleToExisting(
         input.ruleId,
         userId,
+        { expectedUpdatedAt: new Date(payload.ruleUpdatedAt ?? '') },
       );
     if (!result) {
       throw new NotFoundException(
@@ -235,6 +372,33 @@ export class McpCategorizationService {
       priority: input.priority,
       conditions: this.engine.normalizeConditions(input.conditions),
     };
+  }
+
+  private normalizeEdit(
+    input: EditCategorizationRuleDto,
+  ): EditCategorizationRuleDto {
+    return {
+      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+      ...(input.priority !== undefined ? { priority: input.priority } : {}),
+      ...(input.targetCategoryId !== undefined
+        ? { targetCategoryId: input.targetCategoryId }
+        : {}),
+      ...(input.conditions !== undefined
+        ? { conditions: this.engine.normalizeConditions(input.conditions) }
+        : {}),
+    };
+  }
+
+  private editKey(changes: EditCategorizationRuleDto): string {
+    return JSON.stringify({
+      name: changes.name ?? null,
+      priority: changes.priority ?? null,
+      targetCategoryId: changes.targetCategoryId ?? null,
+      conditions:
+        changes.conditions === undefined
+          ? null
+          : this.engine.canonicalConditionsKey(changes.conditions),
+    });
   }
 
   private draftKey(draft: McpNormalizedCategorizationRuleDraft): string {
@@ -283,17 +447,135 @@ export class McpCategorizationService {
     token: string,
     userId: string,
     ruleId: string,
-  ): void {
+  ): PreviewTokenPayload {
     const payload = this.verifyToken(
       token,
       'categorization-rule-application',
       userId,
     );
-    if (payload.ruleId !== ruleId) {
+    if (payload.ruleId !== ruleId || !payload.ruleUpdatedAt) {
       throw new BadRequestException(
         'Preview token does not match the categorization rule',
       );
     }
+
+    return payload;
+  }
+
+  private async previewRuleStatusChange(
+    userId: string,
+    ruleId: string,
+    purpose: 'categorization-rule-archive' | 'categorization-rule-restore',
+  ): Promise<McpCategorizationRuleChangePreview> {
+    const preview =
+      purpose === 'categorization-rule-archive'
+        ? await this.transactionCategorizationService.previewRuleArchive(
+            ruleId,
+            userId,
+          )
+        : await this.transactionCategorizationService.previewRuleRestore(
+            ruleId,
+            userId,
+          );
+    if (!preview) {
+      throw new NotFoundException(`Categorization rule ${ruleId} not found`);
+    }
+
+    return {
+      ...preview,
+      previewToken: this.signRuleChangeToken(
+        purpose,
+        userId,
+        preview.currentRule,
+      ),
+    };
+  }
+
+  private async changeRuleStatus(
+    userId: string,
+    input: McpCategorizationRuleStatusInput,
+    purpose: 'categorization-rule-archive' | 'categorization-rule-restore',
+    archived: boolean,
+  ): Promise<McpCreateCategorizationRuleOutput> {
+    const payload = this.verifyRuleChangeToken(
+      input.previewToken,
+      purpose,
+      userId,
+      input.ruleId,
+    );
+    const rule = await this.transactionCategorizationService.update(
+      input.ruleId,
+      userId,
+      { archived },
+      { expectedUpdatedAt: new Date(payload.ruleUpdatedAt ?? '') },
+    );
+    if (!rule) {
+      throw new NotFoundException(
+        `Categorization rule ${input.ruleId} not found`,
+      );
+    }
+
+    return { rule };
+  }
+
+  private signRuleChangeToken(
+    purpose:
+      | 'categorization-rule-edit'
+      | 'categorization-rule-archive'
+      | 'categorization-rule-restore',
+    userId: string,
+    rule: CategorizationRuleView,
+    changeKey?: string,
+  ): string {
+    const now = Date.now();
+    return this.signToken({
+      purpose,
+      userId,
+      iat: now,
+      exp: now + PREVIEW_TOKEN_TTL_MS,
+      ruleId: rule.id,
+      ruleUpdatedAt: rule.updatedAt.toISOString(),
+      changeKey,
+    });
+  }
+
+  private verifyRuleChangeToken(
+    token: string,
+    purpose:
+      | 'categorization-rule-edit'
+      | 'categorization-rule-archive'
+      | 'categorization-rule-restore',
+    userId: string,
+    ruleId: string,
+    changeKey?: string,
+  ): PreviewTokenPayload {
+    const payload = this.verifyToken(token, purpose, userId);
+    if (
+      payload.ruleId !== ruleId ||
+      !payload.ruleUpdatedAt ||
+      payload.changeKey !== changeKey
+    ) {
+      throw new BadRequestException(
+        'Preview token does not match the categorization rule change',
+      );
+    }
+
+    return payload;
+  }
+
+  private async requireRule(
+    userId: string,
+    ruleId: string,
+  ): Promise<CategorizationRuleView> {
+    const rule = await this.transactionCategorizationService.findOne(
+      ruleId,
+      userId,
+    );
+    if (!rule) {
+      throw new NotFoundException(`Categorization rule ${ruleId} not found`);
+    }
+
+    return rule;
   }
 
   private verifyToken(
@@ -301,7 +583,7 @@ export class McpCategorizationService {
     purpose: PreviewTokenPurpose,
     userId: string,
   ): PreviewTokenPayload {
-    const payload = this.decodeToken(token);
+    const payload = this.decodeToken(token.trim());
     if (
       !payload ||
       payload.purpose !== purpose ||

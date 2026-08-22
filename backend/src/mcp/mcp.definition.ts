@@ -46,6 +46,7 @@ import {
   CashFlowVisualizationOutputSchema,
   CategoriesOutputSchema,
   CategorizationRuleApplicationPreviewOutputSchema,
+  CategorizationRuleChangePreviewOutputSchema,
   CategorizationRuleDraftPreviewOutputSchema,
   CategorizationRecommendationsOutputSchema,
   CreateCategorizationRuleOutputSchema,
@@ -96,6 +97,47 @@ const CategoryIdFilterSchema = z.union([
   UuidSchema,
   z.literal('UNCATEGORIZED'),
 ]);
+const CategorizationRuleEditSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80).optional(),
+    priority: z.number().int().optional(),
+    targetCategoryId: UuidSchema.optional(),
+    conditions: z.array(CategorizationRuleConditionSchema).min(1).optional(),
+  })
+  .strict()
+  .refine((changes) => Object.keys(changes).length > 0, {
+    message: 'Provide at least one rule property to edit',
+  });
+const LIST_TRANSACTIONS_DESCRIPTION = [
+  'Raw transaction data for targeted merchant queries, largest-transaction lists, custom patterns, or analysis where the cash-flow abstraction is insufficient.',
+  'This is not the default for a broad user-facing spending, expense, income, or cash-flow overview; prefer visualize_cash_flow for those questions.',
+  'Results use cursor pagination and activityDate, which respects reportingDateOverride when set. Page until pageInfo.hasMore is false before making complete-range claims.',
+  'All money amounts are major units; always use convertedAmount for cross-currency comparisons.',
+].join(' ');
+const GET_CASHFLOW_ANALYSIS_DESCRIPTION = [
+  'Structured cash-flow data/analysis primitive for reasoning, calculations, prose-only answers, or additional analysis beyond the Cash Flow UI.',
+  'Returns category-grouped analysis for an inclusive activity date range and applies analysis rules, neutralization, pending transactions, and currency conversion. All money amounts are major units.',
+  'Do not prefer this over visualize_cash_flow for broad user-facing questions such as "What were my expenses like last month?" or "How did I spend this month?" unless the user explicitly requests prose only, no visualization/UI, or asks for a narrow factual answer.',
+  'It may still be called after rendering for deeper follow-up reasoning.',
+].join(' ');
+const LIST_CASHFLOW_CATEGORY_TRANSACTIONS_DESCRIPTION = [
+  'Drill into unmatched real transactions for one selected or specific category and direction in a cash-flow report.',
+  'Use for focused follow-ups such as "Why was food so high?" after an overview, or when the user directly asks about a category; this is not a broad spending overview tool.',
+  'Uses the same analysis rules and neutralization pipeline as get_cashflow_analysis.',
+].join(' ');
+const GET_CASHFLOW_ANALYSIS_AUDIT_DESCRIPTION = [
+  'Audit primitive for debugging or explaining cash-flow exclusions, analysis-rule effects, and neutralized pairs for an inclusive activity date range.',
+  'Use when the user asks how a report was calculated or why rows were excluded; this is not a spending overview or default presentation tool.',
+].join(' ');
+const VISUALIZE_CASH_FLOW_DESCRIPTION = [
+  "Preferred/default tool for broad user-facing questions about the authenticated user's actual spending, expenses, income, or cash flow over a date range.",
+  'Resolve relative dates with get_user_context before calling, render the Cash Flow UI as the primary response, and optionally add a concise prose summary afterward.',
+  'Use direction "outflow" for spending or expense questions and "inflow" for income questions. Supports exact-period comparisons and category focus.',
+  'Default examples: "What were my expenses like last month?"; "How much did I spend in July?"; "Where did my money go this month?"; "Show me my spending for the last 30 days."; "How does July spending compare with June?"; "What was my income like last month?".',
+  'Do not call when the user explicitly requests prose only, no visualization, or no UI; for a narrow merchant/transaction fact; for conceptual or hypothetical questions; or for capability discovery.',
+  'Negative examples: "What does positive cash flow mean?"; "How much did I spend at Uber?"; "What was my total spending last month? Answer in prose and do not render a visualization."; "What visualizations can Splice render?".',
+  'Rendering does not prevent follow-up data calls: use category focus and/or list_cashflow_category_transactions when the user asks why a category was high, and other data tools when deeper analysis is needed.',
+].join(' ');
 const CursorSchema = z
   .string()
   .optional()
@@ -312,11 +354,18 @@ export const SPLICE_MCP_TOOL_NAMES = [
   'list_recurring_manual_transaction_schedules',
   'list_analysis_rules',
   'list_categorization_rules',
+  'get_categorization_rule',
   'list_categorization_rule_recommendations',
   'list_manual_categorized_transaction_examples',
   'list_rule_candidate_patterns',
   'preview_categorization_rule_draft',
   'create_categorization_rule',
+  'preview_categorization_rule_edit',
+  'edit_categorization_rule',
+  'preview_categorization_rule_archive',
+  'archive_categorization_rule',
+  'preview_categorization_rule_restore',
+  'restore_categorization_rule',
   'preview_categorization_rule_application',
   'apply_categorization_rule',
   'get_cashflow_analysis',
@@ -445,8 +494,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       'list_transactions',
       {
         title: 'List Transactions',
-        description:
-          'List raw transactions for analysis with cursor pagination. Date ranges use activityDate, which respects reportingDateOverride when set. For spending totals or patterns, keep paging until pageInfo.hasMore is false. All money amounts are major units. Always use convertedAmount for cross-currency comparisons.',
+        description: LIST_TRANSACTIONS_DESCRIPTION,
         inputSchema: {
           startDate: DateStringSchema.optional().describe(
             'Inclusive activity start date in YYYY-MM-DD. activityDate uses reportingDateOverride when set. Resolve relative dates using get_user_context.today.',
@@ -739,7 +787,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'List Categorization Rules',
         description:
-          'List read-only transaction categorization automation rules. This tool cannot create, update, apply, or archive rules.',
+          'List transaction categorization automation rules, active by default or archived when archived=true. Lower priority numbers win when active rules overlap. Use get_categorization_rule for one exact rule.',
         inputSchema: {
           archived: z
             .boolean()
@@ -757,6 +805,28 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
             input,
           ),
         ),
+    ),
+
+    createSpliceTool(
+      'get_categorization_rule',
+      {
+        title: 'Get Categorization Rule',
+        description:
+          'Inspect one active or archived categorization rule, including its conditions, target category, priority, archive state, and updatedAt concurrency version. This read does not preview or mutate anything.',
+        inputSchema: {
+          ruleId: UuidSchema,
+        },
+        outputSchema: CreateCategorizationRuleOutputSchema,
+        requiredScopes: ['splice:read'],
+        risk: { kind: 'read' },
+      },
+      async (input, dependencies) =>
+        toolResult({
+          rule: await dependencies.mcpCategorizationService.getRule(
+            dependencies.userId,
+            input.ruleId,
+          ),
+        }),
     ),
 
     createSpliceTool(
@@ -893,7 +963,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'Create Categorization Rule',
         description:
-          'Create a user-approved categorization rule from an exact previously previewed draft. Requires the previewToken returned by preview_categorization_rule_draft.',
+          'Create a new user-approved categorization rule from an exact previously previewed draft. Do not use this to change an existing rule; use preview_categorization_rule_edit then edit_categorization_rule. Creation affects future categorization only and requires the previewToken from preview_categorization_rule_draft.',
         inputSchema: {
           name: z.string().trim().min(1).max(80),
           targetCategoryId: UuidSchema,
@@ -915,11 +985,148 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
     ),
 
     createSpliceTool(
+      'preview_categorization_rule_edit',
+      {
+        title: 'Preview Categorization Rule Edit',
+        description:
+          'Preview changing editable properties of one existing rule: name, conditions, target category, or priority. The impact compares current versus proposed matching and precedence on existing transactions, but the edit itself affects future categorization only and never rewrites historical assignments. Use the returned normalizedChanges and previewToken for edit_categorization_rule. Do not use for archive/restore or historical application.',
+        inputSchema: {
+          ruleId: UuidSchema,
+          changes: CategorizationRuleEditSchema,
+        },
+        outputSchema: CategorizationRuleChangePreviewOutputSchema,
+        requiredScopes: ['splice:read'],
+        risk: { kind: 'read' },
+      },
+      async (input, dependencies) =>
+        toolResult(
+          await dependencies.mcpCategorizationService.previewRuleEdit(
+            dependencies.userId,
+            { ruleId: input.ruleId, ...input.changes },
+          ),
+        ),
+    ),
+
+    createSpliceTool(
+      'edit_categorization_rule',
+      {
+        title: 'Edit Categorization Rule',
+        description:
+          'Commit the exact existing-rule edit previously previewed by preview_categorization_rule_edit. Requires the matching previewToken and fails if the rule changed concurrently. This changes future matching only; use preview_categorization_rule_application and apply_categorization_rule separately for historical transactions.',
+        inputSchema: {
+          ruleId: UuidSchema,
+          changes: CategorizationRuleEditSchema,
+          previewToken: z.string().trim().min(1),
+        },
+        outputSchema: CreateCategorizationRuleOutputSchema,
+        requiredScopes: ['splice:write'],
+        risk: { kind: 'mutating' },
+      },
+      async (input, dependencies) =>
+        toolResult(
+          await dependencies.mcpCategorizationService.editRule(
+            dependencies.userId,
+            {
+              ruleId: input.ruleId,
+              ...input.changes,
+              previewToken: input.previewToken,
+            },
+          ),
+        ),
+    ),
+
+    createSpliceTool(
+      'preview_categorization_rule_archive',
+      {
+        title: 'Preview Categorization Rule Archive',
+        description:
+          'Preview disabling one active categorization rule. Archiving removes it from future matching and reveals any fallback winners, while leaving every existing transaction category and rule-assignment record untouched. Use the returned previewToken only with archive_categorization_rule.',
+        inputSchema: { ruleId: UuidSchema },
+        outputSchema: CategorizationRuleChangePreviewOutputSchema,
+        requiredScopes: ['splice:read'],
+        risk: { kind: 'read' },
+      },
+      async (input, dependencies) =>
+        toolResult(
+          await dependencies.mcpCategorizationService.previewRuleArchive(
+            dependencies.userId,
+            input.ruleId,
+          ),
+        ),
+    ),
+
+    createSpliceTool(
+      'archive_categorization_rule',
+      {
+        title: 'Archive Categorization Rule',
+        description:
+          'Disable an active categorization rule after preview_categorization_rule_archive. Requires its previewToken and fails on concurrent changes. Existing transaction categories remain untouched; the archived rule stops participating in future categorization.',
+        inputSchema: {
+          ruleId: UuidSchema,
+          previewToken: z.string().trim().min(1),
+        },
+        outputSchema: CreateCategorizationRuleOutputSchema,
+        requiredScopes: ['splice:write'],
+        risk: { kind: 'destructive', idempotent: true },
+      },
+      async (input, dependencies) =>
+        toolResult(
+          await dependencies.mcpCategorizationService.archiveRule(
+            dependencies.userId,
+            input,
+          ),
+        ),
+    ),
+
+    createSpliceTool(
+      'preview_categorization_rule_restore',
+      {
+        title: 'Preview Categorization Rule Restore',
+        description:
+          'Preview re-enabling one archived categorization rule, including its future matching and precedence impact. Existing transaction categories remain untouched. Use the returned previewToken only with restore_categorization_rule.',
+        inputSchema: { ruleId: UuidSchema },
+        outputSchema: CategorizationRuleChangePreviewOutputSchema,
+        requiredScopes: ['splice:read'],
+        risk: { kind: 'read' },
+      },
+      async (input, dependencies) =>
+        toolResult(
+          await dependencies.mcpCategorizationService.previewRuleRestore(
+            dependencies.userId,
+            input.ruleId,
+          ),
+        ),
+    ),
+
+    createSpliceTool(
+      'restore_categorization_rule',
+      {
+        title: 'Restore Categorization Rule',
+        description:
+          'Re-enable an archived categorization rule after preview_categorization_rule_restore. Requires its previewToken, validates active-category and duplicate-rule constraints, and fails on concurrent changes. Restoration affects future matching only.',
+        inputSchema: {
+          ruleId: UuidSchema,
+          previewToken: z.string().trim().min(1),
+        },
+        outputSchema: CreateCategorizationRuleOutputSchema,
+        requiredScopes: ['splice:write'],
+        risk: { kind: 'mutating', idempotent: true },
+      },
+      async (input, dependencies) =>
+        toolResult(
+          await dependencies.mcpCategorizationService.restoreRule(
+            dependencies.userId,
+            input,
+          ),
+        ),
+    ),
+
+    createSpliceTool(
       'preview_categorization_rule_application',
       {
         title: 'Preview Categorization Rule Application',
         description:
-          'Preview applying a saved categorization rule to existing transactions. Use the returned previewToken only for applying the same saved rule.',
+          'Preview the separate historical operation that applies a saved active rule to existing transactions where it is the winning rule by priority. Manual transactions and manual categories are never overwritten. This does not create, edit, archive, or restore a rule. Use the returned previewToken only for apply_categorization_rule.',
         inputSchema: {
           ruleId: UuidSchema,
         },
@@ -941,7 +1148,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       {
         title: 'Apply Categorization Rule',
         description:
-          'Apply a saved categorization rule to existing non-manual transactions after preview. Requires the previewToken returned by preview_categorization_rule_application.',
+          'Apply a saved active rule to historical non-manual transactions where it wins active-rule precedence, after preview_categorization_rule_application. Requires that exact previewToken and fails if the rule changed concurrently. It never overwrites manual categorization, does not edit the rule itself, and does not clear older assignments that no longer match.',
         inputSchema: {
           ruleId: UuidSchema,
           previewToken: z.string().min(1),
@@ -963,14 +1170,13 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       'get_cashflow_analysis',
       {
         title: 'Get Cash Flow Analysis',
-        description:
-          'Get cash-flow analysis grouped by category for an inclusive activity date range. Applies analysis rules, neutralization, pending transactions, and currency conversion. All returned money amounts are major units.',
+        description: GET_CASHFLOW_ANALYSIS_DESCRIPTION,
         inputSchema: {
           startDate: DateStringSchema.describe(
-            'Inclusive activity start date in YYYY-MM-DD.',
+            'Inclusive activity start date in YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone.',
           ),
           endDate: DateStringSchema.describe(
-            'Inclusive activity end date in YYYY-MM-DD.',
+            'Inclusive activity end date in YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone.',
           ),
         },
         outputSchema: CashflowAnalysisOutputSchema,
@@ -996,21 +1202,24 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       'list_cashflow_category_transactions',
       {
         title: 'List Cash Flow Category Transactions',
-        description:
-          'List unmatched real transactions behind a cash-flow category drilldown. Uses the same analysis rules and neutralization pipeline as get_cashflow_analysis.',
+        description: LIST_CASHFLOW_CATEGORY_TRANSACTIONS_DESCRIPTION,
         inputSchema: {
           startDate: DateStringSchema.describe(
-            'Inclusive activity start date in YYYY-MM-DD.',
+            'Inclusive activity start date in YYYY-MM-DD. Reuse the exact overview range or resolve it using get_user_context.',
           ),
           endDate: DateStringSchema.describe(
-            'Inclusive activity end date in YYYY-MM-DD.',
+            'Inclusive activity end date in YYYY-MM-DD. Reuse the exact overview range or resolve it using get_user_context.',
           ),
           categoryPrimary: z
             .string()
             .describe(
               'Primary category to drill into, for example FOOD_AND_DRINK or UNCATEGORIZED.',
             ),
-          flowDirection: z.enum(['inflow', 'outflow']),
+          flowDirection: z
+            .enum(['inflow', 'outflow'])
+            .describe(
+              'Use the same direction as the overview: outflow for spending/expenses and inflow for income.',
+            ),
         },
         outputSchema: CashflowCategoryTransactionsOutputSchema,
         requiredScopes: ['splice:read'],
@@ -1036,14 +1245,13 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       'get_cashflow_analysis_audit',
       {
         title: 'Get Cash Flow Analysis Audit',
-        description:
-          'Get analysis rule audit rows for an inclusive activity date range, including exclusions and neutralized pairs that affect the report range.',
+        description: GET_CASHFLOW_ANALYSIS_AUDIT_DESCRIPTION,
         inputSchema: {
           startDate: DateStringSchema.describe(
-            'Inclusive activity start date in YYYY-MM-DD.',
+            'Inclusive activity start date in YYYY-MM-DD. Reuse the exact report range or resolve it using get_user_context.',
           ),
           endDate: DateStringSchema.describe(
-            'Inclusive activity end date in YYYY-MM-DD.',
+            'Inclusive activity end date in YYYY-MM-DD. Reuse the exact report range or resolve it using get_user_context.',
           ),
         },
         outputSchema: CashflowAuditOutputSchema,
@@ -1067,21 +1275,20 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
       'visualize_cash_flow',
       {
         title: 'Visualize Cash Flow',
-        description:
-          'Render a concise Cash Flow visualization for an actual user question about cash flow, spending, income, or comparing exact periods when visual evidence adds value. Do not call for capability discovery, hypothetical discussion, metadata questions, or simple facts that prose answers clearly.',
+        description: VISUALIZE_CASH_FLOW_DESCRIPTION,
         inputSchema: {
           startDate: DateStringSchema.describe(
-            'Inclusive current-period start date in YYYY-MM-DD.',
+            'Inclusive current-period start date in YYYY-MM-DD. Resolve relative dates first using get_user_context.today and timezone.',
           ),
           endDate: DateStringSchema.describe(
-            'Inclusive current-period end date in YYYY-MM-DD.',
+            'Inclusive current-period end date in YYYY-MM-DD. Resolve relative dates first using get_user_context.today and timezone.',
           ),
           direction: z
             .enum(['outflow', 'inflow'])
             .optional()
             .default('outflow')
             .describe(
-              'Category direction to emphasize. Defaults to outflow; use inflow for income questions.',
+              'Category direction to emphasize. Use outflow for spending or expense questions and inflow for income questions. Defaults to outflow for general cash-flow overviews.',
             ),
           focusCategoryPrimary: z
             .string()
@@ -1089,7 +1296,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
             .min(1)
             .optional()
             .describe(
-              'Optional exact primary category identity to focus when it exists in the selected direction.',
+              'Optional exact primary category identity for a focused follow-up, such as explaining why food spending was high. Omit for the initial broad overview.',
             ),
           comparison: z
             .object({
@@ -1103,7 +1310,7 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
             .strict()
             .optional()
             .describe(
-              'Optional exact comparison range. Both dates are required; no period is inferred.',
+              'Optional exact comparison range for questions comparing periods. Resolve relative periods first; both dates are required and no period is inferred.',
             ),
         },
         outputSchema: CashFlowVisualizationOutputSchema,

@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation Complete — Explicit Follow-up Deployment Pending
+Deployment Complete — Live Explicit Follow-up Smoke Pending
 
 ## Goal
 

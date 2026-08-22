@@ -358,6 +358,9 @@ describe('SpliceMcpRuntimeService', () => {
       ];
       const rules: Array<Record<string, unknown>> = [];
       const transactionCategorizationService = {
+        findOne: jest.fn(
+          async (_id: string) => rules.find((rule) => rule.id === _id) ?? null,
+        ),
         previewDraftRuleApplication: jest.fn().mockResolvedValue({
           matched: 4,
           updated: 4,
