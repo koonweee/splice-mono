@@ -1,8 +1,9 @@
-import { Box, Group, Paper, Stack, Text, UnstyledButton } from '@mantine/core'
+import { Box, Group, Paper, Stack, Text } from '@mantine/core'
 import { Sankey, Tooltip } from 'recharts'
 import { formatPrimaryCategory } from '../../lib/format'
 import { getDisplayCategoryColor } from '../../lib/category-colors'
 import { useIsMobile } from '../../lib/hooks'
+import { Pressable, usePressFeedback } from '../Pressable'
 import {
   buildAnalysisSankeyData,
   formatSankeyAmount,
@@ -42,12 +43,16 @@ function getNodeFill(node: RenderedSankeyNode) {
   return 'var(--mantine-color-gray-6)'
 }
 
-function renderNode(
-  props: NodeProps,
-  onCategoryClick: AnalysisSankeyChartProps['onCategoryClick'],
-) {
+function SankeyNodeShape({
+  nodeProps: props,
+  onCategoryClick,
+}: {
+  nodeProps: NodeProps
+  onCategoryClick: AnalysisSankeyChartProps['onCategoryClick']
+}) {
   const node: RenderedSankeyNode = props.payload
   const isClickable = Boolean(node.categoryPrimary && node.flowDirection)
+  const { pressProps } = usePressFeedback<SVGGElement>(isClickable)
   const labelX =
     node.kind === 'outflow' || node.id === 'net:saved'
       ? props.x + props.width + 8
@@ -62,6 +67,7 @@ function renderNode(
   }
 
   const handleKeyDown = (event: KeyboardEvent<SVGGElement>) => {
+    pressProps.onKeyDown(event)
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       handleClick()
@@ -70,6 +76,7 @@ function renderNode(
 
   return (
     <g
+      {...pressProps}
       className={`${styles.nodeGroup} ${
         isClickable ? styles.clickableNode : ''
       }`}
@@ -101,12 +108,16 @@ function renderNode(
   )
 }
 
-function renderLink(
-  props: LinkProps,
-  onCategoryClick: AnalysisSankeyChartProps['onCategoryClick'],
-) {
+function SankeyLinkShape({
+  linkProps: props,
+  onCategoryClick,
+}: {
+  linkProps: LinkProps
+  onCategoryClick: AnalysisSankeyChartProps['onCategoryClick']
+}) {
   const payload: RenderedSankeyLink = props.payload
   const isClickable = Boolean(payload.categoryPrimary && payload.flowDirection)
+  const { pressProps } = usePressFeedback<SVGPathElement>(isClickable)
   const path = [
     `M${props.sourceX},${props.sourceY}`,
     `C${props.sourceControlX},${props.sourceY}`,
@@ -120,8 +131,17 @@ function renderLink(
     }
   }
 
+  const handleKeyDown = (event: KeyboardEvent<SVGPathElement>) => {
+    pressProps.onKeyDown(event)
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleClick()
+    }
+  }
+
   return (
     <path
+      {...pressProps}
       className={`${styles.link} ${isClickable ? styles.clickableLink : ''}`}
       d={path}
       fill="none"
@@ -134,7 +154,9 @@ function renderLink(
           ? `${payload.flowDirection} ${payload.categoryPrimary}`
           : undefined
       }
+      tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? handleClick : undefined}
+      onKeyDown={isClickable ? handleKeyDown : undefined}
     />
   )
 }
@@ -153,13 +175,13 @@ function CategoryDrilldownList({
   return (
     <Stack gap={4}>
       {categories.map((category, index) => (
-        <UnstyledButton
+        <Pressable
           key={`${direction}:${category.primaryCategory}`}
           onClick={() => onCategoryClick(category.primaryCategory, direction)}
-          py={6}
-          px="xs"
-          style={{ borderRadius: 6 }}
-          className="mantine-hover"
+          style={{
+            borderRadius: 6,
+            padding: '6px var(--mantine-spacing-xs)',
+          }}
         >
           <Group gap="sm" wrap="nowrap">
             <Box
@@ -182,7 +204,7 @@ function CategoryDrilldownList({
               {formatSankeyAmount(category.totalAmount, currency)}
             </Text>
           </Group>
-        </UnstyledButton>
+        </Pressable>
       ))}
     </Stack>
   )
@@ -222,8 +244,18 @@ export function AnalysisSankeyChart({
               width={chartWidth}
               height={height}
               data={data}
-              node={(props) => renderNode(props, onCategoryClick)}
-              link={(props) => renderLink(props, onCategoryClick)}
+              node={(props) => (
+                <SankeyNodeShape
+                  nodeProps={props}
+                  onCategoryClick={onCategoryClick}
+                />
+              )}
+              link={(props) => (
+                <SankeyLinkShape
+                  linkProps={props}
+                  onCategoryClick={onCategoryClick}
+                />
+              )}
               nodePadding={18}
               nodeWidth={12}
               margin={{ top: 16, right: 190, bottom: 16, left: 190 }}

@@ -21,6 +21,14 @@
   cursor: pointer;
 }
 
+.clickableNode rect {
+  transition: opacity 120ms ease;
+}
+
+.clickableNode[data-pressed='true'] rect {
+  opacity: 0.72;
+}
+
 .clickableNode:focus-visible rect {
   outline: 2px solid var(--mantine-primary-color-filled);
   outline-offset: 2px;
@@ -36,7 +44,16 @@
   cursor: pointer;
 }
 
+.clickableLink[data-pressed='true'],
+.clickableLink:focus-visible {
+  stroke-opacity: 0.74;
+}
+
 @media (hover: hover) and (pointer: fine) {
+  .clickableNode:hover rect {
+    opacity: 0.82;
+  }
+
   .clickableLink:hover {
     stroke-opacity: 0.74;
   }

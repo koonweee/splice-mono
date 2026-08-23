@@ -1,4 +1,4 @@
-import { ActionIcon, Collapse, Group, Paper, Stack, Title } from '@mantine/core'
+import { Collapse, Group, Paper, Stack, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import {
@@ -6,6 +6,7 @@ import {
   CRYPTO_ICONS,
   getCryptoNetworkFromInstitution,
 } from '../../lib/crypto-utils'
+import { Pressable } from '../Pressable'
 import { AccountRow } from './AccountRow'
 import { ProviderBadge } from './ProviderBadge'
 import type { Account } from '../../api/models'
@@ -25,29 +26,39 @@ export function InstitutionSection({
 
   return (
     <Paper withBorder p="md" radius="md">
-      <Group
-        justify="space-between"
-        mb={opened ? 'md' : 0}
-        style={{ cursor: 'pointer' }}
+      <Pressable
+        aria-expanded={opened}
+        aria-label={`${opened ? 'Collapse' : 'Expand'} ${institution}`}
         onClick={toggle}
+        style={{
+          borderRadius: 'var(--mantine-radius-sm)',
+          marginBottom: opened ? 'var(--mantine-spacing-md)' : 0,
+        }}
       >
-        <Group gap="sm">
-          <Title order={3}>
-            {cryptoNetwork && (
-              <span
-                style={{ color: CRYPTO_COLORS[cryptoNetwork], marginRight: 8 }}
-              >
-                {CRYPTO_ICONS[cryptoNetwork]}
-              </span>
-            )}
-            {institution}
-          </Title>
-          <ProviderBadge provider={provider} />
+        <Group justify="space-between" px={4} py={2}>
+          <Group gap="sm">
+            <Title order={3}>
+              {cryptoNetwork && (
+                <span
+                  style={{
+                    color: CRYPTO_COLORS[cryptoNetwork],
+                    marginRight: 8,
+                  }}
+                >
+                  {CRYPTO_ICONS[cryptoNetwork]}
+                </span>
+              )}
+              {institution}
+            </Title>
+            <ProviderBadge provider={provider} />
+          </Group>
+          {opened ? (
+            <IconChevronUp aria-hidden size={18} />
+          ) : (
+            <IconChevronDown aria-hidden size={18} />
+          )}
         </Group>
-        <ActionIcon variant="subtle" size="sm">
-          {opened ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
-        </ActionIcon>
-      </Group>
+      </Pressable>
       <Collapse in={opened}>
         <Stack gap="xs">
           {accounts.map((account) => (

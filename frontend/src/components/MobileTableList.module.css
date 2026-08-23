@@ -18,6 +18,10 @@
   border-bottom: 0;
 }
 
+.row[data-selected='true'] {
+  background: light-dark(var(--mantine-color-blue-0), rgba(77, 171, 247, 0.12));
+}
+
 .footer {
   padding: 12px;
   text-align: center;

@@ -11,6 +11,7 @@ interface MobileTableListProps<T> {
   getRowKey: (row: T) => string
   isError?: boolean
   isLoading?: boolean
+  isRowSelected?: (row: T) => boolean
   renderRow: (row: T) => ReactNode
 }
 
@@ -23,6 +24,7 @@ export function MobileTableList<T>({
   getRowKey,
   isError = false,
   isLoading = false,
+  isRowSelected,
   renderRow,
 }: MobileTableListProps<T>) {
   if (isLoading) {
@@ -52,7 +54,11 @@ export function MobileTableList<T>({
   return (
     <div aria-label={ariaLabel} className={styles.list}>
       {data.map((row) => (
-        <div className={styles.row} key={getRowKey(row)}>
+        <div
+          className={styles.row}
+          data-selected={isRowSelected?.(row) || undefined}
+          key={getRowKey(row)}
+        >
           {renderRow(row)}
         </div>
       ))}

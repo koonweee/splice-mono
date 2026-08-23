@@ -11,7 +11,6 @@ import {
   Progress,
   Stack,
   Text,
-  UnstyledButton,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
@@ -27,6 +26,7 @@ import { AnalysisSankeyChart } from '../../components/analysis/AnalysisSankeyCha
 import { CategoryTransactionsModal } from '../../components/CategoryTransactionsModal'
 import { DateRangeControl } from '../../components/DateRangeControl'
 import { PageHeader } from '../../components/PageHeader'
+import { Pressable } from '../../components/Pressable'
 import {
   formatMoneyNumber,
   formatPrimaryCategory,
@@ -209,13 +209,13 @@ function FlowSection({
               const pct = total > 0 ? (cat.totalAmount / total) * 100 : 0
 
               return (
-                <UnstyledButton
+                <Pressable
                   key={cat.primaryCategory}
                   onClick={() => onCategoryClick(cat.primaryCategory)}
-                  py={6}
-                  px="xs"
-                  style={{ borderRadius: 6 }}
-                  className="mantine-hover"
+                  style={{
+                    borderRadius: 6,
+                    padding: '6px var(--mantine-spacing-xs)',
+                  }}
                 >
                   <Group gap="sm" wrap="nowrap">
                     <Box
@@ -260,7 +260,7 @@ function FlowSection({
                       </Text>
                     </Group>
                   </Group>
-                </UnstyledButton>
+                </Pressable>
               )
             })}
           </Stack>

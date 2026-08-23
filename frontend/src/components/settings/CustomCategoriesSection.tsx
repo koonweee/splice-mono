@@ -1300,6 +1300,7 @@ export function CustomCategoriesSection() {
                 data={sortedCategories}
                 emptyMessage="No categories match the current filters."
                 getRowKey={(category) => category.id}
+                isRowSelected={(category) => selectedIds.has(category.id)}
                 renderRow={renderMobileCategoryRow}
               />
             </Stack>
