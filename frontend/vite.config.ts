@@ -13,7 +13,21 @@ const config = defineConfig({
   plugins: [
     // Skip devtools, nitro, and tanstackStart in test mode to avoid hanging processes
     ...(!isTest && !disableDevtools ? [devtools()] : []),
-    ...(!isTest ? [nitro(), tanstackStart()] : []),
+    ...(!isTest
+      ? [
+          nitro({
+            serverDir: 'server',
+            routeRules: {
+              '/sw.js': {
+                headers: {
+                  'cache-control': 'no-cache, no-store, must-revalidate',
+                },
+              },
+            },
+          }),
+          tanstackStart(),
+        ]
+      : []),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
@@ -60,7 +74,6 @@ const config = defineConfig({
       },
       injectManifest: {
         globPatterns: [
-          'assets/**/*.{js,css,woff2}',
           'favicon.ico',
           'favicon192.png',
           'favicon512.png',
