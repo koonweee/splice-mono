@@ -1,4 +1,5 @@
 import { Box, Group, ScrollArea, Table, Text } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
   formatDateTime,
@@ -108,6 +109,11 @@ export function InvestmentHoldingsTable({
   accountCurrency,
 }: InvestmentHoldingsTableProps) {
   const isMobile = useIsMobile()
+  const supportsHover = useMediaQuery(
+    '(hover: hover) and (pointer: fine)',
+    false,
+    { getInitialValueInEffect: false },
+  )
 
   if (holdings.length === 0) {
     return (
@@ -186,7 +192,7 @@ export function InvestmentHoldingsTable({
       <Table
         className={styles.table}
         striped
-        highlightOnHover
+        highlightOnHover={supportsHover}
         verticalSpacing="xs"
       >
         <Table.Thead>

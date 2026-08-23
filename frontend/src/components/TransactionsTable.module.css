@@ -8,10 +8,7 @@
 }
 
 .bulkSelectedRow {
-  background: light-dark(
-    var(--mantine-color-blue-0),
-    rgba(77, 171, 247, 0.12)
-  );
+  background: light-dark(var(--mantine-color-blue-0), rgba(77, 171, 247, 0.12));
 }
 
 .dateCell {
@@ -117,9 +114,14 @@
   transition: opacity 120ms ease;
 }
 
-.merchantInfoButton:hover,
 .merchantInfoButton:focus-visible {
   opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .merchantInfoButton:hover {
+    opacity: 1;
+  }
 }
 
 @media (pointer: coarse) {
@@ -286,25 +288,31 @@
   opacity: 0.75;
 }
 
-.categoryOption:hover {
-  background: var(--mantine-color-gray-1);
-  color: var(--mantine-color-gray-9);
-}
-
 .categoryOption[aria-selected='true'] {
   background: var(--mantine-primary-color-light);
   color: var(--mantine-primary-color-light-color);
 }
 
-.categoryOption[aria-selected='true']:hover {
-  background: var(--mantine-primary-color-light-hover);
-  color: var(--mantine-primary-color-light-color);
-}
-
-.categoryCell:hover .categoryActions,
 .categoryCell:focus-within .categoryActions,
-.dateCell:hover .dateActions,
 .dateCell:focus-within .dateActions {
   opacity: 1;
   pointer-events: auto;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .categoryOption:hover {
+    background: var(--mantine-color-gray-1);
+    color: var(--mantine-color-gray-9);
+  }
+
+  .categoryOption[aria-selected='true']:hover {
+    background: var(--mantine-primary-color-light-hover);
+    color: var(--mantine-primary-color-light-color);
+  }
+
+  .categoryCell:hover .categoryActions,
+  .dateCell:hover .dateActions {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
