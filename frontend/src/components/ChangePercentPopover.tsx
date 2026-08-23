@@ -1,4 +1,5 @@
 import { Popover, Text } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import { useState } from 'react'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
@@ -31,6 +32,11 @@ export function ChangePercentPopover({
   testId?: string
 }) {
   const [opened, setOpened] = useState(false)
+  const supportsHover = useMediaQuery(
+    '(hover: hover) and (pointer: fine)',
+    false,
+    { getInitialValueInEffect: false },
+  )
   const percent = formatPercent(changePercent)
 
   if (!percent) return null
@@ -81,8 +87,8 @@ export function ChangePercentPopover({
             setOpened((current) => !current)
           }}
           onMouseDown={(event) => event.stopPropagation()}
-          onMouseEnter={() => setOpened(true)}
-          onMouseLeave={() => setOpened(false)}
+          onMouseEnter={supportsHover ? () => setOpened(true) : undefined}
+          onMouseLeave={supportsHover ? () => setOpened(false) : undefined}
           onTouchStart={(event) => event.stopPropagation()}
           style={{
             borderRadius: 4,

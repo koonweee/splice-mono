@@ -36,8 +36,10 @@
   cursor: pointer;
 }
 
-.clickableLink:hover {
-  stroke-opacity: 0.74;
+@media (hover: hover) and (pointer: fine) {
+  .clickableLink:hover {
+    stroke-opacity: 0.74;
+  }
 }
 
 .drilldownList {

@@ -7,9 +7,3 @@
     background-color: var(--mantine-color-default-hover);
   }
 }
-
-@media (hover: none) {
-  .clickable:active {
-    background-color: var(--mantine-color-default-hover);
-  }
-}

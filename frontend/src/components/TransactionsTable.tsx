@@ -662,6 +662,11 @@ export function TransactionsTable({
   readOnly = false,
 }: TransactionsTableProps) {
   const queryClient = useQueryClient()
+  const supportsHover = useMediaQuery(
+    '(hover: hover) and (pointer: fine)',
+    false,
+    { getInitialValueInEffect: false },
+  )
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
   >(null)
@@ -1144,7 +1149,7 @@ export function TransactionsTable({
     enablePagination: false,
     manualSorting,
     ...(onSortingChange ? { onSortingChange } : {}),
-    enableColumnResizing: true,
+    enableColumnResizing: supportsHover,
     columnResizeMode: 'onChange',
     layoutMode: 'grid',
     enableRowVirtualization: enableVirtualization,
@@ -1167,6 +1172,7 @@ export function TransactionsTable({
     initialState: { density: 'xs' },
     mantineTableProps: {
       className: tableChrome.table,
+      highlightOnHover: supportsHover,
     },
     mantineTableBodyRowProps: ({ row }) => ({
       className:

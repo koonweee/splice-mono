@@ -53,12 +53,20 @@
   text-align: left;
 }
 
-.row:hover,
 .row:focus-visible {
   background: light-dark(
     var(--mantine-color-gray-0),
     rgba(255, 255, 255, 0.035)
   );
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row:hover {
+    background: light-dark(
+      var(--mantine-color-gray-0),
+      rgba(255, 255, 255, 0.035)
+    );
+  }
 }
 
 .selectedRow {

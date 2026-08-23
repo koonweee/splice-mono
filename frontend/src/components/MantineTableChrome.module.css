@@ -16,13 +16,6 @@
   border-color: var(--splice-table-border) !important;
 }
 
-.table :global(.mrt-table-body-row:hover td) {
-  background: light-dark(
-    var(--mantine-color-gray-0),
-    rgba(255, 255, 255, 0.025)
-  );
-}
-
 .table :global(.mrt-table-head-cell-resize-handle) {
   --resize-handle-thickness: 12px;
   border-radius: 0;
@@ -39,16 +32,6 @@
   content: '';
   opacity: 0.5;
   transform: translateX(-50%);
-}
-
-.table :global(.mrt-table-head-cell-resize-handle:hover),
-.table :global(.mrt-table-head-cell-resize-handle:active) {
-  background: transparent;
-}
-
-.table :global(.mrt-table-head-cell-resize-handle:hover)::after,
-.table :global(.mrt-table-head-cell-resize-handle:active)::after {
-  background: var(--mantine-primary-color-filled);
 }
 
 .actions {
@@ -80,11 +63,6 @@
   background-color: var(--mrt-selected-row-background-color) !important;
 }
 
-.table :global(.mrt-table-body-row[data-hover]:hover[data-selected])
-  .actionsCell::before {
-  background-color: var(--mrt-selected-row-hover-background-color) !important;
-}
-
 .actionsHeader :global(.mrt-table-head-cell-content),
 .actionsHeader :global(.mrt-table-head-cell-labels),
 .actionsHeader :global(.mrt-table-head-cell-content-wrapper) {
@@ -94,4 +72,29 @@
 
 .actionsHeader :global(.mrt-table-head-cell-labels) {
   padding-left: 0 !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .table :global(.mrt-table-body-row:hover td) {
+    background: light-dark(
+      var(--mantine-color-gray-0),
+      rgba(255, 255, 255, 0.025)
+    );
+  }
+
+  .table :global(.mrt-table-head-cell-resize-handle:hover),
+  .table :global(.mrt-table-head-cell-resize-handle:active) {
+    background: transparent;
+  }
+
+  .table :global(.mrt-table-head-cell-resize-handle:hover)::after,
+  .table :global(.mrt-table-head-cell-resize-handle:active)::after {
+    background: var(--mantine-primary-color-filled);
+  }
+
+  .table
+    :global(.mrt-table-body-row[data-hover]:hover[data-selected])
+    .actionsCell::before {
+    background-color: var(--mrt-selected-row-hover-background-color) !important;
+  }
 }
