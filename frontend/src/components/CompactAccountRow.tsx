@@ -10,6 +10,7 @@ import {
   resolveBalance,
 } from '../lib/format'
 import { ChangePercentPopover } from './ChangePercentPopover'
+import { usePressFeedback } from './Pressable'
 import styles from './CompactAccountRow.module.css'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
@@ -36,9 +37,11 @@ export function CompactAccountRow({
     account.convertedEffectiveBalance,
   )
   const stale = isSyncStale(account.syncedAt)
+  const { pressProps } = usePressFeedback<HTMLDivElement>(Boolean(onClick))
 
   return (
     <Group
+      {...pressProps}
       justify="space-between"
       align="center"
       wrap="nowrap"
@@ -48,6 +51,17 @@ export function CompactAccountRow({
       style={{ cursor: onClick ? 'pointer' : undefined }}
       onClick={onClick}
     >
+      {onClick && (
+        <button
+          aria-label={`Open account details for ${account.customName ?? account.name}`}
+          className={styles.rowAction}
+          onClick={(event) => {
+            event.stopPropagation()
+            onClick()
+          }}
+          type="button"
+        />
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <Group gap={6} wrap="nowrap">
           <Text size="sm" fw={500} truncate>
@@ -88,14 +102,16 @@ export function CompactAccountRow({
                 })}
           </Text>
         )}
-        <ChangePercentPopover
-          size="xs"
-          color={getChangeColorMantine(isLiability, account.changePercent)}
-          changeAmount={account.changeAmount}
-          changePercent={account.changePercent}
-          hidden={balancesHidden}
-          testId="account-change-percent"
-        />
+        <div onPointerDown={(event) => event.stopPropagation()}>
+          <ChangePercentPopover
+            size="xs"
+            color={getChangeColorMantine(isLiability, account.changePercent)}
+            changeAmount={account.changeAmount}
+            changePercent={account.changePercent}
+            hidden={balancesHidden}
+            testId="account-change-percent"
+          />
+        </div>
         {!originalBalance && (
           <Text size="xs" style={{ visibility: 'hidden' }}>
             {'\u00A0'}

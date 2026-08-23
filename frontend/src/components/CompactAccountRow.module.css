@@ -1,8 +1,29 @@
 .clickable {
+  position: relative;
   transition: background-color 150ms ease;
 }
 
-@media (hover: hover) {
+.clickable[data-pressed='true'] {
+  background-color: var(--mantine-color-default-hover);
+}
+
+.rowAction {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.rowAction:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
   .clickable:hover {
     background-color: var(--mantine-color-default-hover);
   }

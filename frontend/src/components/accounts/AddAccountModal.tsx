@@ -6,7 +6,6 @@ import {
   Loader,
   Modal,
   NumberInput,
-  Paper,
   Select,
   Stack,
   Text,
@@ -35,6 +34,7 @@ import { getApiErrorMessage } from '../../lib/api-errors'
 import { createMoneyWithSign } from '../../lib/balance-utils'
 import { getDecimalPlaces } from '../../lib/format'
 import { useIsMobile } from '../../lib/hooks'
+import { Pressable } from '../Pressable'
 import {
   ManualBrokeragePositionsEditor,
   isPositiveDecimal,
@@ -471,20 +471,22 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
           initiateLinking.isPending && selectedProvider === provider.id
 
         return (
-          <Paper
+          <Pressable
+            aria-label={`Add account with ${provider.name}`}
             key={provider.id}
-            withBorder
-            p="md"
-            radius="md"
-            style={{ cursor: 'pointer' }}
             onClick={() => handleProviderClick(provider.id)}
+            style={{
+              border: '1px solid var(--mantine-color-default-border)',
+              borderRadius: 'var(--mantine-radius-md)',
+              padding: 'var(--mantine-spacing-md)',
+            }}
           >
             <Group>
               <Icon size={24} />
               <Text fw={500}>{provider.name}</Text>
               {isLoading && <Loader size="sm" />}
             </Group>
-          </Paper>
+          </Pressable>
         )
       })}
     </Stack>

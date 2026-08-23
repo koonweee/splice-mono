@@ -180,8 +180,12 @@ describe('TransactionsMobileList', () => {
     const checkbox = screen.getByRole('checkbox', {
       name: /Select transaction Provider Store/,
     })
+    const rowAction = screen.getByRole('button', {
+      name: /Open transaction details for Provider Store/,
+    })
 
     expect((checkbox as HTMLInputElement).checked).toBe(true)
+    expect(rowAction.contains(checkbox)).toBe(false)
     expect(
       screen.queryByRole('checkbox', {
         name: /Select transaction Manual Store/,
@@ -192,11 +196,7 @@ describe('TransactionsMobileList', () => {
 
     expect(onToggle).toHaveBeenCalledWith('txn-1')
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: /Open transaction details for Provider Store/,
-      }),
-    )
+    fireEvent.click(rowAction)
 
     expect(await screen.findByText('Display')).toBeTruthy()
     expect(screen.queryByLabelText('Reporting date')).toBeNull()

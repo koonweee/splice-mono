@@ -1,17 +1,10 @@
-import {
-  ActionIcon,
-  Collapse,
-  Divider,
-  Group,
-  Paper,
-  Stack,
-  Text,
-} from '@mantine/core'
+import { Collapse, Divider, Group, Paper, Stack, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { AccountType } from '../api/models'
 import { getSignedAmount } from '../lib/balance-utils'
 import { CompactAccountRow } from './CompactAccountRow'
+import { Pressable } from './Pressable'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
 const ASSET_TYPE_LABELS: Record<string, string> = {
@@ -85,19 +78,22 @@ export function AccountSection({
 
   return (
     <>
-      <Group
-        justify="space-between"
-        mb="xs"
-        style={{ cursor: 'pointer' }}
+      <Pressable
+        aria-expanded={opened}
+        aria-label={`${opened ? 'Collapse' : 'Expand'} ${title}`}
         onClick={toggle}
+        style={{
+          borderRadius: 'var(--mantine-radius-sm)',
+          marginBottom: 'var(--mantine-spacing-xs)',
+        }}
       >
-        <Text size="sm" fw={700} tt="uppercase">
-          {title}
-        </Text>
-        <ActionIcon variant="subtle" size="sm">
+        <Group justify="space-between" px={4} py={2}>
+          <Text size="sm" fw={700} tt="uppercase">
+            {title}
+          </Text>
           {opened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
-        </ActionIcon>
-      </Group>
+        </Group>
+      </Pressable>
       <Collapse in={opened}>
         {accounts.length === 0 ? (
           <Text c="dimmed" size="sm">

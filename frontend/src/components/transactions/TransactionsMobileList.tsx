@@ -12,7 +12,6 @@ import {
   Text,
   TextInput,
   Tooltip,
-  UnstyledButton,
 } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
@@ -36,6 +35,7 @@ import {
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
 import { CategorySelect } from '../categories/CategorySelect'
+import { usePressFeedback } from '../Pressable'
 import {
   formatCounterpartyLabel,
   getMerchantDisplay,
@@ -44,7 +44,7 @@ import {
 import styles from './TransactionsMobileList.module.css'
 import statusBadgeStyles from './TransactionStatusBadge.module.css'
 import type { CategorySelectOption } from '../categories/CategorySelect'
-import type { UIEvent } from 'react'
+import type { ReactNode, UIEvent } from 'react'
 import type { Category, Transaction } from '../../api/models'
 
 type TransactionsMobileListProps = {
@@ -126,6 +126,35 @@ function groupTransactionsByDate(data: Array<Transaction>) {
   })
 
   return Array.from(groups.entries())
+}
+
+function TransactionRow({
+  children,
+  className,
+  label,
+  onOpen,
+}: {
+  children: ReactNode
+  className: string
+  label: string
+  onOpen: () => void
+}) {
+  const { pressProps } = usePressFeedback<HTMLDivElement>()
+
+  return (
+    <div {...pressProps} className={className} onClick={onOpen}>
+      <button
+        aria-label={label}
+        className={styles.rowAction}
+        onClick={(event) => {
+          event.stopPropagation()
+          onOpen()
+        }}
+        type="button"
+      />
+      {children}
+    </div>
+  )
 }
 
 function invalidateTransactionQueries(
@@ -299,6 +328,7 @@ export function TransactionsMobileList({
           variant === 'drilldown' ? styles.drilldownList : ''
         }`}
         onScroll={handleScroll}
+        role="region"
       >
         {groupTransactionsByDate(data).map(([date, transactions]) => (
           <section className={styles.dateGroup} key={date}>
@@ -315,8 +345,7 @@ export function TransactionsMobileList({
               const amount = transaction.convertedAmount ?? transaction.amount
 
               return (
-                <UnstyledButton
-                  aria-label={`Open transaction details for ${merchantDisplay.primary}`}
+                <TransactionRow
                   className={`${styles.row} ${
                     bulkModeEnabled &&
                     selectedTransactionIds.has(transaction.id)
@@ -324,7 +353,8 @@ export function TransactionsMobileList({
                       : ''
                   }`}
                   key={transaction.id}
-                  onClick={() => setActiveTransactionId(transaction.id)}
+                  label={`Open transaction details for ${merchantDisplay.primary}`}
+                  onOpen={() => setActiveTransactionId(transaction.id)}
                 >
                   <div className={styles.rowMain}>
                     {bulkModeEnabled && !isManual && (
@@ -406,7 +436,7 @@ export function TransactionsMobileList({
                       {formatMoneyWithSign({ value: amount })}
                     </span>
                   </div>
-                </UnstyledButton>
+                </TransactionRow>
               )
             })}
           </section>
