@@ -17,6 +17,9 @@ type PwaRegistrationOptions = {
 type PwaUpdateListener = (state: PwaUpdateState) => void
 
 const listeners = new Set<PwaUpdateListener>()
+const PWA_CACHE_SCHEMA_KEY = 'splice-pwa-cache-schema'
+const PWA_CACHE_SCHEMA_VERSION = '2'
+const LEGACY_APP_SHELL_CACHE = 'splice-app-shell-v1'
 
 let loadRegisterSW: () => Promise<RegisterSW> = async () => {
   const pwaModule = await import('virtual:pwa-register')
@@ -26,14 +29,36 @@ let loadRegisterSW: () => Promise<RegisterSW> = async () => {
 
 let registrationStarted = false
 let registrationPromise: Promise<void> | null = null
-let serviceWorkerRegistrationPromise:
-  | Promise<ServiceWorkerRegistration>
-  | null = null
+let serviceWorkerRegistrationPromise: Promise<ServiceWorkerRegistration> | null =
+  null
 let needRefresh = false
 let updateServiceWorker: (() => Promise<void>) | null = null
 
 function isServiceWorkerSupported(): boolean {
   return typeof window !== 'undefined' && 'serviceWorker' in navigator
+}
+
+async function clearLegacyPwaCaches(): Promise<void> {
+  if (
+    typeof window === 'undefined' ||
+    !('caches' in window) ||
+    window.localStorage.getItem(PWA_CACHE_SCHEMA_KEY) ===
+      PWA_CACHE_SCHEMA_VERSION
+  ) {
+    return
+  }
+
+  const cacheNames = await window.caches.keys()
+  const legacyCacheNames = cacheNames.filter(
+    (cacheName) =>
+      cacheName === LEGACY_APP_SHELL_CACHE ||
+      cacheName.startsWith('workbox-precache'),
+  )
+
+  await Promise.all(
+    legacyCacheNames.map((cacheName) => window.caches.delete(cacheName)),
+  )
+  window.localStorage.setItem(PWA_CACHE_SCHEMA_KEY, PWA_CACHE_SCHEMA_VERSION)
 }
 
 function emitUpdateState() {
@@ -51,9 +76,7 @@ export function getPwaUpdateState(): PwaUpdateState {
   }
 }
 
-export function subscribeToPwaUpdates(
-  listener: PwaUpdateListener,
-): () => void {
+export function subscribeToPwaUpdates(listener: PwaUpdateListener): () => void {
   listeners.add(listener)
 
   return () => {
@@ -69,7 +92,9 @@ export async function registerPwaServiceWorker(
   }
 
   registrationStarted = true
-  registrationPromise = loadRegisterSW()
+  registrationPromise = clearLegacyPwaCaches()
+    .catch(() => undefined)
+    .then(() => loadRegisterSW())
     .then((registerSW) => {
       const update = registerSW({
         immediate: true,

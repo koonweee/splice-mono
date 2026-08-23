@@ -1,11 +1,10 @@
 /// <reference lib="webworker" />
 
-import { precacheAndRoute } from 'workbox-precaching'
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 
 declare const self: ServiceWorkerGlobalScope
 
 const APP_SHELL_CACHE = 'splice-app-shell-v1'
-const APP_SHELL_URL = '/'
 const OFFLINE_FALLBACK_HTML = `<!doctype html>
 <html lang="en">
   <head>
@@ -71,14 +70,13 @@ type ServiceWorkerMessage = {
   type?: string
 }
 
+cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(cacheAppShell())
-})
-
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim())
+  event.waitUntil(
+    Promise.all([caches.delete(APP_SHELL_CACHE), self.clients.claim()]),
+  )
 })
 
 self.addEventListener('message', (event) => {
@@ -130,52 +128,18 @@ self.addEventListener('push', (event) => {
   )
 })
 
-async function cacheAppShell(): Promise<void> {
-  try {
-    const cache = await caches.open(APP_SHELL_CACHE)
-    await cache.add(
-      new Request(APP_SHELL_URL, {
-        cache: 'reload',
-        credentials: 'same-origin',
-      }),
-    )
-  } catch {
-    // The fallback below still gives cold offline launches a readable page.
-  }
-}
-
 async function loadNavigation(request: Request): Promise<Response> {
   try {
-    const response = await fetch(request)
-
-    if (isRootNavigation(request) && response.ok) {
-      const cache = await caches.open(APP_SHELL_CACHE)
-      await cache.put(APP_SHELL_URL, response.clone())
-    }
-
-    return response
+    return await fetch(request)
   } catch {
-    const cachedAppShell = await caches.match(APP_SHELL_URL, {
-      cacheName: APP_SHELL_CACHE,
-    })
-
-    if (cachedAppShell) {
-      return cachedAppShell
-    }
-
     return new Response(OFFLINE_FALLBACK_HTML, {
       headers: {
+        'Cache-Control': 'no-store',
         'Content-Type': 'text/html; charset=utf-8',
       },
       status: 503,
     })
   }
-}
-
-function isRootNavigation(request: Request): boolean {
-  const url = new URL(request.url)
-
-  return url.origin === self.location.origin && url.pathname === '/'
 }
 
 async function updateAppBadgeFromPushPayload(
