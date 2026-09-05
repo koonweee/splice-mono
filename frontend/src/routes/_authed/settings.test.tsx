@@ -1,3 +1,4 @@
+import { renderToString } from 'react-dom/server'
 import { MantineProvider, Title } from '@mantine/core'
 import {
   cleanup,
@@ -7,12 +8,15 @@ import {
   waitFor,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { SettingsPage } from './settings'
+import { SettingsPage } from '../../components/pages/SettingsPage'
+import { validateSettingsSearch } from '../../lib/route-search'
+import type * as SessionModule from '../../lib/session'
 import type * as ReactQuery from '@tanstack/react-query'
 import type * as SpliceAPI from '../../api/clients/spliceAPI'
 
 const mockFns = vi.hoisted(() => ({
   useQueryClientMock: vi.fn(),
+  onTabChangeMock: vi.fn(),
   useUserControllerMeMock: vi.fn(),
   useUserControllerUpdateSettingsMock: vi.fn(),
   analysisRulesSectionMock: vi.fn(),
@@ -25,6 +29,12 @@ const mockFns = vi.hoisted(() => ({
   disableCurrentDeviceNotificationsMock: vi.fn(),
   updateNewSyncedTransactionsPreferenceMock: vi.fn(),
   updateBankLinkNeedsAttentionPreferenceMock: vi.fn(),
+  updateNotificationsMutateAsyncMock: vi.fn(),
+}))
+
+vi.mock('../../lib/session', async () => ({
+  ...(await vi.importActual<typeof SessionModule>('../../lib/session')),
+  useCurrentUser: mockFns.useUserControllerMeMock,
 }))
 
 vi.mock('@tanstack/react-query', async () => {
@@ -169,7 +179,12 @@ let localStorageState: {
 function renderSettingsPage() {
   return render(
     <MantineProvider>
-      <SettingsPage />
+      <SettingsPage
+        onTabChange={mockFns.onTabChangeMock}
+        {...validateSettingsSearch(
+          Object.fromEntries(new URLSearchParams(window.location.search)),
+        )}
+      />
     </MantineProvider>,
   )
 }
@@ -241,15 +256,21 @@ beforeEach(() => {
     isError: false,
     isSuccess: false,
   }
+  mockFns.updateNotificationsMutateAsyncMock.mockResolvedValue({})
   updateSettingsHookCallCount = 0
 
   mockFns.useQueryClientMock.mockImplementation(() => queryClientState)
   mockFns.useUserControllerMeMock.mockImplementation(() => meState)
   mockFns.useUserControllerUpdateSettingsMock.mockImplementation(() => {
     const mutation =
-      updateSettingsHookCallCount % 2 === 0
-        ? updateSettingsState
-        : updateAnalysisSankeyState
+      updateSettingsHookCallCount % 4 === 1
+        ? updateAnalysisSankeyState
+        : updateSettingsHookCallCount % 4 === 3
+          ? {
+              ...updateSettingsState,
+              mutateAsync: mockFns.updateNotificationsMutateAsyncMock,
+            }
+          : updateSettingsState
     updateSettingsHookCallCount += 1
     return mutation
   })
@@ -294,7 +315,7 @@ afterEach(() => {
 })
 
 describe('SettingsPage', () => {
-  it('shows settings sections in separate tabs', () => {
+  it('shows settings sections in separate tabs and mounts only the selected section', async () => {
     renderSettingsPage()
 
     expect(
@@ -307,6 +328,14 @@ describe('SettingsPage', () => {
     ).toBe('true')
     expect(screen.getByTestId('settings-card')).toBeTruthy()
 
+    expect(mockFns.personalAccessTokenSectionMock).not.toHaveBeenCalled()
+    expect(mockFns.customCategoriesSectionMock).not.toHaveBeenCalled()
+    expect(mockFns.analysisRulesSectionMock).not.toHaveBeenCalled()
+    expect(mockFns.categorizationRulesSectionMock).not.toHaveBeenCalled()
+    expect(
+      mockFns.recurringManualTransactionsSectionMock,
+    ).not.toHaveBeenCalled()
+
     fireEvent.click(screen.getByRole('tab', { name: /access/i }))
     expect(
       screen
@@ -314,12 +343,12 @@ describe('SettingsPage', () => {
         .getAttribute('aria-selected'),
     ).toBe('true')
     expect(
-      screen.getByRole('heading', {
+      await screen.findByRole('heading', {
         name: /personal access tokens/i,
         level: 3,
       }),
     ).toBeTruthy()
-    expect(window.location.search).toBe('?tab=access')
+    expect(mockFns.onTabChangeMock).toHaveBeenLastCalledWith('access')
 
     fireEvent.click(screen.getByRole('tab', { name: /notifications/i }))
     expect(
@@ -340,7 +369,7 @@ describe('SettingsPage', () => {
         name: /bank connections need attention/i,
       }),
     ).toBeTruthy()
-    expect(window.location.search).toBe('?tab=notifications')
+    expect(mockFns.onTabChangeMock).toHaveBeenLastCalledWith('notifications')
 
     fireEvent.click(screen.getByRole('tab', { name: /categories/i }))
     expect(
@@ -348,8 +377,8 @@ describe('SettingsPage', () => {
         .getByRole('tab', { name: /categories/i })
         .getAttribute('aria-selected'),
     ).toBe('true')
-    expect(screen.getByTestId('custom-categories-section')).toBeTruthy()
-    expect(window.location.search).toBe('?tab=categories')
+    expect(await screen.findByTestId('custom-categories-section')).toBeTruthy()
+    expect(mockFns.onTabChangeMock).toHaveBeenLastCalledWith('categories')
 
     fireEvent.click(screen.getByRole('tab', { name: /analysis/i }))
     expect(
@@ -357,7 +386,7 @@ describe('SettingsPage', () => {
         .getByRole('tab', { name: /analysis/i })
         .getAttribute('aria-selected'),
     ).toBe('true')
-    expect(screen.getByTestId('analysis-rules-section')).toBeTruthy()
+    expect(await screen.findByTestId('analysis-rules-section')).toBeTruthy()
     expect(
       screen.getByRole('switch', {
         name: /use sankey diagram on analysis/i,
@@ -371,7 +400,7 @@ describe('SettingsPage', () => {
         }),
       }),
     )
-    expect(window.location.search).toBe('?tab=analysis')
+    expect(mockFns.onTabChangeMock).toHaveBeenLastCalledWith('analysis')
 
     fireEvent.click(screen.getByRole('tab', { name: /categorization/i }))
     expect(
@@ -379,8 +408,10 @@ describe('SettingsPage', () => {
         .getByRole('tab', { name: /categorization/i })
         .getAttribute('aria-selected'),
     ).toBe('true')
-    expect(screen.getByTestId('categorization-rules-section')).toBeTruthy()
-    expect(window.location.search).toBe('?tab=categorization')
+    expect(
+      await screen.findByTestId('categorization-rules-section'),
+    ).toBeTruthy()
+    expect(mockFns.onTabChangeMock).toHaveBeenLastCalledWith('categorization')
 
     fireEvent.click(screen.getByRole('tab', { name: /recurring/i }))
     expect(
@@ -389,9 +420,9 @@ describe('SettingsPage', () => {
         .getAttribute('aria-selected'),
     ).toBe('true')
     expect(
-      screen.getByTestId('recurring-manual-transactions-section'),
+      await screen.findByTestId('recurring-manual-transactions-section'),
     ).toBeTruthy()
-    expect(window.location.search).toBe('?tab=recurring')
+    expect(mockFns.onTabChangeMock).toHaveBeenLastCalledWith('recurring')
 
     expect(screen.queryByRole('tab', { name: /mcp/i })).toBeNull()
   })
@@ -451,7 +482,12 @@ describe('SettingsPage', () => {
     }
     rerender(
       <MantineProvider>
-        <SettingsPage />
+        <SettingsPage
+          onTabChange={mockFns.onTabChangeMock}
+          {...validateSettingsSearch(
+            Object.fromEntries(new URLSearchParams(window.location.search)),
+          )}
+        />
       </MantineProvider>,
     )
 
@@ -476,7 +512,12 @@ describe('SettingsPage', () => {
     }
     rerender(
       <MantineProvider>
-        <SettingsPage />
+        <SettingsPage
+          onTabChange={mockFns.onTabChangeMock}
+          {...validateSettingsSearch(
+            Object.fromEntries(new URLSearchParams(window.location.search)),
+          )}
+        />
       </MantineProvider>,
     )
 
@@ -484,9 +525,7 @@ describe('SettingsPage', () => {
       screen.getByRole('switch', { name: /new uncategorized transactions/i }),
     )
     await waitFor(() => {
-      expect(
-        mockFns.updateNewSyncedTransactionsPreferenceMock,
-      ).toHaveBeenCalled()
+      expect(mockFns.updateNotificationsMutateAsyncMock).toHaveBeenCalled()
     })
     meState.data = {
       settings: {
@@ -499,7 +538,12 @@ describe('SettingsPage', () => {
     }
     rerender(
       <MantineProvider>
-        <SettingsPage />
+        <SettingsPage
+          onTabChange={mockFns.onTabChangeMock}
+          {...validateSettingsSearch(
+            Object.fromEntries(new URLSearchParams(window.location.search)),
+          )}
+        />
       </MantineProvider>,
     )
 
@@ -509,9 +553,7 @@ describe('SettingsPage', () => {
       }),
     )
     await waitFor(() => {
-      expect(
-        mockFns.updateBankLinkNeedsAttentionPreferenceMock,
-      ).toHaveBeenCalled()
+      expect(mockFns.updateNotificationsMutateAsyncMock).toHaveBeenCalled()
     })
     meState.data = {
       settings: {
@@ -524,7 +566,12 @@ describe('SettingsPage', () => {
     }
     rerender(
       <MantineProvider>
-        <SettingsPage />
+        <SettingsPage
+          onTabChange={mockFns.onTabChangeMock}
+          {...validateSettingsSearch(
+            Object.fromEntries(new URLSearchParams(window.location.search)),
+          )}
+        />
       </MantineProvider>,
     )
 
@@ -562,9 +609,9 @@ describe('SettingsPage', () => {
   it('adopts newer server General settings while the form is clean', async () => {
     const { rerender } = renderSettingsPage()
     expect(
-      screen.getByRole('radio', { name: /splice dark/i }).getAttribute(
-        'aria-checked',
-      ),
+      screen
+        .getByRole('radio', { name: /splice dark/i })
+        .getAttribute('aria-checked'),
     ).toBe('true')
 
     meState.data = {
@@ -577,7 +624,12 @@ describe('SettingsPage', () => {
     }
     rerender(
       <MantineProvider>
-        <SettingsPage />
+        <SettingsPage
+          onTabChange={mockFns.onTabChangeMock}
+          {...validateSettingsSearch(
+            Object.fromEntries(new URLSearchParams(window.location.search)),
+          )}
+        />
       </MantineProvider>,
     )
 
@@ -621,7 +673,12 @@ describe('SettingsPage', () => {
     }
     rerender(
       <MantineProvider>
-        <SettingsPage />
+        <SettingsPage
+          onTabChange={mockFns.onTabChangeMock}
+          {...validateSettingsSearch(
+            Object.fromEntries(new URLSearchParams(window.location.search)),
+          )}
+        />
       </MantineProvider>,
     )
 
@@ -793,9 +850,11 @@ describe('SettingsPage', () => {
     )
 
     await waitFor(() => {
-      expect(
-        mockFns.updateNewSyncedTransactionsPreferenceMock,
-      ).toHaveBeenCalledWith(true)
+      expect(mockFns.updateNotificationsMutateAsyncMock).toHaveBeenCalledWith({
+        data: {
+          notifications: { transactions: { newSyncedTransactions: true } },
+        },
+      })
     })
     expect(queryClientState.invalidateQueries).toHaveBeenCalled()
   })
@@ -824,11 +883,33 @@ describe('SettingsPage', () => {
     )
 
     await waitFor(() => {
-      expect(
-        mockFns.updateBankLinkNeedsAttentionPreferenceMock,
-      ).toHaveBeenCalledWith(true)
+      expect(mockFns.updateNotificationsMutateAsyncMock).toHaveBeenCalledWith({
+        data: { notifications: { bankLinks: { needsAttention: true } } },
+      })
     })
     expect(queryClientState.invalidateQueries).toHaveBeenCalled()
+  })
+
+  it('keeps a failed notification preference editable and restores its confirmed value', async () => {
+    mockFns.updateNotificationsMutateAsyncMock.mockRejectedValueOnce(
+      new Error('Save failed'),
+    )
+    renderSettingsPage()
+    fireEvent.click(screen.getByRole('tab', { name: /notifications/i }))
+    const control = screen.getByRole<HTMLInputElement>('switch', {
+      name: /new uncategorized transactions/i,
+    })
+    expect(control.checked).toBe(true)
+    fireEvent.click(control)
+    await screen.findByText('Failed to save notification preference')
+    expect(control.checked).toBe(true)
+    expect(control.disabled).toBe(false)
+    fireEvent.click(control)
+    await waitFor(() =>
+      expect(mockFns.updateNotificationsMutateAsyncMock).toHaveBeenCalledTimes(
+        2,
+      ),
+    )
   })
 
   it('shows unsupported notification state without breaking settings', async () => {
@@ -889,4 +970,32 @@ describe('SettingsPage', () => {
         .map((event) => event.detail.theme),
     ).toEqual(['dracula', 'splice-dark'])
   })
+})
+
+it('renders saved General preferences before effects run', () => {
+  mockFns.useUserControllerMeMock.mockReturnValue({
+    data: {
+      id: 'user',
+      settings: {
+        theme: 'splice-light',
+        currency: 'CAD',
+        timezone: 'America/Toronto',
+        hideZeroBalanceAccounts: true,
+      },
+    },
+    isLoading: false,
+  })
+  const html = renderToString(
+    <MantineProvider>
+      <SettingsPage />
+    </MantineProvider>,
+  )
+  const document = new DOMParser().parseFromString(html, 'text/html')
+  expect(
+    document.querySelector('input[name="currency"]')?.getAttribute('value') ??
+      html,
+  ).toContain('CAD')
+  expect(html).toContain('America/Toronto')
+  const selected = document.querySelector('[role="radio"][aria-checked="true"]')
+  expect(selected?.getAttribute('aria-label')).toBe('Splice light')
 })

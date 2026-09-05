@@ -1,15 +1,19 @@
 import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import dayjs from 'dayjs'
 import {
-  useBalanceQueryControllerGetAllBalances,
-  useBalanceQueryControllerGetBalances,
-} from '../api/clients/spliceAPI'
+  dashboardSeriesOptions,
+  dashboardSummaryOptions,
+} from '../lib/queries/dashboard'
+import { usePresentationPreferences } from '../lib/presentation-preferences'
+import { useBalanceQueryControllerGetBalances } from '../api/clients/spliceAPI'
 import {
   BalanceCurrencyMismatchError,
   getDateRange,
   getLatestAccountBalance,
   getLatestSyncedAt,
+  getSignedAmount,
   transformToAccountChartData,
-  transformToDashboardData,
 } from '../lib/balance-utils'
 import type { DashboardData } from '../lib/balance-utils'
 import type {
@@ -23,32 +27,57 @@ import { TimePeriod } from '@/lib/types'
  * Hook for fetching all account balances for the dashboard
  */
 export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
-  const { startDate, endDate } = getDateRange(period)
-
-  const query = useBalanceQueryControllerGetAllBalances({ startDate, endDate })
-
-  // Transform data to dashboard format
-  const transformed = useMemo<{
-    data?: DashboardData
-    error?: BalanceCurrencyMismatchError
-  }>(() => {
-    if (!query.data) return {}
-
-    try {
-      return {
-        data: transformToDashboardData(query.data, period, reportingCurrency),
-      }
-    } catch (error) {
-      if (error instanceof BalanceCurrencyMismatchError) return { error }
-      throw error
+  const { today } = usePresentationPreferences()
+  const summary = useQuery(dashboardSummaryOptions(period, today))
+  const series = useQuery(dashboardSeriesOptions(period, today))
+  const data = useMemo<DashboardData | undefined>(() => {
+    if (
+      !summary.data ||
+      (reportingCurrency &&
+        summary.data.reportingCurrency !== reportingCurrency)
+    )
+      return undefined
+    const account = (item: (typeof summary.data.assets)[number]) => ({
+      ...item,
+      subType: item.subType ?? undefined,
+      institutionName: item.institutionName ?? undefined,
+      syncedAt: item.syncedAt ?? undefined,
+    })
+    return {
+      netWorth: summary.data.netWorth,
+      changeAmount: summary.data.changeAmount,
+      changePercent: summary.data.changePercent,
+      comparisonPeriod: period,
+      assets: summary.data.assets.map(account),
+      liabilities: summary.data.liabilities.map(account),
+      chartData:
+        series.data?.reportingCurrency === summary.data.reportingCurrency
+          ? series.data.points.map((point) => ({
+              date: point.date,
+              label: dayjs(point.date).format('MMM D'),
+              value: getSignedAmount(point.netWorth),
+            }))
+          : [],
     }
-  }, [query.data, period, reportingCurrency])
-
+  }, [summary.data, series.data, period, reportingCurrency])
   return {
-    data: transformed.data,
-    isLoading: query.isPending,
-    error: query.error ?? transformed.error,
-    refetch: query.refetch,
+    data,
+    isLoading: summary.isPending,
+    error:
+      summary.error ??
+      (summary.data &&
+      reportingCurrency &&
+      summary.data.reportingCurrency !== reportingCurrency
+        ? new BalanceCurrencyMismatchError(
+            reportingCurrency,
+            summary.data.reportingCurrency,
+          )
+        : undefined),
+    isFetching: summary.isFetching,
+    refetch: summary.refetch,
+    seriesError: series.error,
+    seriesLoading: series.isPending,
+    refetchSeries: series.refetch,
   }
 }
 

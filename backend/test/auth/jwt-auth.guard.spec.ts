@@ -20,6 +20,7 @@ interface MockRequest {
 
 describe('JwtAuthGuard', () => {
   let guard: JwtAuthGuard;
+  const response = { setHeader: jest.fn() };
   let reflector: jest.Mocked<Reflector>;
   let patService: {
     isPersonalAccessToken: jest.Mock;
@@ -31,6 +32,7 @@ describe('JwtAuthGuard', () => {
   };
 
   beforeEach(() => {
+    response.setHeader.mockClear();
     reflector = {
       getAllAndOverride: jest.fn(),
     } as unknown as jest.Mocked<Reflector>;
@@ -52,6 +54,7 @@ describe('JwtAuthGuard', () => {
     return {
       switchToHttp: () => ({
         getRequest: () => request,
+        getResponse: () => response,
       }),
       getClass: () => class TestController {},
       getHandler: () => function testHandler() {},
@@ -77,6 +80,7 @@ describe('JwtAuthGuard', () => {
       Promise.resolve(guard.canActivate(createContext(request))),
     ).resolves.toBe(true);
 
+    expect(response.setHeader).not.toHaveBeenCalled();
     expect(patService.isPersonalAccessToken).not.toHaveBeenCalled();
     expect(patService.validateToken).not.toHaveBeenCalled();
   });
@@ -110,6 +114,10 @@ describe('JwtAuthGuard', () => {
       Promise.resolve(guard.canActivate(createContext(request))),
     ).resolves.toBe(true);
 
+    expect(response.setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      'private, no-store',
+    );
     expect(patService.validateToken).toHaveBeenCalledWith(
       'splice_pat_deadbeef',
     );
@@ -251,6 +259,10 @@ describe('JwtAuthGuard', () => {
       Promise.resolve(guard.canActivate(createContext(request))),
     ).rejects.toThrow(UnauthorizedException);
 
+    expect(response.setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      'private, no-store',
+    );
     expect(parentProto.canActivate).not.toHaveBeenCalled();
   });
 

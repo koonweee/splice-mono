@@ -16,8 +16,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Pause, Pencil, Play, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
-  getRecurringManualTransactionControllerFindAllQueryKey,
   useAccountControllerFindAll,
   useCategoryControllerFindAll,
   useRecurringManualTransactionControllerArchive,
@@ -459,16 +459,9 @@ export function RecurringManualTransactionsSection() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const actionPending = useRef(false)
   const invalidateSchedules = () => {
-    queryClient.invalidateQueries({
-      queryKey: getRecurringManualTransactionControllerFindAllQueryKey(),
-    })
-    queryClient.invalidateQueries({
-      predicate: (query) =>
-        Array.isArray(query.queryKey) &&
-        typeof query.queryKey[0] === 'string' &&
-        query.queryKey[0].includes('transaction'),
-    })
+    void invalidateMutationFamilies(queryClient, ['schedules'])
   }
+
   const pauseSchedule = useRecurringManualTransactionControllerPause()
   const resumeSchedule = useRecurringManualTransactionControllerResume()
   const archiveSchedule = useRecurringManualTransactionControllerArchive()

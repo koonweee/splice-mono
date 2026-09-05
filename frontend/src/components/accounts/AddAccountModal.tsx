@@ -19,10 +19,8 @@ import {
 } from '@tabler/icons-react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
-  getAccountControllerFindAllQueryKey,
-  getBalanceQueryControllerGetAllBalancesQueryKey,
-  getBalanceQueryControllerGetBalancesQueryKey,
   investmentControllerSearchSecurities,
   useAccountControllerCreate,
   useBankLinkControllerInitiateLinking,
@@ -219,9 +217,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: getAccountControllerFindAllQueryKey(),
-          })
+          void invalidateMutationFamilies(queryClient, ['accounts'])
           notifications.show({
             title: 'Wallet added',
             message: `Your ${network === 'ethereum' ? 'Ethereum' : 'Bitcoin'} wallet has been linked successfully`,
@@ -268,15 +264,10 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         },
         {
           onSuccess: (response) => {
-            queryClient.invalidateQueries({
-              queryKey: getAccountControllerFindAllQueryKey(),
-            })
-            queryClient.invalidateQueries({
-              queryKey: getBalanceQueryControllerGetBalancesQueryKey(),
-            })
-            queryClient.invalidateQueries({
-              queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
-            })
+            void invalidateMutationFamilies(queryClient, [
+              'accounts',
+              'balances',
+            ])
             notifications.show({
               title: 'Brokerage created',
               message:
@@ -313,9 +304,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: getAccountControllerFindAllQueryKey(),
-          })
+          void invalidateMutationFamilies(queryClient, ['accounts'])
           notifications.show({
             title: 'Account created',
             message: 'Manual account created successfully',

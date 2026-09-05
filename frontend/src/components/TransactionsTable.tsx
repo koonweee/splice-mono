@@ -19,6 +19,7 @@ import dayjs from 'dayjs'
 import { Check, Info, Pencil, RotateCcw, Trash2, X } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { invalidateMutationFamilies } from '../lib/query-invalidation'
 import { useSupportsHover } from '../lib/responsive'
 import {
   useCategoryControllerFindAll,
@@ -605,14 +606,12 @@ function getCategoryToneClass(label: string) {
 function invalidateTransactionQueries(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      Array.isArray(query.queryKey) &&
-      typeof query.queryKey[0] === 'string' &&
-      (query.queryKey[0].includes('transaction') ||
-        query.queryKey[0].includes('category') ||
-        query.queryKey[0].includes('analysis')),
-  })
+  void invalidateMutationFamilies(queryClient, [
+    'transactions',
+    'analysis',
+    'categories',
+    'categorizationRules',
+  ])
 }
 
 function getCategoryLabel(category: Pick<Category, 'primary' | 'detailed'>) {
@@ -1146,6 +1145,9 @@ export function TransactionsTable({
     columnResizeMode: 'onChange',
     layoutMode: 'grid',
     enableRowVirtualization: enableVirtualization,
+    // Render the first viewport during SSR and the matching initial hydration.
+    // The virtualizer replaces this estimate with its measured container after mount.
+    rowVirtualizerOptions: { initialRect: { height: 600, width: 1000 } },
     state: {
       ...(sorting ? { sorting } : {}),
       columnOrder,

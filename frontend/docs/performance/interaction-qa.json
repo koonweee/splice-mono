@@ -1,0 +1,26 @@
+{
+  "environment": "Production Nitro http://localhost:4302 with synthetic API http://localhost:4310",
+  "session": "splice-interaction-qa",
+  "browser": "agent-browser Chrome; desktop then iPhone 14 emulation",
+  "scope": "Bounded interaction QA before exclusive final timing; last Settings mutation-scope fix excluded",
+  "checks": [
+    {"name":"Pointer opens account name editor", "status":"pass", "evidence":"Clicked first Edit account name button; Account name textbox and Save/Cancel appeared."},
+    {"name":"Keyboard failed name save preserves draft", "status":"pass", "evidence":"Filled Unsaved QA name and pressed Enter while /account/<first-fixture-id> returned503. Inline Synthetic outage appeared and textbox value remained Unsaved QA name."},
+    {"name":"Home initial503 Retry recovery", "status":"pass", "evidence":"Failed /balance-query/dashboard-summary. Home shell exposed Retry dashboard. After restoring endpoint and clicking Retry, populated Net worth and Fixture account18 returned and Retry disappeared."},
+    {"name":"Analysis initial503 Retry recovery", "status":"pass", "evidence":"Failed /transaction-analysis. Retry analysis appeared. After restoring endpoint and clicking Retry, No transactions in this period appeared."},
+    {"name":"Keyboard primary navigation", "status":"pass", "evidence":"Opened navigation, focused Transactions link, pressed Enter. URL became /transactions and first purchase appeared in11 rendered virtual table rows."},
+    {"name":"Malformed Transactions dates", "status":"pass", "evidence":"Opened ?startDate=2026-02-30&endDate=garbage&categoryId=UNCATEGORIZED. URL normalized to ?categoryId=UNCATEGORIZED, All dates displayed, purchases remained visible."},
+    {"name":"Browser back and forward", "status":"pass", "evidence":"Back returned /transactions; forward restored categoryId=UNCATEGORIZED with purchase rows visible."},
+    {"name":"Mobile responsive list", "status":"pass", "evidence":"iPhone14 emulation rendered Transactions list,65 total and50 first-page items instead of desktop table."},
+    {"name":"Infinite pagination second page", "status":"not_verified", "evidence":"Two wheel events were attempted but no pageIndex1 request was observed. Did not reach or verify the actual scroll-container end."},
+    {"name":"Mobile detail interaction", "status":"not_verified", "evidence":"Nested detail button click was reported covered by its own card metadata. Parent card click succeeded; no settled popover assertion was captured before release. No actual touch input was dispatched."},
+    {"name":"Cached refresh503 preserves existing data", "status":"not_run"},
+    {"name":"Selected Settings lazy request audit", "status":"not_run"}
+  ],
+  "runtimeErrors": [],
+  "toolingNotes": [
+    "A wait for Failed timed out because the visible inline message was Synthetic outage; actual error and retained draft were inspected afterward.",
+    "A wait for Fixture account0 timed out because that account is excluded from Home display; populated Home account18 and Net worth were inspected afterward."
+  ],
+  "cleanup": {"fixtureReset":true,"sessionClosed":true,"appEdits":false,"serversRestarted":false}
+}

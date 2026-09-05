@@ -4,13 +4,9 @@ import { notifications } from '@mantine/notifications'
 import { IconUpload } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { axios } from '../../api/axios'
-import {
-  getAccountControllerFindAllQueryKey,
-  getBalanceQueryControllerGetAllBalancesQueryKey,
-  getBalanceQueryControllerGetBalancesQueryKey,
-  useBalanceSnapshotControllerImportCsv,
-} from '../../api/clients/spliceAPI'
+import { useBalanceSnapshotControllerImportCsv } from '../../api/clients/spliceAPI'
 import { getApiErrorMessage } from '../../lib/api-errors'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
@@ -79,15 +75,7 @@ export function BackfillModal({ opened, onClose }: BackfillModalProps) {
       },
       {
         onSuccess: (data) => {
-          queryClient.invalidateQueries({
-            queryKey: getAccountControllerFindAllQueryKey(),
-          })
-          queryClient.invalidateQueries({
-            queryKey: getBalanceQueryControllerGetBalancesQueryKey(),
-          })
-          queryClient.invalidateQueries({
-            queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
-          })
+          void invalidateMutationFamilies(queryClient, ['accounts', 'balances'])
           notifications.show({
             title: 'Import successful',
             message:

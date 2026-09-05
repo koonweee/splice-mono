@@ -3,13 +3,9 @@ import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, X } from 'lucide-react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { useCoarsePointer } from '../../lib/responsive'
-import {
-  getAccountControllerFindAllQueryKey,
-  getBalanceQueryControllerGetAllBalancesQueryKey,
-  getBalanceQueryControllerGetBalancesQueryKey,
-  useAccountControllerUpdateBalance,
-} from '../../api/clients/spliceAPI'
+import { useAccountControllerUpdateBalance } from '../../api/clients/spliceAPI'
 import { createMoneyWithSign, getSignedAmount } from '../../lib/balance-utils'
 import { getDecimalPlaces } from '../../lib/format'
 import type { Account, MoneyWithSign } from '../../api/models'
@@ -47,15 +43,7 @@ export function InlineBalanceEditor({
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: getAccountControllerFindAllQueryKey(),
-          })
-          queryClient.invalidateQueries({
-            queryKey: getBalanceQueryControllerGetBalancesQueryKey(),
-          })
-          queryClient.invalidateQueries({
-            queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
-          })
+          void invalidateMutationFamilies(queryClient, ['accounts', 'balances'])
           notifications.show({
             title: 'Balance updated',
             message: 'Account balance has been updated successfully',

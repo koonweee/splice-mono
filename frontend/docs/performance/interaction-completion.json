@@ -1,0 +1,86 @@
+{
+  "checkedAt": "2026-09-05T19:34:37.046Z",
+  "origin": "http://localhost:4302",
+  "checks": [
+    {
+      "name": "actual-touch-opens-transaction-drawer",
+      "passed": true
+    },
+    {
+      "name": "mobile-pagination-50-to-65-on-container-scroll",
+      "passed": true,
+      "requests": [
+        {
+          "path": "/transaction",
+          "search": "?pageSize=50&convert=true&sortBy=activityDate&sortOrder=DESC&pageIndex=1",
+          "method": "GET",
+          "raw": 8363,
+          "bytes": 520
+        }
+      ]
+    },
+    {
+      "name": "selected-settings-list-only",
+      "passed": true,
+      "requests": [
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/category/manage",
+          "search": "?archived=false",
+          "method": "GET",
+          "raw": 2,
+          "bytes": 22
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        },
+        {
+          "path": "/notification/push/config",
+          "search": "",
+          "method": "GET",
+          "raw": 2,
+          "bytes": 22
+        },
+        {
+          "path": "/category/manage",
+          "search": "?archived=true",
+          "method": "GET",
+          "raw": 2,
+          "bytes": 22
+        }
+      ]
+    },
+    {
+      "name": "fresh-navigation-no-primary-request",
+      "passed": true,
+      "requests": []
+    },
+    {
+      "name": "stale-refresh-failure-retains-labeled-content",
+      "passed": true,
+      "requests": [
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        }
+      ]
+    },
+    {
+      "name": "stale-failure-retry-recovers",
+      "passed": true
+    }
+  ]
+}

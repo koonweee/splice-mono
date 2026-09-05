@@ -151,3 +151,35 @@ For visual changes, follow the repository's testing guidance. When browser
 validation is requested, check narrow phone, tablet portrait/landscape, and
 desktop paths, including overflow, focus, and overlays. Viewport emulation does
 not replace testing native browser keyboards or safe-area behavior on devices.
+
+## Route data and cache ownership
+
+Keep route modules small enough for automatic component splitting. Page components
+belong in `components/pages`; unopened editors, Settings sections, and charts use
+local `DeferredFeature` boundaries. Keep the summary and navigation outside chart
+boundaries. Components must not import their route module to obtain URL state.
+
+Place reusable query options in `lib/queries`. A loader and its component must
+use the same parameters, query key, and pagination shape. Transactions uses a
+50-row infinite query (`pages` and `pageParams`) from its first server-rendered
+page onward. Resolve default dates once in the presentation context so server
+and browser use the same user timezone and day.
+
+Use `lib/query-policy.ts` for freshness and `lib/query-invalidation.ts` for explicit
+mutation dependencies. URL path segments identify families; substring predicates
+can invalidate unrelated queries and are discouraged. App-level mutation
+reconciliation owns cancellation, authoritative patches, and invalidation.
+Standalone component consumers can use `invalidateMutationFamilies` without
+causing a second refetch in the managed app.
+
+Keep financial values server-confirmed. Account names and notes may use the
+shared optimistic metadata mechanism and account mutation scope; preserve drafts
+on failure and prevent earlier writes from overwriting newer edits. Never relabel
+previous filtered rows or totals as a new filter's results. DataState should retain
+matching cached results with a visible refresh error and Retry action.
+
+Canonical session data is `User` at `['/user/me']`. `useSession` selects `{user}`
+for compatibility; it does not create a second session cache. Do not persist
+private Query data or copy it into global server state. Presentation preferences
+may use their dedicated small cookies, but masking must apply to chart tooltips,
+labels, and dialogs as well as primary numbers.

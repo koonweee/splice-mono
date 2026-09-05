@@ -112,6 +112,129 @@ describe('axios auth refresh interceptor', () => {
     expect(redirectSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('does not replay original or queued writes after logout during a delayed refresh', async () => {
+    const { axiosInstance, authRedirect } = await import('./axios')
+    const { clearPrivateCaches, acceptBrowserIdentity } =
+      await import('../lib/auth-generation')
+    const redirect = vi
+      .spyOn(authRedirect, 'toLogin')
+      .mockImplementation(() => {})
+    let finishRefresh!: () => void
+    mocks.refreshSession.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishRefresh = resolve
+        }),
+    )
+    const adapter = makeAdapter([
+      (config) =>
+        Promise.reject({
+          config,
+          response: { status: 401 },
+          isAxiosError: true,
+        }),
+      (config) =>
+        Promise.reject({
+          config,
+          response: { status: 401 },
+          isAxiosError: true,
+        }),
+    ])
+    axiosInstance.defaults.adapter = adapter
+    const original = axiosInstance
+      .post('/account/a', { name: 'Old write' })
+      .catch((error: unknown) => error)
+    const queued = axiosInstance
+      .patch('/transaction/b', { categoryId: 'old-category' })
+      .catch((error: unknown) => error)
+    await vi.waitFor(() =>
+      expect(mocks.refreshSession).toHaveBeenCalledTimes(1),
+    )
+    clearPrivateCaches(false)
+    acceptBrowserIdentity('replacement-user')
+    finishRefresh()
+    expect(await original).toMatchObject({ name: 'AbortError' })
+    expect(await queued).toMatchObject({ name: 'AbortError' })
+    expect(adapter).toHaveBeenCalledTimes(2)
+    expect(redirect).not.toHaveBeenCalled()
+  })
+
+  it('starts a separate refresh for the replacement identity instead of joining an old promise', async () => {
+    const { axiosInstance } = await import('./axios')
+    const { clearPrivateCaches, acceptBrowserIdentity } =
+      await import('../lib/auth-generation')
+    let finishOld!: () => void
+    mocks.refreshSession
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishOld = resolve
+          }),
+      )
+      .mockResolvedValueOnce(undefined)
+    const adapter = makeAdapter([
+      (config) =>
+        Promise.reject({
+          config,
+          response: { status: 401 },
+          isAxiosError: true,
+        }),
+      (config) =>
+        Promise.reject({
+          config,
+          response: { status: 401 },
+          isAxiosError: true,
+        }),
+      (config) =>
+        Promise.resolve(makeResponse(config, { identity: 'replacement-user' })),
+    ])
+    axiosInstance.defaults.adapter = adapter
+    const old = axiosInstance
+      .post('/account/old', {})
+      .catch((error: unknown) => error)
+    await vi.waitFor(() =>
+      expect(mocks.refreshSession).toHaveBeenCalledTimes(1),
+    )
+    clearPrivateCaches(false)
+    acceptBrowserIdentity('replacement-user')
+    await expect(axiosInstance.get('/account')).resolves.toMatchObject({
+      data: { identity: 'replacement-user' },
+    })
+    expect(mocks.refreshSession).toHaveBeenCalledTimes(2)
+    finishOld()
+    expect(await old).toMatchObject({ name: 'AbortError' })
+    expect(adapter).toHaveBeenCalledTimes(3)
+  })
+
+  it('limits queued requests to one replay after shared refresh', async () => {
+    const { axiosInstance } = await import('./axios')
+    let finishRefresh!: () => void
+    mocks.refreshSession.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishRefresh = resolve
+        }),
+    )
+    const unauthorized = (config: InternalAxiosRequestConfig) =>
+      Promise.reject({ config, response: { status: 401 }, isAxiosError: true })
+    const adapter = makeAdapter([
+      unauthorized,
+      unauthorized,
+      unauthorized,
+      unauthorized,
+    ])
+    axiosInstance.defaults.adapter = adapter
+    const one = axiosInstance.get('/account/a').catch((error: unknown) => error)
+    const two = axiosInstance.get('/account/b').catch((error: unknown) => error)
+    await vi.waitFor(() =>
+      expect(mocks.refreshSession).toHaveBeenCalledTimes(1),
+    )
+    finishRefresh()
+    await Promise.all([one, two])
+    expect(mocks.refreshSession).toHaveBeenCalledTimes(1)
+    expect(adapter).toHaveBeenCalledTimes(4)
+  })
+
   it('builds login redirects with the current path preserved', async () => {
     const { buildLoginRedirectUrl } = await import('./axios')
 

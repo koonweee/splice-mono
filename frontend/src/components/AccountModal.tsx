@@ -15,15 +15,12 @@ import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { useAccountMetadataMutation } from '../hooks/useAccountMetadataMutation'
+import { invalidateMutationFamilies } from '../lib/query-invalidation'
 import { AccountType } from '../api/models'
 import {
-  getAccountControllerFindAllQueryKey,
-  getBalanceQueryControllerGetAllBalancesQueryKey,
-  getBalanceQueryControllerGetBalancesQueryKey,
-  getInvestmentControllerFindLatestHoldingsForAccountQueryKey,
   investmentControllerSearchSecurities,
-  useAccountControllerUpdate,
   useInvestmentControllerRefreshManualBrokeragePrices,
   useInvestmentControllerReplaceManualBrokerageHoldings,
 } from '../api/clients/spliceAPI'
@@ -41,13 +38,19 @@ import {
 import { useDataListLayout } from '../lib/responsive'
 import styles from './AccountModal.module.css'
 import { InlineBalanceEditor } from './accounts/InlineBalanceEditor'
-import { Chart } from './Chart'
+import { LazyChart as Chart } from './LazyChart'
 import { EditorModal } from './forms/EditorModal'
 import { InvestmentActivityTable } from './investments/InvestmentActivityTable'
 import { InvestmentHoldingsTable } from './investments/InvestmentHoldingsTable'
-import { ManualBrokerageHoldingsModal } from './investments/ManualBrokerageHoldingsModal'
+import { DeferredFeature } from './DeferredFeature'
 import type { TimePeriod } from '../lib/types'
 import type { AccountSummaryData } from '../lib/balance-utils'
+
+const ManualBrokerageHoldingsModal = lazy(() =>
+  import('./investments/ManualBrokerageHoldingsModal').then((module) => ({
+    default: module.ManualBrokerageHoldingsModal,
+  })),
+)
 
 interface AccountModalProps {
   account?: AccountSummaryData
@@ -66,7 +69,7 @@ export function AccountModal({
 }: AccountModalProps) {
   const isMobile = useDataListLayout()
   const queryClient = useQueryClient()
-  const updateAccount = useAccountControllerUpdate()
+  const updateAccount = useAccountMetadataMutation(account?.id)
   const replaceHoldings =
     useInvestmentControllerReplaceManualBrokerageHoldings()
   const refreshPrices = useInvestmentControllerRefreshManualBrokeragePrices()
@@ -143,7 +146,12 @@ export function AccountModal({
     summaryIsHoldingsValued || fullAccount?.valuationMode === 'holdings'
   const notesChanged = notes !== savedNotes
 
+  const notesEditorOpenedRef = useRef(notesEditorOpened)
+  notesEditorOpenedRef.current = notesEditorOpened
+
   useEffect(() => {
+    // Keep the active draft intact during optimistic updates, rollback, and refetch.
+    if (notesEditorOpenedRef.current) return
     const nextNotes = fullAccount?.notes ?? ''
     setNotes(nextNotes)
     setSavedNotes(nextNotes)
@@ -164,23 +172,12 @@ export function AccountModal({
   ])
 
   const invalidateAccountData = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: getAccountControllerFindAllQueryKey(),
-    })
-    queryClient.invalidateQueries({
-      queryKey: getBalanceQueryControllerGetBalancesQueryKey(),
-    })
-    queryClient.invalidateQueries({
-      queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
-    })
-    if (account?.id) {
-      queryClient.invalidateQueries({
-        queryKey: getInvestmentControllerFindLatestHoldingsForAccountQueryKey(
-          account.id,
-        ),
-      })
-    }
-  }, [account?.id, queryClient])
+    void invalidateMutationFamilies(queryClient, [
+      'accounts',
+      'balances',
+      'investments',
+    ])
+  }, [queryClient])
 
   const handleRefreshPrices = useCallback(() => {
     if (!account?.id) return
@@ -677,26 +674,28 @@ export function AccountModal({
         )}
       </EditorModal>
 
-      {isManual && isHoldingsValued && account?.id && (
-        <ManualBrokerageHoldingsModal
-          accountId={account.id}
-          holdings={holdings}
-          onClose={closeHoldingsModal}
-          onSaved={(response) => {
-            setStaleSymbols(response.staleSymbols)
-            invalidateAccountData()
-          }}
-          opened={holdingsModalOpened}
-          saveHoldings={(positions) =>
-            replaceHoldings.mutateAsync({
-              accountId: account.id,
-              data: { positions },
-            })
-          }
-          searchSecurities={(query, signal) =>
-            investmentControllerSearchSecurities({ query, limit: 10 }, signal)
-          }
-        />
+      {holdingsModalOpened && isManual && isHoldingsValued && account?.id && (
+        <DeferredFeature label="Holdings editor">
+          <ManualBrokerageHoldingsModal
+            accountId={account.id}
+            holdings={holdings}
+            onClose={closeHoldingsModal}
+            onSaved={(response) => {
+              setStaleSymbols(response.staleSymbols)
+              invalidateAccountData()
+            }}
+            opened={holdingsModalOpened}
+            saveHoldings={(positions) =>
+              replaceHoldings.mutateAsync({
+                accountId: account.id,
+                data: { positions },
+              })
+            }
+            searchSecurities={(query, signal) =>
+              investmentControllerSearchSecurities({ query, limit: 10 }, signal)
+            }
+          />
+        </DeferredFeature>
       )}
     </>
   )

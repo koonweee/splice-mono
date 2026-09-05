@@ -99,6 +99,7 @@ const historicalCategory = makeCategory({
 })
 
 const archivedRule: CategorizationRuleView = {
+  revision: 2,
   id: '00000000-0000-4000-8000-000000000302',
   name: 'Old rideshare',
   priority: 20,
@@ -111,6 +112,7 @@ const archivedRule: CategorizationRuleView = {
 }
 
 const activeRule: CategorizationRuleView = {
+  revision: 1,
   id: '00000000-0000-4000-8000-000000000301',
   name: 'Uber rideshare',
   priority: 10,

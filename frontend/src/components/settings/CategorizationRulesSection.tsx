@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
   useAccountControllerFindAll,
   useCategorizationRuleControllerApply,
@@ -218,16 +219,12 @@ function getRuleConflict(error: unknown): RuleConflict | null {
 function invalidateCategorizationConsumers(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      Array.isArray(query.queryKey) &&
-      typeof query.queryKey[0] === 'string' &&
-      (query.queryKey[0].includes('/categorization-rules') ||
-        query.queryKey[0].includes('/categorization-rule-recommendations') ||
-        query.queryKey[0].includes('/transaction') ||
-        query.queryKey[0].includes('/category') ||
-        query.queryKey[0].includes('/transaction-analysis')),
-  })
+  void invalidateMutationFamilies(queryClient, [
+    'categorizationRules',
+    'transactions',
+    'analysis',
+    'categories',
+  ])
 }
 
 function isRecommendationGenerationRunning(
