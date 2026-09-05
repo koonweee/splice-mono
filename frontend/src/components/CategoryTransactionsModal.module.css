@@ -31,7 +31,7 @@
   overflow: auto;
 }
 
-@media (max-width: 50em) {
+@media (--compact-layout) {
   .drilldownModalBody {
     padding: 0;
   }

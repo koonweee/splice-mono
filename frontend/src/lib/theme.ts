@@ -304,6 +304,7 @@ function buildTheme(
       }),
       InputWrapper: InputWrapper.extend({
         classNames: {
+          root: 'splice-field-root',
           description: 'splice-input-description',
           error: 'splice-input-error',
           label: 'splice-input-label',

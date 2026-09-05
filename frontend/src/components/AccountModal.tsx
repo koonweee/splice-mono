@@ -38,7 +38,7 @@ import {
   formatMoneyWithSign,
   formatRelativeTime,
 } from '../lib/format'
-import { useIsMobile } from '../lib/hooks'
+import { useDataListLayout } from '../lib/responsive'
 import styles from './AccountModal.module.css'
 import { InlineBalanceEditor } from './accounts/InlineBalanceEditor'
 import { Chart } from './Chart'
@@ -64,7 +64,7 @@ export function AccountModal({
   period,
   balancesHidden = false,
 }: AccountModalProps) {
-  const isMobile = useIsMobile()
+  const isMobile = useDataListLayout()
   const queryClient = useQueryClient()
   const updateAccount = useAccountControllerUpdate()
   const replaceHoldings =

@@ -10,7 +10,6 @@ import {
   Divider,
   Drawer,
   Group,
-  Loader,
   Paper,
   Stack,
   Text,
@@ -18,7 +17,7 @@ import {
   Textarea,
   Tooltip,
 } from '@mantine/core'
-import { useDisclosure, useMediaQuery } from '@mantine/hooks'
+import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -32,6 +31,8 @@ import {
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
+import { useCompactLayout, usePhoneLayout } from '../../lib/responsive'
+import { DataState } from '../DataState'
 import {
   useCategoryControllerBulkUpdateCustom,
   useCategoryControllerCreateCustom,
@@ -258,8 +259,8 @@ function getDefaultRank(category: CategoryManagementItem) {
 
 export function CustomCategoriesSection() {
   const queryClient = useQueryClient()
-  const isMobile = useMediaQuery('(max-width: 48em)')
-  const isNarrow = useMediaQuery('(max-width: 36em)')
+  const isMobile = useCompactLayout()
+  const isNarrow = usePhoneLayout()
   const [filtersOpened, { close: closeFilters, toggle: toggleFilters }] =
     useDisclosure(false)
   const [archivedMode, setArchivedMode] = useState(false)
@@ -281,6 +282,8 @@ export function CustomCategoriesSection() {
     data: categories = [],
     isLoading,
     isError,
+    isFetching,
+    refetch,
   } = useCategoryControllerFindManagement({ archived: archivedMode })
   const { data: comparisonCategories = [] } =
     useCategoryControllerFindManagement({ archived: !archivedMode })
@@ -1242,19 +1245,16 @@ export function CustomCategoriesSection() {
         </Paper>
       )}
 
-      {isLoading && (
-        <Group justify="center" py="lg">
-          <Loader />
-        </Group>
-      )}
-
-      {isError && (
-        <Alert color="red" title="Error">
-          Failed to load categories
-        </Alert>
-      )}
-
-      {!isLoading && !isError && (
+      <DataState
+        hasData={categories.length > 0}
+        isLoading={isLoading}
+        isError={isError}
+        isFetching={isFetching}
+        onRetry={() => void refetch()}
+        loadingMessage="Loading categories…"
+        errorMessage="Failed to load categories"
+        emptyMessage="No categories match the current filters."
+      >
         <Group
           align="stretch"
           gap="md"
@@ -1302,7 +1302,7 @@ export function CustomCategoriesSection() {
             <MantineReactTable table={categoryTable} />
           )}
         </Group>
-      )}
+      </DataState>
       <EditorModal
         opened={panel !== null}
         onClose={() => setPanel(null)}

@@ -12,8 +12,8 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import { Plus, Trash2 } from 'lucide-react'
+import { useCompactLayout } from '../../../lib/responsive'
 import type { Account, CategorizationRuleCondition } from '../../../api/models'
 
 type TextField =
@@ -171,7 +171,7 @@ export function TransactionConditionInput({
   conditions,
   onChange,
 }: TransactionConditionInputProps) {
-  const isMobile = useMediaQuery('(max-width: 48em)')
+  const isMobile = useCompactLayout()
   const accountOptions = accounts.map((account) => ({
     value: account.id,
     label: getAccountLabel(account),

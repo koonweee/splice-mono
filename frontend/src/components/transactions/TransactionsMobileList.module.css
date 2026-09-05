@@ -38,7 +38,11 @@
 }
 
 .row {
-  position: relative;
+  --interactive-row-feedback-background: light-dark(
+    var(--mantine-color-gray-0),
+    rgba(255, 255, 255, 0.035)
+  );
+
   display: grid;
   width: 100%;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -54,49 +58,13 @@
   text-align: left;
 }
 
-.row[data-pressed='true'] {
-  background: light-dark(
-    var(--mantine-color-gray-0),
-    rgba(255, 255, 255, 0.035)
-  );
-}
-
-.rowAction {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  padding: 0;
-  border: 0;
-  appearance: none;
-  background: transparent;
-  pointer-events: none;
-}
-
-.rowAction:focus-visible {
-  outline: 2px solid var(--mantine-primary-color-filled);
-  outline-offset: -2px;
-}
-
 .row.selectedRow {
-  --pressable-feedback-background: light-dark(
+  --interactive-row-feedback-background: light-dark(
     var(--mantine-color-blue-1),
     rgba(77, 171, 247, 0.2)
   );
 
   background: light-dark(var(--mantine-color-blue-0), rgba(77, 171, 247, 0.12));
-}
-
-.row.selectedRow[data-pressed='true'] {
-  background: var(--pressable-feedback-background);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .row:hover {
-    background: light-dark(
-      var(--mantine-color-gray-0),
-      rgba(255, 255, 255, 0.035)
-    );
-  }
 }
 
 .row:last-child {
@@ -246,7 +214,7 @@
   text-align: center;
 }
 
-@media (max-width: 50em) {
+@media (--compact-layout) {
   .list {
     border-right: 0;
     border-left: 0;
@@ -276,7 +244,7 @@
   }
 }
 
-@media (max-width: 50em) {
+@media (--compact-layout) {
   .drilldownList {
     padding-right: var(--mantine-spacing-md);
     padding-left: var(--mantine-spacing-md);

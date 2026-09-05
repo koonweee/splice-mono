@@ -123,7 +123,7 @@ describe('InvestmentActivityTable', () => {
         {
           ...activity,
           price: '120.1234',
-          fees: '1.5',
+          fees: '1.1234',
           amount: {
             ...activity.amount,
             money: { currency: 'EUR', amount: 120025 },
@@ -135,7 +135,8 @@ describe('InvestmentActivityTable', () => {
     })
 
     expect(screen.getByText('€120.1234')).toBeTruthy()
-    expect(screen.getByText('€1.50')).toBeTruthy()
+    expect(screen.getByText('€1.1234')).toBeTruthy()
+    expect(screen.getByText('-€1,200.25')).toBeTruthy()
     expect(screen.getByText('Deposit')).toBeTruthy()
     expect(screen.queryByText('Cash · Deposit')).toBeNull()
   })

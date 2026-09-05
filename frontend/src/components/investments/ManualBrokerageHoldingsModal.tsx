@@ -1,8 +1,9 @@
-import { Alert, Button, Group, Modal, Stack } from '@mantine/core'
+import { Alert, Button, Stack } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useEffect, useRef, useState } from 'react'
 import { getApiErrorMessage } from '../../lib/api-errors'
-import { useIsMobile } from '../../lib/hooks'
+import { EditorModal } from '../forms/EditorModal'
+import { FormActions } from '../forms/FormActions'
 import {
   ManualBrokeragePositionsEditor,
   isPositiveDecimal,
@@ -73,12 +74,12 @@ export function ManualBrokerageHoldingsModal({
   saveHoldings,
   onSaved,
 }: ManualBrokerageHoldingsModalProps) {
-  const isMobile = useIsMobile()
   const [positions, setPositions] = useState(() => holdings.map(toDraft))
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const wasOpened = useRef(false)
   const previousAccountId = useRef(accountId)
+  const saving = useRef(false)
 
   useEffect(() => {
     const justOpened = opened && !wasOpened.current
@@ -98,7 +99,8 @@ export function ManualBrokerageHoldingsModal({
   )
 
   const handleSave = async () => {
-    if (!allQuantitiesValid) return
+    if (!allQuantitiesValid || saving.current) return
+    saving.current = true
     setIsSaving(true)
     setError(null)
     try {
@@ -126,49 +128,52 @@ export function ManualBrokerageHoldingsModal({
         ),
       )
     } finally {
+      saving.current = false
       setIsSaving(false)
     }
   }
 
   return (
-    <Modal
-      fullScreen={isMobile}
-      onClose={onClose}
+    <EditorModal
+      onClose={() => {
+        if (!saving.current) onClose()
+      }}
       opened={opened}
       size="lg"
       title="Edit holdings"
+      closeOnEscape={!isSaving}
+      closeOnClickOutside={!isSaving}
+      closeButtonProps={{ disabled: isSaving }}
     >
-      <Stack>
-        {error && (
-          <Alert color="red" role="alert" title="Holdings not saved">
-            {error}
-          </Alert>
-        )}
-        <ManualBrokeragePositionsEditor
-          disabled={isSaving}
-          onChange={setPositions}
-          positions={positions}
-          searchSecurities={searchSecurities}
-        />
-        <Group grow={isMobile} justify="flex-end" wrap="nowrap">
-          <Button
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+          void handleSave()
+        }}
+      >
+        <Stack>
+          {error && (
+            <Alert color="red" role="alert" title="Holdings not saved">
+              {error}
+            </Alert>
+          )}
+          <ManualBrokeragePositionsEditor
             disabled={isSaving}
-            onClick={onClose}
-            size={isMobile ? 'md' : 'sm'}
-            variant="default"
-          >
-            Cancel
-          </Button>
-          <Button
-            disabled={!allQuantitiesValid}
-            loading={isSaving}
-            onClick={() => void handleSave()}
-            size={isMobile ? 'md' : 'sm'}
-          >
-            Save holdings
-          </Button>
-        </Group>
-      </Stack>
-    </Modal>
+            onChange={setPositions}
+            positions={positions}
+            searchSecurities={searchSecurities}
+          />
+          <FormActions onCancel={onClose} cancelDisabled={isSaving}>
+            <Button
+              disabled={!allQuantitiesValid}
+              loading={isSaving}
+              type="submit"
+            >
+              Save holdings
+            </Button>
+          </FormActions>
+        </Stack>
+      </form>
+    </EditorModal>
   )
 }

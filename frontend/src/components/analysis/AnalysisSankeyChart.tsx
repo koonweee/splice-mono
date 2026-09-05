@@ -2,7 +2,7 @@ import { Box, Group, Paper, Progress, Stack, Text } from '@mantine/core'
 import { Sankey, Tooltip } from 'recharts'
 import { formatPrimaryCategory } from '../../lib/format'
 import { getDisplayCategoryColor } from '../../lib/category-colors'
-import { useIsMobile } from '../../lib/hooks'
+import { useDataListLayout } from '../../lib/responsive'
 import { Pressable, usePressFeedback } from '../Pressable'
 import {
   buildAnalysisSankeyData,
@@ -239,7 +239,7 @@ export function AnalysisSankeyChart({
   analysis,
   onCategoryClick,
 }: AnalysisSankeyChartProps) {
-  const isMobile = useIsMobile()
+  const isMobile = useDataListLayout()
   const data = buildAnalysisSankeyData(analysis)
   const height = Math.max(
     isMobile ? 420 : 360,

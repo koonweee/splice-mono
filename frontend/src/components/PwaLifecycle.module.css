@@ -16,7 +16,7 @@
   box-shadow: var(--mantine-shadow-md);
 }
 
-@media (max-width: 48em) {
+@media (--compact-layout) {
   .container {
     right: var(--mantine-spacing-sm);
     bottom: var(--mantine-spacing-sm);

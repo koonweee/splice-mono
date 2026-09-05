@@ -5,7 +5,7 @@ import { AnalysisSankeyChart } from './AnalysisSankeyChart'
 import { buildAnalysisSankeyData } from './AnalysisSankeyChart.data'
 import type { TransactionAnalysisResponse } from '../../api/models'
 
-vi.mock('../../lib/hooks', () => ({ useIsMobile: () => true }))
+vi.mock('../../lib/responsive', () => ({ useDataListLayout: () => true }))
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()

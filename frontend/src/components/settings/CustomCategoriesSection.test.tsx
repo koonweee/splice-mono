@@ -117,6 +117,26 @@ afterEach(() => {
 })
 
 describe('CustomCategoriesSection', () => {
+  it('keeps cached rows visible after a refresh failure and wires Retry', () => {
+    const refetch = vi.fn()
+    mockFns.useCategoryControllerFindManagementMock.mockReturnValue({
+      data: [activeCategory],
+      isLoading: false,
+      isError: true,
+      isFetching: false,
+      refetch,
+    })
+    renderSection()
+    expect(screen.getAllByText(activeCategory.detailed).length).toBeGreaterThan(
+      0,
+    )
+    expect(
+      screen.getByText('Previously loaded results are shown below.'),
+    ).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
   it('creates and edits user categories without system or visibility controls', async () => {
     renderSection()
 

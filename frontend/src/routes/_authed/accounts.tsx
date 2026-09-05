@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Loader, Stack, Text } from '@mantine/core'
+import { Button, Group, Loader, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { showNotification } from '@mantine/notifications'
 import { IconPlus, IconRefresh, IconUpload } from '@tabler/icons-react'
@@ -15,6 +15,7 @@ import { InstitutionSection } from '@/components/accounts/InstitutionSection'
 import { AddAccountModal } from '@/components/accounts/AddAccountModal'
 import { BackfillModal } from '@/components/accounts/BackfillModal'
 import { PageHeader } from '@/components/PageHeader'
+import { DataState } from '@/components/DataState'
 
 export const Route = createFileRoute('/_authed/accounts')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -26,7 +27,13 @@ export const Route = createFileRoute('/_authed/accounts')({
 
 function AccountsPage() {
   const { accountId: highlightedAccountId } = Route.useSearch()
-  const { data: accounts, isLoading, error } = useAccountControllerFindAll()
+  const {
+    data: accounts,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useAccountControllerFindAll()
   const [modalOpened, { open: openModal, close: closeModal }] =
     useDisclosure(false)
   const [backfillOpened, { open: openBackfill, close: closeBackfill }] =
@@ -73,22 +80,6 @@ function AccountsPage() {
     return groups
   }, [accounts, highlightedAccountId])
 
-  if (isLoading) {
-    return (
-      <Group justify="center" py="xl">
-        <Loader />
-      </Group>
-    )
-  }
-
-  if (error) {
-    return (
-      <Alert color="red" title="Error">
-        Failed to load accounts
-      </Alert>
-    )
-  }
-
   return (
     <>
       <PageHeader
@@ -126,20 +117,28 @@ function AccountsPage() {
           </Group>
         }
       />
-      <Stack gap="lg">
-        {Array.from(groupedAccounts.entries()).map(
-          ([institution, groupAccount]) => (
-            <InstitutionSection
-              key={institution}
-              institution={institution}
-              accounts={groupAccount}
-            />
-          ),
-        )}
-        {groupedAccounts.size === 0 && (
-          <Text c="dimmed">No accounts found</Text>
-        )}
-      </Stack>
+      <DataState
+        hasData={groupedAccounts.size > 0}
+        isLoading={isLoading}
+        isError={Boolean(error)}
+        isFetching={isFetching}
+        loadingMessage="Loading accounts…"
+        errorMessage="Failed to load accounts"
+        emptyMessage="No accounts found"
+        onRetry={() => void refetch()}
+      >
+        <Stack gap="lg">
+          {Array.from(groupedAccounts.entries()).map(
+            ([institution, groupAccount]) => (
+              <InstitutionSection
+                key={institution}
+                institution={institution}
+                accounts={groupAccount}
+              />
+            ),
+          )}
+        </Stack>
+      </DataState>
       <AddAccountModal opened={modalOpened} onClose={closeModal} />
       <BackfillModal opened={backfillOpened} onClose={closeBackfill} />
     </>

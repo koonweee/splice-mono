@@ -121,13 +121,13 @@
   opacity: 1;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (--supports-hover) {
   .merchantInfoButton:hover {
     opacity: 1;
   }
 }
 
-@media (pointer: coarse) {
+@media (--coarse-pointer) {
   .merchantInfoButton {
     min-width: 40px;
     min-height: 40px;
@@ -302,7 +302,7 @@
   pointer-events: auto;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (--supports-hover) {
   .categoryOption:hover {
     background: var(--mantine-color-gray-1);
     color: var(--mantine-color-gray-9);

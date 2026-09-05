@@ -10,7 +10,7 @@ import {
   resolveBalance,
 } from '../lib/format'
 import { ChangePercentPopover } from './ChangePercentPopover'
-import { usePressFeedback } from './Pressable'
+import { InteractiveRow } from './InteractiveRow'
 import styles from './CompactAccountRow.module.css'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
@@ -37,31 +37,13 @@ export function CompactAccountRow({
     account.convertedEffectiveBalance,
   )
   const stale = isSyncStale(account.syncedAt)
-  const { pressProps } = usePressFeedback<HTMLDivElement>(Boolean(onClick))
 
   return (
-    <Group
-      {...pressProps}
-      justify="space-between"
-      align="center"
-      wrap="nowrap"
-      py="sm"
-      px="sm"
-      className={onClick ? styles.clickable : undefined}
-      style={{ cursor: onClick ? 'pointer' : undefined }}
-      onClick={onClick}
+    <InteractiveRow
+      actionLabel={`Open account details for ${account.customName ?? account.name}`}
+      className={styles.row}
+      onActivate={onClick}
     >
-      {onClick && (
-        <button
-          aria-label={`Open account details for ${account.customName ?? account.name}`}
-          className={styles.rowAction}
-          onClick={(event) => {
-            event.stopPropagation()
-            onClick()
-          }}
-          type="button"
-        />
-      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <Group gap={6} wrap="nowrap">
           <Text size="sm" fw={500} truncate>
@@ -118,6 +100,6 @@ export function CompactAccountRow({
           </Text>
         )}
       </div>
-    </Group>
+    </InteractiveRow>
   )
 }

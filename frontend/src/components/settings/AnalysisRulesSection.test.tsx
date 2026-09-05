@@ -161,6 +161,24 @@ afterEach(() => {
 })
 
 describe('AnalysisRulesSection', () => {
+  it('keeps cached rows visible after a refresh failure and wires Retry', () => {
+    const refetch = vi.fn()
+    mockFns.useAnalysisRuleControllerFindAllMock.mockReturnValue({
+      data: [activeRule],
+      isLoading: false,
+      isError: true,
+      isFetching: false,
+      refetch,
+    })
+    renderSection()
+    expect(screen.getAllByText(activeRule.name).length).toBeGreaterThan(0)
+    expect(
+      screen.getByText('Previously loaded results are shown below.'),
+    ).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
   it('renders rules and archives active rules', () => {
     renderSection()
 

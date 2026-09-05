@@ -152,6 +152,23 @@ describe('TransactionsMobileList', () => {
     expect(screen.getByText('Rule')).toBeTruthy()
   })
 
+  it('preserves loaded transactions when a refresh fails and wires Retry', () => {
+    const onRetry = vi.fn()
+    renderMobileList([makeTransaction({ id: 'cached-txn' })], {
+      isError: true,
+      onRetry,
+    })
+
+    expect(
+      screen.getByRole('region', { name: 'Transactions list, 1 total' }),
+    ).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Error loading transactions',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(onRetry).toHaveBeenCalledOnce()
+  })
+
   it('uses checkboxes for bulk selection and opens read-only details from rows', async () => {
     const onToggle = vi.fn()
 
@@ -316,6 +333,8 @@ describe('TransactionsMobileList', () => {
 function renderMobileList(
   data: Array<Transaction>,
   options: {
+    isError?: boolean
+    onRetry?: () => void
     bulkModeEnabled?: boolean
     selectedTransactionIds?: Set<string>
     onToggleTransactionSelection?: (transactionId: string) => void
@@ -332,7 +351,8 @@ function renderMobileList(
           data={data}
           totalRows={data.length}
           isLoading={false}
-          isError={false}
+          isError={options.isError ?? false}
+          onRetry={options.onRetry}
           bulkModeEnabled={options.bulkModeEnabled}
           selectedTransactionIds={options.selectedTransactionIds}
           onToggleTransactionSelection={options.onToggleTransactionSelection}

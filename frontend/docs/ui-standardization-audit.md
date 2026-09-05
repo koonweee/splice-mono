@@ -1,28 +1,35 @@
 # UI standardization audit
 
-September 5, 2026. Follow-up source audit by three agents after the UI polish pass.
-These are recommendations, not additional implemented changes. Current building
-blocks and usage rules are in [Shared UI conventions](ui-conventions.md).
+September 5, 2026. All nine opportunities are implemented and verified.
+Baseline: `7065086`. Usage contracts are in
+[Shared UI conventions](ui-conventions.md).
 
-Ordered by user benefit and reuse:
+| #   | Standard                   | Implementation and adoption                                                                                                                                                                                                                                                               |
+| --- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Save/error feedback        | [Mutation feedback](../src/lib/mutation-feedback.ts), retained account-name drafts, pending guards, and inline form errors. Recurring pause/resume failures support retry. Shared field error colors work across all four themes.                                                         |
+| 2   | Destructive confirmation   | [ConfirmActionDialog](../src/components/ConfirmActionDialog.tsx) names the item and consequences, focuses Cancel, blocks pending dismissal, and shows failures. Adopted for account archive, transaction deletion, and recurring deletion.                                                |
+| 3   | Editor layout              | Holdings and CSV backfill now use [EditorModal and FormActions](../src/components/forms/EditorModal.tsx), semantic forms, validation, and guarded submissions. Phone editors fill the screen; tablet/desktop editors stay bounded.                                                        |
+| 4   | Loading/error/empty states | [DataState](../src/components/DataState.tsx) supplies Retry and preserves cached rows. Adopted by Accounts, Transactions, category drilldowns, all four Settings lists, and MobileTableList. Headers and filters remain available.                                                        |
+| 5   | Responsive rules           | [Named queries](../src/lib/media-queries.ts) feed [React hooks](../src/lib/responsive.ts) and Vite CSS expansion. Phone 36em, compact 48em, and dense-data 50em roles remain distinct; transaction drilldowns now match the 48em list cutoff. Hover and touch capability are independent. |
+| 6   | Investment formatting      | [Quote/value/quantity formatters](../src/lib/investment-format.ts) serve holdings and activity. Quotes retain up to four decimals; values use currency precision; fractional fees opt in. Cash minor units, share quantities, currency labels, and masking remain distinct.               |
+| 7   | Date policy                | [Calendar and timestamp formatters](../src/lib/format.ts) share en-US display: calendar days never shift; timestamps use device-local time. Recommendations and recurring dates reuse them; provider date adapters and API serialization are preserved.                                   |
+| 8   | Lifecycle badges           | [LifecycleBadge](../src/components/LifecycleBadge.tsx) supplies success/warning/neutral styles and size variants to Settings and category pickers. Archived is neutral everywhere these callers display it.                                                                               |
+| 9   | Interactive rows           | [InteractiveRow](../src/components/InteractiveRow.tsx) centralizes account/transaction primary actions, keyboard focus, and press feedback. Checkboxes and secondary actions remain independent sibling controls.                                                                         |
 
-| Order | Opportunity                       | Evidence and proposal                                                                                                                                                                                                                                                                                                                                                                                               |
-| ----- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | Consistent save/error feedback    | [Account rename](../src/components/accounts/AccountRow.tsx#L73) closes before saving; [schedule pause/resume](../src/components/settings/RecurringManualTransactionsSection.tsx#L432) lacks error feedback. Standardize pending controls, preserved input on failure, inline form errors, and row-action notifications using `getApiErrorMessage`. Keep mutations feature-owned.                                    |
-| 2     | Shared confirmation dialog        | [Transaction deletion](../src/routes/_authed/transactions.tsx#L470) uses browser confirmation; [account archive](../src/components/accounts/AccountRow.tsx#L298) uses a custom modal. Introduce `ConfirmActionDialog` with the affected item, consequences, action label, pending state, and failure feedback.                                                                                                      |
-| 3     | Finish shared editor adoption     | [Edit holdings](../src/components/investments/ManualBrokerageHoldingsModal.tsx#L134) has separate fullscreen rules and buttons; [CSV backfill](../src/components/accounts/BackfillModal.tsx#L96) has a separate layout. Migrate to `EditorModal`, semantic forms, and `FormActions` for consistent sizing and reachable actions.                                                                                    |
-| 4     | Shared loading/error/empty states | [Mobile transactions](../src/components/transactions/TransactionsMobileList.tsx#L307) replaces rows on error, while [desktop](../src/components/TransactionsTable.tsx#L1158) retains table data. [Accounts](../src/routes/_authed/accounts.tsx#L76) also loses its header while loading. Share state presentation with Retry; preserve cached rows and page identity.                                               |
-| 5     | Named responsive rules            | [Transactions](../src/routes/_authed/transactions.tsx#L243) switches at `48em`; [category drilldown](../src/components/CategoryTransactionsModal.tsx#L26) uses the `50em` hook. Centralize queries by purpose and align corresponding CSS. Preserve the intentional `36em` phone editor cutoff; keep hover/pointer capability separate.                                                                             |
-| 6     | Investment price formatting       | [Holdings](../src/components/investments/InvestmentHoldingsTable.tsx#L53) forces two decimals; [activity](../src/components/investments/InvestmentActivityTable.tsx#L61) preserves up to four. Share explicit quote/value formatters so fractional prices display consistently. Keep quantities, major-unit prices, and minor-unit cash separate.                                                                   |
-| 7     | Date display policy               | [Recommendation timestamps](../src/components/settings/CategorizationRulesSection.tsx#L262) use browser locale, while [the shared formatter](../src/lib/format.ts#L222) uses `en-US`; [recurring dates](../src/components/settings/RecurringManualTransactionsSection.tsx#L567) format locally. Centralize locale/timezone policy and date helpers, preserving calendar dates and provider-specific date semantics. |
-| 8     | Lifecycle badge colors            | Archived is gray in [Settings](../src/components/settings/SettingsStatusBadge.tsx#L10), orange in [category pickers](../src/components/categories/CategoryScopeInput.tsx#L199). Share lifecycle badge presentation with size variants and semantic theme colors so the same status has the same meaning everywhere.                                                                                                 |
-| 9     | Interactive row behavior          | [Account rows](../src/components/CompactAccountRow.tsx#L40) and [transaction rows](../src/components/transactions/TransactionsMobileList.tsx#L131) repeat the primary button, click handling, focus, and press pattern. Extract a row-action primitive that leaves selection and secondary controls independent.                                                                                                    |
+## Verification
 
-Start with items 1–4. They improve failure recovery and consistency in everyday
-flows. Keep domain-specific status meanings, financial calculations, and chart
-layouts outside generic UI primitives.
+- Behavior tests cover draft retention, pending guards, cancellation, deletion
+  retry, cached-data recovery, independent row controls, price units/precision,
+  and calendar/timestamp semantics.
+- Full gate passed from `frontend/`: `yarn test --maxWorkers=2` (361 tests in
+  58 files), `yarn lint`, `yarn typecheck`, and `yarn build`.
+- Browser checks passed at iPhone 17 (402×874), iPad mini portrait/landscape
+  (744×1133 / 1133×744), and MacBook Air (1470×956), with original-resolution
+  before/after PNGs. Failure checks intercept requests without changing records.
+- Archived/paused states absent from local data are covered by component tests;
+  screenshots do not fabricate those states. Chromium emulation does not cover
+  native Safari or software keyboards.
 
-This pass inspected source and checked documentation formatting and local links;
-it did not repeat browser testing. Implementation should add behavior checks for
-failure recovery, confirmation, and keyboard interaction, plus responsive visual
-checks when implementing a plan or when requested, per repository guidance.
+Keep domain-specific status meanings, financial calculations, and chart layouts
+outside generic UI primitives. Add future shared behavior to these building
+blocks and keep the usage guide current.

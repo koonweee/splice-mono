@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Group,
-  Loader,
   NumberInput,
   Paper,
   Select,
@@ -14,11 +13,12 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import { Archive, CircleHelp, Pencil, RotateCcw, Save } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useMemo, useState } from 'react'
+import { useCompactLayout } from '../../lib/responsive'
+import { DataState } from '../DataState'
 import {
   useAnalysisRuleControllerCreate,
   useAnalysisRuleControllerFindAll,
@@ -250,7 +250,7 @@ export function AnalysisRulesSection({
   lookaroundSetting,
 }: AnalysisRulesSectionProps = {}) {
   const queryClient = useQueryClient()
-  const isMobile = useMediaQuery('(max-width: 48em)')
+  const isMobile = useCompactLayout()
   const [archivedMode, setArchivedMode] = useState(false)
   const [search, setSearch] = useState('')
   const [panel, setPanel] = useState<PanelState>(null)
@@ -271,6 +271,8 @@ export function AnalysisRulesSection({
     data: rules = [],
     isLoading,
     isError,
+    isFetching,
+    refetch,
   } = useAnalysisRuleControllerFindAll({ archived: archivedMode })
   const { data: activeCategories = [] } = useCategoryControllerFindManagement({
     archived: false,
@@ -702,21 +704,17 @@ export function AnalysisRulesSection({
         />
       </Group>
 
-      {isLoading && (
-        <Group justify="center" py="lg">
-          <Loader />
-        </Group>
-      )}
-
-      {isError && (
-        <Alert color="red" title="Error">
-          Failed to load analysis rules
-        </Alert>
-      )}
-
-      {!isLoading &&
-        !isError &&
-        (isMobile ? (
+      <DataState
+        hasData={rules.length > 0}
+        isLoading={isLoading}
+        isError={isError}
+        isFetching={isFetching}
+        onRetry={() => void refetch()}
+        loadingMessage="Loading analysis rules…"
+        errorMessage="Failed to load analysis rules"
+        emptyMessage="No analysis rules match the current filters."
+      >
+        {isMobile ? (
           <MobileTableList
             ariaLabel={`Analysis rules list, ${filteredRules.length.toLocaleString()} total`}
             data={filteredRules}
@@ -726,7 +724,8 @@ export function AnalysisRulesSection({
           />
         ) : (
           <MantineReactTable table={table} />
-        ))}
+        )}
+      </DataState>
 
       <EditorModal
         opened={panel !== null}

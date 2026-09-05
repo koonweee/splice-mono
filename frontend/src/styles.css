@@ -113,6 +113,13 @@ code {
   margin-top: 4px;
 }
 
+.splice-field-root {
+  --mantine-color-error: light-dark(
+    var(--mantine-color-red-9),
+    var(--mantine-color-red-2)
+  );
+}
+
 .splice-input-error {
   margin-top: 4px;
 }
@@ -146,7 +153,7 @@ code {
   box-shadow: var(--mantine-shadow-sm);
 }
 
-@media (max-width: 48em) {
+@media (--compact-layout) {
   input,
   select,
   textarea,

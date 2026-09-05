@@ -7,6 +7,7 @@ import {
   within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { formatDateTime } from '../../lib/format'
 import { CategorizationRulesSection } from './CategorizationRulesSection'
 import type * as ReactQuery from '@tanstack/react-query'
 import type * as SpliceAPI from '../../api/clients/spliceAPI'
@@ -288,6 +289,24 @@ afterEach(() => {
 })
 
 describe('CategorizationRulesSection', () => {
+  it('keeps cached rows visible after a refresh failure and wires Retry', () => {
+    const refetch = vi.fn()
+    mockFns.useCategorizationRuleControllerFindAllMock.mockReturnValue({
+      data: [activeRule],
+      isLoading: false,
+      isError: true,
+      isFetching: false,
+      refetch,
+    })
+    renderSection()
+    expect(screen.getAllByText(activeRule.name).length).toBeGreaterThan(0)
+    expect(
+      screen.getByText('Previously loaded results are shown below.'),
+    ).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
   it('renders active rules and archives them', () => {
     renderSection()
 
@@ -506,7 +525,11 @@ describe('CategorizationRulesSection', () => {
     renderSection()
     fireEvent.click(screen.getByLabelText('Rule recommendations'))
 
-    expect(await screen.findByText(/^Last run/i)).toBeTruthy()
+    expect(
+      await screen.findByText(
+        `Last run ${formatDateTime('2026-02-14T00:01:00.000Z')}.`,
+      ),
+    ).toBeTruthy()
     expect(screen.getByText('No recommendations found')).toBeTruthy()
     expect(mockFns.generateRecommendationsMutateMock).not.toHaveBeenCalled()
     expect(mockFns.regenerateRecommendationsMutateMock).not.toHaveBeenCalled()

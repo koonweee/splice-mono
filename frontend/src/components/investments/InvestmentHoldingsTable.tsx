@@ -1,11 +1,11 @@
 import { Box, Group, ScrollArea, Table, Text } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
+import { HIDDEN_BALANCE_PLACEHOLDER, formatDateTime } from '../../lib/format'
 import {
-  HIDDEN_BALANCE_PLACEHOLDER,
-  formatDateTime,
-  formatMoneyNumber,
-} from '../../lib/format'
-import { useIsMobile } from '../../lib/hooks'
+  formatInvestmentQuantity,
+  formatInvestmentQuote,
+  formatInvestmentValue,
+} from '../../lib/investment-format'
+import { useDataListLayout, useSupportsHover } from '../../lib/responsive'
 import styles from './InvestmentHoldingsTable.module.css'
 import type { InvestmentHoldingSnapshot } from '../../api/models'
 
@@ -23,48 +23,6 @@ function getHoldingCurrency(holding: InvestmentHoldingSnapshot): string {
     holding.security.unofficialCurrencyCode ??
     'USD'
   )
-}
-
-function formatDecimal(
-  value: string | null,
-  maximumFractionDigits = 6,
-): string {
-  if (value === null) return '--'
-  const numericValue = Number(value)
-  if (!Number.isFinite(numericValue)) return value
-
-  return new Intl.NumberFormat('en-US', {
-    maximumFractionDigits,
-  }).format(numericValue)
-}
-
-function formatMoneyValue(
-  value: string | null,
-  currency: string,
-  balancesHidden: boolean,
-  appendCurrency = false,
-): string {
-  if (balancesHidden) return HIDDEN_BALANCE_PLACEHOLDER
-  if (value === null) return '--'
-  const numericValue = Number(value)
-  if (!Number.isFinite(numericValue)) return value
-
-  if (appendCurrency && currency.length === 3) {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      currencyDisplay: 'code',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(numericValue)
-  }
-
-  return formatMoneyNumber({
-    value: numericValue,
-    currency,
-    decimals: 2,
-    appendCurrency: currency.length !== 3,
-  })
 }
 
 function getSecurityLabel(holding: InvestmentHoldingSnapshot): string {
@@ -108,12 +66,8 @@ export function InvestmentHoldingsTable({
   balancesHidden,
   accountCurrency,
 }: InvestmentHoldingsTableProps) {
-  const isMobile = useIsMobile()
-  const supportsHover = useMediaQuery(
-    '(hover: hover) and (pointer: fine)',
-    false,
-    { getInitialValueInEffect: false },
-  )
+  const isMobile = useDataListLayout()
+  const supportsHover = useSupportsHover()
 
   if (holdings.length === 0) {
     return (
@@ -144,15 +98,16 @@ export function InvestmentHoldingsTable({
                   </Text>
                   <Text c="dimmed" size="xs">
                     {getTickerLabel(holding)} ·{' '}
-                    {formatDecimal(holding.quantity)}
+                    {formatInvestmentQuantity(holding.quantity)}
                   </Text>
                   <Text c="dimmed" size="xs">
-                    {formatMoneyValue(
-                      holding.institutionPrice,
-                      currency,
-                      balancesHidden,
-                      showNormalized,
-                    )}
+                    {balancesHidden
+                      ? HIDDEN_BALANCE_PLACEHOLDER
+                      : formatInvestmentQuote({
+                          value: holding.institutionPrice,
+                          currency,
+                          showCurrencyCode: showNormalized,
+                        })}
                   </Text>
                   {quoteAsOf && (
                     <Text c="dimmed" size="xs">
@@ -162,20 +117,22 @@ export function InvestmentHoldingsTable({
                 </Box>
                 <Box ta="right" style={{ flexShrink: 0 }}>
                   <Text fw={600} size="sm">
-                    {formatMoneyValue(
-                      holding.institutionValue,
-                      currency,
-                      balancesHidden,
-                      showNormalized,
-                    )}
+                    {balancesHidden
+                      ? HIDDEN_BALANCE_PLACEHOLDER
+                      : formatInvestmentValue({
+                          value: holding.institutionValue,
+                          currency,
+                          showCurrencyCode: showNormalized,
+                        })}
                   </Text>
                   {showNormalized && normalizedCurrency && (
                     <Text c="dimmed" size="xs">
-                      {formatMoneyValue(
-                        holding.accountValue,
-                        normalizedCurrency,
-                        balancesHidden,
-                      )}
+                      {balancesHidden
+                        ? HIDDEN_BALANCE_PLACEHOLDER
+                        : formatInvestmentValue({
+                            value: holding.accountValue,
+                            currency: normalizedCurrency,
+                          })}
                     </Text>
                   )}
                 </Box>
@@ -232,23 +189,25 @@ export function InvestmentHoldingsTable({
                 </Table.Td>
                 <Table.Td>{getTickerLabel(holding)}</Table.Td>
                 <Table.Td ta="right">
-                  {formatDecimal(holding.quantity)}
+                  {formatInvestmentQuantity(holding.quantity)}
                 </Table.Td>
                 <Table.Td ta="right">
-                  {formatMoneyValue(
-                    holding.institutionPrice,
-                    currency,
-                    balancesHidden,
-                    showNormalized,
-                  )}
+                  {balancesHidden
+                    ? HIDDEN_BALANCE_PLACEHOLDER
+                    : formatInvestmentQuote({
+                        value: holding.institutionPrice,
+                        currency,
+                        showCurrencyCode: showNormalized,
+                      })}
                 </Table.Td>
                 <Table.Td ta="right">
-                  {formatMoneyValue(
-                    holding.institutionValue,
-                    currency,
-                    balancesHidden,
-                    showNormalized,
-                  )}
+                  {balancesHidden
+                    ? HIDDEN_BALANCE_PLACEHOLDER
+                    : formatInvestmentValue({
+                        value: holding.institutionValue,
+                        currency,
+                        showCurrencyCode: showNormalized,
+                      })}
                 </Table.Td>
               </Table.Tr>
             )

@@ -14,12 +14,12 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { DatePicker } from '@mantine/dates'
-import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Check, Info, Pencil, RotateCcw, Trash2, X } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSupportsHover } from '../lib/responsive'
 import {
   useCategoryControllerFindAll,
   useTransactionControllerUpdate,
@@ -115,10 +115,7 @@ function formatOriginalCurrencyAmount(transaction: Transaction) {
 function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
   const [opened, setOpened] = useState(false)
   const closeTimeoutRef = useRef<number | null>(null)
-  const supportsHover = useMediaQuery(
-    '(hover: hover) and (pointer: fine)',
-    false,
-  )
+  const supportsHover = useSupportsHover()
   const details = getMetadataDetails(transaction)
   const rawDescription = formatMetadataValue(transaction.originalDescription)
   const providerName = formatMetadataValue(transaction.providerTransactionName)
@@ -443,10 +440,7 @@ function ProviderCategoryHintPopover({
 }) {
   const [opened, setOpened] = useState(false)
   const closeTimeoutRef = useRef<number | null>(null)
-  const supportsHover = useMediaQuery(
-    '(hover: hover) and (pointer: fine)',
-    false,
-  )
+  const supportsHover = useSupportsHover()
   const providerCategoryHint = getProviderCategoryHint(transaction)
   const displayLabel = formatMetadataValue(providerCategoryHint?.displayLabel)
   const confidence = formatMetadataValue(providerCategoryHint?.confidenceLevel)
@@ -660,10 +654,7 @@ export function TransactionsTable({
   readOnly = false,
 }: TransactionsTableProps) {
   const queryClient = useQueryClient()
-  const supportsHover = useMediaQuery(
-    '(hover: hover) and (pointer: fine)',
-    false,
-  )
+  const supportsHover = useSupportsHover()
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
   >(null)

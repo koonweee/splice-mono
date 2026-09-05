@@ -35,7 +35,8 @@ import {
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
 import { CategorySelect } from '../categories/CategorySelect'
-import { usePressFeedback } from '../Pressable'
+import { DataState } from '../DataState'
+import { InteractiveRow } from '../InteractiveRow'
 import {
   formatCounterpartyLabel,
   getMerchantDisplay,
@@ -44,7 +45,7 @@ import {
 import styles from './TransactionsMobileList.module.css'
 import statusBadgeStyles from './TransactionStatusBadge.module.css'
 import type { CategorySelectOption } from '../categories/CategorySelect'
-import type { ReactNode, UIEvent } from 'react'
+import type { UIEvent } from 'react'
 import type { Category, Transaction } from '../../api/models'
 
 type TransactionsMobileListProps = {
@@ -52,6 +53,8 @@ type TransactionsMobileListProps = {
   isError: boolean
   isFetchingNextPage?: boolean
   isLoading: boolean
+  isFetching?: boolean
+  onRetry?: () => void
   onScrollNearBottom?: () => void
   totalRows: number
   variant?: 'default' | 'drilldown'
@@ -128,35 +131,6 @@ function groupTransactionsByDate(data: Array<Transaction>) {
   return Array.from(groups.entries())
 }
 
-function TransactionRow({
-  children,
-  className,
-  label,
-  onOpen,
-}: {
-  children: ReactNode
-  className: string
-  label: string
-  onOpen: () => void
-}) {
-  const { pressProps } = usePressFeedback<HTMLDivElement>()
-
-  return (
-    <div {...pressProps} className={className} onClick={onOpen}>
-      <button
-        aria-label={label}
-        className={styles.rowAction}
-        onClick={(event) => {
-          event.stopPropagation()
-          onOpen()
-        }}
-        type="button"
-      />
-      {children}
-    </div>
-  )
-}
-
 function invalidateTransactionQueries(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
@@ -191,6 +165,8 @@ export function TransactionsMobileList({
   isError,
   isFetchingNextPage = false,
   isLoading,
+  isFetching = false,
+  onRetry,
   onScrollNearBottom,
   totalRows,
   variant = 'default',
@@ -296,32 +272,17 @@ export function TransactionsMobileList({
     onToggleTransactionSelection?.(transaction.id)
   }
 
-  if (isLoading) {
-    return (
-      <div className={styles.footer}>
-        <Loader size="sm" />
-      </div>
-    )
-  }
-
-  if (isError) {
-    return (
-      <Text c="red" size="sm">
-        Error loading transactions
-      </Text>
-    )
-  }
-
-  if (data.length === 0) {
-    return (
-      <Text c="dimmed" size="sm">
-        No transactions found.
-      </Text>
-    )
-  }
-
   return (
-    <>
+    <DataState
+      hasData={data.length > 0}
+      isLoading={isLoading}
+      isError={isError}
+      isFetching={isFetching}
+      loadingMessage="Loading transactions…"
+      errorMessage="Error loading transactions"
+      emptyMessage="No transactions found."
+      onRetry={onRetry}
+    >
       <div
         aria-label={`Transactions list, ${totalRows.toLocaleString()} total`}
         className={`${styles.list} ${
@@ -345,7 +306,7 @@ export function TransactionsMobileList({
               const amount = transaction.convertedAmount ?? transaction.amount
 
               return (
-                <TransactionRow
+                <InteractiveRow
                   className={`${styles.row} ${
                     bulkModeEnabled &&
                     selectedTransactionIds.has(transaction.id)
@@ -353,8 +314,8 @@ export function TransactionsMobileList({
                       : ''
                   }`}
                   key={transaction.id}
-                  label={`Open transaction details for ${merchantDisplay.primary}`}
-                  onOpen={() => setActiveTransactionId(transaction.id)}
+                  actionLabel={`Open transaction details for ${merchantDisplay.primary}`}
+                  onActivate={() => setActiveTransactionId(transaction.id)}
                 >
                   <div className={styles.rowIdentity}>
                     {bulkModeEnabled && !isManual && (
@@ -439,7 +400,7 @@ export function TransactionsMobileList({
                       </div>
                     )}
                   </div>
-                </TransactionRow>
+                </InteractiveRow>
               )
             })}
           </section>
@@ -660,7 +621,7 @@ export function TransactionsMobileList({
           </Stack>
         )}
       </Drawer>
-    </>
+    </DataState>
   )
 }
 

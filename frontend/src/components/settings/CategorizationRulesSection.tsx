@@ -18,7 +18,6 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Archive,
@@ -48,6 +47,9 @@ import {
   useCategorizationRuleRecommendationControllerRegenerate,
   useCategoryControllerFindManagement,
 } from '../../api/clients/spliceAPI'
+import { formatDateTime } from '../../lib/format'
+import { useCompactLayout } from '../../lib/responsive'
+import { DataState } from '../DataState'
 import { CategorySelect } from '../categories/CategorySelect'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
@@ -259,15 +261,12 @@ function formatRecommendationRunDate(
     return null
   }
 
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+  return formatDateTime(value)
 }
 
 export function CategorizationRulesSection() {
   const queryClient = useQueryClient()
-  const isMobile = useMediaQuery('(max-width: 48em)')
+  const isMobile = useCompactLayout()
   const [archivedMode, setArchivedMode] = useState(false)
   const [search, setSearch] = useState('')
   const [panel, setPanel] = useState<PanelState>(null)
@@ -301,6 +300,8 @@ export function CategorizationRulesSection() {
     data: rules = [],
     isLoading,
     isError,
+    isFetching,
+    refetch,
   } = useCategorizationRuleControllerFindAll({ archived: archivedMode })
   const { data: activeCategories = [] } = useCategoryControllerFindManagement({
     archived: false,
@@ -942,21 +943,17 @@ export function CategorizationRulesSection() {
         />
       </Group>
 
-      {isLoading && (
-        <Group justify="center" py="lg">
-          <Loader />
-        </Group>
-      )}
-
-      {isError && (
-        <Alert color="red" title="Error">
-          Failed to load categorization rules
-        </Alert>
-      )}
-
-      {!isLoading &&
-        !isError &&
-        (isMobile ? (
+      <DataState
+        hasData={rules.length > 0}
+        isLoading={isLoading}
+        isError={isError}
+        isFetching={isFetching}
+        onRetry={() => void refetch()}
+        loadingMessage="Loading categorization rules…"
+        errorMessage="Failed to load categorization rules"
+        emptyMessage="No categorization rules match the current filters."
+      >
+        {isMobile ? (
           <MobileTableList
             ariaLabel={`Categorization rules list, ${filteredRules.length.toLocaleString()} total`}
             data={filteredRules}
@@ -966,7 +963,8 @@ export function CategorizationRulesSection() {
           />
         ) : (
           <MantineReactTable table={table} />
-        ))}
+        )}
+      </DataState>
 
       <EditorModal
         opened={panel !== null}

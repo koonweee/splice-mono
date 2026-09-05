@@ -116,6 +116,33 @@ describe('CategoryScopeInput', () => {
       includeUncategorized: false,
     })
   })
+
+  it('labels archived options while preserving their selection behavior', () => {
+    const onChange = vi.fn()
+    renderInput({
+      value: {
+        mode: 'selected',
+        categoryIds: [],
+        includeUncategorized: false,
+      },
+      onChange,
+    })
+
+    const input = screen.getByRole('textbox', {
+      name: 'Excluded categories categories',
+    })
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: 'grooming' } })
+    fireEvent.click(
+      screen.getByRole('option', { name: /Grooming.*Pets.*Archived/ }),
+    )
+
+    expect(onChange).toHaveBeenCalledWith({
+      mode: 'selected',
+      categoryIds: [archivedCategory.id],
+      includeUncategorized: false,
+    })
+  })
 })
 
 function renderInput({

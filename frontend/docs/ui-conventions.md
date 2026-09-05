@@ -35,7 +35,23 @@ does not enforce these policies. Preserve its content/body classes when
 customizing styles. A details viewer or confirmation need not be an editor.
 
 Current adopters include account editors, manual transactions, categories,
-analysis rules, categorization rules, and recurring transactions.
+analysis rules, categorization rules, recurring transactions, holdings, and CSV
+backfill.
+
+## Saving and confirmation
+
+Keep drafts open on failure. Disable pending actions and guard duplicate submits;
+close only after success. Form errors belong beside the draft, using
+[getApiErrorMessage](../src/lib/api-errors.ts) with an actionable fallback.
+For row actions use [mutation feedback](../src/lib/mutation-feedback.ts):
+`notifyMutationError({ title, error, fallback })` and
+`notifyMutationSuccess({ title, message })`.
+
+Use [ConfirmActionDialog](../src/components/ConfirmActionDialog.tsx) for destructive
+actions. Supply `title`, `targetLabel`, `consequence`, `confirmLabel`, `onConfirm`,
+`onClose`, `opened`, `isPending`, and `error`. It focuses Cancel and blocks dismissal
+while pending. The caller owns the mutation, clears old errors on reopening/retry,
+and closes after success. Do not put a mutation in the trigger that opens it.
 
 ## Settings sections
 
@@ -48,6 +64,11 @@ analysis rules, categorization rules, and recurring transactions.
 These are used across categories and rule sections; recurring transactions also
 use the toolbar and status badge.
 
+[LifecycleBadge](../src/components/LifecycleBadge.tsx) is the underlying status
+primitive, also used in category pickers. It accepts `status` and `size`: Active
+uses success, Paused warning, Archived/Ended neutral. `SettingsStatusBadge` is a
+compatibility wrapper. Domain-specific transaction/provider statuses stay separate.
+
 ## Dates and dropdowns
 
 - Use [DateRangeControl](../src/components/DateRangeControl.tsx) for a standalone
@@ -57,6 +78,10 @@ use the toolbar and status badge.
   owns applying, clearing, and closing the surrounding filters.
 - Use [formatDateRangeLabel](../src/lib/date-range.ts) everywhere a range is
   summarized. It retains the year and handles single-day, open, and empty ranges.
+- Use [formatCalendarDate](../src/lib/format.ts) for `YYYY-MM-DD` display and
+  `formatDateTime` for timestamps. The shared policy is `en-US`, device-local time
+  for instants, and no timezone shift for calendar dates. Preserve provider date
+  adapters and keep display formatting separate from API date serialization.
 - For dropdowns, use [mobile-combobox helpers](../src/lib/mobile-combobox.ts):
   `getViewportAwareComboboxProps` normally, and
   `getViewportAwareOverlayComboboxProps` within an overlay. Pair with
@@ -85,9 +110,42 @@ Prefer these existing building blocks alongside the new editor/settings pieces:
 | [API error messages](../src/lib/api-errors.ts)                                               | Extract server messages with a caller-supplied fallback. Callers still choose inline or notification presentation.                               |
 
 Use native buttons/links, label icon-only actions, and avoid nesting interactive
-controls. Distinguish narrow layouts from coarse-pointer/hover capability.
-Current `36em`, `48em`, and `50em` thresholds serve different roles; breakpoint
-consolidation remains an [audit recommendation](ui-standardization-audit.md).
+controls. Use [InteractiveRow](../src/components/InteractiveRow.tsx) for a row with
+a primary action and independent secondary controls: supply `actionLabel`,
+`onActivate`, and content. It owns the native primary button, focus, and press
+feedback; secondary buttons and selection controls remain siblings.
+
+## Data states and financial display
+
+Use [DataState](../src/components/DataState.tsx) around fetched content. Set
+`hasData`, loading/error/fetching flags, messages, and `onRetry`. Cached children
+remain visible after a failed refresh. Keep `PageHeader` outside the state
+boundary. `MobileTableList` also exposes retry/fetching props; wire them to the
+query rather than rendering a nonfunctional Retry button.
+
+For provider decimal strings in major units, use
+[investment formatters](../src/lib/investment-format.ts): `formatInvestmentQuote`
+preserves up to four decimals; `formatInvestmentValue` uses currency precision
+(explicit fractional-fee opt-in); `formatInvestmentQuantity` keeps share precision
+separate. Callers retain balance masking and currency selection. Cash continues
+through `formatMoneyWithSign`.
+
+## Responsive rules
+
+[media-queries.ts](../src/lib/media-queries.ts) is the source for both
+[React hooks](../src/lib/responsive.ts) and CSS. Use named CSS conditions such as
+`@media (--compact-layout)`; Vite expands them to native media queries.
+
+| Hook / CSS condition                       | Purpose                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------ |
+| `usePhoneLayout` / `--phone-layout`        | Up to `36em`: fullscreen editors and phone toolbars.                     |
+| `useCompactLayout` / `--compact-layout`    | Up to `48em`: page controls, Settings, transaction lists and drilldowns. |
+| `useDataListLayout` / `--data-list-layout` | Up to `50em`: denser investment data and charts.                         |
+| `useSupportsHover` / `--supports-hover`    | Fine pointer with hover; safe initial render during hydration.           |
+| `useCoarsePointer` / `--coarse-pointer`    | Touch-oriented controls, independent of screen width.                    |
+
+Keep one-off content constraints local. Use the named hooks for new callers;
+`useIsMobile` remains a compatibility alias for `useDataListLayout`.
 
 For visual changes, follow the repository's testing guidance. When browser
 validation is requested, check narrow phone, tablet portrait/landscape, and

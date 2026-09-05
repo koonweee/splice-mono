@@ -10,10 +10,11 @@ import {
   TextInput,
 } from '@mantine/core'
 import { DatePicker } from '@mantine/dates'
-import { useDisclosure, useMediaQuery } from '@mantine/hooks'
+import { useDisclosure } from '@mantine/hooks'
 import dayjs from 'dayjs'
 import { X } from 'lucide-react'
 import { useId } from 'react'
+import { useCompactLayout } from '../lib/responsive'
 import { formatDateRangeLabel } from '../lib/date-range'
 import type { DatesRangeValue } from '@mantine/dates'
 
@@ -150,7 +151,7 @@ export function DateRangeControl({
   value,
   width = 300,
 }: DateRangeControlProps) {
-  const isMobile = useMediaQuery('(max-width: 48em)')
+  const isMobile = useCompactLayout()
   const [opened, { close, toggle }] = useDisclosure(false)
   const dropdownId = useId()
   const hasValue = value[0] !== null || value[1] !== null

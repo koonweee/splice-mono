@@ -7,11 +7,11 @@ import {
   Switch,
   TextInput,
 } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import dayjs from 'dayjs'
 import { Minus, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useCompactLayout } from '../../lib/responsive'
 import {
   useRecurringManualTransactionControllerCreate,
   useTransactionControllerCreateManual,
@@ -152,7 +152,7 @@ export function ManualTransactionModal({
   transaction = null,
   onSaved,
 }: ManualTransactionModalProps) {
-  const isMobile = useMediaQuery('(max-width: 48em)')
+  const isMobile = useCompactLayout()
   const [accountId, setAccountId] = useState('')
   const [amount, setAmount] = useState<NumberInputProps['value']>('')
   const [merchantName, setMerchantName] = useState('')

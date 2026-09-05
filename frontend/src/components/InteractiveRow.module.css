@@ -1,0 +1,40 @@
+.root {
+  position: relative;
+  transition: background-color 150ms ease;
+}
+
+.root[data-interactive='true'] {
+  cursor: pointer;
+}
+
+.root[data-interactive='true'][data-pressed='true'] {
+  background: var(
+    --interactive-row-feedback-background,
+    var(--mantine-color-default-hover)
+  );
+}
+
+.action {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+@media (--supports-hover) {
+  .root[data-interactive='true']:hover {
+    background: var(
+      --interactive-row-feedback-background,
+      var(--mantine-color-default-hover)
+    );
+  }
+}

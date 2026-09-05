@@ -18,7 +18,7 @@
   background: var(--mantine-color-body);
 }
 
-@media (max-width: 36em) {
+@media (--phone-layout) {
   .content {
     display: flex;
     flex-direction: column;

@@ -22,17 +22,7 @@
   background: light-dark(var(--mantine-color-blue-0), rgba(77, 171, 247, 0.12));
 }
 
-.footer {
-  padding: 12px;
-  text-align: center;
-}
-
-.state {
-  padding: 18px 12px;
-  text-align: center;
-}
-
-@media (max-width: 48em) {
+@media (--compact-layout) {
   .list {
     overflow: visible;
     border-right: 0;

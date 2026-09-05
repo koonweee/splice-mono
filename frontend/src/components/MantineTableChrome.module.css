@@ -74,7 +74,7 @@
   padding-left: 0 !important;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (--supports-hover) {
   .table :global(.mrt-table-body-row:hover td) {
     background: light-dark(
       var(--mantine-color-gray-0),

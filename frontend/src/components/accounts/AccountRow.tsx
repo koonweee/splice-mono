@@ -1,17 +1,7 @@
-import {
-  ActionIcon,
-  Button,
-  Group,
-  Modal,
-  Stack,
-  Text,
-  TextInput,
-  Tooltip,
-} from '@mantine/core'
-import { notifications } from '@mantine/notifications'
+import { ActionIcon, Group, Text, TextInput, Tooltip } from '@mantine/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Archive, Check, Link2, Pencil, RotateCcw, X } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { SanitizedBankLinkStatus } from '../../api/models/sanitizedBankLinkStatus'
 import {
   getAccountControllerFindAllQueryKey,
@@ -21,7 +11,13 @@ import {
   useBankLinkControllerInitiateLinking,
 } from '../../api/clients/spliceAPI'
 import { axios } from '../../api/axios'
+import { getApiErrorMessage } from '../../lib/api-errors'
 import { formatAccountType, formatRelativeTime } from '../../lib/format'
+import {
+  notifyMutationError,
+  notifyMutationSuccess,
+} from '../../lib/mutation-feedback'
+import { ConfirmActionDialog } from '../ConfirmActionDialog'
 import { StatusBadge } from './StatusBadge'
 import type { Account } from '../../api/models'
 
@@ -39,7 +35,11 @@ export function AccountRow({ account }: { account: Account }) {
 
   const [isEditing, setIsEditing] = useState(false)
   const [editedName, setEditedName] = useState('')
+  const [nameError, setNameError] = useState<string | null>(null)
   const [archiveModalOpened, setArchiveModalOpened] = useState(false)
+  const [archiveError, setArchiveError] = useState<string | null>(null)
+  const nameSubmissionPending = useRef(false)
+  const archiveSubmissionPending = useRef(false)
 
   const displayName = account.customName ?? account.name ?? 'Unnamed account'
   const isLinked = !!account.bankLinkId
@@ -47,12 +47,16 @@ export function AccountRow({ account }: { account: Account }) {
   const isHoldingsValued = account.valuationMode === 'holdings'
 
   const startEditing = useCallback(() => {
+    if (nameSubmissionPending.current) return
     setEditedName(displayName)
+    setNameError(null)
     setIsEditing(true)
   }, [displayName])
 
   const cancelEditing = useCallback(() => {
+    if (nameSubmissionPending.current) return
     setIsEditing(false)
+    setNameError(null)
   }, [])
 
   const invalidateAccounts = useCallback(() => {
@@ -71,51 +75,86 @@ export function AccountRow({ account }: { account: Account }) {
   }, [queryClient])
 
   const saveName = useCallback(() => {
-    if (!editedName.trim()) return
-    setIsEditing(false)
-
-    if (isManual) {
-      updateAccount.mutate(
-        { id: account.id, data: { name: editedName } },
-        { onSuccess: invalidateAccounts },
-      )
-    } else {
-      const syncedName = account.name ?? ''
-      const customName = editedName === syncedName ? null : editedName
-      updateAccount.mutate(
-        { id: account.id, data: { customName } },
-        { onSuccess: invalidateAccounts },
-      )
+    if (nameSubmissionPending.current || updateAccount.isPending) return
+    if (!editedName.trim()) {
+      setNameError('Account name is required')
+      return
     }
+
+    nameSubmissionPending.current = true
+    setNameError(null)
+    const data = isManual
+      ? { name: editedName }
+      : { customName: editedName === (account.name ?? '') ? null : editedName }
+    updateAccount.mutate(
+      { id: account.id, data },
+      {
+        onSuccess: () => {
+          invalidateAccounts()
+          setIsEditing(false)
+        },
+        onError: (error) => {
+          setNameError(
+            getApiErrorMessage(
+              error,
+              'Unable to save the account name. Try again.',
+            ),
+          )
+        },
+        onSettled: () => {
+          nameSubmissionPending.current = false
+        },
+      },
+    )
   }, [account, editedName, isManual, updateAccount, invalidateAccounts])
 
   const resetToSyncedName = useCallback(() => {
+    if (nameSubmissionPending.current || updateAccount.isPending) return
+    nameSubmissionPending.current = true
     updateAccount.mutate(
       { id: account.id, data: { customName: null } },
-      { onSuccess: invalidateAccounts },
+      {
+        onSuccess: invalidateAccounts,
+        onError: (error) => {
+          notifyMutationError({
+            title: 'Name not reset',
+            error,
+            fallback: 'Unable to restore the synced account name. Try again.',
+          })
+        },
+        onSettled: () => {
+          nameSubmissionPending.current = false
+        },
+      },
     )
   }, [account, updateAccount, invalidateAccounts])
 
   const handleArchive = useCallback(() => {
+    if (archiveSubmissionPending.current || archiveAccount.isPending) return
+    archiveSubmissionPending.current = true
+    setArchiveError(null)
     archiveAccount.mutate(
       { id: account.id },
       {
         onSuccess: () => {
           invalidateAccounts()
           invalidateAccountBalances()
-          notifications.show({
+          notifyMutationSuccess({
             title: 'Account archived',
             message: 'The account has been hidden and its balance set to zero.',
-            color: 'green',
           })
           setArchiveModalOpened(false)
         },
-        onError: () => {
-          notifications.show({
-            title: 'Archive failed',
-            message: 'Unable to archive this account. Please try again.',
-            color: 'red',
-          })
+        onError: (error) => {
+          setArchiveError(
+            getApiErrorMessage(
+              error,
+              'Unable to archive this account. Try again.',
+            ),
+          )
+        },
+        onSettled: () => {
+          archiveSubmissionPending.current = false
         },
       },
     )
@@ -136,6 +175,7 @@ export function AccountRow({ account }: { account: Account }) {
 
   const handleFixConnection = needsFix
     ? () => {
+        if (initiateLinking.isPending) return
         const redirectUri = getPlaidRedirectUri()
         initiateLinking.mutate(
           {
@@ -148,6 +188,13 @@ export function AccountRow({ account }: { account: Account }) {
                 window.location.href = response.linkUrl
               }
             },
+            onError: (error) => {
+              notifyMutationError({
+                title: 'Connection not started',
+                error,
+                fallback: 'Unable to reconnect this account. Try again.',
+              })
+            },
           },
         )
       }
@@ -156,6 +203,7 @@ export function AccountRow({ account }: { account: Account }) {
   const handleConvertToLinked =
     isManual && !isHoldingsValued
       ? () => {
+          if (initiateLinking.isPending) return
           initiateLinking.mutate(
             {
               provider: 'plaid',
@@ -170,11 +218,11 @@ export function AccountRow({ account }: { account: Account }) {
                   window.location.href = response.linkUrl
                 }
               },
-              onError: () => {
-                notifications.show({
+              onError: (error) => {
+                notifyMutationError({
                   title: 'Link failed',
-                  message: 'Unable to start Plaid linking for this account.',
-                  color: 'red',
+                  error,
+                  fallback: 'Unable to start Plaid linking for this account.',
                 })
               },
             },
@@ -192,39 +240,53 @@ export function AccountRow({ account }: { account: Account }) {
           borderBottom: '1px solid var(--mantine-color-gray-2)',
         }}
       >
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           {isEditing ? (
-            <Group gap="xs" wrap="nowrap">
-              <TextInput
-                value={editedName}
-                onChange={(e) => setEditedName(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveName()
-                  if (e.key === 'Escape') cancelEditing()
-                }}
-                size="md"
-                autoFocus
-                style={{ flex: 1 }}
-              />
-              <ActionIcon
-                variant="subtle"
-                color="green"
-                onClick={saveName}
-                size="sm"
-                aria-label="Save account name"
-              >
-                <Check size={14} />
-              </ActionIcon>
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                onClick={cancelEditing}
-                size="sm"
-                aria-label="Cancel account name edit"
-              >
-                <X size={14} />
-              </ActionIcon>
-            </Group>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault()
+                saveName()
+              }}
+            >
+              <Group gap="xs" wrap="nowrap" align="flex-start">
+                <TextInput
+                  aria-label="Account name"
+                  value={editedName}
+                  error={nameError}
+                  disabled={updateAccount.isPending}
+                  onChange={(e) => {
+                    setEditedName(e.currentTarget.value)
+                    setNameError(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') cancelEditing()
+                  }}
+                  size="md"
+                  autoFocus
+                  style={{ flex: 1 }}
+                />
+                <ActionIcon
+                  variant="subtle"
+                  color="green"
+                  type="submit"
+                  loading={updateAccount.isPending}
+                  size="lg"
+                  aria-label="Save account name"
+                >
+                  <Check size={14} />
+                </ActionIcon>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  onClick={cancelEditing}
+                  disabled={updateAccount.isPending}
+                  size="lg"
+                  aria-label="Cancel account name edit"
+                >
+                  <X size={14} />
+                </ActionIcon>
+              </Group>
+            </form>
           ) : (
             <Group gap={6} wrap="nowrap">
               <Text fw={500}>{displayName}</Text>
@@ -232,6 +294,7 @@ export function AccountRow({ account }: { account: Account }) {
                 variant="subtle"
                 color="gray"
                 onClick={startEditing}
+                disabled={updateAccount.isPending}
                 size="sm"
                 aria-label="Edit account name"
               >
@@ -260,6 +323,7 @@ export function AccountRow({ account }: { account: Account }) {
                     variant="subtle"
                     color="gray"
                     onClick={resetToSyncedName}
+                    loading={updateAccount.isPending}
                     size="sm"
                     aria-label="Reset to synced account name"
                   >
@@ -271,7 +335,13 @@ export function AccountRow({ account }: { account: Account }) {
                 <ActionIcon
                   variant="subtle"
                   color="red"
-                  onClick={() => setArchiveModalOpened(true)}
+                  onClick={() => {
+                    setArchiveError(null)
+                    setArchiveModalOpened(true)
+                  }}
+                  disabled={
+                    updateAccount.isPending || initiateLinking.isPending
+                  }
                   size="sm"
                   aria-label="Archive account"
                 >
@@ -295,35 +365,19 @@ export function AccountRow({ account }: { account: Account }) {
           onFix={handleFixConnection}
         />
       </Group>
-      <Modal
+      <ConfirmActionDialog
         opened={archiveModalOpened}
-        onClose={() => setArchiveModalOpened(false)}
+        onClose={() => {
+          if (!archiveSubmissionPending.current) setArchiveModalOpened(false)
+        }}
         title="Archive account"
-        centered
-      >
-        <Stack>
-          <Text>
-            This will hide this account from the UI and set its current balance
-            to zero. Historical transactions and balance snapshots will be
-            preserved.
-          </Text>
-          <Group justify="flex-end">
-            <Button
-              variant="default"
-              onClick={() => setArchiveModalOpened(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              color="red"
-              onClick={handleArchive}
-              loading={archiveAccount.isPending}
-            >
-              Confirm archive
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+        targetLabel={displayName}
+        consequence="This will hide this account from the UI and set its current balance to zero. Historical transactions and balance snapshots will be preserved."
+        confirmLabel="Archive"
+        onConfirm={handleArchive}
+        isPending={archiveAccount.isPending}
+        error={archiveError}
+      />
     </>
   )
 }

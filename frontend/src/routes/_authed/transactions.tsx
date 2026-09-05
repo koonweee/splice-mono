@@ -13,7 +13,7 @@ import {
   Switch,
   Text,
 } from '@mantine/core'
-import { useClickOutside, useDisclosure, useMediaQuery } from '@mantine/hooks'
+import { useClickOutside, useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
@@ -35,6 +35,8 @@ import { formatDateRangeLabel } from '../../lib/date-range'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import { getFallbackCategoryColor } from '../../lib/category-colors'
 import { isManualTransaction } from '../../lib/manual-transactions'
+import { getApiErrorMessage } from '../../lib/api-errors'
+import { useCompactLayout } from '../../lib/responsive'
 import {
   getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
@@ -58,6 +60,8 @@ import { TransactionsMobileList } from '@/components/transactions/TransactionsMo
 import { PageHeader } from '@/components/PageHeader'
 import { ManualTransactionModal } from '@/components/transactions/ManualTransactionModal'
 import { AccountSelect } from '@/components/accounts/AccountSelect'
+import { ConfirmActionDialog } from '@/components/ConfirmActionDialog'
+import { DataState } from '@/components/DataState'
 
 const PAGE_SIZE = 50
 const CLEAR_CATEGORY_VALUE = '__clear_category__'
@@ -240,7 +244,7 @@ function TransactionsPage() {
   const search = Route.useSearch()
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
-  const isMobile = useMediaQuery('(max-width: 48em)')
+  const isMobile = useCompactLayout()
   const [filtersOpened, { close: closeFilters, toggle: toggleFilters }] =
     useDisclosure(false)
   const desktopFilterRef = useClickOutside<HTMLDivElement>(() => {
@@ -261,6 +265,9 @@ function TransactionsPage() {
   const [manualModalOpened, setManualModalOpened] = useState(false)
   const [editingManualTransaction, setEditingManualTransaction] =
     useState<Transaction | null>(null)
+  const [deletingManualTransaction, setDeletingManualTransaction] =
+    useState<Transaction | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Filter state
   const [dateRange, setDateRange] = useState<DatesRangeValue>(() => [
@@ -294,25 +301,7 @@ function TransactionsPage() {
           query.queryKey[0].includes('analysis')),
     })
   }, [queryClient])
-  const removeManualTransaction = useTransactionControllerRemoveManual({
-    mutation: {
-      onSuccess: () => {
-        invalidateTransactions()
-        notifications.show({
-          title: 'Transaction deleted',
-          message: 'The manual transaction was deleted.',
-          color: 'green',
-        })
-      },
-      onError: () => {
-        notifications.show({
-          title: 'Delete failed',
-          message: 'The manual transaction was not deleted.',
-          color: 'red',
-        })
-      },
-    },
-  })
+  const removeManualTransaction = useTransactionControllerRemoveManual()
 
   const accountOptions = useMemo(
     () =>
@@ -391,6 +380,7 @@ function TransactionsPage() {
     isFetchingNextPage,
     isLoading,
     isError,
+    refetch,
   } = useInfiniteQuery({
     queryKey: [
       ...getTransactionControllerFindAllQueryKey(queryParams),
@@ -467,15 +457,44 @@ function TransactionsPage() {
   }
 
   const deleteManualTransaction = (transaction: Transaction) => {
-    const confirmed = window.confirm(
-      `Delete "${transaction.merchantName ?? 'this transaction'}"?`,
-    )
+    if (
+      !isManualTransaction(transaction) ||
+      removeManualTransaction.isPending
+    ) {
+      return
+    }
+    setDeleteError(null)
+    setDeletingManualTransaction(transaction)
+  }
 
-    if (!confirmed) {
+  const confirmDeleteManualTransaction = () => {
+    if (!deletingManualTransaction || removeManualTransaction.isPending) {
       return
     }
 
-    removeManualTransaction.mutate({ id: transaction.id })
+    setDeleteError(null)
+    removeManualTransaction.mutate(
+      { id: deletingManualTransaction.id },
+      {
+        onSuccess: () => {
+          setDeletingManualTransaction(null)
+          invalidateTransactions()
+          notifications.show({
+            title: 'Transaction deleted',
+            message: 'The manual transaction was deleted.',
+            color: 'green',
+          })
+        },
+        onError: (error) => {
+          setDeleteError(
+            getApiErrorMessage(
+              error,
+              'The manual transaction was not deleted.',
+            ),
+          )
+        },
+      },
+    )
   }
 
   const selectedLoadedCount = loadedTransactionIds.filter((id) =>
@@ -673,6 +692,23 @@ function TransactionsPage() {
         onClose={closeManualTransactionModal}
         onSaved={invalidateTransactions}
       />
+      <ConfirmActionDialog
+        opened={deletingManualTransaction !== null}
+        title="Delete transaction"
+        targetLabel={
+          deletingManualTransaction?.merchantName ?? 'Manual transaction'
+        }
+        consequence="This removes the manual transaction from your history and analysis. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteManualTransaction}
+        onClose={() => {
+          if (removeManualTransaction.isPending) return
+          setDeletingManualTransaction(null)
+          setDeleteError(null)
+        }}
+        isPending={removeManualTransaction.isPending}
+        error={deleteError}
+      />
 
       <Group
         mb={isMobile ? 'xs' : 'md'}
@@ -802,6 +838,8 @@ function TransactionsPage() {
           totalRows={totalRows}
           isLoading={isLoading}
           isError={isError}
+          isFetching={isFetching}
+          onRetry={() => void refetch()}
           isFetchingNextPage={isFetchingNextPage}
           onScrollNearBottom={fetchMoreOnScroll}
           bulkModeEnabled={bulkModeEnabled}
@@ -811,31 +849,42 @@ function TransactionsPage() {
           onDeleteManualTransaction={deleteManualTransaction}
         />
       ) : (
-        <TransactionsTable
-          data={flatData}
-          totalRows={totalRows}
+        <DataState
+          hasData={flatData.length > 0}
           isLoading={isLoading}
           isError={isError}
-          isFetchingNextPage={isFetchingNextPage}
-          enableVirtualization
-          onScrollNearBottom={fetchMoreOnScroll}
-          manualSorting
-          sorting={sorting}
-          onSortingChange={setSorting}
-          bulkModeEnabled={bulkModeEnabled}
-          selectedTransactionIds={selectedTransactionIds}
-          onToggleTransactionSelection={toggleTransactionSelection}
-          onToggleLoadedSelection={toggleLoadedSelection}
-          onEditManualTransaction={openEditManualTransaction}
-          onDeleteManualTransaction={deleteManualTransaction}
-          mantinePaperProps={{
-            style: { display: 'flex', flexDirection: 'column', flex: 1 },
-          }}
-          mantineTableContainerProps={{
-            ref: tableContainerRef,
-            style: { flex: 1, overflow: 'auto' },
-          }}
-        />
+          isFetching={isFetching}
+          loadingMessage="Loading transactions…"
+          errorMessage="Error loading transactions"
+          emptyMessage="No transactions found."
+          onRetry={() => void refetch()}
+        >
+          <TransactionsTable
+            data={flatData}
+            totalRows={totalRows}
+            isLoading={false}
+            isError={false}
+            isFetchingNextPage={isFetchingNextPage}
+            enableVirtualization
+            onScrollNearBottom={fetchMoreOnScroll}
+            manualSorting
+            sorting={sorting}
+            onSortingChange={setSorting}
+            bulkModeEnabled={bulkModeEnabled}
+            selectedTransactionIds={selectedTransactionIds}
+            onToggleTransactionSelection={toggleTransactionSelection}
+            onToggleLoadedSelection={toggleLoadedSelection}
+            onEditManualTransaction={openEditManualTransaction}
+            onDeleteManualTransaction={deleteManualTransaction}
+            mantinePaperProps={{
+              style: { display: 'flex', flexDirection: 'column', flex: 1 },
+            }}
+            mantineTableContainerProps={{
+              ref: tableContainerRef,
+              style: { flex: 1, overflow: 'auto' },
+            }}
+          />
+        </DataState>
       )}
     </Flex>
   )

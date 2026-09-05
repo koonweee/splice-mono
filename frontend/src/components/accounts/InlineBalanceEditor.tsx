@@ -1,19 +1,16 @@
 import { ActionIcon, Group, NumberInput, Tooltip } from '@mantine/core'
 import { useForm } from '@mantine/form'
-import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, X } from 'lucide-react'
+import { useCoarsePointer } from '../../lib/responsive'
 import {
   getAccountControllerFindAllQueryKey,
   getBalanceQueryControllerGetAllBalancesQueryKey,
   getBalanceQueryControllerGetBalancesQueryKey,
   useAccountControllerUpdateBalance,
 } from '../../api/clients/spliceAPI'
-import {
-  createMoneyWithSign,
-  getSignedAmount,
-} from '../../lib/balance-utils'
+import { createMoneyWithSign, getSignedAmount } from '../../lib/balance-utils'
 import { getDecimalPlaces } from '../../lib/format'
 import type { Account, MoneyWithSign } from '../../api/models'
 
@@ -32,7 +29,7 @@ export function InlineBalanceEditor({
 }: InlineBalanceEditorProps) {
   const queryClient = useQueryClient()
   const updateBalance = useAccountControllerUpdateBalance()
-  const isTouch = useMediaQuery('(pointer: coarse)')
+  const isTouch = useCoarsePointer()
   const currency = balance.money.currency || 'USD'
   const form = useForm({
     initialValues: {

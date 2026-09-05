@@ -1,5 +1,5 @@
 import { Modal } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
+import { usePhoneLayout } from '../../lib/responsive'
 import styles from './EditorModal.module.css'
 import type { ModalProps } from '@mantine/core'
 
@@ -10,7 +10,7 @@ export function EditorModal({
   closeButtonProps,
   ...props
 }: ModalProps) {
-  const isPhone = useMediaQuery('(max-width: 36em)')
+  const isPhone = usePhoneLayout()
 
   return (
     <Modal

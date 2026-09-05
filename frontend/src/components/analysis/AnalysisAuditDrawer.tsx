@@ -11,9 +11,9 @@ import {
   Stack,
   Text,
 } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import { ClipboardList } from 'lucide-react'
 import { useMemo } from 'react'
+import { useCompactLayout } from '../../lib/responsive'
 import {
   formatCategoryName,
   formatDateTime,
@@ -169,7 +169,7 @@ export function AnalysisAuditDrawer({
   endDate,
   auditQuery,
 }: AnalysisAuditDrawerProps) {
-  const isMobile = useMediaQuery('(max-width: 48em)')
+  const isMobile = useCompactLayout()
   const isLoading = Boolean(auditQuery?.isPending ?? auditQuery?.isLoading)
   const isError = Boolean(auditQuery?.isError)
   const rows = auditQuery?.data?.rows ?? []

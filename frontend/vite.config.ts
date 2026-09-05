@@ -5,11 +5,26 @@ import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
+import { expandMediaQuery } from './src/lib/media-queries'
 
 const isTest = process.env.VITEST === 'true'
 const disableDevtools = process.env.VITE_DISABLE_DEVTOOLS === 'true'
 
 const config = defineConfig({
+  css: {
+    postcss: {
+      plugins: [
+        {
+          postcssPlugin: 'splice-responsive-media',
+          AtRule: {
+            media(rule) {
+              rule.params = expandMediaQuery(rule.params)
+            },
+          },
+        },
+      ],
+    },
+  },
   plugins: [
     // Skip devtools, nitro, and tanstackStart in test mode to avoid hanging processes
     ...(!isTest && !disableDevtools ? [devtools()] : []),
