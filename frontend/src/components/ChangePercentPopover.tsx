@@ -1,6 +1,6 @@
 import { Popover, Text } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import { useState } from 'react'
+import { useSupportsHover } from '../lib/responsive'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
   formatMoneyWithSign,
@@ -32,11 +32,7 @@ export function ChangePercentPopover({
   testId?: string
 }) {
   const [opened, setOpened] = useState(false)
-  const supportsHover = useMediaQuery(
-    '(hover: hover) and (pointer: fine)',
-    false,
-    { getInitialValueInEffect: false },
-  )
+  const supportsHover = useSupportsHover()
   const percent = formatPercent(changePercent)
 
   if (!percent) return null

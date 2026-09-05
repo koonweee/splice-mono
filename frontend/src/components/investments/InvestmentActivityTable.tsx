@@ -1,10 +1,15 @@
 import { Box, Group, ScrollArea, Table, Text } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
+  formatCalendarDate,
   formatMoneyWithSign,
 } from '../../lib/format'
-import { useIsMobile } from '../../lib/hooks'
+import {
+  formatInvestmentQuantity,
+  formatInvestmentQuote,
+  formatInvestmentValue,
+} from '../../lib/investment-format'
+import { useDataListLayout, useSupportsHover } from '../../lib/responsive'
 import styles from './InvestmentHoldingsTable.module.css'
 import type { InvestmentActivity } from '../../api/models'
 
@@ -14,23 +19,23 @@ interface InvestmentActivityTableProps {
   total?: number
 }
 
-function formatDecimal(
-  value: string | null,
-  maximumFractionDigits = 6,
-): string {
-  if (value === null) return '--'
-  const numericValue = Number(value)
-  if (!Number.isFinite(numericValue)) return value
-
-  return new Intl.NumberFormat('en-US', {
-    maximumFractionDigits,
-  }).format(numericValue)
-}
-
 function formatSubtype(activity: InvestmentActivity): string {
-  return [activity.investmentType, activity.investmentSubtype]
-    .filter(Boolean)
-    .join(' / ')
+  const type = activity.investmentType.trim()
+  const subtype = activity.investmentSubtype.trim()
+  const labels =
+    subtype && (type === 'cash' || subtype === type)
+      ? [subtype]
+      : [type, subtype]
+
+  return (
+    labels
+      .filter((label): label is string => !!label)
+      .map((label) => {
+        const words = label.replace(/[_-]+/g, ' ')
+        return words.charAt(0).toUpperCase() + words.slice(1)
+      })
+      .join(' · ') || 'Activity'
+  )
 }
 
 function getSecurityLabel(activity: InvestmentActivity): string {
@@ -55,12 +60,8 @@ export function InvestmentActivityTable({
   balancesHidden,
   total = activity.length,
 }: InvestmentActivityTableProps) {
-  const isMobile = useIsMobile()
-  const supportsHover = useMediaQuery(
-    '(hover: hover) and (pointer: fine)',
-    false,
-    { getInitialValueInEffect: false },
-  )
+  const isMobile = useDataListLayout()
+  const supportsHover = useSupportsHover()
 
   if (activity.length === 0) {
     return (
@@ -83,10 +84,14 @@ export function InvestmentActivityTable({
                   {getSecurityLabel(row)}
                 </Text>
                 <Text c="dimmed" size="xs">
-                  {row.activityDate} · {formatSubtype(row)}
+                  {formatCalendarDate(row.activityDate)} · {formatSubtype(row)}
                 </Text>
                 <Text c="dimmed" size="xs">
-                  {formatDecimal(row.quantity)} @ {formatDecimal(row.price, 4)}
+                  {formatInvestmentQuantity(row.quantity)} @{' '}
+                  {formatInvestmentQuote({
+                    value: row.price,
+                    currency: row.amount.money.currency,
+                  })}
                 </Text>
               </Box>
               <Text fw={600} size="sm" ta="right" style={{ flexShrink: 0 }}>
@@ -121,16 +126,29 @@ export function InvestmentActivityTable({
         <Table.Tbody>
           {activity.map((row) => (
             <Table.Tr key={row.id}>
-              <Table.Td>{row.activityDate}</Table.Td>
+              <Table.Td>{formatCalendarDate(row.activityDate)}</Table.Td>
               <Table.Td className={styles.securityCell}>
                 <Text size="sm" truncate>
                   {getSecurityLabel(row)}
                 </Text>
               </Table.Td>
               <Table.Td>{formatSubtype(row)}</Table.Td>
-              <Table.Td ta="right">{formatDecimal(row.quantity)}</Table.Td>
-              <Table.Td ta="right">{formatDecimal(row.price, 4)}</Table.Td>
-              <Table.Td ta="right">{formatDecimal(row.fees, 4)}</Table.Td>
+              <Table.Td ta="right">
+                {formatInvestmentQuantity(row.quantity)}
+              </Table.Td>
+              <Table.Td ta="right">
+                {formatInvestmentQuote({
+                  value: row.price,
+                  currency: row.amount.money.currency,
+                })}
+              </Table.Td>
+              <Table.Td ta="right">
+                {formatInvestmentValue({
+                  value: row.fees,
+                  currency: row.amount.money.currency,
+                  preserveFractionalPrecision: true,
+                })}
+              </Table.Td>
               <Table.Td ta="right">
                 {formatCashImpact(row, balancesHidden)}
               </Table.Td>

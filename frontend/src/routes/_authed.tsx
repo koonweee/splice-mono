@@ -25,6 +25,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useEffect } from 'react'
+import { PrivateSessionBoundary } from '../components/PrivateSessionBoundary'
 import { useLogout } from '../lib/auth'
 import { isConfirmedLoggedOutError } from '../lib/session-refresh'
 import { sessionQueryOptions, useSession } from '../lib/session'
@@ -33,12 +34,13 @@ import styles from './_authed.module.css'
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: async ({ location, context }) => {
-    // Skip auth check during SSR - cookies will authenticate API requests
-    // The client will handle redirects after hydration if needed
-    if (typeof window === 'undefined') {
-      return
-    }
-
+    if (context.sessionOutcome === 'anonymous')
+      throw redirect({
+        to: '/',
+        search: { login: true, redirect: location.href },
+      })
+    if (context.sessionOutcome === 'unavailable')
+      throw new Error('Session is temporarily unavailable. Please retry.')
     await requireAuthedSession({
       location,
       queryClient: context.queryClient,
@@ -66,16 +68,24 @@ export async function requireAuthedSession({
     }
 
     throw redirect({
-        to: '/',
-        search: {
-          login: true,
-          redirect: location.href ?? location.pathname,
-        },
-      })
+      to: '/',
+      search: {
+        login: true,
+        redirect: location.href ?? location.pathname,
+      },
+    })
   }
 }
 
 function AuthedLayout() {
+  return (
+    <PrivateSessionBoundary>
+      <AuthenticatedLayoutContent />
+    </PrivateSessionBoundary>
+  )
+}
+
+function AuthenticatedLayoutContent() {
   const [opened, { toggle }] = useDisclosure()
   const location = useLocation()
   const logoutMutation = useLogout()
@@ -113,13 +123,21 @@ function AuthedLayout() {
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
           <Group>
-            <Burger opened={opened} onClick={toggle} size="sm" />
+            <Burger
+              aria-label={opened ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={opened}
+              aria-controls="main-navigation"
+              opened={opened}
+              onClick={toggle}
+              size="sm"
+            />
             <Text fw={700} size="lg">
               Splice
             </Text>
           </Group>
           <Tooltip label="Logout">
             <ActionIcon
+              aria-label="Log out"
               variant="subtle"
               color="gray"
               onClick={handleLogout}
@@ -131,7 +149,7 @@ function AuthedLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
+      <AppShell.Navbar p="md" id="main-navigation">
         <Stack gap="xs">
           {navItems.map((item) => (
             <NavLink

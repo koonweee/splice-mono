@@ -135,6 +135,20 @@ describe('InvestmentHoldingsTable', () => {
     expect(screen.getAllByText('****')).toHaveLength(2)
   })
 
+  it('preserves fractional quotes while rounding holding values to currency precision', () => {
+    renderTable({
+      holdings: [
+        createHolding({
+          institutionPrice: '120.1234',
+          institutionValue: '1217.345678',
+        }),
+      ],
+    })
+
+    expect(screen.getByText('$120.1234')).toBeTruthy()
+    expect(screen.getByText('$1,217.35')).toBeTruthy()
+  })
+
   it('renders an empty state', () => {
     renderTable({ holdings: [] })
 
@@ -257,7 +271,7 @@ describe('InvestmentHoldingsTable', () => {
       holdings: [
         createHolding({
           quantity: '200',
-          institutionPrice: '7.05',
+          institutionPrice: '7.0512',
           institutionValue: '1410',
           isoCurrencyCode: 'SGD',
           accountCurrency: 'USD',
@@ -271,6 +285,7 @@ describe('InvestmentHoldingsTable', () => {
       screen.getByLabelText('Investment holdings list, 1 total'),
     ).toBeTruthy()
     expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.getByText(/SGD\s+7\.0512/)).toBeTruthy()
     expect(screen.getByText(/SGD\s+1,410\.00/)).toBeTruthy()
     expect(screen.getByText('$1,099.80')).toBeTruthy()
   })

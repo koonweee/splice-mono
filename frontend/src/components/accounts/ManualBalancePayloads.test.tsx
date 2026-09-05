@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountType, MoneyWithSignSign } from '../../api/models'
 import { AddAccountModal } from './AddAccountModal'
 import { InlineBalanceEditor } from './InlineBalanceEditor'
+import type { Query, QueryFilters } from '@tanstack/react-query'
 import type * as Mantine from '@mantine/core'
 import type { Account } from '../../api/models'
 import type React from 'react'
@@ -213,6 +214,25 @@ afterEach(() => {
 })
 
 describe('manual account money payloads', () => {
+  it('cancels account creation from the form footer without saving', () => {
+    const onClose = vi.fn()
+    render(
+      <MantineProvider>
+        <AddAccountModal opened onClose={onClose} />
+      </MantineProvider>,
+    )
+
+    fireEvent.click(screen.getByText('Manual account'))
+    fireEvent.change(screen.getByRole('textbox', { name: /Account name/ }), {
+      target: { value: 'Discard this account' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
+    expect(mockFns.createBrokerageMutateMock).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['USD', -12.34, 1234],
     ['USD', 12.34, 1234],
@@ -305,15 +325,28 @@ describe('manual account money payloads', () => {
       expect.any(Object),
     )
     expect(mockFns.createMutateMock).not.toHaveBeenCalled()
-    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ['/account'],
-    })
-    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ['/balance-query/balances'],
-    })
-    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ['/balance-query/all-balances'],
-    })
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({ queryKey: ['/account'] } as unknown as Query),
+      ),
+    ).toBe(true)
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({
+            queryKey: ['/balance-query/balances'],
+          } as unknown as Query),
+      ),
+    ).toBe(true)
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({
+            queryKey: ['/balance-query/all-balances'],
+          } as unknown as Query),
+      ),
+    ).toBe(true)
   })
 
   it('keeps balance-only manual investment accounts available', () => {

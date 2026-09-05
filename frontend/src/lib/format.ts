@@ -6,6 +6,7 @@ import type { AccountSubType, AccountType, MoneyWithSign } from '../api/models'
 dayjs.extend(relativeTime)
 
 export const HIDDEN_BALANCE_PLACEHOLDER = '****'
+export const DISPLAY_LOCALE = 'en-US'
 
 /**
  * Decimal places for currencies (smallest unit conversion)
@@ -133,8 +134,15 @@ export function formatMoneyNumber(input: {
   currency?: string
   decimals?: number
   appendCurrency?: boolean
+  currencyDisplay?: 'symbol' | 'code'
 }): string {
-  const { value, currency = 'USD', decimals, appendCurrency = false } = input
+  const {
+    value,
+    currency = 'USD',
+    decimals,
+    appendCurrency = false,
+    currencyDisplay = 'symbol',
+  } = input
 
   // Handle crypto currencies differently - without currency symbols
   if (isCryptoCurrency(currency)) {
@@ -148,7 +156,7 @@ export function formatMoneyNumber(input: {
     )
     const formattedValue = value.toFixed(cryptoDecimals)
 
-    if (appendCurrency) {
+    if (appendCurrency || currencyDisplay === 'code') {
       return `${formattedValue} (${currency})`
     } else {
       return formattedValue
@@ -160,10 +168,15 @@ export function formatMoneyNumber(input: {
 
   const overrideCurrency =
     CURRENCY_FORMATTING_OVERRIDES.get(currency) ?? currency
-  const formatted = new Intl.NumberFormat('en-US', {
+  const formatted = new Intl.NumberFormat(DISPLAY_LOCALE, {
     style: 'currency',
     // When appending currency, avoid currency specific formatting
-    currency: appendCurrency ? 'USD' : overrideCurrency,
+    currency: appendCurrency
+      ? 'USD'
+      : currencyDisplay === 'code'
+        ? currency
+        : overrideCurrency,
+    currencyDisplay,
     minimumFractionDigits: effectiveDecimals,
     maximumFractionDigits: effectiveDecimals,
   }).format(value)
@@ -203,28 +216,42 @@ export function formatRelativeTime(date: Date | string): string {
   return dayjs(date).fromNow()
 }
 
+const CALENDAR_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+/** Format a YYYY-MM-DD calendar date without interpreting it as a local instant. */
+export function formatCalendarDate(value: string): string {
+  if (!CALENDAR_DATE_PATTERN.test(value)) return value
+
+  const date = new Date(`${value}T00:00:00Z`)
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== value
+  ) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+    dateStyle: 'medium',
+    timeZone: 'UTC',
+  }).format(date)
+}
+
 /**
- * Format an ISO date or timestamp for display without shifting date-only values
- * across time zones.
+ * Display dates in en-US and timestamps in the device's local time zone.
+ * Date-only values keep their calendar day. Provider-specific timestamp
+ * conventions must be resolved by the provider adapter before formatting.
  */
 export function formatDateTime(value: string): string {
-  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-  const date = dateOnlyMatch
-    ? new Date(
-        Number(dateOnlyMatch[1]),
-        Number(dateOnlyMatch[2]) - 1,
-        Number(dateOnlyMatch[3]),
-      )
-    : new Date(value)
+  if (CALENDAR_DATE_PATTERN.test(value)) return formatCalendarDate(value)
+
+  const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) return value
 
-  return new Intl.DateTimeFormat(
-    'en-US',
-    dateOnlyMatch
-      ? { dateStyle: 'medium' }
-      : { dateStyle: 'medium', timeStyle: 'short' },
-  ).format(date)
+  return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
 }
 
 /**

@@ -1,0 +1,829 @@
+{
+  "cold": [
+    {
+      "viewport": "desktop",
+      "route": "/home",
+      "before": {
+        "median": 10365,
+        "min": 10222,
+        "max": 10636,
+        "samples": 7
+      },
+      "after": {
+        "median": 3100,
+        "min": 3089,
+        "max": 4069,
+        "samples": 7
+      },
+      "improvementPercent": 70.1
+    },
+    {
+      "viewport": "desktop",
+      "route": "/transactions",
+      "before": {
+        "median": 10488,
+        "min": 10448,
+        "max": 10717,
+        "samples": 7
+      },
+      "after": {
+        "median": 4612,
+        "min": 4305,
+        "max": 5206,
+        "samples": 7
+      },
+      "improvementPercent": 56
+    },
+    {
+      "viewport": "desktop",
+      "route": "/accounts",
+      "before": {
+        "median": 10278,
+        "min": 10213,
+        "max": 10316,
+        "samples": 7
+      },
+      "after": {
+        "median": 4163,
+        "min": 3889,
+        "max": 4562,
+        "samples": 7
+      },
+      "improvementPercent": 59.5
+    },
+    {
+      "viewport": "desktop",
+      "route": "/analysis",
+      "before": {
+        "median": 10410,
+        "min": 10335,
+        "max": 10596,
+        "samples": 7
+      },
+      "after": {
+        "median": 4113,
+        "min": 4093,
+        "max": 4119,
+        "samples": 7
+      },
+      "improvementPercent": 60.5
+    },
+    {
+      "viewport": "phone",
+      "route": "/home",
+      "before": {
+        "median": 10299,
+        "min": 10194,
+        "max": 10397,
+        "samples": 7
+      },
+      "after": {
+        "median": 3087,
+        "min": 3077,
+        "max": 4226,
+        "samples": 7
+      },
+      "improvementPercent": 70
+    },
+    {
+      "viewport": "phone",
+      "route": "/transactions",
+      "before": {
+        "median": 10231,
+        "min": 10177,
+        "max": 10274,
+        "samples": 7
+      },
+      "after": {
+        "median": 4476,
+        "min": 4227,
+        "max": 5182,
+        "samples": 7
+      },
+      "improvementPercent": 56.3
+    },
+    {
+      "viewport": "phone",
+      "route": "/accounts",
+      "before": {
+        "median": 10212,
+        "min": 10187,
+        "max": 10287,
+        "samples": 7
+      },
+      "after": {
+        "median": 4143,
+        "min": 3843,
+        "max": 4582,
+        "samples": 7
+      },
+      "improvementPercent": 59.4
+    },
+    {
+      "viewport": "phone",
+      "route": "/analysis",
+      "before": {
+        "median": 10423,
+        "min": 10326,
+        "max": 10497,
+        "samples": 7
+      },
+      "after": {
+        "median": 4096,
+        "min": 4092,
+        "max": 4100,
+        "samples": 7
+      },
+      "improvementPercent": 60.7
+    }
+  ],
+  "chart": [
+    {
+      "viewport": "desktop",
+      "before": {
+        "median": 10203,
+        "min": 10161,
+        "max": 10243,
+        "samples": 7
+      },
+      "after": {
+        "median": 7970,
+        "min": 7962,
+        "max": 9128,
+        "samples": 7
+      }
+    },
+    {
+      "viewport": "phone",
+      "before": {
+        "median": 10189,
+        "min": 10174,
+        "max": 10205,
+        "samples": 7
+      },
+      "after": {
+        "median": 7960,
+        "min": 7951,
+        "max": 10591,
+        "samples": 7
+      }
+    }
+  ],
+  "interactions": [
+    {
+      "viewport": "desktop",
+      "kind": "warm-navigation",
+      "before": {
+        "duration": {
+          "median": 192,
+          "min": 170,
+          "max": 302,
+          "samples": 7
+        },
+        "requests": {
+          "median": 3,
+          "min": 3,
+          "max": 3,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 695052,
+          "min": 694796,
+          "max": 695052,
+          "samples": 7
+        }
+      },
+      "after": {
+        "duration": {
+          "median": 169,
+          "min": 156,
+          "max": 192,
+          "samples": 7
+        },
+        "requests": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": 7
+        }
+      }
+    },
+    {
+      "viewport": "desktop",
+      "kind": "period-change",
+      "before": {
+        "duration": {
+          "median": 79,
+          "min": 65,
+          "max": 344,
+          "samples": 7
+        },
+        "requests": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 177065,
+          "min": 177001,
+          "max": 177065,
+          "samples": 7
+        }
+      },
+      "after": {
+        "duration": {
+          "median": 71,
+          "min": 48,
+          "max": 75,
+          "samples": 7
+        },
+        "requests": {
+          "median": 1,
+          "min": 1,
+          "max": 2,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 9470,
+          "min": 9470,
+          "max": 10373,
+          "samples": 7
+        }
+      }
+    },
+    {
+      "viewport": "desktop",
+      "kind": "account-modal",
+      "before": {
+        "duration": {
+          "median": 71,
+          "min": 61,
+          "max": 252,
+          "samples": 7
+        },
+        "requests": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 45857,
+          "min": 45857,
+          "max": 45857,
+          "samples": 7
+        }
+      },
+      "after": {
+        "duration": {
+          "median": 67,
+          "min": 61,
+          "max": 626,
+          "samples": 7
+        },
+        "requests": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 45857,
+          "min": 45857,
+          "max": 45857,
+          "samples": 7
+        }
+      }
+    },
+    {
+      "viewport": "desktop",
+      "kind": "name-save",
+      "before": {
+        "duration": {
+          "median": 372,
+          "min": 364,
+          "max": 390,
+          "samples": 7
+        },
+        "requests": {
+          "median": 2,
+          "min": 2,
+          "max": 2,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 11433,
+          "min": 11433,
+          "max": 11433,
+          "samples": 7
+        }
+      },
+      "after": {
+        "duration": {
+          "median": 375,
+          "min": 360,
+          "max": 390,
+          "samples": 7
+        },
+        "requests": {
+          "median": 2,
+          "min": 2,
+          "max": 2,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 11433,
+          "min": 11433,
+          "max": 11433,
+          "samples": 7
+        }
+      }
+    },
+    {
+      "viewport": "phone",
+      "kind": "warm-navigation",
+      "before": {
+        "duration": {
+          "median": 198,
+          "min": 175,
+          "max": 307,
+          "samples": 7
+        },
+        "requests": {
+          "median": 3,
+          "min": 3,
+          "max": 3,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 695052,
+          "min": 694796,
+          "max": 695052,
+          "samples": 7
+        }
+      },
+      "after": {
+        "duration": {
+          "median": 151,
+          "min": 148,
+          "max": 169,
+          "samples": 7
+        },
+        "requests": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": 7
+        }
+      }
+    },
+    {
+      "viewport": "phone",
+      "kind": "period-change",
+      "before": {
+        "duration": {
+          "median": 94,
+          "min": 73,
+          "max": 319,
+          "samples": 7
+        },
+        "requests": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 177065,
+          "min": 177001,
+          "max": 177065,
+          "samples": 7
+        }
+      },
+      "after": {
+        "duration": {
+          "median": 69,
+          "min": 40,
+          "max": 79,
+          "samples": 7
+        },
+        "requests": {
+          "median": 1,
+          "min": 1,
+          "max": 2,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 9470,
+          "min": 9470,
+          "max": 10373,
+          "samples": 7
+        }
+      }
+    },
+    {
+      "viewport": "phone",
+      "kind": "account-modal",
+      "before": {
+        "duration": {
+          "median": 72,
+          "min": 65,
+          "max": 214,
+          "samples": 7
+        },
+        "requests": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 45857,
+          "min": 45857,
+          "max": 45857,
+          "samples": 7
+        }
+      },
+      "after": {
+        "duration": {
+          "median": 65,
+          "min": 62,
+          "max": 516,
+          "samples": 7
+        },
+        "requests": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 45857,
+          "min": 45857,
+          "max": 45857,
+          "samples": 7
+        }
+      }
+    },
+    {
+      "viewport": "phone",
+      "kind": "name-save",
+      "before": {
+        "duration": {
+          "median": 383,
+          "min": 360,
+          "max": 400,
+          "samples": 7
+        },
+        "requests": {
+          "median": 2,
+          "min": 2,
+          "max": 2,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 11433,
+          "min": 11433,
+          "max": 11433,
+          "samples": 7
+        }
+      },
+      "after": {
+        "duration": {
+          "median": 373,
+          "min": 357,
+          "max": 393,
+          "samples": 7
+        },
+        "requests": {
+          "median": 2,
+          "min": 2,
+          "max": 2,
+          "samples": 7
+        },
+        "rawResponseBytes": {
+          "median": 11433,
+          "min": 11433,
+          "max": 11433,
+          "samples": 7
+        }
+      }
+    }
+  ],
+  "bundles": [
+    {
+      "name": "Main entry",
+      "before": {
+        "url": "/assets/main-B07lFiHb.js",
+        "raw": 1561670,
+        "gzip": 472784,
+        "imports": []
+      },
+      "after": {
+        "url": "/assets/main-B8enZmeg.js",
+        "raw": 727710,
+        "gzip": 227796,
+        "imports": []
+      }
+    },
+    {
+      "name": "/",
+      "before": {
+        "files": [
+          "/assets/main-B07lFiHb.js"
+        ],
+        "raw": 1561670,
+        "gzip": 472784
+      },
+      "after": {
+        "files": [
+          "/assets/main-B8enZmeg.js",
+          "/assets/index-Bq5R-JaF.js",
+          "/assets/auth-DU_zmjDJ.js",
+          "/assets/browser-push-DmdZh6_G.js",
+          "/assets/createLucideIcon-3nC86enh.js",
+          "/assets/Container-SjFNBxcG.js",
+          "/assets/Title-CxoRvupY.js"
+        ],
+        "raw": 736570,
+        "gzip": 232268
+      }
+    },
+    {
+      "name": "/_authed/home",
+      "before": {
+        "files": [
+          "/assets/main-B07lFiHb.js",
+          "/assets/_authed-RhUiA_iB.js",
+          "/assets/house-DmEkiMKP.js"
+        ],
+        "raw": 1574966,
+        "gzip": 477006
+      },
+      "after": {
+        "files": [
+          "/assets/main-B8enZmeg.js",
+          "/assets/_authed-CFdPUZbU.js",
+          "/assets/auth-DU_zmjDJ.js",
+          "/assets/browser-push-DmdZh6_G.js",
+          "/assets/use-disclosure-CRM3rAuf.js",
+          "/assets/get-sorted-breakpoints-Dj9ley5M.js",
+          "/assets/createLucideIcon-3nC86enh.js",
+          "/assets/house-rZTNG2Q2.js",
+          "/assets/home-CCwzdW3V.js",
+          "/assets/PageHeader-Bs5Y1epc.js",
+          "/assets/Title-CxoRvupY.js",
+          "/assets/balance-utils-lhNIVdvb.js",
+          "/assets/dayjs.min-CZXGGeav.js",
+          "/assets/format-XG1ltYuC.js",
+          "/assets/InteractiveRow-BqYhBgBi.js",
+          "/assets/Pressable-CdnMeDS7.js",
+          "/assets/IconChevronUp-D-EZWRK5.js",
+          "/assets/IconChevronDown-DxkVV4-_.js",
+          "/assets/Divider-BHZ8YadJ.js",
+          "/assets/eye-BGEIEO4w.js",
+          "/assets/Grid-BdHRbh9I.js",
+          "/assets/get-base-value-JqT_q0U7.js"
+        ],
+        "raw": 784748,
+        "gzip": 251989
+      }
+    },
+    {
+      "name": "/_authed/transactions",
+      "before": {
+        "files": [
+          "/assets/main-B07lFiHb.js",
+          "/assets/_authed-RhUiA_iB.js",
+          "/assets/house-DmEkiMKP.js",
+          "/assets/transactions-By5igW4j.js",
+          "/assets/DateRangeControl-6iZDXbqu.js"
+        ],
+        "raw": 1595258,
+        "gzip": 484720
+      },
+      "after": {
+        "files": [
+          "/assets/main-B8enZmeg.js",
+          "/assets/_authed-CFdPUZbU.js",
+          "/assets/auth-DU_zmjDJ.js",
+          "/assets/browser-push-DmdZh6_G.js",
+          "/assets/use-disclosure-CRM3rAuf.js",
+          "/assets/get-sorted-breakpoints-Dj9ley5M.js",
+          "/assets/createLucideIcon-3nC86enh.js",
+          "/assets/house-rZTNG2Q2.js",
+          "/assets/transactions-BMwe8Gwq.js",
+          "/assets/useInfiniteQuery-Db1TaDIS.js",
+          "/assets/dayjs.min-CZXGGeav.js",
+          "/assets/PageHeader-Bs5Y1epc.js",
+          "/assets/Title-CxoRvupY.js",
+          "/assets/format-XG1ltYuC.js",
+          "/assets/DateRangeControl-eORU9gzA.js",
+          "/assets/x-WeG8opT0.js",
+          "/assets/DatePicker-FIQdZq5i.js",
+          "/assets/pick-calendar-levels-props-C9iFEse1.js",
+          "/assets/category-options-Camm1XQ2.js",
+          "/assets/category-colors-DlV3xj2E.js",
+          "/assets/TransactionsMobileList-BTxPg0lq.js",
+          "/assets/MantineTableChrome.module-lhqBO5wr.js",
+          "/assets/IconChevronDown-DxkVV4-_.js",
+          "/assets/use-debounced-value-j3zbeUff.js",
+          "/assets/mobile-combobox-CYxlL_Q5.js",
+          "/assets/Table-3AxRkT58.js",
+          "/assets/CategorySelect-CgxPmGvK.js",
+          "/assets/check-i0Bbdnkv.js",
+          "/assets/pencil-CAL7nxiX.js",
+          "/assets/rotate-ccw-BHabtZKB.js",
+          "/assets/trash-2-BCWzAjWd.js",
+          "/assets/info-pObLs5ch.js",
+          "/assets/Divider-BHZ8YadJ.js",
+          "/assets/DataState-DUn2nDei.js",
+          "/assets/InteractiveRow-BqYhBgBi.js",
+          "/assets/Pressable-CdnMeDS7.js",
+          "/assets/api-errors-CGijFCoY.js",
+          "/assets/save-UYuHXxSR.js",
+          "/assets/AccountSelect-qmSTyoKw.js",
+          "/assets/ConfirmActionDialog-CTXEluP4.js",
+          "/assets/FormActions-D7ox6CYm.js",
+          "/assets/EditorModal.module-CZIRCvzA.js",
+          "/assets/funnel-CufXTveK.js",
+          "/assets/plus-BvtaDuGq.js"
+        ],
+        "raw": 1097531,
+        "gzip": 347192
+      }
+    },
+    {
+      "name": "/_authed/accounts",
+      "before": {
+        "files": [
+          "/assets/main-B07lFiHb.js",
+          "/assets/_authed-RhUiA_iB.js",
+          "/assets/house-DmEkiMKP.js",
+          "/assets/accounts-tnzf72qJ.js"
+        ],
+        "raw": 1593613,
+        "gzip": 483604
+      },
+      "after": {
+        "files": [
+          "/assets/main-B8enZmeg.js",
+          "/assets/_authed-CFdPUZbU.js",
+          "/assets/auth-DU_zmjDJ.js",
+          "/assets/browser-push-DmdZh6_G.js",
+          "/assets/use-disclosure-CRM3rAuf.js",
+          "/assets/get-sorted-breakpoints-Dj9ley5M.js",
+          "/assets/createLucideIcon-3nC86enh.js",
+          "/assets/house-rZTNG2Q2.js",
+          "/assets/accounts-DCOr1Bj8.js",
+          "/assets/PageHeader-Bs5Y1epc.js",
+          "/assets/Title-CxoRvupY.js",
+          "/assets/Pressable-CdnMeDS7.js",
+          "/assets/useAccountMetadataMutation-DYv8p3Xe.js",
+          "/assets/api-errors-CGijFCoY.js",
+          "/assets/format-XG1ltYuC.js",
+          "/assets/dayjs.min-CZXGGeav.js",
+          "/assets/mutation-feedback-CJ9lpoIo.js",
+          "/assets/ConfirmActionDialog-CTXEluP4.js",
+          "/assets/FormActions-D7ox6CYm.js",
+          "/assets/EditorModal.module-CZIRCvzA.js",
+          "/assets/check-i0Bbdnkv.js",
+          "/assets/x-WeG8opT0.js",
+          "/assets/pencil-CAL7nxiX.js",
+          "/assets/rotate-ccw-BHabtZKB.js",
+          "/assets/archive-Dtplk-yL.js",
+          "/assets/IconChevronUp-D-EZWRK5.js",
+          "/assets/IconChevronDown-DxkVV4-_.js",
+          "/assets/DataState-DUn2nDei.js"
+        ],
+        "raw": 779713,
+        "gzip": 250567
+      }
+    },
+    {
+      "name": "/_authed/analysis",
+      "before": {
+        "files": [
+          "/assets/main-B07lFiHb.js",
+          "/assets/_authed-RhUiA_iB.js",
+          "/assets/house-DmEkiMKP.js",
+          "/assets/analysis-B9HMsB51.js",
+          "/assets/DateRangeControl-6iZDXbqu.js"
+        ],
+        "raw": 1631132,
+        "gzip": 494658
+      },
+      "after": {
+        "files": [
+          "/assets/main-B8enZmeg.js",
+          "/assets/_authed-CFdPUZbU.js",
+          "/assets/auth-DU_zmjDJ.js",
+          "/assets/browser-push-DmdZh6_G.js",
+          "/assets/use-disclosure-CRM3rAuf.js",
+          "/assets/get-sorted-breakpoints-Dj9ley5M.js",
+          "/assets/createLucideIcon-3nC86enh.js",
+          "/assets/house-rZTNG2Q2.js",
+          "/assets/analysis-DZcyfC7q.js",
+          "/assets/dayjs.min-CZXGGeav.js",
+          "/assets/PageHeader-Bs5Y1epc.js",
+          "/assets/Title-CxoRvupY.js",
+          "/assets/DateRangeControl-eORU9gzA.js",
+          "/assets/x-WeG8opT0.js",
+          "/assets/DatePicker-FIQdZq5i.js",
+          "/assets/pick-calendar-levels-props-C9iFEse1.js",
+          "/assets/Pressable-CdnMeDS7.js",
+          "/assets/format-XG1ltYuC.js",
+          "/assets/category-colors-DlV3xj2E.js",
+          "/assets/Grid-BdHRbh9I.js",
+          "/assets/get-base-value-JqT_q0U7.js"
+        ],
+        "raw": 820305,
+        "gzip": 260757
+      }
+    },
+    {
+      "name": "/_authed/settings",
+      "before": {
+        "files": [
+          "/assets/main-B07lFiHb.js",
+          "/assets/_authed-RhUiA_iB.js",
+          "/assets/house-DmEkiMKP.js"
+        ],
+        "raw": 1574966,
+        "gzip": 477006
+      },
+      "after": {
+        "files": [
+          "/assets/main-B8enZmeg.js",
+          "/assets/_authed-CFdPUZbU.js",
+          "/assets/auth-DU_zmjDJ.js",
+          "/assets/browser-push-DmdZh6_G.js",
+          "/assets/use-disclosure-CRM3rAuf.js",
+          "/assets/get-sorted-breakpoints-Dj9ley5M.js",
+          "/assets/createLucideIcon-3nC86enh.js",
+          "/assets/house-rZTNG2Q2.js",
+          "/assets/settings-C3nI5X_a.js",
+          "/assets/PageHeader-Bs5Y1epc.js",
+          "/assets/Title-CxoRvupY.js",
+          "/assets/get-base-value-JqT_q0U7.js",
+          "/assets/ColorSwatch-CAHZcloH.js",
+          "/assets/check-i0Bbdnkv.js"
+        ],
+        "raw": 769213,
+        "gzip": 243579
+      }
+    }
+  ],
+  "budgets": [
+    {
+      "name": "desktop /home first useful content",
+      "passed": true
+    },
+    {
+      "name": "desktop /transactions first useful content",
+      "passed": true
+    },
+    {
+      "name": "desktop /accounts first useful content",
+      "passed": true
+    },
+    {
+      "name": "desktop /analysis first useful content",
+      "passed": true
+    },
+    {
+      "name": "phone /home first useful content",
+      "passed": true
+    },
+    {
+      "name": "phone /transactions first useful content",
+      "passed": true
+    },
+    {
+      "name": "phone /accounts first useful content",
+      "passed": true
+    },
+    {
+      "name": "phone /analysis first useful content",
+      "passed": true
+    },
+    {
+      "name": "Main entry gzip <= 300000 bytes",
+      "passed": true
+    }
+  ],
+  "errors": []
+}

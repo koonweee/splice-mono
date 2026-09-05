@@ -1,10 +1,9 @@
 import {
   ActionIcon,
   Alert,
-  Badge,
+  Box,
   Button,
   Group,
-  Modal,
   NumberInput,
   Paper,
   Stack,
@@ -13,13 +12,12 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Pause, Pencil, Play, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
-  getRecurringManualTransactionControllerFindAllQueryKey,
   useAccountControllerFindAll,
   useCategoryControllerFindAll,
   useRecurringManualTransactionControllerArchive,
@@ -30,14 +28,31 @@ import {
   useRecurringManualTransactionControllerUpdate,
 } from '../../api/clients/spliceAPI'
 import { MoneyWithSignSign } from '../../api/models'
+import { getApiErrorMessage } from '../../lib/api-errors'
 import { isAssignableCategoryOption } from '../../lib/category-options'
-import { formatMoneyWithSign, getDecimalPlaces } from '../../lib/format'
+import {
+  formatCalendarDate,
+  formatMoneyWithSign,
+  getDecimalPlaces,
+} from '../../lib/format'
+import {
+  notifyMutationError,
+  notifyMutationSuccess,
+} from '../../lib/mutation-feedback'
+import { useCompactLayout } from '../../lib/responsive'
+import { DataState } from '../DataState'
 import {
   getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
 import { AccountSelect } from '../accounts/AccountSelect'
 import { CategorySelect } from '../categories/CategorySelect'
+import { ConfirmActionDialog } from '../ConfirmActionDialog'
+import { EditorModal } from '../forms/EditorModal'
+import { FormActions } from '../forms/FormActions'
+import { MobileTableList } from '../MobileTableList'
+import { SettingsStatusBadge } from './SettingsStatusBadge'
+import { SettingsToolbar } from './SettingsToolbar'
 import type { CategorySelectOption } from '../categories/CategorySelect'
 import type {
   Account,
@@ -104,8 +119,7 @@ function getSignedAmountDraft(
   }
 
   const decimals = getDecimalPlaces(schedule.amount.money.currency)
-  const unsignedAmount =
-    schedule.amount.money.amount / Math.pow(10, decimals)
+  const unsignedAmount = schedule.amount.money.amount / Math.pow(10, decimals)
 
   return schedule.amount.sign === MoneyWithSignSign.negative
     ? -unsignedAmount
@@ -144,6 +158,8 @@ function RecurringScheduleModal({
   const [dayOfMonth, setDayOfMonth] = useState<NumberInputProps['value']>(1)
   const [startDate, setStartDate] = useState('')
   const [errors, setErrors] = useState<ScheduleFormErrors>({})
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const submissionPending = useRef(false)
   const createSchedule = useRecurringManualTransactionControllerCreate()
   const updateSchedule = useRecurringManualTransactionControllerUpdate()
   const activeAccounts = useMemo(
@@ -185,6 +201,7 @@ function RecurringScheduleModal({
     setDayOfMonth(schedule?.dayOfMonth ?? 1)
     setStartDate(schedule?.startDate ?? dayjs().format('YYYY-MM-DD'))
     setErrors({})
+    setSaveError(null)
   }, [accounts, opened, schedule])
 
   function validate() {
@@ -225,11 +242,14 @@ function RecurringScheduleModal({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (submissionPending.current || isSaving) return
 
     const { isValid, numericAmount, numericDay } = validate()
     if (!isValid || !currency || !categoryId) {
       return
     }
+    submissionPending.current = true
+    setSaveError(null)
 
     const minorUnits = Math.round(
       Math.abs(numericAmount) * Math.pow(10, decimalPlaces),
@@ -257,18 +277,21 @@ function RecurringScheduleModal({
       onSuccess: () => {
         onSaved()
         onClose()
-        notifications.show({
+        notifyMutationSuccess({
           title: schedule ? 'Schedule updated' : 'Schedule added',
           message: 'The recurring manual transaction schedule was saved.',
-          color: 'green',
         })
       },
-      onError: () => {
-        notifications.show({
-          title: 'Schedule save failed',
-          message: 'The recurring manual transaction schedule was not saved.',
-          color: 'red',
-        })
+      onError: (error: unknown) => {
+        setSaveError(
+          getApiErrorMessage(
+            error,
+            'The recurring transaction could not be saved. Try again.',
+          ),
+        )
+      },
+      onSettled: () => {
+        submissionPending.current = false
       },
     }
 
@@ -286,18 +309,33 @@ function RecurringScheduleModal({
     createSchedule.mutate({ data: payload }, mutationOptions)
   }
 
+  const closeIfIdle = () => {
+    if (!submissionPending.current && !isSaving) onClose()
+  }
+
   return (
-    <Modal
+    <EditorModal
       opened={opened}
-      onClose={onClose}
-      title={schedule ? 'Edit recurring transaction' : 'Add recurring transaction'}
+      onClose={closeIfIdle}
+      closeOnEscape={!isSaving}
+      closeOnClickOutside={!isSaving}
+      closeButtonProps={{ disabled: isSaving }}
+      title={
+        schedule ? 'Edit recurring transaction' : 'Add recurring transaction'
+      }
       centered
       size="md"
       transitionProps={{ duration: 0 }}
     >
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
+          {saveError && (
+            <Alert color="red" role="alert" title="Schedule not saved">
+              {saveError}
+            </Alert>
+          )}
           <AccountSelect
+            disabled={isSaving}
             allowDeselect={false}
             comboboxProps={comboboxProps}
             data={accountOptions}
@@ -315,6 +353,7 @@ function RecurringScheduleModal({
           />
           <Group align="flex-start" grow>
             <NumberInput
+              disabled={isSaving}
               decimalScale={decimalPlaces}
               error={errors.amount}
               fixedDecimalScale={decimalPlaces <= 6}
@@ -330,6 +369,7 @@ function RecurringScheduleModal({
             <TextInput label="Currency" readOnly value={currency} />
           </Group>
           <TextInput
+            disabled={isSaving}
             error={errors.merchantName}
             label="Merchant"
             onChange={(event) => {
@@ -343,6 +383,7 @@ function RecurringScheduleModal({
             value={merchantName}
           />
           <CategorySelect
+            disabled={isSaving}
             aria-label="Category"
             clearable={false}
             comboboxProps={comboboxProps}
@@ -360,6 +401,7 @@ function RecurringScheduleModal({
           />
           <Group align="flex-start" grow>
             <NumberInput
+              disabled={isSaving}
               allowDecimal={false}
               clampBehavior="strict"
               error={errors.dayOfMonth}
@@ -377,6 +419,7 @@ function RecurringScheduleModal({
               value={dayOfMonth}
             />
             <TextInput
+              disabled={isSaving}
               error={errors.startDate}
               label="Start date"
               onChange={(event) => {
@@ -391,21 +434,19 @@ function RecurringScheduleModal({
               value={startDate}
             />
           </Group>
-          <Group justify="flex-end">
-            <Button onClick={onClose} type="button" variant="subtle">
-              Cancel
-            </Button>
+          <FormActions onCancel={closeIfIdle} cancelDisabled={isSaving}>
             <Button loading={isSaving} type="submit">
               Save
             </Button>
-          </Group>
+          </FormActions>
         </Stack>
       </form>
-    </Modal>
+    </EditorModal>
   )
 }
 
 export function RecurringManualTransactionsSection() {
+  const isMobile = useCompactLayout()
   const queryClient = useQueryClient()
   const schedulesQuery = useRecurringManualTransactionControllerFindAll()
   const { data: accounts = [] } = useAccountControllerFindAll()
@@ -413,46 +454,82 @@ export function RecurringManualTransactionsSection() {
   const [modalOpened, setModalOpened] = useState(false)
   const [editingSchedule, setEditingSchedule] =
     useState<RecurringManualTransactionSchedule | null>(null)
+  const [deletingSchedule, setDeletingSchedule] =
+    useState<RecurringManualTransactionSchedule | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const actionPending = useRef(false)
   const invalidateSchedules = () => {
-    queryClient.invalidateQueries({
-      queryKey: getRecurringManualTransactionControllerFindAllQueryKey(),
-    })
-    queryClient.invalidateQueries({
-      predicate: (query) =>
-        Array.isArray(query.queryKey) &&
-        typeof query.queryKey[0] === 'string' &&
-        query.queryKey[0].includes('transaction'),
-    })
+    void invalidateMutationFamilies(queryClient, ['schedules'])
   }
-  const pauseSchedule = useRecurringManualTransactionControllerPause({
-    mutation: {
-      onSuccess: invalidateSchedules,
-    },
-  })
-  const resumeSchedule = useRecurringManualTransactionControllerResume({
-    mutation: {
-      onSuccess: invalidateSchedules,
-    },
-  })
-  const archiveSchedule = useRecurringManualTransactionControllerArchive({
-    mutation: {
-      onSuccess: () => {
-        invalidateSchedules()
-        notifications.show({
-          title: 'Schedule deleted',
-          message: 'The recurring manual transaction schedule was deleted.',
-          color: 'green',
-        })
+
+  const pauseSchedule = useRecurringManualTransactionControllerPause()
+  const resumeSchedule = useRecurringManualTransactionControllerResume()
+  const archiveSchedule = useRecurringManualTransactionControllerArchive()
+  const isActionPending =
+    pauseSchedule.isPending ||
+    resumeSchedule.isPending ||
+    archiveSchedule.isPending
+
+  const setSchedulePaused = (
+    schedule: RecurringManualTransactionSchedule,
+    paused: boolean,
+  ) => {
+    if (actionPending.current || isActionPending) return
+    actionPending.current = true
+    const mutation = paused ? pauseSchedule : resumeSchedule
+    mutation.mutate(
+      { id: schedule.id },
+      {
+        onSuccess: () => {
+          invalidateSchedules()
+          notifyMutationSuccess({
+            title: paused ? 'Schedule paused' : 'Schedule resumed',
+            message: `${schedule.merchantName} was ${paused ? 'paused' : 'resumed'}.`,
+          })
+        },
+        onError: (error) => {
+          notifyMutationError({
+            title: paused ? 'Pause failed' : 'Resume failed',
+            error,
+            fallback: `Unable to ${paused ? 'pause' : 'resume'} this schedule. Try again.`,
+          })
+        },
+        onSettled: () => {
+          actionPending.current = false
+        },
       },
-      onError: () => {
-        notifications.show({
-          title: 'Delete failed',
-          message: 'The recurring manual transaction schedule was not deleted.',
-          color: 'red',
-        })
+    )
+  }
+
+  const deleteSchedule = () => {
+    if (!deletingSchedule || actionPending.current || isActionPending) return
+    actionPending.current = true
+    setDeleteError(null)
+    archiveSchedule.mutate(
+      { id: deletingSchedule.id },
+      {
+        onSuccess: () => {
+          invalidateSchedules()
+          setDeletingSchedule(null)
+          notifyMutationSuccess({
+            title: 'Schedule deleted',
+            message: 'The recurring manual transaction schedule was deleted.',
+          })
+        },
+        onError: (error) => {
+          setDeleteError(
+            getApiErrorMessage(
+              error,
+              'Unable to delete this schedule. Try again.',
+            ),
+          )
+        },
+        onSettled: () => {
+          actionPending.current = false
+        },
       },
-    },
-  })
+    )
+  }
 
   const closeModal = () => {
     setModalOpened(false)
@@ -466,8 +543,135 @@ export function RecurringManualTransactionsSection() {
 
   const schedules = schedulesQuery.data ?? []
 
+  function getScheduleStatus(schedule: RecurringManualTransactionSchedule) {
+    return schedule.pausedAt
+      ? 'Paused'
+      : schedule.nextOccurrenceDate
+        ? 'Active'
+        : 'Ended'
+  }
+
+  function renderScheduleActions(schedule: RecurringManualTransactionSchedule) {
+    return (
+      <Group gap={4} justify="flex-end" wrap="nowrap">
+        <Tooltip label="Edit recurring transaction">
+          <ActionIcon
+            disabled={isActionPending}
+            aria-label="Edit recurring transaction"
+            onClick={() => {
+              setEditingSchedule(schedule)
+              setModalOpened(true)
+            }}
+            size={isMobile ? 44 : 36}
+            variant="subtle"
+          >
+            <Pencil size={16} />
+          </ActionIcon>
+        </Tooltip>
+        {schedule.pausedAt ? (
+          <Tooltip label="Resume recurring transaction">
+            <ActionIcon
+              aria-label="Resume recurring transaction"
+              onClick={() => setSchedulePaused(schedule, false)}
+              disabled={isActionPending}
+              loading={
+                resumeSchedule.isPending &&
+                resumeSchedule.variables.id === schedule.id
+              }
+              size={isMobile ? 44 : 36}
+              variant="subtle"
+            >
+              <Play size={16} />
+            </ActionIcon>
+          </Tooltip>
+        ) : (
+          <Tooltip label="Pause recurring transaction">
+            <ActionIcon
+              aria-label="Pause recurring transaction"
+              onClick={() => setSchedulePaused(schedule, true)}
+              disabled={isActionPending}
+              loading={
+                pauseSchedule.isPending &&
+                pauseSchedule.variables.id === schedule.id
+              }
+              size={isMobile ? 44 : 36}
+              variant="subtle"
+            >
+              <Pause size={16} />
+            </ActionIcon>
+          </Tooltip>
+        )}
+        <Tooltip label="Delete recurring transaction">
+          <ActionIcon
+            aria-label="Delete recurring transaction"
+            color="red"
+            disabled={isActionPending}
+            onClick={() => {
+              setDeleteError(null)
+              setDeletingSchedule(schedule)
+            }}
+            size={isMobile ? 44 : 36}
+            variant="subtle"
+          >
+            <Trash2 size={16} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
+    )
+  }
+
+  function renderMobileSchedule(schedule: RecurringManualTransactionSchedule) {
+    return (
+      <Stack px="sm" py="sm" gap="xs">
+        <Group align="flex-start" justify="space-between" wrap="nowrap">
+          <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <Text fw={700}>{schedule.merchantName}</Text>
+            <Text c="dimmed" size="sm">
+              {schedule.accountName ?? 'Account'}
+            </Text>
+          </Box>
+          <Text fw={600} size="sm" style={{ flexShrink: 0 }}>
+            {formatMoneyWithSign({ value: schedule.amount })}
+          </Text>
+        </Group>
+        <Group gap="xs" justify="space-between">
+          <Text c="dimmed" size="sm">
+            Monthly on {formatScheduleDay(schedule.dayOfMonth)}
+          </Text>
+          <Text size="sm">
+            {schedule.nextOccurrenceDate ? (
+              <>
+                Next:{' '}
+                <span>{formatCalendarDate(schedule.nextOccurrenceDate)}</span>
+              </>
+            ) : (
+              'No upcoming transaction'
+            )}
+          </Text>
+        </Group>
+        <Group justify="space-between" wrap="nowrap">
+          <SettingsStatusBadge status={getScheduleStatus(schedule)} />
+          {renderScheduleActions(schedule)}
+        </Group>
+      </Stack>
+    )
+  }
+
   return (
     <Stack gap="md">
+      <ConfirmActionDialog
+        opened={deletingSchedule !== null}
+        onClose={() => {
+          if (!actionPending.current) setDeletingSchedule(null)
+        }}
+        title="Delete recurring transaction"
+        targetLabel={deletingSchedule?.merchantName ?? ''}
+        consequence="Future transactions will no longer be created by this schedule. Existing transactions will be kept."
+        confirmLabel="Delete"
+        onConfirm={deleteSchedule}
+        isPending={archiveSchedule.isPending}
+        error={deleteError}
+      />
       <RecurringScheduleModal
         accounts={accounts}
         categories={categories}
@@ -476,141 +680,82 @@ export function RecurringManualTransactionsSection() {
         onClose={closeModal}
         onSaved={invalidateSchedules}
       />
-      <Group justify="space-between" align="center">
-        <TitleText />
-        <Button
-          leftSection={<Plus size={16} />}
-          onClick={openCreateModal}
-          type="button"
-        >
-          Add recurring
-        </Button>
-      </Group>
-      {schedulesQuery.isError && (
-        <Alert color="red">Failed to load recurring transactions</Alert>
-      )}
-      <Paper withBorder p={0} radius="md" style={{ overflow: 'hidden' }}>
-        <Table.ScrollContainer minWidth={720}>
-          <Table verticalSpacing="sm">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Merchant</Table.Th>
-                <Table.Th>Amount</Table.Th>
-                <Table.Th>Schedule</Table.Th>
-                <Table.Th>Next</Table.Th>
-                <Table.Th>Status</Table.Th>
-                <Table.Th />
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {schedules.map((schedule) => (
-                <Table.Tr key={schedule.id}>
-                  <Table.Td>
-                    <Stack gap={0}>
-                      <Text fw={600} size="sm">
-                        {schedule.merchantName}
-                      </Text>
-                      <Text c="dimmed" size="xs">
-                        {schedule.accountName ?? 'Account'}
-                      </Text>
-                    </Stack>
-                  </Table.Td>
-                  <Table.Td>{formatMoneyWithSign({ value: schedule.amount })}</Table.Td>
-                  <Table.Td>Monthly on {formatScheduleDay(schedule.dayOfMonth)}</Table.Td>
-                  <Table.Td>
-                    {schedule.nextOccurrenceDate
-                      ? dayjs(schedule.nextOccurrenceDate).format('MMM D, YYYY')
-                      : 'Ended'}
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={schedule.pausedAt ? 'gray' : 'green'}>
-                      {schedule.pausedAt ? 'Paused' : 'Active'}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap={4} justify="flex-end" wrap="nowrap">
-                      <Tooltip label="Edit recurring transaction">
-                        <ActionIcon
-                          aria-label="Edit recurring transaction"
-                          onClick={() => {
-                            setEditingSchedule(schedule)
-                            setModalOpened(true)
-                          }}
-                          variant="subtle"
-                        >
-                          <Pencil size={16} />
-                        </ActionIcon>
-                      </Tooltip>
-                      {schedule.pausedAt ? (
-                        <Tooltip label="Resume recurring transaction">
-                          <ActionIcon
-                            aria-label="Resume recurring transaction"
-                            onClick={() =>
-                              resumeSchedule.mutate({ id: schedule.id })
-                            }
-                            variant="subtle"
-                          >
-                            <Play size={16} />
-                          </ActionIcon>
-                        </Tooltip>
-                      ) : (
-                        <Tooltip label="Pause recurring transaction">
-                          <ActionIcon
-                            aria-label="Pause recurring transaction"
-                            onClick={() =>
-                              pauseSchedule.mutate({ id: schedule.id })
-                            }
-                            variant="subtle"
-                          >
-                            <Pause size={16} />
-                          </ActionIcon>
-                        </Tooltip>
-                      )}
-                      <Tooltip label="Delete recurring transaction">
-                        <ActionIcon
-                          aria-label="Delete recurring transaction"
-                          color="red"
-                          onClick={() => {
-                            const confirmed = window.confirm(
-                              `Delete "${schedule.merchantName}" recurring schedule?`,
-                            )
-                            if (confirmed) {
-                              archiveSchedule.mutate({ id: schedule.id })
-                            }
-                          }}
-                          variant="subtle"
-                        >
-                          <Trash2 size={16} />
-                        </ActionIcon>
-                      </Tooltip>
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-              {schedules.length === 0 && (
-                <Table.Tr>
-                  <Table.Td colSpan={6}>
-                    <Text c="dimmed" ta="center" py="lg">
-                      No recurring transactions
-                    </Text>
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
-      </Paper>
-    </Stack>
-  )
-}
-
-function TitleText() {
-  return (
-    <Stack gap={0}>
-      <Text fw={700}>Recurring transactions</Text>
-      <Text c="dimmed" size="sm">
-        Monthly manual transactions created on their due date.
-      </Text>
+      <SettingsToolbar
+        title="Recurring transactions"
+        description="Create monthly transactions automatically on their due date."
+        addLabel="Add recurring"
+        onAdd={openCreateModal}
+      />
+      <DataState
+        hasData={schedules.length > 0}
+        isLoading={schedulesQuery.isLoading}
+        isError={schedulesQuery.isError}
+        isFetching={schedulesQuery.isFetching}
+        onRetry={() => void schedulesQuery.refetch()}
+        loadingMessage="Loading recurring transactions…"
+        errorMessage="Failed to load recurring transactions"
+        emptyMessage="No recurring transactions"
+      >
+        {isMobile ? (
+          <MobileTableList
+            ariaLabel={`Recurring transactions list, ${schedules.length.toLocaleString()} total`}
+            data={schedules}
+            emptyMessage="No recurring transactions"
+            getRowKey={(schedule) => schedule.id}
+            renderRow={renderMobileSchedule}
+          />
+        ) : (
+          <Paper withBorder p={0} radius="md" style={{ overflow: 'hidden' }}>
+            <Table.ScrollContainer minWidth={720}>
+              <Table verticalSpacing="sm">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Merchant</Table.Th>
+                    <Table.Th>Amount</Table.Th>
+                    <Table.Th>Schedule</Table.Th>
+                    <Table.Th>Next</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                    <Table.Th style={{ textAlign: 'right' }}>Actions</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {schedules.map((schedule) => (
+                    <Table.Tr key={schedule.id}>
+                      <Table.Td>
+                        <Stack gap={0}>
+                          <Text fw={600} size="sm">
+                            {schedule.merchantName}
+                          </Text>
+                          <Text c="dimmed" size="xs">
+                            {schedule.accountName ?? 'Account'}
+                          </Text>
+                        </Stack>
+                      </Table.Td>
+                      <Table.Td>
+                        {formatMoneyWithSign({ value: schedule.amount })}
+                      </Table.Td>
+                      <Table.Td>
+                        Monthly on {formatScheduleDay(schedule.dayOfMonth)}
+                      </Table.Td>
+                      <Table.Td>
+                        {schedule.nextOccurrenceDate
+                          ? formatCalendarDate(schedule.nextOccurrenceDate)
+                          : '—'}
+                      </Table.Td>
+                      <Table.Td>
+                        <SettingsStatusBadge
+                          status={getScheduleStatus(schedule)}
+                        />
+                      </Table.Td>
+                      <Table.Td>{renderScheduleActions(schedule)}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
+          </Paper>
+        )}
+      </DataState>
     </Stack>
   )
 }

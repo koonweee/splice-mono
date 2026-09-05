@@ -13,16 +13,16 @@ import {
   Switch,
   Text,
 } from '@mantine/core'
-import { useClickOutside, useDisclosure, useMediaQuery } from '@mantine/hooks'
+import { useClickOutside, useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { Filter, Plus } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
+import { DeferredFeature } from '../../components/DeferredFeature'
 import {
-  getTransactionControllerFindAllQueryKey,
-  transactionControllerFindAll,
   useAccountControllerFindAll,
   useCategoryControllerFindAll,
   useCategoryControllerFindFilterOptions,
@@ -31,13 +31,24 @@ import {
   useTransactionControllerUndoBulkUpdateCategories,
 } from '../../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../../lib/format'
+import { formatDateRangeLabel } from '../../lib/date-range'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import { getFallbackCategoryColor } from '../../lib/category-colors'
 import { isManualTransaction } from '../../lib/manual-transactions'
+import { getApiErrorMessage } from '../../lib/api-errors'
+import { useCompactLayout } from '../../lib/responsive'
 import {
   getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
+import {
+  PAGE_SIZE,
+  accountsQueryOptions,
+  categoriesQueryOptions,
+  categoryFiltersQueryOptions,
+  initialTransactionParams,
+  transactionsQueryOptions,
+} from '../../lib/queries/primary'
 import type {
   Category,
   Transaction,
@@ -46,16 +57,25 @@ import type {
 import type { DatesRangeValue } from '@mantine/dates'
 import type { MRT_SortingState } from 'mantine-react-table'
 import type { CategorySelectOption } from '@/components/categories/CategorySelect'
-import { DateRangeControl } from '@/components/DateRangeControl'
+import {
+  DateRangeControl,
+  DateRangeFields,
+} from '@/components/DateRangeControl'
 import { TransactionsTable } from '@/components/TransactionsTable'
 import { CategorySelect } from '@/components/categories/CategorySelect'
 import { TransactionBulkEditToolbar } from '@/components/transactions/TransactionBulkEditToolbar'
 import { TransactionsMobileList } from '@/components/transactions/TransactionsMobileList'
 import { PageHeader } from '@/components/PageHeader'
-import { ManualTransactionModal } from '@/components/transactions/ManualTransactionModal'
 import { AccountSelect } from '@/components/accounts/AccountSelect'
+import { ConfirmActionDialog } from '@/components/ConfirmActionDialog'
+import { DataState } from '@/components/DataState'
 
-const PAGE_SIZE = 50
+const ManualTransactionModal = lazy(() =>
+  import('@/components/transactions/ManualTransactionModal').then((module) => ({
+    default: module.ManualTransactionModal,
+  })),
+)
+
 const CLEAR_CATEGORY_VALUE = '__clear_category__'
 const UNCATEGORIZED_CATEGORY_VALUE = 'UNCATEGORIZED'
 
@@ -72,12 +92,15 @@ type TransactionFiltersPanelProps = {
   amountSign: string
   categoryId: string | null
   categoryOptions: Array<CategorySelectOption>
+  dateRange: DatesRangeValue
   hasActiveFilters: boolean
   isMobile: boolean
   onAccountChange: (value: string | null) => void
   onAmountSignChange: (value: string) => void
   onCategoryChange: (value: string | null) => void
+  onDateRangeChange: (value: DatesRangeValue) => void
   onClearFilters: () => void
+  onDone: () => void
 }
 
 const amountSignOptions = [
@@ -86,8 +109,14 @@ const amountSignOptions = [
   { label: 'Outflows', value: 'negative' },
 ]
 
-const isValidDateString = (value: unknown): value is string =>
-  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+const isValidDateString = (value: unknown): value is string => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value))
+    return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return (
+    Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+  )
+}
 
 function getCategorySelectOption(
   category: Pick<Category, 'id' | 'primary' | 'detailed' | 'color'>,
@@ -116,12 +145,15 @@ function TransactionsFilterPanel({
   amountSign,
   categoryId,
   categoryOptions,
+  dateRange,
   hasActiveFilters,
   isMobile,
   onAccountChange,
   onAmountSignChange,
   onCategoryChange,
+  onDateRangeChange,
   onClearFilters,
+  onDone,
 }: TransactionFiltersPanelProps) {
   const comboboxProps = isMobile
     ? getViewportAwareOverlayComboboxProps()
@@ -132,11 +164,31 @@ function TransactionsFilterPanel({
 
   return (
     <Stack gap="md">
+      {isMobile && (
+        <>
+          <Stack gap="xs">
+            <Group justify="space-between">
+              <Text fw={600} size="sm">
+                Date range
+              </Text>
+              {dateRange.some(Boolean) && (
+                <Button
+                  onClick={() => onDateRangeChange([null, null])}
+                  size="compact-sm"
+                  variant="subtle"
+                >
+                  Clear dates
+                </Button>
+              )}
+            </Group>
+            <DateRangeFields onChange={onDateRangeChange} value={dateRange} />
+          </Stack>
+          <Divider />
+        </>
+      )}
       <Stack gap="xs">
-        <Text fw={600} size="sm">
-          Filters
-        </Text>
         <AccountSelect
+          label="Account"
           placeholder="Account"
           data={accountOptions}
           value={accountId}
@@ -149,6 +201,7 @@ function TransactionsFilterPanel({
         />
         <CategorySelect
           aria-label="Category"
+          label="Category"
           placeholder="Category"
           data={categoryOptions}
           value={categoryId}
@@ -174,16 +227,17 @@ function TransactionsFilterPanel({
         />
       </Stack>
 
-      {hasActiveFilters ? (
+      {hasActiveFilters || isMobile ? (
         <>
           <Divider />
-          <Button
-            variant="subtle"
-            size={isMobile ? 'md' : 'xs'}
-            onClick={onClearFilters}
-          >
-            Clear filters
-          </Button>
+          <Group justify="space-between" grow={isMobile}>
+            {hasActiveFilters && (
+              <Button variant="default" size="md" onClick={onClearFilters}>
+                Clear filters
+              </Button>
+            )}
+            {isMobile && <Button onClick={onDone}>Done</Button>}
+          </Group>
         </>
       ) : null}
     </Stack>
@@ -201,6 +255,18 @@ export const Route = createFileRoute('/_authed/transactions')({
       : undefined,
     endDate: isValidDateString(search.endDate) ? search.endDate : undefined,
   }),
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context, deps }) => {
+    void context.queryClient.prefetchQuery(accountsQueryOptions())
+    void context.queryClient.prefetchQuery(categoryFiltersQueryOptions())
+    void context.queryClient.prefetchQuery(categoriesQueryOptions())
+    await context.queryClient
+      .ensureInfiniteQueryData({
+        ...transactionsQueryOptions(initialTransactionParams(deps)),
+        revalidateIfStale: true,
+      })
+      .catch(() => undefined)
+  },
   component: TransactionsPage,
 })
 
@@ -208,7 +274,7 @@ function TransactionsPage() {
   const search = Route.useSearch()
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
-  const isMobile = useMediaQuery('(max-width: 48em)')
+  const isMobile = useCompactLayout()
   const [filtersOpened, { close: closeFilters, toggle: toggleFilters }] =
     useDisclosure(false)
   const desktopFilterRef = useClickOutside<HTMLDivElement>(() => {
@@ -229,6 +295,9 @@ function TransactionsPage() {
   const [manualModalOpened, setManualModalOpened] = useState(false)
   const [editingManualTransaction, setEditingManualTransaction] =
     useState<Transaction | null>(null)
+  const [deletingManualTransaction, setDeletingManualTransaction] =
+    useState<Transaction | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Filter state
   const [dateRange, setDateRange] = useState<DatesRangeValue>(() => [
@@ -243,6 +312,16 @@ function TransactionsPage() {
   )
   const [amountSign, setAmountSign] = useState('all')
 
+  // Back/forward and deep-link navigation can reuse this mounted route.
+  useEffect(() => {
+    setAccountId(search.accountId ?? null)
+    setCategoryId(search.categoryId ?? null)
+    setDateRange([
+      search.startDate ? dayjs(search.startDate).toDate() : null,
+      search.endDate ? dayjs(search.endDate).toDate() : null,
+    ])
+  }, [search.accountId, search.categoryId, search.startDate, search.endDate])
+
   // Account data for the select dropdown
   const { data: accounts } = useAccountControllerFindAll()
   const { data: categories } = useCategoryControllerFindFilterOptions()
@@ -252,35 +331,13 @@ function TransactionsPage() {
     useTransactionControllerUndoBulkUpdateCategories()
 
   const invalidateTransactions = useCallback(() => {
-    queryClient.invalidateQueries({
-      predicate: (query) =>
-        Array.isArray(query.queryKey) &&
-        typeof query.queryKey[0] === 'string' &&
-        (query.queryKey[0].includes('transaction') ||
-          query.queryKey[0].includes('recurring-manual-transaction') ||
-          query.queryKey[0].includes('category') ||
-          query.queryKey[0].includes('analysis')),
-    })
+    void invalidateMutationFamilies(queryClient, [
+      'transactions',
+      'analysis',
+      'categories',
+    ])
   }, [queryClient])
-  const removeManualTransaction = useTransactionControllerRemoveManual({
-    mutation: {
-      onSuccess: () => {
-        invalidateTransactions()
-        notifications.show({
-          title: 'Transaction deleted',
-          message: 'The manual transaction was deleted.',
-          color: 'green',
-        })
-      },
-      onError: () => {
-        notifications.show({
-          title: 'Delete failed',
-          message: 'The manual transaction was not deleted.',
-          color: 'red',
-        })
-      },
-    },
-  })
+  const removeManualTransaction = useTransactionControllerRemoveManual()
 
   const accountOptions = useMemo(
     () =>
@@ -359,23 +416,8 @@ function TransactionsPage() {
     isFetchingNextPage,
     isLoading,
     isError,
-  } = useInfiniteQuery({
-    queryKey: [
-      ...getTransactionControllerFindAllQueryKey(queryParams),
-      'infinite',
-    ],
-    queryFn: ({ pageParam = 0 }) =>
-      transactionControllerFindAll({
-        ...queryParams,
-        pageIndex: String(pageParam),
-      }),
-    initialPageParam: 0,
-    getNextPageParam: (_lastPage, allPages) => {
-      const lastPage = _lastPage
-      const totalFetched = allPages.length * PAGE_SIZE
-      return totalFetched < lastPage.total ? allPages.length : undefined
-    },
-  })
+    refetch,
+  } = useInfiniteQuery(transactionsQueryOptions(queryParams))
   const flatData = useMemo(
     () => data?.pages.flatMap((page) => page.data) ?? [],
     [data],
@@ -407,7 +449,7 @@ function TransactionsPage() {
   }, [fetchNextPage, isFetching, hasNextPage])
 
   const hasActiveFilters =
-    dateRange[0] !== null ||
+    dateRange.some(Boolean) ||
     accountId !== null ||
     categoryId !== null ||
     amountSign !== 'all'
@@ -435,15 +477,44 @@ function TransactionsPage() {
   }
 
   const deleteManualTransaction = (transaction: Transaction) => {
-    const confirmed = window.confirm(
-      `Delete "${transaction.merchantName ?? 'this transaction'}"?`,
-    )
+    if (
+      !isManualTransaction(transaction) ||
+      removeManualTransaction.isPending
+    ) {
+      return
+    }
+    setDeleteError(null)
+    setDeletingManualTransaction(transaction)
+  }
 
-    if (!confirmed) {
+  const confirmDeleteManualTransaction = () => {
+    if (!deletingManualTransaction || removeManualTransaction.isPending) {
       return
     }
 
-    removeManualTransaction.mutate({ id: transaction.id })
+    setDeleteError(null)
+    removeManualTransaction.mutate(
+      { id: deletingManualTransaction.id },
+      {
+        onSuccess: () => {
+          setDeletingManualTransaction(null)
+          invalidateTransactions()
+          notifications.show({
+            title: 'Transaction deleted',
+            message: 'The manual transaction was deleted.',
+            color: 'green',
+          })
+        },
+        onError: (error) => {
+          setDeleteError(
+            getApiErrorMessage(
+              error,
+              'The manual transaction was not deleted.',
+            ),
+          )
+        },
+      },
+    )
   }
 
   const selectedLoadedCount = loadedTransactionIds.filter((id) =>
@@ -553,15 +624,16 @@ function TransactionsPage() {
     )
   }
 
-  const hiddenActiveFilterCount = [
+  const activeFilterCount = [
+    isMobile && dateRange.some(Boolean) ? 'dates' : null,
     accountId,
     categoryId,
     amountSign !== 'all' ? amountSign : null,
   ].filter(Boolean).length
 
   const filterButtonLabel =
-    hiddenActiveFilterCount > 0
-      ? `Open transaction filters, ${hiddenActiveFilterCount} active`
+    activeFilterCount > 0
+      ? `Open transaction filters, ${activeFilterCount} active`
       : 'Open transaction filters'
 
   const filterPanel = (
@@ -571,12 +643,15 @@ function TransactionsPage() {
       amountSign={amountSign}
       categoryId={categoryId}
       categoryOptions={categoryOptions}
+      dateRange={dateRange}
       hasActiveFilters={hasActiveFilters}
       isMobile={Boolean(isMobile)}
       onAccountChange={setAccountId}
       onAmountSignChange={setAmountSign}
       onCategoryChange={setCategoryId}
+      onDateRangeChange={setDateRange}
       onClearFilters={clearFilters}
+      onDone={closeFilters}
     />
   )
 
@@ -628,14 +703,35 @@ function TransactionsPage() {
         wrap="nowrap"
         actions={headerActions}
       />
-      <ManualTransactionModal
-        accounts={accounts ?? []}
-        categories={assignableCategories}
-        defaultAccountId={accountId}
-        opened={manualModalOpened}
-        transaction={editingManualTransaction}
-        onClose={closeManualTransactionModal}
-        onSaved={invalidateTransactions}
+      {manualModalOpened && (
+        <DeferredFeature label="Transaction editor">
+          <ManualTransactionModal
+            accounts={accounts ?? []}
+            categories={assignableCategories}
+            defaultAccountId={accountId}
+            opened={manualModalOpened}
+            transaction={editingManualTransaction}
+            onClose={closeManualTransactionModal}
+            onSaved={invalidateTransactions}
+          />
+        </DeferredFeature>
+      )}
+      <ConfirmActionDialog
+        opened={deletingManualTransaction !== null}
+        title="Delete transaction"
+        targetLabel={
+          deletingManualTransaction?.merchantName ?? 'Manual transaction'
+        }
+        consequence="This removes the manual transaction from your history and analysis. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteManualTransaction}
+        onClose={() => {
+          if (removeManualTransaction.isPending) return
+          setDeletingManualTransaction(null)
+          setDeleteError(null)
+        }}
+        isPending={removeManualTransaction.isPending}
+        error={deleteError}
       />
 
       <Group
@@ -645,24 +741,28 @@ function TransactionsPage() {
         align="center"
       >
         {isMobile ? (
-          <Group flex={1} gap="xs" miw={0} wrap="nowrap">
-            <DateRangeControl onChange={setDateRange} value={dateRange} />
-            <Box pos="relative">
-              <ActionIcon
-                aria-label={filterButtonLabel}
-                variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
-                size={48}
-                onClick={toggleFilters}
-              >
-                <Filter size={20} />
-              </ActionIcon>
-              {hiddenActiveFilterCount > 0 && (
-                <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
-                  {hiddenActiveFilterCount}
+          <Button
+            aria-label={filterButtonLabel}
+            fullWidth
+            h="auto"
+            justify="space-between"
+            leftSection={<Filter size={20} />}
+            mih={48}
+            onClick={toggleFilters}
+            py="xs"
+            rightSection={
+              activeFilterCount > 0 ? (
+                <Badge circle size="sm">
+                  {activeFilterCount}
                 </Badge>
-              )}
-            </Box>
-          </Group>
+              ) : null
+            }
+            variant="default"
+          >
+            <Text component="span" size="sm" style={{ whiteSpace: 'normal' }}>
+              Filters · {formatDateRangeLabel(dateRange)}
+            </Text>
+          </Button>
         ) : (
           <DateRangeControl onChange={setDateRange} value={dateRange} />
         )}
@@ -673,7 +773,7 @@ function TransactionsPage() {
             onClose={closeFilters}
             title="Filters"
             position="bottom"
-            size="min(430px, 80dvh)"
+            size="min(680px, 90dvh)"
             padding="md"
           >
             {filterPanel}
@@ -682,15 +782,15 @@ function TransactionsPage() {
           <Box pos="relative" ref={desktopFilterRef}>
             <ActionIcon
               aria-label={filterButtonLabel}
-              variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
+              variant={activeFilterCount > 0 ? 'light' : 'default'}
               size={42}
               onClick={toggleFilters}
             >
               <Filter size={18} />
             </ActionIcon>
-            {hiddenActiveFilterCount > 0 && (
+            {activeFilterCount > 0 && (
               <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
-                {hiddenActiveFilterCount}
+                {activeFilterCount}
               </Badge>
             )}
             {filtersOpened && (
@@ -734,11 +834,7 @@ function TransactionsPage() {
             variant="summary"
           />
         )}
-        {!isMobile && (
-          <Box ml="auto">
-            {addTransactionAction}
-          </Box>
-        )}
+        {!isMobile && <Box ml="auto">{addTransactionAction}</Box>}
       </Group>
 
       {isMobile && bulkModeEnabled && (
@@ -766,6 +862,8 @@ function TransactionsPage() {
           totalRows={totalRows}
           isLoading={isLoading}
           isError={isError}
+          isFetching={isFetching}
+          onRetry={() => void refetch()}
           isFetchingNextPage={isFetchingNextPage}
           onScrollNearBottom={fetchMoreOnScroll}
           bulkModeEnabled={bulkModeEnabled}
@@ -775,31 +873,42 @@ function TransactionsPage() {
           onDeleteManualTransaction={deleteManualTransaction}
         />
       ) : (
-        <TransactionsTable
-          data={flatData}
-          totalRows={totalRows}
+        <DataState
+          hasData={flatData.length > 0}
           isLoading={isLoading}
           isError={isError}
-          isFetchingNextPage={isFetchingNextPage}
-          enableVirtualization
-          onScrollNearBottom={fetchMoreOnScroll}
-          manualSorting
-          sorting={sorting}
-          onSortingChange={setSorting}
-          bulkModeEnabled={bulkModeEnabled}
-          selectedTransactionIds={selectedTransactionIds}
-          onToggleTransactionSelection={toggleTransactionSelection}
-          onToggleLoadedSelection={toggleLoadedSelection}
-          onEditManualTransaction={openEditManualTransaction}
-          onDeleteManualTransaction={deleteManualTransaction}
-          mantinePaperProps={{
-            style: { display: 'flex', flexDirection: 'column', flex: 1 },
-          }}
-          mantineTableContainerProps={{
-            ref: tableContainerRef,
-            style: { flex: 1, overflow: 'auto' },
-          }}
-        />
+          isFetching={isFetching}
+          loadingMessage="Loading transactions…"
+          errorMessage="Error loading transactions"
+          emptyMessage="No transactions found."
+          onRetry={() => void refetch()}
+        >
+          <TransactionsTable
+            data={flatData}
+            totalRows={totalRows}
+            isLoading={false}
+            isError={false}
+            isFetchingNextPage={isFetchingNextPage}
+            enableVirtualization
+            onScrollNearBottom={fetchMoreOnScroll}
+            manualSorting
+            sorting={sorting}
+            onSortingChange={setSorting}
+            bulkModeEnabled={bulkModeEnabled}
+            selectedTransactionIds={selectedTransactionIds}
+            onToggleTransactionSelection={toggleTransactionSelection}
+            onToggleLoadedSelection={toggleLoadedSelection}
+            onEditManualTransaction={openEditManualTransaction}
+            onDeleteManualTransaction={deleteManualTransaction}
+            mantinePaperProps={{
+              style: { display: 'flex', flexDirection: 'column', flex: 1 },
+            }}
+            mantineTableContainerProps={{
+              ref: tableContainerRef,
+              style: { flex: 1, overflow: 'auto' },
+            }}
+          />
+        </DataState>
       )}
     </Flex>
   )

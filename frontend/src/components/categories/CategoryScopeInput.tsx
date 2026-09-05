@@ -14,6 +14,7 @@ import {
   getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
+import { LifecycleBadge } from '../LifecycleBadge'
 import type {
   AnalysisCategoryScope,
   AnalysisRuleCategoryView,
@@ -196,9 +197,7 @@ export function CategoryScopeInput({
                         {category.primary}
                       </Text>
                       {category.archivedAt && (
-                        <Badge size="xs" variant="light" color="orange">
-                          Archived
-                        </Badge>
+                        <LifecycleBadge size="xs" status="Archived" />
                       )}
                     </Group>
                   </Box>
@@ -208,25 +207,37 @@ export function CategoryScopeInput({
           />
           {selectedCategories.length > 0 && (
             <Group gap={6} wrap="wrap">
-              {selectedCategories.map((category) => (
-                <Badge
-                  key={category.id}
-                  variant="light"
-                  color={category.archivedAt ? 'orange' : 'gray'}
-                  leftSection={
-                    <Box
-                      aria-hidden="true"
-                      style={{
-                        ...swatchStyle,
-                        ...getCategoryColorStyles(category.color),
-                      }}
-                    />
-                  }
-                >
-                  {getCategoryLabel(category)}
-                  {category.archivedAt ? ' - Archived' : ''}
-                </Badge>
-              ))}
+              {selectedCategories.map((category) => {
+                const swatch = (
+                  <Box
+                    aria-hidden="true"
+                    style={{
+                      ...swatchStyle,
+                      ...getCategoryColorStyles(category.color),
+                    }}
+                  />
+                )
+
+                return category.archivedAt ? (
+                  <LifecycleBadge
+                    key={category.id}
+                    status="Archived"
+                    size="md"
+                    leftSection={swatch}
+                  >
+                    {getCategoryLabel(category)}
+                  </LifecycleBadge>
+                ) : (
+                  <Badge
+                    key={category.id}
+                    variant="light"
+                    color="gray"
+                    leftSection={swatch}
+                  >
+                    {getCategoryLabel(category)}
+                  </Badge>
+                )
+              })}
             </Group>
           )}
         </Stack>

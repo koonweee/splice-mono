@@ -63,9 +63,11 @@ import {
 } from '../types/UserSettings';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { UserService } from './user.service';
+import { PrivateResponse } from '../auth/decorators/private-response.decorator';
 
 @ApiTags('user')
 @Controller('user')
+@PrivateResponse()
 export class UserController {
   constructor(
     private readonly userService: UserService,

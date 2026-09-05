@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-React frontend for the Splice financial management application. Built with TanStack Start (Router + Query), Vite, and Tailwind CSS.
+React frontend for the Splice financial management application. Built with TanStack Start (Router + Query), Vite, and Mantine; Tailwind CSS is also available.
 
 ## Commands
 
@@ -72,7 +72,9 @@ function AccountList() {
 
 ### Styling
 
-Tailwind CSS 4 with Vite plugin. Global styles in `src/styles.css`.
+Mantine defaults and palettes live in `src/lib/theme.ts`. Shared global styles live in `src/styles.css`; component layouts also use CSS modules. Tailwind CSS 4 is available through the Vite plugin.
+
+Read [Shared UI conventions](docs/ui-conventions.md) before changing UI. Reuse the editor, form-action, settings, date, and table primitives described there. Implementation status and verification are tracked in the [standardization audit](docs/ui-standardization-audit.md).
 
 ### Components
 

@@ -1,32 +1,54 @@
-import { Alert, Button, Group, Loader, Stack, Text } from '@mantine/core'
+import { Button, Group, Loader, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { showNotification } from '@mantine/notifications'
 import { IconPlus, IconRefresh, IconUpload } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { lazy, useMemo } from 'react'
+import { DeferredFeature } from '../../components/DeferredFeature'
 import {
-  getAccountControllerFindAllQueryKey,
   useAccountControllerFindAll,
   useBankLinkControllerSyncAllAccounts,
 } from '../../api/clients/spliceAPI'
+import { accountsQueryOptions } from '../../lib/queries/primary'
+import { loadQuery } from '../../lib/queries/loader'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import type { Account } from '../../api/models'
 import { InstitutionSection } from '@/components/accounts/InstitutionSection'
-import { AddAccountModal } from '@/components/accounts/AddAccountModal'
-import { BackfillModal } from '@/components/accounts/BackfillModal'
 import { PageHeader } from '@/components/PageHeader'
+import { DataState } from '@/components/DataState'
+
+const AddAccountModal = lazy(() =>
+  import('@/components/accounts/AddAccountModal').then((module) => ({
+    default: module.AddAccountModal,
+  })),
+)
+const BackfillModal = lazy(() =>
+  import('@/components/accounts/BackfillModal').then((module) => ({
+    default: module.BackfillModal,
+  })),
+)
 
 export const Route = createFileRoute('/_authed/accounts')({
   validateSearch: (search: Record<string, unknown>) => ({
     accountId:
       typeof search.accountId === 'string' ? search.accountId : undefined,
   }),
+  loader: async ({ context }) => {
+    await loadQuery(context.queryClient, accountsQueryOptions())
+  },
   component: AccountsPage,
 })
 
 function AccountsPage() {
   const { accountId: highlightedAccountId } = Route.useSearch()
-  const { data: accounts, isLoading, error } = useAccountControllerFindAll()
+  const {
+    data: accounts,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useAccountControllerFindAll()
   const [modalOpened, { open: openModal, close: closeModal }] =
     useDisclosure(false)
   const [backfillOpened, { open: openBackfill, close: closeBackfill }] =
@@ -35,9 +57,14 @@ function AccountsPage() {
   const syncAll = useBankLinkControllerSyncAllAccounts({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: getAccountControllerFindAllQueryKey(),
-        })
+        void invalidateMutationFamilies(queryClient, [
+          'accounts',
+          'balances',
+          'investments',
+          'transactions',
+          'analysis',
+          'categories',
+        ])
         showNotification({
           title: 'Sync complete',
           message: 'All accounts have been synced successfully',
@@ -72,22 +99,6 @@ function AccountsPage() {
       })
     return groups
   }, [accounts, highlightedAccountId])
-
-  if (isLoading) {
-    return (
-      <Group justify="center" py="xl">
-        <Loader />
-      </Group>
-    )
-  }
-
-  if (error) {
-    return (
-      <Alert color="red" title="Error">
-        Failed to load accounts
-      </Alert>
-    )
-  }
 
   return (
     <>
@@ -126,22 +137,38 @@ function AccountsPage() {
           </Group>
         }
       />
-      <Stack gap="lg">
-        {Array.from(groupedAccounts.entries()).map(
-          ([institution, groupAccount]) => (
-            <InstitutionSection
-              key={institution}
-              institution={institution}
-              accounts={groupAccount}
-            />
-          ),
-        )}
-        {groupedAccounts.size === 0 && (
-          <Text c="dimmed">No accounts found</Text>
-        )}
-      </Stack>
-      <AddAccountModal opened={modalOpened} onClose={closeModal} />
-      <BackfillModal opened={backfillOpened} onClose={closeBackfill} />
+      <DataState
+        hasData={groupedAccounts.size > 0}
+        isLoading={isLoading}
+        isError={Boolean(error)}
+        isFetching={isFetching}
+        loadingMessage="Loading accounts…"
+        errorMessage="Failed to load accounts"
+        emptyMessage="No accounts found"
+        onRetry={() => void refetch()}
+      >
+        <Stack gap="lg">
+          {Array.from(groupedAccounts.entries()).map(
+            ([institution, groupAccount]) => (
+              <InstitutionSection
+                key={institution}
+                institution={institution}
+                accounts={groupAccount}
+              />
+            ),
+          )}
+        </Stack>
+      </DataState>
+      {modalOpened && (
+        <DeferredFeature label="Add account">
+          <AddAccountModal opened={modalOpened} onClose={closeModal} />
+        </DeferredFeature>
+      )}
+      {backfillOpened && (
+        <DeferredFeature label="Backfill balances">
+          <BackfillModal opened={backfillOpened} onClose={closeBackfill} />
+        </DeferredFeature>
+      )}
     </>
   )
 }

@@ -44,8 +44,8 @@ vi.mock('../api/clients/spliceAPI', async () => {
   }
 })
 
-vi.mock('../lib/hooks', () => ({
-  useIsMobile: () => mockFns.isMobile,
+vi.mock('../lib/responsive', () => ({
+  useCompactLayout: () => mockFns.isMobile,
 }))
 
 vi.mock('./TransactionsTable', () => ({
@@ -231,7 +231,9 @@ describe('CategoryTransactionsModal', () => {
     result.rerenderModal()
 
     expect(
-      screen.getByRole('button', { name: 'Retry' }).getAttribute('data-loading'),
+      screen
+        .getByRole('button', { name: 'Retry' })
+        .getAttribute('data-loading'),
     ).toBe('true')
 
     const transaction = makeTransaction({ id: 'recovered-txn' })
@@ -274,6 +276,18 @@ describe('CategoryTransactionsModal', () => {
       }),
     )
     expect(screen.queryByText('No transactions found.')).toBeNull()
+  })
+
+  it('keeps loaded drilldown rows visible when a refresh fails', () => {
+    analysisHookState.data = [makeTransaction({ id: 'cached-txn' })]
+    analysisHookState.isError = true
+
+    renderModal()
+
+    expect(screen.getByTestId('transactions-table')).toBeTruthy()
+    expect(screen.getByText('Unable to load transactions')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(analysisHookState.refetch).toHaveBeenCalledOnce()
   })
 
   it('renders the shared mobile transaction list for transaction drilldowns on mobile', () => {

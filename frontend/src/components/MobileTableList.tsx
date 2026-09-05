@@ -1,4 +1,4 @@
-import { Loader, Text } from '@mantine/core'
+import { DataState } from './DataState'
 import styles from './MobileTableList.module.css'
 import type { ReactNode } from 'react'
 
@@ -11,6 +11,9 @@ interface MobileTableListProps<T> {
   getRowKey: (row: T) => string
   isError?: boolean
   isLoading?: boolean
+  isFetching?: boolean
+  loadingMessage?: string
+  onRetry?: () => void
   isRowSelected?: (row: T) => boolean
   renderRow: (row: T) => ReactNode
 }
@@ -24,45 +27,35 @@ export function MobileTableList<T>({
   getRowKey,
   isError = false,
   isLoading = false,
+  isFetching = false,
+  loadingMessage,
+  onRetry,
   isRowSelected,
   renderRow,
 }: MobileTableListProps<T>) {
-  if (isLoading) {
-    return (
-      <div className={styles.footer}>
-        <Loader size="sm" />
-      </div>
-    )
-  }
-
-  if (isError) {
-    return (
-      <Text c="red" size="sm">
-        {errorMessage}
-      </Text>
-    )
-  }
-
-  if (data.length === 0) {
-    return (
-      <Text c="dimmed" size="sm" className={styles.state}>
-        {emptyMessage}
-      </Text>
-    )
-  }
-
   return (
-    <div aria-label={ariaLabel} className={styles.list}>
-      {data.map((row) => (
-        <div
-          className={styles.row}
-          data-selected={isRowSelected?.(row) || undefined}
-          key={getRowKey(row)}
-        >
-          {renderRow(row)}
-        </div>
-      ))}
-      {footer}
-    </div>
+    <DataState
+      hasData={data.length > 0}
+      isLoading={isLoading}
+      isError={isError}
+      isFetching={isFetching}
+      loadingMessage={loadingMessage}
+      errorMessage={errorMessage}
+      emptyMessage={emptyMessage}
+      onRetry={onRetry}
+    >
+      <div aria-label={ariaLabel} className={styles.list} role="region">
+        {data.map((row) => (
+          <div
+            className={styles.row}
+            data-selected={isRowSelected?.(row) || undefined}
+            key={getRowKey(row)}
+          >
+            {renderRow(row)}
+          </div>
+        ))}
+        {footer}
+      </div>
+    </DataState>
   )
 }

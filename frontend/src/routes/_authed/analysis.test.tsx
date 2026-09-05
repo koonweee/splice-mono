@@ -9,6 +9,7 @@ import {
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Route } from './analysis'
+import type * as SessionModule from '../../lib/session'
 import type { ComponentType, ReactNode } from 'react'
 import type * as ReactRouter from '@tanstack/react-router'
 import type * as SpliceAPI from '../../api/clients/spliceAPI'
@@ -30,6 +31,11 @@ const mockFns = vi.hoisted(() => ({
   dateRangeControlMock: vi.fn(),
 }))
 
+vi.mock('../../lib/session', async () => ({
+  ...(await vi.importActual<typeof SessionModule>('../../lib/session')),
+  useCurrentUser: mockFns.useUserControllerMeMock,
+}))
+
 vi.mock('@tanstack/react-router', async () => {
   const actual: typeof ReactRouter = await vi.importActual(
     '@tanstack/react-router',
@@ -40,6 +46,7 @@ vi.mock('@tanstack/react-router', async () => {
     createFileRoute: () => (config: Record<string, unknown>) => ({
       ...config,
       useSearch: mockFns.useSearchMock,
+      useLoaderData: mockFns.useSearchMock,
     }),
     Link: ({ children, to }: { children: ReactNode; to: string }) => (
       <a href={to}>{children}</a>
@@ -109,12 +116,15 @@ vi.mock('../../components/analysis/AnalysisSankeyChart', () => ({
 }))
 
 vi.mock('../../components/DateRangeControl', () => ({
-  DateRangeControl: (props: { value: [Date | null, Date | null] }) => {
+  DateRangeControl: (props: {
+    value: [Date | string | null, Date | string | null]
+  }) => {
     mockFns.dateRangeControlMock(props)
     const [start, end] = props.value
     return (
       <div data-testid="date-range-control">
-        {start?.toISOString().slice(0, 10)}:{end?.toISOString().slice(0, 10)}
+        {start instanceof Date ? start.toISOString().slice(0, 10) : start}:
+        {end instanceof Date ? end.toISOString().slice(0, 10) : end}
       </div>
     )
   },
@@ -240,6 +250,32 @@ afterEach(() => {
 })
 
 describe('Analysis route', () => {
+  it('shows neutral totals without an invented split for an empty period and opens the previous month', () => {
+    mockFns.useTransactionAnalysisControllerGetAnalysisMock.mockReturnValue({
+      data: {
+        ...analysisResponse,
+        inflows: [],
+        outflows: [],
+        totalInflow: 0,
+        totalOutflow: 0,
+        netFlow: 0,
+      },
+      isPending: false,
+      isError: false,
+    })
+
+    renderAnalysisPage()
+
+    expect(screen.getByText('No transactions in this period')).toBeTruthy()
+    expect(screen.queryByText('+$0')).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'View previous month' }))
+    expect(mockFns.navigateMock).toHaveBeenCalledWith({
+      to: '/analysis',
+      search: { startDate: '2026-01-01', endDate: '2026-01-31' },
+    })
+  })
+
   it('rejects impossible and reversed direct-navigation date ranges', () => {
     expect(
       validateAnalysisSearch({
@@ -288,10 +324,10 @@ describe('Analysis route', () => {
     })
   })
 
-  it('uses API category colors for chart segments and legend markers', () => {
+  it('uses API category colors for chart segments and legend markers', async () => {
     renderAnalysisPage()
 
-    const charts = screen.getAllByTestId('donut-chart')
+    const charts = await screen.findAllByTestId('donut-chart')
     expect(
       within(charts[0]).getByTestId('donut-segment-Salary').dataset.color,
     ).toBe('#112233')
@@ -317,7 +353,9 @@ describe('Analysis route', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /audit/i }))
 
-    expect(await screen.findByText('Analysis audit')).toBeTruthy()
+    expect(
+      await screen.findByText('Analysis audit', {}, { timeout: 5000 }),
+    ).toBeTruthy()
     expect(
       mockFns.useTransactionAnalysisControllerGetAuditMock,
     ).toHaveBeenCalledWith(
@@ -331,7 +369,7 @@ describe('Analysis route', () => {
     ).toBe('/settings?tab=analysis')
   })
 
-  it('renders the Sankey chart instead of donut sections when enabled', () => {
+  it('renders the Sankey chart instead of donut sections when enabled', async () => {
     mockFns.useUserControllerMeMock.mockReturnValue({
       data: {
         settings: {
@@ -342,11 +380,11 @@ describe('Analysis route', () => {
 
     renderAnalysisPage()
 
-    expect(screen.getByTestId('analysis-sankey-chart')).toBeTruthy()
+    expect(await screen.findByTestId('analysis-sankey-chart')).toBeTruthy()
     expect(screen.queryByTestId('donut-chart')).toBeNull()
   })
 
-  it('opens drilldown for Sankey category clicks and ignores the central hub', () => {
+  it('opens drilldown for Sankey category clicks and ignores the central hub', async () => {
     mockFns.useUserControllerMeMock.mockReturnValue({
       data: {
         settings: {
@@ -357,7 +395,10 @@ describe('Analysis route', () => {
 
     renderAnalysisPage()
 
-    fireEvent.click(screen.getByRole('button', { name: /salary sankey/i }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: /salary sankey/i }),
+    )
+    await screen.findByTestId('category-modal')
     expect(mockFns.categoryModalMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
         opened: true,
@@ -384,4 +425,22 @@ describe('Analysis route', () => {
       }),
     )
   })
+})
+
+it('offers retry and retains matching cached analysis after a refresh failure', () => {
+  const refetch = vi.fn()
+  mockFns.useTransactionAnalysisControllerGetAnalysisMock.mockReturnValue({
+    data: analysisResponse,
+    isPending: false,
+    isError: true,
+    refetch,
+  })
+  renderAnalysisPage()
+  expect(
+    screen.getByText('Previously loaded results are shown below.', {
+      exact: false,
+    }),
+  ).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Retry analysis' }))
+  expect(refetch).toHaveBeenCalledOnce()
 })

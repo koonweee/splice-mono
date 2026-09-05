@@ -1,19 +1,12 @@
 import { ActionIcon, Group, NumberInput, Tooltip } from '@mantine/core'
 import { useForm } from '@mantine/form'
-import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, X } from 'lucide-react'
-import {
-  getAccountControllerFindAllQueryKey,
-  getBalanceQueryControllerGetAllBalancesQueryKey,
-  getBalanceQueryControllerGetBalancesQueryKey,
-  useAccountControllerUpdateBalance,
-} from '../../api/clients/spliceAPI'
-import {
-  createMoneyWithSign,
-  getSignedAmount,
-} from '../../lib/balance-utils'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
+import { useCoarsePointer } from '../../lib/responsive'
+import { useAccountControllerUpdateBalance } from '../../api/clients/spliceAPI'
+import { createMoneyWithSign, getSignedAmount } from '../../lib/balance-utils'
 import { getDecimalPlaces } from '../../lib/format'
 import type { Account, MoneyWithSign } from '../../api/models'
 
@@ -32,7 +25,7 @@ export function InlineBalanceEditor({
 }: InlineBalanceEditorProps) {
   const queryClient = useQueryClient()
   const updateBalance = useAccountControllerUpdateBalance()
-  const isTouch = useMediaQuery('(pointer: coarse)')
+  const isTouch = useCoarsePointer()
   const currency = balance.money.currency || 'USD'
   const form = useForm({
     initialValues: {
@@ -50,15 +43,7 @@ export function InlineBalanceEditor({
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: getAccountControllerFindAllQueryKey(),
-          })
-          queryClient.invalidateQueries({
-            queryKey: getBalanceQueryControllerGetBalancesQueryKey(),
-          })
-          queryClient.invalidateQueries({
-            queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
-          })
+          void invalidateMutationFamilies(queryClient, ['accounts', 'balances'])
           notifications.show({
             title: 'Balance updated',
             message: 'Account balance has been updated successfully',

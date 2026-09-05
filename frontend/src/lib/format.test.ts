@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MoneyWithSignSign } from '../api/models'
 import {
   formatAccountType,
+  formatCalendarDate,
   formatDateTime,
   formatMoneyNumber,
   formatMoneyWithSign,
@@ -10,6 +11,22 @@ import {
 } from './format'
 
 describe('format utils', () => {
+  describe('formatCalendarDate', () => {
+    it('keeps calendar dates independent of the device time zone', () => {
+      expect(formatCalendarDate('2026-05-20')).toBe('May 20, 2026')
+      expect(formatCalendarDate('2024-02-29')).toBe('Feb 29, 2024')
+    })
+
+    it('does not reinterpret invalid dates or timestamps as calendar dates', () => {
+      expect(formatCalendarDate('2026-02-29')).toBe('2026-02-29')
+      expect(formatCalendarDate('2026-13-01')).toBe('2026-13-01')
+      expect(formatCalendarDate('2026-05-20T00:00:00Z')).toBe(
+        '2026-05-20T00:00:00Z',
+      )
+      expect(formatCalendarDate('not-a-date')).toBe('not-a-date')
+    })
+  })
+
   describe('formatDateTime', () => {
     it('pretty formats date-only values without a timezone shift', () => {
       expect(formatDateTime('2026-05-20')).toBe('May 20, 2026')
@@ -20,6 +37,12 @@ describe('format utils', () => {
         'May 20, 2026, 2:35 PM',
       )
       expect(formatDateTime('not-a-date')).toBe('not-a-date')
+    })
+
+    it('retains real midnight timestamps as local date and time', () => {
+      expect(formatDateTime('2026-05-20T00:00:00')).toBe(
+        'May 20, 2026, 12:00 AM',
+      )
     })
   })
 

@@ -1,5 +1,2 @@
-import { useMediaQuery } from '@mantine/hooks'
-
-export function useIsMobile() {
-  return useMediaQuery('(max-width: 50em)')
-}
+/** Legacy alias; prefer a named layout or input-capability hook. */
+export { useDataListLayout as useIsMobile } from './responsive'

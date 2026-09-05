@@ -108,13 +108,54 @@ describe('InvestmentActivityTable', () => {
   it('renders activity fields', () => {
     renderTable()
 
-    expect(screen.getByText('2026-05-20')).toBeTruthy()
+    expect(screen.getByText('May 20, 2026')).toBeTruthy()
     expect(screen.getByText('VWRA')).toBeTruthy()
-    expect(screen.getByText('buy / buy')).toBeTruthy()
+    expect(screen.getByText('Buy')).toBeTruthy()
     expect(screen.getByText('10')).toBeTruthy()
-    expect(screen.getByText('120.25')).toBeTruthy()
-    expect(screen.getByText('1.25')).toBeTruthy()
+    expect(screen.getByText('$120.25')).toBeTruthy()
+    expect(screen.getByText('$1.25')).toBeTruthy()
     expect(screen.getByText('-$1,200.25')).toBeTruthy()
+  })
+
+  it('uses the activity currency for prices and fees without dropping quote precision', () => {
+    renderTable({
+      activity: [
+        {
+          ...activity,
+          price: '120.1234',
+          fees: '1.1234',
+          amount: {
+            ...activity.amount,
+            money: { currency: 'EUR', amount: 120025 },
+          },
+          investmentType: 'cash',
+          investmentSubtype: 'deposit',
+        },
+      ],
+    })
+
+    expect(screen.getByText('€120.1234')).toBeTruthy()
+    expect(screen.getByText('€1.1234')).toBeTruthy()
+    expect(screen.getByText('-€1,200.25')).toBeTruthy()
+    expect(screen.getByText('Deposit')).toBeTruthy()
+    expect(screen.queryByText('Cash · Deposit')).toBeNull()
+  })
+
+  it('formats repeated and compound provider labels for people', () => {
+    renderTable({
+      activity: [
+        { ...activity, investmentType: 'sell', investmentSubtype: 'sell' },
+        {
+          ...activity,
+          id: 'reinvestment',
+          investmentType: 'buy',
+          investmentSubtype: 'dividend_reinvestment',
+        },
+      ],
+    })
+
+    expect(screen.getByText('Sell')).toBeTruthy()
+    expect(screen.getByText('Buy · Dividend reinvestment')).toBeTruthy()
   })
 
   it('masks cash impact only', () => {

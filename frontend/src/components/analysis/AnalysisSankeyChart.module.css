@@ -49,7 +49,7 @@
   stroke-opacity: 0.74;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (--supports-hover) {
   .clickableNode:hover rect {
     opacity: 0.82;
   }
@@ -64,7 +64,23 @@
   padding-top: var(--mantine-spacing-sm);
 }
 
-@media (max-width: 50em) {
+.drilldownGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mantine-spacing-lg);
+}
+
+.compactList {
+  min-width: 0;
+}
+
+@media (--phone-layout) {
+  .drilldownGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (--data-list-layout) {
   .chartCanvas {
     min-width: 640px;
   }

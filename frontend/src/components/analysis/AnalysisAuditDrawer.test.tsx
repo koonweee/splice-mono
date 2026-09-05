@@ -100,7 +100,9 @@ describe('AnalysisAuditDrawer', () => {
     })
 
     expect(screen.getByText('Analysis audit')).toBeTruthy()
-    expect(screen.queryByText('No rule effects for this date range.')).toBeNull()
+    expect(
+      screen.queryByText('No rule effects for this date range.'),
+    ).toBeNull()
 
     rerender(
       <MantineProvider>
@@ -126,7 +128,9 @@ describe('AnalysisAuditDrawer', () => {
         />
       </MantineProvider>,
     )
-    expect(screen.getByText('No rule effects for this date range.')).toBeTruthy()
+    expect(
+      screen.getByText('No rule effects for this date range.'),
+    ).toBeTruthy()
     expect(
       screen
         .getAllByRole('link', { name: /manage rules/i })[0]
@@ -146,7 +150,9 @@ describe('AnalysisAuditDrawer', () => {
     expect(screen.getByText('Store refund')).toBeTruthy()
     expect(screen.getByText('Outflow')).toBeTruthy()
     expect(screen.getByText('Inflow')).toBeTruthy()
-    expect(screen.getByText(/Neutralization lookaround:\s*60 days/i)).toBeTruthy()
+    expect(screen.getByText(/Refund matching window:\s*60 days/i)).toBeTruthy()
+    expect(screen.getByText('Feb 1–28, 2026')).toBeTruthy()
+    expect(screen.getByText(/Feb 4, 2026/)).toBeTruthy()
   })
 })
 

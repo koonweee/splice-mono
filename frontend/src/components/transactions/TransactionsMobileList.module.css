@@ -38,12 +38,16 @@
 }
 
 .row {
-  position: relative;
+  --interactive-row-feedback-background: light-dark(
+    var(--mantine-color-gray-0),
+    rgba(255, 255, 255, 0.035)
+  );
+
   display: grid;
   width: 100%;
-  grid-template-columns: minmax(0, 1fr) minmax(88px, auto);
-  gap: 10px;
-  padding: 9px 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 3px 8px;
+  padding: 12px;
   border-bottom: 1px solid
     light-dark(var(--mantine-color-gray-2), rgba(255, 255, 255, 0.065));
   background: light-dark(
@@ -54,31 +58,8 @@
   text-align: left;
 }
 
-.row[data-pressed='true'] {
-  background: light-dark(
-    var(--mantine-color-gray-0),
-    rgba(255, 255, 255, 0.035)
-  );
-}
-
-.rowAction {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  padding: 0;
-  border: 0;
-  appearance: none;
-  background: transparent;
-  pointer-events: none;
-}
-
-.rowAction:focus-visible {
-  outline: 2px solid var(--mantine-primary-color-filled);
-  outline-offset: -2px;
-}
-
 .row.selectedRow {
-  --pressable-feedback-background: light-dark(
+  --interactive-row-feedback-background: light-dark(
     var(--mantine-color-blue-1),
     rgba(77, 171, 247, 0.2)
   );
@@ -86,28 +67,17 @@
   background: light-dark(var(--mantine-color-blue-0), rgba(77, 171, 247, 0.12));
 }
 
-.row.selectedRow[data-pressed='true'] {
-  background: var(--pressable-feedback-background);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .row:hover {
-    background: light-dark(
-      var(--mantine-color-gray-0),
-      rgba(255, 255, 255, 0.035)
-    );
-  }
-}
-
 .row:last-child {
   border-bottom: 0;
 }
 
-.rowMain {
+.rowIdentity {
   display: flex;
+  grid-row: 1 / span 2;
   min-width: 0;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
+  padding-top: 2px;
 }
 
 .merchantAvatar {
@@ -123,12 +93,13 @@
 }
 
 .rowDetails {
+  grid-column: 2 / -1;
   min-width: 0;
 }
 
 .merchantLine,
-.statusLine,
-.metaLine {
+.categoryLine,
+.categoryLabel {
   display: flex;
   min-width: 0;
   align-items: center;
@@ -136,24 +107,28 @@
 }
 
 .merchant {
-  overflow: hidden;
+  overflow-wrap: anywhere;
   font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .meta {
-  overflow: hidden;
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--mantine-color-dimmed);
   font-size: var(--mantine-font-size-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.metaSeparator {
+.categoryLine {
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+
+.categoryLabel {
+  max-width: 100%;
+}
+
+.metadataBadge {
   flex: 0 0 auto;
-  color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
 }
 
 .categorySwatch {
@@ -168,10 +143,6 @@
   font-weight: 700;
   text-align: right;
   white-space: nowrap;
-}
-
-.statusLine {
-  margin-top: 2px;
 }
 
 .rowAside {
@@ -228,11 +199,14 @@
 }
 
 .positive {
-  color: var(--mantine-color-teal-6);
+  color: light-dark(
+    var(--mantine-color-teal-9),
+    var(--mantine-color-teal-text)
+  );
 }
 
 .negative {
-  color: var(--mantine-color-red-6);
+  color: light-dark(var(--mantine-color-red-7), var(--mantine-color-red-2));
 }
 
 .footer {
@@ -240,7 +214,7 @@
   text-align: center;
 }
 
-@media (max-width: 50em) {
+@media (--compact-layout) {
   .list {
     border-right: 0;
     border-left: 0;
@@ -253,7 +227,7 @@
   }
 
   .row {
-    padding: 9px 4px 9px 0;
+    padding: 12px 4px 12px 0;
     background: transparent;
   }
 
@@ -270,7 +244,7 @@
   }
 }
 
-@media (max-width: 50em) {
+@media (--compact-layout) {
   .drilldownList {
     padding-right: var(--mantine-spacing-md);
     padding-left: var(--mantine-spacing-md);

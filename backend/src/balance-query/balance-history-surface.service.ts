@@ -1,6 +1,5 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { AccountType } from 'plaid';
 import {
   formatAccountLabel,
   getAccountGrouping,
@@ -14,10 +13,16 @@ import type {
 } from '../types/BalanceQuery';
 import {
   MoneySign,
-  getDecimalPlaces,
   type SerializedMoneyWithSign,
 } from '../types/MoneyWithSign';
 import { BalanceQueryService } from './balance-query.service';
+import {
+  isLiabilityType,
+  getSignedAmount,
+  calculateNetWorthForDate,
+  calculateChangePercent,
+  createMoneyWithSign,
+} from './balance-projection';
 
 export interface BalanceHistorySurfaceChartPoint {
   date: string;
@@ -58,12 +63,6 @@ export interface BalanceHistorySurfaceOptions {
   accountIds?: string[];
 }
 
-function isLiabilityType(type: string): boolean {
-  return (
-    type === String(AccountType.Credit) || type === String(AccountType.Loan)
-  );
-}
-
 function resolveEffectiveBalance(
   balance: BalanceWithConvertedBalance | undefined,
 ): SerializedMoneyWithSign {
@@ -75,35 +74,6 @@ function resolveEffectiveBalance(
   }
 
   return balance.convertedBalance ?? balance.balance;
-}
-
-function getSignedAmount(balance: SerializedMoneyWithSign): number {
-  const decimalPlaces = getDecimalPlaces(balance.money.currency);
-  const major = balance.money.amount / Math.pow(10, decimalPlaces);
-  return balance.sign === MoneySign.NEGATIVE ? -major : major;
-}
-
-function calculateNetWorthForDate(
-  balances: Record<string, AccountBalanceResult>,
-): number {
-  assertSingleEffectiveCurrency(balances);
-  let netWorth = 0;
-
-  Object.values(balances).forEach((result) => {
-    const effectiveBalance = result.effectiveBalance.convertedBalance
-      ? result.effectiveBalance.convertedBalance
-      : result.effectiveBalance.balance;
-    const amount = getSignedAmount(effectiveBalance);
-
-    if (isLiabilityType(String(result.account.type))) {
-      netWorth -= Math.abs(amount);
-      return;
-    }
-
-    netWorth += amount;
-  });
-
-  return netWorth;
 }
 
 function assertSingleEffectiveCurrency(
@@ -130,30 +100,6 @@ function assertSingleEffectiveCurrency(
   });
 
   return nonZeroCurrency ?? fallbackCurrency ?? 'USD';
-}
-
-function calculateChangePercent(
-  current: number,
-  previous: number,
-): number | undefined {
-  if (previous === 0) return undefined;
-  return ((current - previous) / Math.abs(previous)) * 100;
-}
-
-function createMoneyWithSign(
-  amount: number,
-  currency: string,
-): SerializedMoneyWithSign {
-  const isNegative = amount < 0;
-  const decimalPlaces = getDecimalPlaces(currency);
-
-  return {
-    money: {
-      amount: Math.round(Math.abs(amount) * Math.pow(10, decimalPlaces)),
-      currency,
-    },
-    sign: isNegative ? MoneySign.NEGATIVE : MoneySign.POSITIVE,
-  };
 }
 
 function getLatestSyncedAt(

@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Check, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
   useCategoryControllerFindAll,
   useTransactionControllerUpdate,
@@ -35,7 +36,8 @@ import {
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
 import { CategorySelect } from '../categories/CategorySelect'
-import { usePressFeedback } from '../Pressable'
+import { DataState } from '../DataState'
+import { InteractiveRow } from '../InteractiveRow'
 import {
   formatCounterpartyLabel,
   getMerchantDisplay,
@@ -44,7 +46,7 @@ import {
 import styles from './TransactionsMobileList.module.css'
 import statusBadgeStyles from './TransactionStatusBadge.module.css'
 import type { CategorySelectOption } from '../categories/CategorySelect'
-import type { ReactNode, UIEvent } from 'react'
+import type { UIEvent } from 'react'
 import type { Category, Transaction } from '../../api/models'
 
 type TransactionsMobileListProps = {
@@ -52,6 +54,8 @@ type TransactionsMobileListProps = {
   isError: boolean
   isFetchingNextPage?: boolean
   isLoading: boolean
+  isFetching?: boolean
+  onRetry?: () => void
   onScrollNearBottom?: () => void
   totalRows: number
   variant?: 'default' | 'drilldown'
@@ -128,46 +132,15 @@ function groupTransactionsByDate(data: Array<Transaction>) {
   return Array.from(groups.entries())
 }
 
-function TransactionRow({
-  children,
-  className,
-  label,
-  onOpen,
-}: {
-  children: ReactNode
-  className: string
-  label: string
-  onOpen: () => void
-}) {
-  const { pressProps } = usePressFeedback<HTMLDivElement>()
-
-  return (
-    <div {...pressProps} className={className} onClick={onOpen}>
-      <button
-        aria-label={label}
-        className={styles.rowAction}
-        onClick={(event) => {
-          event.stopPropagation()
-          onOpen()
-        }}
-        type="button"
-      />
-      {children}
-    </div>
-  )
-}
-
 function invalidateTransactionQueries(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      Array.isArray(query.queryKey) &&
-      typeof query.queryKey[0] === 'string' &&
-      (query.queryKey[0].includes('transaction') ||
-        query.queryKey[0].includes('category') ||
-        query.queryKey[0].includes('analysis')),
-  })
+  void invalidateMutationFamilies(queryClient, [
+    'transactions',
+    'analysis',
+    'categories',
+    'categorizationRules',
+  ])
 }
 
 function formatMetadataValue(value: string | null | undefined) {
@@ -191,6 +164,8 @@ export function TransactionsMobileList({
   isError,
   isFetchingNextPage = false,
   isLoading,
+  isFetching = false,
+  onRetry,
   onScrollNearBottom,
   totalRows,
   variant = 'default',
@@ -296,32 +271,17 @@ export function TransactionsMobileList({
     onToggleTransactionSelection?.(transaction.id)
   }
 
-  if (isLoading) {
-    return (
-      <div className={styles.footer}>
-        <Loader size="sm" />
-      </div>
-    )
-  }
-
-  if (isError) {
-    return (
-      <Text c="red" size="sm">
-        Error loading transactions
-      </Text>
-    )
-  }
-
-  if (data.length === 0) {
-    return (
-      <Text c="dimmed" size="sm">
-        No transactions found.
-      </Text>
-    )
-  }
-
   return (
-    <>
+    <DataState
+      hasData={data.length > 0}
+      isLoading={isLoading}
+      isError={isError}
+      isFetching={isFetching}
+      loadingMessage="Loading transactions…"
+      errorMessage="Error loading transactions"
+      emptyMessage="No transactions found."
+      onRetry={onRetry}
+    >
       <div
         aria-label={`Transactions list, ${totalRows.toLocaleString()} total`}
         className={`${styles.list} ${
@@ -345,7 +305,7 @@ export function TransactionsMobileList({
               const amount = transaction.convertedAmount ?? transaction.amount
 
               return (
-                <TransactionRow
+                <InteractiveRow
                   className={`${styles.row} ${
                     bulkModeEnabled &&
                     selectedTransactionIds.has(transaction.id)
@@ -353,10 +313,10 @@ export function TransactionsMobileList({
                       : ''
                   }`}
                   key={transaction.id}
-                  label={`Open transaction details for ${merchantDisplay.primary}`}
-                  onOpen={() => setActiveTransactionId(transaction.id)}
+                  actionLabel={`Open transaction details for ${merchantDisplay.primary}`}
+                  onActivate={() => setActiveTransactionId(transaction.id)}
                 >
-                  <div className={styles.rowMain}>
+                  <div className={styles.rowIdentity}>
                     {bulkModeEnabled && !isManual && (
                       <Checkbox
                         aria-label={`Select transaction ${merchantDisplay.primary}`}
@@ -374,58 +334,11 @@ export function TransactionsMobileList({
                     >
                       {avatarLabel}
                     </Avatar>
-                    <div className={styles.rowDetails}>
-                      <div className={styles.merchantLine}>
-                        <span className={styles.merchant}>
-                          {merchantDisplay.primary}
-                        </span>
-                      </div>
-                      {transaction.pending && (
-                        <div className={styles.statusLine}>
-                          <Badge
-                            classNames={{
-                              root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.pendingBadge}`,
-                            }}
-                            color="yellow"
-                            size="xs"
-                            variant="light"
-                          >
-                            Pending
-                          </Badge>
-                        </div>
-                      )}
-                      <div
-                        aria-label={`${transaction.accountName ?? 'Account'} · ${getCategoryLabel(transaction)}`}
-                        className={styles.metaLine}
-                      >
-                        <span className={styles.meta}>
-                          {transaction.accountName}
-                        </span>
-                        <span className={styles.metaSeparator}>·</span>
-                        <span
-                          aria-hidden="true"
-                          className={styles.categorySwatch}
-                          style={getCategoryColorStyles(
-                            getTransactionCategoryColor(transaction),
-                          )}
-                        />
-                        <span className={styles.meta}>
-                          {getCategoryLabel(transaction)}
-                        </span>
-                        {shouldShowRuleAssignment(transaction) && (
-                          <Badge color="violet" size="xs" variant="light">
-                            Rule
-                          </Badge>
-                        )}
-                      </div>
-                      {formatPaymentChannel(transaction.paymentChannel) && (
-                        <div className={styles.metaLine}>
-                          <span className={styles.meta}>
-                            {formatPaymentChannel(transaction.paymentChannel)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                  </div>
+                  <div className={styles.merchantLine}>
+                    <span className={styles.merchant}>
+                      {merchantDisplay.primary}
+                    </span>
                   </div>
                   <div className={styles.rowAside}>
                     <span
@@ -436,7 +349,57 @@ export function TransactionsMobileList({
                       {formatMoneyWithSign({ value: amount })}
                     </span>
                   </div>
-                </TransactionRow>
+                  <div
+                    aria-label={`${transaction.accountName ?? 'Account'} · ${getCategoryLabel(transaction)}`}
+                    className={styles.rowDetails}
+                  >
+                    <div className={styles.meta}>
+                      {transaction.accountName ?? 'Account'}
+                    </div>
+                    <div className={styles.categoryLine}>
+                      <span className={styles.categoryLabel}>
+                        <span
+                          aria-hidden="true"
+                          className={styles.categorySwatch}
+                          style={getCategoryColorStyles(
+                            getTransactionCategoryColor(transaction),
+                          )}
+                        />
+                        <span className={styles.meta}>
+                          {getCategoryLabel(transaction)}
+                        </span>
+                      </span>
+                      {shouldShowRuleAssignment(transaction) && (
+                        <Badge
+                          className={statusBadgeStyles.ruleBadge}
+                          color="violet"
+                          size="xs"
+                          variant="light"
+                        >
+                          Rule
+                        </Badge>
+                      )}
+                      {transaction.pending && (
+                        <Badge
+                          className={styles.metadataBadge}
+                          classNames={{
+                            root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.pendingBadge}`,
+                          }}
+                          color="yellow"
+                          size="xs"
+                          variant="light"
+                        >
+                          Pending
+                        </Badge>
+                      )}
+                    </div>
+                    {formatPaymentChannel(transaction.paymentChannel) && (
+                      <div className={styles.meta}>
+                        {formatPaymentChannel(transaction.paymentChannel)}
+                      </div>
+                    )}
+                  </div>
+                </InteractiveRow>
               )
             })}
           </section>
@@ -657,7 +620,7 @@ export function TransactionsMobileList({
           </Stack>
         )}
       </Drawer>
-    </>
+    </DataState>
   )
 }
 

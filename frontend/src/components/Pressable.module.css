@@ -19,7 +19,7 @@
   );
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (--supports-hover) {
   .root:hover {
     background: var(
       --pressable-feedback-background,

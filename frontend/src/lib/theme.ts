@@ -124,7 +124,7 @@ const spliceGray: MantineColorsTuple = [
   '#b8c9c4',
   '#9fb4ae',
   '#879f99',
-  '#6d847f',
+  '#566e68',
   '#566a65',
   '#3f4f4b',
   '#26322f',
@@ -153,7 +153,7 @@ const yellow: MantineColorsTuple = [
   '#fab005',
   '#f59f00',
   '#f08c00',
-  '#e67700',
+  '#a85600',
 ]
 
 const draculaPurple: MantineColorsTuple = [
@@ -234,7 +234,10 @@ const oledDark: MantineColorsTuple = [
   '#000000',
 ]
 
-function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
+function buildTheme(
+  tokens: ThemePresetTokens,
+  colorScheme: ThemePreset['colorScheme'],
+): MantineThemeOverride {
   return createTheme({
     colors: {
       brand: tokens.brand,
@@ -250,7 +253,11 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
       pink: tokens.accent,
     },
     primaryColor: 'brand',
-    primaryShade: { light: 6, dark: 4 },
+    // Presets force their scheme. A single shade keeps Mantine's contrast
+    // calculation in sync with the filled background it actually renders.
+    primaryShade: colorScheme === 'dark' ? 4 : 6,
+    autoContrast: true,
+    luminanceThreshold: 0.179,
     defaultRadius: 'md',
     components: {
       ActionIcon: ActionIcon.extend({
@@ -258,7 +265,7 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
         classNames: { root: 'splice-action-icon-root' },
       }),
       Autocomplete: Autocomplete.extend({
-        defaultProps: { radius: 'md' },
+        defaultProps: { radius: 'md', size: 'md' },
         classNames: { input: 'splice-input-input' },
       }),
       Badge: Badge.extend({
@@ -266,7 +273,7 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
         classNames: { root: 'splice-badge-root' },
       }),
       Button: Button.extend({
-        defaultProps: { radius: 'md' },
+        defaultProps: { radius: 'md', size: 'md' },
         classNames: { root: 'splice-button-root' },
       }),
       Checkbox: Checkbox.extend({
@@ -274,7 +281,12 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
         classNames: { root: 'splice-inline-control-root' },
       }),
       Drawer: Drawer.extend({
-        defaultProps: { padding: 'md', radius: 'md', shadow: 'xl' },
+        defaultProps: {
+          padding: 'md',
+          radius: 'md',
+          shadow: 'xl',
+          closeButtonProps: { 'aria-label': 'Close panel' },
+        },
         classNames: {
           body: 'splice-overlay-body',
           content: 'splice-overlay-content splice-drawer-content',
@@ -283,15 +295,16 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
         },
       }),
       FileInput: FileInput.extend({
-        defaultProps: { radius: 'md' },
+        defaultProps: { radius: 'md', size: 'md' },
         classNames: { input: 'splice-input-input' },
       }),
       Input: Input.extend({
-        defaultProps: { radius: 'md' },
+        defaultProps: { radius: 'md', size: 'md' },
         classNames: { input: 'splice-input-input' },
       }),
       InputWrapper: InputWrapper.extend({
         classNames: {
+          root: 'splice-field-root',
           description: 'splice-input-description',
           error: 'splice-input-error',
           label: 'splice-input-label',
@@ -301,7 +314,12 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
         defaultProps: { color: 'brand' },
       }),
       Modal: Modal.extend({
-        defaultProps: { padding: 'md', radius: 'md', shadow: 'xl' },
+        defaultProps: {
+          padding: 'md',
+          radius: 'md',
+          shadow: 'xl',
+          closeButtonProps: { 'aria-label': 'Close dialog' },
+        },
         classNames: {
           body: 'splice-overlay-body',
           content: 'splice-overlay-content',
@@ -310,7 +328,7 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
         },
       }),
       MultiSelect: MultiSelect.extend({
-        defaultProps: { radius: 'md' },
+        defaultProps: { radius: 'md', size: 'md' },
         classNames: { input: 'splice-input-input' },
       }),
       NavLink: NavLink.extend({
@@ -320,7 +338,7 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
         },
       }),
       NumberInput: NumberInput.extend({
-        defaultProps: { radius: 'md' },
+        defaultProps: { radius: 'md', size: 'md' },
         classNames: { input: 'splice-input-input' },
       }),
       Paper: Paper.extend({
@@ -347,7 +365,7 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
         },
       }),
       Select: Select.extend({
-        defaultProps: { radius: 'md' },
+        defaultProps: { radius: 'md', size: 'md' },
         classNames: { input: 'splice-input-input' },
       }),
       Skeleton: Skeleton.extend({
@@ -365,11 +383,11 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
         },
       }),
       Textarea: Textarea.extend({
-        defaultProps: { radius: 'md' },
+        defaultProps: { radius: 'md', size: 'md' },
         classNames: { input: 'splice-input-input' },
       }),
       TextInput: TextInput.extend({
-        defaultProps: { radius: 'md' },
+        defaultProps: { radius: 'md', size: 'md' },
         classNames: { input: 'splice-input-input' },
       }),
       Tooltip: Tooltip.extend({
@@ -385,16 +403,18 @@ function buildTheme(tokens: ThemePresetTokens): MantineThemeOverride {
   })
 }
 
-function definePreset(config: Omit<ThemePreset, 'theme'> & {
-  tokens: ThemePresetTokens
-}): ThemePreset {
+function definePreset(
+  config: Omit<ThemePreset, 'theme'> & {
+    tokens: ThemePresetTokens
+  },
+): ThemePreset {
   return {
     id: config.id,
     label: config.label,
     description: config.description,
     colorScheme: config.colorScheme,
     swatches: config.swatches,
-    theme: buildTheme(config.tokens),
+    theme: buildTheme(config.tokens, config.colorScheme),
   }
 }
 
@@ -438,7 +458,12 @@ export const THEME_PRESETS = [
     label: 'Dracula',
     description: 'High-chroma dark palette with purple and cyan accents.',
     colorScheme: 'dark',
-    swatches: [draculaDark[8], draculaPurple[4], draculaCyan[3], draculaPink[3]],
+    swatches: [
+      draculaDark[8],
+      draculaPurple[4],
+      draculaCyan[3],
+      draculaPink[3],
+    ],
     tokens: {
       brand: draculaPurple,
       gray: draculaDark,
@@ -552,7 +577,13 @@ export function getThemePreset(value: unknown): ThemePreset {
 export function readStoredThemePresetId(): ThemePresetId {
   if (typeof window === 'undefined') return DEFAULT_THEME_PRESET_ID
 
-  return normalizeThemePresetId(window.localStorage.getItem(THEME_STORAGE_KEY))
+  try {
+    return normalizeThemePresetId(
+      window.localStorage.getItem(THEME_STORAGE_KEY),
+    )
+  } catch {
+    return DEFAULT_THEME_PRESET_ID
+  }
 }
 
 export function previewThemePresetId(theme: ThemePresetId): void {
@@ -568,6 +599,11 @@ export function previewThemePresetId(theme: ThemePresetId): void {
 export function applyThemePresetId(theme: ThemePresetId): void {
   if (typeof window === 'undefined') return
 
-  window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+  } catch {
+    /* storage may be unavailable */
+  }
+  document.cookie = `splice_theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
   previewThemePresetId(theme)
 }

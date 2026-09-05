@@ -1,13 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ensureSession, sessionQueryOptions } from './session'
-import {
-  ConfirmedLoggedOutError,
-  TransientAuthError,
-} from './session-refresh'
+import { ConfirmedLoggedOutError, TransientAuthError } from './session-refresh'
 
 const mocks = vi.hoisted(() => ({
   resolveApiBaseUrl: vi.fn(),
   fetch: vi.fn(),
+}))
+
+vi.mock('@tanstack/react-start', () => ({
+  createIsomorphicFn: () => ({
+    server: () => ({ client: (fn: unknown) => fn }),
+  }),
 }))
 
 vi.mock('./api-base-url', () => ({
@@ -37,7 +40,7 @@ describe('session helpers', () => {
       json: vi.fn().mockResolvedValue(user),
     })
 
-    await expect(ensureSession()).resolves.toEqual({ user })
+    await expect(ensureSession()).resolves.toEqual(user)
 
     expect(mocks.fetch).toHaveBeenCalledWith(
       new URL('/user/me', 'http://localhost:3000'),
@@ -55,12 +58,13 @@ describe('session helpers', () => {
         json: vi.fn().mockResolvedValue(user),
       })
 
-    await expect(ensureSession()).resolves.toEqual({ user })
+    await expect(ensureSession()).resolves.toEqual(user)
 
     expect(mocks.fetch).toHaveBeenNthCalledWith(
       2,
       new URL('/user/refresh', 'http://localhost:3000'),
       {
+        signal: expect.any(AbortSignal),
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

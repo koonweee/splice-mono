@@ -1,0 +1,26 @@
+{
+  "result": "pass",
+  "environment": "Final production Nitro4302 / synthetic fixture API4310",
+  "mechanism": "CDP401 injection into both real canonical /user/me invalidations; one successful refresh interception; subsequent /user/me calls forwarded to actual fixture",
+  "webLocksAvailable": true,
+  "rotatedHttpOnlyCookiesVerified": true,
+  "initial401s": 2,
+  "coordinatedRefreshes": 1,
+  "successfulMeRetries": 2,
+  "tabs": [
+    {
+      "url": "http://localhost:4302/accounts",
+      "privateContent": true,
+      "blocked": false,
+      "queryError": null
+    },
+    {
+      "url": "http://localhost:4302/accounts",
+      "privateContent": true,
+      "blocked": false,
+      "queryError": null
+    }
+  ],
+  "sameIdentityPreserved": true,
+  "pageErrors": []
+}

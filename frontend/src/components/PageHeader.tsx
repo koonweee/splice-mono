@@ -1,5 +1,5 @@
 import { Group, Title } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
+import { useCompactLayout } from '../lib/responsive'
 import type { GroupProps } from '@mantine/core'
 import type { ReactNode } from 'react'
 
@@ -18,7 +18,7 @@ export function PageHeader({
   mb = 'xl',
   wrap = 'wrap',
 }: PageHeaderProps) {
-  const isMobile = useMediaQuery('(max-width: 48em)')
+  const isMobile = useCompactLayout()
 
   return (
     <Group align={align} justify="space-between" mb={mb} wrap={wrap}>

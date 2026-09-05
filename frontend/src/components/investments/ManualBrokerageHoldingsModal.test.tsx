@@ -69,6 +69,7 @@ function renderModal(options: {
   holdings?: Array<InvestmentHoldingSnapshot>
   saveHoldings?: ReturnType<typeof vi.fn>
   onSaved?: ReturnType<typeof vi.fn>
+  onClose?: ReturnType<typeof vi.fn>
 }) {
   const saveHoldings =
     options.saveHoldings ??
@@ -82,7 +83,7 @@ function renderModal(options: {
         <ManualBrokerageHoldingsModal
           accountId="account-id"
           holdings={options.holdings ?? [holding]}
-          onClose={vi.fn()}
+          onClose={options.onClose ?? vi.fn()}
           onSaved={options.onSaved}
           opened
           saveHoldings={saveHoldings}
@@ -111,6 +112,43 @@ afterEach(() => {
 })
 
 describe('ManualBrokerageHoldingsModal', () => {
+  it('guards form resubmission and dismissal until the save completes', async () => {
+    let finishSave: (value: { staleSymbols: Array<string> }) => void = () => {}
+    const saveHoldings = vi.fn(
+      () =>
+        new Promise<{ staleSymbols: Array<string> }>((resolve) => {
+          finishSave = resolve
+        }),
+    )
+    const onClose = vi.fn()
+    renderModal({ saveHoldings, onClose })
+    const form = screen
+      .getByRole('button', { name: 'Save holdings' })
+      .closest('form')!
+
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close editor' }))
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    expect(saveHoldings).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
+
+    finishSave({ staleSymbols: [] })
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
+
+  it('rejects invalid quantities even when the form is submitted directly', () => {
+    const saveHoldings = renderModal({})
+    fireEvent.change(screen.getByLabelText('GOOGL quantity'), {
+      target: { value: '0' },
+    })
+    fireEvent.submit(
+      screen.getByRole('button', { name: 'Save holdings' }).closest('form')!,
+    )
+    expect(saveHoldings).not.toHaveBeenCalled()
+  })
+
   it('removes storage padding from whole and fractional share quantities', () => {
     renderModal({
       holdings: [
@@ -130,9 +168,9 @@ describe('ManualBrokerageHoldingsModal', () => {
       ],
     })
 
-    expect(screen.getByLabelText<HTMLInputElement>('GOOGL quantity').value).toBe(
-      '97',
-    )
+    expect(
+      screen.getByLabelText<HTMLInputElement>('GOOGL quantity').value,
+    ).toBe('97')
     expect(screen.getByLabelText<HTMLInputElement>('NVDA quantity').value).toBe(
       '2.5',
     )
@@ -224,9 +262,9 @@ describe('ManualBrokerageHoldingsModal', () => {
       ]),
     )
 
-    expect(screen.getByLabelText<HTMLInputElement>('GOOGL quantity').value).toBe(
-      '3.125',
-    )
+    expect(
+      screen.getByLabelText<HTMLInputElement>('GOOGL quantity').value,
+    ).toBe('3.125')
 
     result.rerender(
       renderContent(
@@ -234,8 +272,8 @@ describe('ManualBrokerageHoldingsModal', () => {
         'account-id-2',
       ),
     )
-    expect(screen.getByLabelText<HTMLInputElement>('GOOGL quantity').value).toBe(
-      '99',
-    )
+    expect(
+      screen.getByLabelText<HTMLInputElement>('GOOGL quantity').value,
+    ).toBe('99')
   })
 })

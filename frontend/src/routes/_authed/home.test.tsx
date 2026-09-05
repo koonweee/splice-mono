@@ -1,8 +1,19 @@
 import { MantineProvider } from '@mantine/core'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountType, MoneyWithSignSign } from '../../api/models'
-import { HOME_BALANCES_HIDDEN_STORAGE_KEY, HomePage } from './home'
+import { HomePage } from '../../components/pages/HomePage'
+import {
+  HOME_BALANCES_HIDDEN_STORAGE_KEY,
+  PresentationProvider,
+} from '../../lib/presentation-preferences'
+import type * as SessionModule from '../../lib/session'
 import type { DashboardData } from '../../lib/balance-utils'
 import type * as ReactRouter from '@tanstack/react-router'
 import type * as SpliceAPI from '../../api/clients/spliceAPI'
@@ -15,6 +26,11 @@ const mockFns = vi.hoisted(() => ({
   useUserControllerMeMock: vi.fn(),
   useBalanceDataMock: vi.fn(),
   accountModalMock: vi.fn(),
+}))
+
+vi.mock('../../lib/session', async () => ({
+  ...(await vi.importActual<typeof SessionModule>('../../lib/session')),
+  useCurrentUser: mockFns.useUserControllerMeMock,
 }))
 
 vi.mock('@tanstack/react-router', async () => {
@@ -137,7 +153,15 @@ const dashboard: DashboardData = {
 function renderHomePage() {
   return render(
     <MantineProvider>
-      <HomePage />
+      <PresentationProvider
+        initial={{
+          theme: 'splice-dark',
+          maskBalances: null,
+          today: '2026-09-05',
+        }}
+      >
+        <HomePage {...mockFns.useSearchMock()} />
+      </PresentationProvider>
     </MantineProvider>,
   )
 }
@@ -245,16 +269,22 @@ describe('HomePage balance visibility', () => {
     expect(screen.getByText('$500.00')).toBeTruthy()
   })
 
-  it('passes hidden balance preference into the account modal', () => {
+  it('passes hidden balance preference into the account modal opened by URL', async () => {
+    mockFns.useSearchMock.mockReturnValue({ accountId: dashboard.assets[0].id })
     window.localStorage.setItem(HOME_BALANCES_HIDDEN_STORAGE_KEY, 'true')
 
     renderHomePage()
 
-    expect(mockFns.accountModalMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        balancesHidden: true,
-      }),
+    await waitFor(() =>
+      expect(mockFns.accountModalMock).toHaveBeenCalledWith(
+        expect.objectContaining({ balancesHidden: true, opened: true }),
+      ),
     )
+  })
+
+  it('does not mount the unopened account modal', () => {
+    renderHomePage()
+    expect(mockFns.accountModalMock).not.toHaveBeenCalled()
   })
 
   it('does not show archived accounts in dashboard account sections', () => {
@@ -282,4 +312,22 @@ describe('HomePage balance visibility', () => {
     expect(screen.getByText('Cash')).toBeTruthy()
     expect(screen.queryByText('Closed Checking')).toBeNull()
   })
+})
+
+it('offers a retry while keeping matching cached dashboard data visible', () => {
+  const refetch = vi.fn()
+  mockFns.useBalanceDataMock.mockReturnValue({
+    data: dashboard,
+    isLoading: false,
+    error: new Error('Offline'),
+    refetch,
+  })
+  renderHomePage()
+  expect(
+    screen.getByText('Previously loaded results are shown below.', {
+      exact: false,
+    }),
+  ).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Retry dashboard' }))
+  expect(refetch).toHaveBeenCalledOnce()
 })

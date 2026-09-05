@@ -10,7 +10,6 @@ import {
   Divider,
   Drawer,
   Group,
-  Loader,
   Paper,
   Stack,
   Text,
@@ -18,7 +17,7 @@ import {
   Textarea,
   Tooltip,
 } from '@mantine/core'
-import { useDisclosure, useMediaQuery } from '@mantine/hooks'
+import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -27,13 +26,14 @@ import {
   Filter,
   Info,
   Pencil,
-  Plus,
   RotateCcw,
   Save,
-  X,
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
+import { useCompactLayout, usePhoneLayout } from '../../lib/responsive'
+import { DataState } from '../DataState'
 import {
   useCategoryControllerBulkUpdateCustom,
   useCategoryControllerCreateCustom,
@@ -41,6 +41,8 @@ import {
   useCategoryControllerUpdateCustom,
 } from '../../api/clients/spliceAPI'
 import { CategorySelect } from '../categories/CategorySelect'
+import { EditorModal } from '../forms/EditorModal'
+import { FormActions } from '../forms/FormActions'
 import {
   generateCategoryColor,
   getCategoryColorStyles,
@@ -52,6 +54,9 @@ import {
 } from '../../lib/mobile-combobox'
 import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
+import { SettingsToolbar } from './SettingsToolbar'
+import { SettingsStatusBadge } from './SettingsStatusBadge'
+import { SettingsArchiveFilter } from './SettingsArchiveFilter'
 import type {
   MRT_ColumnDef,
   MRT_RowSelectionState,
@@ -80,7 +85,7 @@ const TABLE_HEADER_HEIGHT = 52
 const SELECT_COLUMN_WIDTH = 56
 const STATUS_COLUMN_WIDTH = 130
 const USED_COLUMN_WIDTH = 88
-const ACTIONS_COLUMN_WIDTH = 48
+const ACTIONS_COLUMN_WIDTH = 92
 const ACTION_ICON_SIZE = 36
 
 const tableHeaderCellStyle = {
@@ -216,13 +221,13 @@ function getCategoryErrorMessage(error: unknown): string {
 function invalidateCategoryConsumers(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      Array.isArray(query.queryKey) &&
-      typeof query.queryKey[0] === 'string' &&
-      (query.queryKey[0].includes('/category') ||
-        query.queryKey[0].includes('transaction')),
-  })
+  void invalidateMutationFamilies(queryClient, [
+    'categories',
+    'transactions',
+    'analysis',
+    'categorizationRules',
+    'analysisRules',
+  ])
 }
 
 function showSkippedNotification(result: BulkCategoryActionResponse) {
@@ -255,8 +260,8 @@ function getDefaultRank(category: CategoryManagementItem) {
 
 export function CustomCategoriesSection() {
   const queryClient = useQueryClient()
-  const isMobile = useMediaQuery('(max-width: 48em)')
-  const isNarrow = useMediaQuery('(max-width: 36em)')
+  const isMobile = useCompactLayout()
+  const isNarrow = usePhoneLayout()
   const [filtersOpened, { close: closeFilters, toggle: toggleFilters }] =
     useDisclosure(false)
   const [archivedMode, setArchivedMode] = useState(false)
@@ -278,6 +283,8 @@ export function CustomCategoriesSection() {
     data: categories = [],
     isLoading,
     isError,
+    isFetching,
+    refetch,
   } = useCategoryControllerFindManagement({ archived: archivedMode })
   const { data: comparisonCategories = [] } =
     useCategoryControllerFindManagement({ archived: !archivedMode })
@@ -468,11 +475,8 @@ export function CustomCategoriesSection() {
   const categoryColumnSize = isMobile ? 168 : 320
   const categoryColumnMinSize = isMobile ? 96 : 180
   const categoryColumnMaxSize = isMobile ? 220 : undefined
-  const hiddenActiveFilterCount = [
-    archivedMode ? 'archived' : null,
-    primaryFilter,
-  ].filter(Boolean).length
-  const hasActiveFilters = hiddenActiveFilterCount > 0
+  const hiddenActiveFilterCount = primaryFilter ? 1 : 0
+  const hasActiveFilters = archivedMode || hiddenActiveFilterCount > 0
   const filterButtonLabel =
     hiddenActiveFilterCount > 0
       ? `Open category filters, ${hiddenActiveFilterCount} active`
@@ -501,7 +505,14 @@ export function CustomCategoriesSection() {
 
   function submitCreateOrEdit() {
     const normalizedColor = normalizeHexColor(color)
-    if (!normalizedColor) {
+    if (
+      !normalizedColor ||
+      !cleanCategoryLabel(primary) ||
+      !cleanCategoryLabel(detailed) ||
+      formDuplicateConflict ||
+      createCategory.isPending ||
+      updateCategory.isPending
+    ) {
       return
     }
 
@@ -632,12 +643,6 @@ export function CustomCategoriesSection() {
         placeholder="Primary category"
         size="md"
       />
-      <Checkbox
-        label="Archived"
-        checked={archivedMode}
-        onChange={(event) => setArchivedMode(event.currentTarget.checked)}
-        size={isMobile ? 'md' : 'sm'}
-      />
 
       {hasActiveFilters ? (
         <>
@@ -655,7 +660,7 @@ export function CustomCategoriesSection() {
   )
   const panelTitle =
     panel?.mode === 'create'
-      ? 'New category'
+      ? 'Add category'
       : panel?.mode === 'edit-custom'
         ? 'Edit category'
         : 'Category details'
@@ -679,111 +684,122 @@ export function CustomCategoriesSection() {
             <Text size="sm" c="dimmed">
               {panel.category.description || 'No description.'}
             </Text>
-            <Badge w="fit-content" variant="light">
-              {getStatus(panel.category)}
-            </Badge>
+            <SettingsStatusBadge status={getStatus(panel.category)} />
           </>
         )}
       </Stack>
     ) : (
-      <Stack gap="sm">
-        <Autocomplete
-          comboboxProps={
-            isMobile ? getViewportAwareOverlayComboboxProps() : undefined
-          }
-          label="Primary category"
-          maxDropdownHeight={
-            isMobile ? viewportAwareDropdownMaxHeight : undefined
-          }
-          value={primary}
-          onChange={setPrimary}
-          data={primaryOptions}
-          data-testid="custom-category-primary-input"
-          placeholder="Primary category"
-          clearable
-          clearButtonProps={{ 'aria-label': 'Clear primary category' }}
-          size={isMobile ? 'md' : undefined}
-        />
-        <Autocomplete
-          comboboxProps={
-            isMobile ? getViewportAwareOverlayComboboxProps() : undefined
-          }
-          label="Secondary category"
-          maxDropdownHeight={
-            isMobile ? viewportAwareDropdownMaxHeight : undefined
-          }
-          value={detailed}
-          onChange={setDetailed}
-          data={detailedOptions}
-          data-testid="custom-category-detailed-input"
-          placeholder="Secondary category"
-          clearable
-          clearButtonProps={{ 'aria-label': 'Clear secondary category' }}
-          size={isMobile ? 'md' : undefined}
-        />
-        <Textarea
-          label="Description"
-          value={description}
-          onChange={(event) => setDescription(event.currentTarget.value)}
-          minRows={3}
-          size={isMobile ? 'md' : undefined}
-        />
-        <ColorInput
-          label="Color"
-          value={color}
-          onChange={setColor}
-          format="hex"
-          data-testid="custom-category-color-input"
-          error={normalizeHexColor(color) ? null : 'Enter a valid hex color'}
-          size={isMobile ? 'md' : undefined}
-          withEyeDropper={false}
-        />
-        {panel.mode === 'edit-custom' && (
-          <Text size="xs" c="dimmed">
-            Renaming a category updates existing transactions that use it.
-          </Text>
-        )}
-        {formDuplicateConflict && (
-          <Alert color="yellow" title="Duplicate detected">
-            <Text size="sm">
-              Category already exists:{' '}
-              {
-                getCategoryConflictFromManagementItem(formDuplicateConflict)
-                  .label
-              }
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+          submitCreateOrEdit()
+        }}
+      >
+        <Stack gap="sm">
+          <Autocomplete
+            comboboxProps={
+              isMobile ? getViewportAwareOverlayComboboxProps() : undefined
+            }
+            label="Primary category"
+            maxDropdownHeight={
+              isMobile ? viewportAwareDropdownMaxHeight : undefined
+            }
+            value={primary}
+            onChange={setPrimary}
+            data={primaryOptions}
+            required
+            data-testid="custom-category-primary-input"
+            placeholder="Primary category"
+            clearable
+            clearButtonProps={{ 'aria-label': 'Clear primary category' }}
+            size={isMobile ? 'md' : undefined}
+          />
+          <Autocomplete
+            comboboxProps={
+              isMobile ? getViewportAwareOverlayComboboxProps() : undefined
+            }
+            label="Secondary category"
+            maxDropdownHeight={
+              isMobile ? viewportAwareDropdownMaxHeight : undefined
+            }
+            value={detailed}
+            onChange={setDetailed}
+            data={detailedOptions}
+            required
+            data-testid="custom-category-detailed-input"
+            placeholder="Secondary category"
+            clearable
+            clearButtonProps={{ 'aria-label': 'Clear secondary category' }}
+            size={isMobile ? 'md' : undefined}
+          />
+          <Textarea
+            label="Description"
+            value={description}
+            onChange={(event) => setDescription(event.currentTarget.value)}
+            minRows={3}
+            size={isMobile ? 'md' : undefined}
+          />
+          <ColorInput
+            label="Color"
+            value={color}
+            onChange={setColor}
+            format="hex"
+            data-testid="custom-category-color-input"
+            error={normalizeHexColor(color) ? null : 'Enter a valid hex color'}
+            size={isMobile ? 'md' : undefined}
+            withEyeDropper={false}
+          />
+          {panel.mode === 'edit-custom' && (
+            <Text size="xs" c="dimmed">
+              Renaming a category updates existing transactions that use it.
             </Text>
-            {renderManagementConflictAction(formDuplicateConflict)}
-          </Alert>
-        )}
-        {(createCategory.isError || updateCategory.isError) && (
-          <Alert color="yellow" title="Duplicate detected">
-            <Text size="sm">
-              {getCategoryErrorMessage(
+          )}
+          {formDuplicateConflict && (
+            <Alert color="yellow" title="Duplicate detected">
+              <Text size="sm">
+                Category already exists:{' '}
+                {
+                  getCategoryConflictFromManagementItem(formDuplicateConflict)
+                    .label
+                }
+              </Text>
+              {renderManagementConflictAction(formDuplicateConflict)}
+            </Alert>
+          )}
+          {(createCategory.isError || updateCategory.isError) && (
+            <Alert color="yellow" title="Duplicate detected">
+              <Text size="sm">
+                {getCategoryErrorMessage(
+                  createCategory.error ?? updateCategory.error,
+                )}
+              </Text>
+              {renderConflictAction(
                 createCategory.error ?? updateCategory.error,
               )}
-            </Text>
-            {renderConflictAction(createCategory.error ?? updateCategory.error)}
-          </Alert>
-        )}
-        <Group justify="flex-end">
-          <Button variant="subtle" onClick={() => setPanel(null)}>
-            Cancel
-          </Button>
-          <Button
-            leftSection={<Save size={16} />}
-            onClick={submitCreateOrEdit}
-            loading={createCategory.isPending || updateCategory.isPending}
-            disabled={
-              !cleanCategoryLabel(primary) ||
-              !cleanCategoryLabel(detailed) ||
-              !normalizeHexColor(color) ||
-              Boolean(formDuplicateConflict)
+            </Alert>
+          )}
+          <FormActions
+            onCancel={() => setPanel(null)}
+            cancelDisabled={
+              createCategory.isPending || updateCategory.isPending
             }
           >
-            {panel.mode === 'create' ? 'Create category' : 'Save'}
-          </Button>
-        </Group>
-      </Stack>
+            <Button
+              leftSection={<Save size={16} />}
+              type="submit"
+              loading={createCategory.isPending || updateCategory.isPending}
+              disabled={
+                !cleanCategoryLabel(primary) ||
+                !cleanCategoryLabel(detailed) ||
+                !normalizeHexColor(color) ||
+                Boolean(formDuplicateConflict)
+              }
+            >
+              {panel.mode === 'create' ? 'Create' : 'Save'}
+            </Button>
+          </FormActions>
+        </Stack>
+      </form>
     )
   ) : null
 
@@ -797,11 +813,11 @@ export function CustomCategoriesSection() {
         justify="flex-end"
         wrap="nowrap"
       >
-        <Tooltip label="Details">
+        <Tooltip label={isArchived ? 'Category details' : 'Edit category'}>
           <ActionIcon
-            aria-label="View category details"
+            aria-label={isArchived ? 'View category details' : 'Edit category'}
             variant="subtle"
-            size={ACTION_ICON_SIZE}
+            size={isMobile ? 44 : ACTION_ICON_SIZE}
             onClick={() =>
               !isArchived
                 ? openEditPanel(category)
@@ -814,15 +830,26 @@ export function CustomCategoriesSection() {
             {!isArchived ? <Pencil size={16} /> : <Info size={16} />}
           </ActionIcon>
         </Tooltip>
-        {isArchived && (
+        {isArchived ? (
           <Tooltip label="Restore category">
             <ActionIcon
               aria-label="Restore category"
               variant="subtle"
-              size={ACTION_ICON_SIZE}
+              size={isMobile ? 44 : ACTION_ICON_SIZE}
               onClick={() => archiveOrRestore([category.id], 'restore')}
             >
               <RotateCcw size={16} />
+            </ActionIcon>
+          </Tooltip>
+        ) : (
+          <Tooltip label="Archive category">
+            <ActionIcon
+              aria-label="Archive category"
+              variant="subtle"
+              size={isMobile ? 44 : ACTION_ICON_SIZE}
+              onClick={() => archiveOrRestore([category.id], 'archive')}
+            >
+              <Archive size={16} />
             </ActionIcon>
           </Tooltip>
         )}
@@ -866,10 +893,8 @@ export function CustomCategoriesSection() {
   )
 
   function renderMobileCategoryRow(category: CategoryManagementItem) {
-    const usedCount = category.transactionCount ?? 0
-
     return (
-      <Box px="sm" py="sm">
+      <Stack px="sm" py="sm" gap="xs">
         <Group align="flex-start" gap="sm" wrap="nowrap">
           <Checkbox
             aria-label={`Select ${getCategoryPairLabel(category)}`}
@@ -889,28 +914,22 @@ export function CustomCategoriesSection() {
             }}
           />
           <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
-            <Group gap="xs" wrap="nowrap">
-              <Text fw={700} truncate>
-                {getPrimaryDisplay(category)}
-              </Text>
-              <Badge
-                color={getStatus(category) === 'Active' ? 'green' : 'orange'}
-                size="sm"
-                variant="light"
-              >
-                {getStatus(category)}
-              </Badge>
-            </Group>
-            <Text c="dimmed" size="sm" truncate>
+            <Text fw={700}>{getPrimaryDisplay(category)}</Text>
+            <Text c="dimmed" size="sm">
               {getDetailedDisplay(category)}
             </Text>
-            <Text c="dimmed" size="xs">
-              {usedCount.toLocaleString()} used
-            </Text>
           </Box>
+        </Group>
+        <Group justify="space-between" gap="xs" wrap="nowrap">
+          <Group gap={6}>
+            <SettingsStatusBadge status={getStatus(category)} />
+            <Text c="dimmed" size="xs">
+              {(category.transactionCount ?? 0).toLocaleString()} used
+            </Text>
+          </Group>
           {renderCategoryRowActions(category)}
         </Group>
-      </Box>
+      </Stack>
     )
   }
 
@@ -969,13 +988,7 @@ export function CustomCategoriesSection() {
 
         return (
           <Tooltip label={status}>
-            <Badge
-              size="sm"
-              color={status === 'Active' ? 'green' : 'orange'}
-              variant="light"
-            >
-              {status}
-            </Badge>
+            <SettingsStatusBadge status={status} />
           </Tooltip>
         )
       },
@@ -1025,7 +1038,7 @@ export function CustomCategoriesSection() {
         enableResizing: false,
       },
       'mrt-row-actions': {
-        header: '',
+        header: 'Actions',
         size: ACTIONS_COLUMN_WIDTH,
         minSize: ACTIONS_COLUMN_WIDTH,
         maxSize: ACTIONS_COLUMN_WIDTH,
@@ -1095,29 +1108,15 @@ export function CustomCategoriesSection() {
       data-testid="custom-categories-section"
       style={{ flex: '1 1 auto', minHeight: 0 }}
     >
-      <Group justify="space-between" align="flex-end" gap="sm" wrap="wrap">
-        <Box style={{ flex: '1 1 260px' }}>
-          <Text fw={700} size="lg">
-            Categories
-          </Text>
-          <Text size="sm" c="dimmed">
-            Manage categories used by transaction dropdowns.
-          </Text>
-        </Box>
-        {selectedRows.length === 0 && (
-          <Button
-            leftSection={<Plus size={16} />}
-            mih={isMobile ? 48 : undefined}
-            onClick={openCreatePanel}
-            size="md"
-            style={{ flex: isMobile ? '1 1 100%' : undefined }}
-          >
-            New category
-          </Button>
-        )}
-      </Group>
+      <SettingsToolbar
+        title="Categories"
+        description="Organize your transactions with categories that make sense to you."
+        addLabel="Add category"
+        onAdd={openCreatePanel}
+        hideAdd={selectedRows.length > 0}
+      />
 
-      <Group align="center" gap="xs" wrap={isMobile ? 'nowrap' : 'wrap'}>
+      <Group align="center" gap="xs" wrap="wrap">
         <TextInput
           aria-label="Search categories"
           placeholder="Search categories..."
@@ -1125,6 +1124,10 @@ export function CustomCategoriesSection() {
           onChange={(event) => setSearch(event.currentTarget.value)}
           size="md"
           style={{ flex: '1 1 240px', minWidth: 0 }}
+        />
+        <SettingsArchiveFilter
+          checked={archivedMode}
+          onChange={setArchivedMode}
         />
         {isMobile ? (
           <Box pos="relative">
@@ -1144,11 +1147,6 @@ export function CustomCategoriesSection() {
           </Box>
         ) : (
           <>
-            <Checkbox
-              label="Archived"
-              checked={archivedMode}
-              onChange={(event) => setArchivedMode(event.currentTarget.checked)}
-            />
             <CategorySelect
               aria-label="Primary category"
               value={primaryFilter}
@@ -1248,19 +1246,16 @@ export function CustomCategoriesSection() {
         </Paper>
       )}
 
-      {isLoading && (
-        <Group justify="center" py="lg">
-          <Loader />
-        </Group>
-      )}
-
-      {isError && (
-        <Alert color="red" title="Error">
-          Failed to load categories
-        </Alert>
-      )}
-
-      {!isLoading && !isError && (
+      <DataState
+        hasData={categories.length > 0}
+        isLoading={isLoading}
+        isError={isError}
+        isFetching={isFetching}
+        onRetry={() => void refetch()}
+        loadingMessage="Loading categories…"
+        errorMessage="Failed to load categories"
+        emptyMessage="No categories match the current filters."
+      >
         <Group
           align="stretch"
           gap="md"
@@ -1307,34 +1302,16 @@ export function CustomCategoriesSection() {
           ) : (
             <MantineReactTable table={categoryTable} />
           )}
-
-          {!isMobile && panel && (
-            <Paper withBorder radius="md" p="md" w={340}>
-              <Group justify="space-between" mb="sm">
-                <Text fw={700}>{panelTitle}</Text>
-                <ActionIcon
-                  aria-label="Close category panel"
-                  variant="subtle"
-                  onClick={() => setPanel(null)}
-                >
-                  <X size={16} />
-                </ActionIcon>
-              </Group>
-              {panelBody}
-            </Paper>
-          )}
         </Group>
-      )}
-      <Drawer
-        opened={Boolean(isMobile && panel)}
+      </DataState>
+      <EditorModal
+        opened={panel !== null}
         onClose={() => setPanel(null)}
         title={panelTitle}
-        position="bottom"
-        size="min(620px, 92dvh)"
-        padding="md"
+        size="md"
       >
         {panelBody}
-      </Drawer>
+      </EditorModal>
     </Stack>
   )
 }

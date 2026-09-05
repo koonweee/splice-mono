@@ -1,0 +1,67 @@
+{
+  "entry": {
+    "url": "/assets/main-B07lFiHb.js",
+    "raw": 1561670,
+    "gzip": 472784,
+    "imports": []
+  },
+  "routes": {
+    "/": {
+      "files": [
+        "/assets/main-B07lFiHb.js"
+      ],
+      "raw": 1561670,
+      "gzip": 472784
+    },
+    "/_authed/home": {
+      "files": [
+        "/assets/main-B07lFiHb.js",
+        "/assets/_authed-RhUiA_iB.js",
+        "/assets/house-DmEkiMKP.js"
+      ],
+      "raw": 1574966,
+      "gzip": 477006
+    },
+    "/_authed/transactions": {
+      "files": [
+        "/assets/main-B07lFiHb.js",
+        "/assets/_authed-RhUiA_iB.js",
+        "/assets/house-DmEkiMKP.js",
+        "/assets/transactions-By5igW4j.js",
+        "/assets/DateRangeControl-6iZDXbqu.js"
+      ],
+      "raw": 1595258,
+      "gzip": 484720
+    },
+    "/_authed/accounts": {
+      "files": [
+        "/assets/main-B07lFiHb.js",
+        "/assets/_authed-RhUiA_iB.js",
+        "/assets/house-DmEkiMKP.js",
+        "/assets/accounts-tnzf72qJ.js"
+      ],
+      "raw": 1593613,
+      "gzip": 483604
+    },
+    "/_authed/analysis": {
+      "files": [
+        "/assets/main-B07lFiHb.js",
+        "/assets/_authed-RhUiA_iB.js",
+        "/assets/house-DmEkiMKP.js",
+        "/assets/analysis-B9HMsB51.js",
+        "/assets/DateRangeControl-6iZDXbqu.js"
+      ],
+      "raw": 1631132,
+      "gzip": 494658
+    },
+    "/_authed/settings": {
+      "files": [
+        "/assets/main-B07lFiHb.js",
+        "/assets/_authed-RhUiA_iB.js",
+        "/assets/house-DmEkiMKP.js"
+      ],
+      "raw": 1574966,
+      "gzip": 477006
+    }
+  }
+}

@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { DonutChart } from '@mantine/charts'
+import { lazy, useEffect, useState } from 'react'
 import {
   Alert,
   Box,
@@ -16,14 +15,14 @@ import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { ArrowDownLeft, ArrowUpRight, ClipboardList } from 'lucide-react'
+import { useCurrentUser } from '../../lib/session'
+import { loadQuery } from '../../lib/queries/loader'
+import { analysisQueryOptions } from '../../lib/queries/primary'
+import { DeferredFeature } from '../../components/DeferredFeature'
 import {
   useTransactionAnalysisControllerGetAnalysis,
   useTransactionAnalysisControllerGetAudit,
-  useUserControllerMe,
 } from '../../api/clients/spliceAPI'
-import { AnalysisAuditDrawer } from '../../components/analysis/AnalysisAuditDrawer'
-import { AnalysisSankeyChart } from '../../components/analysis/AnalysisSankeyChart'
-import { CategoryTransactionsModal } from '../../components/CategoryTransactionsModal'
 import { DateRangeControl } from '../../components/DateRangeControl'
 import { PageHeader } from '../../components/PageHeader'
 import { Pressable } from '../../components/Pressable'
@@ -35,6 +34,25 @@ import {
 import { getDisplayCategoryColor } from '../../lib/category-colors'
 import type { CategoryAggregate } from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
+
+const DonutChart = lazy(() =>
+  import('@mantine/charts').then((module) => ({ default: module.DonutChart })),
+)
+const AnalysisAuditDrawer = lazy(() =>
+  import('../../components/analysis/AnalysisAuditDrawer').then((module) => ({
+    default: module.AnalysisAuditDrawer,
+  })),
+)
+const AnalysisSankeyChart = lazy(() =>
+  import('../../components/analysis/AnalysisSankeyChart').then((module) => ({
+    default: module.AnalysisSankeyChart,
+  })),
+)
+const CategoryTransactionsModal = lazy(() =>
+  import('../../components/CategoryTransactionsModal').then((module) => ({
+    default: module.CategoryTransactionsModal,
+  })),
+)
 
 // --- Route ---
 
@@ -56,6 +74,16 @@ const isValidDateString = (value: unknown): value is string => {
 }
 
 export const Route = createFileRoute('/_authed/analysis')({
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context, deps }) => {
+    const today = context.presentation.today
+    const range = {
+      startDate: deps.startDate ?? `${today.slice(0, 7)}-01`,
+      endDate: deps.endDate ?? today,
+    }
+    await loadQuery(context.queryClient, analysisQueryOptions(range))
+    return range
+  },
   component: AnalysisPage,
   validateSearch: (search: Record<string, unknown>): AnalysisSearch => {
     if (
@@ -98,11 +126,16 @@ function SummaryStrip({
   currency: string
 }) {
   const total = totalInflow + totalOutflow
-  const inflowPct = total > 0 ? (totalInflow / total) * 100 : 50
+  const inflowPct = total > 0 ? (totalInflow / total) * 100 : 0
 
   return (
     <Paper p="md" radius="md" withBorder>
-      <Group justify="space-between" wrap="wrap" gap="md" mb="sm">
+      <Group
+        justify="space-between"
+        wrap="wrap"
+        gap="md"
+        mb={total > 0 ? 'sm' : 0}
+      >
         <Group gap="lg">
           <Group gap={6}>
             <ArrowDownLeft size={16} color="var(--mantine-color-teal-6)" />
@@ -123,16 +156,29 @@ function SummaryStrip({
           <Text size="sm" c="dimmed" fw={500}>
             Net
           </Text>
-          <Text fw={700} c={netFlow >= 0 ? 'teal' : 'red'}>
-            {netFlow >= 0 ? '+' : ''}
+          <Text
+            fw={700}
+            c={netFlow === 0 ? undefined : netFlow > 0 ? 'teal' : 'red'}
+          >
+            {netFlow > 0 ? '+' : ''}
             {formatAmount(netFlow, currency)}
           </Text>
         </Group>
       </Group>
-      <Progress.Root size="sm" radius="xl">
-        <Progress.Section value={inflowPct} color="teal" />
-        <Progress.Section value={100 - inflowPct} color="red" />
-      </Progress.Root>
+      {total > 0 && (
+        <Progress.Root size="sm" radius="xl">
+          <Progress.Section
+            value={inflowPct}
+            color="teal"
+            aria-label="Inflow share"
+          />
+          <Progress.Section
+            value={100 - inflowPct}
+            color="red"
+            aria-label="Outflow share"
+          />
+        </Progress.Root>
+      )}
     </Paper>
   )
 }
@@ -191,16 +237,18 @@ function FlowSection({
       <Grid gutter="lg" align="center">
         <Grid.Col span={{ base: 12, sm: 4 }}>
           <Box style={{ display: 'flex', justifyContent: 'center' }}>
-            <DonutChart
-              data={chartData}
-              size={160}
-              thickness={24}
-              tooltipDataSource="segment"
-              chartLabel={formatAmount(total, currency)}
-              valueFormatter={(value) =>
-                formatMoneyNumber({ value, currency, decimals: 0 })
-              }
-            />
+            <DeferredFeature label="Category chart" minHeight={160}>
+              <DonutChart
+                data={chartData}
+                size={160}
+                thickness={24}
+                tooltipDataSource="segment"
+                chartLabel={formatAmount(total, currency)}
+                valueFormatter={(value) =>
+                  formatMoneyNumber({ value, currency, decimals: 0 })
+                }
+              />
+            </DeferredFeature>
           </Box>
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 8 }}>
@@ -273,20 +321,18 @@ function FlowSection({
 // --- Page ---
 
 function AnalysisPage() {
-  const search = Route.useSearch()
   const navigate = useNavigate()
 
-  // Default to 1st of current month through today
-  const startDate =
-    search.startDate ?? dayjs().startOf('month').format('YYYY-MM-DD')
-  const endDate = search.endDate ?? dayjs().format('YYYY-MM-DD')
+  const { startDate, endDate } = Route.useLoaderData()
 
   const {
     data: analysis,
     isPending,
     isError,
+    isFetching,
+    refetch,
   } = useTransactionAnalysisControllerGetAnalysis({ startDate, endDate })
-  const { data: user } = useUserControllerMe()
+  const { data: user } = useCurrentUser()
   const analysisSankeyEnabled = user?.settings.analysisSankeyEnabled ?? false
 
   // Category drill-down modal
@@ -339,7 +385,7 @@ function AnalysisPage() {
       <PageHeader
         title="Analysis"
         actions={
-          <Group gap="xs">
+          <Group gap="xs" wrap="nowrap" w={{ base: '100%', sm: 'auto' }}>
             <DateRangeControl
               value={dateRangeValue}
               onChange={handleDateRangeChange}
@@ -366,7 +412,16 @@ function AnalysisPage() {
 
       {isError && (
         <Alert color="red" title="Error" mb="lg">
-          Failed to load analysis data. Please try again.
+          Failed to load analysis data.{' '}
+          {analysis && 'Previously loaded results are shown below.'}
+          <Button
+            variant="light"
+            color="red"
+            loading={isFetching}
+            onClick={() => void refetch()}
+          >
+            Retry analysis
+          </Button>
         </Alert>
       )}
 
@@ -381,17 +436,34 @@ function AnalysisPage() {
 
           {analysis.inflows.length === 0 && analysis.outflows.length === 0 ? (
             <Paper p="xl" radius="md" withBorder>
-              <Text c="dimmed" ta="center">
-                No transaction data found for this period.
-              </Text>
+              <Stack align="center" gap="sm">
+                <Text fw={600}>No transactions in this period</Text>
+                <Text c="dimmed" ta="center" size="sm">
+                  Choose another date range to see your cashflow.
+                </Text>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    const previousMonth = dayjs(startDate).subtract(1, 'month')
+                    handleDateRangeChange([
+                      previousMonth.startOf('month').format('YYYY-MM-DD'),
+                      previousMonth.endOf('month').format('YYYY-MM-DD'),
+                    ])
+                  }}
+                >
+                  View previous month
+                </Button>
+              </Stack>
             </Paper>
           ) : (
             <>
               {analysisSankeyEnabled ? (
-                <AnalysisSankeyChart
-                  analysis={analysis}
-                  onCategoryClick={handleCategoryClick}
-                />
+                <DeferredFeature label="Cashflow chart" minHeight={320}>
+                  <AnalysisSankeyChart
+                    analysis={analysis}
+                    onCategoryClick={handleCategoryClick}
+                  />
+                </DeferredFeature>
               ) : (
                 <Grid>
                   <Grid.Col span={{ base: 12, md: 6 }}>
@@ -427,21 +499,29 @@ function AnalysisPage() {
         </Stack>
       )}
 
-      <CategoryTransactionsModal
-        opened={modalOpened}
-        onClose={closeModal}
-        categoryPrimary={selectedCategory}
-        startDate={startDate}
-        endDate={endDate}
-        flowDirection={selectedFlowDirection}
-      />
-      <AnalysisAuditDrawer
-        opened={auditOpened}
-        onClose={closeAudit}
-        startDate={startDate}
-        endDate={endDate}
-        auditQuery={auditQuery}
-      />
+      {modalOpened && (
+        <DeferredFeature label="Category transactions">
+          <CategoryTransactionsModal
+            opened={modalOpened}
+            onClose={closeModal}
+            categoryPrimary={selectedCategory}
+            startDate={startDate}
+            endDate={endDate}
+            flowDirection={selectedFlowDirection}
+          />
+        </DeferredFeature>
+      )}
+      {auditOpened && (
+        <DeferredFeature label="Analysis audit">
+          <AnalysisAuditDrawer
+            opened={auditOpened}
+            onClose={closeAudit}
+            startDate={startDate}
+            endDate={endDate}
+            auditQuery={auditQuery}
+          />
+        </DeferredFeature>
+      )}
     </>
   )
 }

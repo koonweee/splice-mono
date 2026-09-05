@@ -7,6 +7,7 @@ import {
   within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { formatDateTime } from '../../lib/format'
 import { CategorizationRulesSection } from './CategorizationRulesSection'
 import type * as ReactQuery from '@tanstack/react-query'
 import type * as SpliceAPI from '../../api/clients/spliceAPI'
@@ -98,6 +99,7 @@ const historicalCategory = makeCategory({
 })
 
 const archivedRule: CategorizationRuleView = {
+  revision: 2,
   id: '00000000-0000-4000-8000-000000000302',
   name: 'Old rideshare',
   priority: 20,
@@ -110,6 +112,7 @@ const archivedRule: CategorizationRuleView = {
 }
 
 const activeRule: CategorizationRuleView = {
+  revision: 1,
   id: '00000000-0000-4000-8000-000000000301',
   name: 'Uber rideshare',
   priority: 10,
@@ -288,6 +291,24 @@ afterEach(() => {
 })
 
 describe('CategorizationRulesSection', () => {
+  it('keeps cached rows visible after a refresh failure and wires Retry', () => {
+    const refetch = vi.fn()
+    mockFns.useCategorizationRuleControllerFindAllMock.mockReturnValue({
+      data: [activeRule],
+      isLoading: false,
+      isError: true,
+      isFetching: false,
+      refetch,
+    })
+    renderSection()
+    expect(screen.getAllByText(activeRule.name).length).toBeGreaterThan(0)
+    expect(
+      screen.getByText('Previously loaded results are shown below.'),
+    ).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
   it('renders active rules and archives them', () => {
     renderSection()
 
@@ -295,7 +316,7 @@ describe('CategorizationRulesSection', () => {
     expect(screen.getByText('Uber rideshare')).toBeTruthy()
     expect(screen.getByText('Transport / Rideshare')).toBeTruthy()
     expect(
-      screen.getByText(/Merchant contains uber AND Amount is outflow/i),
+      screen.getByText(/Merchant contains uber and Money is going out/i),
     ).toBeTruthy()
 
     fireEvent.click(screen.getByLabelText('Archive rule'))
@@ -306,13 +327,52 @@ describe('CategorizationRulesSection', () => {
     })
   })
 
+  it('shows readable bank categories and account names without changing saved conditions', async () => {
+    const rule: CategorizationRuleView = {
+      ...activeRule,
+      conditions: [
+        {
+          field: 'providerCategoryDetailed',
+          operator: 'equals',
+          value: 'income_wages',
+        },
+        { field: 'accountId', operator: 'equals', value: account.id },
+      ],
+    }
+    mockFns.useCategorizationRuleControllerFindAllMock.mockReturnValue({
+      data: [rule],
+      isLoading: false,
+      isError: false,
+    })
+    renderSection()
+
+    expect(
+      screen.getByText(
+        /Bank subcategory is Income Wages and Account is Checking/,
+      ),
+    ).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Edit rule'))
+    const editor = await screen.findByRole('dialog', {
+      name: 'Edit categorization rule',
+    })
+    fireEvent.click(within(editor).getByRole('button', { name: /^save$/i }))
+    expect(mockFns.updateMutateMock).toHaveBeenCalledWith({
+      id: rule.id,
+      data: expect.objectContaining({ conditions: rule.conditions }),
+    })
+  })
+
   it('creates a rule with multiple AND conditions', async () => {
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: /new rule/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add rule/i }))
     const dialog = await screen.findByRole('dialog', {
-      name: /new categorization rule/i,
+      name: /add categorization rule/i,
     })
+    const form = dialog.querySelector('form')
+    if (!form) throw new Error('Categorization rule editor form is missing')
+    fireEvent.submit(form)
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
     fireEvent.change(within(dialog).getByRole('textbox', { name: /name/i }), {
       target: { value: 'Uber by amount' },
     })
@@ -338,6 +398,11 @@ describe('CategorizationRulesSection', () => {
     )
 
     expect(within(dialog).getByText('AND')).toBeTruthy()
+    expect(
+      within(dialog)
+        .getByRole('textbox', { name: /^priority/i })
+        .hasAttribute('required'),
+    ).toBe(true)
     fireEvent.click(within(dialog).getByRole('button', { name: /^save$/i }))
 
     expect(mockFns.createMutateMock).toHaveBeenCalledWith({
@@ -390,7 +455,7 @@ describe('CategorizationRulesSection', () => {
   it('shows archived rules and restores them', () => {
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: /archived/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /archived/i }))
     expect(screen.getByText('Old rideshare')).toBeTruthy()
 
     fireEvent.click(screen.getByLabelText('Restore rule'))
@@ -462,7 +527,11 @@ describe('CategorizationRulesSection', () => {
     renderSection()
     fireEvent.click(screen.getByLabelText('Rule recommendations'))
 
-    expect(await screen.findByText(/^Last run/i)).toBeTruthy()
+    expect(
+      await screen.findByText(
+        `Last run ${formatDateTime('2026-02-14T00:01:00.000Z')}.`,
+      ),
+    ).toBeTruthy()
     expect(screen.getByText('No recommendations found')).toBeTruthy()
     expect(mockFns.generateRecommendationsMutateMock).not.toHaveBeenCalled()
     expect(mockFns.regenerateRecommendationsMutateMock).not.toHaveBeenCalled()
@@ -650,7 +719,7 @@ describe('CategorizationRulesSection', () => {
     )
 
     const editDialog = await screen.findByRole('dialog', {
-      name: /new categorization rule/i,
+      name: /add categorization rule/i,
     })
     expect(
       within(editDialog).getByDisplayValue('Suggested Uber rideshare'),

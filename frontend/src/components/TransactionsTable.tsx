@@ -14,12 +14,13 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { DatePicker } from '@mantine/dates'
-import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Check, Info, Pencil, RotateCcw, Trash2, X } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { invalidateMutationFamilies } from '../lib/query-invalidation'
+import { useSupportsHover } from '../lib/responsive'
 import {
   useCategoryControllerFindAll,
   useTransactionControllerUpdate,
@@ -115,11 +116,7 @@ function formatOriginalCurrencyAmount(transaction: Transaction) {
 function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
   const [opened, setOpened] = useState(false)
   const closeTimeoutRef = useRef<number | null>(null)
-  const supportsHover = useMediaQuery(
-    '(hover: hover) and (pointer: fine)',
-    false,
-    { getInitialValueInEffect: false },
-  )
+  const supportsHover = useSupportsHover()
   const details = getMetadataDetails(transaction)
   const rawDescription = formatMetadataValue(transaction.originalDescription)
   const providerName = formatMetadataValue(transaction.providerTransactionName)
@@ -444,11 +441,7 @@ function ProviderCategoryHintPopover({
 }) {
   const [opened, setOpened] = useState(false)
   const closeTimeoutRef = useRef<number | null>(null)
-  const supportsHover = useMediaQuery(
-    '(hover: hover) and (pointer: fine)',
-    false,
-    { getInitialValueInEffect: false },
-  )
+  const supportsHover = useSupportsHover()
   const providerCategoryHint = getProviderCategoryHint(transaction)
   const displayLabel = formatMetadataValue(providerCategoryHint?.displayLabel)
   const confidence = formatMetadataValue(providerCategoryHint?.confidenceLevel)
@@ -613,14 +606,12 @@ function getCategoryToneClass(label: string) {
 function invalidateTransactionQueries(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      Array.isArray(query.queryKey) &&
-      typeof query.queryKey[0] === 'string' &&
-      (query.queryKey[0].includes('transaction') ||
-        query.queryKey[0].includes('category') ||
-        query.queryKey[0].includes('analysis')),
-  })
+  void invalidateMutationFamilies(queryClient, [
+    'transactions',
+    'analysis',
+    'categories',
+    'categorizationRules',
+  ])
 }
 
 function getCategoryLabel(category: Pick<Category, 'primary' | 'detailed'>) {
@@ -662,11 +653,7 @@ export function TransactionsTable({
   readOnly = false,
 }: TransactionsTableProps) {
   const queryClient = useQueryClient()
-  const supportsHover = useMediaQuery(
-    '(hover: hover) and (pointer: fine)',
-    false,
-    { getInitialValueInEffect: false },
-  )
+  const supportsHover = useSupportsHover()
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
   >(null)
@@ -1057,7 +1044,12 @@ export function TransactionsTable({
               <ProviderCategoryHintPopover transaction={transaction} />
               {shouldShowRuleAssignment(transaction) && (
                 <Tooltip label="Assigned by categorization rule">
-                  <Badge color="violet" size="xs" variant="light">
+                  <Badge
+                    className={statusBadgeStyles.ruleBadge}
+                    color="violet"
+                    size="xs"
+                    variant="light"
+                  >
                     Rule
                   </Badge>
                 </Tooltip>
@@ -1153,6 +1145,9 @@ export function TransactionsTable({
     columnResizeMode: 'onChange',
     layoutMode: 'grid',
     enableRowVirtualization: enableVirtualization,
+    // Render the first viewport during SSR and the matching initial hydration.
+    // The virtualizer replaces this estimate with its measured container after mount.
+    rowVirtualizerOptions: { initialRect: { height: 600, width: 1000 } },
     state: {
       ...(sorting ? { sorting } : {}),
       columnOrder,

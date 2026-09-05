@@ -55,7 +55,9 @@ yarn test
 
 ## Styling
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+The UI uses Mantine components and theme defaults, CSS modules, and shared global styles. [Tailwind CSS](https://tailwindcss.com/) is also available.
+
+See [Shared UI conventions](docs/ui-conventions.md) for reusable primitives and usage examples, and the [standardization audit](docs/ui-standardization-audit.md) for implementation status and verification.
 
 ## Linting & Formatting
 
@@ -323,3 +325,33 @@ Files prefixed with `demo` can be safely deleted. They are there to provide a st
 # Learn More
 
 You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+
+## Authenticated rendering and query reuse
+
+Splice uses TanStack Start and Nitro to render authenticated pages. Every HTTP
+request gets its own QueryClient and API transport. The transport forwards only
+Splice session cookies, coordinates refresh before rendering, and forwards each
+rotated cookie separately. Authenticated HTML is `private, no-store`.
+
+Set `SPLICE_INTERNAL_API_BASE_URL` in the frontend **server runtime** to the
+backend's trusted internal origin. Local development defaults to
+`http://localhost:3000`; the Docker runner defaults to
+`http://splice-backend:3000`. Override that default when the runtime uses another
+service name. `VITE_API_BASE_URL` remains the browser-facing API/OAuth origin;
+it is a separate build-time setting. The internal origin is never derived from
+an incoming Host header or included in the browser bundle.
+
+Primary route loaders and components share query keys and options. Financial
+and lookup data stays fresh for 30 seconds in the current tab's memory; stale
+navigation shows cached results while refreshing. Edits invalidate their explicit
+dependencies immediately. Session checks use five minutes; token inventory is
+fresh on entry. Logout and identity changes discard private cache state. No
+financial data is saved to localStorage or the service worker.
+
+Theme and masking cookies contain presentation preferences only. An existing
+masking preference with no cookie is conservatively masked during SSR, then
+migrated from localStorage after hydration. Saved user theme settings determine
+authenticated first paint; theme previews stay temporary.
+
+Reproducible validation and release ordering are documented in
+[performance validation](./docs/performance-validation.md).

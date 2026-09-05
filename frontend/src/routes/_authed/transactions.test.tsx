@@ -1,5 +1,12 @@
 import { MantineProvider } from '@mantine/core'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   AccountType,
@@ -79,6 +86,7 @@ const mockFns = vi.hoisted(() => ({
   transactionsMobileListMock: vi.fn(),
   manualTransactionModalMock: vi.fn(),
   removeManualMutateMock: vi.fn(),
+  refetchMock: vi.fn(),
   notificationsShowMock: vi.fn(),
 }))
 
@@ -348,6 +356,19 @@ function renderTransactionsPage() {
   )
 }
 
+function setMobileViewport() {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: query === '(max-width: 48em)',
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }))
+}
+
 beforeEach(() => {
   mockFns.useSearchMock.mockReturnValue({
     accountId: 'account-1',
@@ -368,6 +389,7 @@ beforeEach(() => {
         isFetching: false,
         isFetchingNextPage: false,
         isLoading: false,
+        refetch: mockFns.refetchMock,
       }
     },
   )
@@ -418,6 +440,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.clearAllMocks()
 })
 
@@ -465,6 +488,7 @@ describe('TransactionsPage category assignment workflow', () => {
         pageIndex: '2',
         pageSize: '50',
       }),
+      undefined,
     )
     const lastParams =
       mockFns.transactionControllerFindAllMock.mock.calls.at(-1)?.[0] ?? {}
@@ -488,15 +512,16 @@ describe('TransactionsPage category assignment workflow', () => {
         pageIndex: '0',
         pageSize: '50',
       }),
+      undefined,
     )
   })
 
-  it('opens the add transaction modal with the filtered account selected', () => {
+  it('opens the add transaction modal with the filtered account selected', async () => {
     renderTransactionsPage()
 
     fireEvent.click(screen.getByRole('button', { name: 'Add transaction' }))
 
-    const modal = screen.getByTestId('manual-transaction-modal')
+    const modal = await screen.findByTestId('manual-transaction-modal')
     expect(modal).toBeTruthy()
     expect(modal.textContent).toContain('Add transaction')
     expect(modal.textContent).toContain('Default account account-1')
@@ -509,8 +534,7 @@ describe('TransactionsPage category assignment workflow', () => {
     )
   })
 
-  it('wires manual edit and delete handlers through list components', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+  it('opens manual edits and requires explicit deletion confirmation', async () => {
     const manualTransaction = {
       ...transaction,
       source: TransactionSource.manual,
@@ -538,10 +562,86 @@ describe('TransactionsPage category assignment workflow', () => {
       tableProps.onDeleteManualTransaction(manualTransaction)
     })
 
-    expect(mockFns.removeManualMutateMock).toHaveBeenCalledWith({
-      id: manualTransaction.id,
+    expect(
+      await screen.findByRole('dialog', { name: 'Delete transaction' }),
+    ).toBeTruthy()
+    expect(mockFns.removeManualMutateMock).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(mockFns.removeManualMutateMock).toHaveBeenCalledWith(
+      { id: manualTransaction.id },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    )
+  })
+
+  it('cancels deletion safely, keeps failures visible, and closes only after success', async () => {
+    renderTransactionsPage()
+    const manualTransaction = {
+      ...transaction,
+      source: TransactionSource.manual,
+    }
+    const tableProps = mockFns.transactionsTableMock.mock.calls.at(-1)?.[0] as {
+      onDeleteManualTransaction: (transaction: Transaction) => void
+    }
+    act(() => tableProps.onDeleteManualTransaction(manualTransaction))
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
+    expect(mockFns.removeManualMutateMock).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Delete transaction' }),
+      ).toBeNull(),
+    )
+
+    act(() => tableProps.onDeleteManualTransaction(manualTransaction))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+    const callbacks = mockFns.removeManualMutateMock.mock.calls.at(-1)?.[1] as {
+      onSuccess: () => void
+      onError: (error: unknown) => void
+    }
+    act(() =>
+      callbacks.onError({
+        response: { data: { message: 'Please retry shortly.' } },
+      }),
+    )
+    expect(
+      screen.getByRole('dialog', { name: 'Delete transaction' }),
+    ).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Please retry shortly.',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(mockFns.removeManualMutateMock).toHaveBeenCalledTimes(2)
+    act(() => callbacks.onSuccess())
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Delete transaction' }),
+      ).toBeNull(),
+    )
+    expect(mockFns.invalidateQueriesMock).toHaveBeenCalled()
+  })
+
+  it('keeps the desktop header and cached table on refresh failure with a visible Retry action', () => {
+    mockFns.useInfiniteQueryMock.mockReturnValue({
+      data: { pages: [transactionsPageData] },
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isError: true,
+      isFetching: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      refetch: mockFns.refetchMock,
     })
-    confirmSpy.mockRestore()
+    renderTransactionsPage()
+
+    expect(screen.getByRole('heading', { name: 'Transactions' })).toBeTruthy()
+    expect(screen.getByTestId('transactions-table')).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Error loading transactions',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(mockFns.refetchMock).toHaveBeenCalledOnce()
   })
 
   it('bulk clears selected transaction categories and exposes undo', () => {
@@ -648,16 +748,7 @@ describe('TransactionsPage category assignment workflow', () => {
   })
 
   it('uses the mobile transaction list at narrow viewports', () => {
-    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
-      matches: query === '(max-width: 48em)',
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }))
+    setMobileViewport()
 
     renderTransactionsPage()
 
@@ -669,6 +760,85 @@ describe('TransactionsPage category assignment workflow', () => {
         totalRows: 125,
       }),
     )
+  })
+
+  it('combines mobile dates and other filters in one sheet with shortcuts and clear actions', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-12T12:00:00-07:00'))
+    setMobileViewport()
+    renderTransactionsPage()
+
+    expect(screen.getByText('Filters · Feb 1–28, 2026')).toBeTruthy()
+    expect(
+      screen.queryByRole('button', { name: 'Choose date range' }),
+    ).toBeNull()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open transaction filters, 2 active',
+      }),
+    )
+    act(() => vi.runAllTimers())
+
+    expect(screen.getAllByText('Filters')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Apr' }))
+    expect(screen.getByRole('dialog', { name: 'Filters' })).toBeTruthy()
+    expect(screen.getByLabelText<HTMLInputElement>('Start').value).toBe(
+      '2026-04-01',
+    )
+    expect(screen.getByLabelText<HTMLInputElement>('End').value).toBe(
+      '2026-04-30',
+    )
+    fireEvent.change(screen.getByLabelText('Start'), {
+      target: { value: '2026-04-10' },
+    })
+    fireEvent.change(screen.getByLabelText('End'), {
+      target: { value: '2026-04-20' },
+    })
+    fireEvent.change(screen.getByLabelText('Category'), {
+      target: { value: category.id },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Outflows' }))
+    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+
+    expect(mockFns.transactionControllerFindAllMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        accountId: 'account-1',
+        categoryId: category.id,
+        amountSign: 'negative',
+        startDate: '2026-04-10',
+        endDate: '2026-04-20',
+      }),
+      undefined,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear dates' }))
+    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+    const withoutDates =
+      mockFns.transactionControllerFindAllMock.mock.calls.at(-1)?.[0]
+    expect(withoutDates).toMatchObject({
+      accountId: 'account-1',
+      categoryId: category.id,
+      amountSign: 'negative',
+    })
+    expect(withoutDates).not.toHaveProperty('startDate')
+    expect(withoutDates).not.toHaveProperty('endDate')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+    expect(mockFns.transactionControllerFindAllMock).toHaveBeenLastCalledWith(
+      {
+        pageSize: '50',
+        pageIndex: '0',
+        convert: true,
+        sortBy: 'activityDate',
+        sortOrder: 'DESC',
+      },
+      undefined,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    act(() => vi.runAllTimers())
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText('Filters · All dates')).toBeTruthy()
   })
 })
 

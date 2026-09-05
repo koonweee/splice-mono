@@ -1,14 +1,24 @@
 import { MantineProvider } from '@mantine/core'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountType, MoneyWithSignSign } from '../../api/models'
 import { AccountRow } from './AccountRow'
+import type { Query, QueryFilters } from '@tanstack/react-query'
 import type * as ReactQuery from '@tanstack/react-query'
 import type { Account } from '../../api/models'
 
 const mockFns = vi.hoisted(() => ({
   invalidateQueriesMock: vi.fn(),
   archiveMutateMock: vi.fn(),
+  updateMutateMock: vi.fn(),
+  archivePending: false,
+  updatePending: false,
   useAccountControllerUpdateMock: vi.fn(),
   useBankLinkControllerInitiateLinkingMock: vi.fn(),
   notificationsShowMock: vi.fn(),
@@ -26,7 +36,7 @@ vi.mock('@tanstack/react-query', async () => {
     }),
     useMutation: () => ({
       mutate: mockFns.archiveMutateMock,
-      isPending: false,
+      isPending: mockFns.archivePending,
     }),
   }
 })
@@ -98,13 +108,20 @@ function renderAccount(overrides: Partial<Account>) {
 }
 
 beforeEach(() => {
+  mockFns.archivePending = false
+  mockFns.updatePending = false
   mockFns.archiveMutateMock.mockImplementation((_variables, options) => {
     options?.onSuccess?.()
+    options?.onSettled?.()
   })
-  mockFns.useAccountControllerUpdateMock.mockReturnValue({
-    mutate: vi.fn(),
-    isPending: false,
+  mockFns.updateMutateMock.mockImplementation((_variables, options) => {
+    options?.onSuccess?.()
+    options?.onSettled?.()
   })
+  mockFns.useAccountControllerUpdateMock.mockImplementation(() => ({
+    mutate: mockFns.updateMutateMock,
+    isPending: mockFns.updatePending,
+  }))
   mockFns.useBankLinkControllerInitiateLinkingMock.mockReturnValue({
     mutate: vi.fn(),
     isPending: false,
@@ -137,9 +154,7 @@ describe('AccountRow archive action', () => {
     fireEvent.click(screen.getByRole('button', { name: /archive account/i }))
     expect(await screen.findByText(/hide this account/i)).toBeTruthy()
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: /confirm archive/i }),
-    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Archive' }))
 
     expect(mockFns.archiveMutateMock).toHaveBeenCalledWith(
       { id: 'account-id' },
@@ -148,18 +163,160 @@ describe('AccountRow archive action', () => {
         onError: expect.any(Function),
       }),
     )
-    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ['/account'],
-    })
-    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ['/balance-query/balances'],
-    })
-    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ['/balance-query/all-balances'],
-    })
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({ queryKey: ['/account'] } as unknown as Query),
+      ),
+    ).toBe(true)
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({
+            queryKey: ['/balance-query/balances'],
+          } as unknown as Query),
+      ),
+    ).toBe(true)
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({
+            queryKey: ['/balance-query/all-balances'],
+          } as unknown as Query),
+      ),
+    ).toBe(true)
     expect(mockFns.notificationsShowMock).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Account archived',
+      }),
+    )
+  })
+
+  it('does not archive until confirmed and keeps a failed confirmation open for retry', async () => {
+    mockFns.archiveMutateMock.mockImplementationOnce((_variables, options) => {
+      options?.onError?.({
+        response: { data: { message: 'Account is still syncing.' } },
+      })
+      options?.onSettled?.()
+    })
+    renderAccountRow()
+    fireEvent.click(screen.getByRole('button', { name: 'Archive account' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Archive account',
+    })
+    expect(within(dialog).getByText('Checking')).toBeTruthy()
+    expect(mockFns.archiveMutateMock).not.toHaveBeenCalled()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Archive' }))
+    expect(within(dialog).getByRole('alert').textContent).toContain(
+      'Account is still syncing.',
+    )
+    expect(screen.getByRole('dialog', { name: 'Archive account' })).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Archive' }))
+    expect(mockFns.archiveMutateMock).toHaveBeenCalledTimes(2)
+    expect(mockFns.notificationsShowMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Account archived' }),
+    )
+  })
+})
+
+describe('AccountRow rename feedback', () => {
+  it('preserves a failed rename draft and closes only after a successful retry', () => {
+    mockFns.updateMutateMock.mockImplementationOnce((_variables, options) => {
+      options?.onError?.({
+        response: { data: { message: 'Name is already in use.' } },
+      })
+      options?.onSettled?.()
+    })
+    renderAccountRow()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit account name' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Account name' }), {
+      target: { value: 'Household checking' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save account name' }))
+    expect(
+      screen
+        .getByRole('textbox', { name: 'Account name' })
+        .getAttribute('value'),
+    ).toBe('Household checking')
+    expect(screen.getByText('Name is already in use.')).toBeTruthy()
+    expect(mockFns.notificationsShowMock).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save account name' }))
+    expect(mockFns.updateMutateMock).toHaveBeenLastCalledWith(
+      { id: account.id, data: { name: 'Household checking' } },
+      expect.any(Object),
+    )
+    expect(screen.queryByRole('textbox', { name: 'Account name' })).toBeNull()
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({ queryKey: ['/account'] } as unknown as Query),
+      ),
+    ).toBe(true)
+  })
+
+  it('keeps pending input and controls locked and prevents repeated submit or Escape cancellation', () => {
+    mockFns.updateMutateMock.mockImplementation(() => undefined)
+    const view = renderAccountRow()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit account name' }))
+    const input = screen.getByRole('textbox', { name: 'Account name' })
+    fireEvent.change(input, { target: { value: 'Household checking' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save account name' }))
+    const form = input.closest('form')
+    if (!form) throw new Error('Rename form is missing')
+    fireEvent.submit(form)
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(mockFns.updateMutateMock).toHaveBeenCalledOnce()
+    expect(screen.getByRole('textbox', { name: 'Account name' })).toBeTruthy()
+
+    mockFns.updatePending = true
+    view.rerender(
+      <MantineProvider>
+        <AccountRow account={account} />
+      </MantineProvider>,
+    )
+    expect(
+      screen
+        .getByRole('textbox', { name: 'Account name' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+    expect(
+      screen
+        .getByRole('button', { name: 'Save account name' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+    expect(
+      screen
+        .getByRole('button', { name: 'Cancel account name edit' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+  })
+
+  it('keeps the linked-account custom-name contract and reports reset failures', () => {
+    renderAccount({ bankLinkId: 'bank-link', customName: 'Personal checking' })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit account name' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Account name' }), {
+      target: { value: 'Checking' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save account name' }))
+    expect(mockFns.updateMutateMock).toHaveBeenCalledWith(
+      { id: account.id, data: { customName: null } },
+      expect.any(Object),
+    )
+
+    mockFns.updateMutateMock.mockImplementationOnce((_variables, options) => {
+      options?.onError?.({
+        response: { data: { message: 'Account is unavailable.' } },
+      })
+      options?.onSettled?.()
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Reset to synced account name' }),
+    )
+    expect(mockFns.notificationsShowMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Name not reset',
+        message: 'Account is unavailable.',
       }),
     )
   })

@@ -1,3 +1,8 @@
+import {
+  assertAuthGeneration,
+  getAuthGeneration,
+  subscribeAuthBoundary,
+} from './auth-generation'
 import { resolveApiUrl } from './api-base-url'
 
 const REFRESH_LOCK_NAME = 'splice-refresh-token'
@@ -27,7 +32,7 @@ type NavigatorWithLocks = Navigator & {
   }
 }
 
-let refreshPromise: Promise<void> | null = null
+let refreshState: { generation: number; promise: Promise<void> } | undefined
 let refreshChannel: BroadcastChannel | null = null
 let lastRefreshCompletedAt = 0
 
@@ -66,20 +71,39 @@ export function isTransientRefreshFailureStatus(status: number): boolean {
 }
 
 export async function refreshSession(): Promise<void> {
-  if (refreshPromise) {
-    return refreshPromise
-  }
-
+  const generation = getAuthGeneration()
+  if (refreshState?.generation === generation) return refreshState.promise
   const startedAt = Date.now()
-  refreshPromise = withRefreshLock(startedAt)
-    .finally(() => {
-      refreshPromise = null
-    })
-
-  return refreshPromise
+  const controller = new AbortController()
+  const unsubscribe = subscribeAuthBoundary(() => {
+    if (getAuthGeneration() !== generation) controller.abort()
+  })
+  let rejectCancelled!: () => void
+  const cancelled = new Promise<never>((_resolve, reject) => {
+    rejectCancelled = () =>
+      reject(new DOMException('Session changed', 'AbortError'))
+    controller.signal.addEventListener('abort', rejectCancelled, { once: true })
+  })
+  const promise = Promise.race([
+    withRefreshLock(startedAt, generation, controller.signal),
+    cancelled,
+  ]).then(() => assertAuthGeneration(generation))
+  const state = { generation, promise }
+  refreshState = state
+  try {
+    await promise
+  } finally {
+    unsubscribe()
+    controller.signal.removeEventListener('abort', rejectCancelled)
+    if (refreshState === state) refreshState = undefined
+  }
 }
 
-async function withRefreshLock(startedAt: number): Promise<void> {
+async function withRefreshLock(
+  startedAt: number,
+  generation: number,
+  signal: AbortSignal,
+): Promise<void> {
   if (typeof navigator !== 'undefined') {
     const locks = Reflect.get(navigator, 'locks') as
       | NavigatorWithLocks['locks']
@@ -89,31 +113,37 @@ async function withRefreshLock(startedAt: number): Promise<void> {
         REFRESH_LOCK_NAME,
         { mode: 'exclusive' },
         async () => {
+          assertAuthGeneration(generation)
           if (getLastRefreshCompletedAt() > startedAt) {
             return
           }
 
-          await performRefresh()
+          await performRefresh(generation, signal)
         },
       )
     }
   }
 
   if (typeof window === 'undefined') {
-    return performRefresh()
+    return performRefresh(generation, signal)
   }
 
-  return withStorageRefreshLock(startedAt)
+  return withStorageRefreshLock(startedAt, generation, signal)
 }
 
-async function withStorageRefreshLock(startedAt: number): Promise<void> {
+async function withStorageRefreshLock(
+  startedAt: number,
+  generation: number,
+  signal: AbortSignal,
+): Promise<void> {
   const lockOwner = await tryAcquireStorageLock()
   if (lockOwner) {
     try {
+      assertAuthGeneration(generation)
       if (getLastRefreshCompletedAt() > startedAt) {
         return
       }
-      await performRefresh()
+      await performRefresh(generation, signal)
       return
     } finally {
       releaseStorageLock(lockOwner)
@@ -121,26 +151,33 @@ async function withStorageRefreshLock(startedAt: number): Promise<void> {
   }
 
   const received = await waitForRefreshBroadcast(startedAt)
+  assertAuthGeneration(generation)
   if (received === 'success' || getLastRefreshCompletedAt() > startedAt) {
     return
   }
 
   if (isStorageLockExpired()) {
-    return withStorageRefreshLock(startedAt)
+    return withStorageRefreshLock(startedAt, generation, signal)
   }
 
   throw new TransientAuthError('Timed out waiting for session refresh')
 }
 
-async function performRefresh(): Promise<void> {
+async function performRefresh(
+  generation: number,
+  signal: AbortSignal,
+): Promise<void> {
   try {
+    assertAuthGeneration(generation)
     const response = await fetch(resolveApiUrl('/user/refresh'), {
+      signal,
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     })
 
+    assertAuthGeneration(generation)
     if (response.ok) {
       lastRefreshCompletedAt = Date.now()
       postRefreshMessage('success')
@@ -157,10 +194,8 @@ async function performRefresh(): Promise<void> {
       `Session refresh failed with status ${response.status}`,
     )
   } catch (error) {
-    if (
-      isConfirmedLoggedOutError(error) ||
-      isTransientAuthError(error)
-    ) {
+    assertAuthGeneration(generation)
+    if (isConfirmedLoggedOutError(error) || isTransientAuthError(error)) {
       throw error
     }
 
@@ -299,7 +334,10 @@ function getLastRefreshCompletedAt(): number {
       window.localStorage.getItem(REFRESH_SUCCESS_STORAGE_KEY),
     )
     if (Number.isFinite(storedCompletedAt)) {
-      lastRefreshCompletedAt = Math.max(lastRefreshCompletedAt, storedCompletedAt)
+      lastRefreshCompletedAt = Math.max(
+        lastRefreshCompletedAt,
+        storedCompletedAt,
+      )
     }
   } catch {
     // Storage is an optional cross-tab coordination aid.
@@ -310,7 +348,10 @@ function getLastRefreshCompletedAt(): number {
 
 function storeLastRefreshCompletedAt(completedAt: number): void {
   try {
-    window.localStorage.setItem(REFRESH_SUCCESS_STORAGE_KEY, String(completedAt))
+    window.localStorage.setItem(
+      REFRESH_SUCCESS_STORAGE_KEY,
+      String(completedAt),
+    )
   } catch {
     // Storage is an optional cross-tab coordination aid.
   }

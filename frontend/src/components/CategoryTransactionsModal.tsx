@@ -1,7 +1,8 @@
-import { Alert, Box, Button, Group, Loader, Modal, Text } from '@mantine/core'
+import { Box, Modal } from '@mantine/core'
 import { useTransactionAnalysisControllerGetTransactions } from '../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../lib/format'
-import { useIsMobile } from '../lib/hooks'
+import { useCompactLayout } from '../lib/responsive'
+import { DataState } from './DataState'
 import { TransactionsTable } from './TransactionsTable'
 import { TransactionsMobileList } from './transactions/TransactionsMobileList'
 import styles from './CategoryTransactionsModal.module.css'
@@ -23,7 +24,7 @@ export function CategoryTransactionsModal({
   endDate,
   flowDirection,
 }: CategoryTransactionsModalProps) {
-  const isMobile = useIsMobile()
+  const isMobile = useCompactLayout()
   const directionLabel = flowDirection === 'inflow' ? 'Inflows' : 'Outflows'
   const title = `${categoryPrimary ? formatPrimaryCategory(categoryPrimary) : 'Transactions'} Transactions (${directionLabel})`
 
@@ -41,60 +42,38 @@ export function CategoryTransactionsModal({
 
     const transactions = data ?? []
 
-    if (isPending) {
-      return (
-        <Group justify="center" py="xl">
-          <Loader />
-        </Group>
-      )
-    }
-
-    if (isError) {
-      return (
-        <Alert color="red" title="Unable to load transactions">
-          <Text size="sm" mb="sm">
-            The transactions for this category could not be loaded.
-          </Text>
-          <Button
-            color="red"
-            loading={isFetching}
-            onClick={() => void refetch()}
-            size="xs"
-            variant="light"
-          >
-            Retry
-          </Button>
-        </Alert>
-      )
-    }
-
-    if (transactions.length === 0) {
-      return (
-        <Text c="dimmed" ta="center" py="xl">
-          No transactions found.
-        </Text>
-      )
-    }
-
-    return isMobile ? (
-      <TransactionsMobileList
-        data={transactions}
-        totalRows={transactions.length}
-        isLoading={false}
-        isError={false}
-        variant="drilldown"
-      />
-    ) : (
-      <TransactionsTable
-        data={transactions}
-        totalRows={transactions.length}
-        isLoading={false}
-        isError={false}
-        mantinePaperProps={{ className: styles.drilldownTablePaper }}
-        mantineTableContainerProps={{
-          className: styles.drilldownTableContainer,
-        }}
-      />
+    return (
+      <DataState
+        hasData={transactions.length > 0}
+        isLoading={isPending}
+        isError={isError}
+        isFetching={isFetching}
+        loadingMessage="Loading transactions…"
+        errorMessage="Unable to load transactions"
+        emptyMessage="No transactions found."
+        onRetry={() => void refetch()}
+      >
+        {isMobile ? (
+          <TransactionsMobileList
+            data={transactions}
+            totalRows={transactions.length}
+            isLoading={false}
+            isError={false}
+            variant="drilldown"
+          />
+        ) : (
+          <TransactionsTable
+            data={transactions}
+            totalRows={transactions.length}
+            isLoading={false}
+            isError={false}
+            mantinePaperProps={{ className: styles.drilldownTablePaper }}
+            mantineTableContainerProps={{
+              className: styles.drilldownTableContainer,
+            }}
+          />
+        )}
+      </DataState>
     )
   }
 

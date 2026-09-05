@@ -4,9 +4,7 @@ import {
   Badge,
   Box,
   Button,
-  Drawer,
   Group,
-  Loader,
   NumberInput,
   Paper,
   Select,
@@ -15,18 +13,13 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  Archive,
-  CircleHelp,
-  Pencil,
-  Plus,
-  RotateCcw,
-  Save,
-} from 'lucide-react'
+import { Archive, CircleHelp, Pencil, RotateCcw, Save } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useMemo, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
+import { useCompactLayout } from '../../lib/responsive'
+import { DataState } from '../DataState'
 import {
   useAnalysisRuleControllerCreate,
   useAnalysisRuleControllerFindAll,
@@ -34,8 +27,13 @@ import {
   useCategoryControllerFindManagement,
 } from '../../api/clients/spliceAPI'
 import { CategoryScopeInput } from '../categories/CategoryScopeInput'
+import { EditorModal } from '../forms/EditorModal'
+import { FormActions } from '../forms/FormActions'
 import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
+import { SettingsArchiveFilter } from './SettingsArchiveFilter'
+import { SettingsStatusBadge } from './SettingsStatusBadge'
+import { SettingsToolbar } from './SettingsToolbar'
 import type { MRT_ColumnDef } from 'mantine-react-table'
 import type {
   AnalysisCategoryScope,
@@ -134,7 +132,7 @@ function getRuleStatus(rule: AnalysisRuleItem) {
 }
 
 function getRuleTypeLabel(type: AnalysisRuleView['type']) {
-  return type === 'exclude' ? 'Exclude' : 'Neutralize'
+  return type === 'exclude' ? 'Exclude' : 'Match and offset'
 }
 
 function getItemTypeLabel(item: AnalysisRuleTableItem) {
@@ -171,20 +169,15 @@ function getScopeSummary(scope: AnalysisCategoryScopeView | null | undefined) {
 
 function getRuleScopeSummary(rule: AnalysisRuleItem) {
   if (rule.type === 'exclude') {
-    return getScopeSummary(rule.excludeScope)
+    return `When a transaction is in ${getScopeSummary(rule.excludeScope)}, exclude it from analysis.`
   }
 
-  return `${getScopeSummary(rule.inflowScope)} -> ${getScopeSummary(
-    rule.outflowScope,
-  )}`
+  return `When money in for ${getScopeSummary(rule.inflowScope)} matches money out for ${getScopeSummary(rule.outflowScope)}, exclude both from analysis.`
 }
 
 function getLookaroundScopeSummary(days: number) {
-  if (days === 1) {
-    return '1 day before/after selected range'
-  }
-
-  return `${days} days before/after selected range`
+  if (days === 0) return 'Match only within the selected date range.'
+  return `Match up to ${days} ${days === 1 ? 'day' : 'days'} before or after the selected date range.`
 }
 
 function getItemScopeSummary(item: AnalysisRuleTableItem) {
@@ -228,14 +221,11 @@ function getRuleErrorMessage(error: unknown) {
 function invalidateAnalysisRuleConsumers(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      Array.isArray(query.queryKey) &&
-      typeof query.queryKey[0] === 'string' &&
-      (query.queryKey[0].includes('/analysis-rules') ||
-        query.queryKey[0].includes('/user/me') ||
-        query.queryKey[0].includes('/transaction-analysis')),
-  })
+  void invalidateMutationFamilies(queryClient, [
+    'analysisRules',
+    'analysis',
+    'user',
+  ])
 }
 
 function collectRuleCategories(
@@ -258,7 +248,7 @@ export function AnalysisRulesSection({
   lookaroundSetting,
 }: AnalysisRulesSectionProps = {}) {
   const queryClient = useQueryClient()
-  const isMobile = useMediaQuery('(max-width: 48em)')
+  const isMobile = useCompactLayout()
   const [archivedMode, setArchivedMode] = useState(false)
   const [search, setSearch] = useState('')
   const [panel, setPanel] = useState<PanelState>(null)
@@ -279,6 +269,8 @@ export function AnalysisRulesSection({
     data: rules = [],
     isLoading,
     isError,
+    isFetching,
+    refetch,
   } = useAnalysisRuleControllerFindAll({ archived: archivedMode })
   const { data: activeCategories = [] } = useCategoryControllerFindManagement({
     archived: false,
@@ -344,7 +336,7 @@ export function AnalysisRulesSection({
 
     return tableItems.filter((item) =>
       [
-        isLookaroundItem(item) ? 'Neutralization lookaround' : item.name,
+        isLookaroundItem(item) ? 'Matching window' : item.name,
         getItemTypeLabel(item),
         getItemScopeSummary(item),
         getItemStatus(item),
@@ -427,6 +419,7 @@ export function AnalysisRulesSection({
   }
 
   function submitRule() {
+    if (createRule.isPending || updateRule.isPending) return
     const dto = buildSubmitDto()
     if (!dto) {
       return
@@ -453,6 +446,7 @@ export function AnalysisRulesSection({
   }
 
   function getValidatedLookaroundDays() {
+    if (String(lookaroundDays).trim() === '') return null
     const parsed =
       typeof lookaroundDays === 'number'
         ? lookaroundDays
@@ -470,6 +464,7 @@ export function AnalysisRulesSection({
   }
 
   function submitLookaround() {
+    if (lookaroundSetting?.isSaving) return
     const nextDays = getValidatedLookaroundDays()
     if (nextDays === null) {
       setLookaroundError('Enter a whole number from 0 to 180.')
@@ -478,7 +473,7 @@ export function AnalysisRulesSection({
 
     if (!lookaroundSetting?.onSave) {
       setLookaroundError(
-        'Neutralization lookaround is ready to connect after the generated API client exposes neutralizationLookaroundDays.',
+        'The matching window setting is unavailable. Try again after updating Splice.',
       )
       return
     }
@@ -489,7 +484,7 @@ export function AnalysisRulesSection({
         invalidateAnalysisRuleConsumers(queryClient)
       })
       .catch(() => {
-        setLookaroundError('Failed to save neutralization lookaround.')
+        setLookaroundError('Failed to save matching window.')
       })
   }
 
@@ -499,7 +494,8 @@ export function AnalysisRulesSection({
         <Group gap={4} justify="flex-end" wrap="nowrap">
           <Tooltip label="Edit setting">
             <ActionIcon
-              aria-label="Edit neutralization lookaround"
+              aria-label="Edit matching window"
+              size={isMobile ? 44 : 36}
               variant="subtle"
               onClick={openLookaroundPanel}
             >
@@ -515,6 +511,7 @@ export function AnalysisRulesSection({
         <Tooltip label="Edit rule">
           <ActionIcon
             aria-label="Edit rule"
+            size={isMobile ? 44 : 36}
             variant="subtle"
             onClick={() => openEditPanel(item)}
           >
@@ -525,6 +522,7 @@ export function AnalysisRulesSection({
           <Tooltip label="Restore rule">
             <ActionIcon
               aria-label="Restore rule"
+              size={isMobile ? 44 : 36}
               variant="subtle"
               onClick={() => archiveOrRestore(item, false)}
             >
@@ -535,6 +533,7 @@ export function AnalysisRulesSection({
           <Tooltip label="Archive rule">
             <ActionIcon
               aria-label="Archive rule"
+              size={isMobile ? 44 : 36}
               variant="subtle"
               onClick={() => archiveOrRestore(item, true)}
             >
@@ -547,62 +546,37 @@ export function AnalysisRulesSection({
   }
 
   function renderMobileRuleRow(item: AnalysisRuleTableItem) {
-    const status = getItemStatus(item)
-
     return (
-      <Box px="sm" py="sm">
-        <Group
-          align="flex-start"
-          justify="space-between"
-          gap="sm"
-          wrap="nowrap"
-        >
-          <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
-            <Text fw={700} truncate>
-              {isLookaroundItem(item)
-                ? 'Neutralization lookaround'
-                : item.name}
-            </Text>
-            <Group gap="xs" mt={4}>
-              <Badge
-                variant="light"
-                color={
-                  isLookaroundItem(item)
-                    ? 'gray'
-                    : item.type === 'exclude'
-                      ? 'red'
-                      : 'blue'
-                }
-              >
-                {getItemTypeLabel(item)}
-              </Badge>
-              <Badge
-                color={status === 'Active' ? 'green' : 'orange'}
-                variant="light"
-              >
-                {status}
-              </Badge>
-            </Group>
-            <Text c="dimmed" lineClamp={2} mt={6} size="sm">
-              {getItemScopeSummary(item)}
-            </Text>
-          </Box>
+      <Stack px="sm" py="sm" gap="xs">
+        <Text fw={700}>
+          {isLookaroundItem(item) ? 'Matching window' : item.name}
+        </Text>
+        <Text c="dimmed" lineClamp={3} size="sm">
+          {getItemScopeSummary(item)}
+        </Text>
+        <Group justify="space-between" gap="xs" wrap="nowrap">
+          <Group gap={6}>
+            <SettingsStatusBadge status={getItemStatus(item)} />
+            <Badge variant="light" size="sm" color="gray">
+              {getItemTypeLabel(item)}
+            </Badge>
+          </Group>
           {renderRuleRowActions(item)}
         </Group>
-      </Box>
+      </Stack>
     )
   }
 
   const activeError = createRule.error ?? updateRule.error
   const conflict = getRuleConflict(activeError)
   const submitDisabled = buildSubmitDto() === null
-  const drawerControlSize = isMobile ? 'md' : undefined
-  const drawerTitle =
+  const editorControlSize = 'md'
+  const editorTitle =
     panel?.mode === 'edit-lookaround'
-      ? 'Edit neutralization lookaround'
+      ? 'Edit matching window'
       : panel?.mode === 'edit'
         ? 'Edit analysis rule'
-        : 'New analysis rule'
+        : 'Add analysis rule'
 
   const columns: Array<MRT_ColumnDef<AnalysisRuleTableItem>> = [
     {
@@ -613,7 +587,7 @@ export function AnalysisRulesSection({
         <Box>
           <Text fw={600} size="sm">
             {isLookaroundItem(row.original)
-              ? 'Neutralization lookaround'
+              ? 'Matching window'
               : row.original.name}
           </Text>
           <Text size="xs" c="dimmed" hiddenFrom="sm">
@@ -644,7 +618,7 @@ export function AnalysisRulesSection({
     },
     {
       id: 'scope',
-      header: 'Scope',
+      header: 'Behavior',
       accessorFn: getItemScopeSummary,
       minSize: 260,
       Cell: ({ row }) => (
@@ -660,14 +634,7 @@ export function AnalysisRulesSection({
       size: 110,
       Cell: ({ row }) => {
         const status = getItemStatus(row.original)
-        return (
-          <Badge
-            color={status === 'Active' ? 'green' : 'orange'}
-            variant="light"
-          >
-            {status}
-          </Badge>
-        )
+        return <SettingsStatusBadge status={status} />
       },
     },
   ]
@@ -713,26 +680,12 @@ export function AnalysisRulesSection({
         overflowY: isMobile ? 'auto' : undefined,
       }}
     >
-      <Group justify="space-between" align="flex-end" gap="sm" wrap="wrap">
-        <Box style={{ flex: '1 1 260px' }}>
-          <Text fw={700} size="lg">
-            Analysis rules
-          </Text>
-          <Text size="sm" c="dimmed">
-            Rules apply to the selected analysis date range and future analysis
-            callers automatically.
-          </Text>
-        </Box>
-        <Button
-          leftSection={<Plus size={16} />}
-          onClick={resetFormForCreate}
-          mih={isMobile ? 48 : undefined}
-          size="md"
-          style={{ flex: isMobile ? '1 1 100%' : undefined }}
-        >
-          New rule
-        </Button>
-      </Group>
+      <SettingsToolbar
+        title="Analysis rules"
+        description="Choose which transactions count toward your analysis totals."
+        addLabel="Add rule"
+        onAdd={resetFormForCreate}
+      />
 
       <Group gap="xs" wrap={isMobile ? 'wrap' : 'nowrap'}>
         <TextInput
@@ -743,31 +696,23 @@ export function AnalysisRulesSection({
           size="md"
           style={{ flex: '1 1 240px', minWidth: 0 }}
         />
-        <Button
-          variant={archivedMode ? 'light' : 'default'}
-          onClick={() => setArchivedMode((value) => !value)}
-          mih={isMobile ? 48 : undefined}
-          size="md"
-        >
-          Archived
-        </Button>
+        <SettingsArchiveFilter
+          checked={archivedMode}
+          onChange={setArchivedMode}
+        />
       </Group>
 
-      {isLoading && (
-        <Group justify="center" py="lg">
-          <Loader />
-        </Group>
-      )}
-
-      {isError && (
-        <Alert color="red" title="Error">
-          Failed to load analysis rules
-        </Alert>
-      )}
-
-      {!isLoading &&
-        !isError &&
-        (isMobile ? (
+      <DataState
+        hasData={rules.length > 0}
+        isLoading={isLoading}
+        isError={isError}
+        isFetching={isFetching}
+        onRetry={() => void refetch()}
+        loadingMessage="Loading analysis rules…"
+        errorMessage="Failed to load analysis rules"
+        emptyMessage="No analysis rules match the current filters."
+      >
+        {isMobile ? (
           <MobileTableList
             ariaLabel={`Analysis rules list, ${filteredRules.length.toLocaleString()} total`}
             data={filteredRules}
@@ -777,201 +722,201 @@ export function AnalysisRulesSection({
           />
         ) : (
           <MantineReactTable table={table} />
-        ))}
+        )}
+      </DataState>
 
-      <Drawer
+      <EditorModal
         opened={panel !== null}
         onClose={() => setPanel(null)}
-        title={drawerTitle}
-        position={isMobile ? 'bottom' : 'right'}
-        size={isMobile ? 'min(92dvh, 720px)' : 520}
-        padding="md"
+        title={editorTitle}
+        size="lg"
       >
-        {panel?.mode === 'edit-lookaround' ? (
-          <Stack gap="md">
-            <NumberInput
-              label="Lookaround days"
-              description="Neutralization can match transactions this many days before and after the selected analysis range."
-              value={lookaroundDays}
-              onChange={(value) => {
-                setLookaroundDays(value)
-                setLookaroundError(null)
-              }}
-              min={MIN_LOOKAROUND_DAYS}
-              max={MAX_LOOKAROUND_DAYS}
-              allowDecimal={false}
-              clampBehavior="strict"
-              size={drawerControlSize}
-              required
-            />
-
-            <Paper withBorder p="sm" radius="md">
-              <Text size="sm" fw={600}>
-                Summary
-              </Text>
-              <Text size="sm" c="dimmed">
-                {getLookaroundScopeSummary(
-                  getValidatedLookaroundDays() ?? lookaroundItem.lookaroundDays,
-                )}
-              </Text>
-            </Paper>
-
-            {lookaroundError && (
-              <Alert color="yellow" title="Unable to save">
-                {lookaroundError}
-              </Alert>
-            )}
-
-            <Group justify="flex-end">
-              <Button
-                variant="subtle"
-                onClick={() => setPanel(null)}
-                size={drawerControlSize}
-              >
-                Cancel
-              </Button>
-              <Button
-                leftSection={<Save size={16} />}
-                onClick={submitLookaround}
-                loading={Boolean(lookaroundSetting?.isSaving)}
-                size={drawerControlSize}
-              >
-                Save
-              </Button>
-            </Group>
-          </Stack>
-        ) : (
-          <Stack gap="md">
-            <TextInput
-              label="Name"
-              value={name}
-              onChange={(event) => setName(event.currentTarget.value)}
-              maxLength={80}
-              size={drawerControlSize}
-              required
-            />
-            <Select
-              label="Type"
-              value={type}
-              size={drawerControlSize}
-              onChange={(value) =>
-                value && setType(value as 'exclude' | 'neutralize')
-              }
-              data={[
-                { value: 'exclude', label: 'Exclude' },
-                { value: 'neutralize', label: 'Neutralize' },
-              ]}
-              allowDeselect={false}
-            />
-
-            {type === 'exclude' ? (
-              <CategoryScopeInput
-                label="Excluded categories"
-                value={excludeScope}
-                onChange={setExcludeScope}
-                categories={panelCategories}
-                size={drawerControlSize}
-                viewportAwareDropdown={Boolean(isMobile)}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (panel?.mode === 'edit-lookaround') submitLookaround()
+            else submitRule()
+          }}
+        >
+          {panel?.mode === 'edit-lookaround' ? (
+            <Stack gap="md">
+              <NumberInput
+                label="Days outside the date range"
+                description="Include nearby transactions when matching refunds, reimbursements, or transfers."
+                value={lookaroundDays}
+                onChange={(value) => {
+                  setLookaroundDays(value)
+                  setLookaroundError(null)
+                }}
+                min={MIN_LOOKAROUND_DAYS}
+                max={MAX_LOOKAROUND_DAYS}
+                allowDecimal={false}
+                clampBehavior="strict"
+                size={editorControlSize}
+                required
               />
-            ) : (
-              <>
-                <CategoryScopeInput
-                  label="Inflows"
-                  value={inflowScope}
-                  onChange={setInflowScope}
-                  categories={panelCategories}
-                  size={drawerControlSize}
-                  viewportAwareDropdown={Boolean(isMobile)}
-                />
-                <CategoryScopeInput
-                  label="Outflows"
-                  value={outflowScope}
-                  onChange={setOutflowScope}
-                  categories={panelCategories}
-                  size={drawerControlSize}
-                  viewportAwareDropdown={Boolean(isMobile)}
-                />
-              </>
-            )}
 
-            {(createRule.isError || updateRule.isError) && (
-              <Alert color="yellow" title="Duplicate detected">
-                <Text size="sm">{getRuleErrorMessage(activeError)}</Text>
-                {conflict?.archivedAt && (
-                  <Button
-                    size="xs"
-                    variant="light"
-                    mt="xs"
-                    onClick={() => restoreConflictRule(conflict.ruleId)}
-                  >
-                    Restore existing rule
-                  </Button>
-                )}
-              </Alert>
-            )}
-
-            <Paper withBorder p="sm" radius="md">
-              <Group gap={6} wrap="nowrap">
+              <Paper withBorder p="sm" radius="md">
                 <Text size="sm" fw={600}>
                   Summary
                 </Text>
-                {type === 'neutralize' && (
-                  <Tooltip
-                    label="Exact same currency and smallest-unit amount. Outflows match oldest first; closest-date inflow wins, then oldest/id."
-                    multiline
-                    w={260}
-                  >
-                    <ActionIcon
-                      aria-label="Neutralize tie breaking rules"
-                      size="xs"
-                      variant="subtle"
-                    >
-                      <CircleHelp size={14} />
-                    </ActionIcon>
-                  </Tooltip>
-                )}
-              </Group>
-              <Text size="sm" c="dimmed">
-                {type === 'exclude'
-                  ? getScopeSummary(
-                      excludeScope.mode === 'all'
-                        ? { mode: 'all' }
-                        : {
-                            mode: 'selected',
-                            includeUncategorized:
-                              excludeScope.includeUncategorized ?? false,
-                            categories: panelCategories.filter((category) =>
-                              (excludeScope.categoryIds ?? []).includes(
-                                category.id,
-                              ),
-                            ),
-                          },
-                    )
-                  : 'Inflows matching the first scope may cancel outflows matching the second scope.'}
-              </Text>
-            </Paper>
+                <Text size="sm" c="dimmed">
+                  {getLookaroundScopeSummary(
+                    getValidatedLookaroundDays() ??
+                      lookaroundItem.lookaroundDays,
+                  )}
+                </Text>
+              </Paper>
 
-            <Group justify="flex-end">
-              <Button
-                variant="subtle"
-                onClick={() => setPanel(null)}
-                size={drawerControlSize}
+              {lookaroundError && (
+                <Alert color="yellow" title="Unable to save">
+                  {lookaroundError}
+                </Alert>
+              )}
+
+              <FormActions
+                onCancel={() => setPanel(null)}
+                cancelDisabled={Boolean(lookaroundSetting?.isSaving)}
               >
-                Cancel
-              </Button>
-              <Button
-                leftSection={<Save size={16} />}
-                onClick={submitRule}
-                loading={createRule.isPending || updateRule.isPending}
-                disabled={submitDisabled}
-                size={drawerControlSize}
+                <Button
+                  leftSection={<Save size={16} />}
+                  type="submit"
+                  loading={Boolean(lookaroundSetting?.isSaving)}
+                  size={editorControlSize}
+                >
+                  Save
+                </Button>
+              </FormActions>
+            </Stack>
+          ) : (
+            <Stack gap="md">
+              <TextInput
+                label="Name"
+                value={name}
+                onChange={(event) => setName(event.currentTarget.value)}
+                maxLength={80}
+                size={editorControlSize}
+                required
+              />
+              <Select
+                label="Effect"
+                value={type}
+                size={editorControlSize}
+                onChange={(value) =>
+                  value && setType(value as 'exclude' | 'neutralize')
+                }
+                data={[
+                  { value: 'exclude', label: 'Exclude from analysis' },
+                  { value: 'neutralize', label: 'Match money in and out' },
+                ]}
+                allowDeselect={false}
+              />
+
+              {type === 'exclude' ? (
+                <CategoryScopeInput
+                  label="Excluded categories"
+                  value={excludeScope}
+                  onChange={setExcludeScope}
+                  categories={panelCategories}
+                  size={editorControlSize}
+                  viewportAwareDropdown={Boolean(isMobile)}
+                />
+              ) : (
+                <>
+                  <CategoryScopeInput
+                    label="Money in"
+                    value={inflowScope}
+                    onChange={setInflowScope}
+                    categories={panelCategories}
+                    size={editorControlSize}
+                    viewportAwareDropdown={Boolean(isMobile)}
+                  />
+                  <CategoryScopeInput
+                    label="Money out"
+                    value={outflowScope}
+                    onChange={setOutflowScope}
+                    categories={panelCategories}
+                    size={editorControlSize}
+                    viewportAwareDropdown={Boolean(isMobile)}
+                  />
+                </>
+              )}
+
+              {(createRule.isError || updateRule.isError) && (
+                <Alert color="yellow" title="Duplicate detected">
+                  <Text size="sm">{getRuleErrorMessage(activeError)}</Text>
+                  {conflict?.archivedAt && (
+                    <Button
+                      size="xs"
+                      variant="light"
+                      mt="xs"
+                      onClick={() => restoreConflictRule(conflict.ruleId)}
+                    >
+                      Restore existing rule
+                    </Button>
+                  )}
+                </Alert>
+              )}
+
+              <Paper withBorder p="sm" radius="md">
+                <Group gap={6} wrap="nowrap">
+                  <Text size="sm" fw={600}>
+                    Summary
+                  </Text>
+                  {type === 'neutralize' && (
+                    <Tooltip
+                      label="Matches must have the same amount and currency. Older payments are matched first, using the nearest matching money-in date."
+                      multiline
+                      w={260}
+                    >
+                      <ActionIcon
+                        aria-label="How matching works"
+                        size="xs"
+                        variant="subtle"
+                      >
+                        <CircleHelp size={14} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </Group>
+                <Text size="sm" c="dimmed">
+                  {type === 'exclude'
+                    ? `When a transaction is in ${getScopeSummary(
+                        excludeScope.mode === 'all'
+                          ? { mode: 'all' }
+                          : {
+                              mode: 'selected',
+                              includeUncategorized:
+                                excludeScope.includeUncategorized ?? false,
+                              categories: panelCategories.filter((category) =>
+                                (excludeScope.categoryIds ?? []).includes(
+                                  category.id,
+                                ),
+                              ),
+                            },
+                      )}, exclude it from analysis.`
+                    : 'When the selected money-in and money-out categories have matching amounts and currencies, exclude both transactions from analysis.'}
+                </Text>
+              </Paper>
+
+              <FormActions
+                onCancel={() => setPanel(null)}
+                cancelDisabled={createRule.isPending || updateRule.isPending}
               >
-                Save
-              </Button>
-            </Group>
-          </Stack>
-        )}
-      </Drawer>
+                <Button
+                  leftSection={<Save size={16} />}
+                  type="submit"
+                  loading={createRule.isPending || updateRule.isPending}
+                  disabled={submitDisabled}
+                  size={editorControlSize}
+                >
+                  Save
+                </Button>
+              </FormActions>
+            </Stack>
+          )}
+        </form>
+      </EditorModal>
     </Stack>
   )
 }
