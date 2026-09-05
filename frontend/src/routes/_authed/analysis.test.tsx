@@ -109,12 +109,15 @@ vi.mock('../../components/analysis/AnalysisSankeyChart', () => ({
 }))
 
 vi.mock('../../components/DateRangeControl', () => ({
-  DateRangeControl: (props: { value: [Date | null, Date | null] }) => {
+  DateRangeControl: (props: {
+    value: [Date | string | null, Date | string | null]
+  }) => {
     mockFns.dateRangeControlMock(props)
     const [start, end] = props.value
     return (
       <div data-testid="date-range-control">
-        {start?.toISOString().slice(0, 10)}:{end?.toISOString().slice(0, 10)}
+        {start instanceof Date ? start.toISOString().slice(0, 10) : start}:
+        {end instanceof Date ? end.toISOString().slice(0, 10) : end}
       </div>
     )
   },
@@ -240,6 +243,32 @@ afterEach(() => {
 })
 
 describe('Analysis route', () => {
+  it('shows neutral totals without an invented split for an empty period and opens the previous month', () => {
+    mockFns.useTransactionAnalysisControllerGetAnalysisMock.mockReturnValue({
+      data: {
+        ...analysisResponse,
+        inflows: [],
+        outflows: [],
+        totalInflow: 0,
+        totalOutflow: 0,
+        netFlow: 0,
+      },
+      isPending: false,
+      isError: false,
+    })
+
+    renderAnalysisPage()
+
+    expect(screen.getByText('No transactions in this period')).toBeTruthy()
+    expect(screen.queryByText('+$0')).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'View previous month' }))
+    expect(mockFns.navigateMock).toHaveBeenCalledWith({
+      to: '/analysis',
+      search: { startDate: '2026-01-01', endDate: '2026-01-31' },
+    })
+  })
+
   it('rejects impossible and reversed direct-navigation date ranges', () => {
     expect(
       validateAnalysisSearch({

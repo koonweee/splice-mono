@@ -2,7 +2,10 @@ import { Box, Group, ScrollArea, Table, Text } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
+  formatDateTime,
+  formatMoneyNumber,
   formatMoneyWithSign,
+  getDecimalPlaces,
 } from '../../lib/format'
 import { useIsMobile } from '../../lib/hooks'
 import styles from './InvestmentHoldingsTable.module.css'
@@ -28,9 +31,40 @@ function formatDecimal(
 }
 
 function formatSubtype(activity: InvestmentActivity): string {
-  return [activity.investmentType, activity.investmentSubtype]
-    .filter(Boolean)
-    .join(' / ')
+  const type = activity.investmentType.trim()
+  const subtype = activity.investmentSubtype.trim()
+  const labels =
+    subtype && (type === 'cash' || subtype === type)
+      ? [subtype]
+      : [type, subtype]
+
+  return (
+    labels
+      .filter((label): label is string => !!label)
+      .map((label) => {
+        const words = label.replace(/[_-]+/g, ' ')
+        return words.charAt(0).toUpperCase() + words.slice(1)
+      })
+      .join(' · ') || 'Activity'
+  )
+}
+
+function formatActivityMoney(
+  value: string | null,
+  activity: InvestmentActivity,
+): string {
+  if (value === null) return '--'
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return value
+
+  const currency = activity.amount.money.currency
+  const fractionDigits = value.split('.')[1]?.replace(/0+$/, '').length ?? 0
+  return formatMoneyNumber({
+    value: numericValue,
+    currency,
+    decimals: Math.min(4, Math.max(getDecimalPlaces(currency), fractionDigits)),
+    appendCurrency: currency.length !== 3,
+  })
 }
 
 function getSecurityLabel(activity: InvestmentActivity): string {
@@ -83,10 +117,11 @@ export function InvestmentActivityTable({
                   {getSecurityLabel(row)}
                 </Text>
                 <Text c="dimmed" size="xs">
-                  {row.activityDate} · {formatSubtype(row)}
+                  {formatDateTime(row.activityDate)} · {formatSubtype(row)}
                 </Text>
                 <Text c="dimmed" size="xs">
-                  {formatDecimal(row.quantity)} @ {formatDecimal(row.price, 4)}
+                  {formatDecimal(row.quantity)} @{' '}
+                  {formatActivityMoney(row.price, row)}
                 </Text>
               </Box>
               <Text fw={600} size="sm" ta="right" style={{ flexShrink: 0 }}>
@@ -121,7 +156,7 @@ export function InvestmentActivityTable({
         <Table.Tbody>
           {activity.map((row) => (
             <Table.Tr key={row.id}>
-              <Table.Td>{row.activityDate}</Table.Td>
+              <Table.Td>{formatDateTime(row.activityDate)}</Table.Td>
               <Table.Td className={styles.securityCell}>
                 <Text size="sm" truncate>
                   {getSecurityLabel(row)}
@@ -129,8 +164,12 @@ export function InvestmentActivityTable({
               </Table.Td>
               <Table.Td>{formatSubtype(row)}</Table.Td>
               <Table.Td ta="right">{formatDecimal(row.quantity)}</Table.Td>
-              <Table.Td ta="right">{formatDecimal(row.price, 4)}</Table.Td>
-              <Table.Td ta="right">{formatDecimal(row.fees, 4)}</Table.Td>
+              <Table.Td ta="right">
+                {formatActivityMoney(row.price, row)}
+              </Table.Td>
+              <Table.Td ta="right">
+                {formatActivityMoney(row.fees, row)}
+              </Table.Td>
               <Table.Td ta="right">
                 {formatCashImpact(row, balancesHidden)}
               </Table.Td>

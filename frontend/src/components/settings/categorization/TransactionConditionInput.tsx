@@ -67,14 +67,14 @@ const textFields: Array<TextField> = [
 
 const fieldOptions = [
   { value: 'merchantName', label: 'Merchant name' },
-  { value: 'providerTransactionName', label: 'Provider name' },
-  { value: 'originalDescription', label: 'Raw description' },
-  { value: 'merchantEntityId', label: 'Merchant entity ID' },
+  { value: 'providerTransactionName', label: 'Bank description' },
+  { value: 'originalDescription', label: 'Original description' },
+  { value: 'merchantEntityId', label: 'Merchant identifier' },
   { value: 'website', label: 'Website' },
-  { value: 'providerCategoryPrimary', label: 'Provider primary category' },
-  { value: 'providerCategoryDetailed', label: 'Provider detailed category' },
+  { value: 'providerCategoryPrimary', label: 'Bank category' },
+  { value: 'providerCategoryDetailed', label: 'Bank subcategory' },
   { value: 'accountId', label: 'Account' },
-  { value: 'amountSign', label: 'Amount direction' },
+  { value: 'amountSign', label: 'Money direction' },
   { value: 'amount', label: 'Amount' },
 ]
 
@@ -251,8 +251,8 @@ export function TransactionConditionInput({
         <Select
           aria-label="Condition amount direction"
           data={[
-            { value: 'negative', label: 'Outflow' },
-            { value: 'positive', label: 'Inflow' },
+            { value: 'negative', label: 'Money out' },
+            { value: 'positive', label: 'Money in' },
           ]}
           label="Value"
           value={condition.value}

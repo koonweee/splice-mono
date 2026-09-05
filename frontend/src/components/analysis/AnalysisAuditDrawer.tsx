@@ -15,10 +15,13 @@ import { useMediaQuery } from '@mantine/hooks'
 import { ClipboardList } from 'lucide-react'
 import { useMemo } from 'react'
 import {
+  formatCategoryName,
+  formatDateTime,
   formatMoneyNumber,
   formatPrimaryCategory,
   getDecimalPlaces,
 } from '../../lib/format'
+import { formatDateRangeLabel } from '../../lib/date-range'
 import type {
   AnalysisAuditTransaction,
   TransactionAnalysisAuditResponse,
@@ -59,7 +62,6 @@ function formatAuditAmount(transaction: AnalysisAuditTransaction) {
   return formatMoneyNumber({
     value: toMajorUnits(signedAmount, transaction.amount.currency),
     currency: transaction.amount.currency,
-    decimals: 2,
   })
 }
 
@@ -78,6 +80,14 @@ function TransactionSummary({
   label?: string
   transaction: AnalysisAuditTransaction
 }) {
+  const primary = formatPrimaryCategory(transaction.categoryPrimary)
+  const detailed = transaction.categoryDetailed
+    ? formatCategoryName({
+        primary: transaction.categoryPrimary,
+        detailed: transaction.categoryDetailed,
+      })
+    : null
+
   return (
     <Box style={{ minWidth: 0 }}>
       <Group gap="xs" justify="space-between" wrap="nowrap">
@@ -95,16 +105,22 @@ function TransactionSummary({
           {formatAuditAmount(transaction)}
         </Text>
       </Group>
-      <Text c="dimmed" size="xs" lineClamp={1}>
-        {transaction.activityDate} - {transaction.accountName} -{' '}
-        {formatPrimaryCategory(transaction.categoryPrimary)}
-        {transaction.categoryDetailed ? ` / ${transaction.categoryDetailed}` : ''}
+      <Text c="dimmed" size="xs" mt={4}>
+        {formatDateTime(transaction.activityDate)} · {transaction.accountName}
+      </Text>
+      <Text c="dimmed" size="xs">
+        {primary}
+        {detailed && detailed !== primary ? ` · ${detailed}` : ''}
       </Text>
     </Box>
   )
 }
 
-function AuditRowCard({ row }: { row: TransactionAnalysisAuditResponseRowsItem }) {
+function AuditRowCard({
+  row,
+}: {
+  row: TransactionAnalysisAuditResponseRowsItem
+}) {
   if (row.type === 'excluded') {
     return (
       <Paper withBorder p="sm" radius="sm">
@@ -168,8 +184,10 @@ export function AnalysisAuditDrawer({
       size={isMobile ? 'min(92dvh, 720px)' : 560}
       padding="md"
       styles={{
+        content: { display: 'flex', flexDirection: 'column' },
         body: {
-          height: isMobile ? 'calc(92dvh - 64px)' : 'calc(100dvh - 64px)',
+          flex: 1,
+          minHeight: 0,
           overflow: 'hidden',
         },
       }}
@@ -178,11 +196,11 @@ export function AnalysisAuditDrawer({
         <Group justify="space-between" align="flex-start" gap="sm">
           <Box style={{ minWidth: 0 }}>
             <Text size="sm" c="dimmed">
-              {startDate} to {endDate}
+              {formatDateRangeLabel([startDate, endDate])}
             </Text>
             {auditQuery?.data && (
               <Text size="xs" c="dimmed">
-                Neutralization lookaround:{' '}
+                Refund matching window:{' '}
                 {auditQuery.data.neutralizationLookaroundDays} days
               </Text>
             )}

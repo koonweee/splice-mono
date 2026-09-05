@@ -98,11 +98,16 @@ function SummaryStrip({
   currency: string
 }) {
   const total = totalInflow + totalOutflow
-  const inflowPct = total > 0 ? (totalInflow / total) * 100 : 50
+  const inflowPct = total > 0 ? (totalInflow / total) * 100 : 0
 
   return (
     <Paper p="md" radius="md" withBorder>
-      <Group justify="space-between" wrap="wrap" gap="md" mb="sm">
+      <Group
+        justify="space-between"
+        wrap="wrap"
+        gap="md"
+        mb={total > 0 ? 'sm' : 0}
+      >
         <Group gap="lg">
           <Group gap={6}>
             <ArrowDownLeft size={16} color="var(--mantine-color-teal-6)" />
@@ -123,16 +128,29 @@ function SummaryStrip({
           <Text size="sm" c="dimmed" fw={500}>
             Net
           </Text>
-          <Text fw={700} c={netFlow >= 0 ? 'teal' : 'red'}>
-            {netFlow >= 0 ? '+' : ''}
+          <Text
+            fw={700}
+            c={netFlow === 0 ? undefined : netFlow > 0 ? 'teal' : 'red'}
+          >
+            {netFlow > 0 ? '+' : ''}
             {formatAmount(netFlow, currency)}
           </Text>
         </Group>
       </Group>
-      <Progress.Root size="sm" radius="xl">
-        <Progress.Section value={inflowPct} color="teal" />
-        <Progress.Section value={100 - inflowPct} color="red" />
-      </Progress.Root>
+      {total > 0 && (
+        <Progress.Root size="sm" radius="xl">
+          <Progress.Section
+            value={inflowPct}
+            color="teal"
+            aria-label="Inflow share"
+          />
+          <Progress.Section
+            value={100 - inflowPct}
+            color="red"
+            aria-label="Outflow share"
+          />
+        </Progress.Root>
+      )}
     </Paper>
   )
 }
@@ -339,7 +357,7 @@ function AnalysisPage() {
       <PageHeader
         title="Analysis"
         actions={
-          <Group gap="xs">
+          <Group gap="xs" wrap="nowrap" w={{ base: '100%', sm: 'auto' }}>
             <DateRangeControl
               value={dateRangeValue}
               onChange={handleDateRangeChange}
@@ -381,9 +399,24 @@ function AnalysisPage() {
 
           {analysis.inflows.length === 0 && analysis.outflows.length === 0 ? (
             <Paper p="xl" radius="md" withBorder>
-              <Text c="dimmed" ta="center">
-                No transaction data found for this period.
-              </Text>
+              <Stack align="center" gap="sm">
+                <Text fw={600}>No transactions in this period</Text>
+                <Text c="dimmed" ta="center" size="sm">
+                  Choose another date range to see your cashflow.
+                </Text>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    const previousMonth = dayjs(startDate).subtract(1, 'month')
+                    handleDateRangeChange([
+                      previousMonth.startOf('month').format('YYYY-MM-DD'),
+                      previousMonth.endOf('month').format('YYYY-MM-DD'),
+                    ])
+                  }}
+                >
+                  View previous month
+                </Button>
+              </Stack>
             </Paper>
           ) : (
             <>

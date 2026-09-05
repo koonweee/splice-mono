@@ -2,6 +2,14 @@
   border: 1px solid transparent;
 }
 
+.ruleBadge {
+  color: light-dark(
+    var(--mantine-color-violet-9),
+    var(--mantine-color-violet-2)
+  );
+  flex-shrink: 0;
+}
+
 .pendingBadge {
   border-color: light-dark(
     var(--mantine-color-yellow-4),

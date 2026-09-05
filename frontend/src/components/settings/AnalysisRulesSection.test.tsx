@@ -164,13 +164,17 @@ describe('AnalysisRulesSection', () => {
   it('renders rules and archives active rules', () => {
     renderSection()
 
-    expect(screen.getByText('Neutralization lookaround')).toBeTruthy()
+    expect(screen.getByText('Matching window')).toBeTruthy()
     expect(
-      screen.getAllByText('60 days before/after selected range'),
+      screen.getAllByText(
+        'Match up to 60 days before or after the selected date range.',
+      ),
     ).not.toHaveLength(0)
     expect(screen.getByText('Cancel reimbursements')).toBeTruthy()
     expect(
-      screen.getAllByText(/Hardware \(Home Projects\) -> All categories/),
+      screen.getAllByText(
+        /When money in for Hardware \(Home Projects\) matches money out for All categories, exclude both from analysis\./,
+      ),
     ).not.toHaveLength(0)
 
     fireEvent.click(screen.getByLabelText('Archive rule'))
@@ -212,7 +216,14 @@ describe('AnalysisRulesSection', () => {
   it('creates an exclude rule with an all-categories scope', async () => {
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: /new rule/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add rule/i }))
+    const editor = await screen.findByRole('dialog', {
+      name: 'Add analysis rule',
+    })
+    const form = editor.querySelector('form')
+    if (!form) throw new Error('Analysis rule editor form is missing')
+    fireEvent.submit(form)
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
     fireEvent.change(await screen.findByRole('textbox', { name: /name/i }), {
       target: { value: 'Ignore everything' },
     })
@@ -231,9 +242,9 @@ describe('AnalysisRulesSection', () => {
   it('hides the lookaround setting in archived mode', () => {
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: /archived/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /archived/i }))
 
-    expect(screen.queryByText('Neutralization lookaround')).toBeNull()
+    expect(screen.queryByText('Matching window')).toBeNull()
     expect(screen.getByText('Ignore pets')).toBeTruthy()
   })
 
@@ -242,12 +253,14 @@ describe('AnalysisRulesSection', () => {
 
     renderSection({ lookaroundSetting: { value: 45, onSave } })
 
-    fireEvent.click(screen.getByLabelText('Edit neutralization lookaround'))
+    fireEvent.click(screen.getByLabelText('Edit matching window'))
     const dialog = await screen.findByRole('dialog', {
-      name: /edit neutralization lookaround/i,
+      name: /edit matching window/i,
     })
     fireEvent.change(
-      within(dialog).getByRole('textbox', { name: /lookaround days/i }),
+      within(dialog).getByRole('textbox', {
+        name: /days outside the date range/i,
+      }),
       {
         target: { value: '30' },
       },
@@ -260,21 +273,45 @@ describe('AnalysisRulesSection', () => {
     })
   })
 
-  it('shows the post-orval integration seam when lookaround is not connected', async () => {
+  it('does not treat a blank matching window as zero when the form is submitted', async () => {
+    const onSave = vi.fn()
+    renderSection({ lookaroundSetting: { value: 45, onSave } })
+    fireEvent.click(screen.getByLabelText('Edit matching window'))
+    const editor = await screen.findByRole('dialog', {
+      name: 'Edit matching window',
+    })
+    fireEvent.change(
+      within(editor).getByRole('textbox', {
+        name: /days outside the date range/i,
+      }),
+      {
+        target: { value: '' },
+      },
+    )
+    const form = editor.querySelector('form')
+    if (!form) throw new Error('Matching window form is missing')
+    fireEvent.submit(form)
+    expect(onSave).not.toHaveBeenCalled()
+    expect(
+      within(editor).getByText('Enter a whole number from 0 to 180.'),
+    ).toBeTruthy()
+  })
+
+  it('shows a readable error when the matching window setting is unavailable', async () => {
     renderSection()
 
-    fireEvent.click(screen.getByLabelText('Edit neutralization lookaround'))
+    fireEvent.click(screen.getByLabelText('Edit matching window'))
     const dialog = await screen.findByRole('dialog', {
-      name: /edit neutralization lookaround/i,
+      name: /edit matching window/i,
     })
     fireEvent.click(within(dialog).getByRole('button', { name: /^save$/i }))
 
     expect(
-      await screen.findByText(/generated API client exposes/i),
+      await screen.findByText(/matching window setting is unavailable/i),
     ).toBeTruthy()
   })
 
-  it('restores archived duplicate conflicts from the drawer', async () => {
+  it('restores archived duplicate conflicts from the editor', async () => {
     mockFns.useAnalysisRuleControllerCreateMock.mockReturnValue({
       mutate: mockFns.createMutateMock,
       isPending: false,
@@ -296,7 +333,7 @@ describe('AnalysisRulesSection', () => {
 
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: /new rule/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add rule/i }))
     expect(await screen.findByText('Duplicate detected')).toBeTruthy()
     fireEvent.click(
       screen.getByRole('button', { name: /restore existing rule/i }),

@@ -186,6 +186,18 @@ beforeEach(() => {
 })
 
 describe('ManualTransactionModal', () => {
+  it('cancels the editor without submitting the transaction', () => {
+    const onClose = vi.fn()
+    renderModal(onClose)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
+    expect(mockFns.createRecurringMutateMock).not.toHaveBeenCalled()
+    expect(mockFns.updateMutateMock).not.toHaveBeenCalled()
+  })
+
   it('creates a signed manual transaction in the selected account currency', () => {
     renderModal()
 
@@ -379,7 +391,7 @@ describe('ManualTransactionModal', () => {
   })
 })
 
-function renderModal() {
+function renderModal(onClose = vi.fn()) {
   return render(
     <MantineProvider>
       <ManualTransactionModal
@@ -390,7 +402,7 @@ function renderModal() {
         ]}
         categories={[category]}
         defaultAccountId="account-1"
-        onClose={vi.fn()}
+        onClose={onClose}
       />
     </MantineProvider>,
   )

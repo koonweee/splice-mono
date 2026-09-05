@@ -1,6 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { MantineProvider } from '@mantine/core'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { AnalysisSankeyChart } from './AnalysisSankeyChart'
 import { buildAnalysisSankeyData } from './AnalysisSankeyChart.data'
 import type { TransactionAnalysisResponse } from '../../api/models'
+
+vi.mock('../../lib/hooks', () => ({ useIsMobile: () => true }))
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 
 function makeAnalysis(
   overrides: Partial<TransactionAnalysisResponse> = {},
@@ -37,6 +46,34 @@ function makeAnalysis(
 }
 
 describe('buildAnalysisSankeyData', () => {
+  it('keeps mobile outflow and inflow totals directly actionable in reading order', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    )
+    const onCategoryClick = vi.fn()
+    render(
+      <MantineProvider>
+        <AnalysisSankeyChart
+          analysis={makeAnalysis()}
+          onCategoryClick={onCategoryClick}
+        />
+      </MantineProvider>,
+    )
+
+    const buttons = screen.getAllByRole('button')
+    expect(buttons[0].textContent).toContain('Groceries')
+    expect(buttons[0].textContent).toContain('$120')
+    fireEvent.click(buttons[0])
+    expect(onCategoryClick).toHaveBeenLastCalledWith('Groceries', 'outflow')
+    fireEvent.click(screen.getByRole('button', { name: /Salary/ }))
+    expect(onCategoryClick).toHaveBeenLastCalledWith('Salary', 'inflow')
+  })
+
   it('builds inflow, hub, outflow, and net saved nodes for positive net flow', () => {
     const data = buildAnalysisSankeyData(makeAnalysis())
 

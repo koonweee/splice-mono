@@ -118,7 +118,6 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
   const supportsHover = useMediaQuery(
     '(hover: hover) and (pointer: fine)',
     false,
-    { getInitialValueInEffect: false },
   )
   const details = getMetadataDetails(transaction)
   const rawDescription = formatMetadataValue(transaction.originalDescription)
@@ -447,7 +446,6 @@ function ProviderCategoryHintPopover({
   const supportsHover = useMediaQuery(
     '(hover: hover) and (pointer: fine)',
     false,
-    { getInitialValueInEffect: false },
   )
   const providerCategoryHint = getProviderCategoryHint(transaction)
   const displayLabel = formatMetadataValue(providerCategoryHint?.displayLabel)
@@ -665,7 +663,6 @@ export function TransactionsTable({
   const supportsHover = useMediaQuery(
     '(hover: hover) and (pointer: fine)',
     false,
-    { getInitialValueInEffect: false },
   )
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
@@ -1057,7 +1054,12 @@ export function TransactionsTable({
               <ProviderCategoryHintPopover transaction={transaction} />
               {shouldShowRuleAssignment(transaction) && (
                 <Tooltip label="Assigned by categorization rule">
-                  <Badge color="violet" size="xs" variant="light">
+                  <Badge
+                    className={statusBadgeStyles.ruleBadge}
+                    color="violet"
+                    size="xs"
+                    variant="light"
+                  >
                     Rule
                   </Badge>
                 </Tooltip>

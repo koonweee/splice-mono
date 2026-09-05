@@ -455,43 +455,35 @@ afterEach(() => {
 })
 
 describe('AccountModal notes', () => {
-  it('renders an empty notes textarea with placeholder when notes are absent', () => {
+  it('keeps an empty note collapsed until Add note is selected', () => {
     renderAccountModal(null)
 
-    const textarea = getTextarea(
-      screen.getByPlaceholderText('Enter notes here'),
-    )
-
-    expect(textarea.value).toBe('')
-  })
-
-  it('renders existing notes in the textarea', () => {
-    renderAccountModal('Use for household bills.')
+    expect(screen.queryByLabelText('Account notes')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }))
 
     const textarea = getTextarea(screen.getByLabelText('Account notes'))
-
-    expect(textarea.value).toBe('Use for household bills.')
+    expect(textarea.value).toBe('')
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', {
+        name: 'Save account notes',
+      }).disabled,
+    ).toBe(true)
   })
 
-  it('hides the save button until notes change', () => {
-    renderAccountModal(null)
+  it('shows a saved note as readable text before editing', () => {
+    renderAccountModal('Use for household bills.')
 
-    expect(
-      screen.queryByRole('button', { name: /save account notes/i }),
-    ).toBeNull()
-
-    fireEvent.change(screen.getByLabelText('Account notes'), {
-      target: { value: 'New note' },
-    })
-
-    expect(
-      screen.getByRole('button', { name: /save account notes/i }),
-    ).toBeTruthy()
+    expect(screen.getByText('Use for household bills.')).toBeTruthy()
+    expect(screen.queryByLabelText('Account notes')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit note' }))
+    expect(getTextarea(screen.getByLabelText('Account notes')).value).toBe(
+      'Use for household bills.',
+    )
   })
 
-  it('saves edited notes', () => {
+  it('saves edited notes and returns to the compact preview', () => {
     renderAccountModal(null)
-
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }))
     fireEvent.change(screen.getByLabelText('Account notes'), {
       target: { value: 'New note' },
     })
@@ -504,11 +496,48 @@ describe('AccountModal notes', () => {
         onError: expect.any(Function),
       }),
     )
+    expect(screen.queryByLabelText('Account notes')).toBeNull()
+    expect(screen.getByText('New note')).toBeTruthy()
+  })
+
+  it('cancels a note edit without saving and restores the original draft', () => {
+    renderAccountModal('Original note')
+    fireEvent.click(screen.getByRole('button', { name: 'Edit note' }))
+    fireEvent.change(screen.getByLabelText('Account notes'), {
+      target: { value: 'Discard this edit' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(mockFns.mutateMock).not.toHaveBeenCalled()
+    expect(screen.getByText('Original note')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit note' }))
+    expect(getTextarea(screen.getByLabelText('Account notes')).value).toBe(
+      'Original note',
+    )
+  })
+
+  it('keeps an unsaved draft available after a failed save', () => {
+    mockFns.mutateMock.mockImplementation((_variables, options) =>
+      options?.onError?.(),
+    )
+    renderAccountModal(null)
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }))
+    fireEvent.change(screen.getByLabelText('Account notes'), {
+      target: { value: 'Retry this note' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save account notes' }))
+
+    expect(getTextarea(screen.getByLabelText('Account notes')).value).toBe(
+      'Retry this note',
+    )
+    expect(mockFns.notificationsShowMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Save failed' }),
+    )
   })
 
   it('saves whitespace-only notes as null', () => {
     renderAccountModal('Old note')
-
+    fireEvent.click(screen.getByRole('button', { name: 'Edit note' }))
     fireEvent.change(screen.getByLabelText('Account notes'), {
       target: { value: '   ' },
     })
@@ -518,6 +547,7 @@ describe('AccountModal notes', () => {
       { id: 'account-id', data: { notes: null } },
       expect.any(Object),
     )
+    expect(screen.getByRole('button', { name: 'Add note' })).toBeTruthy()
   })
 })
 
@@ -577,7 +607,7 @@ describe('AccountModal balance history', () => {
     expect(screen.queryByText('Unable to load account history')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
     expect(screen.getByText('Current balance')).toBeTruthy()
-    expect(screen.getByLabelText('Account notes')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add note' })).toBeTruthy()
   })
 
   it('edits a manual account balance inline and confirms the change', () => {
@@ -615,9 +645,7 @@ describe('AccountModal balance history', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Current balance' }), {
       target: { value: '25.50' },
     })
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Cancel balance edit' }),
-    )
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel balance edit' }))
 
     expect(mockFns.updateBalanceMutateMock).not.toHaveBeenCalled()
     expect(screen.queryByRole('form', { name: 'Edit balance' })).toBeNull()
@@ -678,6 +706,51 @@ describe('AccountModal balance history', () => {
 })
 
 describe('AccountModal holdings', () => {
+  it('opens holdings first and fetches activity only when its tab is selected', () => {
+    const result = renderAccountModal(null, {
+      type: AccountType.investment,
+      holdings: [investmentHolding],
+    })
+
+    expect(
+      screen
+        .getByRole('tab', { name: 'Holdings' })
+        .getAttribute('aria-selected'),
+    ).toBe('true')
+    expect(screen.queryByLabelText('Account notes')).toBeNull()
+    expect(mockFns.useInvestmentActivityMock).toHaveBeenLastCalledWith(
+      'account-id',
+      false,
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
+    expect(mockFns.useInvestmentActivityMock).toHaveBeenLastCalledWith(
+      'account-id',
+      true,
+    )
+    expect(screen.getByText('Current balance')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'History' }))
+    expect(
+      screen.getByText('No balance changes to chart for this period.'),
+    ).toBeTruthy()
+    expect(mockFns.useInvestmentActivityMock).toHaveBeenLastCalledWith(
+      'account-id',
+      false,
+    )
+    expect(screen.getByText('Current balance')).toBeTruthy()
+
+    result.setOpened(false)
+    expect(mockFns.useInvestmentHoldingsMock).toHaveBeenLastCalledWith(
+      'account-id',
+      false,
+    )
+    expect(mockFns.useInvestmentActivityMock).toHaveBeenLastCalledWith(
+      'account-id',
+      false,
+    )
+  })
+
   it('fetches and renders holdings for investment accounts', () => {
     renderAccountModal(null, {
       type: AccountType.investment,
@@ -731,6 +804,8 @@ describe('AccountModal holdings', () => {
       investmentActivityLoading: true,
     })
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
+
     expect(
       screen.getByRole('status', { name: 'Loading investment activity' }),
     ).toBeTruthy()
@@ -743,6 +818,8 @@ describe('AccountModal holdings', () => {
       investmentActivity: [],
       investmentActivityTotal: 0,
     })
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
 
     expect(screen.getByText('0 of 0')).toBeTruthy()
     expect(screen.getByText('No investment activity found.')).toBeTruthy()
@@ -762,6 +839,8 @@ describe('AccountModal holdings', () => {
       hasMoreInvestmentActivity: true,
       loadMoreInvestmentActivity: loadMore,
     })
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
 
     expect(screen.getByText('10 of 25')).toBeTruthy()
     expect(mockFns.investmentActivityTableMock).toHaveBeenCalledWith(
@@ -785,6 +864,8 @@ describe('AccountModal holdings', () => {
       investmentActivityLoadMoreError: true,
     })
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
+
     expect(screen.getByText('10 of 25')).toBeTruthy()
     expect(screen.getByTestId('investment-activity-table')).toBeTruthy()
     expect(screen.getByRole('alert').textContent).toContain(
@@ -806,7 +887,7 @@ describe('AccountModal holdings', () => {
 
     expect(screen.getByRole('button', { name: 'Edit holdings' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
-    expect(screen.getByText('(as of May 20, 2026)')).toBeTruthy()
+    expect(screen.getByText('As of May 20, 2026')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Edit balance' })).toBeNull()
     expect(screen.queryByText('Activity')).toBeNull()
     expect(mockFns.useInvestmentActivityMock).toHaveBeenCalledWith(

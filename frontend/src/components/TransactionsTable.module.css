@@ -64,11 +64,14 @@
 }
 
 .positive {
-  color: var(--mantine-color-teal-6);
+  color: light-dark(
+    var(--mantine-color-teal-9),
+    var(--mantine-color-teal-text)
+  );
 }
 
 .negative {
-  color: var(--mantine-color-red-6);
+  color: light-dark(var(--mantine-color-red-7), var(--mantine-color-red-2));
 }
 
 .merchantCell {

@@ -1,6 +1,12 @@
 import { MantineProvider } from '@mantine/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MoneyWithSignSign } from '../../api/models'
 import { RecurringManualTransactionsSection } from './RecurringManualTransactionsSection'
@@ -33,7 +39,7 @@ vi.mock('../../api/clients/spliceAPI', async () => {
       isPending: false,
     }),
     useRecurringManualTransactionControllerFindAll: () => ({
-      data: schedules,
+      data: scheduleItems,
       isError: false,
     }),
     useRecurringManualTransactionControllerPause: () => ({
@@ -57,6 +63,7 @@ afterEach(() => {
 })
 
 beforeEach(() => {
+  scheduleItems = schedules
   Object.defineProperty(window, 'matchMedia', {
     value: vi.fn().mockImplementation(() => ({
       matches: false,
@@ -92,7 +99,9 @@ describe('RecurringManualTransactionsSection', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Pause recurring transaction' }),
     )
-    expect(mockFns.pauseMutateMock).toHaveBeenCalledWith({ id: schedules[0].id })
+    expect(mockFns.pauseMutateMock).toHaveBeenCalledWith({
+      id: schedules[0].id,
+    })
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Delete recurring transaction' }),
@@ -100,6 +109,63 @@ describe('RecurringManualTransactionsSection', () => {
     expect(mockFns.archiveMutateMock).toHaveBeenCalledWith({
       id: schedules[0].id,
     })
+  })
+
+  it('keeps the next date and resume action accessible in the tablet list', async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(max-width: 48em)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+      configurable: true,
+    })
+    scheduleItems = [{ ...schedules[0], pausedAt: '2026-06-01T00:00:00.000Z' }]
+    renderSection()
+
+    const list = screen.getByLabelText('Recurring transactions list, 1 total')
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(within(list).getByText('Jun 30, 2026')).toBeTruthy()
+    expect(within(list).getByText('Paused')).toBeTruthy()
+    fireEvent.click(
+      within(list).getByRole('button', {
+        name: 'Resume recurring transaction',
+      }),
+    )
+    expect(mockFns.resumeMutateMock).toHaveBeenCalledWith({
+      id: schedules[0].id,
+    })
+
+    fireEvent.click(
+      within(list).getByRole('button', { name: 'Edit recurring transaction' }),
+    )
+    const editor = await screen.findByRole('dialog', {
+      name: 'Edit recurring transaction',
+    })
+    expect(within(editor).getByDisplayValue('Rent')).toBeTruthy()
+    fireEvent.click(within(editor).getByRole('button', { name: 'Cancel' }))
+    expect(mockFns.updateMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('validates an incomplete schedule without creating a transaction', async () => {
+    renderSection()
+    fireEvent.click(screen.getByRole('button', { name: 'Add recurring' }))
+    const editor = await screen.findByRole('dialog', {
+      name: 'Add recurring transaction',
+    })
+    const form = within(editor)
+      .getByRole('button', { name: 'Save' })
+      .closest('form')
+    if (!form) throw new Error('Schedule editor form is missing')
+    fireEvent.submit(form)
+    expect(within(editor).getByText('Account is required')).toBeTruthy()
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
+    fireEvent.click(within(editor).getByRole('button', { name: 'Cancel' }))
   })
 })
 
@@ -140,3 +206,5 @@ const schedules: Array<RecurringManualTransactionSchedule> = [
     updatedAt: '2026-05-01T00:00:00.000Z',
   },
 ]
+
+let scheduleItems = schedules

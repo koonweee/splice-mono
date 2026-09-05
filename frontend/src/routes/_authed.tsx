@@ -66,12 +66,12 @@ export async function requireAuthedSession({
     }
 
     throw redirect({
-        to: '/',
-        search: {
-          login: true,
-          redirect: location.href ?? location.pathname,
-        },
-      })
+      to: '/',
+      search: {
+        login: true,
+        redirect: location.href ?? location.pathname,
+      },
+    })
   }
 }
 
@@ -113,13 +113,21 @@ function AuthedLayout() {
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
           <Group>
-            <Burger opened={opened} onClick={toggle} size="sm" />
+            <Burger
+              aria-label={opened ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={opened}
+              aria-controls="main-navigation"
+              opened={opened}
+              onClick={toggle}
+              size="sm"
+            />
             <Text fw={700} size="lg">
               Splice
             </Text>
           </Group>
           <Tooltip label="Logout">
             <ActionIcon
+              aria-label="Log out"
               variant="subtle"
               color="gray"
               onClick={handleLogout}
@@ -131,7 +139,7 @@ function AuthedLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
+      <AppShell.Navbar p="md" id="main-navigation">
         <Stack gap="xs">
           {navItems.map((item) => (
             <NavLink

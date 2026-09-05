@@ -348,6 +348,19 @@ function renderTransactionsPage() {
   )
 }
 
+function setMobileViewport() {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: query === '(max-width: 48em)',
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }))
+}
+
 beforeEach(() => {
   mockFns.useSearchMock.mockReturnValue({
     accountId: 'account-1',
@@ -418,6 +431,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.clearAllMocks()
 })
 
@@ -648,16 +662,7 @@ describe('TransactionsPage category assignment workflow', () => {
   })
 
   it('uses the mobile transaction list at narrow viewports', () => {
-    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
-      matches: query === '(max-width: 48em)',
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }))
+    setMobileViewport()
 
     renderTransactionsPage()
 
@@ -669,6 +674,81 @@ describe('TransactionsPage category assignment workflow', () => {
         totalRows: 125,
       }),
     )
+  })
+
+  it('combines mobile dates and other filters in one sheet with shortcuts and clear actions', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-12T12:00:00-07:00'))
+    setMobileViewport()
+    renderTransactionsPage()
+
+    expect(screen.getByText('Filters · Feb 1–28, 2026')).toBeTruthy()
+    expect(
+      screen.queryByRole('button', { name: 'Choose date range' }),
+    ).toBeNull()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open transaction filters, 2 active',
+      }),
+    )
+    act(() => vi.runAllTimers())
+
+    expect(screen.getAllByText('Filters')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Apr' }))
+    expect(screen.getByRole('dialog', { name: 'Filters' })).toBeTruthy()
+    expect(screen.getByLabelText<HTMLInputElement>('Start').value).toBe(
+      '2026-04-01',
+    )
+    expect(screen.getByLabelText<HTMLInputElement>('End').value).toBe(
+      '2026-04-30',
+    )
+    fireEvent.change(screen.getByLabelText('Start'), {
+      target: { value: '2026-04-10' },
+    })
+    fireEvent.change(screen.getByLabelText('End'), {
+      target: { value: '2026-04-20' },
+    })
+    fireEvent.change(screen.getByLabelText('Category'), {
+      target: { value: category.id },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Outflows' }))
+    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+
+    expect(mockFns.transactionControllerFindAllMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        accountId: 'account-1',
+        categoryId: category.id,
+        amountSign: 'negative',
+        startDate: '2026-04-10',
+        endDate: '2026-04-20',
+      }),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear dates' }))
+    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+    const withoutDates =
+      mockFns.transactionControllerFindAllMock.mock.calls.at(-1)?.[0]
+    expect(withoutDates).toMatchObject({
+      accountId: 'account-1',
+      categoryId: category.id,
+      amountSign: 'negative',
+    })
+    expect(withoutDates).not.toHaveProperty('startDate')
+    expect(withoutDates).not.toHaveProperty('endDate')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+    expect(mockFns.transactionControllerFindAllMock).toHaveBeenLastCalledWith({
+      pageSize: '50',
+      pageIndex: '0',
+      convert: true,
+      sortBy: 'activityDate',
+      sortOrder: 'DESC',
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    act(() => vi.runAllTimers())
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText('Filters · All dates')).toBeTruthy()
   })
 })
 

@@ -213,6 +213,25 @@ afterEach(() => {
 })
 
 describe('manual account money payloads', () => {
+  it('cancels account creation from the form footer without saving', () => {
+    const onClose = vi.fn()
+    render(
+      <MantineProvider>
+        <AddAccountModal opened onClose={onClose} />
+      </MantineProvider>,
+    )
+
+    fireEvent.click(screen.getByText('Manual account'))
+    fireEvent.change(screen.getByRole('textbox', { name: /Account name/ }), {
+      target: { value: 'Discard this account' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
+    expect(mockFns.createBrokerageMutateMock).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['USD', -12.34, 1234],
     ['USD', 12.34, 1234],

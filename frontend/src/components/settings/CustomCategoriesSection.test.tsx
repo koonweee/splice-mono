@@ -117,14 +117,15 @@ afterEach(() => {
 })
 
 describe('CustomCategoriesSection', () => {
-  it('creates and edits user categories without system or visibility controls', () => {
+  it('creates and edits user categories without system or visibility controls', async () => {
     renderSection()
 
     expect(screen.queryByText('System')).toBeNull()
     expect(screen.queryByText(/visibility/i)).toBeNull()
     expect(screen.queryByText(/Hide from dropdowns/i)).toBeNull()
 
-    fireEvent.click(screen.getByRole('button', { name: /new category/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add category/i }))
+    await screen.findByRole('dialog', { name: 'Add category' })
     fireEvent.change(screen.getByTestId('custom-category-primary-input'), {
       target: { value: 'Kids' },
     })
@@ -137,7 +138,7 @@ describe('CustomCategoriesSection', () => {
     fireEvent.change(screen.getByTestId('custom-category-color-input'), {
       target: { value: '#112233' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /create category/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^create$/i }))
 
     expect(mockFns.createMutateMock).toHaveBeenCalledWith({
       data: {
@@ -148,8 +149,9 @@ describe('CustomCategoriesSection', () => {
       },
     })
 
-    fireEvent.click(screen.getByLabelText('Close category panel'))
-    fireEvent.click(screen.getByLabelText('View category details'))
+    fireEvent.click(screen.getByLabelText('Close editor'))
+    fireEvent.click(screen.getByLabelText('Edit category'))
+    await screen.findByRole('dialog', { name: 'Edit category' })
     fireEvent.change(screen.getByTestId('custom-category-primary-input'), {
       target: { value: 'House' },
     })
@@ -166,12 +168,24 @@ describe('CustomCategoriesSection', () => {
     })
   })
 
+  it('rejects incomplete form submissions and lets Cancel dismiss without saving', async () => {
+    renderSection()
+    fireEvent.click(screen.getByRole('button', { name: /add category/i }))
+    const editor = await screen.findByRole('dialog', { name: 'Add category' })
+    const form = editor.querySelector('form')
+    if (!form) throw new Error('Category editor form is missing')
+    fireEvent.submit(form)
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(mockFns.createMutateMock).not.toHaveBeenCalled()
+  })
+
   it('archives, restores, and bulk duplicates selected categories', () => {
     renderSection()
 
-    expect(screen.getByRole('button', { name: /new category/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /add category/i })).toBeTruthy()
     fireEvent.click(screen.getByLabelText('Select Home Projects > Hardware'))
-    expect(screen.queryByRole('button', { name: /new category/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /add category/i })).toBeNull()
     expect(screen.queryByLabelText('Bulk primary category')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /^archive$/i }))
 
@@ -266,18 +280,19 @@ describe('CustomCategoriesSection', () => {
     renderSection()
 
     fireEvent.click(screen.getByLabelText('Select Home Projects > Hardware'))
-    expect(screen.queryByRole('button', { name: /new category/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /add category/i })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /^archive$/i }))
 
     expect(screen.queryByText('1 selected')).toBeNull()
-    expect(screen.getByRole('button', { name: /new category/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /add category/i })).toBeTruthy()
   })
 
-  it('offers restore for archived duplicate conflicts', () => {
+  it('offers restore for archived duplicate conflicts', async () => {
     renderSection()
 
-    fireEvent.click(screen.getByRole('button', { name: /new category/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add category/i }))
+    await screen.findByRole('dialog', { name: 'Add category' })
     fireEvent.change(screen.getByTestId('custom-category-primary-input'), {
       target: { value: 'Pets' },
     })

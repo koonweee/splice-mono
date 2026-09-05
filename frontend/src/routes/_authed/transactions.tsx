@@ -31,6 +31,7 @@ import {
   useTransactionControllerUndoBulkUpdateCategories,
 } from '../../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../../lib/format'
+import { formatDateRangeLabel } from '../../lib/date-range'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import { getFallbackCategoryColor } from '../../lib/category-colors'
 import { isManualTransaction } from '../../lib/manual-transactions'
@@ -46,7 +47,10 @@ import type {
 import type { DatesRangeValue } from '@mantine/dates'
 import type { MRT_SortingState } from 'mantine-react-table'
 import type { CategorySelectOption } from '@/components/categories/CategorySelect'
-import { DateRangeControl } from '@/components/DateRangeControl'
+import {
+  DateRangeControl,
+  DateRangeFields,
+} from '@/components/DateRangeControl'
 import { TransactionsTable } from '@/components/TransactionsTable'
 import { CategorySelect } from '@/components/categories/CategorySelect'
 import { TransactionBulkEditToolbar } from '@/components/transactions/TransactionBulkEditToolbar'
@@ -72,12 +76,15 @@ type TransactionFiltersPanelProps = {
   amountSign: string
   categoryId: string | null
   categoryOptions: Array<CategorySelectOption>
+  dateRange: DatesRangeValue
   hasActiveFilters: boolean
   isMobile: boolean
   onAccountChange: (value: string | null) => void
   onAmountSignChange: (value: string) => void
   onCategoryChange: (value: string | null) => void
+  onDateRangeChange: (value: DatesRangeValue) => void
   onClearFilters: () => void
+  onDone: () => void
 }
 
 const amountSignOptions = [
@@ -116,12 +123,15 @@ function TransactionsFilterPanel({
   amountSign,
   categoryId,
   categoryOptions,
+  dateRange,
   hasActiveFilters,
   isMobile,
   onAccountChange,
   onAmountSignChange,
   onCategoryChange,
+  onDateRangeChange,
   onClearFilters,
+  onDone,
 }: TransactionFiltersPanelProps) {
   const comboboxProps = isMobile
     ? getViewportAwareOverlayComboboxProps()
@@ -132,11 +142,31 @@ function TransactionsFilterPanel({
 
   return (
     <Stack gap="md">
+      {isMobile && (
+        <>
+          <Stack gap="xs">
+            <Group justify="space-between">
+              <Text fw={600} size="sm">
+                Date range
+              </Text>
+              {dateRange.some(Boolean) && (
+                <Button
+                  onClick={() => onDateRangeChange([null, null])}
+                  size="compact-sm"
+                  variant="subtle"
+                >
+                  Clear dates
+                </Button>
+              )}
+            </Group>
+            <DateRangeFields onChange={onDateRangeChange} value={dateRange} />
+          </Stack>
+          <Divider />
+        </>
+      )}
       <Stack gap="xs">
-        <Text fw={600} size="sm">
-          Filters
-        </Text>
         <AccountSelect
+          label="Account"
           placeholder="Account"
           data={accountOptions}
           value={accountId}
@@ -149,6 +179,7 @@ function TransactionsFilterPanel({
         />
         <CategorySelect
           aria-label="Category"
+          label="Category"
           placeholder="Category"
           data={categoryOptions}
           value={categoryId}
@@ -174,16 +205,17 @@ function TransactionsFilterPanel({
         />
       </Stack>
 
-      {hasActiveFilters ? (
+      {hasActiveFilters || isMobile ? (
         <>
           <Divider />
-          <Button
-            variant="subtle"
-            size={isMobile ? 'md' : 'xs'}
-            onClick={onClearFilters}
-          >
-            Clear filters
-          </Button>
+          <Group justify="space-between" grow={isMobile}>
+            {hasActiveFilters && (
+              <Button variant="default" size="md" onClick={onClearFilters}>
+                Clear filters
+              </Button>
+            )}
+            {isMobile && <Button onClick={onDone}>Done</Button>}
+          </Group>
         </>
       ) : null}
     </Stack>
@@ -407,7 +439,7 @@ function TransactionsPage() {
   }, [fetchNextPage, isFetching, hasNextPage])
 
   const hasActiveFilters =
-    dateRange[0] !== null ||
+    dateRange.some(Boolean) ||
     accountId !== null ||
     categoryId !== null ||
     amountSign !== 'all'
@@ -553,15 +585,16 @@ function TransactionsPage() {
     )
   }
 
-  const hiddenActiveFilterCount = [
+  const activeFilterCount = [
+    isMobile && dateRange.some(Boolean) ? 'dates' : null,
     accountId,
     categoryId,
     amountSign !== 'all' ? amountSign : null,
   ].filter(Boolean).length
 
   const filterButtonLabel =
-    hiddenActiveFilterCount > 0
-      ? `Open transaction filters, ${hiddenActiveFilterCount} active`
+    activeFilterCount > 0
+      ? `Open transaction filters, ${activeFilterCount} active`
       : 'Open transaction filters'
 
   const filterPanel = (
@@ -571,12 +604,15 @@ function TransactionsPage() {
       amountSign={amountSign}
       categoryId={categoryId}
       categoryOptions={categoryOptions}
+      dateRange={dateRange}
       hasActiveFilters={hasActiveFilters}
       isMobile={Boolean(isMobile)}
       onAccountChange={setAccountId}
       onAmountSignChange={setAmountSign}
       onCategoryChange={setCategoryId}
+      onDateRangeChange={setDateRange}
       onClearFilters={clearFilters}
+      onDone={closeFilters}
     />
   )
 
@@ -645,24 +681,28 @@ function TransactionsPage() {
         align="center"
       >
         {isMobile ? (
-          <Group flex={1} gap="xs" miw={0} wrap="nowrap">
-            <DateRangeControl onChange={setDateRange} value={dateRange} />
-            <Box pos="relative">
-              <ActionIcon
-                aria-label={filterButtonLabel}
-                variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
-                size={48}
-                onClick={toggleFilters}
-              >
-                <Filter size={20} />
-              </ActionIcon>
-              {hiddenActiveFilterCount > 0 && (
-                <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
-                  {hiddenActiveFilterCount}
+          <Button
+            aria-label={filterButtonLabel}
+            fullWidth
+            h="auto"
+            justify="space-between"
+            leftSection={<Filter size={20} />}
+            mih={48}
+            onClick={toggleFilters}
+            py="xs"
+            rightSection={
+              activeFilterCount > 0 ? (
+                <Badge circle size="sm">
+                  {activeFilterCount}
                 </Badge>
-              )}
-            </Box>
-          </Group>
+              ) : null
+            }
+            variant="default"
+          >
+            <Text component="span" size="sm" style={{ whiteSpace: 'normal' }}>
+              Filters · {formatDateRangeLabel(dateRange)}
+            </Text>
+          </Button>
         ) : (
           <DateRangeControl onChange={setDateRange} value={dateRange} />
         )}
@@ -673,7 +713,7 @@ function TransactionsPage() {
             onClose={closeFilters}
             title="Filters"
             position="bottom"
-            size="min(430px, 80dvh)"
+            size="min(680px, 90dvh)"
             padding="md"
           >
             {filterPanel}
@@ -682,15 +722,15 @@ function TransactionsPage() {
           <Box pos="relative" ref={desktopFilterRef}>
             <ActionIcon
               aria-label={filterButtonLabel}
-              variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
+              variant={activeFilterCount > 0 ? 'light' : 'default'}
               size={42}
               onClick={toggleFilters}
             >
               <Filter size={18} />
             </ActionIcon>
-            {hiddenActiveFilterCount > 0 && (
+            {activeFilterCount > 0 && (
               <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
-                {hiddenActiveFilterCount}
+                {activeFilterCount}
               </Badge>
             )}
             {filtersOpened && (
@@ -734,11 +774,7 @@ function TransactionsPage() {
             variant="summary"
           />
         )}
-        {!isMobile && (
-          <Box ml="auto">
-            {addTransactionAction}
-          </Box>
-        )}
+        {!isMobile && <Box ml="auto">{addTransactionAction}</Box>}
       </Group>
 
       {isMobile && bulkModeEnabled && (

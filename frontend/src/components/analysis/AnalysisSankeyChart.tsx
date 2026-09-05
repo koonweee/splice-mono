@@ -1,4 +1,4 @@
-import { Box, Group, Paper, Stack, Text } from '@mantine/core'
+import { Box, Group, Paper, Progress, Stack, Text } from '@mantine/core'
 import { Sankey, Tooltip } from 'recharts'
 import { formatPrimaryCategory } from '../../lib/format'
 import { getDisplayCategoryColor } from '../../lib/category-colors'
@@ -166,12 +166,19 @@ function CategoryDrilldownList({
   currency,
   direction,
   onCategoryClick,
+  compact = false,
 }: {
   categories: Array<CategoryAggregate>
   currency: string
   direction: FlowDirection
   onCategoryClick: AnalysisSankeyChartProps['onCategoryClick']
+  compact?: boolean
 }) {
+  const total = categories.reduce(
+    (sum, category) => sum + category.totalAmount,
+    0,
+  )
+
   return (
     <Stack gap={4}>
       {categories.map((category, index) => (
@@ -180,7 +187,9 @@ function CategoryDrilldownList({
           onClick={() => onCategoryClick(category.primaryCategory, direction)}
           style={{
             borderRadius: 6,
-            padding: '6px var(--mantine-spacing-xs)',
+            padding: compact
+              ? '10px var(--mantine-spacing-xs)'
+              : '6px var(--mantine-spacing-xs)',
           }}
         >
           <Group gap="sm" wrap="nowrap">
@@ -197,13 +206,29 @@ function CategoryDrilldownList({
                 flexShrink: 0,
               }}
             />
-            <Text size="sm" style={{ flex: 1 }} truncate>
+            <Text
+              size="sm"
+              style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}
+            >
               {formatPrimaryCategory(category.primaryCategory)}
             </Text>
             <Text size="sm" fw={500} style={{ flexShrink: 0 }}>
               {formatSankeyAmount(category.totalAmount, currency)}
             </Text>
           </Group>
+          {compact && (
+            <Progress
+              mt={8}
+              size={4}
+              value={total > 0 ? (category.totalAmount / total) * 100 : 0}
+              color={getDisplayCategoryColor(
+                category.color,
+                category.primaryCategory,
+                index,
+              )}
+              aria-label={`${formatPrimaryCategory(category.primaryCategory)} share of ${direction}s`}
+            />
+          )}
         </Pressable>
       ))}
     </Stack>
@@ -220,7 +245,10 @@ export function AnalysisSankeyChart({
     isMobile ? 420 : 360,
     (analysis.inflows.length + analysis.outflows.length + 2) * 42,
   )
-  const chartWidth = isMobile ? 640 : 900
+  const chartWidth = 900
+  const directions: Array<FlowDirection> = isMobile
+    ? ['outflow', 'inflow']
+    : ['inflow', 'outflow']
 
   return (
     <Paper
@@ -238,62 +266,65 @@ export function AnalysisSankeyChart({
             {formatSankeyAmount(analysis.totalOutflow, analysis.currency)} out
           </Text>
         </Group>
-        <Box className={styles.chartViewport}>
-          <Box className={styles.chartCanvas} h={height} w={chartWidth}>
-            <Sankey
-              width={chartWidth}
-              height={height}
-              data={data}
-              node={(props) => (
-                <SankeyNodeShape
-                  nodeProps={props}
-                  onCategoryClick={onCategoryClick}
+        {!isMobile && (
+          <Box className={styles.chartViewport}>
+            <Box className={styles.chartCanvas} h={height} w={chartWidth}>
+              <Sankey
+                width={chartWidth}
+                height={height}
+                data={data}
+                node={(props) => (
+                  <SankeyNodeShape
+                    nodeProps={props}
+                    onCategoryClick={onCategoryClick}
+                  />
+                )}
+                link={(props) => (
+                  <SankeyLinkShape
+                    linkProps={props}
+                    onCategoryClick={onCategoryClick}
+                  />
+                )}
+                nodePadding={18}
+                nodeWidth={12}
+                margin={{ top: 16, right: 190, bottom: 16, left: 190 }}
+                sort={false}
+              >
+                <Tooltip
+                  formatter={(value) =>
+                    formatSankeyMajorAmount(Number(value), analysis.currency)
+                  }
                 />
-              )}
-              link={(props) => (
-                <SankeyLinkShape
-                  linkProps={props}
-                  onCategoryClick={onCategoryClick}
-                />
-              )}
-              nodePadding={18}
-              nodeWidth={12}
-              margin={{ top: 16, right: 190, bottom: 16, left: 190 }}
-              sort={false}
-            >
-              <Tooltip
-                formatter={(value) =>
-                  formatSankeyMajorAmount(Number(value), analysis.currency)
-                }
-              />
-            </Sankey>
+              </Sankey>
+            </Box>
           </Box>
-        </Box>
-        <Box className={styles.drilldownList}>
-          <Group align="flex-start" grow>
-            <Box>
-              <Text size="sm" fw={600} mb={4}>
-                Inflows
-              </Text>
-              <CategoryDrilldownList
-                categories={analysis.inflows}
-                currency={analysis.currency}
-                direction="inflow"
-                onCategoryClick={onCategoryClick}
-              />
-            </Box>
-            <Box>
-              <Text size="sm" fw={600} mb={4}>
-                Outflows
-              </Text>
-              <CategoryDrilldownList
-                categories={analysis.outflows}
-                currency={analysis.currency}
-                direction="outflow"
-                onCategoryClick={onCategoryClick}
-              />
-            </Box>
-          </Group>
+        )}
+        <Box className={isMobile ? styles.compactList : styles.drilldownList}>
+          <div className={styles.drilldownGrid}>
+            {directions.map((direction) => {
+              const categories =
+                direction === 'inflow' ? analysis.inflows : analysis.outflows
+              return (
+                <Box key={direction}>
+                  <Text size="sm" fw={600} mb={4}>
+                    {direction === 'inflow' ? 'Inflows' : 'Outflows'}
+                  </Text>
+                  <CategoryDrilldownList
+                    categories={categories}
+                    currency={analysis.currency}
+                    direction={direction}
+                    onCategoryClick={onCategoryClick}
+                    compact={isMobile}
+                  />
+                  {categories.length === 0 && (
+                    <Text size="sm" c="dimmed">
+                      No {direction}s
+                    </Text>
+                  )}
+                </Box>
+              )
+            })}
+          </div>
         </Box>
       </Stack>
     </Paper>

@@ -23,11 +23,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   Archive,
   Check,
-  CircleHelp,
   Eye,
   Pencil,
   Play,
-  Plus,
   RefreshCw,
   RotateCcw,
   Save,
@@ -51,10 +49,15 @@ import {
   useCategoryControllerFindManagement,
 } from '../../api/clients/spliceAPI'
 import { CategorySelect } from '../categories/CategorySelect'
+import { EditorModal } from '../forms/EditorModal'
+import { FormActions } from '../forms/FormActions'
 import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
 import { TransactionsTable } from '../TransactionsTable'
 import { TransactionsMobileList } from '../transactions/TransactionsMobileList'
+import { SettingsToolbar } from './SettingsToolbar'
+import { SettingsStatusBadge } from './SettingsStatusBadge'
+import { SettingsArchiveFilter } from './SettingsArchiveFilter'
 import {
   TransactionConditionInput,
   getDefaultCategorizationCondition,
@@ -62,6 +65,7 @@ import {
 } from './categorization/TransactionConditionInput'
 import type { MRT_ColumnDef } from 'mantine-react-table'
 import type {
+  Account,
   CategorizationRuleSuggestion,
   CategorizationRuleSuggestionGeneration,
   CategorizationRuleView,
@@ -88,17 +92,20 @@ function getCategoryLabel(category: { primary: string; detailed: string }) {
   return `${category.primary} / ${category.detailed}`
 }
 
-function getConditionLabel(condition: EditableCategorizationCondition) {
+function getConditionLabel(
+  condition: EditableCategorizationCondition,
+  accounts: Array<Account>,
+) {
   const fieldLabels: Record<string, string> = {
     merchantName: 'Merchant',
-    providerTransactionName: 'Provider name',
-    originalDescription: 'Raw description',
-    merchantEntityId: 'Merchant entity',
+    providerTransactionName: 'Bank description',
+    originalDescription: 'Original description',
+    merchantEntityId: 'Merchant identifier',
     website: 'Website',
-    providerCategoryPrimary: 'Provider primary',
-    providerCategoryDetailed: 'Provider detailed',
+    providerCategoryPrimary: 'Bank category',
+    providerCategoryDetailed: 'Bank subcategory',
     accountId: 'Account',
-    amountSign: 'Amount',
+    amountSign: 'Money',
     amount: 'Amount',
   }
   const operatorLabels: Record<string, string> = {
@@ -114,7 +121,7 @@ function getConditionLabel(condition: EditableCategorizationCondition) {
 
   if (condition.field === 'amountSign') {
     return `${fieldLabels[condition.field]} is ${
-      condition.value === 'positive' ? 'inflow' : 'outflow'
+      condition.value === 'positive' ? 'coming in' : 'going out'
     }`
   }
 
@@ -126,9 +133,26 @@ function getConditionLabel(condition: EditableCategorizationCondition) {
     } and ${value.max ?? 'any'}`
   }
 
+  function displayValue(value: unknown) {
+    if (condition.field === 'accountId') {
+      const account = accounts.find((item) => item.id === value)
+      return account?.customName ?? account?.name ?? 'Unavailable account'
+    }
+    if (
+      condition.field === 'providerCategoryPrimary' ||
+      condition.field === 'providerCategoryDetailed'
+    ) {
+      return String(value)
+        .replaceAll('_', ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    }
+    return String(value)
+  }
+
   const value = Array.isArray(condition.value)
-    ? condition.value.join(', ')
-    : String(condition.value)
+    ? condition.value.map(displayValue).join(', ')
+    : displayValue(condition.value)
 
   return `${fieldLabels[condition.field]} ${
     operatorLabels[condition.operator]
@@ -435,18 +459,21 @@ export function CategorizationRulesSection() {
       [
         rule.name,
         getCategoryLabel(rule.targetCategory),
-        rule.conditions.map(conditionFromApi).map(getConditionLabel).join(' '),
+        rule.conditions
+          .map(conditionFromApi)
+          .map((condition) => getConditionLabel(condition, accounts))
+          .join(' '),
         getRuleStatus(rule),
       ]
         .join(' ')
         .toLowerCase()
         .includes(normalizedSearch),
     )
-  }, [rules, search])
+  }, [accounts, rules, search])
 
   const activeError = createRule.error ?? updateRule.error
   const conflict = getRuleConflict(activeError)
-  const drawerControlSize = isMobile ? 'md' : undefined
+  const editorControlSize = 'md'
 
   function resetFormForCreate() {
     setPanel({ mode: 'create' })
@@ -487,6 +514,7 @@ export function CategorizationRulesSection() {
   }
 
   function submitRule() {
+    if (createRule.isPending || updateRule.isPending) return
     const dto = buildSubmitDto()
     if (!dto) {
       return
@@ -557,11 +585,7 @@ export function CategorizationRulesSection() {
   }) {
     return (
       <Group gap="xs" wrap="nowrap">
-        <ColorSwatch
-          color={category.color}
-          size={14}
-          withShadow={false}
-        />
+        <ColorSwatch color={category.color} size={14} withShadow={false} />
         <Text size="sm" lineClamp={1}>
           {getCategoryLabel(category)}
         </Text>
@@ -576,22 +600,29 @@ export function CategorizationRulesSection() {
   function renderConditionSummary(
     rule: Pick<CategorizationRuleView, 'conditions'>,
   ) {
-    const labels = rule.conditions.map(conditionFromApi).map(getConditionLabel)
+    const labels = rule.conditions
+      .map(conditionFromApi)
+      .map((condition) => getConditionLabel(condition, accounts))
 
-    return labels.join(' AND ')
+    return labels.join(' and ')
   }
 
   function renderSuggestionCard(suggestion: CategorizationRuleSuggestion) {
     return (
       <Paper key={suggestion.id} withBorder p="sm" radius="md">
-        <Group align="flex-start" gap="sm" justify="space-between" wrap="nowrap">
+        <Group
+          align="flex-start"
+          gap="sm"
+          justify="space-between"
+          wrap="nowrap"
+        >
           <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
             <Text fw={700} truncate>
               {suggestion.name}
             </Text>
             <Box mt={4}>{renderCategoryLabel(suggestion.targetCategory)}</Box>
             <Text c="dimmed" lineClamp={2} mt={6} size="sm">
-              {renderConditionSummary(suggestion)}
+              When {renderConditionSummary(suggestion)}
             </Text>
             <Group gap="xs" mt={8}>
               <Badge variant="light">
@@ -662,10 +693,21 @@ export function CategorizationRulesSection() {
   function renderRuleRowActions(rule: CategorizationRuleView) {
     return (
       <Group gap={4} justify="flex-end" wrap="nowrap">
+        <Tooltip label="Edit rule">
+          <ActionIcon
+            aria-label="Edit rule"
+            size={isMobile ? 44 : 36}
+            onClick={() => openEditPanel(rule)}
+            variant="subtle"
+          >
+            <Pencil size={16} />
+          </ActionIcon>
+        </Tooltip>
         {!rule.archivedAt && (
           <Tooltip label="Apply to existing transactions">
             <ActionIcon
               aria-label="Apply rule to existing transactions"
+              size={isMobile ? 44 : 36}
               onClick={() => openApply(rule)}
               variant="subtle"
             >
@@ -673,19 +715,11 @@ export function CategorizationRulesSection() {
             </ActionIcon>
           </Tooltip>
         )}
-        <Tooltip label="Edit rule">
-          <ActionIcon
-            aria-label="Edit rule"
-            onClick={() => openEditPanel(rule)}
-            variant="subtle"
-          >
-            <Pencil size={16} />
-          </ActionIcon>
-        </Tooltip>
         {rule.archivedAt ? (
           <Tooltip label="Restore rule">
             <ActionIcon
               aria-label="Restore rule"
+              size={isMobile ? 44 : 36}
               onClick={() => archiveOrRestore(rule, false)}
               variant="subtle"
             >
@@ -696,6 +730,7 @@ export function CategorizationRulesSection() {
           <Tooltip label="Archive rule">
             <ActionIcon
               aria-label="Archive rule"
+              size={isMobile ? 44 : 36}
               onClick={() => archiveOrRestore(rule, true)}
               variant="subtle"
             >
@@ -708,37 +743,28 @@ export function CategorizationRulesSection() {
   }
 
   function renderMobileRuleRow(rule: CategorizationRuleView) {
-    const status = getRuleStatus(rule)
-
     return (
-      <Box px="sm" py="sm">
-        <Group
-          align="flex-start"
-          justify="space-between"
-          gap="sm"
-          wrap="nowrap"
-        >
-          <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
-            <Text fw={700} truncate>
-              {rule.name}
-            </Text>
-            <Group gap="xs" mt={4}>
-              <Badge
-                color={status === 'Active' ? 'green' : 'orange'}
-                variant="light"
-              >
-                {status}
-              </Badge>
-              <Badge variant="light">Priority {rule.priority}</Badge>
-            </Group>
-            <Text c="dimmed" lineClamp={2} mt={6} size="sm">
-              {renderConditionSummary(rule)}
-            </Text>
-            <Box mt={6}>{renderTargetCategory(rule)}</Box>
-          </Box>
+      <Stack px="sm" py="sm" gap="xs">
+        <Text fw={700}>{rule.name}</Text>
+        <Text c="dimmed" lineClamp={3} size="sm">
+          When {renderConditionSummary(rule)}
+        </Text>
+        <Group gap={6}>
+          <Text size="sm" c="dimmed">
+            Then categorize as
+          </Text>
+          {renderTargetCategory(rule)}
+        </Group>
+        <Group justify="space-between" gap="xs" wrap="nowrap">
+          <Group gap={6}>
+            <SettingsStatusBadge status={getRuleStatus(rule)} />
+            <Badge color="gray" size="sm" variant="light">
+              Priority {rule.priority}
+            </Badge>
+          </Group>
           {renderRuleRowActions(rule)}
         </Group>
-      </Box>
+      </Stack>
     )
   }
 
@@ -755,14 +781,14 @@ export function CategorizationRulesSection() {
     },
     {
       id: 'targetCategory',
-      header: 'Target category',
+      header: 'Then categorize as',
       accessorFn: (rule) => getCategoryLabel(rule.targetCategory),
       minSize: 220,
       Cell: ({ row }) => renderTargetCategory(row.original),
     },
     {
       id: 'conditions',
-      header: 'Conditions',
+      header: 'When',
       accessorFn: renderConditionSummary,
       minSize: 280,
       Cell: ({ row }) => (
@@ -783,14 +809,7 @@ export function CategorizationRulesSection() {
       size: 110,
       Cell: ({ row }) => {
         const status = getRuleStatus(row.original)
-        return (
-          <Badge
-            color={status === 'Active' ? 'green' : 'orange'}
-            variant="light"
-          >
-            {status}
-          </Badge>
-        )
+        return <SettingsStatusBadge status={status} />
       },
     },
   ]
@@ -847,10 +866,10 @@ export function CategorizationRulesSection() {
   })
 
   const submitDisabled = buildSubmitDto() === null
-  const drawerTitle =
+  const editorTitle =
     panel?.mode === 'edit'
       ? 'Edit categorization rule'
-      : 'New categorization rule'
+      : 'Add categorization rule'
   const applicationCounts = applyResult ?? applicationPreview.data ?? null
   const recommendationSuggestions = recommendations.data?.suggestions ?? []
   const recommendationGeneration = recommendations.data?.generation
@@ -891,38 +910,22 @@ export function CategorizationRulesSection() {
         overflowY: isMobile ? 'auto' : undefined,
       }}
     >
-      <Group justify="space-between" align="flex-end" gap="sm" wrap="wrap">
-        <Box style={{ flex: '1 1 260px' }}>
-          <Text fw={700} size="lg">
-            Categorization rules
-          </Text>
-          <Text size="sm" c="dimmed">
-            Rules set effective transaction categories during ingestion.
-          </Text>
-        </Box>
-        <Group gap="xs" style={{ flex: isMobile ? '1 1 100%' : undefined }}>
-          <Button
-            leftSection={<Plus size={16} />}
-            onClick={resetFormForCreate}
-            mih={isMobile ? 48 : undefined}
-            size="md"
-            style={{ flex: isMobile ? '1 1 auto' : undefined }}
-          >
-            New rule
-          </Button>
-          <Tooltip label="Rule recommendations">
-            <ActionIcon
-              aria-label="Rule recommendations"
-              loading={generateRecommendations.isPending}
-              onClick={openRecommendations}
-              size={isMobile ? 48 : 42}
-              variant="filled"
-            >
-              <Sparkles size={18} />
-            </ActionIcon>
-          </Tooltip>
-        </Group>
-      </Group>
+      <SettingsToolbar
+        title="Categorization rules"
+        description="Automatically categorize new transactions when they match your rules."
+        addLabel="Add rule"
+        onAdd={resetFormForCreate}
+      >
+        <Button
+          aria-label="Rule recommendations"
+          leftSection={<Sparkles size={16} />}
+          loading={generateRecommendations.isPending}
+          onClick={openRecommendations}
+          variant="default"
+        >
+          Suggestions
+        </Button>
+      </SettingsToolbar>
 
       <Group gap="xs" wrap={isMobile ? 'wrap' : 'nowrap'}>
         <TextInput
@@ -933,14 +936,10 @@ export function CategorizationRulesSection() {
           style={{ flex: '1 1 240px', minWidth: 0 }}
           value={search}
         />
-        <Button
-          mih={isMobile ? 48 : undefined}
-          onClick={() => setArchivedMode((value) => !value)}
-          size="md"
-          variant={archivedMode ? 'light' : 'default'}
-        >
-          Archived
-        </Button>
+        <SettingsArchiveFilter
+          checked={archivedMode}
+          onChange={setArchivedMode}
+        />
       </Group>
 
       {isLoading && (
@@ -969,127 +968,115 @@ export function CategorizationRulesSection() {
           <MantineReactTable table={table} />
         ))}
 
-      <Drawer
+      <EditorModal
         opened={panel !== null}
         onClose={() => setPanel(null)}
-        title={drawerTitle}
-        position={isMobile ? 'bottom' : 'right'}
-        size={isMobile ? 'min(92dvh, 760px)' : 640}
-        padding="md"
+        title={editorTitle}
+        size="lg"
       >
-        <Stack gap="md">
-          <TextInput
-            label="Name"
-            maxLength={80}
-            onChange={(event) => setName(event.currentTarget.value)}
-            required
-            size={drawerControlSize}
-            value={name}
-          />
-          <CategorySelect
-            clearable={false}
-            data={categoryOptions}
-            label="Target category"
-            onChange={setTargetCategoryId}
-            placeholder="Select category"
-            required
-            size={drawerControlSize}
-            value={targetCategoryId}
-          />
-          <NumberInput
-            allowDecimal={false}
-            label={
-              <Group component="span" gap={6} wrap="nowrap">
-                <span>Priority</span>
-                <Tooltip
-                  label="Lower numbers run first. If multiple rules match, the lowest priority wins; ties use older rules first."
-                  multiline
-                  w={260}
-                >
-                  <Box
-                    aria-label="Priority help"
-                    component="span"
-                    style={{ display: 'inline-flex' }}
-                  >
-                    <CircleHelp size={14} />
-                  </Box>
-                </Tooltip>
-              </Group>
-            }
-            onChange={setPriority}
-            required
-            size={drawerControlSize}
-            value={priority}
-          />
-
-          <Stack gap="xs">
-            <Text fw={600} size="sm">
-              Conditions
-            </Text>
-            <TransactionConditionInput
-              accounts={accounts}
-              conditions={conditions}
-              onChange={setConditions}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            submitRule()
+          }}
+        >
+          <Stack gap="md">
+            <TextInput
+              label="Name"
+              maxLength={80}
+              onChange={(event) => setName(event.currentTarget.value)}
+              required
+              size={editorControlSize}
+              value={name}
             />
-          </Stack>
+            <CategorySelect
+              clearable={false}
+              data={categoryOptions}
+              label="Target category"
+              onChange={setTargetCategoryId}
+              placeholder="Select category"
+              required
+              size={editorControlSize}
+              value={targetCategoryId}
+            />
+            <NumberInput
+              allowDecimal={false}
+              label="Priority"
+              description="Lower numbers run first. When priorities match, the older rule runs first."
+              onChange={setPriority}
+              required
+              size={editorControlSize}
+              value={priority}
+            />
 
-          {(createRule.isError || updateRule.isError) && (
-            <Alert color="yellow" title="Duplicate detected">
-              <Text size="sm">
-                Categorization rule already exists
-                {conflict ? `: ${conflict.label}` : '.'}
+            <Stack gap="xs">
+              <Text fw={600} size="sm">
+                Conditions
               </Text>
-              {conflict?.archivedAt && (
-                <Button
-                  mt="xs"
-                  onClick={() => restoreConflictRule(conflict.ruleId)}
-                  size="xs"
-                  variant="light"
-                >
-                  Restore existing rule
-                </Button>
-              )}
-            </Alert>
-          )}
+              <TransactionConditionInput
+                accounts={accounts}
+                conditions={conditions}
+                onChange={setConditions}
+              />
+            </Stack>
 
-          <Paper withBorder p="sm" radius="md">
-            <Text size="sm" fw={600}>
-              Summary
-            </Text>
-            <Text size="sm" c="dimmed">
-              If {conditions.map(getConditionLabel).join(', and ')}, set
-              category to{' '}
-              {targetCategoryId
-                ? getCategoryLabel(
-                    categories.find(
-                      (category) => category.id === targetCategoryId,
-                    ) ?? { primary: 'Selected', detailed: 'category' },
-                  )
-                : 'the selected category'}
-              .
-            </Text>
-          </Paper>
+            {(createRule.isError || updateRule.isError) && (
+              <Alert color="yellow" title="Duplicate detected">
+                <Text size="sm">
+                  Categorization rule already exists
+                  {conflict ? `: ${conflict.label}` : '.'}
+                </Text>
+                {conflict?.archivedAt && (
+                  <Button
+                    mt="xs"
+                    onClick={() => restoreConflictRule(conflict.ruleId)}
+                    size="xs"
+                    variant="light"
+                  >
+                    Restore existing rule
+                  </Button>
+                )}
+              </Alert>
+            )}
 
-          <Group justify="flex-end">
-            <Button
-              onClick={() => setPanel(null)}
-              size={drawerControlSize}
-              variant="subtle"
+            <Paper withBorder p="sm" radius="md">
+              <Text size="sm" fw={600}>
+                Summary
+              </Text>
+              <Text size="sm" c="dimmed">
+                When{' '}
+                {conditions
+                  .map((condition) => getConditionLabel(condition, accounts))
+                  .join(' and ')}
+                , then categorize as{' '}
+                {targetCategoryId
+                  ? getCategoryLabel(
+                      categories.find(
+                        (category) => category.id === targetCategoryId,
+                      ) ?? { primary: 'Selected', detailed: 'category' },
+                    )
+                  : 'the selected category'}
+                .
+              </Text>
+            </Paper>
+
+            <FormActions
+              onCancel={() => setPanel(null)}
+              cancelDisabled={createRule.isPending || updateRule.isPending}
             >
-              Cancel
-            </Button>
-            <Button
-              disabled={submitDisabled}
-              leftSection={<Save size={16} />}
-              loading={createRule.isPending || updateRule.isPending}
-              onClick={submitRule}
-              size={drawerControlSize}
-            >
-              Save
-            </Button>
-          </Group>
-        </Stack>
-      </Drawer>
+              <Button
+                disabled={submitDisabled}
+                leftSection={<Save size={16} />}
+                loading={createRule.isPending || updateRule.isPending}
+                type="submit"
+                size={editorControlSize}
+              >
+                Save
+              </Button>
+            </FormActions>
+          </Stack>
+        </form>
+      </EditorModal>
 
       <Modal
         opened={applyRule !== null}
@@ -1211,7 +1198,9 @@ export function CategorizationRulesSection() {
                   !applyResult &&
                   (applicationPreview.isLoading || applicationPreview.isError)
                 }
-                loading={applyMutation.isPending || applicationPreview.isLoading}
+                loading={
+                  applyMutation.isPending || applicationPreview.isLoading
+                }
                 onClick={() => applyMutation.mutate({ id: applyRule.id })}
               >
                 {applyButtonLabel}

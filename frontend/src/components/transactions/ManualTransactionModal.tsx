@@ -2,7 +2,6 @@ import {
   ActionIcon,
   Button,
   Group,
-  Modal,
   NumberInput,
   Stack,
   Switch,
@@ -27,6 +26,8 @@ import {
 } from '../../lib/mobile-combobox'
 import { AccountSelect } from '../accounts/AccountSelect'
 import { CategorySelect } from '../categories/CategorySelect'
+import { EditorModal } from '../forms/EditorModal'
+import { FormActions } from '../forms/FormActions'
 import type { CategorySelectOption } from '../categories/CategorySelect'
 import type { Account, Category, Transaction } from '../../api/models'
 import type { NumberInputProps } from '@mantine/core'
@@ -158,9 +159,8 @@ export function ManualTransactionModal({
   const [providerDate, setProviderDate] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [recurringEnabled, setRecurringEnabled] = useState(false)
-  const [recurrenceDay, setRecurrenceDay] = useState<NumberInputProps['value']>(
-    1,
-  )
+  const [recurrenceDay, setRecurrenceDay] =
+    useState<NumberInputProps['value']>(1)
   const [errors, setErrors] = useState<FormErrors>({})
   const createManualTransaction = useTransactionControllerCreateManual()
   const updateManualTransaction = useTransactionControllerUpdateManual()
@@ -337,12 +337,10 @@ export function ManualTransactionModal({
   }
 
   return (
-    <Modal
+    <EditorModal
       opened={opened}
       onClose={onClose}
       title={isEditing ? 'Edit transaction' : 'Add transaction'}
-      centered={!isMobile}
-      fullScreen={Boolean(isMobile)}
       size="md"
       transitionProps={{ duration: 0 }}
     >
@@ -489,16 +487,13 @@ export function ManualTransactionModal({
               )}
             </>
           )}
-          <Group justify="flex-end">
-            <Button onClick={onClose} type="button" variant="subtle">
-              Cancel
-            </Button>
+          <FormActions onCancel={onClose} cancelDisabled={isSaving}>
             <Button loading={isSaving} type="submit">
               Save
             </Button>
-          </Group>
+          </FormActions>
         </Stack>
       </form>
-    </Modal>
+    </EditorModal>
   )
 }

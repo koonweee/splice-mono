@@ -55,7 +55,9 @@ yarn test
 
 ## Styling
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+The UI uses Mantine components and theme defaults, CSS modules, and shared global styles. [Tailwind CSS](https://tailwindcss.com/) is also available.
+
+See [Shared UI conventions](docs/ui-conventions.md) for reusable primitives and usage examples, and the [standardization audit](docs/ui-standardization-audit.md) for remaining opportunities.
 
 ## Linting & Formatting
 

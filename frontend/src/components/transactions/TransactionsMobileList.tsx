@@ -356,7 +356,7 @@ export function TransactionsMobileList({
                   label={`Open transaction details for ${merchantDisplay.primary}`}
                   onOpen={() => setActiveTransactionId(transaction.id)}
                 >
-                  <div className={styles.rowMain}>
+                  <div className={styles.rowIdentity}>
                     {bulkModeEnabled && !isManual && (
                       <Checkbox
                         aria-label={`Select transaction ${merchantDisplay.primary}`}
@@ -374,34 +374,30 @@ export function TransactionsMobileList({
                     >
                       {avatarLabel}
                     </Avatar>
-                    <div className={styles.rowDetails}>
-                      <div className={styles.merchantLine}>
-                        <span className={styles.merchant}>
-                          {merchantDisplay.primary}
-                        </span>
-                      </div>
-                      {transaction.pending && (
-                        <div className={styles.statusLine}>
-                          <Badge
-                            classNames={{
-                              root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.pendingBadge}`,
-                            }}
-                            color="yellow"
-                            size="xs"
-                            variant="light"
-                          >
-                            Pending
-                          </Badge>
-                        </div>
-                      )}
-                      <div
-                        aria-label={`${transaction.accountName ?? 'Account'} · ${getCategoryLabel(transaction)}`}
-                        className={styles.metaLine}
-                      >
-                        <span className={styles.meta}>
-                          {transaction.accountName}
-                        </span>
-                        <span className={styles.metaSeparator}>·</span>
+                  </div>
+                  <div className={styles.merchantLine}>
+                    <span className={styles.merchant}>
+                      {merchantDisplay.primary}
+                    </span>
+                  </div>
+                  <div className={styles.rowAside}>
+                    <span
+                      className={`${styles.amount} ${getAmountClass(
+                        transaction,
+                      )}`}
+                    >
+                      {formatMoneyWithSign({ value: amount })}
+                    </span>
+                  </div>
+                  <div
+                    aria-label={`${transaction.accountName ?? 'Account'} · ${getCategoryLabel(transaction)}`}
+                    className={styles.rowDetails}
+                  >
+                    <div className={styles.meta}>
+                      {transaction.accountName ?? 'Account'}
+                    </div>
+                    <div className={styles.categoryLine}>
+                      <span className={styles.categoryLabel}>
                         <span
                           aria-hidden="true"
                           className={styles.categorySwatch}
@@ -412,29 +408,36 @@ export function TransactionsMobileList({
                         <span className={styles.meta}>
                           {getCategoryLabel(transaction)}
                         </span>
-                        {shouldShowRuleAssignment(transaction) && (
-                          <Badge color="violet" size="xs" variant="light">
-                            Rule
-                          </Badge>
-                        )}
-                      </div>
-                      {formatPaymentChannel(transaction.paymentChannel) && (
-                        <div className={styles.metaLine}>
-                          <span className={styles.meta}>
-                            {formatPaymentChannel(transaction.paymentChannel)}
-                          </span>
-                        </div>
+                      </span>
+                      {shouldShowRuleAssignment(transaction) && (
+                        <Badge
+                          className={statusBadgeStyles.ruleBadge}
+                          color="violet"
+                          size="xs"
+                          variant="light"
+                        >
+                          Rule
+                        </Badge>
+                      )}
+                      {transaction.pending && (
+                        <Badge
+                          className={styles.metadataBadge}
+                          classNames={{
+                            root: `${statusBadgeStyles.statusBadge} ${statusBadgeStyles.pendingBadge}`,
+                          }}
+                          color="yellow"
+                          size="xs"
+                          variant="light"
+                        >
+                          Pending
+                        </Badge>
                       )}
                     </div>
-                  </div>
-                  <div className={styles.rowAside}>
-                    <span
-                      className={`${styles.amount} ${getAmountClass(
-                        transaction,
-                      )}`}
-                    >
-                      {formatMoneyWithSign({ value: amount })}
-                    </span>
+                    {formatPaymentChannel(transaction.paymentChannel) && (
+                      <div className={styles.meta}>
+                        {formatPaymentChannel(transaction.paymentChannel)}
+                      </div>
+                    )}
                   </div>
                 </TransactionRow>
               )
