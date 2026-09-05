@@ -577,7 +577,13 @@ export function getThemePreset(value: unknown): ThemePreset {
 export function readStoredThemePresetId(): ThemePresetId {
   if (typeof window === 'undefined') return DEFAULT_THEME_PRESET_ID
 
-  return normalizeThemePresetId(window.localStorage.getItem(THEME_STORAGE_KEY))
+  try {
+    return normalizeThemePresetId(
+      window.localStorage.getItem(THEME_STORAGE_KEY),
+    )
+  } catch {
+    return DEFAULT_THEME_PRESET_ID
+  }
 }
 
 export function previewThemePresetId(theme: ThemePresetId): void {
@@ -593,6 +599,11 @@ export function previewThemePresetId(theme: ThemePresetId): void {
 export function applyThemePresetId(theme: ThemePresetId): void {
   if (typeof window === 'undefined') return
 
-  window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+  } catch {
+    /* storage may be unavailable */
+  }
+  document.cookie = `splice_theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
   previewThemePresetId(theme)
 }

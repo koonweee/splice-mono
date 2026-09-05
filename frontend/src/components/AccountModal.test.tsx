@@ -16,6 +16,7 @@ import {
 } from '../api/models'
 import { TimePeriod } from '../lib/types'
 import { AccountModal } from './AccountModal'
+import type { Query } from '@tanstack/react-query'
 import type {
   Account,
   AccountBalanceResult,
@@ -478,6 +479,33 @@ describe('AccountModal notes', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit note' }))
     expect(getTextarea(screen.getByLabelText('Account notes')).value).toBe(
       'Use for household bills.',
+    )
+  })
+
+  it('preserves the active notes draft across a rollback or background metadata refresh', () => {
+    const { rerenderModal } = renderAccountModal('Original note')
+    fireEvent.click(screen.getByRole('button', { name: 'Edit note' }))
+    fireEvent.change(screen.getByLabelText('Account notes'), {
+      target: { value: 'Unsaved draft' },
+    })
+    const previous =
+      mockFns.useAccountBalanceHistoryMock.mock.results.at(-1)?.value
+    mockFns.useAccountBalanceHistoryMock.mockReturnValue({
+      ...previous,
+      data: {
+        ...previous.data,
+        latestBalance: {
+          ...previous.data.latestBalance,
+          account: {
+            ...previous.data.latestBalance.account,
+            notes: 'Server refresh',
+          },
+        },
+      },
+    })
+    rerenderModal()
+    expect(getTextarea(screen.getByLabelText('Account notes')).value).toBe(
+      'Unsaved draft',
     )
   })
 
@@ -1022,11 +1050,19 @@ describe('AccountModal holdings', () => {
         data: { positions: [{ symbol: 'VWRA', quantity: '12.5' }] },
       }),
     )
-    expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['/investment/account/account-id/holdings/latest'],
-    })
-    expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['/balance-query/balances'],
-    })
+    expect(
+      invalidateQueries.mock.calls.some(([filters]) =>
+        filters?.predicate?.({
+          queryKey: ['/investment/account/account-id/holdings/latest'],
+        } as unknown as Query),
+      ),
+    ).toBe(true)
+    expect(
+      invalidateQueries.mock.calls.some(([filters]) =>
+        filters?.predicate?.({
+          queryKey: ['/balance-query/balances'],
+        } as unknown as Query),
+      ),
+    ).toBe(true)
   })
 })

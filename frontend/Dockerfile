@@ -18,6 +18,7 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV SPLICE_INTERNAL_API_BASE_URL=http://splice-backend:3000
 
 # Copy built output from Nitro
 COPY --from=builder /app/.output ./.output

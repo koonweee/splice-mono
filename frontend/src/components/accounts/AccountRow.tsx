@@ -2,14 +2,10 @@ import { ActionIcon, Group, Text, TextInput, Tooltip } from '@mantine/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Archive, Check, Link2, Pencil, RotateCcw, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
+import { useAccountMetadataMutation } from '../../hooks/useAccountMetadataMutation'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { SanitizedBankLinkStatus } from '../../api/models/sanitizedBankLinkStatus'
-import {
-  getAccountControllerFindAllQueryKey,
-  getBalanceQueryControllerGetAllBalancesQueryKey,
-  getBalanceQueryControllerGetBalancesQueryKey,
-  useAccountControllerUpdate,
-  useBankLinkControllerInitiateLinking,
-} from '../../api/clients/spliceAPI'
+import { useBankLinkControllerInitiateLinking } from '../../api/clients/spliceAPI'
 import { axios } from '../../api/axios'
 import { getApiErrorMessage } from '../../lib/api-errors'
 import { formatAccountType, formatRelativeTime } from '../../lib/format'
@@ -27,8 +23,9 @@ function archiveAccountById(id: string): Promise<Account> {
 
 export function AccountRow({ account }: { account: Account }) {
   const initiateLinking = useBankLinkControllerInitiateLinking()
-  const updateAccount = useAccountControllerUpdate()
+  const updateAccount = useAccountMetadataMutation(account.id)
   const archiveAccount = useMutation({
+    mutationKey: ['accountControllerArchive'],
     mutationFn: ({ id }: { id: string }) => archiveAccountById(id),
   })
   const queryClient = useQueryClient()
@@ -60,18 +57,11 @@ export function AccountRow({ account }: { account: Account }) {
   }, [])
 
   const invalidateAccounts = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: getAccountControllerFindAllQueryKey(),
-    })
+    void invalidateMutationFamilies(queryClient, ['accounts'])
   }, [queryClient])
 
   const invalidateAccountBalances = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: getBalanceQueryControllerGetBalancesQueryKey(),
-    })
-    queryClient.invalidateQueries({
-      queryKey: getBalanceQueryControllerGetAllBalancesQueryKey(),
-    })
+    void invalidateMutationFamilies(queryClient, ['balances'])
   }, [queryClient])
 
   const saveName = useCallback(() => {

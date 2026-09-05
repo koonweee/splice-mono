@@ -6,11 +6,12 @@ import {
   useLogout,
   useLogoutAll,
 } from './auth'
-import { sessionQueryKey } from './session'
 
 const mocks = vi.hoisted(() => ({
   resolveApiBaseUrl: vi.fn(),
   queryClient: {
+    cancelQueries: vi.fn(),
+    clear: vi.fn(),
     removeQueries: vi.fn(),
     invalidateQueries: vi.fn(),
   },
@@ -58,6 +59,8 @@ describe('auth helpers', () => {
     mocks.revokeCurrentDevicePushSubscription.mockResolvedValue(undefined)
     mocks.revokeAllPushSubscriptions.mockResolvedValue(undefined)
     mocks.clearAppBadge.mockResolvedValue(undefined)
+    mocks.queryClient.clear.mockReset()
+    mocks.queryClient.cancelQueries.mockReset()
     mocks.queryClient.removeQueries.mockReset()
     mocks.queryClient.invalidateQueries.mockReset()
   })
@@ -84,9 +87,8 @@ describe('auth helpers', () => {
   it('removes the session query from cache', () => {
     clearSessionCache(mocks.queryClient)
 
-    expect(mocks.queryClient.removeQueries).toHaveBeenCalledWith({
-      queryKey: sessionQueryKey,
-    })
+    expect(mocks.queryClient.cancelQueries).toHaveBeenCalled()
+    expect(mocks.queryClient.clear).toHaveBeenCalled()
   })
 
   it('attempts current-device notification cleanup before logout', async () => {
@@ -114,9 +116,8 @@ describe('auth helpers', () => {
 
     options.mutation.onSuccess()
 
-    expect(mocks.queryClient.removeQueries).toHaveBeenCalledWith({
-      queryKey: sessionQueryKey,
-    })
+    expect(mocks.queryClient.cancelQueries).toHaveBeenCalled()
+    expect(mocks.queryClient.clear).toHaveBeenCalled()
     expect(navigate).toHaveBeenCalledWith({ to: '/' })
   })
 

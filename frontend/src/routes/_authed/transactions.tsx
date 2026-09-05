@@ -19,10 +19,10 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { Filter, Plus } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
+import { DeferredFeature } from '../../components/DeferredFeature'
 import {
-  getTransactionControllerFindAllQueryKey,
-  transactionControllerFindAll,
   useAccountControllerFindAll,
   useCategoryControllerFindAll,
   useCategoryControllerFindFilterOptions,
@@ -41,6 +41,14 @@ import {
   getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
 } from '../../lib/mobile-combobox'
+import {
+  PAGE_SIZE,
+  accountsQueryOptions,
+  categoriesQueryOptions,
+  categoryFiltersQueryOptions,
+  initialTransactionParams,
+  transactionsQueryOptions,
+} from '../../lib/queries/primary'
 import type {
   Category,
   Transaction,
@@ -58,12 +66,16 @@ import { CategorySelect } from '@/components/categories/CategorySelect'
 import { TransactionBulkEditToolbar } from '@/components/transactions/TransactionBulkEditToolbar'
 import { TransactionsMobileList } from '@/components/transactions/TransactionsMobileList'
 import { PageHeader } from '@/components/PageHeader'
-import { ManualTransactionModal } from '@/components/transactions/ManualTransactionModal'
 import { AccountSelect } from '@/components/accounts/AccountSelect'
 import { ConfirmActionDialog } from '@/components/ConfirmActionDialog'
 import { DataState } from '@/components/DataState'
 
-const PAGE_SIZE = 50
+const ManualTransactionModal = lazy(() =>
+  import('@/components/transactions/ManualTransactionModal').then((module) => ({
+    default: module.ManualTransactionModal,
+  })),
+)
+
 const CLEAR_CATEGORY_VALUE = '__clear_category__'
 const UNCATEGORIZED_CATEGORY_VALUE = 'UNCATEGORIZED'
 
@@ -97,8 +109,14 @@ const amountSignOptions = [
   { label: 'Outflows', value: 'negative' },
 ]
 
-const isValidDateString = (value: unknown): value is string =>
-  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+const isValidDateString = (value: unknown): value is string => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value))
+    return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return (
+    Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+  )
+}
 
 function getCategorySelectOption(
   category: Pick<Category, 'id' | 'primary' | 'detailed' | 'color'>,
@@ -237,6 +255,18 @@ export const Route = createFileRoute('/_authed/transactions')({
       : undefined,
     endDate: isValidDateString(search.endDate) ? search.endDate : undefined,
   }),
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context, deps }) => {
+    void context.queryClient.prefetchQuery(accountsQueryOptions())
+    void context.queryClient.prefetchQuery(categoryFiltersQueryOptions())
+    void context.queryClient.prefetchQuery(categoriesQueryOptions())
+    await context.queryClient
+      .ensureInfiniteQueryData({
+        ...transactionsQueryOptions(initialTransactionParams(deps)),
+        revalidateIfStale: true,
+      })
+      .catch(() => undefined)
+  },
   component: TransactionsPage,
 })
 
@@ -282,6 +312,16 @@ function TransactionsPage() {
   )
   const [amountSign, setAmountSign] = useState('all')
 
+  // Back/forward and deep-link navigation can reuse this mounted route.
+  useEffect(() => {
+    setAccountId(search.accountId ?? null)
+    setCategoryId(search.categoryId ?? null)
+    setDateRange([
+      search.startDate ? dayjs(search.startDate).toDate() : null,
+      search.endDate ? dayjs(search.endDate).toDate() : null,
+    ])
+  }, [search.accountId, search.categoryId, search.startDate, search.endDate])
+
   // Account data for the select dropdown
   const { data: accounts } = useAccountControllerFindAll()
   const { data: categories } = useCategoryControllerFindFilterOptions()
@@ -291,15 +331,11 @@ function TransactionsPage() {
     useTransactionControllerUndoBulkUpdateCategories()
 
   const invalidateTransactions = useCallback(() => {
-    queryClient.invalidateQueries({
-      predicate: (query) =>
-        Array.isArray(query.queryKey) &&
-        typeof query.queryKey[0] === 'string' &&
-        (query.queryKey[0].includes('transaction') ||
-          query.queryKey[0].includes('recurring-manual-transaction') ||
-          query.queryKey[0].includes('category') ||
-          query.queryKey[0].includes('analysis')),
-    })
+    void invalidateMutationFamilies(queryClient, [
+      'transactions',
+      'analysis',
+      'categories',
+    ])
   }, [queryClient])
   const removeManualTransaction = useTransactionControllerRemoveManual()
 
@@ -381,23 +417,7 @@ function TransactionsPage() {
     isLoading,
     isError,
     refetch,
-  } = useInfiniteQuery({
-    queryKey: [
-      ...getTransactionControllerFindAllQueryKey(queryParams),
-      'infinite',
-    ],
-    queryFn: ({ pageParam = 0 }) =>
-      transactionControllerFindAll({
-        ...queryParams,
-        pageIndex: String(pageParam),
-      }),
-    initialPageParam: 0,
-    getNextPageParam: (_lastPage, allPages) => {
-      const lastPage = _lastPage
-      const totalFetched = allPages.length * PAGE_SIZE
-      return totalFetched < lastPage.total ? allPages.length : undefined
-    },
-  })
+  } = useInfiniteQuery(transactionsQueryOptions(queryParams))
   const flatData = useMemo(
     () => data?.pages.flatMap((page) => page.data) ?? [],
     [data],
@@ -683,15 +703,19 @@ function TransactionsPage() {
         wrap="nowrap"
         actions={headerActions}
       />
-      <ManualTransactionModal
-        accounts={accounts ?? []}
-        categories={assignableCategories}
-        defaultAccountId={accountId}
-        opened={manualModalOpened}
-        transaction={editingManualTransaction}
-        onClose={closeManualTransactionModal}
-        onSaved={invalidateTransactions}
-      />
+      {manualModalOpened && (
+        <DeferredFeature label="Transaction editor">
+          <ManualTransactionModal
+            accounts={accounts ?? []}
+            categories={assignableCategories}
+            defaultAccountId={accountId}
+            opened={manualModalOpened}
+            transaction={editingManualTransaction}
+            onClose={closeManualTransactionModal}
+            onSaved={invalidateTransactions}
+          />
+        </DeferredFeature>
+      )}
       <ConfirmActionDialog
         opened={deletingManualTransaction !== null}
         title="Delete transaction"

@@ -10,7 +10,7 @@ import {
 } from './notifications/browser-push'
 import { clearAppBadge } from './pwa/app-badge'
 import { resolveApiBaseUrl } from './api-base-url'
-import { sessionQueryKey } from './session'
+import { clearPrivateCaches } from './auth-generation'
 
 const DEFAULT_LOGIN_REDIRECT = '/home'
 const RELATIVE_URL_ORIGIN = 'http://splice.local'
@@ -68,10 +68,12 @@ export function startGoogleLogin(redirectTo?: string): void {
 export function clearSessionCache(
   queryClient: Pick<
     ReturnType<typeof useQueryClient>,
-    'removeQueries' | 'invalidateQueries'
+    'cancelQueries' | 'clear'
   >,
 ): void {
-  queryClient.removeQueries({ queryKey: sessionQueryKey })
+  clearPrivateCaches()
+  void queryClient.cancelQueries()
+  queryClient.clear()
 }
 
 /**
@@ -88,6 +90,7 @@ export function useLogout(options?: { redirectTo?: string }) {
       onMutate: async () => {
         await revokeCurrentDevicePushSubscription()
         await clearAppBadge()
+        clearSessionCache(queryClient)
       },
       onSuccess: () => {
         clearSessionCache(queryClient)
@@ -115,6 +118,7 @@ export function useLogoutAll(options?: { redirectTo?: string }) {
       onMutate: async () => {
         await revokeAllPushSubscriptions()
         await clearAppBadge()
+        clearSessionCache(queryClient)
       },
       onSuccess: () => {
         clearSessionCache(queryClient)

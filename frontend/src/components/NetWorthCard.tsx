@@ -1,8 +1,11 @@
 import {
   ActionIcon,
+  Alert,
   Box,
+  Button,
   Group,
   Paper,
+  Skeleton,
   Text,
   Title,
   Tooltip,
@@ -16,7 +19,7 @@ import {
   getChangeColorMantine,
 } from '../lib/format'
 import { ChangePercentPopover } from './ChangePercentPopover'
-import { Chart } from './Chart'
+import { LazyChart as Chart } from './LazyChart'
 import type { ChartDataPoint } from './Chart'
 import type { TimePeriod } from '@/lib/types'
 import type { MoneyWithSign } from '../api/models'
@@ -30,6 +33,9 @@ export function NetWorthCard({
   changeAmount,
   comparisonPeriod,
   chartData,
+  chartLoading,
+  chartError,
+  onRetryChart,
 }: {
   balancesHidden: boolean
   netWorth: MoneyWithSign
@@ -37,6 +43,9 @@ export function NetWorthCard({
   changePercent?: number
   changeAmount?: MoneyWithSign
   comparisonPeriod: TimePeriod
+  chartLoading?: boolean
+  chartError?: boolean
+  onRetryChart?: () => void
   chartData?: Array<ChartDataPoint>
 }) {
   const hasChartData = chartData && chartData.length > 0
@@ -103,13 +112,26 @@ export function NetWorthCard({
           </Text>
         </Group>
       </Box>
+      {chartError && (
+        <Alert color="red" mt="md" title="Chart unavailable">
+          The summary is still available.{' '}
+          <Button variant="subtle" onClick={onRetryChart}>
+            Retry chart
+          </Button>
+        </Alert>
+      )}
+      {chartLoading && !hasChartData && (
+        <Skeleton height={200} mt="md" aria-label="Loading chart" />
+      )}
       {hasChartData && (
         <Box mt="md">
           <Chart
             data={chartData}
             height={200}
             valueFormatter={(value) =>
-              formatMoneyNumber({ value, decimals: 0 })
+              balancesHidden
+                ? HIDDEN_BALANCE_PLACEHOLDER
+                : formatMoneyNumber({ value, decimals: 0 })
             }
             onDataPointHover={setHoveredPoint}
           />

@@ -5,7 +5,8 @@ import {
   ConfirmedLoggedOutError,
   TransientAuthError,
 } from '../lib/session-refresh'
-import { LandingPage, validateIndexSearch } from './index'
+import { LandingPage } from '../components/pages/LandingPage'
+import { validateIndexSearch } from '../lib/route-search'
 import type { ReactNode } from 'react'
 
 const mocks = vi.hoisted(() => ({
@@ -16,14 +17,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({
-    children,
-    to,
-    ...props
-  }: {
-    children: ReactNode
-    to: string
-  }) => (
+  Link: ({ children, to, ...props }: { children: ReactNode; to: string }) => (
     <a href={to} {...props}>
       {children}
     </a>

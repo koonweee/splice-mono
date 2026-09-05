@@ -1,0 +1,1592 @@
+{
+  "origin": "http://localhost:4302",
+  "syntheticApi": "http://localhost:4310",
+  "checkedAt": "2026-09-05T19:11:35.743Z",
+  "firstPaint": [
+    {
+      "name": "splice-dark",
+      "theme": "splice-dark",
+      "viewport": "desktop",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(28, 36, 34)",
+        "bodyHeight": 1690.046875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(28, 36, 34)",
+        "bodyHeight": 1690.046875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-dark",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "splice-dark-desktop-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 76,
+          "bytes": 90
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "splice-dark",
+      "theme": "splice-dark",
+      "viewport": "tablet",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(28, 36, 34)",
+        "bodyHeight": 2136.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(28, 36, 34)",
+        "bodyHeight": 2136.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-dark",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "splice-dark-tablet-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "splice-dark",
+      "theme": "splice-dark",
+      "viewport": "phone",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(28, 36, 34)",
+        "bodyHeight": 2139.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(28, 36, 34)",
+        "bodyHeight": 2134.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-dark",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "splice-dark-phone-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "splice-dark-settings",
+      "theme": "splice-dark",
+      "viewport": "desktop",
+      "route": "/settings",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 15,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(28, 36, 34)",
+        "bodyHeight": 1000,
+        "overflow": false,
+        "hasAccounts": false,
+        "hasMasks": false,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "currency": "JPY - Japanese yen",
+        "timezone": "Asia/Tokyo",
+        "selectedTheme": "Splice dark",
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(28, 36, 34)",
+        "bodyHeight": 1000,
+        "overflow": false,
+        "hasAccounts": false,
+        "hasMasks": false,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "currency": "JPY - Japanese yen",
+        "timezone": "Asia/Tokyo",
+        "selectedTheme": "Splice dark",
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-dark",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "splice-dark-settings-desktop-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 119
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 258,
+          "bytes": 187
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        },
+        {
+          "path": "/notification/push/config",
+          "search": "",
+          "method": "GET",
+          "raw": 2,
+          "bytes": 22
+        }
+      ]
+    },
+    {
+      "name": "splice-light",
+      "theme": "splice-light",
+      "viewport": "desktop",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "light",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(255, 255, 255)",
+        "bodyHeight": 1690.046875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "light",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(255, 255, 255)",
+        "bodyHeight": 1690.046875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "splice-light-desktop-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 119
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 252,
+          "bytes": 183
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "splice-light",
+      "theme": "splice-light",
+      "viewport": "tablet",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "light",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(255, 255, 255)",
+        "bodyHeight": 2136.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "light",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(255, 255, 255)",
+        "bodyHeight": 2136.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "splice-light-tablet-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 252,
+          "bytes": 183
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "splice-light",
+      "theme": "splice-light",
+      "viewport": "phone",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "light",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(255, 255, 255)",
+        "bodyHeight": 2139.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "light",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(255, 255, 255)",
+        "bodyHeight": 2134.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "splice-light-phone-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 252,
+          "bytes": 183
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "splice-light-settings",
+      "theme": "splice-light",
+      "viewport": "desktop",
+      "route": "/settings",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 15,
+      "before": {
+        "scheme": "light",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(255, 255, 255)",
+        "bodyHeight": 1000,
+        "overflow": false,
+        "hasAccounts": false,
+        "hasMasks": false,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "currency": "JPY - Japanese yen",
+        "timezone": "Asia/Tokyo",
+        "selectedTheme": "Splice light",
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "light",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(255, 255, 255)",
+        "bodyHeight": 1000,
+        "overflow": false,
+        "hasAccounts": false,
+        "hasMasks": false,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "currency": "JPY - Japanese yen",
+        "timezone": "Asia/Tokyo",
+        "selectedTheme": "Splice light",
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "splice-light-settings-desktop-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 119
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 259,
+          "bytes": 187
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        },
+        {
+          "path": "/notification/push/config",
+          "search": "",
+          "method": "GET",
+          "raw": 2,
+          "bytes": 22
+        }
+      ]
+    },
+    {
+      "name": "dracula",
+      "theme": "dracula",
+      "viewport": "desktop",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 1690.046875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 1690.046875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=dracula",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "dracula-desktop-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 247,
+          "bytes": 180
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "dracula",
+      "theme": "dracula",
+      "viewport": "tablet",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 2136.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 2136.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=dracula",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "dracula-tablet-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 247,
+          "bytes": 180
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "dracula",
+      "theme": "dracula",
+      "viewport": "phone",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 2139.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 2134.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=dracula",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "dracula-phone-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 247,
+          "bytes": 180
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "dracula-settings",
+      "theme": "dracula",
+      "viewport": "desktop",
+      "route": "/settings",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 15,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 1000,
+        "overflow": false,
+        "hasAccounts": false,
+        "hasMasks": false,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "currency": "JPY - Japanese yen",
+        "timezone": "Asia/Tokyo",
+        "selectedTheme": "Dracula",
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 1000,
+        "overflow": false,
+        "hasAccounts": false,
+        "hasMasks": false,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "currency": "JPY - Japanese yen",
+        "timezone": "Asia/Tokyo",
+        "selectedTheme": "Dracula",
+        "dialog": false,
+        "themeCookie": "splice_theme=dracula",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "dracula-settings-desktop-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 119
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 254,
+          "bytes": 185
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        },
+        {
+          "path": "/notification/push/config",
+          "search": "",
+          "method": "GET",
+          "raw": 2,
+          "bytes": 22
+        }
+      ]
+    },
+    {
+      "name": "oled-black",
+      "theme": "oled-black",
+      "viewport": "desktop",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(5, 11, 8)",
+        "bodyHeight": 1690.046875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(5, 11, 8)",
+        "bodyHeight": 1690.046875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=oled-black",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "oled-black-desktop-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 119
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 250,
+          "bytes": 183
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "oled-black",
+      "theme": "oled-black",
+      "viewport": "tablet",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(5, 11, 8)",
+        "bodyHeight": 2136.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(5, 11, 8)",
+        "bodyHeight": 2136.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=oled-black",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "oled-black-tablet-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 250,
+          "bytes": 183
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "oled-black",
+      "theme": "oled-black",
+      "viewport": "phone",
+      "route": "/home",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(5, 11, 8)",
+        "bodyHeight": 2139.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(5, 11, 8)",
+        "bodyHeight": 2134.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=oled-black",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "oled-black-phone-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 250,
+          "bytes": 183
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "oled-black-settings",
+      "theme": "oled-black",
+      "viewport": "desktop",
+      "route": "/settings",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 15,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(5, 11, 8)",
+        "bodyHeight": 1000,
+        "overflow": false,
+        "hasAccounts": false,
+        "hasMasks": false,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "currency": "JPY - Japanese yen",
+        "timezone": "Asia/Tokyo",
+        "selectedTheme": "OLED black",
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(5, 11, 8)",
+        "bodyHeight": 1000,
+        "overflow": false,
+        "hasAccounts": false,
+        "hasMasks": false,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "currency": "JPY - Japanese yen",
+        "timezone": "Asia/Tokyo",
+        "selectedTheme": "OLED black",
+        "dialog": false,
+        "themeCookie": "splice_theme=oled-black",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "oled-black-settings-desktop-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 257,
+          "bytes": 187
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        },
+        {
+          "path": "/notification/push/config",
+          "search": "",
+          "method": "GET",
+          "raw": 2,
+          "bytes": 22
+        }
+      ]
+    },
+    {
+      "name": "legacy-masking-true",
+      "theme": "dracula",
+      "viewport": "phone",
+      "route": "/home",
+      "maskCookie": null,
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 2139.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 2134.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=dracula",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "legacy-masking-true-phone-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 247,
+          "bytes": 180
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "legacy-masking-false",
+      "theme": "dracula",
+      "viewport": "phone",
+      "route": "/home",
+      "maskCookie": null,
+      "legacyHidden": false,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 2139.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(52, 55, 70)",
+        "bodyHeight": 2134.796875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": false,
+        "hasCurrency": true,
+        "errors": [],
+        "leakedCurrency": true,
+        "dialog": false,
+        "themeCookie": "splice_theme=dracula",
+        "maskCookie": "splice_mask_balances=0"
+      },
+      "image": "legacy-masking-false-phone-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 247,
+          "bytes": 180
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        }
+      ]
+    },
+    {
+      "name": "masked-account-modal",
+      "theme": "oled-black",
+      "viewport": "desktop",
+      "route": "/home?accountId=00000000-0000-4000-8000-000000000102",
+      "maskCookie": "1",
+      "legacyHidden": true,
+      "blockedScriptCount": 22,
+      "before": {
+        "scheme": "dark",
+        "routerInitialized": false,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(5, 11, 8)",
+        "bodyHeight": 1690.046875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": false,
+        "themeCookie": "splice_theme=splice-light",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "after": {
+        "scheme": "dark",
+        "routerInitialized": true,
+        "bodyVisibility": "visible",
+        "bodyDisplay": "block",
+        "bodyBackground": "rgb(5, 11, 8)",
+        "bodyHeight": 1690.046875,
+        "overflow": false,
+        "hasAccounts": true,
+        "hasMasks": true,
+        "hasCurrency": false,
+        "errors": [],
+        "leakedCurrency": false,
+        "dialog": true,
+        "themeCookie": "splice_theme=oled-black",
+        "maskCookie": "splice_mask_balances=1"
+      },
+      "image": "masked-account-modal-desktop-before-js.png",
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 148,
+          "bytes": 118
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 250,
+          "bytes": 183
+        },
+        {
+          "path": "/balance-query/dashboard-series",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 3120,
+          "bytes": 292
+        },
+        {
+          "path": "/balance-query/dashboard-summary",
+          "search": "?period=month&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 9463,
+          "bytes": 956
+        },
+        {
+          "path": "/transaction",
+          "search": "?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "raw": 27734,
+          "bytes": 887
+        },
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000102&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 29458,
+          "bytes": 630
+        }
+      ]
+    }
+  ],
+  "auth": [
+    {
+      "name": "anonymous-no-probe",
+      "passed": true,
+      "requests": [
+        {
+          "path": "/__requests",
+          "search": "",
+          "method": "GET",
+          "raw": 2,
+          "bytes": 22
+        }
+      ],
+      "image": "anonymous-phone.png"
+    },
+    {
+      "name": "cross-tab-logout-button",
+      "states": [
+        {
+          "pathname": "/",
+          "ready": "complete",
+          "router": "idle",
+          "hasPrivate": false,
+          "authenticated": false,
+          "anonymous": true
+        },
+        {
+          "pathname": "/",
+          "ready": "complete",
+          "router": "idle",
+          "hasPrivate": false,
+          "authenticated": false,
+          "anonymous": true
+        }
+      ],
+      "cookieNames": [
+        "splice_mask_balances",
+        "splice_theme"
+      ],
+      "passed": true,
+      "image": "cross-tab-logout.png"
+    }
+  ],
+  "failures": [],
+  "authCheckedAt": "2026-09-05T19:14:57.522Z"
+}

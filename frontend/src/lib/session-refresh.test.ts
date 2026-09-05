@@ -59,6 +59,66 @@ describe('refreshSession', () => {
     expect(mocks.fetch).toHaveBeenCalledTimes(1)
   })
 
+  it('does not share an in-flight refresh across an identity transition', async () => {
+    const { refreshSession } = await import('./session-refresh')
+    const { clearPrivateCaches } = await import('./auth-generation')
+    Object.defineProperty(navigator, 'locks', {
+      configurable: true,
+      value: {
+        request: (
+          _name: string,
+          _options: unknown,
+          callback: () => Promise<void>,
+        ) => callback(),
+      },
+    })
+    let finishOld!: (response: { ok: boolean }) => void
+    mocks.fetch
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishOld = resolve
+          }),
+      )
+      .mockResolvedValueOnce({ ok: true })
+    const old = refreshSession().catch((error: unknown) => error)
+    await vi.waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1))
+    const oldSignal = mocks.fetch.mock.calls[0][1].signal as AbortSignal
+    clearPrivateCaches(false)
+    expect(oldSignal.aborted).toBe(true)
+    await refreshSession()
+    expect(mocks.fetch).toHaveBeenCalledTimes(2)
+    finishOld({ ok: true })
+    expect(await old).toMatchObject({ name: 'AbortError' })
+  })
+
+  it('does not dispatch an old identity refresh after waiting for a browser lock', async () => {
+    const { refreshSession } = await import('./session-refresh')
+    const { clearPrivateCaches } = await import('./auth-generation')
+    let unlock!: () => void
+    const gate = new Promise<void>((resolve) => {
+      unlock = resolve
+    })
+    Object.defineProperty(navigator, 'locks', {
+      configurable: true,
+      value: {
+        request: async (
+          _name: string,
+          _options: unknown,
+          callback: () => Promise<void>,
+        ) => {
+          await gate
+          return callback()
+        },
+      },
+    })
+    const old = refreshSession().catch((error: unknown) => error)
+    clearPrivateCaches(false)
+    unlock()
+    expect(await old).toMatchObject({ name: 'AbortError' })
+    expect(mocks.fetch).not.toHaveBeenCalled()
+  })
+
   it('uses navigator locks when available', async () => {
     const lockRequest = vi.fn(
       async (
@@ -87,7 +147,10 @@ describe('refreshSession', () => {
   it('skips refresh when another tab already completed one after this request started', async () => {
     const { refreshSession } = await import('./session-refresh')
     const startedAt = Date.now()
-    window.localStorage.setItem('splice_refresh_success_at', String(startedAt + 1))
+    window.localStorage.setItem(
+      'splice_refresh_success_at',
+      String(startedAt + 1),
+    )
 
     await refreshSession()
 
@@ -95,9 +158,8 @@ describe('refreshSession', () => {
   })
 
   it('classifies missing refresh cookies as confirmed logged out', async () => {
-    const { ConfirmedLoggedOutError, refreshSession } = await import(
-      './session-refresh'
-    )
+    const { ConfirmedLoggedOutError, refreshSession } =
+      await import('./session-refresh')
     mocks.fetch.mockResolvedValue({ ok: false, status: 400 })
 
     await expect(refreshSession()).rejects.toBeInstanceOf(
@@ -106,9 +168,8 @@ describe('refreshSession', () => {
   })
 
   it('classifies refresh server failures as transient', async () => {
-    const { TransientAuthError, refreshSession } = await import(
-      './session-refresh'
-    )
+    const { TransientAuthError, refreshSession } =
+      await import('./session-refresh')
     mocks.fetch.mockResolvedValue({ ok: false, status: 503 })
 
     await expect(refreshSession()).rejects.toBeInstanceOf(TransientAuthError)

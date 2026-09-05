@@ -12,6 +12,11 @@ import {
 } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
+import {
+  assertAuthGeneration,
+  getAuthGeneration,
+} from '../../lib/auth-generation'
 import {
   getUserControllerListTokensQueryKey,
   useUserControllerCreateToken,
@@ -54,7 +59,9 @@ function buildTokenFromCreateResponse(
 
 export function PersonalAccessTokenSection() {
   const queryClient = useQueryClient()
-  const tokensQuery = useUserControllerListTokens()
+  const tokensQuery = useUserControllerListTokens({
+    query: { refetchOnMount: false },
+  })
   const createTokenMutation = useUserControllerCreateToken()
   const revokeTokenMutation = useUserControllerRevokeToken()
 
@@ -89,10 +96,12 @@ export function PersonalAccessTokenSection() {
       return
     }
 
+    const generation = getAuthGeneration()
     createTokenMutation.mutate(
       { data: { name: normalizedName } },
       {
         onSuccess: (response) => {
+          assertAuthGeneration(generation)
           setRevealedToken(response.token)
           setRevealedTokenId(response.id)
           setClipboardFeedback(null)
@@ -103,9 +112,7 @@ export function PersonalAccessTokenSection() {
           queryClient.setQueryData(
             getUserControllerListTokensQueryKey(),
             (current: Array<PersonalAccessToken> | undefined) => {
-              const activeCurrent = getActivePersonalAccessTokens(
-                current ?? [],
-              )
+              const activeCurrent = getActivePersonalAccessTokens(current ?? [])
               const withoutExisting = activeCurrent.filter(
                 (token) => token.id !== newToken.id,
               )
@@ -114,16 +121,11 @@ export function PersonalAccessTokenSection() {
             },
           )
 
-          void queryClient.invalidateQueries({
-            queryKey: getUserControllerListTokensQueryKey(),
-          })
+          void invalidateMutationFamilies(queryClient, ['tokens'])
         },
         onError: (error) => {
           setCreateError(
-            getErrorMessage(
-              error,
-              'Failed to create personal access token.',
-            ),
+            getErrorMessage(error, 'Failed to create personal access token.'),
           )
         },
       },
@@ -137,10 +139,12 @@ export function PersonalAccessTokenSection() {
       return next
     })
 
+    const generation = getAuthGeneration()
     revokeTokenMutation.mutate(
       { id: token.id },
       {
         onSuccess: () => {
+          assertAuthGeneration(generation)
           queryClient.setQueryData(
             getUserControllerListTokensQueryKey(),
             (current: Array<PersonalAccessToken> | undefined) =>
@@ -153,9 +157,7 @@ export function PersonalAccessTokenSection() {
             setClipboardFeedback(null)
           }
 
-          void queryClient.invalidateQueries({
-            queryKey: getUserControllerListTokensQueryKey(),
-          })
+          void invalidateMutationFamilies(queryClient, ['tokens'])
         },
         onError: (error) => {
           setRevokeErrors((current) => ({
@@ -191,7 +193,12 @@ export function PersonalAccessTokenSection() {
   if (tokensQuery.isPending) {
     return (
       <Paper withBorder p="lg" radius="md" data-testid="pat-section">
-        <Stack align="center" justify="center" py="xl" data-testid="pat-section-loader">
+        <Stack
+          align="center"
+          justify="center"
+          py="xl"
+          data-testid="pat-section-loader"
+        >
           <Loader />
         </Stack>
       </Paper>
@@ -204,8 +211,7 @@ export function PersonalAccessTokenSection() {
         <Stack gap={4}>
           <Title order={3}>Personal access tokens</Title>
           <Text size="sm" c="dimmed">
-            Create tokens for REST API automation. The token is shown only
-            once.
+            Create tokens for REST API automation. The token is shown only once.
           </Text>
         </Stack>
 
@@ -279,7 +285,11 @@ export function PersonalAccessTokenSection() {
                 {clipboardFeedback != null && (
                   <Text
                     size="sm"
-                    c={clipboardFeedback === 'Copied to clipboard.' ? 'dimmed' : 'red'}
+                    c={
+                      clipboardFeedback === 'Copied to clipboard.'
+                        ? 'dimmed'
+                        : 'red'
+                    }
                   >
                     {clipboardFeedback}
                   </Text>

@@ -1,0 +1,1144 @@
+{
+  "origin": "http://localhost:4301",
+  "profile": {
+    "cpu": 4,
+    "latency": 150,
+    "download": 1600000
+  },
+  "results": [
+    {
+      "viewport": "desktop",
+      "run": 0,
+      "kind": "warm-navigation",
+      "duration": 301.59999990463257,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10854,
+          "bytes": 489
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683691,
+          "bytes": 8607
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 0,
+      "kind": "period-change",
+      "duration": 343.7999999523163,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177001,
+          "bytes": 3110
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 0,
+      "kind": "account-modal",
+      "duration": 252.39999997615814,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 0,
+      "kind": "name-save",
+      "duration": 390.2999999523163,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 284
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 496
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 1,
+      "kind": "warm-navigation",
+      "duration": 192.10000002384186,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 496
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8608
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 1,
+      "kind": "period-change",
+      "duration": 86,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3119
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 1,
+      "kind": "account-modal",
+      "duration": 70.70000004768372,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 1,
+      "kind": "name-save",
+      "duration": 372.09999990463257,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 285
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 2,
+      "kind": "warm-navigation",
+      "duration": 184.79999995231628,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8608
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 2,
+      "kind": "period-change",
+      "duration": 64.5,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3119
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 2,
+      "kind": "account-modal",
+      "duration": 61,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 2,
+      "kind": "name-save",
+      "duration": 364.39999997615814,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 285
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 3,
+      "kind": "warm-navigation",
+      "duration": 170.29999995231628,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8609
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 3,
+      "kind": "period-change",
+      "duration": 68.5,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3119
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 3,
+      "kind": "account-modal",
+      "duration": 61.799999952316284,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 3,
+      "kind": "name-save",
+      "duration": 364.2000000476837,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 286
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 496
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 4,
+      "kind": "warm-navigation",
+      "duration": 178.60000002384186,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 496
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8608
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 4,
+      "kind": "period-change",
+      "duration": 91.5,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3119
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 4,
+      "kind": "account-modal",
+      "duration": 70.80000007152557,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 4,
+      "kind": "name-save",
+      "duration": 369.89999997615814,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 286
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 5,
+      "kind": "warm-navigation",
+      "duration": 206.10000002384186,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8608
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 5,
+      "kind": "period-change",
+      "duration": 78.79999995231628,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3119
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 5,
+      "kind": "account-modal",
+      "duration": 88.89999997615814,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 5,
+      "kind": "name-save",
+      "duration": 379.6999999284744,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 286
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 6,
+      "kind": "warm-navigation",
+      "duration": 207,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8608
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 6,
+      "kind": "period-change",
+      "duration": 75.19999992847443,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3120
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 6,
+      "kind": "account-modal",
+      "duration": 67.29999995231628,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "run": 6,
+      "kind": "name-save",
+      "duration": 376.7000000476837,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 286
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 0,
+      "kind": "warm-navigation",
+      "duration": 198,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10854,
+          "bytes": 489
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683691,
+          "bytes": 8607
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 0,
+      "kind": "period-change",
+      "duration": 318.59999990463257,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177001,
+          "bytes": 3110
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 0,
+      "kind": "account-modal",
+      "duration": 214,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 0,
+      "kind": "name-save",
+      "duration": 391.7999999523163,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 284
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 496
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 1,
+      "kind": "warm-navigation",
+      "duration": 256.60000002384186,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 496
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8608
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 1,
+      "kind": "period-change",
+      "duration": 109.90000009536743,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3119
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 1,
+      "kind": "account-modal",
+      "duration": 87.79999995231628,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 1,
+      "kind": "name-save",
+      "duration": 370.2000000476837,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 285
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 2,
+      "kind": "warm-navigation",
+      "duration": 280.5,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8608
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 2,
+      "kind": "period-change",
+      "duration": 87.10000002384186,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3119
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 2,
+      "kind": "account-modal",
+      "duration": 91.39999997615814,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 2,
+      "kind": "name-save",
+      "duration": 399.5,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 285
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 3,
+      "kind": "warm-navigation",
+      "duration": 193,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8609
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 3,
+      "kind": "period-change",
+      "duration": 72.70000004768372,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3119
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 3,
+      "kind": "account-modal",
+      "duration": 70.89999997615814,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 3,
+      "kind": "name-save",
+      "duration": 375.60000002384186,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 286
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 496
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 4,
+      "kind": "warm-navigation",
+      "duration": 174.80000007152557,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 496
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8608
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 4,
+      "kind": "period-change",
+      "duration": 94,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3119
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 4,
+      "kind": "account-modal",
+      "duration": 66.10000002384186,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 4,
+      "kind": "name-save",
+      "duration": 359.60000002384186,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 286
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 5,
+      "kind": "warm-navigation",
+      "duration": 177.89999997615814,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8608
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 5,
+      "kind": "period-change",
+      "duration": 73.89999997615814,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3119
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 5,
+      "kind": "account-modal",
+      "duration": 64.70000004768372,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 5,
+      "kind": "name-save",
+      "duration": 393.39999997615814,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 286
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 6,
+      "kind": "warm-navigation",
+      "duration": 306.7000000476837,
+      "requests": [
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        },
+        {
+          "path": "/user/me",
+          "search": "",
+          "method": "GET",
+          "raw": 251,
+          "bytes": 182
+        },
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 683939,
+          "bytes": 8608
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 6,
+      "kind": "period-change",
+      "duration": 116.79999995231628,
+      "requests": [
+        {
+          "path": "/balance-query/all-balances",
+          "search": "?startDate=2026-08-29&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 177065,
+          "bytes": 3120
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 6,
+      "kind": "account-modal",
+      "duration": 71.5,
+      "requests": [
+        {
+          "path": "/balance-query/balances",
+          "search": "?accountIds=00000000-0000-4000-8000-000000000118&startDate=2026-08-06&endDate=2026-09-05",
+          "method": "GET",
+          "raw": 45857,
+          "bytes": 812
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "run": 6,
+      "kind": "name-save",
+      "duration": 382.60000002384186,
+      "requests": [
+        {
+          "path": "/account/00000000-0000-4000-8000-000000000100",
+          "search": "",
+          "method": "PATCH",
+          "raw": 571,
+          "bytes": 286
+        },
+        {
+          "path": "/account",
+          "search": "",
+          "method": "GET",
+          "raw": 10862,
+          "bytes": 497
+        }
+      ]
+    }
+  ]
+}

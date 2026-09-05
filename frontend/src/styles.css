@@ -2,10 +2,6 @@ html {
   scrollbar-gutter: stable;
 }
 
-html[data-splice-theme-loading] body {
-  visibility: hidden;
-}
-
 /* Doubled attribute selector beats react-remove-scroll-bar's injected
    body[data-scroll-locked] style. scrollbar-gutter: stable on html already
    reserves scrollbar space, so the library's margin-right compensation is

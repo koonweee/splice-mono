@@ -1,7 +1,4 @@
-import {
-  ColorSchemeScript,
-  mantineHtmlProps,
-} from '@mantine/core'
+import { ColorSchemeScript, mantineHtmlProps } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 import {
   HeadContent,
@@ -16,11 +13,17 @@ import mantineDatesCss from '@mantine/dates/styles.css?url'
 import mantineNotificationsCss from '@mantine/notifications/styles.css?url'
 import mantineReactTableCss from 'mantine-react-table/styles.css?url'
 import appCss from '../styles.css?url'
+import { getThemePreset } from '../lib/theme'
 import {
-  DEFAULT_THEME_PRESET_ID,
-  THEME_PRESET_IDS,
-  THEME_STORAGE_KEY,
-} from '../lib/theme'
+  PresentationProvider,
+  getPresentationPreferences,
+} from '../lib/presentation-preferences'
+import { SessionOutcomeContext, sessionQueryOptions } from '../lib/session'
+import { isConfirmedLoggedOutError } from '../lib/session-refresh'
+import { PrivateSessionBoundary } from '../components/PrivateSessionBoundary'
+import type { PresentationPreferences } from '../lib/presentation-preferences'
+import type { User } from '../api/models/user'
+import type { SessionOutcome } from '../lib/session'
 import type { RouterContext } from '../router'
 import { AppThemeProvider } from '@/components/AppThemeProvider'
 import { PwaLifecycle } from '@/components/PwaLifecycle'
@@ -73,6 +76,41 @@ const APPLE_STARTUP_IMAGE_LINKS = [
 }))
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: async ({
+    context,
+  }): Promise<{
+    sessionUser: Omit<User, 'providerDetails'> | null
+    sessionOutcome: SessionOutcome
+    presentation: PresentationPreferences
+  }> => {
+    let sessionOutcome: SessionOutcome = 'authenticated'
+    const sessionUser = await context.queryClient
+      .ensureQueryData(sessionQueryOptions())
+      .catch((error: unknown) => {
+        sessionOutcome = isConfirmedLoggedOutError(error)
+          ? 'anonymous'
+          : 'unavailable'
+        return null
+      })
+    const presentation = await getPresentationPreferences(sessionUser)
+    const safeUser = sessionUser
+      ? {
+          id: sessionUser.id,
+          email: sessionUser.email,
+          displayName: sessionUser.displayName,
+          avatarUrl: sessionUser.avatarUrl,
+          settings: sessionUser.settings,
+          createdAt: sessionUser.createdAt,
+          updatedAt: sessionUser.updatedAt,
+        }
+      : null
+    return { sessionUser: safeUser, sessionOutcome, presentation }
+  },
+  loader: ({ context }) => ({
+    presentation: context.presentation,
+    sessionOutcome: context.sessionOutcome,
+    authenticated: Boolean(context.sessionUser),
+  }),
   head: () => ({
     meta: [
       {
@@ -153,30 +191,32 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootComponent() {
+  const { presentation, sessionOutcome, authenticated } = Route.useLoaderData()
+  const preset = getThemePreset(presentation.theme)
   return (
-    <html lang="en" {...mantineHtmlProps}>
+    <html
+      lang="en"
+      {...mantineHtmlProps}
+      data-mantine-color-scheme={preset.colorScheme}
+    >
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-try {
-  var theme = window.localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
-  var knownThemes = ${JSON.stringify(THEME_PRESET_IDS)};
-  if (knownThemes.indexOf(theme) !== -1 && theme !== ${JSON.stringify(DEFAULT_THEME_PRESET_ID)}) {
-    document.documentElement.setAttribute('data-splice-theme-loading', '');
-  }
-} catch (_) {}
-`,
-          }}
-        />
-        <ColorSchemeScript defaultColorScheme="auto" />
+        <ColorSchemeScript forceColorScheme={preset.colorScheme} />
         <HeadContent />
       </head>
       <body>
-        <AppThemeProvider>
-          <Notifications />
-          <PwaLifecycle />
-          <Outlet />
+        <AppThemeProvider
+          initialTheme={presentation.theme}
+          authenticated={authenticated}
+        >
+          <SessionOutcomeContext.Provider value={sessionOutcome}>
+            <PresentationProvider initial={presentation}>
+              <PrivateSessionBoundary fallback={null}>
+                <Notifications />
+              </PrivateSessionBoundary>
+              <PwaLifecycle />
+              <Outlet />
+            </PresentationProvider>
+          </SessionOutcomeContext.Provider>
         </AppThemeProvider>
         <Scripts />
       </body>

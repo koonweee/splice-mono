@@ -25,6 +25,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useEffect } from 'react'
+import { PrivateSessionBoundary } from '../components/PrivateSessionBoundary'
 import { useLogout } from '../lib/auth'
 import { isConfirmedLoggedOutError } from '../lib/session-refresh'
 import { sessionQueryOptions, useSession } from '../lib/session'
@@ -33,12 +34,13 @@ import styles from './_authed.module.css'
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: async ({ location, context }) => {
-    // Skip auth check during SSR - cookies will authenticate API requests
-    // The client will handle redirects after hydration if needed
-    if (typeof window === 'undefined') {
-      return
-    }
-
+    if (context.sessionOutcome === 'anonymous')
+      throw redirect({
+        to: '/',
+        search: { login: true, redirect: location.href },
+      })
+    if (context.sessionOutcome === 'unavailable')
+      throw new Error('Session is temporarily unavailable. Please retry.')
     await requireAuthedSession({
       location,
       queryClient: context.queryClient,
@@ -76,6 +78,14 @@ export async function requireAuthedSession({
 }
 
 function AuthedLayout() {
+  return (
+    <PrivateSessionBoundary>
+      <AuthenticatedLayoutContent />
+    </PrivateSessionBoundary>
+  )
+}
+
+function AuthenticatedLayoutContent() {
   const [opened, { toggle }] = useDisclosure()
   const location = useLocation()
   const logoutMutation = useLogout()

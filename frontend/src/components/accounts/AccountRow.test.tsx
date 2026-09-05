@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountType, MoneyWithSignSign } from '../../api/models'
 import { AccountRow } from './AccountRow'
+import type { Query, QueryFilters } from '@tanstack/react-query'
 import type * as ReactQuery from '@tanstack/react-query'
 import type { Account } from '../../api/models'
 
@@ -153,9 +154,7 @@ describe('AccountRow archive action', () => {
     fireEvent.click(screen.getByRole('button', { name: /archive account/i }))
     expect(await screen.findByText(/hide this account/i)).toBeTruthy()
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Archive' }),
-    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Archive' }))
 
     expect(mockFns.archiveMutateMock).toHaveBeenCalledWith(
       { id: 'account-id' },
@@ -164,15 +163,28 @@ describe('AccountRow archive action', () => {
         onError: expect.any(Function),
       }),
     )
-    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ['/account'],
-    })
-    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ['/balance-query/balances'],
-    })
-    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ['/balance-query/all-balances'],
-    })
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({ queryKey: ['/account'] } as unknown as Query),
+      ),
+    ).toBe(true)
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({
+            queryKey: ['/balance-query/balances'],
+          } as unknown as Query),
+      ),
+    ).toBe(true)
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({
+            queryKey: ['/balance-query/all-balances'],
+          } as unknown as Query),
+      ),
+    ).toBe(true)
     expect(mockFns.notificationsShowMock).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Account archived',
@@ -194,16 +206,12 @@ describe('AccountRow archive action', () => {
     })
     expect(within(dialog).getByText('Checking')).toBeTruthy()
     expect(mockFns.archiveMutateMock).not.toHaveBeenCalled()
-    fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Archive' }),
-    )
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Archive' }))
     expect(within(dialog).getByRole('alert').textContent).toContain(
       'Account is still syncing.',
     )
     expect(screen.getByRole('dialog', { name: 'Archive account' })).toBeTruthy()
-    fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Archive' }),
-    )
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Archive' }))
     expect(mockFns.archiveMutateMock).toHaveBeenCalledTimes(2)
     expect(mockFns.notificationsShowMock).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Account archived' }),
@@ -239,9 +247,12 @@ describe('AccountRow rename feedback', () => {
       expect.any(Object),
     )
     expect(screen.queryByRole('textbox', { name: 'Account name' })).toBeNull()
-    expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ['/account'],
-    })
+    expect(
+      mockFns.invalidateQueriesMock.mock.calls.some(
+        ([filters]: Array<QueryFilters | undefined>) =>
+          filters?.predicate?.({ queryKey: ['/account'] } as unknown as Query),
+      ),
+    ).toBe(true)
   })
 
   it('keeps pending input and controls locked and prevents repeated submit or Escape cancellation', () => {

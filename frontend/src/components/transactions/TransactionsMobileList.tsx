@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Check, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
   useCategoryControllerFindAll,
   useTransactionControllerUpdate,
@@ -134,14 +135,12 @@ function groupTransactionsByDate(data: Array<Transaction>) {
 function invalidateTransactionQueries(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      Array.isArray(query.queryKey) &&
-      typeof query.queryKey[0] === 'string' &&
-      (query.queryKey[0].includes('transaction') ||
-        query.queryKey[0].includes('category') ||
-        query.queryKey[0].includes('analysis')),
-  })
+  void invalidateMutationFamilies(queryClient, [
+    'transactions',
+    'analysis',
+    'categories',
+    'categorizationRules',
+  ])
 }
 
 function formatMetadataValue(value: string | null | undefined) {

@@ -7,6 +7,7 @@ import { UserModule } from '../user/user.module';
 import { BalanceQueryController } from './balance-query.controller';
 import { BalanceHistorySurfaceService } from './balance-history-surface.service';
 import { BalanceQueryService } from './balance-query.service';
+import { DashboardQueryService } from './dashboard-query.service';
 
 @Module({
   imports: [
@@ -15,7 +16,11 @@ import { BalanceQueryService } from './balance-query.service';
     UserModule,
   ],
   controllers: [BalanceQueryController],
-  providers: [BalanceQueryService, BalanceHistorySurfaceService],
+  providers: [
+    BalanceQueryService,
+    BalanceHistorySurfaceService,
+    DashboardQueryService,
+  ],
   exports: [BalanceQueryService, BalanceHistorySurfaceService],
 })
 export class BalanceQueryModule {}

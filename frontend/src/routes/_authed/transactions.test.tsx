@@ -488,6 +488,7 @@ describe('TransactionsPage category assignment workflow', () => {
         pageIndex: '2',
         pageSize: '50',
       }),
+      undefined,
     )
     const lastParams =
       mockFns.transactionControllerFindAllMock.mock.calls.at(-1)?.[0] ?? {}
@@ -511,15 +512,16 @@ describe('TransactionsPage category assignment workflow', () => {
         pageIndex: '0',
         pageSize: '50',
       }),
+      undefined,
     )
   })
 
-  it('opens the add transaction modal with the filtered account selected', () => {
+  it('opens the add transaction modal with the filtered account selected', async () => {
     renderTransactionsPage()
 
     fireEvent.click(screen.getByRole('button', { name: 'Add transaction' }))
 
-    const modal = screen.getByTestId('manual-transaction-modal')
+    const modal = await screen.findByTestId('manual-transaction-modal')
     expect(modal).toBeTruthy()
     expect(modal.textContent).toContain('Add transaction')
     expect(modal.textContent).toContain('Default account account-1')
@@ -806,6 +808,7 @@ describe('TransactionsPage category assignment workflow', () => {
         startDate: '2026-04-10',
         endDate: '2026-04-20',
       }),
+      undefined,
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Clear dates' }))
@@ -822,13 +825,16 @@ describe('TransactionsPage category assignment workflow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
     await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
-    expect(mockFns.transactionControllerFindAllMock).toHaveBeenLastCalledWith({
-      pageSize: '50',
-      pageIndex: '0',
-      convert: true,
-      sortBy: 'activityDate',
-      sortOrder: 'DESC',
-    })
+    expect(mockFns.transactionControllerFindAllMock).toHaveBeenLastCalledWith(
+      {
+        pageSize: '50',
+        pageIndex: '0',
+        convert: true,
+        sortBy: 'activityDate',
+        sortOrder: 'DESC',
+      },
+      undefined,
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     act(() => vi.runAllTimers())
     expect(screen.queryByRole('dialog')).toBeNull()

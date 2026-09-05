@@ -5,9 +5,10 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { ExtractJwt } from 'passport-jwt';
 import type { JwtUser } from '../decorators/current-user.decorator';
+import { PRIVATE_RESPONSE_KEY } from '../decorators/private-response.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { SESSION_JWT_ONLY_KEY } from '../decorators/session-jwt-only.decorator';
 import { PersonalAccessTokenService } from '../personal-access-token.service';
@@ -31,9 +32,19 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       context.getClass(),
     ]);
 
-    if (isPublic) {
-      return true;
+    const explicitlyPrivate = this.reflector.getAllAndOverride<boolean>(
+      PRIVATE_RESPONSE_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    // Apply before JWT/PAT validation so success, errors, and expired sessions
+    // share a private response boundary. Public session exchanges opt in too.
+    if (!isPublic || explicitlyPrivate) {
+      context
+        .switchToHttp()
+        .getResponse<Response>()
+        .setHeader('Cache-Control', 'private, no-store');
     }
+    if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const rawBearer = ExtractJwt.fromAuthHeaderAsBearerToken()(request);

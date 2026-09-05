@@ -1,4 +1,10 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Header,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   CurrentUser,
@@ -17,11 +23,94 @@ import {
 } from '../types/BalanceQuery';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { BalanceQueryService } from './balance-query.service';
+import { DashboardQueryService } from './dashboard-query.service';
+import {
+  DashboardPeriodSchema,
+  DashboardQuerySchema,
+  DashboardSummaryResponseSchema,
+  DashboardSeriesResponseSchema,
+  type DashboardQuery,
+  type DashboardSummaryResponse,
+  type DashboardSeriesResponse,
+} from '../types/Dashboard';
 
 @ApiTags('balance-query')
 @Controller('balance-query')
 export class BalanceQueryController {
-  constructor(private readonly balanceQueryService: BalanceQueryService) {}
+  constructor(
+    private readonly balanceQueryService: BalanceQueryService,
+    private readonly dashboardQueryService: DashboardQueryService,
+  ) {}
+
+  @Get('dashboard-summary')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    description:
+      'Compact dashboard totals and account summaries in the authenticated user reporting currency.',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: true,
+    enum: DashboardPeriodSchema.options,
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: true,
+    type: String,
+    description: 'Valid calendar date (YYYY-MM-DD, inclusive)',
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Dashboard summary',
+    schema: DashboardSummaryResponseSchema,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid period or calendar date' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({
+    status: 503,
+    description: 'Required exchange rate unavailable',
+  })
+  getDashboardSummary(
+    @CurrentUser() user: JwtUser,
+    @Query(new ZodValidationPipe(DashboardQuerySchema)) query: DashboardQuery,
+  ): Promise<DashboardSummaryResponse> {
+    return this.dashboardQueryService.getSummary(user.userId, query);
+  }
+
+  @Get('dashboard-series')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    description:
+      'Bounded dashboard net-worth series with historical currency conversion.',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: true,
+    enum: DashboardPeriodSchema.options,
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: true,
+    type: String,
+    description: 'Valid calendar date (YYYY-MM-DD, inclusive)',
+  })
+  @ZodApiResponse({
+    status: 200,
+    description: 'Dashboard series',
+    schema: DashboardSeriesResponseSchema,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid period or calendar date' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({
+    status: 503,
+    description: 'Required exchange rate unavailable',
+  })
+  getDashboardSeries(
+    @CurrentUser() user: JwtUser,
+    @Query(new ZodValidationPipe(DashboardQuerySchema)) query: DashboardQuery,
+  ): Promise<DashboardSeriesResponse> {
+    return this.dashboardQueryService.getSeries(user.userId, query);
+  }
 
   @Get('balances')
   @ApiOperation({

@@ -2,6 +2,9 @@ import { QueryClient } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 
+import { configureQueryPolicy } from './lib/query-policy'
+import { createMutationCache } from './lib/query-invalidation'
+import { bindBrowserQueryClient } from './lib/auth-generation'
 import { routeTree } from './routeTree.gen'
 
 export interface RouterContext {
@@ -9,13 +12,19 @@ export interface RouterContext {
 }
 
 export function getRouter() {
-  const queryClient = new QueryClient({
+  const queryClient: QueryClient = new QueryClient({
+    mutationCache: createMutationCache(() => queryClient),
     defaultOptions: {
       queries: {
-        staleTime: 0,
+        staleTime: 30_000,
+        // Loader failures stay visible through SSR/hydration until an explicit retry.
+        retryOnMount: false,
       },
     },
   })
+
+  configureQueryPolicy(queryClient)
+  bindBrowserQueryClient(queryClient)
 
   const router = createRouter({
     routeTree,
@@ -23,6 +32,7 @@ export function getRouter() {
       queryClient,
     },
     scrollRestoration: true,
+    defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
   })
 

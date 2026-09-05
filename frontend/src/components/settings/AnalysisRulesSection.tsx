@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Archive, CircleHelp, Pencil, RotateCcw, Save } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useMemo, useState } from 'react'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { useCompactLayout } from '../../lib/responsive'
 import { DataState } from '../DataState'
 import {
@@ -220,14 +221,11 @@ function getRuleErrorMessage(error: unknown) {
 function invalidateAnalysisRuleConsumers(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      Array.isArray(query.queryKey) &&
-      typeof query.queryKey[0] === 'string' &&
-      (query.queryKey[0].includes('/analysis-rules') ||
-        query.queryKey[0].includes('/user/me') ||
-        query.queryKey[0].includes('/transaction-analysis')),
-  })
+  void invalidateMutationFamilies(queryClient, [
+    'analysisRules',
+    'analysis',
+    'user',
+  ])
 }
 
 function collectRuleCategories(

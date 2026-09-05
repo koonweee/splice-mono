@@ -17,6 +17,11 @@ export interface CategorizationRuleView {
   conditions: CategorizationRuleCondition[]
   /** @nullable */
   archivedAt?: string | null
+  /**
+   * @minimum 0
+   * @exclusiveMinimum
+   */
+  revision: number
   createdAt: string
   updatedAt: string
 }

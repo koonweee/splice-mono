@@ -4,24 +4,39 @@ import { showNotification } from '@mantine/notifications'
 import { IconPlus, IconRefresh, IconUpload } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { lazy, useMemo } from 'react'
+import { DeferredFeature } from '../../components/DeferredFeature'
 import {
-  getAccountControllerFindAllQueryKey,
   useAccountControllerFindAll,
   useBankLinkControllerSyncAllAccounts,
 } from '../../api/clients/spliceAPI'
+import { accountsQueryOptions } from '../../lib/queries/primary'
+import { loadQuery } from '../../lib/queries/loader'
+import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import type { Account } from '../../api/models'
 import { InstitutionSection } from '@/components/accounts/InstitutionSection'
-import { AddAccountModal } from '@/components/accounts/AddAccountModal'
-import { BackfillModal } from '@/components/accounts/BackfillModal'
 import { PageHeader } from '@/components/PageHeader'
 import { DataState } from '@/components/DataState'
+
+const AddAccountModal = lazy(() =>
+  import('@/components/accounts/AddAccountModal').then((module) => ({
+    default: module.AddAccountModal,
+  })),
+)
+const BackfillModal = lazy(() =>
+  import('@/components/accounts/BackfillModal').then((module) => ({
+    default: module.BackfillModal,
+  })),
+)
 
 export const Route = createFileRoute('/_authed/accounts')({
   validateSearch: (search: Record<string, unknown>) => ({
     accountId:
       typeof search.accountId === 'string' ? search.accountId : undefined,
   }),
+  loader: async ({ context }) => {
+    await loadQuery(context.queryClient, accountsQueryOptions())
+  },
   component: AccountsPage,
 })
 
@@ -42,9 +57,14 @@ function AccountsPage() {
   const syncAll = useBankLinkControllerSyncAllAccounts({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: getAccountControllerFindAllQueryKey(),
-        })
+        void invalidateMutationFamilies(queryClient, [
+          'accounts',
+          'balances',
+          'investments',
+          'transactions',
+          'analysis',
+          'categories',
+        ])
         showNotification({
           title: 'Sync complete',
           message: 'All accounts have been synced successfully',
@@ -139,8 +159,16 @@ function AccountsPage() {
           )}
         </Stack>
       </DataState>
-      <AddAccountModal opened={modalOpened} onClose={closeModal} />
-      <BackfillModal opened={backfillOpened} onClose={closeBackfill} />
+      {modalOpened && (
+        <DeferredFeature label="Add account">
+          <AddAccountModal opened={modalOpened} onClose={closeModal} />
+        </DeferredFeature>
+      )}
+      {backfillOpened && (
+        <DeferredFeature label="Backfill balances">
+          <BackfillModal opened={backfillOpened} onClose={closeBackfill} />
+        </DeferredFeature>
+      )}
     </>
   )
 }

@@ -1,0 +1,3636 @@
+{
+  "origin": "http://localhost:4301",
+  "profile": {
+    "cpu": 4,
+    "latency": 150,
+    "download": 1600000
+  },
+  "results": [
+    {
+      "viewport": "desktop",
+      "route": "/home",
+      "run": 0,
+      "firstUseful": 10190.299999952316,
+      "chartReady": 10190.299999952316,
+      "lcp": 10200,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9518.800000071526
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1088.8999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 338.09999990463257
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 863.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2707.399999976158
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 188
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 449.1999999284744
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 645.3999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 667.1000000238419
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 981.3999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 997.7999999523163
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 1.399999976158142
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 2.3000000715255737
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 1.5
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 158.29999995231628
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 155.60000002384186
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 159.09999990463257
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 211
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 155.30000007152557
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 189.5
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/home",
+      "run": 1,
+      "firstUseful": 10160.699999928474,
+      "chartReady": 10160.699999928474,
+      "lcp": 10172,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9514.699999928474
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 859.3000000715256
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1085.3000000715256
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2704.5
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 326.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 184.79999995231628
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 664.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 446.7999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 978.5
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1001.7999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 641.3999999761581
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 1.3000000715255737
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 0.9000000953674316
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 1
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 154.5
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 152.30000007152557
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 156.5
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 208.10000002384186
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 156.5
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 190.89999997615814
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/home",
+      "run": 2,
+      "firstUseful": 10203.399999976158,
+      "chartReady": 10203.399999976158,
+      "lcp": 10220,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9521.399999976158
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 866.2000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1090.7000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 332.7999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2711
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 197.5
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 460.59999990463257
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 669.5999999046326
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1007
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 985.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 653.6999999284744
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 0.7000000476837158
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 1.2999999523162842
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 0.6999999284744263
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 163
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 161.29999995231628
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 156.59999990463257
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 208
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 162.80000007152557
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 195.20000004768372
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/home",
+      "run": 3,
+      "firstUseful": 10240.399999976158,
+      "chartReady": 10240.5,
+      "lcp": 10264,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9515.300000071526
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1084.6000000238419
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 859.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 334.39999997615814
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2703.600000023842
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 191.59999990463257
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 671.3999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 453.39999997615814
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 993.3000000715256
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1001.3999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 640.1999999284744
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 0.7999999523162842
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 1.1999999284744263
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 0.7000000476837158
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 162.5
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 161.59999990463257
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 160
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 210.60000002384186
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 155
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 188.19999992847443
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/home",
+      "run": 4,
+      "firstUseful": 10242.600000023842,
+      "chartReady": 10243.300000071526,
+      "lcp": 10264,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9518
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 870.6000000238419
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1087.1999999284744
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 337.5
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2714.899999976158
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 674.7000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 194.89999997615814
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1004.7000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 456.2000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 643.8000000715256
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 996
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 1.399999976158142
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 1.600000023841858
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 1.5999999046325684
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 156.10000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 152.69999992847443
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 157.10000002384186
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 207.5
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 154.39999997615814
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 188.80000007152557
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/home",
+      "run": 5,
+      "firstUseful": 10206.199999928474,
+      "chartReady": 10206.199999928474,
+      "lcp": 10228,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9519.199999928474
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1087.9000000953674
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 856.2000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 345.89999997615814
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2707.6999999284744
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 172.70000004768372
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 660.5
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 997.5
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 443.60000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 637.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 1005.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 1.399999976158142
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 2.600000023841858
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 2.100000023841858
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 163
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 161.10000002384186
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 162.20000004768372
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 212.10000002384186
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 162.89999997615814
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 194.79999995231628
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/home",
+      "run": 6,
+      "firstUseful": 10182.299999952316,
+      "chartReady": 10182.299999952316,
+      "lcp": 10200,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9518.400000095367
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 472.60000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 863.7000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2708
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 338.2000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 675.3999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 203.10000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 600
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1110
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 788.0999999046326
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 1064.7999999523163
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 1.399999976158142
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 1.2000000476837158
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 1
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 156.69999992847443
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 154.89999997615814
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 158.60000002384186
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 210.09999990463257
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 155.80000007152557
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 189.19999992847443
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "route": "/home",
+      "run": 0,
+      "firstUseful": 10188.700000047684,
+      "chartReady": 10188.700000047684,
+      "lcp": 10192,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9521.399999976158
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1099.8999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 881.6000000238419
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2711.100000023842
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 198.89999997615814
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 332.60000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 686.3000000715256
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 461
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 655.3999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 985.6000000238419
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1007.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 1.2000000476837158
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 1.600000023841858
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 1.100000023841858
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 161.29999995231628
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 158.19999992847443
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 159.90000009536743
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 211.60000002384186
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 153.60000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 187.60000002384186
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "route": "/home",
+      "run": 1,
+      "firstUseful": 10174.299999952316,
+      "chartReady": 10174.399999976158,
+      "lcp": 10180,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9516.700000047684
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 862.1999999284744
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1079.1999999284744
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 186.10000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 328.3000000715256
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 665.5
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2706.7000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 447.2000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 987.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1003.6000000238419
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 635.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 0.6999999284744263
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 0.8999999761581421
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 0.6999999284744263
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 162.10000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 161.20000004768372
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 156.60000002384186
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 207.19999992847443
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 162.80000007152557
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 196.5
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "route": "/home",
+      "run": 2,
+      "firstUseful": 10186.799999952316,
+      "chartReady": 10186.799999952316,
+      "lcp": 10200,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9518.300000071526
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 862.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1087.5
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2706.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 330.40000009536743
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 186.60000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 667.6000000238419
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 441.89999997615814
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1004.1000000238419
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 636.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 989.1999999284744
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 0.5999999046325684
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 1
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 1
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 159.5
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 157.70000004768372
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 159.40000009536743
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 211.60000002384186
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 162.10000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 194.90000009536743
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "route": "/home",
+      "run": 3,
+      "firstUseful": 10189.099999904633,
+      "chartReady": 10189.099999904633,
+      "lcp": 10204,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9519.299999952316
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1088.2000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 330.1999999284744
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 682.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 877
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2707.600000023842
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 195
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 456.60000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 982.2000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1005
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 643.8000000715256
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 0.7999999523162842
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 1.5
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 1.3000000715255737
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 161.30000007152557
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 159.59999990463257
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 160.89999997615814
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 212
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 155.5
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 190.59999990463257
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "route": "/home",
+      "run": 4,
+      "firstUseful": 10189.399999976158,
+      "chartReady": 10189.5,
+      "lcp": 10208,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9517.599999904633
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1087.6999999284744
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 330.59999990463257
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 667.3999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 855.3999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2707.899999976158
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 195
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 455.7000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1004.2000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 643.2000000476837
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 989.5
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 0.8000000715255737
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 1.600000023841858
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 1
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 157.09999990463257
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 155.5
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 158.19999992847443
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 209.89999997615814
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 163.30000007152557
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 196.69999992847443
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "route": "/home",
+      "run": 5,
+      "firstUseful": 10204.800000071526,
+      "chartReady": 10204.800000071526,
+      "lcp": 10216,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9515.199999928474
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1085.5
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 853.5999999046326
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2705.600000023842
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 328.10000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 184.79999995231628
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 439.89999997615814
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 634.5
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 664.0999999046326
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 986.3999999761581
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 995.5
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 1
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 1.100000023841858
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 0.7000000476837158
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 160.29999995231628
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 159
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 159.39999997615814
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 211
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 161.80000007152557
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 196.90000009536743
+        }
+      ]
+    },
+    {
+      "viewport": "phone",
+      "route": "/home",
+      "run": 6,
+      "firstUseful": 10200.400000095367,
+      "chartReady": 10200.400000095367,
+      "lcp": 10204,
+      "errors": [],
+      "responses": [
+        {
+          "url": "http://localhost:4301/home",
+          "status": 200,
+          "encoded": -1,
+          "type": "Document"
+        },
+        {
+          "url": "http://localhost:4301/manifest.json",
+          "status": 200,
+          "encoded": 0,
+          "type": "Manifest"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "status": 200,
+          "encoded": 330,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "status": 200,
+          "encoded": 327,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "status": 200,
+          "encoded": 325,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "status": 200,
+          "encoded": 326,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "status": 200,
+          "encoded": 328,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "status": 200,
+          "encoded": 323,
+          "type": "Stylesheet"
+        },
+        {
+          "url": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "status": 200,
+          "encoded": 335,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4301/favicon192.png",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/favicon.ico",
+          "status": 200,
+          "encoded": 0,
+          "type": "Other"
+        },
+        {
+          "url": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "status": 200,
+          "encoded": 339,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "Fetch"
+        },
+        {
+          "url": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "status": 200,
+          "encoded": 332,
+          "type": "Script"
+        },
+        {
+          "url": "http://localhost:4310/user/me",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "status": 200,
+          "encoded": 451,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "status": 200,
+          "encoded": 450,
+          "type": "XHR"
+        },
+        {
+          "url": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "status": 200,
+          "encoded": 334,
+          "type": "Script"
+        }
+      ],
+      "resources": [
+        {
+          "name": "http://localhost:4301/assets/main-B07lFiHb.js",
+          "transfer": 1561970,
+          "encoded": 1561670,
+          "duration": 9519.699999928474
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-RhUiA_iB.js",
+          "transfer": 13315,
+          "encoded": 13015,
+          "duration": 1088.5
+        },
+        {
+          "name": "http://localhost:4301/assets/house-DmEkiMKP.js",
+          "transfer": 581,
+          "encoded": 281,
+          "duration": 863.5999999046326
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-Bo-vtJFx.css",
+          "transfer": 201013,
+          "encoded": 200713,
+          "duration": 2708.0999999046326
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C2i_EZ8M.css",
+          "transfer": 1186,
+          "encoded": 886,
+          "duration": 196.10000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DrbgVAe_.css",
+          "transfer": 6732,
+          "encoded": 6432,
+          "duration": 330.90000009536743
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-DAqvOFgL.css",
+          "transfer": 19733,
+          "encoded": 19433,
+          "duration": 668
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-CEz5fxRK.css",
+          "transfer": 3152,
+          "encoded": 2852,
+          "duration": 450.60000002384186
+        },
+        {
+          "name": "http://localhost:4301/assets/_authed-BMtzMyB6.css",
+          "transfer": 364,
+          "encoded": 64,
+          "duration": 646.2999999523163
+        },
+        {
+          "name": "http://localhost:4301/assets/main-mpinAXB-.css",
+          "transfer": 20365,
+          "encoded": 20065,
+          "duration": 983
+        },
+        {
+          "name": "http://localhost:4301/assets/styles-C36hm8jf.css",
+          "transfer": 34059,
+          "encoded": 33759,
+          "duration": 1005
+        },
+        {
+          "name": "http://localhost:4301/manifest.json",
+          "transfer": 0,
+          "encoded": 517,
+          "duration": 0.6999999284744263
+        },
+        {
+          "name": "http://localhost:4301/favicon.ico",
+          "transfer": 0,
+          "encoded": 94251,
+          "duration": 0.9000000953674316
+        },
+        {
+          "name": "http://localhost:4301/favicon192.png",
+          "transfer": 0,
+          "encoded": 35892,
+          "duration": 0.8000000715255737
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 160.89999997615814
+        },
+        {
+          "name": "http://localhost:4301/assets/virtual_pwa-register-C7XPeVoG.js",
+          "transfer": 1220,
+          "encoded": 920,
+          "duration": 157.69999992847443
+        },
+        {
+          "name": "http://localhost:4310/user/me",
+          "transfer": 482,
+          "encoded": 182,
+          "duration": 160.10000002384186
+        },
+        {
+          "name": "http://localhost:4310/balance-query/all-balances?startDate=2026-08-06&endDate=2026-09-05",
+          "transfer": 8907,
+          "encoded": 8607,
+          "duration": 211.60000002384186
+        },
+        {
+          "name": "http://localhost:4310/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "transfer": 1187,
+          "encoded": 887,
+          "duration": 161.5
+        },
+        {
+          "name": "http://localhost:4301/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "transfer": 6048,
+          "encoded": 5748,
+          "duration": 196.5
+        }
+      ]
+    }
+  ]
+}
