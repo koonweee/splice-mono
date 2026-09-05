@@ -1,13 +1,17 @@
+# syntax=docker/dockerfile:1
+
 # Build stage
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-ARG VITE_API_BASE_URL
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-
 # Install dependencies
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN --mount=type=cache,id=splice-frontend-yarn-node22,target=/yarn-cache,sharing=locked \
+    YARN_CACHE_FOLDER=/yarn-cache yarn install --frozen-lockfile --non-interactive --network-timeout 300000
+
+# API configuration only affects the application build, not dependencies.
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 # Copy source and build
 COPY . .
