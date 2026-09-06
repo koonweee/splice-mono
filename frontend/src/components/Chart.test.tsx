@@ -88,6 +88,76 @@ describe('Chart interaction cleanup', () => {
     expect(onDataPointHover).toHaveBeenLastCalledWith(point)
   })
 
+  it('clears on outside pointer movement even when mouse-leave is missed', () => {
+    const { chart, onDataPointHover } = setup()
+    fireEvent.mouseEnter(chart)
+    move()
+    expect(onDataPointHover).toHaveBeenLastCalledWith(point)
+
+    // SVG changes can prevent React's mouse-leave from reaching the wrapper.
+    fireEvent(
+      document.body,
+      new MouseEvent('pointermove', {
+        bubbles: true,
+        clientX: 500,
+        clientY: 500,
+      }),
+    )
+    expect(onDataPointHover).toHaveBeenLastCalledWith()
+    expect(chartProps.tooltipProps?.active).toBe(false)
+    onDataPointHover.mockClear()
+    move()
+    expect(onDataPointHover).not.toHaveBeenCalled()
+  })
+
+  it('keeps selection while the pointer is within the chart', () => {
+    const { chart, onDataPointHover } = setup()
+    vi.spyOn(chart.parentElement!, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      right: 600,
+      top: 0,
+      bottom: 200,
+      x: 0,
+      y: 0,
+      width: 600,
+      height: 200,
+      toJSON: () => ({}),
+    })
+    fireEvent.mouseEnter(chart)
+    move()
+    onDataPointHover.mockClear()
+    fireEvent(
+      chart,
+      new MouseEvent('pointermove', {
+        bubbles: true,
+        clientX: 100,
+        clientY: 100,
+      }),
+    )
+    expect(onDataPointHover).not.toHaveBeenCalled()
+    expect(chartProps.tooltipProps?.active).toBeUndefined()
+  })
+
+  it.each(['window blur', 'pointer leaves window'])(
+    'clears selection on %s without a chart leave event',
+    (event) => {
+      const { chart, onDataPointHover } = setup()
+      fireEvent.mouseEnter(chart)
+      move()
+      if (event === 'window blur') fireEvent.blur(window)
+      else
+        fireEvent(
+          document.body,
+          new MouseEvent('pointerout', {
+            bubbles: true,
+            relatedTarget: null,
+          }),
+        )
+      expect(onDataPointHover).toHaveBeenLastCalledWith()
+      expect(chartProps.tooltipProps?.active).toBe(false)
+    },
+  )
+
   it('clears a retained index when the tooltip becomes inactive', () => {
     const { chart, onDataPointHover } = setup()
     fireEvent.mouseEnter(chart)

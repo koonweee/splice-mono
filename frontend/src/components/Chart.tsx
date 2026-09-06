@@ -1,6 +1,6 @@
 import { AreaChart } from '@mantine/charts'
 import { Box, Paper, Text } from '@mantine/core'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { MoneyWithSign } from '../api/models'
 
 function ChartTooltip({ label, value }: { label: string; value?: string }) {
@@ -44,8 +44,51 @@ export function Chart({
   mb,
   onDataPointHover,
 }: ChartProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const interacting = useRef(false)
   const [interactionActive, setInteractionActive] = useState(false)
+
+  useEffect(() => {
+    const clearInteraction = () => {
+      if (!interacting.current) return
+      interacting.current = false
+      setInteractionActive(false)
+      onDataPointHover?.()
+    }
+    const handlePointerMove = (event: PointerEvent) => {
+      const container = containerRef.current
+      if (!container || !interacting.current) return
+      const bounds = container.getBoundingClientRect()
+      if (
+        event.clientX < bounds.left ||
+        event.clientX >= bounds.right ||
+        event.clientY < bounds.top ||
+        event.clientY >= bounds.bottom ||
+        !(event.target instanceof Node && container.contains(event.target))
+      ) {
+        clearInteraction()
+      }
+    }
+    const handlePointerOut = (event: PointerEvent) => {
+      if (event.relatedTarget === null) clearInteraction()
+    }
+    const handleVisibilityChange = () => {
+      if (document.hidden) clearInteraction()
+    }
+
+    // A rapidly changing SVG can miss React's synthesized mouse-leave event.
+    // Capture pointer movement outside the chart independently of that event.
+    document.addEventListener('pointermove', handlePointerMove, true)
+    document.addEventListener('pointerout', handlePointerOut, true)
+    window.addEventListener('blur', clearInteraction)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('pointermove', handlePointerMove, true)
+      document.removeEventListener('pointerout', handlePointerOut, true)
+      window.removeEventListener('blur', clearInteraction)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [onDataPointHover])
 
   if (data.length === 0) {
     return null
@@ -89,6 +132,7 @@ export function Chart({
 
   return (
     <Box
+      ref={containerRef}
       mb={mb}
       onMouseEnter={handleStart}
       onMouseLeave={handleLeave}
