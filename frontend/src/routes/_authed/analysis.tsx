@@ -1,11 +1,9 @@
 import { lazy, useEffect, useState } from 'react'
 import {
-  Alert,
   Box,
   Button,
   Grid,
   Group,
-  Loader,
   Paper,
   Progress,
   Stack,
@@ -15,6 +13,20 @@ import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { ArrowDownLeft, ArrowUpRight, ClipboardList } from 'lucide-react'
+import { AnalysisAuditHeader } from '../../components/analysis/AnalysisAuditHeader'
+import {
+  AnalysisSkeleton,
+  TableSkeleton,
+} from '../../components/loading/LoadingSkeleton'
+import { DeferredOverlay } from '../../components/DeferredOverlay'
+import {
+  featureIntent,
+  loadAnalysisAuditDrawer,
+  loadAnalysisSankeyChart,
+  loadCategoryTransactionsModal,
+  loadDonutChart,
+  prepareChartCode,
+} from '../../lib/feature-loaders'
 import {
   minorToChartNumber,
   parseSignedMinorUnits,
@@ -22,7 +34,11 @@ import {
 } from '../../lib/money'
 import { useCurrentUser } from '../../lib/session'
 import { loadQuery } from '../../lib/queries/loader'
-import { analysisQueryOptions } from '../../lib/queries/primary'
+import {
+  analysisDateRange,
+  analysisQueryOptions,
+} from '../../lib/queries/primary'
+import { DataState } from '../../components/DataState'
 import { DeferredFeature } from '../../components/DeferredFeature'
 import {
   useTransactionAnalysisControllerGetAnalysis,
@@ -40,24 +56,10 @@ import { getDisplayCategoryColor } from '../../lib/category-colors'
 import type { CategoryAggregate } from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
 
-const DonutChart = lazy(() =>
-  import('@mantine/charts').then((module) => ({ default: module.DonutChart })),
-)
-const AnalysisAuditDrawer = lazy(() =>
-  import('../../components/analysis/AnalysisAuditDrawer').then((module) => ({
-    default: module.AnalysisAuditDrawer,
-  })),
-)
-const AnalysisSankeyChart = lazy(() =>
-  import('../../components/analysis/AnalysisSankeyChart').then((module) => ({
-    default: module.AnalysisSankeyChart,
-  })),
-)
-const CategoryTransactionsModal = lazy(() =>
-  import('../../components/CategoryTransactionsModal').then((module) => ({
-    default: module.CategoryTransactionsModal,
-  })),
-)
+const DonutChart = lazy(loadDonutChart)
+const AnalysisAuditDrawer = lazy(loadAnalysisAuditDrawer)
+const AnalysisSankeyChart = lazy(loadAnalysisSankeyChart)
+const CategoryTransactionsModal = lazy(loadCategoryTransactionsModal)
 
 // --- Route ---
 
@@ -81,11 +83,8 @@ const isValidDateString = (value: unknown): value is string => {
 export const Route = createFileRoute('/_authed/analysis')({
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
-    const today = context.presentation.today
-    const range = {
-      startDate: deps.startDate ?? `${today.slice(0, 7)}-01`,
-      endDate: deps.endDate ?? today,
-    }
+    prepareChartCode('analysis')
+    const range = analysisDateRange(context.presentation.today, deps)
     await loadQuery(context.queryClient, analysisQueryOptions(range))
     return range
   },
@@ -275,6 +274,7 @@ function FlowSection({
                 <Pressable
                   key={cat.primaryCategory}
                   onClick={() => onCategoryClick(cat.primaryCategory)}
+                  {...featureIntent(loadCategoryTransactionsModal)}
                   style={{
                     borderRadius: 6,
                     padding: '6px var(--mantine-spacing-xs)',
@@ -408,6 +408,7 @@ function AnalysisPage() {
             />
             <Button
               onClick={openAudit}
+              {...featureIntent(loadAnalysisAuditDrawer)}
               leftSection={<ClipboardList size={16} />}
               h={{ base: 48, sm: 42 }}
               size="md"
@@ -419,103 +420,101 @@ function AnalysisPage() {
         }
       />
 
-      {isPending && (
-        <Group justify="center" py="xl">
-          <Loader />
-        </Group>
-      )}
+      <DataState
+        hasData={Boolean(analysis)}
+        isLoading={isPending}
+        isError={isError}
+        isFetching={isFetching}
+        errorMessage="Failed to load analysis data."
+        onRetry={() => void refetch()}
+        loadingFallback={<AnalysisSkeleton />}
+      >
+        {analysis && (
+          <Stack gap="lg">
+            <SummaryStrip
+              totalInflow={analysis.totalInflow}
+              totalOutflow={analysis.totalOutflow}
+              netFlow={analysis.netFlow}
+              currency={analysis.currency}
+            />
 
-      {isError && (
-        <Alert color="red" title="Error" mb="lg">
-          Failed to load analysis data.{' '}
-          {analysis && 'Previously loaded results are shown below.'}
-          <Button
-            variant="light"
-            color="red"
-            loading={isFetching}
-            onClick={() => void refetch()}
-          >
-            Retry analysis
-          </Button>
-        </Alert>
-      )}
-
-      {analysis && (
-        <Stack gap="lg">
-          <SummaryStrip
-            totalInflow={analysis.totalInflow}
-            totalOutflow={analysis.totalOutflow}
-            netFlow={analysis.netFlow}
-            currency={analysis.currency}
-          />
-
-          {analysis.inflows.length === 0 && analysis.outflows.length === 0 ? (
-            <Paper p="xl" radius="md" withBorder>
-              <Stack align="center" gap="sm">
-                <Text fw={600}>No transactions in this period</Text>
-                <Text c="dimmed" ta="center" size="sm">
-                  Choose another date range to see your cashflow.
-                </Text>
-                <Button
-                  variant="default"
-                  onClick={() => {
-                    const previousMonth = dayjs(startDate).subtract(1, 'month')
-                    handleDateRangeChange([
-                      previousMonth.startOf('month').format('YYYY-MM-DD'),
-                      previousMonth.endOf('month').format('YYYY-MM-DD'),
-                    ])
-                  }}
-                >
-                  View previous month
-                </Button>
-              </Stack>
-            </Paper>
-          ) : (
-            <>
-              {analysisSankeyEnabled ? (
-                <DeferredFeature label="Cashflow chart" minHeight={320}>
-                  <AnalysisSankeyChart
-                    analysis={analysis}
-                    onCategoryClick={handleCategoryClick}
-                  />
-                </DeferredFeature>
-              ) : (
-                <Grid>
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <FlowSection
-                      title="Inflows"
-                      icon={ArrowDownLeft}
-                      iconColor="var(--mantine-color-teal-6)"
-                      categories={analysis.inflows}
-                      total={analysis.totalInflow}
-                      currency={analysis.currency}
-                      onCategoryClick={(cat) =>
-                        handleCategoryClick(cat, 'inflow')
-                      }
+            {analysis.inflows.length === 0 && analysis.outflows.length === 0 ? (
+              <Paper p="xl" radius="md" withBorder>
+                <Stack align="center" gap="sm">
+                  <Text fw={600}>No transactions in this period</Text>
+                  <Text c="dimmed" ta="center" size="sm">
+                    Choose another date range to see your cashflow.
+                  </Text>
+                  <Button
+                    variant="default"
+                    onClick={() => {
+                      const previousMonth = dayjs(startDate).subtract(
+                        1,
+                        'month',
+                      )
+                      handleDateRangeChange([
+                        previousMonth.startOf('month').format('YYYY-MM-DD'),
+                        previousMonth.endOf('month').format('YYYY-MM-DD'),
+                      ])
+                    }}
+                  >
+                    View previous month
+                  </Button>
+                </Stack>
+              </Paper>
+            ) : (
+              <>
+                {analysisSankeyEnabled ? (
+                  <DeferredFeature label="Cashflow chart" minHeight={320}>
+                    <AnalysisSankeyChart
+                      analysis={analysis}
+                      onCategoryClick={handleCategoryClick}
                     />
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <FlowSection
-                      title="Outflows"
-                      icon={ArrowUpRight}
-                      iconColor="var(--mantine-color-red-6)"
-                      categories={analysis.outflows}
-                      total={analysis.totalOutflow}
-                      currency={analysis.currency}
-                      onCategoryClick={(cat) =>
-                        handleCategoryClick(cat, 'outflow')
-                      }
-                    />
-                  </Grid.Col>
-                </Grid>
-              )}
-            </>
-          )}
-        </Stack>
-      )}
+                  </DeferredFeature>
+                ) : (
+                  <Grid>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <FlowSection
+                        title="Inflows"
+                        icon={ArrowDownLeft}
+                        iconColor="var(--mantine-color-teal-6)"
+                        categories={analysis.inflows}
+                        total={analysis.totalInflow}
+                        currency={analysis.currency}
+                        onCategoryClick={(cat) =>
+                          handleCategoryClick(cat, 'inflow')
+                        }
+                      />
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <FlowSection
+                        title="Outflows"
+                        icon={ArrowUpRight}
+                        iconColor="var(--mantine-color-red-6)"
+                        categories={analysis.outflows}
+                        total={analysis.totalOutflow}
+                        currency={analysis.currency}
+                        onCategoryClick={(cat) =>
+                          handleCategoryClick(cat, 'outflow')
+                        }
+                      />
+                    </Grid.Col>
+                  </Grid>
+                )}
+              </>
+            )}
+          </Stack>
+        )}
+      </DataState>
 
       {modalOpened && (
-        <DeferredFeature label="Category transactions">
+        <DeferredOverlay
+          label="Category transactions"
+          title={`${selectedCategory ? formatPrimaryCategory(selectedCategory) : 'Transactions'} Transactions (${selectedFlowDirection === 'inflow' ? 'Inflows' : 'Outflows'})`}
+          kind="drilldown"
+          skeleton={<TableSkeleton />}
+          onClose={closeModal}
+        >
           <CategoryTransactionsModal
             opened={modalOpened}
             onClose={closeModal}
@@ -524,10 +523,22 @@ function AnalysisPage() {
             endDate={endDate}
             flowDirection={selectedFlowDirection}
           />
-        </DeferredFeature>
+        </DeferredOverlay>
       )}
       {auditOpened && (
-        <DeferredFeature label="Analysis audit">
+        <DeferredOverlay
+          label="Analysis audit"
+          kind="audit"
+          header={
+            <AnalysisAuditHeader
+              startDate={startDate}
+              endDate={endDate}
+              lookaroundDays={auditQuery.data?.neutralizationLookaroundDays}
+            />
+          }
+          skeleton={<TableSkeleton rows={4} />}
+          onClose={closeAudit}
+        >
           <AnalysisAuditDrawer
             opened={auditOpened}
             onClose={closeAudit}
@@ -535,7 +546,7 @@ function AnalysisPage() {
             endDate={endDate}
             auditQuery={auditQuery}
           />
-        </DeferredFeature>
+        </DeferredOverlay>
       )}
     </>
   )

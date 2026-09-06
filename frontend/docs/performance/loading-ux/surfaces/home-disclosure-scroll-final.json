@@ -1,0 +1,30 @@
+{
+  "homeBefore": {
+    "scrollY": 20,
+    "period": "Month",
+    "url": "http://localhost:4101/home",
+    "collapsed": true
+  },
+  "delayedRequests": [
+    {
+      "url": "http://localhost:3101/balance-query/dashboard-series?period=week&endDate=2026-09-06",
+      "delayMs": 4000
+    },
+    {
+      "url": "http://localhost:3101/balance-query/dashboard-summary?period=week&endDate=2026-09-06",
+      "delayMs": 4000
+    }
+  ],
+  "homeDuring": {
+    "scrollY": 20,
+    "period": "Week",
+    "url": "http://localhost:4101/home?period=week",
+    "collapsed": true
+  },
+  "homeAfter": {
+    "scrollY": 20,
+    "period": "Week",
+    "url": "http://localhost:4101/home?period=week",
+    "collapsed": true
+  }
+}

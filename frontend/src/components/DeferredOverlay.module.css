@@ -1,0 +1,8 @@
+.body,
+.body > [role='status'],
+.body > [role='status'] > [aria-hidden='true'] {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}

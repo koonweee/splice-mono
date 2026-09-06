@@ -17,6 +17,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Archive, CircleHelp, Pencil, RotateCcw, Save } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useMemo, useState } from 'react'
+import { ResponsiveSlot } from '../ResponsiveSlot'
+import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { useCompactLayout } from '../../lib/responsive'
 import { DataState } from '../DataState'
@@ -491,7 +493,12 @@ export function AnalysisRulesSection({
   function renderRuleRowActions(item: AnalysisRuleTableItem) {
     if (isLookaroundItem(item)) {
       return (
-        <Group gap={4} justify="flex-end" wrap="nowrap">
+        <Group
+          className={tableChrome.actions}
+          gap={4}
+          justify="flex-end"
+          wrap="nowrap"
+        >
           <Tooltip label="Edit setting">
             <ActionIcon
               aria-label="Edit matching window"
@@ -507,7 +514,12 @@ export function AnalysisRulesSection({
     }
 
     return (
-      <Group gap={4} justify="flex-end" wrap="nowrap">
+      <Group
+        className={tableChrome.actions}
+        gap={4}
+        justify="flex-end"
+        wrap="nowrap"
+      >
         <Tooltip label="Edit rule">
           <ActionIcon
             aria-label="Edit rule"
@@ -703,6 +715,7 @@ export function AnalysisRulesSection({
       </Group>
 
       <DataState
+        loadingFallback={<TableSkeleton rows={4} />}
         hasData={rules.length > 0}
         isLoading={isLoading}
         isError={isError}
@@ -712,7 +725,7 @@ export function AnalysisRulesSection({
         errorMessage="Failed to load analysis rules"
         emptyMessage="No analysis rules match the current filters."
       >
-        {isMobile ? (
+        <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
           <MobileTableList
             ariaLabel={`Analysis rules list, ${filteredRules.length.toLocaleString()} total`}
             data={filteredRules}
@@ -720,9 +733,10 @@ export function AnalysisRulesSection({
             getRowKey={(rule) => rule.id}
             renderRow={renderMobileRuleRow}
           />
-        ) : (
+        </ResponsiveSlot>
+        <ResponsiveSlot compact={Boolean(isMobile)} variant="wide">
           <MantineReactTable table={table} />
-        )}
+        </ResponsiveSlot>
       </DataState>
 
       <EditorModal

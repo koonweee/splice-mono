@@ -1,0 +1,386 @@
+{
+  "scenario": {
+    "name": "phone-settings-notifications",
+    "width": 390,
+    "height": 844,
+    "mobile": true,
+    "path": "/settings?tab=notifications"
+  },
+  "ready": true,
+  "interceptions": [],
+  "runtimeErrors": [],
+  "audit": {
+    "start": 14.799999952316284,
+    "shifts": [],
+    "anchors": [
+      {
+        "at": 21.5,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": 16,
+              "y": 138.796875,
+              "width": 687.203125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": 16,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 98.171875,
+              "y": 138.796875,
+              "width": 118.328125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 216.5,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 294.8125,
+              "y": 138.796875,
+              "width": 102.15625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 396.96875,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 482.15625,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 608.640625,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "NotificationsEnable notifications on this deviceDevice notifications are configured separately in ea"
+            },
+            "rect": {
+              "x": 16,
+              "y": 202.796875,
+              "width": 358,
+              "height": 158.09375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "TransactionsNew uncategorized transactionsBank connections need attention"
+            },
+            "rect": {
+              "x": 16,
+              "y": 380.890625,
+              "width": 358,
+              "height": 140.09375
+            }
+          }
+        ]
+      },
+      {
+        "at": 43.59999990463257,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": 16,
+              "y": 138.796875,
+              "width": 687.203125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": 16,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 98.171875,
+              "y": 138.796875,
+              "width": 118.328125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 216.5,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 294.8125,
+              "y": 138.796875,
+              "width": 102.15625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 396.96875,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 482.15625,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 608.640625,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "NotificationsEnable notifications on this devicePush notifications are not configured for this envir"
+            },
+            "rect": {
+              "x": 16,
+              "y": 202.796875,
+              "width": 358,
+              "height": 158.09375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "TransactionsNew uncategorized transactionsBank connections need attention"
+            },
+            "rect": {
+              "x": 16,
+              "y": 380.890625,
+              "width": 358,
+              "height": 140.09375
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "inputs": [],
+    "scroll": [
+      {
+        "at": 21.5,
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "documentHeight": 844
+      }
+    ],
+    "resources": []
+  },
+  "dom": {
+    "title": "Settings",
+    "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nSettings\nGeneral\nNotifications\nAccess\nCategories\nAnalysis\nCategorization\nRecurring\nNotifications\nEnable notifications on this device\n\nPush notifications are not configured for this environment.\n\nTransactions\nNew uncategorized transactions\nBank connections need attention",
+    "dialogs": [],
+    "reducedMotion": false
+  }
+}

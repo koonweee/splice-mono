@@ -12,6 +12,7 @@ interface MobileTableListProps<T> {
   isError?: boolean
   isLoading?: boolean
   isFetching?: boolean
+  loadingFallback?: ReactNode
   loadingMessage?: string
   onRetry?: () => void
   isRowSelected?: (row: T) => boolean
@@ -29,6 +30,7 @@ export function MobileTableList<T>({
   isLoading = false,
   isFetching = false,
   loadingMessage,
+  loadingFallback,
   onRetry,
   isRowSelected,
   renderRow,
@@ -40,6 +42,7 @@ export function MobileTableList<T>({
       isError={isError}
       isFetching={isFetching}
       loadingMessage={loadingMessage}
+      loadingFallback={loadingFallback}
       errorMessage={errorMessage}
       emptyMessage={emptyMessage}
       onRetry={onRetry}

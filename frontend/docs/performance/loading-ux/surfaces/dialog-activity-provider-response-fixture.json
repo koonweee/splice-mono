@@ -1,0 +1,1116 @@
+{
+  "scenario": {
+    "name": "dialog-activity-provider-response-fixture",
+    "path": "/home?accountId=55b5665a-8ee5-4334-b91a-cedcd06fe82d",
+    "width": 1024,
+    "height": 768,
+    "providerActivityFixture": true,
+    "readyText": "Holdings",
+    "delayPattern": "/activity",
+    "delayMs": 4000,
+    "action": {
+      "selector": "[role=\"tab\"][id$=\"-tab-activity\"]"
+    },
+    "resultText": "No investment activity found."
+  },
+  "ready": true,
+  "actionReady": true,
+  "interceptions": [
+    {
+      "url": "http://localhost:4101/assets/main-CI-rsIHW.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/_authed-Z5MR6VAo.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/auth-B6_q-C11.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/use-disclosure-rZmADeje.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/createLucideIcon-CQ4dW4bL.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/house-D44cKnAF.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/browser-push-JS2LdlsD.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/home-B01yEuYg.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DeferredOverlay-DVMk2rKy.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/balance-utils-yjvaOAX9.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/money-Cq-eqcN7.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/dayjs.min-BNMtz_8I.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/format-LbgKyRTa.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/responsive-BQ6iiVdB.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/InteractiveRow-cdbWw8C-.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Pressable-DPG8yZiX.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/IconChevronUp-DSIsSRLw.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/IconChevronDown-wsMIQE48.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Divider-DJxXsbvD.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DeferredFeature-DijpZwEt.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/eye-DJcoM-Bd.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DataState-C5kmWhH3.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-Bo-vtJFx.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-DrbgVAe_.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-DAqvOFgL.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-C2i_EZ8M.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-C36hm8jf.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-D-Jrl7B0.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/style-CRS8gQDN.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/EditorModal-sgdZFhG9.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/CategoryTransactionsModal.module-DPUGtYf_.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/virtual_pwa-register-CVujObS1.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/workbox-window.prod.es5-BBnX5xw4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Chart-DbHZz_9K.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AreaChart-D5HfTwYi.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/ColorSwatch-Bo_lsCgp.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/RechartsWrapper-BXNWGLLL.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AccountModal-Desegh5d.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/useAccountMetadataMutation-KoEY9thP.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/useInfiniteQuery-BBx1fLP-.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DecimalInput-DCijlypY.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/use-form-Gjr1hGxo.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/check-_nLvGc1q.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/x-I_JzhtRN.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Table-Dea-WxyK.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/pencil-Bs-xT6gm.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/plus-DOJzRll2.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/refresh-cw-i94VbLoa.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/transactions-CObEgf59.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/date-range-BXXTBxSB.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/category-options-Camm1XQ2.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/category-colors-DlV3xj2E.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/TransactionsMobileList-COumjLLp.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/MantineTableChrome.module-A2wrxPdN.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/use-debounced-value-BdZx7IP4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/use-mantine-color-scheme-ClZJI4sr.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/pick-calendar-levels-props-ERXem-du.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/CategorySelect-2pbCw2Sd.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DatePicker-Cns8np5X.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/rotate-ccw-BZEBs08S.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/trash-2-B1q_9tMM.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/info-B21J9o7X.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/mobile-combobox-y2FY3FuM.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/api-errors-CGijFCoY.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DateRangeControl-CmyqoJ_s.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/save-CEz6eXMg.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AccountSelect-COzbZHdH.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/ConfirmActionDialog-AfnSdHX9.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/FormActions-DC6Esc4d.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/funnel-D1rFh2it.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/transaction?pageSize=50&convert=true&sortBy=activityDate&sortOrder=DESC",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/analysis-DPAwaxRk.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/clipboard-list-kTpM6cHP.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/transaction-analysis?startDate=2026-09-01&endDate=2026-09-06",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/accounts-ZjZr7uBn.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/mutation-feedback-BTSLFvd3.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/archive-H8AWuIgN.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/IconUpload-QVYLehCP.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/account",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/settings-BtUQ-nH4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/SimpleGrid-Bj5EgeVx.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/index-DZmGuEej.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/maxBy-B0OGrNav.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AnalysisSankeyChart-KoQ9arxt.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/balance-query/balances?accountIds=55b5665a-8ee5-4334-b91a-cedcd06fe82d&startDate=2026-08-07&endDate=2026-09-06",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/investment/account/55b5665a-8ee5-4334-b91a-cedcd06fe82d/holdings/latest",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/balance-query/balances?accountIds=55b5665a-8ee5-4334-b91a-cedcd06fe82d&startDate=2026-08-07&endDate=2026-09-06",
+      "fixtureOverride": true,
+      "changed": true
+    },
+    {
+      "url": "http://localhost:3101/investment/account/55b5665a-8ee5-4334-b91a-cedcd06fe82d/activity?pageIndex=0&pageSize=10",
+      "delay": 4000,
+      "fail": false
+    }
+  ],
+  "runtimeErrors": [],
+  "audit": {
+    "start": 611.6000000238419,
+    "shifts": [
+      {
+        "at": 620.7999999523163,
+        "value": 0.043061733595095575,
+        "hadRecentInput": true,
+        "sources": [
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_6j4wl_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Fixture brokerageCurrent balance$37.04OverviewHoldingsActivityHistory Loading investment activity"
+            },
+            "before": {
+              "x": 87,
+              "y": 186.453125,
+              "width": 850,
+              "height": 462.078125
+            },
+            "after": {
+              "x": 87,
+              "y": 118.34375,
+              "width": 850,
+              "height": 598.296875
+            }
+          }
+        ]
+      }
+    ],
+    "anchors": [
+      {
+        "at": 626,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 980,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Home"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 94.078125,
+              "height": 44.1875
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Select-input",
+              "label": "Comparison period"
+            },
+            "rect": {
+              "x": 888,
+              "y": 84,
+              "width": 120,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Net worth$7,517.04from last month"
+            },
+            "rect": {
+              "x": 16,
+              "y": 158,
+              "width": 992,
+              "height": 306.484375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Hide balances"
+            },
+            "rect": {
+              "x": 83.703125,
+              "y": 158,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_8a5d1357 mantine-Title-root",
+              "label": "$7,517.04"
+            },
+            "rect": {
+              "x": 16,
+              "y": 184,
+              "width": 992,
+              "height": 44.1875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Assets"
+            },
+            "rect": {
+              "x": 16,
+              "y": 497.484375,
+              "width": 488,
+              "height": 24.296875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Investment33.5%Exact ETH walletCrypto wallet$2,480.001.000000 (ETH)Fixture brokerageBrokerage$37.04 "
+            },
+            "rect": {
+              "x": 16,
+              "y": 531.78125,
+              "width": 488,
+              "height": 311.265625
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Exact ETH wallet"
+            },
+            "rect": {
+              "x": 17,
+              "y": 569.578125,
+              "width": 486,
+              "height": 77.890625
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Fixture brokerage"
+            },
+            "rect": {
+              "x": 17,
+              "y": 648.46875,
+              "width": 486,
+              "height": 77.890625
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Fixture checking"
+            },
+            "rect": {
+              "x": 17,
+              "y": 764.15625,
+              "width": 486,
+              "height": 77.890625
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Liabilities"
+            },
+            "rect": {
+              "x": 520,
+              "y": 497.484375,
+              "width": 488,
+              "height": 24.296875
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_6j4wl_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Fixture brokerageCurrent balance$37.04OverviewHoldingsActivityHistory Loading investment activity"
+            },
+            "rect": {
+              "x": 122,
+              "y": 122.34375,
+              "width": 780,
+              "height": 523.296875
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Fixture brokerage"
+            },
+            "rect": {
+              "x": 143,
+              "y": 149.34375,
+              "width": 137.3125,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 858,
+              "y": 143.34375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit balance"
+            },
+            "rect": {
+              "x": 837,
+              "y": 232.34375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 _sectionList_e5jgp_6 m_89d33d6d mantine-Tabs-list",
+              "label": "Account sections"
+            },
+            "rect": {
+              "x": 159,
+              "y": 284.34375,
+              "width": 706,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b _sectionTab_e5jgp_10 m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Overview"
+            },
+            "rect": {
+              "x": 159,
+              "y": 284.34375,
+              "width": 176.5,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b _sectionTab_e5jgp_10 m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Holdings"
+            },
+            "rect": {
+              "x": 335.5,
+              "y": 284.34375,
+              "width": 176.5,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b _sectionTab_e5jgp_10 m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Activity"
+            },
+            "rect": {
+              "x": 512,
+              "y": 284.34375,
+              "width": 176.5,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b _sectionTab_e5jgp_10 m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "History"
+            },
+            "rect": {
+              "x": 688.5,
+              "y": 284.34375,
+              "width": 176.5,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": ""
+            },
+            "rect": {
+              "x": 159,
+              "y": 376.640625,
+              "width": 706,
+              "height": 236
+            }
+          }
+        ]
+      },
+      {
+        "at": 4658.899999976158,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 980,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Home"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 94.078125,
+              "height": 44.1875
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Select-input",
+              "label": "Comparison period"
+            },
+            "rect": {
+              "x": 888,
+              "y": 84,
+              "width": 120,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Net worth$7,517.04from last month"
+            },
+            "rect": {
+              "x": 16,
+              "y": 158,
+              "width": 992,
+              "height": 306.484375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Hide balances"
+            },
+            "rect": {
+              "x": 83.703125,
+              "y": 158,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_8a5d1357 mantine-Title-root",
+              "label": "$7,517.04"
+            },
+            "rect": {
+              "x": 16,
+              "y": 184,
+              "width": 992,
+              "height": 44.1875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Assets"
+            },
+            "rect": {
+              "x": 16,
+              "y": 497.484375,
+              "width": 488,
+              "height": 24.296875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Investment33.5%Exact ETH walletCrypto wallet$2,480.001.000000 (ETH)Fixture brokerageBrokerage$37.04 "
+            },
+            "rect": {
+              "x": 16,
+              "y": 531.78125,
+              "width": 488,
+              "height": 311.265625
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Exact ETH wallet"
+            },
+            "rect": {
+              "x": 17,
+              "y": 569.578125,
+              "width": 486,
+              "height": 77.890625
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Fixture brokerage"
+            },
+            "rect": {
+              "x": 17,
+              "y": 648.46875,
+              "width": 486,
+              "height": 77.890625
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Fixture checking"
+            },
+            "rect": {
+              "x": 17,
+              "y": 764.15625,
+              "width": 486,
+              "height": 77.890625
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Liabilities"
+            },
+            "rect": {
+              "x": 520,
+              "y": 497.484375,
+              "width": 488,
+              "height": 24.296875
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_6j4wl_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Fixture brokerageCurrent balance$37.04OverviewHoldingsActivityHistory0 of 0No investment activity fo"
+            },
+            "rect": {
+              "x": 122,
+              "y": 122.34375,
+              "width": 780,
+              "height": 523.296875
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Fixture brokerage"
+            },
+            "rect": {
+              "x": 143,
+              "y": 149.34375,
+              "width": 137.3125,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 858,
+              "y": 143.34375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit balance"
+            },
+            "rect": {
+              "x": 837,
+              "y": 232.34375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 _sectionList_e5jgp_6 m_89d33d6d mantine-Tabs-list",
+              "label": "Account sections"
+            },
+            "rect": {
+              "x": 159,
+              "y": 284.34375,
+              "width": 706,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b _sectionTab_e5jgp_10 m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Overview"
+            },
+            "rect": {
+              "x": 159,
+              "y": 284.34375,
+              "width": 176.5,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b _sectionTab_e5jgp_10 m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Holdings"
+            },
+            "rect": {
+              "x": 335.5,
+              "y": 284.34375,
+              "width": 176.5,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b _sectionTab_e5jgp_10 m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Activity"
+            },
+            "rect": {
+              "x": 512,
+              "y": 284.34375,
+              "width": 176.5,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b _sectionTab_e5jgp_10 m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "History"
+            },
+            "rect": {
+              "x": 688.5,
+              "y": 284.34375,
+              "width": 176.5,
+              "height": 44
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "inputs": [
+      {
+        "type": "pointerdown",
+        "at": 613.5,
+        "target": {
+          "tag": "SPAN",
+          "class": "m_42bbd1ae mantine-Tabs-tabLabel",
+          "label": "Activity"
+        }
+      }
+    ],
+    "scroll": [],
+    "resources": []
+  },
+  "dom": {
+    "title": "Home",
+    "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nHome\n\nNet worth\n\n$7,517.04\n\nASSETS\n\nINVESTMENT\n\n33.5%\n\nExact ETH wallet\n\nCrypto Wallet\n\n$2,480.00\n\n1.000000 (ETH)\n\nFixture brokerage\n\nBrokerage\n\n$37.04\n\nDEPOSITORY\n\n66.5%\n\nFixture checking\n\nChecking\n\n$5,000.00\n\nLIABILITIES\n\nNo liabilities\n\nFixture brokerage\n\nCurrent balance\n\n$37.04\n\nOverview\nHoldings\nActivity\nHistory\n\n0 of 0\n\nNo investment activity found.\n\n2026-09-03",
+    "dialogs": [
+      "Fixture brokerageCurrent balance$37.04OverviewHoldingsActivityHistory0 of 0No investment activity found."
+    ],
+    "reducedMotion": false
+  }
+}

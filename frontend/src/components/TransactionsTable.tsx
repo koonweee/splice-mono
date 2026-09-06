@@ -1146,8 +1146,13 @@ export function TransactionsTable({
     layoutMode: 'grid',
     enableRowVirtualization: enableVirtualization,
     // Render the first viewport during SSR and the matching initial hydration.
-    // The virtualizer replaces this estimate with its measured container after mount.
-    rowVirtualizerOptions: { initialRect: { height: 600, width: 1000 } },
+    // Match the normal 49px row footprint so hydration does not progressively
+    // move later rows when the library replaces its smaller density default.
+    // Rows with additional content still receive their actual measured height.
+    rowVirtualizerOptions: {
+      initialRect: { height: 600, width: 1000 },
+      estimateSize: () => 49,
+    },
     state: {
       ...(sorting ? { sorting } : {}),
       columnOrder,

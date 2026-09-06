@@ -1,0 +1,1459 @@
+{
+  "schemaVersion": 1,
+  "input": "docs/performance/loading-ux/after-warmed-transactions.json",
+  "counts": {
+    "intentional: navigation drawer closing": 29
+  },
+  "entries": [
+    {
+      "kind": "warmed-transactions",
+      "run": 1,
+      "index": 0,
+      "elapsedMs": 144.20000004768372,
+      "value": 0.009595820779682677,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 271.703125,
+            "y": 76,
+            "width": 1152.296875,
+            "height": 908
+          },
+          "current": {
+            "x": 253.25,
+            "y": 76,
+            "width": 1170.75,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 266.703125,
+            "y": 190.484375,
+            "width": 1162.296875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 248.25,
+            "y": 190.484375,
+            "width": 1180.75,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 1,
+      "index": 1,
+      "elapsedMs": 161.30000007152557,
+      "value": 0.021177470793547454,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 253.25,
+            "y": 76,
+            "width": 1170.75,
+            "height": 908
+          },
+          "current": {
+            "x": 213.828125,
+            "y": 76,
+            "width": 1210.171875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 248.25,
+            "y": 190.484375,
+            "width": 1180.75,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 208.828125,
+            "y": 190.484375,
+            "width": 1220.171875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 1,
+      "index": 2,
+      "elapsedMs": 177.89999997615814,
+      "value": 0.027337504114221645,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 213.828125,
+            "y": 76,
+            "width": 1210.171875,
+            "height": 908
+          },
+          "current": {
+            "x": 164.90625,
+            "y": 76,
+            "width": 1259.09375,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 208.828125,
+            "y": 190.484375,
+            "width": 1220.171875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 159.90625,
+            "y": 190.484375,
+            "width": 1269.09375,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 1,
+      "index": 3,
+      "elapsedMs": 194.39999997615814,
+      "value": 0.024870448284384644,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 164.90625,
+            "y": 76,
+            "width": 1259.09375,
+            "height": 908
+          },
+          "current": {
+            "x": 121.859375,
+            "y": 76,
+            "width": 1302.140625,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 159.90625,
+            "y": 190.484375,
+            "width": 1269.09375,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 116.859375,
+            "y": 190.484375,
+            "width": 1312.140625,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 1,
+      "index": 4,
+      "elapsedMs": 212,
+      "value": 0.019582866452064047,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 121.859375,
+            "y": 76,
+            "width": 1302.140625,
+            "height": 908
+          },
+          "current": {
+            "x": 88.796875,
+            "y": 76,
+            "width": 1335.203125,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 116.859375,
+            "y": 190.484375,
+            "width": 1312.140625,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 83.796875,
+            "y": 190.484375,
+            "width": 1345.203125,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 1,
+      "index": 5,
+      "elapsedMs": 242.89999997615814,
+      "value": 0.025816314998673803,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 88.796875,
+            "y": 76,
+            "width": 1335.203125,
+            "height": 908
+          },
+          "current": {
+            "x": 46.53125,
+            "y": 76,
+            "width": 1377.46875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 83.796875,
+            "y": 190.484375,
+            "width": 1345.203125,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 41.53125,
+            "y": 190.484375,
+            "width": 1387.46875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 1,
+      "index": 6,
+      "elapsedMs": 261.2000000476837,
+      "value": 0.007841634415991512,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 46.53125,
+            "y": 76,
+            "width": 1377.46875,
+            "height": 908
+          },
+          "current": {
+            "x": 33.8125,
+            "y": 76,
+            "width": 1390.1875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 41.53125,
+            "y": 190.484375,
+            "width": 1387.46875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 28.8125,
+            "y": 190.484375,
+            "width": 1400.1875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 1,
+      "index": 7,
+      "elapsedMs": 277.89999997615814,
+      "value": 0.0054488384633005395,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 33.8125,
+            "y": 76,
+            "width": 1390.1875,
+            "height": 908
+          },
+          "current": {
+            "x": 25.03125,
+            "y": 76,
+            "width": 1398.96875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 28.8125,
+            "y": 190.484375,
+            "width": 1400.1875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 20.03125,
+            "y": 190.484375,
+            "width": 1408.96875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 1,
+      "index": 8,
+      "elapsedMs": 294.39999997615814,
+      "value": 0.0034443768084490736,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 25.03125,
+            "y": 76,
+            "width": 1398.96875,
+            "height": 908
+          },
+          "current": {
+            "x": 19.5,
+            "y": 76,
+            "width": 1404.5,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 20.03125,
+            "y": 190.484375,
+            "width": 1408.96875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 14.5,
+            "y": 190.484375,
+            "width": 1414.5,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 2,
+      "index": 0,
+      "elapsedMs": 140.79999995231628,
+      "value": 0.009668947271653162,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 271.6875,
+            "y": 76,
+            "width": 1152.3125,
+            "height": 908
+          },
+          "current": {
+            "x": 253.09375,
+            "y": 76,
+            "width": 1170.90625,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 266.6875,
+            "y": 190.484375,
+            "width": 1162.3125,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 248.09375,
+            "y": 190.484375,
+            "width": 1180.90625,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 2,
+      "index": 1,
+      "elapsedMs": 157.79999995231628,
+      "value": 0.021211045856240354,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 253.09375,
+            "y": 76,
+            "width": 1170.90625,
+            "height": 908
+          },
+          "current": {
+            "x": 213.609375,
+            "y": 76,
+            "width": 1210.390625,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 248.09375,
+            "y": 190.484375,
+            "width": 1180.90625,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 208.609375,
+            "y": 190.484375,
+            "width": 1220.390625,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 2,
+      "index": 2,
+      "elapsedMs": 174,
+      "value": 0.027189073079427084,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 213.609375,
+            "y": 76,
+            "width": 1210.390625,
+            "height": 908
+          },
+          "current": {
+            "x": 164.953125,
+            "y": 76,
+            "width": 1259.046875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 208.609375,
+            "y": 190.484375,
+            "width": 1220.390625,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 159.953125,
+            "y": 190.484375,
+            "width": 1269.046875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 2,
+      "index": 3,
+      "elapsedMs": 191,
+      "value": 0.024870448284384644,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 164.953125,
+            "y": 76,
+            "width": 1259.046875,
+            "height": 908
+          },
+          "current": {
+            "x": 121.90625,
+            "y": 76,
+            "width": 1302.09375,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 159.953125,
+            "y": 190.484375,
+            "width": 1269.046875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 116.90625,
+            "y": 190.484375,
+            "width": 1312.09375,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 2,
+      "index": 4,
+      "elapsedMs": 208.20000004768372,
+      "value": 0.01949031982421875,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 121.90625,
+            "y": 76,
+            "width": 1302.09375,
+            "height": 908
+          },
+          "current": {
+            "x": 89,
+            "y": 76,
+            "width": 1335,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 116.90625,
+            "y": 190.484375,
+            "width": 1312.09375,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 84,
+            "y": 190.484375,
+            "width": 1345,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 2,
+      "index": 5,
+      "elapsedMs": 224.5,
+      "value": 0.014809569106867284,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 89,
+            "y": 76,
+            "width": 1335,
+            "height": 908
+          },
+          "current": {
+            "x": 64.453125,
+            "y": 76,
+            "width": 1359.546875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 84,
+            "y": 190.484375,
+            "width": 1345,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 59.453125,
+            "y": 190.484375,
+            "width": 1369.546875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 2,
+      "index": 6,
+      "elapsedMs": 241,
+      "value": 0.010937337149160878,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 64.453125,
+            "y": 76,
+            "width": 1359.546875,
+            "height": 908
+          },
+          "current": {
+            "x": 46.546875,
+            "y": 76,
+            "width": 1377.453125,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 59.453125,
+            "y": 190.484375,
+            "width": 1369.546875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 41.546875,
+            "y": 190.484375,
+            "width": 1387.453125,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 2,
+      "index": 7,
+      "elapsedMs": 257.60000002384186,
+      "value": 0.007851267873505015,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 46.546875,
+            "y": 76,
+            "width": 1377.453125,
+            "height": 908
+          },
+          "current": {
+            "x": 33.8125,
+            "y": 76,
+            "width": 1390.1875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 41.546875,
+            "y": 190.484375,
+            "width": 1387.453125,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 28.8125,
+            "y": 190.484375,
+            "width": 1400.1875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 2,
+      "index": 8,
+      "elapsedMs": 274.39999997615814,
+      "value": 0.0054488384633005395,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 33.8125,
+            "y": 76,
+            "width": 1390.1875,
+            "height": 908
+          },
+          "current": {
+            "x": 25.03125,
+            "y": 76,
+            "width": 1398.96875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 28.8125,
+            "y": 190.484375,
+            "width": 1400.1875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 20.03125,
+            "y": 190.484375,
+            "width": 1408.96875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 2,
+      "index": 9,
+      "elapsedMs": 290.89999997615814,
+      "value": 0.0034443768084490736,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 25.03125,
+            "y": 76,
+            "width": 1398.96875,
+            "height": 908
+          },
+          "current": {
+            "x": 19.5,
+            "y": 76,
+            "width": 1404.5,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 20.03125,
+            "y": 190.484375,
+            "width": 1408.96875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 14.5,
+            "y": 190.484375,
+            "width": 1414.5,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 3,
+      "index": 0,
+      "elapsedMs": 134.5,
+      "value": 0.009587695613908178,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 271.703125,
+            "y": 76,
+            "width": 1152.296875,
+            "height": 908
+          },
+          "current": {
+            "x": 253.265625,
+            "y": 76,
+            "width": 1170.734375,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 266.703125,
+            "y": 190.484375,
+            "width": 1162.296875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 248.265625,
+            "y": 190.484375,
+            "width": 1180.734375,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 3,
+      "index": 1,
+      "elapsedMs": 152.10000002384186,
+      "value": 0.021160683262201004,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 253.265625,
+            "y": 76,
+            "width": 1170.734375,
+            "height": 908
+          },
+          "current": {
+            "x": 213.875,
+            "y": 76,
+            "width": 1210.125,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 248.265625,
+            "y": 190.484375,
+            "width": 1180.734375,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 208.875,
+            "y": 190.484375,
+            "width": 1220.125,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 3,
+      "index": 2,
+      "elapsedMs": 167.70000004768372,
+      "value": 0.027503397623697915,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 213.875,
+            "y": 76,
+            "width": 1210.125,
+            "height": 908
+          },
+          "current": {
+            "x": 164.65625,
+            "y": 76,
+            "width": 1259.34375,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 208.875,
+            "y": 190.484375,
+            "width": 1220.125,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 159.65625,
+            "y": 190.484375,
+            "width": 1269.34375,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 3,
+      "index": 3,
+      "elapsedMs": 184.10000002384186,
+      "value": 0.024707955337336034,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 164.65625,
+            "y": 76,
+            "width": 1259.34375,
+            "height": 908
+          },
+          "current": {
+            "x": 121.890625,
+            "y": 76,
+            "width": 1302.109375,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 159.65625,
+            "y": 190.484375,
+            "width": 1269.34375,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 116.890625,
+            "y": 190.484375,
+            "width": 1312.109375,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 3,
+      "index": 4,
+      "elapsedMs": 201.29999995231628,
+      "value": 0.019592121114848572,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 121.890625,
+            "y": 76,
+            "width": 1302.109375,
+            "height": 908
+          },
+          "current": {
+            "x": 88.8125,
+            "y": 76,
+            "width": 1335.1875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 116.890625,
+            "y": 190.484375,
+            "width": 1312.109375,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 83.8125,
+            "y": 190.484375,
+            "width": 1345.1875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 3,
+      "index": 5,
+      "elapsedMs": 217.70000004768372,
+      "value": 0.014696447000385802,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 88.8125,
+            "y": 76,
+            "width": 1335.1875,
+            "height": 908
+          },
+          "current": {
+            "x": 64.453125,
+            "y": 76,
+            "width": 1359.546875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 83.8125,
+            "y": 190.484375,
+            "width": 1345.1875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 59.453125,
+            "y": 190.484375,
+            "width": 1369.546875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 3,
+      "index": 6,
+      "elapsedMs": 234.5,
+      "value": 0.010937337149160878,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 64.453125,
+            "y": 76,
+            "width": 1359.546875,
+            "height": 908
+          },
+          "current": {
+            "x": 46.546875,
+            "y": 76,
+            "width": 1377.453125,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 59.453125,
+            "y": 190.484375,
+            "width": 1369.546875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 41.546875,
+            "y": 190.484375,
+            "width": 1387.453125,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 3,
+      "index": 7,
+      "elapsedMs": 251,
+      "value": 0.007851267873505015,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 46.546875,
+            "y": 76,
+            "width": 1377.453125,
+            "height": 908
+          },
+          "current": {
+            "x": 33.8125,
+            "y": 76,
+            "width": 1390.1875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 41.546875,
+            "y": 190.484375,
+            "width": 1387.453125,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 28.8125,
+            "y": 190.484375,
+            "width": 1400.1875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 3,
+      "index": 8,
+      "elapsedMs": 267.7999999523163,
+      "value": 0.0054488384633005395,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 33.8125,
+            "y": 76,
+            "width": 1390.1875,
+            "height": 908
+          },
+          "current": {
+            "x": 25.03125,
+            "y": 76,
+            "width": 1398.96875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 28.8125,
+            "y": 190.484375,
+            "width": 1400.1875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 20.03125,
+            "y": 190.484375,
+            "width": 1408.96875,
+            "height": 799.515625
+          }
+        }
+      ]
+    },
+    {
+      "kind": "warmed-transactions",
+      "run": 3,
+      "index": 9,
+      "elapsedMs": 284.2000000476837,
+      "value": 0.003424917052469136,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_8bffd616 mantine-Flex-root __m__-_r_1f_",
+            "label": "TransactionsBulk editAll datesAdd transactionDateDescriptionAmountAccountCategorySep 5, 2026FFixture"
+          },
+          "previous": {
+            "x": 25.03125,
+            "y": 76,
+            "width": 1398.96875,
+            "height": 908
+          },
+          "current": {
+            "x": 19.53125,
+            "y": 76,
+            "width": 1404.46875,
+            "height": 908
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+          },
+          "previous": {
+            "x": 20.03125,
+            "y": 190.484375,
+            "width": 1408.96875,
+            "height": 799.515625
+          },
+          "current": {
+            "x": 14.53125,
+            "y": 190.484375,
+            "width": 1414.46875,
+            "height": 799.515625
+          }
+        }
+      ]
+    }
+  ]
+}

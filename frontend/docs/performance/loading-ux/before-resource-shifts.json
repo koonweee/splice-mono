@@ -1,0 +1,2421 @@
+{
+  "schemaVersion": 1,
+  "input": "frontend/docs/performance/loading-ux/before-resources.json",
+  "counts": {
+    "intentional: navigation drawer closing": 30
+  },
+  "entries": [
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 0,
+      "elapsedMs": 26.100000023841858,
+      "value": 0.0071196256811824855,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 263.6875,
+            "y": 488.484375,
+            "width": 1168.3125,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 245,
+            "y": 488.484375,
+            "width": 1187,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 271.6875,
+            "y": 158,
+            "width": 1152.3125,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 253,
+            "y": 158,
+            "width": 1171,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 267.6875,
+            "y": 264.484375,
+            "width": 1160,
+            "height": 200
+          },
+          "current": {
+            "x": 249,
+            "y": 264.484375,
+            "width": 1160,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 271.6875,
+            "y": 76,
+            "width": 1152.3125,
+            "height": 50
+          },
+          "current": {
+            "x": 253,
+            "y": 76,
+            "width": 1171,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 1,
+      "elapsedMs": 41.5,
+      "value": 0.015453606303650655,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 245,
+            "y": 488.484375,
+            "width": 1187,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 205.734375,
+            "y": 488.484375,
+            "width": 1226.265625,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 253,
+            "y": 158,
+            "width": 1171,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 213.734375,
+            "y": 158,
+            "width": 1210.265625,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 249,
+            "y": 264.484375,
+            "width": 1179,
+            "height": 200
+          },
+          "current": {
+            "x": 209.734375,
+            "y": 264.484375,
+            "width": 1179,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 253,
+            "y": 76,
+            "width": 1171,
+            "height": 50
+          },
+          "current": {
+            "x": 213.734375,
+            "y": 76,
+            "width": 1210.265625,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 2,
+      "elapsedMs": 59.10000002384186,
+      "value": 0.020033765462239582,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 205.734375,
+            "y": 488.484375,
+            "width": 1226.265625,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 156.796875,
+            "y": 488.484375,
+            "width": 1275.203125,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 213.734375,
+            "y": 158,
+            "width": 1210.265625,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 164.796875,
+            "y": 158,
+            "width": 1259.203125,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 209.734375,
+            "y": 264.484375,
+            "width": 1218,
+            "height": 200
+          },
+          "current": {
+            "x": 160.796875,
+            "y": 264.484375,
+            "width": 1218,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 213.734375,
+            "y": 76,
+            "width": 1210.265625,
+            "height": 50
+          },
+          "current": {
+            "x": 164.796875,
+            "y": 76,
+            "width": 1259.203125,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 3,
+      "elapsedMs": 75.70000004768372,
+      "value": 0.0181136700213397,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 156.796875,
+            "y": 488.484375,
+            "width": 1275.203125,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 114,
+            "y": 488.484375,
+            "width": 1318,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 164.796875,
+            "y": 158,
+            "width": 1259.203125,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 122,
+            "y": 158,
+            "width": 1302,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 160.796875,
+            "y": 264.484375,
+            "width": 1267,
+            "height": 200
+          },
+          "current": {
+            "x": 118,
+            "y": 264.484375,
+            "width": 1267,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 164.796875,
+            "y": 76,
+            "width": 1259.203125,
+            "height": 50
+          },
+          "current": {
+            "x": 122,
+            "y": 76,
+            "width": 1302,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 4,
+      "elapsedMs": 94,
+      "value": 0.014359185971860533,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 114,
+            "y": 488.484375,
+            "width": 1318,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 80.90625,
+            "y": 488.484375,
+            "width": 1351.09375,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 122,
+            "y": 158,
+            "width": 1302,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 88.90625,
+            "y": 158,
+            "width": 1335.09375,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 118,
+            "y": 264.484375,
+            "width": 1310,
+            "height": 200
+          },
+          "current": {
+            "x": 84.90625,
+            "y": 264.484375,
+            "width": 1310,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 122,
+            "y": 76,
+            "width": 1302,
+            "height": 50
+          },
+          "current": {
+            "x": 88.90625,
+            "y": 76,
+            "width": 1335.09375,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 5,
+      "elapsedMs": 109.10000002384186,
+      "value": 0.010841828221450616,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 80.90625,
+            "y": 488.484375,
+            "width": 1351.09375,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 56.375,
+            "y": 488.484375,
+            "width": 1375.625,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 88.90625,
+            "y": 158,
+            "width": 1335.09375,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 64.375,
+            "y": 158,
+            "width": 1359.625,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 84.90625,
+            "y": 264.484375,
+            "width": 1343,
+            "height": 200
+          },
+          "current": {
+            "x": 60.375,
+            "y": 264.484375,
+            "width": 1343,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 88.90625,
+            "y": 76,
+            "width": 1335.09375,
+            "height": 50
+          },
+          "current": {
+            "x": 64.375,
+            "y": 76,
+            "width": 1359.625,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 6,
+      "elapsedMs": 126.10000002384186,
+      "value": 0.0079631145637418,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 56.375,
+            "y": 488.484375,
+            "width": 1375.625,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 38.578125,
+            "y": 488.484375,
+            "width": 1393.421875,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 64.375,
+            "y": 158,
+            "width": 1359.625,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 46.578125,
+            "y": 158,
+            "width": 1377.421875,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 60.375,
+            "y": 264.484375,
+            "width": 1368,
+            "height": 200
+          },
+          "current": {
+            "x": 42.578125,
+            "y": 264.484375,
+            "width": 1368,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 64.375,
+            "y": 76,
+            "width": 1359.625,
+            "height": 50
+          },
+          "current": {
+            "x": 46.578125,
+            "y": 76,
+            "width": 1377.421875,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 7,
+      "elapsedMs": 142,
+      "value": 0.005779563937717014,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 38.578125,
+            "y": 488.484375,
+            "width": 1393.421875,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 25.78125,
+            "y": 488.484375,
+            "width": 1406.21875,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 46.578125,
+            "y": 158,
+            "width": 1377.421875,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 33.78125,
+            "y": 158,
+            "width": 1390.21875,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 42.578125,
+            "y": 264.484375,
+            "width": 1385,
+            "height": 200
+          },
+          "current": {
+            "x": 29.78125,
+            "y": 264.484375,
+            "width": 1385,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 46.578125,
+            "y": 76,
+            "width": 1377.421875,
+            "height": 50
+          },
+          "current": {
+            "x": 33.78125,
+            "y": 76,
+            "width": 1390.21875,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 8,
+      "elapsedMs": 171.79999995231628,
+      "value": 0.0023772107837818288,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_6d731127 mantine-Stack-root",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2e_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2g"
+          },
+          "previous": {
+            "x": 25.78125,
+            "y": 159.296875,
+            "width": 1406.21875,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 17.015625,
+            "y": 159.296875,
+            "width": 1414.984375,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1j_{width:100%;}@media(min-width: 48em){.__m__-_r_1j_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 33.78125,
+            "y": 76,
+            "width": 1390.21875,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 25.015625,
+            "y": 76,
+            "width": 1398.984375,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 9,
+      "elapsedMs": 175.79999995231628,
+      "value": 0.0014968614969135803,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_6d731127 mantine-Stack-root",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2e_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2g"
+          },
+          "previous": {
+            "x": 17.015625,
+            "y": 159.296875,
+            "width": 1414.984375,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 11.515625,
+            "y": 159.296875,
+            "width": 1420.484375,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1j_{width:100%;}@media(min-width: 48em){.__m__-_r_1j_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 25.015625,
+            "y": 76,
+            "width": 1398.984375,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 19.515625,
+            "y": 76,
+            "width": 1404.484375,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 0,
+      "elapsedMs": 24.199999928474426,
+      "value": 0.007083908495490934,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 263.703125,
+            "y": 488.484375,
+            "width": 1168.296875,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 245.109375,
+            "y": 488.484375,
+            "width": 1186.890625,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 271.703125,
+            "y": 158,
+            "width": 1152.296875,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 253.109375,
+            "y": 158,
+            "width": 1170.890625,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 267.703125,
+            "y": 264.484375,
+            "width": 1160,
+            "height": 200
+          },
+          "current": {
+            "x": 249.109375,
+            "y": 264.484375,
+            "width": 1160,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 271.703125,
+            "y": 76,
+            "width": 1152.296875,
+            "height": 50
+          },
+          "current": {
+            "x": 253.109375,
+            "y": 76,
+            "width": 1170.890625,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 1,
+      "elapsedMs": 42.39999997615814,
+      "value": 0.015539698817877123,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 245.109375,
+            "y": 488.484375,
+            "width": 1186.890625,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 205.625,
+            "y": 488.484375,
+            "width": 1226.375,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 253.109375,
+            "y": 158,
+            "width": 1170.890625,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 213.625,
+            "y": 158,
+            "width": 1210.375,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 249.109375,
+            "y": 264.484375,
+            "width": 1179,
+            "height": 200
+          },
+          "current": {
+            "x": 209.625,
+            "y": 264.484375,
+            "width": 1179,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 253.109375,
+            "y": 76,
+            "width": 1170.890625,
+            "height": 50
+          },
+          "current": {
+            "x": 213.625,
+            "y": 76,
+            "width": 1210.375,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 2,
+      "elapsedMs": 58.299999952316284,
+      "value": 0.019912232402283465,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 205.625,
+            "y": 488.484375,
+            "width": 1226.375,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 156.984375,
+            "y": 488.484375,
+            "width": 1275.015625,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 213.625,
+            "y": 158,
+            "width": 1210.375,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 164.984375,
+            "y": 158,
+            "width": 1259.015625,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 209.625,
+            "y": 264.484375,
+            "width": 1218,
+            "height": 200
+          },
+          "current": {
+            "x": 160.984375,
+            "y": 264.484375,
+            "width": 1218,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 213.625,
+            "y": 76,
+            "width": 1210.375,
+            "height": 50
+          },
+          "current": {
+            "x": 164.984375,
+            "y": 76,
+            "width": 1259.015625,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 3,
+      "elapsedMs": 77.09999990463257,
+      "value": 0.018226095136477626,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 156.984375,
+            "y": 488.484375,
+            "width": 1275.015625,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 113.921875,
+            "y": 488.484375,
+            "width": 1318.078125,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 164.984375,
+            "y": 158,
+            "width": 1259.015625,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 121.921875,
+            "y": 158,
+            "width": 1302.078125,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 160.984375,
+            "y": 264.484375,
+            "width": 1267,
+            "height": 200
+          },
+          "current": {
+            "x": 117.921875,
+            "y": 264.484375,
+            "width": 1267,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 164.984375,
+            "y": 76,
+            "width": 1259.015625,
+            "height": 50
+          },
+          "current": {
+            "x": 121.921875,
+            "y": 76,
+            "width": 1302.078125,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 4,
+      "elapsedMs": 92,
+      "value": 0.014352406375084394,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 113.921875,
+            "y": 488.484375,
+            "width": 1318.078125,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 80.84375,
+            "y": 488.484375,
+            "width": 1351.15625,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 121.921875,
+            "y": 158,
+            "width": 1302.078125,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 88.84375,
+            "y": 158,
+            "width": 1335.15625,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 117.921875,
+            "y": 264.484375,
+            "width": 1310,
+            "height": 200
+          },
+          "current": {
+            "x": 84.84375,
+            "y": 264.484375,
+            "width": 1310,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 121.921875,
+            "y": 76,
+            "width": 1302.078125,
+            "height": 50
+          },
+          "current": {
+            "x": 88.84375,
+            "y": 76,
+            "width": 1335.15625,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 5,
+      "elapsedMs": 109.29999995231628,
+      "value": 0.01082801697530864,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 80.84375,
+            "y": 488.484375,
+            "width": 1351.15625,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 56.34375,
+            "y": 488.484375,
+            "width": 1375.65625,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 88.84375,
+            "y": 158,
+            "width": 1335.15625,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 64.34375,
+            "y": 158,
+            "width": 1359.65625,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 84.84375,
+            "y": 264.484375,
+            "width": 1343,
+            "height": 200
+          },
+          "current": {
+            "x": 60.34375,
+            "y": 264.484375,
+            "width": 1343,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 88.84375,
+            "y": 76,
+            "width": 1335.15625,
+            "height": 50
+          },
+          "current": {
+            "x": 64.34375,
+            "y": 76,
+            "width": 1359.65625,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 6,
+      "elapsedMs": 125.69999992847443,
+      "value": 0.007921166638032889,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 56.34375,
+            "y": 488.484375,
+            "width": 1375.65625,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 38.640625,
+            "y": 488.484375,
+            "width": 1393.359375,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 64.34375,
+            "y": 158,
+            "width": 1359.65625,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 46.640625,
+            "y": 158,
+            "width": 1377.359375,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 60.34375,
+            "y": 264.484375,
+            "width": 1368,
+            "height": 200
+          },
+          "current": {
+            "x": 42.640625,
+            "y": 264.484375,
+            "width": 1368,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 64.34375,
+            "y": 76,
+            "width": 1359.65625,
+            "height": 50
+          },
+          "current": {
+            "x": 46.640625,
+            "y": 76,
+            "width": 1377.359375,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 7,
+      "elapsedMs": 142.59999990463257,
+      "value": 0.0058148482108410495,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 38.640625,
+            "y": 488.484375,
+            "width": 1393.359375,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 25.765625,
+            "y": 488.484375,
+            "width": 1406.234375,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 46.640625,
+            "y": 158,
+            "width": 1377.359375,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 33.765625,
+            "y": 158,
+            "width": 1390.234375,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 42.640625,
+            "y": 264.484375,
+            "width": 1385,
+            "height": 200
+          },
+          "current": {
+            "x": 29.765625,
+            "y": 264.484375,
+            "width": 1385,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 46.640625,
+            "y": 76,
+            "width": 1377.359375,
+            "height": 50
+          },
+          "current": {
+            "x": 33.765625,
+            "y": 76,
+            "width": 1390.234375,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 8,
+      "elapsedMs": 170.39999997615814,
+      "value": 0.0023772107837818288,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_6d731127 mantine-Stack-root",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2e_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2g"
+          },
+          "previous": {
+            "x": 25.765625,
+            "y": 159.296875,
+            "width": 1406.234375,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 17,
+            "y": 159.296875,
+            "width": 1415,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1j_{width:100%;}@media(min-width: 48em){.__m__-_r_1j_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 33.765625,
+            "y": 76,
+            "width": 1390.234375,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 25,
+            "y": 76,
+            "width": 1399,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 9,
+      "elapsedMs": 173.89999997615814,
+      "value": 0.0014968614969135803,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_6d731127 mantine-Stack-root",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2e_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2g"
+          },
+          "previous": {
+            "x": 17,
+            "y": 159.296875,
+            "width": 1415,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 11.5,
+            "y": 159.296875,
+            "width": 1420.5,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1j_{width:100%;}@media(min-width: 48em){.__m__-_r_1j_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 25,
+            "y": 76,
+            "width": 1399,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 19.5,
+            "y": 76,
+            "width": 1404.5,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 0,
+      "elapsedMs": 25.700000047683716,
+      "value": 0.00711367281690056,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 263.71875,
+            "y": 488.484375,
+            "width": 1168.28125,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 245.046875,
+            "y": 488.484375,
+            "width": 1186.953125,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 271.71875,
+            "y": 158,
+            "width": 1152.28125,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 253.046875,
+            "y": 158,
+            "width": 1170.953125,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 267.71875,
+            "y": 264.484375,
+            "width": 1160,
+            "height": 200
+          },
+          "current": {
+            "x": 249.046875,
+            "y": 264.484375,
+            "width": 1160,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 271.71875,
+            "y": 76,
+            "width": 1152.28125,
+            "height": 50
+          },
+          "current": {
+            "x": 253.046875,
+            "y": 76,
+            "width": 1170.953125,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 1,
+      "elapsedMs": 42.40000009536743,
+      "value": 0.015453606303650655,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 245.046875,
+            "y": 488.484375,
+            "width": 1186.953125,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 205.78125,
+            "y": 488.484375,
+            "width": 1226.21875,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 253.046875,
+            "y": 158,
+            "width": 1170.953125,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 213.78125,
+            "y": 158,
+            "width": 1210.21875,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 249.046875,
+            "y": 264.484375,
+            "width": 1179,
+            "height": 200
+          },
+          "current": {
+            "x": 209.78125,
+            "y": 264.484375,
+            "width": 1179,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 253.046875,
+            "y": 76,
+            "width": 1170.953125,
+            "height": 50
+          },
+          "current": {
+            "x": 213.78125,
+            "y": 76,
+            "width": 1210.21875,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 2,
+      "elapsedMs": 59.700000047683716,
+      "value": 0.020027368985399786,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 205.78125,
+            "y": 488.484375,
+            "width": 1226.21875,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 156.859375,
+            "y": 488.484375,
+            "width": 1275.140625,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 213.78125,
+            "y": 158,
+            "width": 1210.21875,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 164.859375,
+            "y": 158,
+            "width": 1259.140625,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 209.78125,
+            "y": 264.484375,
+            "width": 1218,
+            "height": 200
+          },
+          "current": {
+            "x": 160.859375,
+            "y": 264.484375,
+            "width": 1218,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 213.78125,
+            "y": 76,
+            "width": 1210.21875,
+            "height": 50
+          },
+          "current": {
+            "x": 164.859375,
+            "y": 76,
+            "width": 1259.140625,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 3,
+      "elapsedMs": 75.90000009536743,
+      "value": 0.018120283263406634,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 156.859375,
+            "y": 488.484375,
+            "width": 1275.140625,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 114.046875,
+            "y": 488.484375,
+            "width": 1317.953125,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 164.859375,
+            "y": 158,
+            "width": 1259.140625,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 122.046875,
+            "y": 158,
+            "width": 1301.953125,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 160.859375,
+            "y": 264.484375,
+            "width": 1267,
+            "height": 200
+          },
+          "current": {
+            "x": 118.046875,
+            "y": 264.484375,
+            "width": 1267,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 164.859375,
+            "y": 76,
+            "width": 1259.140625,
+            "height": 50
+          },
+          "current": {
+            "x": 122.046875,
+            "y": 76,
+            "width": 1301.953125,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 4,
+      "elapsedMs": 93.20000004768372,
+      "value": 0.01436596556863667,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 114.046875,
+            "y": 488.484375,
+            "width": 1317.953125,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 80.9375,
+            "y": 488.484375,
+            "width": 1351.0625,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 122.046875,
+            "y": 158,
+            "width": 1301.953125,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 88.9375,
+            "y": 158,
+            "width": 1335.0625,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 118.046875,
+            "y": 264.484375,
+            "width": 1310,
+            "height": 200
+          },
+          "current": {
+            "x": 84.9375,
+            "y": 264.484375,
+            "width": 1310,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 122.046875,
+            "y": 76,
+            "width": 1301.953125,
+            "height": 50
+          },
+          "current": {
+            "x": 88.9375,
+            "y": 76,
+            "width": 1335.0625,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 5,
+      "elapsedMs": 110.80000007152557,
+      "value": 0.010841828221450616,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 80.9375,
+            "y": 488.484375,
+            "width": 1351.0625,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 56.40625,
+            "y": 488.484375,
+            "width": 1375.59375,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 88.9375,
+            "y": 158,
+            "width": 1335.0625,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 64.40625,
+            "y": 158,
+            "width": 1359.59375,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 84.9375,
+            "y": 264.484375,
+            "width": 1343,
+            "height": 200
+          },
+          "current": {
+            "x": 60.40625,
+            "y": 264.484375,
+            "width": 1343,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 88.9375,
+            "y": 76,
+            "width": 1335.0625,
+            "height": 50
+          },
+          "current": {
+            "x": 64.40625,
+            "y": 76,
+            "width": 1359.59375,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 6,
+      "elapsedMs": 127.20000004768372,
+      "value": 0.008005062489450713,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 56.40625,
+            "y": 488.484375,
+            "width": 1375.59375,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 38.515625,
+            "y": 488.484375,
+            "width": 1393.484375,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 64.40625,
+            "y": 158,
+            "width": 1359.59375,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 46.515625,
+            "y": 158,
+            "width": 1377.484375,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 60.40625,
+            "y": 264.484375,
+            "width": 1368,
+            "height": 200
+          },
+          "current": {
+            "x": 42.515625,
+            "y": 264.484375,
+            "width": 1368,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 64.40625,
+            "y": 76,
+            "width": 1359.59375,
+            "height": 50
+          },
+          "current": {
+            "x": 46.515625,
+            "y": 76,
+            "width": 1377.484375,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 7,
+      "elapsedMs": 143.5,
+      "value": 0.0057442796645929784,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_410352e9 mantine-Grid-root __m__-_R_1arr7r6_",
+            "label": ".__m__-_R_6rarr7r6_{--col-flex-grow:auto;--col-flex-basis:100%;--col-max-width:100%;}@media(min-widt"
+          },
+          "previous": {
+            "x": 38.515625,
+            "y": 488.484375,
+            "width": 1393.484375,
+            "height": 312.171875
+          },
+          "current": {
+            "x": 25.796875,
+            "y": 488.484375,
+            "width": 1406.203125,
+            "height": 312.171875
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+            "label": "Net worth$7,517.04from last month"
+          },
+          "previous": {
+            "x": 46.515625,
+            "y": 158,
+            "width": 1377.484375,
+            "height": 306.484375
+          },
+          "current": {
+            "x": 33.796875,
+            "y": 158,
+            "width": 1390.203125,
+            "height": 306.484375
+          }
+        },
+        {
+          "node": {
+            "tag": "svg",
+            "class": "recharts-surface",
+            "label": ""
+          },
+          "previous": {
+            "x": 42.515625,
+            "y": 264.484375,
+            "width": 1385,
+            "height": 200
+          },
+          "current": {
+            "x": 29.796875,
+            "y": 264.484375,
+            "width": 1385,
+            "height": 200
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Home"
+          },
+          "previous": {
+            "x": 46.515625,
+            "y": 76,
+            "width": 1377.484375,
+            "height": 50
+          },
+          "current": {
+            "x": 33.796875,
+            "y": 76,
+            "width": 1390.203125,
+            "height": 50
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 8,
+      "elapsedMs": 172.10000002384186,
+      "value": 0.0023814482361593364,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_6d731127 mantine-Stack-root",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2e_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2g"
+          },
+          "previous": {
+            "x": 25.796875,
+            "y": 159.296875,
+            "width": 1406.203125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 17.015625,
+            "y": 159.296875,
+            "width": 1414.984375,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1j_{width:100%;}@media(min-width: 48em){.__m__-_r_1j_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 33.796875,
+            "y": 76,
+            "width": 1390.203125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 25.015625,
+            "y": 76,
+            "width": 1398.984375,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 9,
+      "elapsedMs": 175.5,
+      "value": 0.0014968614969135803,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_6d731127 mantine-Stack-root",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2e_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2g"
+          },
+          "previous": {
+            "x": 17.015625,
+            "y": 159.296875,
+            "width": 1414.984375,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 11.515625,
+            "y": 159.296875,
+            "width": 1420.484375,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1j_{width:100%;}@media(min-width: 48em){.__m__-_r_1j_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 25.015625,
+            "y": 76,
+            "width": 1398.984375,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 19.515625,
+            "y": 76,
+            "width": 1404.484375,
+            "height": 51.296875
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "cachedDraftFailure": {
+    "value": "Unsaved browser draft",
+    "sameNode": true,
+    "focused": true,
+    "cachedRow": true
+  },
+  "cachedDraftRetry": {
+    "value": "Unsaved browser draft",
+    "sameNode": true
+  },
+  "homeBefore": {
+    "scrollY": 50,
+    "collapsed": true
+  }
+}

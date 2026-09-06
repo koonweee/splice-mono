@@ -1,5 +1,4 @@
 import { Modal } from '@mantine/core'
-import { usePhoneLayout } from '../../lib/responsive'
 import styles from './EditorModal.module.css'
 import type { ModalProps } from '@mantine/core'
 
@@ -8,18 +7,22 @@ export function EditorModal({
   children,
   size = 'md',
   closeButtonProps,
+  centered,
   ...props
 }: ModalProps) {
-  const isPhone = usePhoneLayout()
-
   return (
     <Modal
       size={size}
       padding="lg"
-      classNames={{ content: styles.content, body: styles.body }}
+      classNames={{
+        content: styles.content,
+        body: styles.body,
+        inner: styles.inner,
+        header: styles.header,
+      }}
       {...props}
-      fullScreen={isPhone}
-      centered={!isPhone}
+      fullScreen={false}
+      centered={centered ?? true}
       closeButtonProps={{ 'aria-label': 'Close editor', ...closeButtonProps }}
     >
       {children}

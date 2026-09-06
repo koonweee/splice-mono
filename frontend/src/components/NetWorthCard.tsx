@@ -33,6 +33,7 @@ export function NetWorthCard({
   changePercent,
   changeAmount,
   comparisonPeriod,
+  comparisonLoading = false,
   chartData,
   chartLoading,
   chartError,
@@ -44,15 +45,20 @@ export function NetWorthCard({
   changePercent?: number
   changeAmount?: MoneyWithSign
   comparisonPeriod: TimePeriod
+  comparisonLoading?: boolean
   chartLoading?: boolean
   chartError?: boolean
   onRetryChart?: () => void
   chartData?: Array<ChartDataPoint>
 }) {
   const hasChartData = chartData && chartData.length > 0
-  const [hoveredPoint, setHoveredPoint] = useState<ChartDataPoint | undefined>(
-    undefined,
-  )
+  const [hover, setHover] = useState<{
+    point?: ChartDataPoint
+    data: typeof chartData
+  }>()
+  // Ignore points from an old dataset, including during a period transition.
+  const hoveredPoint =
+    !comparisonLoading && hover?.data === chartData ? hover?.point : undefined
 
   const displayValue = hoveredPoint
     ? formatMoneyWithSign({ value: hoveredPoint.money })
@@ -89,48 +95,62 @@ export function NetWorthCard({
         <Title order={2} size="h1">
           {visibleDisplayValue}
         </Title>
-        <Group
-          gap={3}
-          wrap="nowrap"
-          style={{
-            visibility:
-              !hoveredPoint &&
-              changePercent !== undefined &&
-              changePercent !== 0
-                ? 'visible'
-                : 'hidden',
-          }}
-        >
-          <ChangePercentPopover
-            size="sm"
-            color={getChangeColorMantine(false, changePercent)}
-            changeAmount={changeAmount}
-            changePercent={changePercent}
-            hidden={balancesHidden}
-          />
-          <Text size="sm" c={getChangeColorMantine(false, changePercent)}>
-            from last {TIME_PERIOD_LABELS[comparisonPeriod].toLowerCase()}
-          </Text>
-        </Group>
+        <Box aria-busy={comparisonLoading} style={{ position: 'relative' }}>
+          {comparisonLoading && (
+            <Skeleton
+              aria-hidden="true"
+              h={14}
+              w={180}
+              style={{
+                position: 'absolute',
+                top: '50%',
+                transform: 'translateY(-50%)',
+              }}
+            />
+          )}
+          <Group
+            gap={3}
+            wrap="nowrap"
+            style={{
+              visibility:
+                !comparisonLoading &&
+                !hoveredPoint &&
+                changePercent !== undefined &&
+                changePercent !== 0
+                  ? 'visible'
+                  : 'hidden',
+            }}
+          >
+            {!comparisonLoading && (
+              <ChangePercentPopover
+                size="sm"
+                color={getChangeColorMantine(false, changePercent)}
+                changeAmount={changeAmount}
+                changePercent={changePercent}
+                hidden={balancesHidden}
+              />
+            )}
+            <Text
+              aria-hidden={comparisonLoading}
+              size="sm"
+              c={getChangeColorMantine(false, changePercent)}
+            >
+              {comparisonLoading
+                ? '\u00A0'
+                : `from last ${TIME_PERIOD_LABELS[comparisonPeriod].toLowerCase()}`}
+            </Text>
+          </Group>
+        </Box>
       </Box>
       {/* The streamed series can settle between SSR and hydration. Keep this
           region deterministic without making the summary wait for the chart. */}
-      <ClientOnly
-        fallback={<Skeleton height={200} mt="md" aria-label="Loading chart" />}
-      >
-        {chartError && (
-          <Alert color="red" mt="md" title="Chart unavailable">
-            The summary is still available.{' '}
-            <Button variant="subtle" onClick={onRetryChart}>
-              Retry chart
-            </Button>
-          </Alert>
-        )}
-        {chartLoading && !hasChartData && (
-          <Skeleton height={200} mt="md" aria-label="Loading chart" />
-        )}
-        {hasChartData && (
-          <Box mt="md">
+      <Box mt="md" h={200} style={{ position: 'relative' }}>
+        <ClientOnly
+          fallback={<Skeleton height={200} aria-label="Loading chart" />}
+        >
+          {comparisonLoading || (chartLoading && !hasChartData) ? (
+            <Skeleton height={200} aria-label="Loading chart" />
+          ) : hasChartData ? (
             <Chart
               data={chartData}
               height={200}
@@ -143,11 +163,27 @@ export function NetWorthCard({
                       decimals: 0,
                     })
               }
-              onDataPointHover={setHoveredPoint}
+              onDataPointHover={(point) => setHover({ point, data: chartData })}
             />
-          </Box>
-        )}
-      </ClientOnly>
+          ) : !chartError ? (
+            <Text size="sm" c="dimmed">
+              No history for this period.
+            </Text>
+          ) : null}
+          {chartError && (
+            <Alert
+              color="red"
+              title="Chart unavailable"
+              style={{ position: 'absolute', inset: 0, zIndex: 1 }}
+            >
+              The summary is still available.{' '}
+              <Button variant="subtle" onClick={onRetryChart}>
+                Retry chart
+              </Button>
+            </Alert>
+          )}
+        </ClientOnly>
+      </Box>
     </Paper>
   )
 }

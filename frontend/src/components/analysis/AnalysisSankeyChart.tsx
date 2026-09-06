@@ -3,7 +3,6 @@ import { Sankey, Tooltip } from 'recharts'
 import { parseSignedMinorUnits, ratioPercent } from '../../lib/money'
 import { formatPrimaryCategory } from '../../lib/format'
 import { getDisplayCategoryColor } from '../../lib/category-colors'
-import { useDataListLayout } from '../../lib/responsive'
 import { Pressable, usePressFeedback } from '../Pressable'
 import {
   buildAnalysisSankeyData,
@@ -166,13 +165,11 @@ function CategoryDrilldownList({
   currency,
   direction,
   onCategoryClick,
-  compact = false,
 }: {
   categories: Array<CategoryAggregate>
   currency: string
   direction: FlowDirection
   onCategoryClick: AnalysisSankeyChartProps['onCategoryClick']
-  compact?: boolean
 }) {
   const total = categories.reduce(
     (sum, category) => sum + parseSignedMinorUnits(category.totalAmount),
@@ -185,12 +182,7 @@ function CategoryDrilldownList({
         <Pressable
           key={`${direction}:${category.primaryCategory}`}
           onClick={() => onCategoryClick(category.primaryCategory, direction)}
-          style={{
-            borderRadius: 6,
-            padding: compact
-              ? '10px var(--mantine-spacing-xs)'
-              : '6px var(--mantine-spacing-xs)',
-          }}
+          className={styles.categoryButton}
         >
           <Group gap="sm" wrap="nowrap">
             <Box
@@ -216,7 +208,7 @@ function CategoryDrilldownList({
               {formatSankeyAmount(category.totalAmount, currency)}
             </Text>
           </Group>
-          {compact && (
+          <div className={styles.compactProgress}>
             <Progress
               mt={8}
               size={4}
@@ -231,7 +223,7 @@ function CategoryDrilldownList({
               )}
               aria-label={`${formatPrimaryCategory(category.primaryCategory)} share of ${direction}s`}
             />
-          )}
+          </div>
         </Pressable>
       ))}
     </Stack>
@@ -242,16 +234,13 @@ export function AnalysisSankeyChart({
   analysis,
   onCategoryClick,
 }: AnalysisSankeyChartProps) {
-  const isMobile = useDataListLayout()
   const data = buildAnalysisSankeyData(analysis)
   const height = Math.max(
-    isMobile ? 420 : 360,
+    360,
     (analysis.inflows.length + analysis.outflows.length + 2) * 42,
   )
   const chartWidth = 900
-  const directions: Array<FlowDirection> = isMobile
-    ? ['outflow', 'inflow']
-    : ['inflow', 'outflow']
+  const directions: Array<FlowDirection> = ['outflow', 'inflow']
 
   return (
     <Paper
@@ -269,7 +258,7 @@ export function AnalysisSankeyChart({
             {formatSankeyAmount(analysis.totalOutflow, analysis.currency)} out
           </Text>
         </Group>
-        {!isMobile && (
+        {
           <Box className={styles.chartViewport}>
             <Box className={styles.chartCanvas} h={height} w={chartWidth}>
               <Sankey
@@ -304,14 +293,18 @@ export function AnalysisSankeyChart({
               </Sankey>
             </Box>
           </Box>
-        )}
-        <Box className={isMobile ? styles.compactList : styles.drilldownList}>
+        }
+        <Box
+          className={styles.drilldownList}
+          role="region"
+          aria-label="Cashflow categories"
+        >
           <div className={styles.drilldownGrid}>
             {directions.map((direction) => {
               const categories =
                 direction === 'inflow' ? analysis.inflows : analysis.outflows
               return (
-                <Box key={direction}>
+                <Box key={direction} data-direction={direction}>
                   <Text size="sm" fw={600} mb={4}>
                     {direction === 'inflow' ? 'Inflows' : 'Outflows'}
                   </Text>
@@ -320,7 +313,6 @@ export function AnalysisSankeyChart({
                     currency={analysis.currency}
                     direction={direction}
                     onCategoryClick={onCategoryClick}
-                    compact={isMobile}
                   />
                   {categories.length === 0 && (
                     <Text size="sm" c="dimmed">

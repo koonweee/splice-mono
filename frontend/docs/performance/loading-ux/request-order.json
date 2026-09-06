@@ -1,0 +1,36 @@
+{
+  "before": [
+    {
+      "chartCodeStart": 1424.507080078125,
+      "chartCodeEnd": 1876.511976480484,
+      "transactionCodeStart": null
+    },
+    {
+      "chartCodeStart": 1378.904052734375,
+      "chartCodeEnd": 1830.0508807897568,
+      "transactionCodeStart": null
+    },
+    {
+      "chartCodeStart": 1376.615234375,
+      "chartCodeEnd": 1828.9088925123215,
+      "transactionCodeStart": null
+    }
+  ],
+  "after": [
+    {
+      "chartCodeStart": 1480.498046875,
+      "chartCodeEnd": 1932.4809647798538,
+      "transactionCodeStart": 1987.0390625
+    },
+    {
+      "chartCodeStart": 1393.319091796875,
+      "chartCodeEnd": 1850.2200019359589,
+      "transactionCodeStart": 1883.947021484375
+    },
+    {
+      "chartCodeStart": 1396.717041015625,
+      "chartCodeEnd": 1853.283880829811,
+      "transactionCodeStart": 1879.60498046875
+    }
+  ]
+}

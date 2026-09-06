@@ -125,6 +125,7 @@ vi.mock('../../components/settings/RecurringManualTransactionsSection', () => ({
 }))
 
 let queryClientState: {
+  ensureQueryData: ReturnType<typeof vi.fn>
   invalidateQueries: ReturnType<typeof vi.fn>
 }
 
@@ -216,6 +217,7 @@ beforeEach(() => {
   installMockLocalStorage()
 
   queryClientState = {
+    ensureQueryData: vi.fn().mockResolvedValue(undefined),
     invalidateQueries: vi.fn(),
   }
 
@@ -315,6 +317,22 @@ afterEach(() => {
 })
 
 describe('SettingsPage', () => {
+  it('prepares list data on pointer, keyboard, and touch intent without mounting the section or fetching security inventory', () => {
+    renderSettingsPage()
+    fireEvent.pointerEnter(screen.getByRole('tab', { name: 'Categories' }))
+    expect(queryClientState.ensureQueryData).toHaveBeenCalledTimes(1)
+    expect(mockFns.customCategoriesSectionMock).not.toHaveBeenCalled()
+    fireEvent.focus(screen.getByRole('tab', { name: 'Analysis' }))
+    expect(queryClientState.ensureQueryData).toHaveBeenCalledTimes(2)
+    fireEvent.touchStart(screen.getByRole('tab', { name: 'Recurring' }))
+    expect(queryClientState.ensureQueryData).toHaveBeenCalledTimes(3)
+    fireEvent.pointerEnter(screen.getByRole('tab', { name: 'Access' }))
+    fireEvent.focus(screen.getByRole('tab', { name: 'Access' }))
+    fireEvent.touchStart(screen.getByRole('tab', { name: 'Access' }))
+    expect(queryClientState.ensureQueryData).toHaveBeenCalledTimes(3)
+    expect(mockFns.personalAccessTokenSectionMock).not.toHaveBeenCalled()
+  })
+
   it('shows settings sections in separate tabs and mounts only the selected section', async () => {
     renderSettingsPage()
 

@@ -1,0 +1,303 @@
+{
+  "scenario": {
+    "name": "tablet-portrait-settings-general",
+    "width": 768,
+    "height": 1024,
+    "mobile": true,
+    "path": "/settings?tab=general"
+  },
+  "ready": true,
+  "interceptions": [],
+  "runtimeErrors": [],
+  "audit": {
+    "start": 13.600000023841858,
+    "shifts": [],
+    "anchors": [
+      {
+        "at": 20.899999976158142,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 724,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": 16,
+              "y": 138.796875,
+              "width": 736,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": 16,
+              "y": 138.796875,
+              "width": 84.421875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 100.421875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 214.078125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 292.390625,
+              "y": 138.796875,
+              "width": 102.15625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 394.546875,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 479.734375,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 606.21875,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "AppearanceChoose your theme..__m__-_R_6dminarr7r6_{--sg-spacing-x:var(--mantine-spacing-sm);--sg-spa"
+            },
+            "rect": {
+              "x": 16,
+              "y": 202.796875,
+              "width": 720,
+              "height": 814.25
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto _themePresetOption_pyxhh_64 m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Splice light"
+            },
+            "rect": {
+              "x": 37,
+              "y": 292.1875,
+              "width": 333,
+              "height": 96
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto _themePresetOption_pyxhh_64 m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Splice dark"
+            },
+            "rect": {
+              "x": 382,
+              "y": 292.1875,
+              "width": 333,
+              "height": 96
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto _themePresetOption_pyxhh_64 m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Dracula"
+            },
+            "rect": {
+              "x": 37,
+              "y": 400.1875,
+              "width": 333,
+              "height": 105.890625
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto _themePresetOption_pyxhh_64 m_87cf2631 mantine-UnstyledButton-root",
+              "label": "OLED black"
+            },
+            "rect": {
+              "x": 382,
+              "y": 400.1875,
+              "width": 333,
+              "height": 105.890625
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Select-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 37,
+              "y": 594.46875,
+              "width": 678,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Select-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 37,
+              "y": 730.859375,
+              "width": 543.390625,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Use browser"
+            },
+            "rect": {
+              "x": 592.390625,
+              "y": 742.859375,
+              "width": 122.609375,
+              "height": 36
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Save changes"
+            },
+            "rect": {
+              "x": 564.171875,
+              "y": 954.046875,
+              "width": 150.828125,
+              "height": 42
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "inputs": [],
+    "scroll": [
+      {
+        "at": 20.899999976158142,
+        "x": 0,
+        "y": 0,
+        "width": 768,
+        "height": 1024,
+        "documentWidth": 768,
+        "documentHeight": 1024
+      }
+    ],
+    "resources": []
+  },
+  "dom": {
+    "title": "Settings",
+    "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nSettings\nGeneral\nNotifications\nAccess\nCategories\nAnalysis\nCategorization\nRecurring\nAppearance\n\nChoose your theme.\n\nSplice light\n\nCurrent Splice palette with a light surface.\n\nSplice dark\n\nCurrent Splice palette with the existing dark surface.\n\nDracula\n\nHigh-chroma dark palette with purple and cyan accents.\n\nOLED black\n\nTrue-black surfaces with electric teal accents.\n\nDisplay currency\n\nAll balances and amounts will be converted to this currency for display.\n\nTimezone\n\nUsed for displaying dates and times throughout the app.\n\nUse browser\n\nDetected: America/Los_Angeles\n\nHome dashboard\n\nHide zero-balance accounts from the Assets and Liabilities sections on Home.\n\nHide 0 balance accounts\nSave changes",
+    "dialogs": [],
+    "reducedMotion": false
+  }
+}

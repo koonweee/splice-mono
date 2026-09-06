@@ -2,6 +2,7 @@ import { Box, Modal } from '@mantine/core'
 import { useTransactionAnalysisControllerGetTransactions } from '../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../lib/format'
 import { useCompactLayout } from '../lib/responsive'
+import { TableSkeleton } from './loading/LoadingSkeleton'
 import { DataState } from './DataState'
 import { TransactionsTable } from './TransactionsTable'
 import { TransactionsMobileList } from './transactions/TransactionsMobileList'
@@ -44,6 +45,7 @@ export function CategoryTransactionsModal({
 
     return (
       <DataState
+        loadingFallback={<TableSkeleton />}
         hasData={transactions.length > 0}
         isLoading={isPending}
         isError={isError}

@@ -5,7 +5,7 @@ const { randomUUID, randomBytes } = require('node:crypto');
 const { spawn } = require('node:child_process');
 const backend = path.resolve(__dirname, '../..');
 const frontend = path.resolve(backend, '../frontend');
-const local = require('dotenv').parse(fs.readFileSync(path.join(backend, '.env')));
+const local = require('dotenv').parse(fs.readFileSync(process.env.SPLICE_BROWSER_ENV_FILE || path.join(backend, '.env')));
 const schema = `browser_fixture_${randomUUID().replaceAll('-', '')}`;
 Object.assign(process.env, {
   POSTGRES_HOST: '127.0.0.1', POSTGRES_PORT: '5432', POSTGRES_DB: 'splice_backend_benchmark',
@@ -72,8 +72,11 @@ async function start() {
   }
   await transactions.createManual(user.id, { accountId: eth.id, amount: { money: { amount: '1000000000000000001', currency: 'ETH' }, sign: 'negative' }, merchantName: 'Exact ETH transaction', providerDate: '2026-09-05', categoryId: category.id });
   await app.listen(3101, '127.0.0.1');
-  frontendProcess = spawn(process.execPath, [path.join(__dirname, 'serve-browser-frontend.cjs')], { cwd: frontend, detached: true, stdio: 'inherit', env: { ...process.env, VITE_API_BASE_URL: 'http://localhost:3101', SPLICE_INTERNAL_API_BASE_URL: 'http://localhost:3101', VITE_DISABLE_DEVTOOLS: 'true' } });
-  frontendProcess.once('exit', () => void close().finally(() => process.exit(0)));
+  // Benchmarks can swap production frontend builds without destroying the fixture.
+  if (process.env.SPLICE_BROWSER_EXTERNAL_FRONTEND !== 'true') {
+    frontendProcess = spawn(process.execPath, [path.join(__dirname, 'serve-browser-frontend.cjs')], { cwd: frontend, detached: true, stdio: 'inherit', env: { ...process.env, VITE_API_BASE_URL: 'http://localhost:3101', SPLICE_INTERNAL_API_BASE_URL: 'http://localhost:3101', VITE_DISABLE_DEVTOOLS: 'true' } });
+    frontendProcess.once('exit', () => void close().finally(() => process.exit(0)));
+  }
   fs.writeFileSync('/tmp/splice-browser-fixture.json', JSON.stringify({ schema, userId: user.id, usdAccountId: usd.id, ethAccountId: eth.id, categoryId: category.id, brokerageAccountId: brokerage.account.id, login: 'http://localhost:3101/user/dev/login?redirect=/transactions' }, null, 2));
   console.log('Synthetic browser fixture ready: http://localhost:3101/user/dev/login?redirect=/transactions');
 }

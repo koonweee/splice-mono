@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   Group,
-  Loader,
   Stack,
   Tabs,
   Text,
@@ -16,6 +15,10 @@ import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, RefreshCw } from 'lucide-react'
 import { lazy, useCallback, useEffect, useRef, useState } from 'react'
+import {
+  featureIntent,
+  loadManualBrokerageHoldingsModal,
+} from '../lib/feature-loaders'
 import { useAccountMetadataMutation } from '../hooks/useAccountMetadataMutation'
 import { invalidateMutationFamilies } from '../lib/query-invalidation'
 import { AccountType } from '../api/models'
@@ -35,22 +38,22 @@ import {
   formatMoneyWithSign,
   formatRelativeTime,
 } from '../lib/format'
-import { useDataListLayout } from '../lib/responsive'
+import {
+  AccountDetailsSkeleton,
+  TableSkeleton,
+} from './loading/LoadingSkeleton'
+import { DataState } from './DataState'
 import styles from './AccountModal.module.css'
 import { InlineBalanceEditor } from './accounts/InlineBalanceEditor'
 import { LazyChart as Chart } from './LazyChart'
 import { EditorModal } from './forms/EditorModal'
 import { InvestmentActivityTable } from './investments/InvestmentActivityTable'
 import { InvestmentHoldingsTable } from './investments/InvestmentHoldingsTable'
-import { DeferredFeature } from './DeferredFeature'
+import { DeferredOverlay } from './DeferredOverlay'
 import type { TimePeriod } from '../lib/types'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
-const ManualBrokerageHoldingsModal = lazy(() =>
-  import('./investments/ManualBrokerageHoldingsModal').then((module) => ({
-    default: module.ManualBrokerageHoldingsModal,
-  })),
-)
+const ManualBrokerageHoldingsModal = lazy(loadManualBrokerageHoldingsModal)
 
 interface AccountModalProps {
   account?: AccountSummaryData
@@ -67,7 +70,6 @@ export function AccountModal({
   period,
   balancesHidden = false,
 }: AccountModalProps) {
-  const isMobile = useDataListLayout()
   const queryClient = useQueryClient()
   const updateAccount = useAccountMetadataMutation(account?.id)
   const replaceHoldings =
@@ -116,6 +118,8 @@ export function AccountModal({
     accountCurrency,
     isLoading: holdingsLoading,
     isError: holdingsError,
+    isFetching: holdingsFetching,
+    refetch: refetchHoldings,
   } = useInvestmentHoldings(
     account?.id,
     opened &&
@@ -130,6 +134,9 @@ export function AccountModal({
     isLoadingMore: investmentActivityLoadingMore,
     isLoading: activityLoading,
     isInitialError: activityInitialError,
+    isRefetchError: activityRefetchError,
+    isFetching: activityFetching,
+    refetch: refetchActivity,
     isLoadMoreError: investmentActivityLoadMoreError,
   } = useInvestmentActivity(
     account?.id,
@@ -279,34 +286,23 @@ export function AccountModal({
         onClose={onClose}
         title={account?.customName ?? account?.name ?? 'Account details'}
         size="xl"
+        centered={false}
         transitionProps={{ transition: 'fade', duration: 200 }}
       >
-        {isLoading ? (
-          <Group
-            aria-label="Loading account history"
-            justify="center"
-            py="xl"
-            role="status"
-          >
-            <Loader />
-          </Group>
-        ) : balanceHistoryError ? (
-          <Alert color="red" title="Unable to load account history" m="lg">
-            <Text size="sm" mb="sm">
-              Balance history for this account could not be loaded.
-            </Text>
-            <Button
-              color="red"
-              loading={balanceHistoryFetching}
-              onClick={() => void refetchBalanceHistory()}
-              size="xs"
-              variant="light"
-            >
-              Retry
-            </Button>
-          </Alert>
-        ) : (
-          <Stack gap="md" px={isMobile ? 'xs' : 'md'} py="sm">
+        <DataState
+          hasData={!isLoading && (!balanceHistoryError || Boolean(fullAccount))}
+          isLoading={isLoading}
+          isError={balanceHistoryError}
+          isFetching={balanceHistoryFetching}
+          onRetry={() => void refetchBalanceHistory()}
+          loadingMessage="Loading account history"
+          loadingFallback={
+            <AccountDetailsSkeleton account={account} section={activeSection} />
+          }
+          errorTitle="Unable to load account history"
+          errorMessage="Balance history for this account could not be loaded."
+        >
+          <Stack gap="md" className={styles.detailsBody}>
             {!fullAccount && (
               <Text c="dimmed" size="sm">
                 No balance history is available for this account.
@@ -317,6 +313,12 @@ export function AccountModal({
                 <Group
                   align="center"
                   className={styles.balanceRow}
+                  data-converted={Boolean(
+                    account?.valuationMode !== 'holdings' &&
+                    account?.convertedEffectiveBalance &&
+                    account.effectiveBalance.money.currency !==
+                      account.convertedEffectiveBalance.money.currency,
+                  )}
                   justify="space-between"
                   wrap="nowrap"
                 >
@@ -380,7 +382,8 @@ export function AccountModal({
                             <ActionIcon
                               aria-label="Edit balance"
                               onClick={openBalanceEditor}
-                              size={isMobile ? 44 : 'md'}
+                              size="md"
+                              className={styles.compactAction}
                               variant="subtle"
                             >
                               <Pencil size={18} />
@@ -390,7 +393,10 @@ export function AccountModal({
                       )}
                     </Stack>
                   ) : (
-                    <div style={{ textAlign: 'right' }}>
+                    <div
+                      className={styles.balanceValue}
+                      style={{ textAlign: 'right' }}
+                    >
                       <Text fw={600}>
                         {balancesHidden
                           ? HIDDEN_BALANCE_PLACEHOLDER
@@ -534,6 +540,7 @@ export function AccountModal({
                     align="center"
                     mb="sm"
                     gap="xs"
+                    mih={44}
                   >
                     <Text size="sm" c="dimmed">
                       {snapshotDate
@@ -547,7 +554,9 @@ export function AccountModal({
                             aria-label="Edit holdings"
                             disabled={holdingsLoading || holdingsError}
                             onClick={openHoldingsModal}
-                            size={isMobile ? 44 : 'lg'}
+                            {...featureIntent(loadManualBrokerageHoldingsModal)}
+                            size="lg"
+                            className={styles.compactAction}
                             variant="subtle"
                           >
                             <Pencil size={18} />
@@ -558,7 +567,8 @@ export function AccountModal({
                             aria-label="Refresh prices"
                             loading={refreshPrices.isPending}
                             onClick={handleRefreshPrices}
-                            size={isMobile ? 44 : 'lg'}
+                            size="lg"
+                            className={styles.compactAction}
                             variant="subtle"
                           >
                             <RefreshCw size={18} />
@@ -573,56 +583,52 @@ export function AccountModal({
                       times are shown below.
                     </Alert>
                   )}
-                  {holdingsLoading ? (
-                    <Group
-                      aria-label="Loading investment holdings"
-                      justify="center"
-                      py="md"
-                      role="status"
+                  <Box className={styles.holdingsRegion}>
+                    <DataState
+                      hasData={holdings.length > 0}
+                      isLoading={holdingsLoading}
+                      isError={holdingsError}
+                      isFetching={holdingsFetching}
+                      onRetry={() => void refetchHoldings()}
+                      loadingMessage="Loading investment holdings"
+                      errorMessage="Holdings unavailable."
+                      emptyMessage="No holdings found."
+                      loadingFallback={<TableSkeleton rows={1} />}
                     >
-                      <Loader size="sm" />
-                    </Group>
-                  ) : holdingsError ? (
-                    <Text c="dimmed" size="sm">
-                      Holdings unavailable.
-                    </Text>
-                  ) : (
-                    <InvestmentHoldingsTable
-                      accountCurrency={accountCurrency}
-                      holdings={holdings}
-                      balancesHidden={balancesHidden}
-                    />
-                  )}
+                      <InvestmentHoldingsTable
+                        accountCurrency={accountCurrency}
+                        holdings={holdings}
+                        balancesHidden={balancesHidden}
+                      />
+                    </DataState>
+                  </Box>
                 </Tabs.Panel>
               )}
 
               {isInvestmentAccount && !isHoldingsValued && (
                 <Tabs.Panel value="activity" pt="md">
-                  {!activityLoading && !activityInitialError && (
-                    <Text c="dimmed" size="sm" mb="sm">
-                      {investmentActivity.length} of {investmentActivityTotal}
-                    </Text>
-                  )}
-                  {activityLoading ? (
-                    <Group
-                      aria-label="Loading investment activity"
-                      justify="center"
-                      py="md"
-                      role="status"
-                    >
-                      <Loader size="sm" />
-                    </Group>
-                  ) : activityInitialError ? (
-                    <Text c="dimmed" size="sm">
-                      Provider activity is unavailable or incomplete.
-                    </Text>
-                  ) : (
+                  <Text c="dimmed" size="sm" mb="sm" mih={20}>
+                    {!activityLoading && !activityInitialError
+                      ? `${investmentActivity.length} of ${investmentActivityTotal}`
+                      : '\u00a0'}
+                  </Text>
+                  <DataState
+                    hasData={investmentActivity.length > 0}
+                    isLoading={activityLoading}
+                    isError={activityInitialError || activityRefetchError}
+                    isFetching={activityFetching}
+                    onRetry={() => void refetchActivity()}
+                    loadingMessage="Loading investment activity"
+                    errorMessage="Provider activity is unavailable or incomplete."
+                    emptyMessage="No investment activity found."
+                    loadingFallback={<TableSkeleton rows={3} />}
+                  >
                     <InvestmentActivityTable
                       activity={investmentActivity}
                       balancesHidden={balancesHidden}
                       total={investmentActivityTotal}
                     />
-                  )}
+                  </DataState>
                   {investmentActivityLoadMoreError && (
                     <Text c="red" mt="sm" role="alert" size="sm">
                       Unable to load more provider activity.
@@ -676,11 +682,16 @@ export function AccountModal({
               </Tabs.Panel>
             </Tabs>
           </Stack>
-        )}
+        </DataState>
       </EditorModal>
 
       {holdingsModalOpened && isManual && isHoldingsValued && account?.id && (
-        <DeferredFeature label="Holdings editor">
+        <DeferredOverlay
+          label="Holdings editor"
+          title="Edit holdings"
+          size="lg"
+          onClose={closeHoldingsModal}
+        >
           <ManualBrokerageHoldingsModal
             accountId={account.id}
             holdings={holdings}
@@ -700,7 +711,7 @@ export function AccountModal({
               investmentControllerSearchSecurities({ query, limit: 10 }, signal)
             }
           />
-        </DeferredFeature>
+        </DeferredOverlay>
       )}
     </>
   )

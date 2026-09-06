@@ -1,0 +1,43 @@
+.compact {
+  display: none;
+}
+.wide {
+  display: contents;
+}
+.fill.wide {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+@media (--compact-layout) {
+  .wide,
+  .fill.wide {
+    display: none;
+  }
+  .compact {
+    display: contents;
+  }
+  .fill.compact {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+@media (--data-list-layout) {
+  .dataList.wide,
+  .dataList.fill.wide {
+    display: none;
+  }
+  .dataList.compact {
+    display: contents;
+  }
+  .dataList.fill.compact {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+}

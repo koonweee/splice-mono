@@ -16,6 +16,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Pause, Pencil, Play, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import tableChrome from '../MantineTableChrome.module.css'
+import { ResponsiveSlot } from '../ResponsiveSlot'
+import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { moneyToMajorString, tryParseMoneyDraft } from '../../lib/money'
 import { DecimalInput } from '../forms/DecimalInput'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
@@ -538,7 +541,12 @@ export function RecurringManualTransactionsSection() {
 
   function renderScheduleActions(schedule: RecurringManualTransactionSchedule) {
     return (
-      <Group gap={4} justify="flex-end" wrap="nowrap">
+      <Group
+        className={tableChrome.actions}
+        gap={4}
+        justify="flex-end"
+        wrap="nowrap"
+      >
         <Tooltip label="Edit recurring transaction">
           <ActionIcon
             disabled={isActionPending}
@@ -672,6 +680,7 @@ export function RecurringManualTransactionsSection() {
         onAdd={openCreateModal}
       />
       <DataState
+        loadingFallback={<TableSkeleton rows={4} />}
         hasData={schedules.length > 0}
         isLoading={schedulesQuery.isLoading}
         isError={schedulesQuery.isError}
@@ -681,7 +690,7 @@ export function RecurringManualTransactionsSection() {
         errorMessage="Failed to load recurring transactions"
         emptyMessage="No recurring transactions"
       >
-        {isMobile ? (
+        <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
           <MobileTableList
             ariaLabel={`Recurring transactions list, ${schedules.length.toLocaleString()} total`}
             data={schedules}
@@ -689,7 +698,8 @@ export function RecurringManualTransactionsSection() {
             getRowKey={(schedule) => schedule.id}
             renderRow={renderMobileSchedule}
           />
-        ) : (
+        </ResponsiveSlot>
+        <ResponsiveSlot compact={Boolean(isMobile)} variant="wide">
           <Paper withBorder p={0} radius="md" style={{ overflow: 'hidden' }}>
             <Table.ScrollContainer minWidth={720}>
               <Table verticalSpacing="sm">
@@ -739,7 +749,7 @@ export function RecurringManualTransactionsSection() {
               </Table>
             </Table.ScrollContainer>
           </Paper>
-        )}
+        </ResponsiveSlot>
       </DataState>
     </Stack>
   )

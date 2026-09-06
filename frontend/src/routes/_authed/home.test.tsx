@@ -324,15 +324,15 @@ it('offers a retry while keeping matching cached dashboard data visible', () => 
   })
   renderHomePage()
   expect(
-    screen.getByText('Previously loaded results are shown below.', {
+    screen.getByText('Previously loaded results remain visible.', {
       exact: false,
     }),
   ).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Retry dashboard' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   expect(refetch).toHaveBeenCalledOnce()
 })
 
-it('keeps cards visible and labels the previous period while switching', () => {
+it('keeps balances visible and hides old comparisons while switching', () => {
   mockFns.useSearchMock.mockReturnValue({ period: TimePeriod.week })
   mockFns.useBalanceDataMock.mockReturnValue({
     data: { ...dashboard, comparisonPeriod: TimePeriod.month },
@@ -342,13 +342,12 @@ it('keeps cards visible and labels the previous period while switching', () => {
     seriesLoading: true,
   })
   renderHomePage()
-  expect(screen.getByRole('status').textContent).toBe(
-    'Updating period… Showing Month results.',
-  )
+  expect(screen.queryByText(/Updating period/)).toBeNull()
+  expect(screen.queryByText(/Show absolute change/)).toBeNull()
   expect(screen.getByText('Cash')).toBeTruthy()
   expect(screen.getByText('Brokerage')).toBeTruthy()
   expect(screen.getByText('Card')).toBeTruthy()
-  expect(screen.getByText('from last month')).toBeTruthy()
+  expect(screen.queryByText('from last month')).toBeNull()
   expect(
     screen.getByRole('textbox', { name: 'Comparison period' }),
   ).toBeTruthy()

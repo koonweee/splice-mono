@@ -1,5 +1,11 @@
 import { MantineProvider } from '@mantine/core'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AnalysisSankeyChart } from './AnalysisSankeyChart'
 import { buildAnalysisSankeyData } from './AnalysisSankeyChart.data'
@@ -65,12 +71,15 @@ describe('buildAnalysisSankeyData', () => {
       </MantineProvider>,
     )
 
-    const buttons = screen.getAllByRole('button')
+    const categoryList = within(
+      screen.getByRole('region', { name: 'Cashflow categories' }),
+    )
+    const buttons = categoryList.getAllByRole('button')
     expect(buttons[0].textContent).toContain('Groceries')
     expect(buttons[0].textContent).toContain('$120')
     fireEvent.click(buttons[0])
     expect(onCategoryClick).toHaveBeenLastCalledWith('Groceries', 'outflow')
-    fireEvent.click(screen.getByRole('button', { name: /Salary/ }))
+    fireEvent.click(categoryList.getByRole('button', { name: /Salary/ }))
     expect(onCategoryClick).toHaveBeenLastCalledWith('Salary', 'inflow')
   })
 

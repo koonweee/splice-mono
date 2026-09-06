@@ -1,0 +1,6 @@
+{
+  "viewports": [{"name":"desktop","width":1440,"height":1000},{"name":"phone","width":390,"height":844,"mobile":true},{"name":"tablet-portrait","width":768,"height":1024,"mobile":true},{"name":"tablet-landscape","width":1024,"height":768,"mobile":true}],
+  "direct": ["/home","/transactions","/analysis","/accounts","/settings?tab=general","/settings?tab=notifications","/settings?tab=access","/settings?tab=categories","/settings?tab=analysis","/settings?tab=categorization","/settings?tab=recurring"],
+  "interaction": ["Settings keyboard tab selection","Phone Settings touch selection","Add account dialog code failure and close","Backfill form draft and close","Transaction editor draft and close","Analysis category drilldown delayed/empty/error/retry","Analysis audit delayed/empty/error/retry","Account history delayed/error/retry","Brokerage holdings/activity","Category editor draft and refresh","Analysis rule editor draft","Categorization apply preview delay","Recurring transaction editor draft","Mask balances and chart tooltips","Reduced motion skeleton","Sankey enabled phone"],
+  "safety": "Synthetic loopback fixture only; no sync, provider linking, token creation, real account data or mutation submission. Browser clicks may toggle synthetic presentation preferences and restore them afterward."
+}

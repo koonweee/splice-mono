@@ -1,0 +1,52 @@
+{
+  "scenario": {
+    "width": 390,
+    "height": 844,
+    "mobile": true,
+    "name": "controlled-recurring-populated-phone",
+    "path": "/settings?tab=recurring",
+    "queryFixtures": [
+      {
+        "keyIncludes": "/recurring-manual-transaction",
+        "data": [
+          {
+            "id": "fixture-recurring-1",
+            "userId": "fa654396-1e9b-42f9-8425-2fc489c83507",
+            "accountId": "83433f31-bd8c-43c2-8aa1-3a5684ee8626",
+            "accountName": "Fixture checking",
+            "amount": {
+              "money": {
+                "amount": "12500",
+                "currency": "USD"
+              },
+              "sign": "negative"
+            },
+            "merchantName": "Fixture recurring display only",
+            "categoryId": "d2141fc0-30a1-4fd9-bded-72f764a0aec5",
+            "category": {
+              "id": "d2141fc0-30a1-4fd9-bded-72f764a0aec5",
+              "primary": "Food",
+              "detailed": "Restaurants",
+              "color": "#4594ff",
+              "archivedAt": null,
+              "createdAt": "2026-09-01T00:00:00.000Z",
+              "updatedAt": "2026-09-01T00:00:00.000Z"
+            },
+            "frequency": "monthly",
+            "dayOfMonth": 15,
+            "startDate": "2026-09-01",
+            "endDate": null,
+            "nextOccurrenceDate": "2026-09-15",
+            "lastGeneratedOccurrenceDate": null,
+            "pausedAt": null,
+            "archivedAt": null,
+            "createdAt": "2026-09-01T00:00:00.000Z",
+            "updatedAt": "2026-09-01T00:00:00.000Z"
+          }
+        ]
+      }
+    ]
+  },
+  "interceptions": [],
+  "error": "Error: TypeError: Cannot read properties of undefined (reading 'options')\n    at <anonymous>:1:44\n    at <anonymous>:1:1104"
+}
