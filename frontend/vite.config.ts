@@ -11,6 +11,9 @@ const isTest = process.env.VITEST === 'true'
 const disableDevtools = process.env.VITE_DISABLE_DEVTOOLS === 'true'
 
 const config = defineConfig({
+  // SSR route links are removed on navigation, but Vite remembers their CSS as
+  // loaded. Keep shared component styles in the persistent root stylesheet.
+  build: { cssCodeSplit: false },
   css: {
     postcss: {
       plugins: [
@@ -26,6 +29,25 @@ const config = defineConfig({
     },
   },
   plugins: [
+    {
+      name: 'splice-persistent-css',
+      enforce: 'post',
+      generateBundle(_options, bundle) {
+        if (this.environment.config.consumer !== 'client') return
+        // Start discovers SSR styles through entry-chunk metadata. Vite does
+        // not attach its combined CSS asset there when cssCodeSplit is false.
+        const stylesheet = Object.values(bundle).find(
+          (output) =>
+            output.type === 'asset' && output.names.includes('style.css'),
+        )
+        if (!stylesheet) return
+        for (const output of Object.values(bundle)) {
+          if (output.type === 'chunk' && output.isEntry) {
+            output.viteMetadata?.importedCss.add(stylesheet.fileName)
+          }
+        }
+      },
+    },
     // Skip devtools, nitro, and tanstackStart in test mode to avoid hanging processes
     ...(!isTest && !disableDevtools ? [devtools()] : []),
     ...(!isTest
