@@ -28,8 +28,6 @@ vi.mock('./Chart', () => ({
 function renderNetWorthCard(
   props?: Partial<Parameters<typeof NetWorthCard>[0]>,
 ) {
-  const onToggleBalancesHidden = vi.fn()
-
   render(
     <MantineProvider>
       <NetWorthCard
@@ -38,7 +36,6 @@ function renderNetWorthCard(
           money: { amount: '12345', currency: 'USD' },
           sign: MoneyWithSignSign.positive,
         }}
-        onToggleBalancesHidden={onToggleBalancesHidden}
         changePercent={12.34}
         changeAmount={{
           money: { amount: '4567', currency: 'USD' },
@@ -60,8 +57,6 @@ function renderNetWorthCard(
       />
     </MantineProvider>,
   )
-
-  return { onToggleBalancesHidden }
 }
 
 beforeEach(() => {
@@ -86,15 +81,10 @@ afterEach(() => {
 })
 
 describe('NetWorthCard', () => {
-  it('renders the current value and calls the toggle handler', () => {
-    const { onToggleBalancesHidden } = renderNetWorthCard()
+  it('renders the current value', () => {
+    renderNetWorthCard()
 
     expect(screen.getByText('$123.45')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /hide balances/i })).toBeTruthy()
-
-    fireEvent.click(screen.getByRole('button', { name: /hide balances/i }))
-
-    expect(onToggleBalancesHidden).toHaveBeenCalledTimes(1)
   })
 
   it('masks the summary value and hovered chart value when hidden', () => {
@@ -102,13 +92,12 @@ describe('NetWorthCard', () => {
 
     expect(screen.getByText('****')).toBeTruthy()
     expect(screen.queryByText('$123.45')).toBeNull()
-    expect(screen.getByRole('button', { name: /show balances/i })).toBeTruthy()
     expect(screen.getByText('+12.34%')).toBeTruthy()
     expect(screen.getByText('from last month')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: /hover point/i }))
 
-    expect(screen.getByText('Net worth - Apr 1')).toBeTruthy()
+    expect(screen.getByText('Apr 1')).toBeTruthy()
     expect(screen.getByText('****')).toBeTruthy()
     expect(screen.queryByText('$4,321.00')).toBeNull()
   })
@@ -158,7 +147,6 @@ it('discards an old hovered value and open comparison when the period changes', 
       <NetWorthCard
         balancesHidden={false}
         netWorth={netWorth}
-        onToggleBalancesHidden={() => {}}
         comparisonPeriod={TimePeriod.month}
         changePercent={10}
         changeAmount={netWorth}
@@ -176,7 +164,9 @@ it('discards an old hovered value and open comparison when the period changes', 
   expect(screen.queryByText('+10.00%')).toBeNull()
   expect(screen.queryByText('from last month')).toBeNull()
   expect(screen.queryByText('+$123.45')).toBeNull()
-  expect(screen.queryByRole('button', { name: 'hover point' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'hover point' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'hover point' }))
+  expect(screen.queryByText('$999.00')).toBeNull()
   rerender(card(false, [...chartData]))
   expect(screen.getByText('$123.45')).toBeTruthy()
   expect(screen.queryByText('$999.00')).toBeNull()

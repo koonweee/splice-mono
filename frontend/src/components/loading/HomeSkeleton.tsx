@@ -1,16 +1,15 @@
 import { Box, Grid, Group, Paper, Skeleton, Text, Title } from '@mantine/core'
+import styles from '../NetWorthCard.module.css'
+import { ChartSkeleton } from './ChartSkeleton'
 import { RowSkeleton } from './LoadingSkeleton'
 
 /** Summary and chart use the same spacing as the loaded Home card. */
 export function HomeSkeleton() {
   return (
     <>
-      <Paper mb="xl">
-        <Group mb={4} h={22}>
-          <Skeleton h={14} w={100} />
-        </Group>
+      <Paper mb={8}>
         <Box pos="relative">
-          <Title order={2} size="h1">
+          <Title order={2} className={styles.amount}>
             {'\u00A0'}
           </Title>
           <Skeleton h="75%" w={210} pos="absolute" top="12.5%" />
@@ -19,7 +18,12 @@ export function HomeSkeleton() {
           <Text size="sm">{'\u00A0'}</Text>
           <Skeleton h={14} w={180} pos="absolute" top="15%" />
         </Box>
-        <Skeleton mt="md" h={200} />
+        <Box mt="xs">
+          <ChartSkeleton />
+        </Box>
+        <Group mt={8} justify="center" h={50}>
+          <Skeleton h={34} w={240} radius="xl" />
+        </Group>
       </Paper>
       <Grid>
         {['Assets', 'Liabilities'].map((label) => (

@@ -21,6 +21,41 @@ const query = {
 };
 
 describe('DashboardQueryService', () => {
+  it('uses the first owned snapshot for All, includes endpoints and bounds long history', async () => {
+    const fixture = createDashboardFixture(1);
+    fixture.snapshots.splice(
+      0,
+      fixture.snapshots.length,
+      fixtureSnapshot(fixture.accounts[0].id, '2002-02-17', 10000),
+      fixtureSnapshot(fixture.accounts[0].id, query.endDate, 25000),
+      Object.assign(
+        fixtureSnapshot(fixture.accounts[0].id, '2000-01-01', 99999),
+        { userId: 'someone-else' },
+      ),
+      fixtureSnapshot(fixture.accounts[0].id, '2027-01-01', 99999),
+    );
+    const all = { ...query, period: 'all' as const };
+    const summary = await fixture.dashboard.getSummary(userId, all);
+    const series = await fixture.dashboard.getSeries(userId, all);
+    expect(summary.startDate).toBe('2002-02-17');
+    expect(summary.changePercent).toBe(150);
+    expect(series.startDate).toBe(summary.startDate);
+    expect(series.points[0].date).toBe(summary.startDate);
+    expect(series.points.at(-1)?.netWorth).toEqual(summary.netWorth);
+    expect(DashboardSeriesResponseSchema.safeParse(series).success).toBe(true);
+    expect(series.points.length).toBeLessThanOrEqual(122);
+  });
+
+  it('returns an empty All chart when there are no accounts or history', async () => {
+    const fixture = createDashboardFixture(0);
+    const series = await fixture.dashboard.getSeries(userId, {
+      ...query,
+      period: 'all',
+    });
+    expect(series.startDate).toBe(query.endDate);
+    expect(series.points).toEqual([]);
+  });
+
   it('returns truthful currency-aware zeros and no chart when no accounts exist', async () => {
     const fixture = createDashboardFixture(0);
     const summary = await fixture.dashboard.getSummary(userId, query);

@@ -28,6 +28,19 @@ import type { RouterContext } from '../router'
 import { AppThemeProvider } from '@/components/AppThemeProvider'
 import { PwaLifecycle } from '@/components/PwaLifecycle'
 
+// Vite injects CSS modules through JavaScript in development. Include their
+// processed CSS in the server-rendered head to avoid an unstyled first paint.
+// Production uses the persistent stylesheet emitted by the Vite build plugin.
+const developmentStyles = import.meta.env.DEV
+  ? Object.values(
+      import.meta.glob<string>('../**/*.module.css', {
+        eager: true,
+        query: '?inline',
+        import: 'default',
+      }),
+    ).join('\n')
+  : undefined
+
 const APPLE_STARTUP_IMAGE_LINKS = [
   {
     href: '/splash/apple-splash-1290-2796.png',
@@ -202,6 +215,7 @@ function RootComponent() {
       <head>
         <ColorSchemeScript forceColorScheme={preset.colorScheme} />
         <HeadContent />
+        {developmentStyles && <style>{developmentStyles}</style>}
       </head>
       <body>
         <AppThemeProvider

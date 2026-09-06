@@ -2,7 +2,13 @@ import { assertDateRange } from '../common/query-bounds';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
-import { Between, In, Repository, type EntityManager } from 'typeorm';
+import {
+  Between,
+  In,
+  LessThanOrEqual,
+  Repository,
+  type EntityManager,
+} from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { calculateEffectiveBalance as calculateSharedEffectiveBalance } from '../common/effective-balance';
@@ -237,6 +243,19 @@ export class BalanceQueryService {
    * is retained. Boundary reads select at most two snapshots per account;
    * series reads retain complete daily FX validation, even on omitted dates.
    */
+  async getHistoryStartDate(userId: string, endDate: string): Promise<string> {
+    const first = await this.snapshotRepository.findOne({
+      where: {
+        userId,
+        account: { userId },
+        snapshotDate: LessThanOrEqual(endDate),
+      },
+      order: { snapshotDate: 'ASC' },
+      select: { id: true, snapshotDate: true },
+    });
+    return first?.snapshotDate ?? endDate;
+  }
+
   loadDashboardProjection(
     userId: string,
     startDate: string,

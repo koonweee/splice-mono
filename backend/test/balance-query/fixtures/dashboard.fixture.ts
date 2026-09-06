@@ -125,6 +125,20 @@ export function createDashboardFixture(count = 20) {
     },
   };
   const snapshotRepository = {
+    findOne: async ({ where }: any) =>
+      data.snapshots
+        .filter(
+          (snapshot) =>
+            snapshot.userId === where.userId &&
+            snapshot.snapshotDate <= where.snapshotDate.value &&
+            data.accounts.some(
+              (account) =>
+                account.id === snapshot.accountId &&
+                account.userId === where.account.userId,
+            ),
+        )
+        .sort((a, b) => a.snapshotDate.localeCompare(b.snapshotDate))[0] ??
+      null,
     find: async ({ where }: any) => {
       reads.snapshots++;
       return data.snapshots

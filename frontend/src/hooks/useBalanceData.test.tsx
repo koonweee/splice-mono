@@ -8,7 +8,7 @@ import {
   dashboardSeriesOptions,
   dashboardSummaryOptions,
 } from '../lib/queries/dashboard'
-import { useBalanceData } from './useBalanceData'
+import { useAccountBalanceHistory, useBalanceData } from './useBalanceData'
 import type { DashboardSummaryResponse } from '../api/models'
 import type { ReactNode } from 'react'
 
@@ -91,6 +91,7 @@ describe('compact dashboard queries', () => {
       expect(result.current.isLoading).toBe(false)
       expect(result.current.isChangingPeriod).toBe(true)
       expect(result.current.seriesLoading).toBe(true)
+      expect(result.current.chartDisplayData?.[0].money).toEqual(money)
       // Placeholder values belong only to this observer, never the week's cache.
       expect(
         client.getQueryData(
@@ -107,6 +108,9 @@ describe('compact dashboard queries', () => {
           expect(result.current.data?.comparisonPeriod).toBe(TimePeriod.week)
         else expect(result.current.isFetching).toBe(true)
         expect(result.current.data?.chartData).toEqual([])
+        expect(result.current.chartDisplayData?.[0].money).toEqual(
+          first === 'summary' ? money : weekly.netWorth,
+        )
         expect(result.current.seriesLoading).toBe(true)
       })
       await act(async () => {
@@ -219,6 +223,63 @@ describe('compact dashboard queries', () => {
     )
     expect(result.current.data).toBeUndefined()
     expect(result.current.error).toBeInstanceOf(BalanceCurrencyMismatchError)
+    unmount()
+    client.clear()
+  })
+})
+
+describe('all-history account drilldown', () => {
+  it('uses the resolved first history date and presentation end date', async () => {
+    const { client, wrapper } = setup()
+    client.setQueryData(
+      dashboardSummaryOptions(TimePeriod.all, date).queryKey,
+      {
+        ...summary,
+        period: 'all',
+        startDate: '2002-02-17',
+      },
+    )
+    transport.mockReset()
+    transport.mockResolvedValue([])
+    const { result, unmount } = renderHook(
+      () => useAccountBalanceHistory('account-1', true, TimePeriod.all),
+      { wrapper },
+    )
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(transport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: {
+          accountIds: 'account-1',
+          startDate: '2002-02-17',
+          endDate: date,
+        },
+      }),
+    )
+    unmount()
+    client.clear()
+  })
+
+  it('exposes a failed history lookup for retry instead of loading forever', async () => {
+    const { client, wrapper } = setup()
+    transport.mockReset()
+    transport.mockRejectedValue(new Error('Offline'))
+    const { result, unmount } = renderHook(
+      () => useAccountBalanceHistory('account-1', true, TimePeriod.all),
+      { wrapper },
+    )
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.isLoading).toBe(false)
+    transport
+      .mockResolvedValueOnce({
+        ...summary,
+        period: 'all',
+        startDate: '2002-02-17',
+      })
+      .mockResolvedValue([])
+    await act(async () => {
+      await result.current.refetch()
+    })
+    await waitFor(() => expect(result.current.isError).toBe(false))
     unmount()
     client.clear()
   })

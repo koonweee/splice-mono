@@ -238,19 +238,25 @@ describe('HomePage balance visibility', () => {
 
     expect(screen.getByText('+10.00%')).toBeTruthy()
     expect(screen.getByText('from last month')).toBeTruthy()
-    expect(screen.getByText('+5.00%')).toBeTruthy()
-    expect(screen.getByText('-2.00%')).toBeTruthy()
-    expect(screen.getByText('-1.00%')).toBeTruthy()
+    expect(screen.queryByText('+5.00%')).toBeNull()
+    expect(screen.queryByText('-2.00%')).toBeNull()
+    expect(screen.queryByText('-1.00%')).toBeNull()
     expect(screen.getByText('54.5%')).toBeTruthy()
     expect(screen.getByText('45.5%')).toBeTruthy()
   })
 
-  it('reveals absolute change when tapping an account percentage', async () => {
+  it('opens account details from the simplified overview row', () => {
+    const navigate = vi.fn()
+    mockFns.useNavigateMock.mockReturnValue(navigate)
     renderHomePage()
-
-    fireEvent.click(screen.getByText('+5.00%'))
-
-    expect(await screen.findByText('+$50.00')).toBeTruthy()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open account details for Cash' }),
+    )
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/home',
+      search: { accountId: 'asset-1', period: TimePeriod.month },
+      resetScroll: false,
+    })
   })
 
   it('updates localStorage when the toggle is used', () => {
@@ -348,7 +354,40 @@ it('keeps balances visible and hides old comparisons while switching', () => {
   expect(screen.getByText('Brokerage')).toBeTruthy()
   expect(screen.getByText('Card')).toBeTruthy()
   expect(screen.queryByText('from last month')).toBeNull()
+  expect(screen.getByRole('group', { name: 'Comparison period' })).toBeTruthy()
+})
+
+it('switches shortcuts and extended periods without losing the selected account', async () => {
+  const navigate = vi.fn()
+  mockFns.useNavigateMock.mockReturnValue(navigate)
+  mockFns.useSearchMock.mockReturnValue({
+    period: TimePeriod.month,
+    accountId: 'asset-1',
+  })
+  renderHomePage()
+  fireEvent.click(screen.getByRole('button', { name: 'Week' }))
+  expect(navigate).toHaveBeenLastCalledWith({
+    to: '/home',
+    search: { accountId: 'asset-1', period: TimePeriod.week },
+    resetScroll: false,
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'More periods' }))
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'All' }))
+  expect(navigate).toHaveBeenLastCalledWith({
+    to: '/home',
+    search: { accountId: 'asset-1', period: TimePeriod.all },
+    resetScroll: false,
+  })
+})
+
+it('shows the active extended period on the menu trigger', () => {
+  mockFns.useSearchMock.mockReturnValue({ period: TimePeriod.tenYears })
+  renderHomePage()
   expect(
-    screen.getByRole('textbox', { name: 'Comparison period' }),
-  ).toBeTruthy()
+    screen.getByRole('button', { name: 'More periods, selected 10Y' })
+      .textContent,
+  ).toBe('10Y')
+  expect(
+    screen.getByRole('button', { name: 'Month' }).getAttribute('aria-pressed'),
+  ).toBe('false')
 })

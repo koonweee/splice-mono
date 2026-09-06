@@ -1,5 +1,4 @@
 import {
-  ActionIcon,
   Alert,
   Box,
   Button,
@@ -8,9 +7,8 @@ import {
   Skeleton,
   Text,
   Title,
-  Tooltip,
+  VisuallyHidden,
 } from '@mantine/core'
-import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import {
@@ -19,6 +17,9 @@ import {
   formatMoneyWithSign,
   getChangeColorMantine,
 } from '../lib/format'
+import { ChartSkeleton } from './loading/ChartSkeleton'
+import { HomePeriodControl } from './HomePeriodControl'
+import styles from './NetWorthCard.module.css'
 import { ChangePercentPopover } from './ChangePercentPopover'
 import { LazyChart as Chart } from './LazyChart'
 import type { ChartDataPoint } from './Chart'
@@ -29,7 +30,6 @@ import { TIME_PERIOD_LABELS } from '@/lib/types'
 export function NetWorthCard({
   balancesHidden,
   netWorth,
-  onToggleBalancesHidden,
   changePercent,
   changeAmount,
   comparisonPeriod,
@@ -38,10 +38,13 @@ export function NetWorthCard({
   chartLoading,
   chartError,
   onRetryChart,
+  period,
+  onPeriodChange,
 }: {
+  period?: TimePeriod
+  onPeriodChange?: (period: TimePeriod) => void
   balancesHidden: boolean
   netWorth: MoneyWithSign
-  onToggleBalancesHidden: () => void
   changePercent?: number
   changeAmount?: MoneyWithSign
   comparisonPeriod: TimePeriod
@@ -58,7 +61,12 @@ export function NetWorthCard({
   }>()
   // Ignore points from an old dataset, including during a period transition.
   const hoveredPoint =
-    !comparisonLoading && hover?.data === chartData ? hover?.point : undefined
+    !comparisonLoading &&
+    !chartLoading &&
+    !chartError &&
+    hover?.data === chartData
+      ? hover?.point
+      : undefined
 
   const displayValue = hoveredPoint
     ? formatMoneyWithSign({ value: hoveredPoint.money })
@@ -67,32 +75,11 @@ export function NetWorthCard({
     ? HIDDEN_BALANCE_PLACEHOLDER
     : displayValue
 
-  const displayLabel = ['Net worth', hoveredPoint?.label]
-    .filter(Boolean)
-    .join(' - ')
-  const toggleLabel = balancesHidden ? 'Show balances' : 'Hide balances'
-
   return (
-    <Paper mb="xl">
+    <Paper mb={8}>
       <Box>
-        <Group gap={4} align="center" mb={4} wrap="nowrap">
-          <Text size="sm" c="dimmed">
-            {displayLabel}
-          </Text>
-          <Tooltip label={toggleLabel}>
-            <ActionIcon
-              variant="subtle"
-              size="sm"
-              c="dimmed"
-              aria-label={toggleLabel}
-              aria-pressed={balancesHidden}
-              onClick={onToggleBalancesHidden}
-            >
-              {balancesHidden ? <EyeOff size={16} /> : <Eye size={16} />}
-            </ActionIcon>
-          </Tooltip>
-        </Group>
-        <Title order={2} size="h1">
+        <Title order={2} className={styles.amount}>
+          <VisuallyHidden>Net worth: </VisuallyHidden>
           {visibleDisplayValue}
         </Title>
         <Box aria-busy={comparisonLoading} style={{ position: 'relative' }}>
@@ -107,6 +94,11 @@ export function NetWorthCard({
                 transform: 'translateY(-50%)',
               }}
             />
+          )}
+          {hoveredPoint && (
+            <Text size="sm" c="dimmed" pos="absolute" top={0}>
+              {hoveredPoint.label}
+            </Text>
           )}
           <Group
             gap={3}
@@ -130,30 +122,30 @@ export function NetWorthCard({
                 hidden={balancesHidden}
               />
             )}
-            <Text
-              aria-hidden={comparisonLoading}
-              size="sm"
-              c={getChangeColorMantine(false, changePercent)}
-            >
+            <Text aria-hidden={comparisonLoading} size="sm" c="dimmed">
               {comparisonLoading
                 ? '\u00A0'
-                : `from last ${TIME_PERIOD_LABELS[comparisonPeriod].toLowerCase()}`}
+                : comparisonPeriod === 'all'
+                  ? 'since first recorded balance'
+                  : `from last ${TIME_PERIOD_LABELS[comparisonPeriod].toLowerCase()}`}
             </Text>
           </Group>
         </Box>
       </Box>
       {/* The streamed series can settle between SSR and hydration. Keep this
           region deterministic without making the summary wait for the chart. */}
-      <Box mt="md" h={200} style={{ position: 'relative' }}>
-        <ClientOnly
-          fallback={<Skeleton height={200} aria-label="Loading chart" />}
-        >
-          {comparisonLoading || (chartLoading && !hasChartData) ? (
-            <Skeleton height={200} aria-label="Loading chart" />
-          ) : hasChartData ? (
+      <Box mt="xs" h={180} style={{ position: 'relative' }}>
+        <ClientOnly fallback={<ChartSkeleton />}>
+          {hasChartData ||
+          (!chartError && (comparisonLoading || chartLoading)) ? (
             <Chart
-              data={chartData}
-              height={200}
+              data={chartData ?? []}
+              placeholder
+              loading={!hasChartData}
+              minimal
+              animate
+              interactive={!comparisonLoading && !chartLoading && !chartError}
+              height={180}
               valueFormatter={(value) =>
                 balancesHidden
                   ? HIDDEN_BALANCE_PLACEHOLDER
@@ -184,6 +176,11 @@ export function NetWorthCard({
           )}
         </ClientOnly>
       </Box>
+      {period && onPeriodChange && (
+        <Box mt={8}>
+          <HomePeriodControl period={period} onChange={onPeriodChange} />
+        </Box>
+      )}
     </Paper>
   )
 }

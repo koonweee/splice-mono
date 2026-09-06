@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 type PageHeaderProps = {
   title: string
   actions?: ReactNode
+  titleAccessory?: ReactNode
   align?: GroupProps['align']
   mb?: GroupProps['mb']
   wrap?: GroupProps['wrap']
@@ -14,15 +15,19 @@ type PageHeaderProps = {
 export function PageHeader({
   title,
   actions,
+  titleAccessory,
   align = 'baseline',
   mb = 'xl',
   wrap = 'wrap',
 }: PageHeaderProps) {
   return (
     <Group align={align} justify="space-between" mb={mb} wrap={wrap}>
-      <Title order={1} className={styles.title}>
-        {title}
-      </Title>
+      <Group gap={6} wrap="nowrap">
+        <Title order={1} className={styles.title}>
+          {title}
+        </Title>
+        {titleAccessory}
+      </Group>
       {actions}
     </Group>
   )

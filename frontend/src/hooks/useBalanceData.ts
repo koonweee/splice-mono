@@ -27,6 +27,7 @@ import type { DashboardData } from '../lib/balance-utils'
 import type {
   AccountBalanceResult,
   BalanceQueryPerDateResult,
+  DashboardSeriesResponse,
   DashboardSummaryResponse,
 } from '../api/models'
 import type { ChartDataPoint } from '../components/Chart'
@@ -91,7 +92,36 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
     cachedPrevious.reportingCurrency === reportingCurrency
       ? cachedPrevious
       : undefined)
-  const series = useQuery(dashboardSeriesOptions(period, today))
+  const series = useQuery({
+    ...dashboardSeriesOptions(period, today),
+    placeholderData: (previous, previousQuery) =>
+      previous?.endDate === today &&
+      previous.reportingCurrency === reportingCurrency &&
+      previousQuery &&
+      queryClient
+        .getQueryCache()
+        .get<DashboardSeriesResponse, void>(previousQuery.queryHash) ===
+        previousQuery
+        ? previous
+        : undefined,
+  })
+  // Retain only the visual series while switching. Comparison values still
+  // require a matching summary; hover is disabled until both queries settle.
+  const chartDisplayData = useMemo<Array<ChartDataPoint> | undefined>(() => {
+    if (
+      !series.data ||
+      series.data.endDate !== today ||
+      series.data.reportingCurrency !== reportingCurrency
+    )
+      return undefined
+    const shortRange = ['day', 'week', 'month'].includes(series.data.period)
+    return series.data.points.map((point) => ({
+      date: point.date,
+      label: dayjs(point.date).format(shortRange ? 'MMM D' : 'MMM D, YYYY'),
+      value: moneyToChartNumber(point.netWorth),
+      money: point.netWorth,
+    }))
+  }, [series.data, reportingCurrency, today])
   const seriesMatchesSummary =
     series.data !== undefined &&
     summaryData !== undefined &&
@@ -122,13 +152,25 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
       chartData: seriesMatchesSummary
         ? series.data.points.map((point) => ({
             date: point.date,
-            label: dayjs(point.date).format('MMM D'),
+            label: dayjs(point.date).format(
+              [TimePeriod.day, TimePeriod.week, TimePeriod.month].includes(
+                period,
+              )
+                ? 'MMM D'
+                : 'MMM D, YYYY',
+            ),
             value: moneyToChartNumber(point.netWorth),
             money: point.netWorth,
           }))
         : [],
     }
-  }, [summaryData, series.data, seriesMatchesSummary, reportingCurrency])
+  }, [
+    summaryData,
+    series.data,
+    seriesMatchesSummary,
+    reportingCurrency,
+    period,
+  ])
   return {
     data,
     isLoading: summary.isPending,
@@ -148,7 +190,8 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
     refetch: summary.refetch,
     seriesError: series.error,
     seriesLoading:
-      series.isPending || (!seriesMatchesSummary && summary.isFetching),
+      series.isPending || series.isPlaceholderData || !seriesMatchesSummary,
+    chartDisplayData,
     refetchSeries: series.refetch,
   }
 }
@@ -172,7 +215,14 @@ export function useAccountBalanceHistory(
   enabled: boolean,
   period: TimePeriod = TimePeriod.month,
 ) {
-  const { startDate, endDate } = getDateRange(period)
+  const { today } = usePresentationPreferences()
+  const allHistory = useQuery({
+    ...dashboardSummaryOptions(TimePeriod.all, today),
+    enabled: enabled && !!accountId && period === TimePeriod.all,
+  })
+  const range = getDateRange(period, allHistory.data?.startDate)
+  const startDate = range.startDate
+  const endDate = period === TimePeriod.all ? today : range.endDate
 
   const query = useBalanceQueryControllerGetBalances(
     {
@@ -180,7 +230,14 @@ export function useAccountBalanceHistory(
       startDate,
       endDate,
     },
-    { query: { enabled: enabled && !!accountId } },
+    {
+      query: {
+        enabled:
+          enabled &&
+          !!accountId &&
+          (period !== TimePeriod.all || !!allHistory.data),
+      },
+    },
   )
 
   // Transform data for the chart
@@ -224,10 +281,21 @@ export function useAccountBalanceHistory(
 
   return {
     data: transformed.data,
-    isLoading: query.isPending,
-    isFetching: query.isFetching,
-    isError: query.isError || transformed.error !== undefined,
-    error: query.error ?? transformed.error,
-    refetch: query.refetch,
+    isLoading:
+      query.isPending && !(period === TimePeriod.all && allHistory.isError),
+    isFetching:
+      query.isFetching || (period === TimePeriod.all && allHistory.isFetching),
+    isError:
+      query.isError ||
+      transformed.error !== undefined ||
+      (period === TimePeriod.all && allHistory.isError),
+    error:
+      query.error ??
+      transformed.error ??
+      (period === TimePeriod.all ? allHistory.error : null),
+    refetch:
+      period === TimePeriod.all && allHistory.isError
+        ? allHistory.refetch
+        : query.refetch,
   }
 }
