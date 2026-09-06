@@ -1,9 +1,16 @@
+import {
+  compareDecimals,
+  parseAppMoney,
+  signedAppMoney,
+  subtractDecimals,
+  sumDecimals,
+} from './exact-money';
 export type CashFlowDirection = 'outflow' | 'inflow';
 
 export interface CashFlowMoney {
-  readonly amount: number;
+  readonly amount: string;
   readonly currency: string;
-  readonly sign?: 'positive' | 'negative';
+  readonly sign: 'positive' | 'negative';
 }
 
 export interface CashFlowCategory {
@@ -13,8 +20,8 @@ export interface CashFlowCategory {
   readonly transactionCount: number;
   readonly transactionCountKnown?: boolean;
   readonly color?: string;
-  readonly comparisonAmount?: number;
-  readonly delta?: number;
+  readonly comparisonAmount?: string;
+  readonly delta?: string;
 }
 
 export interface CashFlowAdjustmentSummary {
@@ -37,16 +44,16 @@ export interface CashFlowPresentation {
   readonly direction: CashFlowDirection;
   readonly current: CashFlowPeriodView;
   readonly comparison?: CashFlowPeriodView;
-  readonly netDelta?: number;
-  readonly inflowDelta?: number;
-  readonly outflowDelta?: number;
+  readonly netDelta?: string;
+  readonly inflowDelta?: string;
+  readonly outflowDelta?: string;
   readonly topCategories: readonly CashFlowCategory[];
   readonly remainingCategories: readonly CashFlowCategory[];
-  readonly otherAmount: number;
+  readonly otherAmount: string;
   readonly otherTransactionCount: number;
   readonly uncategorized?: CashFlowCategory;
   readonly focusedCategory?: CashFlowCategory;
-  readonly maxCategoryAmount: number;
+  readonly maxCategoryAmount: string;
   readonly isEmpty: boolean;
 }
 
@@ -70,27 +77,22 @@ function finiteNumber(value: unknown): number | null {
   return typeof number === 'number' && Number.isFinite(number) ? number : null;
 }
 
-export function moneySignedAmount(value: unknown): number {
-  if (!isRecord(value)) return finiteNumber(value) ?? 0;
-  const amount = finiteNumber(value.amount) ?? 0;
-  return value.sign === 'negative' ? -Math.abs(amount) : Math.abs(amount);
+export function moneySignedAmount(value: unknown): string {
+  const money = parseAppMoney(value);
+  if (!money) throw new Error('Invalid cash-flow amount');
+  return signedAppMoney(money);
 }
 
-export function moneyMagnitude(value: unknown): number {
-  return Math.abs(moneySignedAmount(value));
+export function moneyMagnitude(value: unknown): string {
+  const money = parseAppMoney(value);
+  if (!money) throw new Error('Invalid cash-flow amount');
+  return money.amount;
 }
 
-function parseMoney(value: unknown, fallbackCurrency: string): CashFlowMoney {
-  const record = isRecord(value) ? value : {};
-  const signed = moneySignedAmount(value);
-  return {
-    amount: Math.abs(signed),
-    currency:
-      typeof record.currency === 'string' && record.currency.length > 0
-        ? record.currency
-        : fallbackCurrency,
-    sign: signed < 0 ? 'negative' : 'positive',
-  };
+function parseMoney(value: unknown, currency: string): CashFlowMoney {
+  const money = parseAppMoney(value, currency);
+  if (!money) throw new Error('Invalid cash-flow amount');
+  return money;
 }
 
 export function formatCashFlowCategory(value: unknown): string {
@@ -197,8 +199,10 @@ function stableCategorySort(
   left: CashFlowCategory,
   right: CashFlowCategory,
 ): number {
-  const amountDifference =
-    moneyMagnitude(right.totalAmount) - moneyMagnitude(left.totalAmount);
+  const amountDifference = compareDecimals(
+    moneyMagnitude(right.totalAmount),
+    moneyMagnitude(left.totalAmount),
+  );
   if (amountDifference !== 0) return amountDifference;
   const labelDifference = left.label.localeCompare(right.label);
   return labelDifference !== 0
@@ -218,18 +222,19 @@ function withComparison(
   category: CashFlowCategory,
   comparison: ReadonlyMap<string, CashFlowCategory>,
 ): CashFlowCategory {
-  const comparisonAmount = moneyMagnitude(
-    comparison.get(category.primaryCategory)?.totalAmount,
-  );
+  const comparisonCategory = comparison.get(category.primaryCategory);
+  const comparisonAmount = comparisonCategory
+    ? moneyMagnitude(comparisonCategory.totalAmount)
+    : '0';
   const currentAmount = moneyMagnitude(category.totalAmount);
   return {
     ...category,
     comparisonAmount,
-    delta: currentAmount - comparisonAmount,
+    delta: subtractDecimals(currentAmount, comparisonAmount),
   };
 }
 
-export function createCashFlowPresentation(
+function buildCashFlowPresentation(
   value: unknown,
 ): CashFlowPresentation | null {
   if (!isRecord(value) || !isRecord(value.presentation)) return null;
@@ -250,11 +255,14 @@ export function createCashFlowPresentation(
     ? {
         ...currentUncategorized,
         totalAmount:
-          moneyMagnitude(currentUncategorized.totalAmount) > 0
+          compareDecimals(
+            moneyMagnitude(currentUncategorized.totalAmount),
+            '0',
+          ) > 0
             ? currentUncategorized.totalAmount
             : current.uncategorizedMoney,
       }
-    : uncategorizedMagnitude > 0
+    : compareDecimals(uncategorizedMagnitude, '0') > 0
       ? {
           primaryCategory: 'UNCATEGORIZED',
           label: 'Uncategorized',
@@ -272,11 +280,14 @@ export function createCashFlowPresentation(
       ? {
           ...comparisonUncategorizedInCategories,
           totalAmount:
-            moneyMagnitude(comparisonUncategorizedInCategories.totalAmount) > 0
+            compareDecimals(
+              moneyMagnitude(comparisonUncategorizedInCategories.totalAmount),
+              '0',
+            ) > 0
               ? comparisonUncategorizedInCategories.totalAmount
               : comparison.uncategorizedMoney,
         }
-      : moneyMagnitude(comparison.uncategorizedMoney) > 0
+      : compareDecimals(moneyMagnitude(comparison.uncategorizedMoney), '0') > 0
         ? {
             primaryCategory: 'UNCATEGORIZED',
             label: 'Uncategorized',
@@ -329,22 +340,29 @@ export function createCashFlowPresentation(
     current: current.view,
     comparison: comparison?.view,
     netDelta: comparison
-      ? moneySignedAmount(current.view.netFlow) -
-        moneySignedAmount(comparison.view.netFlow)
+      ? subtractDecimals(
+          moneySignedAmount(current.view.netFlow),
+          moneySignedAmount(comparison.view.netFlow),
+        )
       : undefined,
     inflowDelta: comparison
-      ? moneyMagnitude(current.view.totalInflow) -
-        moneyMagnitude(comparison.view.totalInflow)
+      ? subtractDecimals(
+          moneyMagnitude(current.view.totalInflow),
+          moneyMagnitude(comparison.view.totalInflow),
+        )
       : undefined,
     outflowDelta: comparison
-      ? moneyMagnitude(current.view.totalOutflow) -
-        moneyMagnitude(comparison.view.totalOutflow)
+      ? subtractDecimals(
+          moneyMagnitude(current.view.totalOutflow),
+          moneyMagnitude(comparison.view.totalOutflow),
+        )
       : undefined,
     topCategories,
     remainingCategories,
-    otherAmount: remainingCategories.reduce(
-      (total, category) => total + moneyMagnitude(category.totalAmount),
-      0,
+    otherAmount: sumDecimals(
+      remainingCategories.map((category) =>
+        moneyMagnitude(category.totalAmount),
+      ),
     ),
     otherTransactionCount: remainingCategories.reduce(
       (total, category) => total + category.transactionCount,
@@ -352,18 +370,32 @@ export function createCashFlowPresentation(
     ),
     uncategorized: comparedUncategorized,
     focusedCategory,
-    maxCategoryAmount: Math.max(1, ...amounts),
-    isEmpty: amounts.every((amount) => amount === 0),
+    maxCategoryAmount: amounts.reduce(
+      (max, amount) => (compareDecimals(amount, max) > 0 ? amount : max),
+      '1',
+    ),
+    isEmpty: amounts.every((amount) => amount === '0'),
   };
+}
+
+export function createCashFlowPresentation(
+  value: unknown,
+): CashFlowPresentation | null {
+  try {
+    return buildCashFlowPresentation(value);
+  } catch {
+    return null;
+  }
 }
 
 function transactionMoney(
   transaction: CashFlowTransaction,
   reportingCurrency: string,
 ): CashFlowMoney | null {
-  if (transaction.convertedAmount) return transaction.convertedAmount;
+  if (transaction.convertedAmount)
+    return parseMoney(transaction.convertedAmount, reportingCurrency);
   if (transaction.amount && transaction.amount.currency === reportingCurrency) {
-    return transaction.amount;
+    return parseMoney(transaction.amount, reportingCurrency);
   }
   return null;
 }
@@ -386,11 +418,29 @@ export function sortCashFlowTransactions(
       : [];
   return rows
     .filter(isRecord)
-    .map((row) => row as CashFlowTransaction)
+    .map((row) => {
+      const transaction = row as CashFlowTransaction;
+      if (transaction.amount && !parseAppMoney(transaction.amount))
+        throw new Error('Invalid transaction amount');
+      if (
+        transaction.convertedAmount &&
+        !parseAppMoney(transaction.convertedAmount, reportingCurrency)
+      )
+        throw new Error('Invalid converted amount');
+      return transaction;
+    })
     .sort((left, right) => {
+      const rightMoney = transactionMoney(right, reportingCurrency);
+      const leftMoney = transactionMoney(left, reportingCurrency);
+      // A missing conversion is unavailable evidence, ordered after usable rows.
       const amountDifference =
-        moneyMagnitude(transactionMoney(right, reportingCurrency)) -
-        moneyMagnitude(transactionMoney(left, reportingCurrency));
+        rightMoney && leftMoney
+          ? compareDecimals(rightMoney.amount, leftMoney.amount)
+          : rightMoney
+            ? 1
+            : leftMoney
+              ? -1
+              : 0;
       if (amountDifference !== 0) return amountDifference;
       return String(right.activityDate ?? '').localeCompare(
         String(left.activityDate ?? ''),

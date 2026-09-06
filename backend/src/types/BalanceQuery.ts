@@ -1,27 +1,12 @@
+import { CalendarDateSchema } from '../common/query-bounds';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { AccountSchema } from './Account';
 import { MoneyWithSignSchema } from './MoneyWithSign';
 
-/**
- * Source of an exchange rate value
- */
-export const RateSourceSchema = z.enum(['DB', 'FILLED']);
-export type RateSource = z.infer<typeof RateSourceSchema>;
-
-/**
- * Exchange rate with source indicator (for API responses)
- */
-export const RateWithSourceSchema = registerSchema(
-  'RateWithSource',
-  z.object({
-    baseCurrency: z.string(),
-    targetCurrency: z.string(),
-    rate: z.number(),
-    source: RateSourceSchema,
-  }),
-);
-export type RateWithSource = z.infer<typeof RateWithSourceSchema>;
+import { RateWithSourceSchema } from './ExchangeRate';
+export { RateWithSourceSchema, RateSourceSchema } from './ExchangeRate';
+export type { RateWithSource, RateSource } from './ExchangeRate';
 
 /**
  * Balance with optional converted balance and exchange rate info
@@ -77,9 +62,9 @@ export const SnapshotBalancesRequestSchema = registerSchema(
     /** List of account IDs to query balances for */
     accountIds: z.array(z.string().uuid()),
     /** Start date (YYYY-MM-DD, inclusive) */
-    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    startDate: CalendarDateSchema,
     /** End date (YYYY-MM-DD, inclusive) */
-    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    endDate: CalendarDateSchema,
   }),
 );
 export type SnapshotBalancesRequest = z.infer<
@@ -99,9 +84,9 @@ export const BalancesQuerySchema = registerSchema(
       .transform((s) => s.split(','))
       .pipe(z.array(z.string().uuid())),
     /** Start date (YYYY-MM-DD, inclusive) */
-    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    startDate: CalendarDateSchema,
     /** End date (YYYY-MM-DD, inclusive) */
-    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    endDate: CalendarDateSchema,
   }),
 );
 export type BalancesQuery = z.infer<typeof BalancesQuerySchema>;
@@ -113,9 +98,9 @@ export const AllBalancesQuerySchema = registerSchema(
   'AllBalancesQuery',
   z.object({
     /** Start date (YYYY-MM-DD, inclusive) */
-    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    startDate: CalendarDateSchema,
     /** End date (YYYY-MM-DD, inclusive) */
-    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    endDate: CalendarDateSchema,
   }),
 );
 export type AllBalancesQuery = z.infer<typeof AllBalancesQuerySchema>;

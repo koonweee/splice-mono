@@ -1,14 +1,20 @@
 import { z } from 'zod';
-import Decimal from 'decimal.js';
+import {
+  ExactDecimal as Decimal,
+  DECIMAL_PATTERN,
+} from '../common/exact-money';
+import { CalendarDateSchema } from '../common/query-bounds';
 import { MoneySign } from '../types/MoneyWithSign';
 
-const DateStringSchema = z
+const DateStringSchema = CalendarDateSchema;
+const McpAmountSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD');
+  .max(156)
+  .regex(DECIMAL_PATTERN, 'Use nonnegative decimal major-unit text');
 
 export const McpMoneySchema = z
   .object({
-    amount: z.number(),
+    amount: McpAmountSchema,
     currency: z.string(),
     sign: z.nativeEnum(MoneySign),
   })
@@ -26,7 +32,7 @@ export const McpLooseObjectSchema = z.object({}).passthrough();
 
 const MoneyLikeRecordSchema = z
   .object({
-    amount: z.number().optional(),
+    amount: McpAmountSchema.optional(),
     currency: z.string().optional(),
     sign: z.nativeEnum(MoneySign).optional(),
   })
@@ -95,19 +101,12 @@ export const InvestmentHoldingsOutputSchema = z
 
 const PortfolioUsdMoneySchema = z
   .object({
-    amount: z
-      .number()
-      .nonnegative()
-      .finite()
-      .max(Number.MAX_SAFE_INTEGER / 100)
-      .refine(
-        (amount) => {
-          const decimal = new Decimal(amount);
-          return decimal.decimalPlaces() <= 2 && decimal.mul(100).isInteger();
-        },
-        { message: 'Must be a USD amount in whole cents.' },
-      )
-      .describe('USD major-unit amount rounded to whole cents.'),
+    amount: McpAmountSchema.refine((amount) => {
+      const decimal = new Decimal(amount);
+      return (
+        decimal.decimalPlaces() <= 2 && decimal.mul(100).lte('9'.repeat(78))
+      );
+    }, 'Use a USD decimal amount in whole cents within 78 minor-unit digits'),
     currency: z.literal('USD'),
     sign: z.literal(MoneySign.POSITIVE),
   })

@@ -161,7 +161,7 @@ vi.mock('../../api/clients/spliceAPI', () => ({
 }))
 
 function buildAccount(
-  amount: number,
+  amount: string | number,
   currency: string,
   sign: MoneyWithSignSign,
 ): Account {
@@ -172,8 +172,8 @@ function buildAccount(
     customName: null,
     notes: null,
     mask: null,
-    availableBalance: { money: { amount, currency }, sign },
-    currentBalance: { money: { amount, currency }, sign },
+    availableBalance: { money: { amount: String(amount), currency }, sign },
+    currentBalance: { money: { amount: String(amount), currency }, sign },
     type: AccountType.depository,
     valuationMode: 'balance',
     subType: null,
@@ -267,11 +267,11 @@ describe('manual account money payloads', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             availableBalance: {
-              money: { amount: expectedMagnitude, currency },
+              money: { amount: String(expectedMagnitude), currency },
               sign: expectedSign,
             },
             currentBalance: {
-              money: { amount: expectedMagnitude, currency },
+              money: { amount: String(expectedMagnitude), currency },
               sign: expectedSign,
             },
           }),
@@ -280,6 +280,33 @@ describe('manual account money payloads', () => {
       )
     },
   )
+
+  it('resaves an untouched ETH balance without losing the final wei', () => {
+    const account = buildAccount(
+      '1000000000000000001',
+      'ETH',
+      MoneyWithSignSign.positive,
+    )
+    render(
+      <MantineProvider>
+        <InlineBalanceEditor
+          account={account}
+          balance={account.currentBalance}
+          onCancel={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </MantineProvider>,
+    )
+    expect(screen.getByLabelText('Current balance')).toHaveProperty('value', '1.000000000000000001')
+    fireEvent.click(screen.getByRole('button', { name: 'Save balance' }))
+    expect(mockFns.updateBalanceMutateMock).toHaveBeenCalledWith(
+      {
+        id: 'account-id',
+        data: { balance: account.currentBalance },
+      },
+      expect.any(Object),
+    )
+  })
 
   it('creates a brokerage through the holdings contract instead of a balance payload', () => {
     mockFns.createBrokerageMutateMock.mockImplementation(
@@ -374,7 +401,7 @@ describe('manual account money payloads', () => {
           name: 'Private investment',
           type: AccountType.investment,
           currentBalance: {
-            money: { amount: 125000, currency: 'USD' },
+            money: { amount: '125000', currency: 'USD' },
             sign: MoneyWithSignSign.positive,
           },
         }),
@@ -457,7 +484,7 @@ describe('manual account money payloads', () => {
           id: 'account-id',
           data: {
             balance: {
-              money: { amount: expectedMagnitude, currency },
+              money: { amount: String(expectedMagnitude), currency },
               sign: expectedSign,
             },
           },

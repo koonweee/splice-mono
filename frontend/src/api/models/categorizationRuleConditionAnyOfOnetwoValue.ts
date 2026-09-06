@@ -8,5 +8,5 @@
 import type { CategorizationRuleConditionAnyOfOnetwoValueAnyOf } from './categorizationRuleConditionAnyOfOnetwoValueAnyOf'
 
 export type CategorizationRuleConditionAnyOfOnetwoValue =
-  | number
+  | string
   | CategorizationRuleConditionAnyOfOnetwoValueAnyOf

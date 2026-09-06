@@ -1,3 +1,11 @@
+import {
+  compareDecimals,
+  decimalPercentage,
+  exactDecimal,
+  formatAppMoney,
+  formatAppQuantity,
+  parseAppMoney,
+} from './exact-money';
 /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, no-var */
 import { createMcpAppRuntime } from '@koonweee/mcp-kit/apps';
 import {
@@ -63,48 +71,21 @@ import {
       .replace(/'/g, '&#39;');
   }
 
-  function moneyAmount(value) {
-    if (value == null) return 0;
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string') {
-      var parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed : 0;
-    }
-    if (typeof value === 'object') {
-      if (value.money) return moneyAmount(value.money);
-      if (value.amount != null) return moneyAmount(value.amount);
-    }
-    return 0;
-  }
-
   function moneyCurrency(value, fallback) {
-    if (value && typeof value === 'object') {
-      if (value.currency) return String(value.currency);
-      if (value.money && value.money.currency)
-        return String(value.money.currency);
-    }
-    return fallback || 'USD';
+    const money = parseAppMoney(value);
+    return money ? money.currency : fallback;
   }
 
   function moneySign(value) {
-    if (value && typeof value === 'object' && value.sign)
-      return String(value.sign);
-    return moneyAmount(value) < 0 ? 'negative' : 'positive';
+    const money = parseAppMoney(value);
+    if (!money) throw new Error('Invalid money value');
+    return money.sign;
   }
 
   function formatCashFlowMoney(value, fallbackCurrency) {
-    var amount = Math.abs(moneyAmount(value));
-    var currency = moneyCurrency(value, fallbackCurrency);
-    var sign = moneySign(value) === 'negative' ? '-' : '';
-    return (
-      sign +
-      new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: currency,
-        currencyDisplay: 'narrowSymbol',
-        maximumFractionDigits: 2,
-      }).format(amount)
-    );
+    const money = parseAppMoney(value, fallbackCurrency);
+    if (!money) throw new Error('Invalid money value');
+    return formatAppMoney(money);
   }
 
   function readEnvelopeData(): any {
@@ -309,11 +290,15 @@ import {
 
   function formatDelta(value, currency) {
     if (value == null) return '';
-    if (value === 0) return 'No change';
+    if (compareDecimals(value, '0') === 0) return 'No change';
     return (
-      (value > 0 ? '+' : '−') +
+      (compareDecimals(value, '0') > 0 ? '+' : '−') +
       formatMagnitude(
-        { amount: Math.abs(value), currency: currency, sign: 'positive' },
+        {
+          amount: exactDecimal(value).abs().toFixed(),
+          currency: currency,
+          sign: 'positive',
+        },
         currency,
       )
     );
@@ -355,8 +340,8 @@ import {
     var color = safeCategoryColor(category.color, index);
     var amount = moneyMagnitude(category.totalAmount);
     var width = Math.max(
-      amount > 0 ? 3 : 0,
-      Math.round((amount / presentation.maxCategoryAmount) * 100),
+      compareDecimals(amount, '0') > 0 ? 3 : 0,
+      Math.round(decimalPercentage(amount, presentation.maxCategoryAmount)),
     );
     var selected = state.selectedCategory === category.primaryCategory;
     var comparison = presentation.comparison
@@ -364,7 +349,7 @@ import {
         escapeHtml(
           formatMagnitude(
             {
-              amount: category.comparisonAmount || 0,
+              amount: category.comparisonAmount ?? '0',
               currency: presentation.current.currency,
               sign: 'positive',
             },
@@ -372,11 +357,11 @@ import {
           ),
         ) +
         ' <span data-delta-tone="' +
-        (category.delta > 0
+        (compareDecimals(category.delta, '0') > 0
           ? presentation.direction === 'outflow'
             ? 'negative'
             : 'positive'
-          : category.delta < 0
+          : compareDecimals(category.delta, '0') < 0
             ? presentation.direction === 'outflow'
               ? 'positive'
               : 'negative'
@@ -601,9 +586,9 @@ import {
       return;
     }
     var currency = presentation.current.currency;
-    var netDelta = presentation.netDelta || 0;
-    var inflowDelta = presentation.inflowDelta || 0;
-    var outflowDelta = presentation.outflowDelta || 0;
+    var netDelta = presentation.netDelta ?? '0';
+    var inflowDelta = presentation.inflowDelta ?? '0';
+    var outflowDelta = presentation.outflowDelta ?? '0';
     var comparison = presentation.comparison
       ? '<p class="comparison-period">Compared with ' +
         escapeHtml(
@@ -670,7 +655,11 @@ import {
       '</strong>' +
       (presentation.comparison
         ? '<small><span data-delta-tone="' +
-          (netDelta > 0 ? 'positive' : netDelta < 0 ? 'negative' : 'neutral') +
+          (compareDecimals(netDelta, '0') > 0
+            ? 'positive'
+            : compareDecimals(netDelta, '0') < 0
+              ? 'negative'
+              : 'neutral') +
           '">' +
           escapeHtml(formatDelta(netDelta, currency)) +
           '</span> vs comparison</small>'
@@ -681,9 +670,9 @@ import {
       '</strong>' +
       (presentation.comparison
         ? '<small data-delta-tone="' +
-          (inflowDelta > 0
+          (compareDecimals(inflowDelta, '0') > 0
             ? 'positive'
-            : inflowDelta < 0
+            : compareDecimals(inflowDelta, '0') < 0
               ? 'negative'
               : 'neutral') +
           '">' +
@@ -695,9 +684,9 @@ import {
       '</strong>' +
       (presentation.comparison
         ? '<small data-delta-tone="' +
-          (outflowDelta > 0
+          (compareDecimals(outflowDelta, '0') > 0
             ? 'negative'
-            : outflowDelta < 0
+            : compareDecimals(outflowDelta, '0') < 0
               ? 'positive'
               : 'neutral') +
           '">' +
@@ -863,11 +852,11 @@ import {
   }
 
   function formatPortfolioDecimal(value) {
-    var parsed = Number(value);
-    if (!Number.isFinite(parsed)) return '';
-    return new Intl.NumberFormat('en-US', {
-      maximumFractionDigits: 6,
-    }).format(parsed);
+    try {
+      return formatAppQuantity(value);
+    } catch {
+      return '';
+    }
   }
 
   function renderPortfolioDetail(

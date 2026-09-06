@@ -60,7 +60,7 @@ export type RecurringManualTransactionOccurrence = z.infer<
 >;
 
 const RecurringManualTransactionAmountSchema = MoneyWithSignSchema.refine(
-  (amount) => amount.money.amount > 0,
+  (amount) => amount.money.amount !== '0',
   {
     message: 'Recurring manual transaction amount must be positive',
     path: ['money', 'amount'],

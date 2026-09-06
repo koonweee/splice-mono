@@ -1,5 +1,11 @@
+import {
+  compareDecimals,
+  formatAppMoney,
+  parseAppMoney,
+  sumDecimals,
+} from './exact-money';
 export interface PortfolioMoney {
-  readonly amount: number;
+  readonly amount: string;
   readonly currency: 'USD';
   readonly sign: 'positive';
 }
@@ -60,16 +66,9 @@ function nullableString(value: unknown): string | null {
 
 function parseUsdMoney(value: unknown): PortfolioMoney | null {
   if (!isRecord(value)) return null;
-  const amount = finiteNumber(value.amount);
-  if (
-    amount === null ||
-    amount < 0 ||
-    value.currency !== 'USD' ||
-    value.sign !== 'positive'
-  ) {
-    return null;
-  }
-  return { amount, currency: 'USD', sign: 'positive' };
+  const money = parseAppMoney(value, 'USD');
+  if (!money || money.sign !== 'positive') return null;
+  return { ...money, currency: 'USD', sign: 'positive' };
 }
 
 function parseContribution(
@@ -134,7 +133,10 @@ export function stablePortfolioPositionSort(
   left: PortfolioPosition,
   right: PortfolioPosition,
 ): number {
-  const valueDifference = right.valueUsd.amount - left.valueUsd.amount;
+  const valueDifference = compareDecimals(
+    right.valueUsd.amount,
+    left.valueUsd.amount,
+  );
   if (valueDifference !== 0) return valueDifference;
   const labelDifference = portfolioPositionLabel(left).localeCompare(
     portfolioPositionLabel(right),
@@ -144,13 +146,11 @@ export function stablePortfolioPositionSort(
 }
 
 function sumUsdMoney(positions: readonly PortfolioPosition[]): PortfolioMoney {
-  // The server has already rounded every value to USD cents. Summing integer
-  // cents avoids introducing a new floating-point rounding decision in the UI.
-  const cents = positions.reduce(
-    (sum, position) => sum + Math.round(position.valueUsd.amount * 100),
-    0,
-  );
-  return { amount: cents / 100, currency: 'USD', sign: 'positive' };
+  return {
+    amount: sumDecimals(positions.map((position) => position.valueUsd.amount)),
+    currency: 'USD',
+    sign: 'positive',
+  };
 }
 
 function parseSnapshotRange(value: unknown): PortfolioSnapshotRange | null {
@@ -234,12 +234,7 @@ export function formatPortfolioPercentage(allocationBps: number): string {
 }
 
 export function formatPortfolioMoney(value: PortfolioMoney): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    currencyDisplay: 'narrowSymbol',
-    maximumFractionDigits: 2,
-  }).format(value.amount);
+  return formatAppMoney(value);
 }
 
 export function portfolioSnapshotLabel(

@@ -105,6 +105,7 @@ vi.mock('@mantine/core', async () => {
       label,
       onChange,
       readOnly,
+      rightSection,
       type = 'text',
       value,
     }: {
@@ -112,6 +113,7 @@ vi.mock('@mantine/core', async () => {
       label?: string
       onChange?: React.ChangeEventHandler<HTMLInputElement>
       readOnly?: boolean
+      rightSection?: React.ReactNode
       type?: string
       value?: string
     }) => (
@@ -124,6 +126,7 @@ vi.mock('@mantine/core', async () => {
           type={type}
           value={value ?? ''}
         />
+        {rightSection}
         {error && <span>{error}</span>}
       </label>
     ),
@@ -220,7 +223,7 @@ describe('ManualTransactionModal', () => {
         data: {
           accountId: 'account-1',
           amount: {
-            money: { amount: 1234, currency: 'USD' },
+            money: { amount: '1234', currency: 'USD' },
             sign: MoneyWithSignSign.negative,
           },
           merchantName: 'Coffee Shop',
@@ -260,7 +263,7 @@ describe('ManualTransactionModal', () => {
         data: {
           accountId: 'account-1',
           amount: {
-            money: { amount: 1234, currency: 'USD' },
+            money: { amount: '1234', currency: 'USD' },
             sign: MoneyWithSignSign.negative,
           },
           merchantName: 'Coffee Shop',
@@ -307,7 +310,7 @@ describe('ManualTransactionModal', () => {
         data: expect.objectContaining({
           accountId: 'account-jpy',
           amount: {
-            money: { amount: 500, currency: 'JPY' },
+            money: { amount: '500', currency: 'JPY' },
             sign: MoneyWithSignSign.positive,
           },
         }),
@@ -340,7 +343,7 @@ describe('ManualTransactionModal', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           amount: {
-            money: { amount: 1234, currency: 'USD' },
+            money: { amount: '1234', currency: 'USD' },
             sign: MoneyWithSignSign.negative,
           },
         }),
@@ -363,9 +366,51 @@ describe('ManualTransactionModal', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(screen.getByText('Enter a non-zero amount')).toBeTruthy()
+    expect(screen.getByText(/Enter a non-zero amount/)).toBeTruthy()
     expect(screen.getByText('Category is required')).toBeTruthy()
     expect(mockFns.createMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('submits and sign-toggles the final wei of an ETH amount exactly', () => {
+    render(
+      <MantineProvider>
+        <ManualTransactionModal
+          opened
+          accounts={[makeAccount('eth', 'Wallet', 'ETH')]}
+          categories={[category]}
+          defaultAccountId="eth"
+          onClose={vi.fn()}
+        />
+      </MantineProvider>,
+    )
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '1.000000000000000001' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Make amount negative' }),
+    )
+    expect(screen.getByLabelText('Amount')).toHaveProperty('value', '-1.000000000000000001')
+    fireEvent.change(screen.getByLabelText('Date'), {
+      target: { value: '2026-05-07' },
+    })
+    fireEvent.change(screen.getByLabelText('Merchant'), {
+      target: { value: 'Exact transfer' },
+    })
+    fireEvent.change(screen.getByLabelText('Category'), {
+      target: { value: 'category-1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(mockFns.createMutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          amount: {
+            money: { amount: '1000000000000000001', currency: 'ETH' },
+            sign: 'negative',
+          },
+        }),
+      }),
+      expect.any(Object),
+    )
   })
 
   it('allows clearing the account and errors on save', () => {
@@ -416,11 +461,11 @@ function makeAccount(id: string, name: string, currency: string): Account {
     customName: null,
     mask: null,
     availableBalance: {
-      money: { amount: 10000, currency },
+      money: { amount: '10000', currency },
       sign: MoneyWithSignSign.positive,
     },
     currentBalance: {
-      money: { amount: 10000, currency },
+      money: { amount: '10000', currency },
       sign: MoneyWithSignSign.positive,
     },
     type: AccountType.depository,

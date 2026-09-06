@@ -1,3 +1,4 @@
+import { decimalRateRatio } from '../../../src/common/exact-money';
 import dayjs from 'dayjs';
 import { AccountType } from 'plaid';
 import { Repository } from 'typeorm';
@@ -21,7 +22,7 @@ export function fixtureMoney(
   currency = 'USD',
 ): SerializedMoneyWithSign {
   return {
-    money: { amount: Math.abs(amount), currency },
+    money: { amount: String(Math.abs(amount)), currency },
     sign: amount < 0 ? MoneySign.NEGATIVE : MoneySign.POSITIVE,
   };
 }
@@ -105,7 +106,15 @@ export function buildDashboardFixture(count = 20) {
 export function createDashboardFixture(count = 20) {
   const data = buildDashboardFixture(count);
   const reads = { accounts: 0, users: 0, snapshots: 0, rates: 0 };
+  const manager = {
+    withRepository: <T>(repository: T): T => repository,
+    transaction: async <T>(
+      _isolation: string,
+      callback: (value: typeof manager) => Promise<T>,
+    ): Promise<T> => callback(manager),
+  };
   const accountRepository = {
+    manager,
     find: async ({ where }: any) => {
       reads.accounts++;
       return data.accounts.filter(
@@ -180,7 +189,13 @@ export function createDashboardFixture(count = 20) {
       reads.rates++;
       const results: Array<{
         date: string;
-        rates: Array<CurrencyPair & { rate: number; source: string }>;
+        rates: Array<
+          CurrencyPair & {
+            rate: string;
+            ratio: { numerator: string; denominator: string };
+            source: string;
+          }
+        >;
       }> = [];
       for (
         let date = start;
@@ -191,7 +206,10 @@ export function createDashboardFixture(count = 20) {
           date,
           rates: pairs.map((pair) => ({
             ...pair,
-            rate: pair.baseCurrency === 'JPY' ? 0.007 : 1.1,
+            rate: pair.baseCurrency === 'JPY' ? '0.007' : '1.1',
+            ratio: decimalRateRatio(
+              pair.baseCurrency === 'JPY' ? '0.007' : '1.1',
+            ),
             source: 'synthetic',
           })),
         });
@@ -200,7 +218,7 @@ export function createDashboardFixture(count = 20) {
     },
   };
   const users = {
-    findOne: async (id: string) => {
+    findSettings: async (id: string) => {
       reads.users++;
       return id === DASHBOARD_FIXTURE_USER_ID
         ? { id, settings: { currency: 'USD' } }

@@ -24,14 +24,14 @@ export interface ICurrencyRateProvider {
    * @param baseCurrency - Source currency (e.g., 'EUR', 'ETH')
    * @param targetCurrency - Target currency (e.g., 'USD')
    * @param date - Optional date for historical rate (YYYY-MM-DD). If not provided, returns latest.
-   * @returns Exchange rate as a number
+   * @returns Exchange rate as exact decimal text
    * @throws Error if request fails or currency is unsupported
    */
   getRate(
     baseCurrency: string,
     targetCurrency: string,
     date?: string,
-  ): Promise<number>;
+  ): Promise<string>;
 
   /**
    * Get historical exchange rates for a date range.
@@ -48,5 +48,5 @@ export interface ICurrencyRateProvider {
     targetCurrencies: string[],
     startDate: string,
     endDate: string,
-  ): Promise<Map<string, Map<string, number>>>;
+  ): Promise<Map<string, Map<string, string>>>;
 }

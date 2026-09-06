@@ -14,11 +14,11 @@ const createMockAccount = (
   customName: 'House Checking',
   mask: '1234',
   availableBalance: {
-    money: { amount: 10000, currency: 'USD' },
+    money: { amount: '10000', currency: 'USD' },
     sign: MoneySign.POSITIVE,
   },
   currentBalance: {
-    money: { amount: 12345, currency: 'USD' },
+    money: { amount: '12345', currency: 'USD' },
     sign: MoneySign.POSITIVE,
   },
   type: 'depository',
@@ -69,7 +69,7 @@ describe('AccountsSurfaceService', () => {
         subType: '401k',
         bankLink: null,
         currentBalance: {
-          money: { amount: 54321, currency: 'USD' },
+          money: { amount: '54321', currency: 'USD' },
           sign: MoneySign.POSITIVE,
         },
       }),
@@ -81,7 +81,7 @@ describe('AccountsSurfaceService', () => {
         subType: 'credit card',
         bankLink: null,
         currentBalance: {
-          money: { amount: 76543, currency: 'USD' },
+          money: { amount: '76543', currency: 'USD' },
           sign: MoneySign.POSITIVE,
         },
       }),
@@ -93,7 +93,7 @@ describe('AccountsSurfaceService', () => {
         subType: 'home equity',
         bankLink: null,
         currentBalance: {
-          money: { amount: 250000, currency: 'USD' },
+          money: { amount: '250000', currency: 'USD' },
           sign: MoneySign.POSITIVE,
         },
       }),
@@ -105,7 +105,7 @@ describe('AccountsSurfaceService', () => {
         subType: 'paypal',
         bankLink: null,
         currentBalance: {
-          money: { amount: 1000, currency: 'USD' },
+          money: { amount: '1000', currency: 'USD' },
           sign: MoneySign.POSITIVE,
         },
       }),

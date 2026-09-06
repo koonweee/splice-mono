@@ -1,0 +1,210 @@
+{
+  "completed": true,
+  "protocol": "Single bounded sparse-FX follow-up;5 warmups and20 calls in one fresh process per variant",
+  "confidence": "Diagnostic median/range; no repeated-run or p95-improvement confidence claim.",
+  "name": "shape.history.year.20-accounts.sparse-prior-fx.daily",
+  "before": {
+    "medianMs": 13.52020900000025,
+    "rangeMs": [
+      11.78912500000024,
+      21.905666999999994
+    ],
+    "cpuMedianMs": 12.434,
+    "selects": 8,
+    "diagnostics": {
+      "sqlMs": {
+        "p50": 6.054875000000266,
+        "p95": 11.440833999999995,
+        "min": 5.065540999999939,
+        "max": 18.777498999999352
+      },
+      "totalDataSqlMs": {
+        "p50": 6.054875000000266,
+        "p95": 11.440833999999995,
+        "min": 5.065540999999939,
+        "max": 18.777498999999352
+      },
+      "topLevelWriteSqlMs": {
+        "p50": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "sqlRows": {
+        "p50": 314,
+        "p95": 314,
+        "min": 314,
+        "max": 314
+      },
+      "sqlBytes": {
+        "p50": 246600,
+        "p95": 246600,
+        "min": 246600,
+        "max": 246600
+      },
+      "sqlWriteCount": {
+        "p50": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dataModifyingStatements": {
+        "p50": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transactionStatements": {
+        "p50": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "serializationMs": {
+        "p50": 0.1768329999999878,
+        "p95": 0.29062500000009095,
+        "min": 0.1461669999998776,
+        "max": 0.3150829999999587
+      },
+      "poolWaitMs": {
+        "p50": 0.10887299999967581,
+        "p95": 0.18058199999950375,
+        "min": 0.09533399999918402,
+        "max": 0.20008199999983844
+      },
+      "poolAcquisitions": {
+        "p50": 8,
+        "p95": 8,
+        "min": 8,
+        "max": 8
+      },
+      "heapDelta": {
+        "p50": 15801088,
+        "p95": 17054152,
+        "min": -48052432,
+        "max": 17094320
+      },
+      "rss": {
+        "p50": 310984704,
+        "p95": 324730880,
+        "min": 300892160,
+        "max": 324763648
+      },
+      "responseBytes": {
+        "p50": 30367,
+        "p95": 30367,
+        "min": 30367,
+        "max": 30367
+      },
+      "gzipBytes": {
+        "p50": 2873,
+        "p95": 2873,
+        "min": 2873,
+        "max": 2873
+      }
+    }
+  },
+  "after": {
+    "medianMs": 25.012040999999954,
+    "rangeMs": [
+      16.99866699999984,
+      91.26691600000004
+    ],
+    "cpuMedianMs": 16.642,
+    "selects": 6,
+    "diagnostics": {
+      "sqlMs": {
+        "p50": 20.00112399999989,
+        "p95": 45.73225000000002,
+        "min": 9.983126999999968,
+        "max": 52.26645700000063
+      },
+      "totalDataSqlMs": {
+        "p50": 20.00112399999989,
+        "p95": 45.73225000000002,
+        "min": 9.983126999999968,
+        "max": 52.26645700000063
+      },
+      "topLevelWriteSqlMs": {
+        "p50": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "sqlRows": {
+        "p50": 667,
+        "p95": 667,
+        "min": 667,
+        "max": 667
+      },
+      "sqlBytes": {
+        "p50": 274981,
+        "p95": 274981,
+        "min": 274981,
+        "max": 274981
+      },
+      "sqlWriteCount": {
+        "p50": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "dataModifyingStatements": {
+        "p50": 0,
+        "p95": 0,
+        "min": 0,
+        "max": 0
+      },
+      "transactionStatements": {
+        "p50": 2,
+        "p95": 2,
+        "min": 2,
+        "max": 2
+      },
+      "serializationMs": {
+        "p50": 0.2108339999999771,
+        "p95": 0.44079199999987395,
+        "min": 0.16458300000022064,
+        "max": 0.9355000000000473
+      },
+      "poolWaitMs": {
+        "p50": 0.025208000000020547,
+        "p95": 0.058083999999780644,
+        "min": 0.02304099999992104,
+        "max": 0.08154199999989942
+      },
+      "poolAcquisitions": {
+        "p50": 1,
+        "p95": 1,
+        "min": 1,
+        "max": 1
+      },
+      "heapDelta": {
+        "p50": 19197840,
+        "p95": 20653368,
+        "min": -41083608,
+        "max": 20685864
+      },
+      "rss": {
+        "p50": 332120064,
+        "p95": 339001344,
+        "min": 306020352,
+        "max": 339083264
+      },
+      "responseBytes": {
+        "p50": 31280,
+        "p95": 31280,
+        "min": 31280,
+        "max": 31280
+      },
+      "gzipBytes": {
+        "p50": 2951,
+        "p95": 2951,
+        "min": 2951,
+        "max": 2951
+      }
+    }
+  },
+  "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+  "queryBudget": 7
+}

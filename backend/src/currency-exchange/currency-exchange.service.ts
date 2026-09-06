@@ -1,7 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ExactDecimal, decimalRateRatio } from '../common/exact-money';
+import { assertDateRange } from '../common/query-bounds';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
-import { Repository } from 'typeorm';
+import { Repository, type EntityManager } from 'typeorm';
 import type {
   CreateExchangeRateDto,
   CurrencyPair,
@@ -25,6 +32,11 @@ export function buildExchangeRateKey(
 ): string {
   const normalized = normalizeCurrencyPair(baseCurrency, targetCurrency);
   return `${normalized.base}:${normalized.target}:${rateDate}`;
+}
+
+export type FxRequest = CurrencyPair & { requestedDate: string };
+export function fxRequestKey(request: FxRequest): string {
+  return `${request.baseCurrency.toUpperCase()}:${request.targetCurrency.toUpperCase()}:${request.requestedDate}`;
 }
 
 @Injectable()
@@ -82,158 +94,145 @@ export class CurrencyExchangeService {
     pairs: CurrencyPair[],
     startDate: string,
     endDate: string,
+    manager?: EntityManager,
   ): Promise<DateRangeRateResponse[]> {
-    if (pairs.length === 0) {
-      return [];
+    assertDateRange(startDate, endDate, { maxDays: 10_000 });
+    if (pairs.length === 0) return [];
+    const requests: FxRequest[] = [];
+    const dates: string[] = [];
+    for (
+      let date = dayjs(startDate);
+      date.format('YYYY-MM-DD') <= endDate;
+      date = date.add(1, 'day')
+    ) {
+      const requestedDate = date.format('YYYY-MM-DD');
+      dates.push(requestedDate);
+      for (const pair of pairs) requests.push({ ...pair, requestedDate });
     }
-
-    // Normalize all pairs and track mapping
-    const normalizedPairs = pairs.map((pair) => ({
-      original: pair,
-      normalized: normalizeCurrencyPair(pair.baseCurrency, pair.targetCurrency),
+    const resolved = await this.resolveRequests(requests, manager);
+    return dates.map((date) => ({
+      date,
+      rates: pairs.map(
+        (pair) => resolved.get(fxRequestKey({ ...pair, requestedDate: date }))!,
+      ),
     }));
+  }
 
-    // Get unique normalized bases and targets for the query
-    const normalizedBases = [
-      ...new Set(normalizedPairs.map((p) => p.normalized.base)),
-    ];
-    const normalizedTargets = [
-      ...new Set(normalizedPairs.map((p) => p.normalized.target)),
-    ];
-
-    // Query rates within the date range
-    const entitiesInRange = await this.repository
-      .createQueryBuilder('rate')
-      .where('rate.baseCurrency IN (:...bases)', { bases: normalizedBases })
-      .andWhere('rate.targetCurrency IN (:...targets)', {
-        targets: normalizedTargets,
-      })
-      .andWhere('rate.rateDate >= :startDate', { startDate })
-      .andWhere('rate.rateDate <= :endDate', { endDate })
-      .orderBy('rate.rateDate', 'ASC')
-      .getMany();
-
-    // For fill-forward: get the most recent rate before startDate for each pair
-    const priorRates = await this.repository
-      .createQueryBuilder('rate')
-      .distinctOn(['rate.baseCurrency', 'rate.targetCurrency'])
-      .where('rate.baseCurrency IN (:...bases)', { bases: normalizedBases })
-      .andWhere('rate.targetCurrency IN (:...targets)', {
-        targets: normalizedTargets,
-      })
-      .andWhere('rate.rateDate < :startDate', { startDate })
-      .orderBy('rate.baseCurrency')
-      .addOrderBy('rate.targetCurrency')
-      .addOrderBy('rate.rateDate', 'DESC')
-      .getMany();
-
-    // For fill-backward: get the earliest rate after endDate for each pair (fallback)
-    const futureRates = await this.repository
-      .createQueryBuilder('rate')
-      .distinctOn(['rate.baseCurrency', 'rate.targetCurrency'])
-      .where('rate.baseCurrency IN (:...bases)', { bases: normalizedBases })
-      .andWhere('rate.targetCurrency IN (:...targets)', {
-        targets: normalizedTargets,
-      })
-      .andWhere('rate.rateDate > :endDate', { endDate })
-      .orderBy('rate.baseCurrency')
-      .addOrderBy('rate.targetCurrency')
-      .addOrderBy('rate.rateDate', 'ASC')
-      .getMany();
-
-    const entities = [...priorRates, ...entitiesInRange, ...futureRates];
-
-    // Build lookup map: "base:target:date" -> rate
-    const rateMap = new Map<string, number>();
-    entities.forEach((entity) => {
-      const rate =
-        typeof entity.rate === 'string' ? parseFloat(entity.rate) : entity.rate;
-      rateMap.set(
-        `${entity.baseCurrency}:${entity.targetCurrency}:${entity.rateDate}`,
-        rate,
+  /** Resolve only requested pair/dates in one indexed query; sparse dates never expand to a daily grid. */
+  async resolveRequests(
+    requests: FxRequest[],
+    manager?: EntityManager,
+    options: { allowMissing?: boolean } = {},
+  ): Promise<Map<string, RateWithSource>> {
+    if (requests.length > 1_000_000)
+      throw new BadRequestException(
+        'FX request exceeds 1,000,000 pair-dates; request a shorter range',
       );
-    });
-
-    // For each pair, verify we have at least one rate
-    normalizedPairs.forEach(({ original, normalized }) => {
-      const hasAnyRate = entities.some(
-        (e) =>
-          e.baseCurrency === normalized.base &&
-          e.targetCurrency === normalized.target,
+    const unique = new Map<string, FxRequest>();
+    const normalized = new Map<
+      string,
+      { base: string; target: string; date: string }
+    >();
+    for (const request of requests) {
+      assertDateRange(request.requestedDate, request.requestedDate);
+      const clean = {
+        ...request,
+        baseCurrency: request.baseCurrency.toUpperCase(),
+        targetCurrency: request.targetCurrency.toUpperCase(),
+      };
+      unique.set(fxRequestKey(clean), clean);
+      if (clean.baseCurrency === clean.targetCurrency) continue;
+      const pair = normalizeCurrencyPair(
+        clean.baseCurrency,
+        clean.targetCurrency,
       );
-      if (!hasAnyRate) {
-        throw new Error(
-          `No exchange rate found for pair ${original.baseCurrency}→${original.targetCurrency}`,
+      normalized.set(`${pair.base}:${pair.target}:${clean.requestedDate}`, {
+        base: pair.base,
+        target: pair.target,
+        date: clean.requestedDate,
+      });
+    }
+    type RateRow = {
+      base: string;
+      target: string;
+      date: string;
+      rate: string | null;
+      rateDate: string | null;
+    };
+    const rows: RateRow[] =
+      normalized.size === 0
+        ? []
+        : await (manager ?? this.repository.manager).query(
+            `
+      WITH requested AS (
+        SELECT DISTINCT base, target, date FROM jsonb_to_recordset($1::jsonb) AS input(base text, target text, date date)
+      )
+      SELECT requested.base, requested.target, requested.date::text,
+        COALESCE(prior.rate, future.rate)::text AS rate,
+        COALESCE(prior."rateDate", future."rateDate")::text AS "rateDate"
+      FROM requested
+      LEFT JOIN LATERAL (
+        SELECT rate, "rateDate" FROM exchange_rate_entity
+        WHERE "baseCurrency" = requested.base AND "targetCurrency" = requested.target AND "rateDate" <= requested.date
+        ORDER BY "rateDate" DESC LIMIT 1
+      ) prior ON true
+      LEFT JOIN LATERAL (
+        SELECT rate, "rateDate" FROM exchange_rate_entity
+        WHERE prior.rate IS NULL AND "baseCurrency" = requested.base AND "targetCurrency" = requested.target AND "rateDate" > requested.date
+        ORDER BY "rateDate" ASC LIMIT 1
+      ) future ON true
+    `,
+            [JSON.stringify([...normalized.values()])],
+          );
+    const found = new Map(
+      rows.map((row) => [`${row.base}:${row.target}:${row.date}`, row]),
+    );
+    const result = new Map<string, RateWithSource>();
+    for (const [key, request] of unique) {
+      if (request.baseCurrency === request.targetCurrency) {
+        result.set(key, {
+          ...request,
+          rateDate: request.requestedDate,
+          rate: '1',
+          source: 'IDENTITY',
+          ratio: { numerator: '1', denominator: '1' },
+        });
+        continue;
+      }
+      const pair = normalizeCurrencyPair(
+        request.baseCurrency,
+        request.targetCurrency,
+      );
+      const row = found.get(
+        `${pair.base}:${pair.target}:${request.requestedDate}`,
+      );
+      if (
+        !row?.rate ||
+        !row.rateDate ||
+        !new ExactDecimal(row.rate).isPositive()
+      ) {
+        if (options.allowMissing) continue;
+        throw new ServiceUnavailableException(
+          `Required exchange rate is unavailable for ${request.baseCurrency} to ${request.targetCurrency} on ${request.requestedDate}`,
         );
       }
-    });
-
-    // Build a sorted list of all dates we have rates for, per pair
-    const pairRateDates = new Map<string, { date: string; rate: number }[]>();
-    normalizedPairs.forEach(({ normalized }) => {
-      const pairKey = `${normalized.base}:${normalized.target}`;
-      if (!pairRateDates.has(pairKey)) {
-        const pairEntities = entities
-          .filter(
-            (e) =>
-              e.baseCurrency === normalized.base &&
-              e.targetCurrency === normalized.target,
-          )
-          .map((e) => ({
-            date: e.rateDate,
-            rate: typeof e.rate === 'string' ? parseFloat(e.rate) : e.rate,
-          }))
-          .sort((a, b) => a.date.localeCompare(b.date));
-        pairRateDates.set(pairKey, pairEntities);
-      }
-    });
-
-    // Generate results for each date in range
-    const results: DateRangeRateResponse[] = [];
-    let currentDate = dayjs(startDate);
-    const end = dayjs(endDate);
-
-    while (currentDate.diff(end, 'day') <= 0) {
-      const dateStr = currentDate.format('YYYY-MM-DD');
-      const rates: RateWithSource[] = [];
-
-      normalizedPairs.forEach(({ original, normalized }) => {
-        const pairKey = `${normalized.base}:${normalized.target}`;
-        const lookupKey = `${normalized.base}:${normalized.target}:${dateStr}`;
-
-        // Check if we have a DB rate for this exact date
-        const dbRate = rateMap.get(lookupKey);
-
-        let rate: number;
-        let source: 'DB' | 'FILLED';
-
-        if (dbRate !== undefined) {
-          rate = dbRate;
-          source = 'DB';
-        } else {
-          // Fill from closest known rate (prefer last known, fallback to next known)
-          const pairDates = pairRateDates.get(pairKey)!;
-          const filledRate = this.findClosestRate(pairDates, dateStr);
-          rate = filledRate;
-          source = 'FILLED';
-        }
-
-        // If the pair was inverted during normalization, invert the rate
-        const finalRate = normalized.inverted ? 1 / rate : rate;
-
-        rates.push({
-          baseCurrency: original.baseCurrency,
-          targetCurrency: original.targetCurrency,
-          rate: finalRate,
-          source,
-        });
+      const ratio = decimalRateRatio(row.rate, pair.inverted);
+      result.set(key, {
+        ...request,
+        rateDate: row.rateDate,
+        ratio,
+        rate: new ExactDecimal(ratio.numerator)
+          .div(ratio.denominator)
+          .toFixed(),
+        source:
+          row.rateDate === request.requestedDate
+            ? 'DB'
+            : row.rateDate < request.requestedDate
+              ? 'FORWARD_FILLED'
+              : 'BACKWARD_FILLED',
       });
-
-      results.push({ date: dateStr, rates });
-      currentDate = currentDate.add(1, 'day');
     }
-
-    return results;
+    return result;
   }
 
   /**
@@ -249,45 +248,36 @@ export class CurrencyExchangeService {
     baseCurrency: string,
     targetCurrency: string,
     date?: string,
-  ): Promise<number> {
+  ): Promise<string> {
     const rateDate = date ?? dayjs().format('YYYY-MM-DD');
-
-    // Normalize the pair
+    assertDateRange(rateDate, rateDate);
+    if (baseCurrency.toUpperCase() === targetCurrency.toUpperCase()) return '1';
     const { base, target, inverted } = normalizeCurrencyPair(
       baseCurrency,
       targetCurrency,
     );
-
-    // Check database first
-    const existing = await this.repository.findOne({
-      where: {
+    let existing = await this.repository.findOne({
+      where: { baseCurrency: base, targetCurrency: target, rateDate },
+    });
+    if (!existing) {
+      const fetched = await this.getProviderForCurrency(baseCurrency).getRate(
+        base,
+        target,
+        rateDate,
+      );
+      const stored = await this.upsertRate({
         baseCurrency: base,
         targetCurrency: target,
+        rate: new ExactDecimal(String(fetched)).toFixed(),
         rateDate,
-      },
-    });
-
-    if (existing) {
-      const rate =
-        typeof existing.rate === 'string'
-          ? parseFloat(existing.rate)
-          : existing.rate;
-      return inverted ? 1 / rate : rate;
+      });
+      existing = ExchangeRateEntity.fromDto(stored);
     }
-
-    // Fetch from provider
-    const provider = this.getProviderForCurrency(baseCurrency);
-    const fetchedRate = await provider.getRate(base, target, rateDate);
-
-    // Store in database
-    await this.upsertRate({
-      baseCurrency: base,
-      targetCurrency: target,
-      rate: fetchedRate,
-      rateDate,
-    });
-
-    return inverted ? 1 / fetchedRate : fetchedRate;
+    return (
+      inverted
+        ? new ExactDecimal(1).div(existing.rate)
+        : new ExactDecimal(existing.rate)
+    ).toFixed();
   }
 
   // ============================================================
@@ -299,37 +289,42 @@ export class CurrencyExchangeService {
    * Normalizes the currency pair alphabetically before storing.
    */
   async upsertRate(dto: CreateExchangeRateDto): Promise<ExchangeRate> {
-    // Normalize the pair to canonical form (alphabetically sorted)
+    assertDateRange(dto.rateDate, dto.rateDate);
     const { base, target, inverted } = normalizeCurrencyPair(
       dto.baseCurrency,
       dto.targetCurrency,
     );
-
-    // If inverted, we need to store the inverse rate
-    const normalizedRate = inverted ? 1 / dto.rate : dto.rate;
-
-    // Check if rate already exists for this normalized pair and date
-    const existing = await this.repository.findOne({
+    const input = new ExactDecimal(dto.rate);
+    if (!input.isFinite() || !input.isPositive())
+      throw new BadRequestException(
+        'Exchange rate must be positive decimal text',
+      );
+    const normalized = inverted ? new ExactDecimal(1).div(input) : input;
+    const rate = normalized.toFixed(10);
+    if (
+      !new ExactDecimal(rate).isPositive() ||
+      new ExactDecimal(rate).gte('10000000000')
+    ) {
+      throw new BadRequestException(
+        'Exchange rate is outside supported storage precision',
+      );
+    }
+    await this.repository.upsert(
+      {
+        baseCurrency: base,
+        targetCurrency: target,
+        rate,
+        rateDate: dto.rateDate,
+      },
+      ['baseCurrency', 'targetCurrency', 'rateDate'],
+    );
+    const saved = await this.repository.findOneOrFail({
       where: {
         baseCurrency: base,
         targetCurrency: target,
         rateDate: dto.rateDate,
       },
     });
-
-    if (existing) {
-      existing.rate = normalizedRate;
-      const saved = await this.repository.save(existing);
-      return saved.toObject();
-    }
-
-    const entity = ExchangeRateEntity.fromDto({
-      baseCurrency: base,
-      targetCurrency: target,
-      rate: normalizedRate,
-      rateDate: dto.rateDate,
-    });
-    const saved = await this.repository.save(entity);
     return saved.toObject();
   }
 
@@ -386,41 +381,5 @@ export class CurrencyExchangeService {
     });
 
     return existingKeys;
-  }
-
-  // ============================================================
-  // PRIVATE HELPERS
-  // ============================================================
-
-  /**
-   * Find the closest rate for a given date from a sorted list of rates.
-   * Prefers the last known rate (before the date), falls back to next known rate.
-   */
-  private findClosestRate(
-    sortedRates: { date: string; rate: number }[],
-    targetDate: string,
-  ): number {
-    let lastKnown: number | undefined;
-    let nextKnown: number | undefined;
-
-    for (const { date, rate } of sortedRates) {
-      if (date <= targetDate) {
-        lastKnown = rate;
-      } else if (nextKnown === undefined) {
-        nextKnown = rate;
-        break; // We found the next rate, no need to continue
-      }
-    }
-
-    // Prefer last known, fallback to next known
-    if (lastKnown !== undefined) {
-      return lastKnown;
-    }
-    if (nextKnown !== undefined) {
-      return nextKnown;
-    }
-
-    // This shouldn't happen since we verified the pair has at least one rate
-    throw new Error(`No rate found for date ${targetDate}`);
   }
 }

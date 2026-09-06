@@ -12,6 +12,12 @@ export const mockTransactionService = {
   }),
   findOne: jest.fn().mockResolvedValue(mockTransaction),
   findAll: jest.fn().mockResolvedValue([mockTransaction, mockTransaction2]),
+  findPage: jest.fn().mockResolvedValue({
+    data: [mockTransaction, mockTransaction2],
+    total: 2,
+    nextCursor: null,
+    hasMore: false,
+  }),
   findAllPaginated: jest.fn().mockResolvedValue({
     data: [mockTransaction, mockTransaction2],
     total: 2,

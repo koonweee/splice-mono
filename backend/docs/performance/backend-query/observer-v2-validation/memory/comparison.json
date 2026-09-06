@@ -1,0 +1,82 @@
+{
+  "exploratory": true,
+  "comparisons": [
+    {
+      "name": "history.ten-years.100-accounts.daily",
+      "rows": 10000,
+      "run": 1,
+      "policy": "equivalent",
+      "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+      "before": {
+        "p50": 313.31145800000013,
+        "p95": 313.31145800000013,
+        "min": 313.31145800000013,
+        "max": 313.31145800000013
+      },
+      "after": {
+        "p50": 186.26737500000013,
+        "p95": 186.26737500000013,
+        "min": 186.26737500000013,
+        "max": 186.26737500000013
+      },
+      "beforeCpu": {
+        "p50": 408.26,
+        "p95": 408.26,
+        "min": 408.26,
+        "max": 408.26
+      },
+      "afterCpu": {
+        "p50": 231.957,
+        "p95": 231.957,
+        "min": 231.957,
+        "max": 231.957
+      },
+      "p50ImprovementPercent": 40.548814847365065,
+      "p95ImprovementPercent": 40.548814847365065,
+      "beforeQueries": 5,
+      "afterQueries": 5,
+      "beforeBytes": 241896,
+      "afterBytes": 249501,
+      "beforeGzipBytes": 14506,
+      "afterGzipBytes": 14571,
+      "beforeSqlBytes": 9594858,
+      "afterSqlBytes": 9579445,
+      "queryBudget": 7,
+      "regression": []
+    }
+  ],
+  "summary": [
+    {
+      "name": "history.ten-years.100-accounts.daily",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 313.31145800000013,
+        "min": 313.31145800000013,
+        "max": 313.31145800000013
+      },
+      "p50After": {
+        "median": 186.26737500000013,
+        "min": 186.26737500000013,
+        "max": 186.26737500000013
+      },
+      "p95Before": {
+        "median": 313.31145800000013,
+        "min": 313.31145800000013,
+        "max": 313.31145800000013
+      },
+      "p95After": {
+        "median": 186.26737500000013,
+        "min": 186.26737500000013,
+        "max": 186.26737500000013
+      },
+      "cpuMedianBefore": 408.26,
+      "cpuMedianAfter": 231.957,
+      "queriesBefore": 5,
+      "queriesAfter": 5,
+      "bytesBefore": 241896,
+      "bytesAfter": 249501,
+      "regressionRuns": []
+    }
+  ]
+}

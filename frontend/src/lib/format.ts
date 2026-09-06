@@ -1,50 +1,23 @@
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import { MoneyWithSignSign } from '../api/models'
+import { getDecimalPlaces } from './currency-scales.generated'
+import {
+  decimalFromString,
+  minorToMajorString,
+  moneyToMajorString,
+} from './money'
 import type { AccountSubType, AccountType, MoneyWithSign } from '../api/models'
+
+export { getDecimalPlaces } from './currency-scales.generated'
 
 dayjs.extend(relativeTime)
 
 export const HIDDEN_BALANCE_PLACEHOLDER = '****'
 export const DISPLAY_LOCALE = 'en-US'
 
-/**
- * Decimal places for currencies (smallest unit conversion)
- * Copied from backend/src/types/MoneyWithSign.ts
- */
-const CURRENCY_DECIMALS: Record<string, number> = {
-  // Major fiat currencies (ISO-4217)
-  USD: 2,
-  EUR: 2,
-  GBP: 2,
-  CAD: 2,
-  AUD: 2,
-  CHF: 2,
-  CNY: 2,
-  INR: 2,
-  MXN: 2,
-  BRL: 2,
-  // Zero-decimal currencies
-  JPY: 0,
-  KRW: 0,
-  // Crypto currencies
-  ETH: 18,
-  BTC: 8,
-}
-
-/**
- * Check if a currency is a cryptocurrency
- */
+/** Crypto display is intentionally rounded to six decimals for readability. */
 function isCryptoCurrency(currency: string): boolean {
-  const cryptoCurrencies = ['BTC', 'ETH'] // Add other cryptocurrencies as needed
-  return cryptoCurrencies.includes(currency)
-}
-
-/**
- * Get decimal places for a currency, defaulting to 2 for unknown currencies
- */
-export function getDecimalPlaces(currency: string): number {
-  return CURRENCY_DECIMALS[currency] ?? 2
+  return currency === 'BTC' || currency === 'ETH'
 }
 
 /**
@@ -68,7 +41,7 @@ export interface ResolvedBalance {
  * // => { primaryBalance: usdBalance, originalBalance: null }
  *
  * // With conversion (different currencies)
- * resolveBalance(eurBalance, { balance: usdEquivalent, rate: 1.1, rateDate: '...' })
+ * resolveBalance(eurBalance, { balance: usdEquivalent, rate: '1.1', rateDate: '...' })
  * // => { primaryBalance: usdEquivalent, originalBalance: eurBalance }
  */
 export function resolveBalance(
@@ -88,16 +61,16 @@ export function resolveBalance(
  * Converts from cents to dollars and applies the sign
  *
  * @example
- * formatMoneyWithSign({ value: { money: { amount: 12345, currency: 'USD' }, sign: 'positive' } })
+ * formatMoneyWithSign({ value: { money: { amount: '12345', currency: 'USD' }, sign: 'positive' } })
  * // => "$123.45"
  *
- * formatMoneyWithSign({ value: { money: { amount: 12345, currency: 'USD' }, sign: 'negative' } })
+ * formatMoneyWithSign({ value: { money: { amount: '12345', currency: 'USD' }, sign: 'negative' } })
  * // => "-$123.45"
  *
- * formatMoneyWithSign({ value: { money: { amount: 12345, currency: 'USD' }, sign: 'positive' }, decimals: 0 })
+ * formatMoneyWithSign({ value: { money: { amount: '12345', currency: 'USD' }, sign: 'positive' }, decimals: 0 })
  * // => "$123"
  *
- * formatMoneyWithSign({ value: { money: { amount: 12345, currency: 'USD' }, sign: 'positive' }, appendCurrency: true })
+ * formatMoneyWithSign({ value: { money: { amount: '12345', currency: 'USD' }, sign: 'positive' }, appendCurrency: true })
  * // => "$123.45 ($USD)"
  */
 export function formatMoneyWithSign(input: {
@@ -106,81 +79,95 @@ export function formatMoneyWithSign(input: {
   appendCurrency?: boolean
 }): string {
   const { value, decimals, appendCurrency = false } = input
-  const decimalPlaces = getDecimalPlaces(value.money.currency)
-  const dollars = value.money.amount / Math.pow(10, decimalPlaces)
-  const signedAmount =
-    value.sign === MoneyWithSignSign.negative ? -dollars : dollars
-  return formatMoneyNumber({
-    value: signedAmount,
+  return formatMajorMoneyString({
+    value: moneyToMajorString(value),
     currency: value.money.currency,
-    decimals: decimals, // Pass undefined if not provided, to let formatMoneyNumber handle crypto defaults
+    decimals,
     appendCurrency,
   })
 }
 
-/** eg. override SGD to format with currency USD to get '$' prefix instead of 'SGD' */
 const CURRENCY_FORMATTING_OVERRIDES = new Map<string, string>([['SGD', 'USD']])
 
-/**
- * Format a number as a currency
- * For use with chart value formatters
- *
- * @example
- * formatUSD(123.45)    // => "$123.45"
- * formatUSD(123.45, 0) // => "$123"
- */
-export function formatMoneyNumber(input: {
-  value: number
+type MoneyFormatOptions = {
   currency?: string
   decimals?: number
   appendCurrency?: boolean
   currencyDisplay?: 'symbol' | 'code'
-}): string {
-  const {
-    value,
-    currency = 'USD',
-    decimals,
-    appendCurrency = false,
-    currencyDisplay = 'symbol',
-  } = input
+}
 
-  // Handle crypto currencies differently - without currency symbols
-  if (isCryptoCurrency(currency)) {
-    // Use up to 6 decimal places max for crypto currencies (with currency's specific decimal places as upper limit)
-    const decimalPlaces = getDecimalPlaces(currency)
-    const maxCryptoDecimals = 6 // Cap crypto display at 6 decimals for readability
-    const cryptoDecimals = Math.min(
-      decimals !== undefined ? decimals : decimalPlaces,
-      maxCryptoDecimals,
-      decimalPlaces,
-    )
-    const formattedValue = value.toFixed(cryptoDecimals)
-
-    if (appendCurrency || currencyDisplay === 'code') {
-      return `${formattedValue} (${currency})`
-    } else {
-      return formattedValue
-    }
+/** Formats exact major-unit decimal text; never converts money to Number. */
+export function formatMajorMoneyString({
+  value,
+  currency = 'USD',
+  decimals,
+  appendCurrency = false,
+  currencyDisplay = 'symbol',
+}: MoneyFormatOptions & { value: string }): string {
+  const crypto = isCryptoCurrency(currency)
+  const scale = crypto
+    ? Math.min(
+        decimals ?? getDecimalPlaces(currency),
+        6,
+        getDecimalPlaces(currency),
+      )
+    : (decimals ?? getDecimalPlaces(currency))
+  const rounded = decimalFromString(value).toDecimalPlaces(scale)
+  const fixed = rounded.abs().toFixed(scale)
+  const negative = rounded.isNegative() && !rounded.isZero()
+  if (crypto) {
+    const formatted = (negative ? '-' : '') + fixed
+    return appendCurrency || currencyDisplay === 'code'
+      ? formatted + ' (' + currency + ')'
+      : formatted
   }
-
-  // For non-crypto currencies, default to the currency's native decimal places.
-  const effectiveDecimals = decimals ?? getDecimalPlaces(currency)
-
-  const overrideCurrency =
-    CURRENCY_FORMATTING_OVERRIDES.get(currency) ?? currency
+  const [integer, fraction] = fixed.split('.')
+  const integerValue = BigInt(integer)
+  // -0 is a formatting token for a negative fraction, not converted financial data.
+  const signedInteger = negative
+    ? integerValue === 0n
+      ? -0
+      : -integerValue
+    : integerValue
   const formatted = new Intl.NumberFormat(DISPLAY_LOCALE, {
     style: 'currency',
-    // When appending currency, avoid currency specific formatting
     currency: appendCurrency
       ? 'USD'
       : currencyDisplay === 'code'
         ? currency
-        : overrideCurrency,
+        : (CURRENCY_FORMATTING_OVERRIDES.get(currency) ?? currency),
     currencyDisplay,
-    minimumFractionDigits: effectiveDecimals,
-    maximumFractionDigits: effectiveDecimals,
-  }).format(value)
-  return appendCurrency ? `${formatted} (${currency})` : formatted
+    minimumFractionDigits: scale,
+    maximumFractionDigits: scale,
+  })
+    .formatToParts(signedInteger)
+    .map((part) => (part.type === 'fraction' ? fraction : part.value))
+    .join('')
+  return appendCurrency ? formatted + ' (' + currency + ')' : formatted
+}
+
+export function formatMinorMoneyString(
+  input: MoneyFormatOptions & { value: string },
+): string {
+  return formatMajorMoneyString({
+    ...input,
+    value: minorToMajorString(input.value, input.currency ?? 'USD'),
+  })
+}
+
+/** Approximate axis/tick formatting only. Exact labels use the string formatters. */
+export function formatMoneyNumber(
+  input: MoneyFormatOptions & { value: number },
+): string {
+  if (!Number.isFinite(input.value)) throw new Error('Invalid chart value')
+  // Chart coordinates may use exponent notation; expand only at this presentation boundary.
+  return formatMajorMoneyString({
+    ...input,
+    value: new Intl.NumberFormat('en-US', {
+      useGrouping: false,
+      maximumFractionDigits: 20,
+    }).format(input.value),
+  })
 }
 
 /**

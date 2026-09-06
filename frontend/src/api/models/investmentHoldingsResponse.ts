@@ -10,10 +10,7 @@ import type { InvestmentHoldingSnapshot } from './investmentHoldingSnapshot'
 
 export interface InvestmentHoldingsResponse {
   accountId: string
-  /**
-   * @nullable
-   * @pattern ^\d{4}-\d{2}-\d{2}$
-   */
+  /** @nullable */
   snapshotDate: string | null
   /** @nullable */
   accountCurrency: string | null

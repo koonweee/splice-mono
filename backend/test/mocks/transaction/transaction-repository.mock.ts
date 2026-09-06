@@ -23,11 +23,11 @@ const mockTransactionEntity = {
   category: null,
   categoryUpdatedAt: null,
   amount: {
-    amount: 5000,
+    amount: '5000',
     currency: 'USD',
     sign: MoneySign.NEGATIVE,
     toMoneyWithSign: jest.fn().mockReturnValue({
-      money: { currency: 'USD', amount: 5000 },
+      money: { currency: 'USD', amount: '5000' },
       sign: MoneySign.NEGATIVE,
     }),
   },
@@ -53,11 +53,11 @@ const mockTransactionEntity2 = {
   category: null,
   categoryUpdatedAt: null,
   amount: {
-    amount: 2500,
+    amount: '2500',
     currency: 'USD',
     sign: MoneySign.NEGATIVE,
     toMoneyWithSign: jest.fn().mockReturnValue({
-      money: { currency: 'USD', amount: 2500 },
+      money: { currency: 'USD', amount: '2500' },
       sign: MoneySign.NEGATIVE,
     }),
   },

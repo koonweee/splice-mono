@@ -1,4 +1,8 @@
 import {
+  DecimalAmountSchema,
+  MinorUnitAmountSchema,
+} from '../types/MoneyWithSign';
+import {
   defineServer,
   defineTool,
   McpPublicError,
@@ -442,6 +446,21 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
           startDate: DateStringSchema,
           endDate: DateStringSchema,
           accountIds: z.array(z.string().uuid()).optional(),
+          resolution: z
+            .enum(['daily', 'compact'])
+            .optional()
+            .describe(
+              'Daily preserves every point. Compact preserves endpoints and extrema for a smaller chart payload.',
+            ),
+          maxPoints: z
+            .number()
+            .int()
+            .min(4)
+            .max(1000)
+            .optional()
+            .describe(
+              'Compact point budget; default 240. Does not bypass date/account-day work limits.',
+            ),
         },
         outputSchema: BalanceHistoryOutputSchema,
         requiredScopes: ['splice:read'],
@@ -468,8 +487,12 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
           accountIds: z.array(z.string().uuid()).optional(),
           categoryPrimary: z.string().optional(),
           merchantQuery: z.string().optional(),
-          minAmount: z.number().optional(),
-          maxAmount: z.number().optional(),
+          minAmount: MinorUnitAmountSchema.optional().describe(
+            'Exact minimum magnitude in native minor units; use list_transactions.amountFilter for converted major-unit filtering',
+          ),
+          maxAmount: MinorUnitAmountSchema.optional().describe(
+            'Exact maximum magnitude in native minor units',
+          ),
           sign: z.enum(['positive', 'negative']).optional(),
           includePending: z.boolean().optional(),
           limit: z.number().int().positive().max(20).optional(),
@@ -548,16 +571,12 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
           ),
           amountFilter: z
             .object({
-              min: z
-                .number()
-                .nonnegative()
-                .optional()
-                .describe('Minimum absolute amount in major units.'),
-              max: z
-                .number()
-                .nonnegative()
-                .optional()
-                .describe('Maximum absolute amount in major units.'),
+              min: DecimalAmountSchema.optional().describe(
+                'Minimum absolute amount in major units.',
+              ),
+              max: DecimalAmountSchema.optional().describe(
+                'Maximum absolute amount in major units.',
+              ),
               currency: CurrencySchema.describe(
                 'Must match reportingCurrency. Candidate transactions are converted before this filter is applied.',
               ),
@@ -1328,18 +1347,12 @@ export const spliceMcpDefinition = defineServer<SpliceMcpDependencies>()({
         }
 
         const loadPeriod = async (startDate: string, endDate: string) => {
-          const [analysis, audit] = await Promise.all([
-            dependencies.transactionAnalysisService.getAnalysis(
+          const { summary: analysis, audit } =
+            await dependencies.transactionAnalysisService.getReport(
               startDate,
               endDate,
               dependencies.userId,
-            ),
-            dependencies.transactionAnalysisService.getAnalysisAudit(
-              startDate,
-              endDate,
-              dependencies.userId,
-            ),
-          ]);
+            );
 
           return {
             analysis: mcpCashflowAnalysis(analysis),

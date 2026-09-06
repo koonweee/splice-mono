@@ -50,7 +50,14 @@ const mockTransactionService = {
   findStalePendingProviderTransactions: jest.fn().mockResolvedValue([]),
 };
 
+const mockSyncToken = {
+  generation: '1',
+  userId: 'user-uuid-123',
+  bankLinkId: 'bank-link-1',
+  kind: 'holdings',
+};
 const mockInvestmentService = {
+  beginProviderSync: jest.fn().mockResolvedValue(mockSyncToken),
   upsertPlaidHoldings: jest.fn().mockResolvedValue({
     accounts: 1,
     securities: 1,
@@ -1367,6 +1374,7 @@ describe('BankLinkService', () => {
           holdings: expect.any(Array) as unknown[],
           securities: expect.any(Array) as unknown[],
         }),
+        mockSyncToken,
       );
     });
 
@@ -1446,6 +1454,7 @@ describe('BankLinkService', () => {
           transactions: expect.any(Array) as unknown[],
           securities: expect.any(Array) as unknown[],
         }),
+        mockSyncToken,
       );
     });
 
@@ -2173,25 +2182,24 @@ describe('BankLinkService', () => {
       expect(
         mockInvestmentService.upsertPlaidInvestmentTransactions,
       ).toHaveBeenCalled();
-      expect(mockBankLinkRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          id: currentBankLink.id,
-          userId: mockUserId,
-          archivedAt: expect.objectContaining({ _type: 'isNull' }),
-        },
-        lock: { mode: 'pessimistic_write' },
-      });
-      expect(mockBankLinkRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          authentication: expect.objectContaining({
-            nextCursor: 'current-cursor',
-            investmentTransactionsSync: expect.objectContaining({
-              lastSyncedAt: expect.any(String),
-              lastStartDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-              lastEndDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-            }),
-          }),
-        }),
+      expect(mockInvestmentService.beginProviderSync).toHaveBeenCalledWith(
+        mockUserId,
+        currentBankLink.id,
+        'transactions',
+      );
+      const fetch = mockPlaidProvider.syncInvestmentTransactions;
+      if (!jest.isMockFunction(fetch))
+        throw new Error('Expected provider mock');
+      expect(
+        mockInvestmentService.beginProviderSync.mock.invocationCallOrder[0],
+      ).toBeLessThan(fetch.mock.invocationCallOrder[0]);
+      expect(
+        mockInvestmentService.upsertPlaidInvestmentTransactions,
+      ).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Map),
+        expect.any(Object),
+        mockSyncToken,
       );
       expect(result).toEqual({ synced: 1, failed: 0, skipped: 0 });
     });
@@ -2678,7 +2686,7 @@ describe('BankLinkService', () => {
           {
             accountId: 'provider-account',
             amount: {
-              money: { amount: 1200, currency: 'USD' },
+              money: { amount: '1200', currency: 'USD' },
               sign: MoneySign.NEGATIVE,
             },
             merchantName: 'Store',
@@ -2709,7 +2717,7 @@ describe('BankLinkService', () => {
           {
             accountId: 'unknown-provider-account',
             amount: {
-              money: { amount: 1200, currency: 'USD' },
+              money: { amount: '1200', currency: 'USD' },
               sign: MoneySign.NEGATIVE,
             },
             merchantName: 'Store',
@@ -2759,7 +2767,7 @@ describe('BankLinkService', () => {
           {
             accountId: 'archived-provider-account',
             amount: {
-              money: { amount: 1200, currency: 'USD' },
+              money: { amount: '1200', currency: 'USD' },
               sign: MoneySign.NEGATIVE,
             },
             merchantName: 'Hidden Store',
@@ -2919,7 +2927,7 @@ describe('BankLinkService', () => {
             {
               accountId: 'external-account-id',
               amount: {
-                money: { amount: 1200, currency: 'USD' },
+                money: { amount: '1200', currency: 'USD' },
                 sign: MoneySign.NEGATIVE,
               },
               merchantName: 'Posted Store',
@@ -3150,7 +3158,7 @@ describe('BankLinkService', () => {
             {
               accountId: 'external-account-id',
               amount: {
-                money: { amount: 1200, currency: 'USD' },
+                money: { amount: '1200', currency: 'USD' },
                 sign: MoneySign.NEGATIVE,
               },
               merchantName: 'First Posted Store',
@@ -3162,7 +3170,7 @@ describe('BankLinkService', () => {
             {
               accountId: 'external-account-id',
               amount: {
-                money: { amount: 1200, currency: 'USD' },
+                money: { amount: '1200', currency: 'USD' },
                 sign: MoneySign.NEGATIVE,
               },
               merchantName: 'Second Posted Store',

@@ -43,6 +43,17 @@ const INTENTIONALLY_UPDATED_CASH_FLOW_GUIDANCE_TOOLS = new Set([
   'list_cashflow_category_transactions',
   'get_cashflow_analysis_audit',
 ]);
+const INTENTIONALLY_UPDATED_EXACT_QUERY_TOOLS = new Set([
+  'get_user_context',
+  'get_balance_history',
+  'search_transactions',
+  'list_balance_snapshots',
+  'list_categories',
+  'list_investment_holdings',
+  'list_investment_activity',
+  'preview_categorization_rule_draft',
+  'collect_projection_assumptions',
+]);
 const ADDED_CATEGORIZATION_LIFECYCLE_TOOLS = new Set([
   'get_categorization_rule',
   'preview_categorization_rule_edit',
@@ -133,10 +144,27 @@ describe('Splice MCP definition', () => {
     applyRule: jest.fn(),
   };
   const transactionAnalysisService = {
+    getReport: jest.fn(),
     getAnalysis: jest.fn(),
     getCategoryTransactions: jest.fn(),
     getAnalysisAudit: jest.fn(),
   };
+
+  beforeEach(() => {
+    transactionAnalysisService.getReport.mockImplementation(
+      async (startDate: string, endDate: string, userId: string) => {
+        const [summary, audit] = await Promise.all([
+          transactionAnalysisService.getAnalysis(startDate, endDate, userId),
+          transactionAnalysisService.getAnalysisAudit(
+            startDate,
+            endDate,
+            userId,
+          ),
+        ]);
+        return { summary, audit, evaluatedTransactions: [] };
+      },
+    );
+  });
 
   afterEach(() => {
     jest.clearAllMocks();
@@ -516,7 +544,8 @@ describe('Splice MCP definition', () => {
             name !== REPLACED_CASH_FLOW_TOOL &&
             name !== REPLACED_PORTFOLIO_TOOL &&
             !UPDATED_CATEGORIZATION_GUIDANCE_TOOLS.has(name) &&
-            !INTENTIONALLY_UPDATED_CASH_FLOW_GUIDANCE_TOOLS.has(name),
+            !INTENTIONALLY_UPDATED_CASH_FLOW_GUIDANCE_TOOLS.has(name) &&
+            !INTENTIONALLY_UPDATED_EXACT_QUERY_TOOLS.has(name),
         );
       const retainedResources = PRE_PORT_MCP_CONTRACT.fixedResources.filter(
         (uri) =>
@@ -547,7 +576,8 @@ describe('Splice MCP definition', () => {
               tool.name !== 'visualize_portfolio' &&
               !ADDED_CATEGORIZATION_LIFECYCLE_TOOLS.has(tool.name) &&
               !UPDATED_CATEGORIZATION_GUIDANCE_TOOLS.has(tool.name) &&
-              !INTENTIONALLY_UPDATED_CASH_FLOW_GUIDANCE_TOOLS.has(tool.name),
+              !INTENTIONALLY_UPDATED_CASH_FLOW_GUIDANCE_TOOLS.has(tool.name) &&
+              !INTENTIONALLY_UPDATED_EXACT_QUERY_TOOLS.has(tool.name),
           )
           .map((tool) => ({
             name: tool.name,
@@ -712,11 +742,11 @@ describe('Splice MCP definition', () => {
       currency: 'USD',
       inflows: [],
       outflows: [],
-      totalInflow: 0,
-      totalOutflow: 0,
-      netFlow: 0,
-      uncategorizedInflow: 0,
-      uncategorizedOutflow: 0,
+      totalInflow: '0',
+      totalOutflow: '0',
+      netFlow: '0',
+      uncategorizedInflow: '0',
+      uncategorizedOutflow: '0',
     });
     accountsSurfaceService.getAccountsSnapshot.mockResolvedValue({
       accounts: [{ id: mockAccountId, displayName: 'Checking' }],
@@ -999,7 +1029,7 @@ describe('Splice MCP definition', () => {
           grouping: 'cash',
           groupingLabel: 'Cash',
           balance: {
-            money: { amount: 12345, currency: 'USD' },
+            money: { amount: '12345', currency: 'USD' },
             sign: MoneySign.POSITIVE,
           },
         },
@@ -1021,7 +1051,7 @@ describe('Splice MCP definition', () => {
         accounts: [
           {
             balance: {
-              amount: 123.45,
+              amount: '123.45',
               currency: 'USD',
               sign: MoneySign.POSITIVE,
             },
@@ -1036,7 +1066,7 @@ describe('Splice MCP definition', () => {
   it('delegates balance history requests to the balance history surface', async () => {
     balanceHistorySurfaceService.getBalanceHistorySummary.mockResolvedValue({
       netWorth: {
-        money: { amount: 100000, currency: 'USD' },
+        money: { amount: '100000', currency: 'USD' },
         sign: MoneySign.POSITIVE,
       },
       chartData: [],
@@ -1674,7 +1704,7 @@ describe('Splice MCP definition', () => {
       inflows: [
         {
           primaryCategory: 'INCOME',
-          totalAmount: 250000,
+          totalAmount: '250000',
           currency: 'USD',
           transactionCount: 2,
           color: '#2f9e44',
@@ -1683,17 +1713,17 @@ describe('Splice MCP definition', () => {
       outflows: [
         {
           primaryCategory: 'FOOD_AND_DRINK',
-          totalAmount: 4200,
+          totalAmount: '4200',
           currency: 'USD',
           transactionCount: 3,
           color: '#f59f00',
         },
       ],
-      totalInflow: 250000,
-      totalOutflow: 4200,
-      netFlow: 245800,
-      uncategorizedInflow: 0,
-      uncategorizedOutflow: 1200,
+      totalInflow: '250000',
+      totalOutflow: '4200',
+      netFlow: '245800',
+      uncategorizedInflow: '0',
+      uncategorizedOutflow: '1200',
     });
 
     const { client, close } = await connect(createServer(mockUserId));
@@ -1715,22 +1745,22 @@ describe('Splice MCP definition', () => {
       expect(result.structuredContent).toMatchObject({
         totals: {
           totalInflow: {
-            amount: 2500,
+            amount: '2500',
             currency: 'USD',
             sign: MoneySign.POSITIVE,
           },
           totalOutflow: {
-            amount: 42,
+            amount: '42',
             currency: 'USD',
             sign: MoneySign.NEGATIVE,
           },
           netFlow: {
-            amount: 2458,
+            amount: '2458',
             currency: 'USD',
             sign: MoneySign.POSITIVE,
           },
           uncategorizedOutflow: {
-            amount: 12,
+            amount: '12',
             currency: 'USD',
             sign: MoneySign.NEGATIVE,
           },
@@ -1739,7 +1769,7 @@ describe('Splice MCP definition', () => {
           {
             primaryCategory: 'INCOME',
             totalAmount: {
-              amount: 2500,
+              amount: '2500',
               currency: 'USD',
               sign: MoneySign.POSITIVE,
             },
@@ -1749,7 +1779,7 @@ describe('Splice MCP definition', () => {
           {
             primaryCategory: 'FOOD_AND_DRINK',
             totalAmount: {
-              amount: 42,
+              amount: '42',
               currency: 'USD',
               sign: MoneySign.NEGATIVE,
             },
@@ -1828,7 +1858,7 @@ describe('Splice MCP definition', () => {
       inflows: [
         {
           primaryCategory: 'INCOME',
-          totalAmount: 250000,
+          totalAmount: '250000',
           currency: 'USD',
           transactionCount: 2,
           color: '#2f9e44',
@@ -1837,17 +1867,17 @@ describe('Splice MCP definition', () => {
       outflows: [
         {
           primaryCategory: 'FOOD_AND_DRINK',
-          totalAmount: 4200,
+          totalAmount: '4200',
           currency: 'USD',
           transactionCount: 3,
           color: '#f59f00',
         },
       ],
-      totalInflow: 250000,
-      totalOutflow: 4200,
-      netFlow: 245800,
-      uncategorizedInflow: 0,
-      uncategorizedOutflow: 1200,
+      totalInflow: '250000',
+      totalOutflow: '4200',
+      netFlow: '245800',
+      uncategorizedInflow: '0',
+      uncategorizedOutflow: '1200',
     });
     transactionAnalysisService.getAnalysisAudit.mockResolvedValue({
       startDate: '2026-03-01',
@@ -1929,18 +1959,18 @@ describe('Splice MCP definition', () => {
           inflows: [
             {
               primaryCategory: 'INCOME',
-              totalAmount: 100000,
+              totalAmount: '100000',
               currency: 'USD',
               transactionCount: 1,
               color: '#2f9e44',
             },
           ],
           outflows: [],
-          totalInflow: 100000,
-          totalOutflow: 0,
-          netFlow: 100000,
-          uncategorizedInflow: 0,
-          uncategorizedOutflow: 0,
+          totalInflow: '100000',
+          totalOutflow: '0',
+          netFlow: '100000',
+          uncategorizedInflow: '0',
+          uncategorizedOutflow: '0',
         };
       },
     );
@@ -1973,6 +2003,7 @@ describe('Splice MCP definition', () => {
         },
       });
       await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(transactionAnalysisService.getReport).toHaveBeenCalledTimes(2);
       expect(started.sort()).toEqual(
         [
           'analysis:2026-02-01:2026-02-28',
@@ -2018,11 +2049,11 @@ describe('Splice MCP definition', () => {
       currency: 'USD',
       inflows: [],
       outflows: [],
-      totalInflow: 0,
-      totalOutflow: 0,
-      netFlow: 0,
-      uncategorizedInflow: 0,
-      uncategorizedOutflow: 0,
+      totalInflow: '0',
+      totalOutflow: '0',
+      netFlow: '0',
+      uncategorizedInflow: '0',
+      uncategorizedOutflow: '0',
     });
     transactionAnalysisService.getAnalysisAudit.mockRejectedValue(
       new Error('PRIVATE_COMPARISON_FAILURE'),
@@ -2084,11 +2115,11 @@ describe('Splice MCP definition', () => {
       currency: 'USD',
       inflows: [],
       outflows: [],
-      totalInflow: 0,
-      totalOutflow: 0,
-      netFlow: 0,
-      uncategorizedInflow: 0,
-      uncategorizedOutflow: 0,
+      totalInflow: '0',
+      totalOutflow: '0',
+      netFlow: '0',
+      uncategorizedInflow: '0',
+      uncategorizedOutflow: '0',
     });
     transactionAnalysisService.getAnalysisAudit.mockResolvedValue({
       startDate: '2026-03-01',
@@ -2099,7 +2130,7 @@ describe('Splice MCP definition', () => {
     mcpPortfolioVisualizationService.visualize.mockResolvedValue({
       reportingCurrency: 'USD',
       totalValueUsd: {
-        amount: 125.5,
+        amount: '125.5',
         currency: 'USD',
         sign: MoneySign.POSITIVE,
       },
@@ -2114,7 +2145,7 @@ describe('Splice MCP definition', () => {
           subtype: 'etf',
           quantity: '2.5',
           valueUsd: {
-            amount: 125.5,
+            amount: '125.5',
             currency: 'USD',
             sign: MoneySign.POSITIVE,
           },
@@ -2126,12 +2157,12 @@ describe('Splice MCP definition', () => {
               snapshotDate: '2026-08-16',
               quantity: '2.5',
               valueUsd: {
-                amount: 125.5,
+                amount: '125.5',
                 currency: 'USD',
                 sign: MoneySign.POSITIVE,
               },
               priceUsd: {
-                amount: 45.83,
+                amount: '45.83',
                 currency: 'USD',
                 sign: MoneySign.POSITIVE,
               },
@@ -2215,7 +2246,7 @@ describe('Splice MCP definition', () => {
           expect(result.structuredContent).toMatchObject({
             data: {
               reportingCurrency: 'USD',
-              totalValueUsd: { amount: 125.5, currency: 'USD' },
+              totalValueUsd: { amount: '125.5', currency: 'USD' },
               positions: [
                 {
                   tickerSymbol: 'TEST',
@@ -2277,7 +2308,7 @@ describe('Splice MCP definition', () => {
       mcpPortfolioVisualizationService.visualize.mockResolvedValue({
         reportingCurrency: 'USD',
         totalValueUsd: {
-          amount: 0.001,
+          amount: '0.001',
           currency: 'USD',
           sign: MoneySign.POSITIVE,
         },

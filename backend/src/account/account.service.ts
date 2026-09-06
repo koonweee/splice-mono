@@ -123,7 +123,7 @@ export class AccountService extends OwnedCrudService<
       accountEntity.type === String(AccountType.Brokerage);
     const availableBalance: SerializedMoneyWithSign = isInvestmentType
       ? {
-          money: { amount: 0, currency: newBalance.money.currency },
+          money: { amount: '0', currency: newBalance.money.currency },
           sign: MoneySign.POSITIVE,
         }
       : newBalance;
@@ -297,7 +297,7 @@ export class AccountService extends OwnedCrudService<
 
   private createZeroBalance(currency: string): BalanceColumns {
     return BalanceColumns.fromMoneyWithSign({
-      money: { amount: 0, currency },
+      money: { amount: '0', currency },
       sign: MoneySign.POSITIVE,
     });
   }

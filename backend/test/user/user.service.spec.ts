@@ -30,6 +30,9 @@ describe('UserService', () => {
   const mockRepository = {
     save: jest.fn(),
     findOne: jest.fn(),
+    findOneByOrFail: jest.fn(),
+    update: jest.fn(),
+    manager: { transaction: jest.fn() },
   };
 
   const mockAuthService = {
@@ -46,6 +49,9 @@ describe('UserService', () => {
   };
 
   beforeEach(async () => {
+    mockRepository.manager.transaction.mockImplementation(async (work) =>
+      work({ getRepository: () => mockRepository }),
+    );
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,
@@ -65,6 +71,9 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
+    mockRepository.findOneByOrFail.mockImplementation(async (where) =>
+      mockRepository.findOne({ where }),
+    );
   });
 
   afterEach(() => {
@@ -136,7 +145,8 @@ describe('UserService', () => {
 
       mockRepository.findOne
         .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(existingEntity);
+        .mockResolvedValueOnce(existingEntity)
+        .mockResolvedValue(existingEntity);
       mockRepository.save.mockImplementation((entity: UserEntity) =>
         Promise.resolve(entity),
       );
@@ -147,9 +157,9 @@ describe('UserService', () => {
       });
 
       expect(result.id).toBe(existingEntity.id);
-      expect(mockRepository.save).toHaveBeenCalledWith(
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        existingEntity.id,
         expect.objectContaining({
-          id: existingEntity.id,
           googleSubject: 'google-subject-123',
         }),
       );
@@ -304,6 +314,7 @@ describe('UserService', () => {
       expect(result).toEqual({ userToken: 'plaid-user-token-123' });
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { id: 'user-uuid-123' },
+        select: { providerDetails: true },
       });
     });
 
@@ -460,6 +471,22 @@ describe('UserService', () => {
   });
 
   describe('updateSettings', () => {
+    it('does not emit a settings event when the transaction fails to commit', async () => {
+      mockRepository.findOne.mockResolvedValue({
+        id: 'user-uuid-123',
+        settings: defaultSettings,
+      });
+      mockRepository.manager.transaction.mockImplementationOnce(
+        async (work) => {
+          await work({ getRepository: () => mockRepository });
+          throw new Error('Commit failed');
+        },
+      );
+      await expect(
+        service.updateSettings('user-uuid-123', { currency: 'EUR' }),
+      ).rejects.toThrow('Commit failed');
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+    });
     it('should update settings and emit event when currency changes', async () => {
       const mockEntity = new UserEntity();
       mockEntity.id = 'user-uuid-123';
@@ -715,7 +742,8 @@ describe('UserService', () => {
         true,
       );
       expect(result?.notifications.bankLinks.needsAttention).toBe(true);
-      expect(mockRepository.save).toHaveBeenCalledWith(
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        'user-uuid-123',
         expect.objectContaining({
           settings: expect.objectContaining({
             notifications: {

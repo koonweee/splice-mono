@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CalendarDateSchema } from '../common/query-bounds';
 import { registerSchema } from '../common/zod-api-response';
 import {
   MoneyWithSignSchema,
@@ -20,9 +21,7 @@ export type InvestmentActivityProvider = z.infer<
   typeof InvestmentActivityProviderSchema
 >;
 
-export const DateStringSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD');
+export const DateStringSchema = CalendarDateSchema;
 
 const NullableDecimalStringSchema = z.string().nullable();
 const ProviderJsonObjectSchema = z.record(z.string(), z.unknown());

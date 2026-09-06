@@ -1,3 +1,5 @@
+import { minorToMajorString } from '../common/exact-money';
+import { CalendarDateSchema } from '../common/query-bounds';
 import {
   enforceRequiredScopes,
   mcpExtensionErrorBoundary,
@@ -10,7 +12,7 @@ import {
   type ReadResourceResult,
 } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { getDecimalPlaces, MoneySign } from '../types/MoneyWithSign';
+import { MoneySign } from '../types/MoneyWithSign';
 import type {
   CategoryAggregate,
   TransactionAnalysisAuditResponse,
@@ -20,9 +22,7 @@ import { normalizeMcpMoney, type McpMoney } from './mcp-money';
 import type { CashFlowAdjustmentSummary } from './mcp-schemas';
 import type { SpliceMcpDependencies } from './mcp.definition';
 
-export const DateStringSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD');
+export const DateStringSchema = CalendarDateSchema;
 export const CurrencySchema = z
   .string()
   .trim()
@@ -62,38 +62,33 @@ Use list_analysis_rules to explain configured cash-flow rules, then get_cashflow
 
 Use reportingCurrency from get_user_context.currency unless the user asks for another currency. Compare amounts using convertedAmount. Native amount preserves the original transaction currency.
 
-All MCP money amounts are major units and always include currency and sign. Amount filters require a currency and are applied after conversion into reportingCurrency.
+All MCP money amounts are exact decimal strings in major units and always include currency and sign. Amount filters require a currency and are applied after conversion into reportingCurrency.
 
 Transaction date ranges use activityDate (reportingDateOverride when set, otherwise authorizedDate when available, otherwise providerDate). Dates are inclusive YYYY-MM-DD. Resolve relative dates using get_user_context.today and timezone. Raw provider and authorized dates remain available for audit. Provider category hints are guidance only; category filters are user-category filters. Use list_categories for exact category IDs when needed.
 
 Pending transactions are included in cash-flow analysis and excluded from list_transactions by default unless includePending is true. State whether pending transactions were included.`;
 
-function majorUnitAmount(amount: number, currency: string): number {
-  const decimals = getDecimalPlaces(currency);
-
-  return Number((Math.abs(amount) / Math.pow(10, decimals)).toFixed(decimals));
-}
-
 function mcpMoneyFromSmallestUnit(
-  amount: number,
+  amount: string,
   currency: string,
   sign: MoneySign,
 ): McpMoney {
+  const value = BigInt(amount);
   return {
-    amount: majorUnitAmount(amount, currency),
+    amount: minorToMajorString(value < 0n ? -value : value, currency),
     currency,
     sign,
   };
 }
 
 function mcpMoneyFromSignedSmallestUnit(
-  amount: number,
+  amount: string,
   currency: string,
 ): McpMoney {
   return mcpMoneyFromSmallestUnit(
     amount,
     currency,
-    amount < 0 ? MoneySign.NEGATIVE : MoneySign.POSITIVE,
+    BigInt(amount) < 0n ? MoneySign.NEGATIVE : MoneySign.POSITIVE,
   );
 }
 

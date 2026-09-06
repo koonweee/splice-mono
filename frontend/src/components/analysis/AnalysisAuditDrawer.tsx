@@ -17,9 +17,8 @@ import { useCompactLayout } from '../../lib/responsive'
 import {
   formatCategoryName,
   formatDateTime,
-  formatMoneyNumber,
+  formatMoneyWithSign,
   formatPrimaryCategory,
-  getDecimalPlaces,
 } from '../../lib/format'
 import { formatDateRangeLabel } from '../../lib/date-range'
 import type {
@@ -49,19 +48,15 @@ type AnalysisAuditDrawerProps = {
   auditQuery?: AnalysisAuditDrawerQuery
 }
 
-function toMajorUnits(amount: number, currency: string) {
-  return amount / Math.pow(10, getDecimalPlaces(currency))
-}
-
 function formatAuditAmount(transaction: AnalysisAuditTransaction) {
-  const signedAmount =
-    transaction.amount.sign === 'negative'
-      ? -Math.abs(transaction.amount.amount)
-      : Math.abs(transaction.amount.amount)
-
-  return formatMoneyNumber({
-    value: toMajorUnits(signedAmount, transaction.amount.currency),
-    currency: transaction.amount.currency,
+  return formatMoneyWithSign({
+    value: {
+      money: {
+        amount: transaction.amount.amount,
+        currency: transaction.amount.currency,
+      },
+      sign: transaction.amount.sign,
+    },
   })
 }
 

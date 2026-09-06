@@ -19,7 +19,7 @@ const createMockResult = (date: string, amount: number) => ({
       },
       effectiveBalance: {
         balance: {
-          money: { amount: amount * 100, currency: 'USD' },
+          money: { amount: String(Math.abs(amount) * 100), currency: 'USD' },
           sign:
             amount >= 0
               ? MoneyWithSignSign.positive
@@ -70,7 +70,7 @@ describe('balance-utils transform', () => {
                 },
                 effectiveBalance: {
                   balance: {
-                    money: { amount: 10000, currency: 'USD' },
+                    money: { amount: '10000', currency: 'USD' },
                     sign: MoneyWithSignSign.positive,
                   },
                 },
@@ -99,7 +99,7 @@ describe('balance-utils transform', () => {
 
     it('orders assets and liabilities by converted values when present', () => {
       const makeBalance = (amount: number, currency = 'USD') => ({
-        money: { amount, currency },
+        money: { amount: String(amount), currency },
         sign: MoneyWithSignSign.positive,
       })
       const data = transformToDashboardData(
@@ -173,7 +173,7 @@ describe('balance-utils transform', () => {
             },
             effectiveBalance: {
               balance: {
-                money: { amount: 10000, currency: 'USD' },
+                money: { amount: '10000', currency: 'USD' },
                 sign: MoneyWithSignSign.positive,
               },
             },
@@ -186,7 +186,7 @@ describe('balance-utils transform', () => {
             },
             effectiveBalance: {
               balance: {
-                money: { amount: 5000, currency: 'EUR' },
+                money: { amount: '5000', currency: 'EUR' },
                 sign: MoneyWithSignSign.positive,
               },
             },
@@ -211,7 +211,7 @@ describe('balance-utils transform', () => {
             },
             effectiveBalance: {
               balance: {
-                money: { amount: 10000, currency: 'USD' },
+                money: { amount: '10000', currency: 'USD' },
                 sign: MoneyWithSignSign.positive,
               },
             },
@@ -224,7 +224,7 @@ describe('balance-utils transform', () => {
             },
             effectiveBalance: {
               balance: {
-                money: { amount: 0, currency: 'EUR' },
+                money: { amount: '0', currency: 'EUR' },
                 sign: MoneyWithSignSign.positive,
               },
             },
@@ -238,7 +238,7 @@ describe('balance-utils transform', () => {
         'USD',
       )
 
-      expect(data.netWorth.money).toEqual({ amount: 10000, currency: 'USD' })
+      expect(data.netWorth.money).toEqual({ amount: '10000', currency: 'USD' })
       expect(data.chartData[0].value).toBe(100)
     })
 
@@ -254,7 +254,7 @@ describe('balance-utils transform', () => {
             },
             effectiveBalance: {
               balance: {
-                money: { amount: 0, currency: 'EUR' },
+                money: { amount: '0', currency: 'EUR' },
                 sign: MoneyWithSignSign.positive,
               },
             },
@@ -267,7 +267,7 @@ describe('balance-utils transform', () => {
             },
             effectiveBalance: {
               balance: {
-                money: { amount: 0, currency: 'JPY' },
+                money: { amount: '0', currency: 'JPY' },
                 sign: MoneyWithSignSign.positive,
               },
             },
@@ -277,8 +277,8 @@ describe('balance-utils transform', () => {
 
       const data = transformToDashboardData([result] as any, TimePeriod.month)
 
-      expect(data.netWorth.money).toEqual({ amount: 0, currency: 'EUR' })
-      expect(data.changeAmount?.money).toEqual({ amount: 0, currency: 'EUR' })
+      expect(data.netWorth.money).toEqual({ amount: '0', currency: 'EUR' })
+      expect(data.changeAmount?.money).toEqual({ amount: '0', currency: 'EUR' })
     })
 
     it('lets a non-zero balance establish the unit after a foreign zero', () => {
@@ -293,7 +293,7 @@ describe('balance-utils transform', () => {
             },
             effectiveBalance: {
               balance: {
-                money: { amount: 0, currency: 'EUR' },
+                money: { amount: '0', currency: 'EUR' },
                 sign: MoneyWithSignSign.positive,
               },
             },
@@ -306,7 +306,7 @@ describe('balance-utils transform', () => {
             },
             effectiveBalance: {
               balance: {
-                money: { amount: 10000, currency: 'USD' },
+                money: { amount: '10000', currency: 'USD' },
                 sign: MoneyWithSignSign.positive,
               },
             },
@@ -316,9 +316,9 @@ describe('balance-utils transform', () => {
 
       const data = transformToDashboardData([result] as any, TimePeriod.month)
 
-      expect(data.netWorth.money).toEqual({ amount: 10000, currency: 'USD' })
+      expect(data.netWorth.money).toEqual({ amount: '10000', currency: 'USD' })
       expect(data.changeAmount?.money).toEqual({
-        amount: 0,
+        amount: '0',
         currency: 'USD',
       })
     })
@@ -335,7 +335,7 @@ describe('balance-utils transform', () => {
             },
             effectiveBalance: {
               balance: {
-                money: { amount, currency },
+                money: { amount: String(amount), currency },
                 sign: MoneyWithSignSign.positive,
               },
             },
@@ -353,11 +353,11 @@ describe('balance-utils transform', () => {
       )
 
       expect(data.changeAmount?.money).toEqual({
-        amount: 10000,
+        amount: '10000',
         currency: 'USD',
       })
       expect(data.assets[0].changeAmount?.money).toEqual({
-        amount: 10000,
+        amount: '10000',
         currency: 'USD',
       })
     })
@@ -396,7 +396,7 @@ describe('balance-utils transform', () => {
               ...createMockResult('2026-06-02', 100).balances.acc1,
               effectiveBalance: {
                 balance: {
-                  money: { amount: 10000, currency: 'EUR' },
+                  money: { amount: '10000', currency: 'EUR' },
                   sign: MoneyWithSignSign.positive,
                 },
               },

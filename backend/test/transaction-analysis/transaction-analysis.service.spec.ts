@@ -1,37 +1,22 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountEntity } from '../../src/account/account.entity';
 import { AnalysisRuleEntity } from '../../src/analysis-rule/analysis-rule.entity';
-import { AnalysisRuleService } from '../../src/analysis-rule/analysis-rule.service';
 import { CategoryEntity } from '../../src/category/category.entity';
-import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionAnalysisService } from '../../src/transaction-analysis/transaction-analysis.service';
-import { MoneySign, getDecimalPlaces } from '../../src/types/MoneyWithSign';
+import { MoneySign } from '../../src/types/MoneyWithSign';
+import {
+  convertMinorUnits as realConvertAmount,
+  decimalRateRatio,
+} from '../../src/common/exact-money';
+import { CashFlowQueryService } from '../../src/transaction-analysis/cash-flow-query.service';
+import { fxRequestKey } from '../../src/currency-exchange/currency-exchange.service';
 import type { AnalysisCategoryScope } from '../../src/types/AnalysisRule';
-import { UserService } from '../../src/user/user.service';
 
 const mockUserId = 'user-uuid-123';
 
-/**
- * Real conversion logic (mirrors CurrencyConversionService.convertAmount)
- * so mock behaves identically to production code.
- */
-function realConvertAmount(
-  amount: number,
-  sourceCurrency: string,
-  targetCurrency: string,
-  rate: number,
-): number {
-  const sourceDecimals = getDecimalPlaces(sourceCurrency);
-  const targetDecimals = getDecimalPlaces(targetCurrency);
-  const majorUnits = amount / Math.pow(10, sourceDecimals);
-  return Math.round(majorUnits * rate * Math.pow(10, targetDecimals));
-}
-
 function buildTransaction(params: {
   id: string;
-  amount: number;
+  amount: string | number;
   sign: MoneySign;
   accountId?: string;
   currency?: string;
@@ -50,7 +35,7 @@ function buildTransaction(params: {
     {
       amount: {
         money: {
-          amount: params.amount,
+          amount: String(params.amount),
           currency: params.currency ?? 'USD',
         },
         sign: params.sign,
@@ -77,14 +62,14 @@ function buildTransaction(params: {
         mask: null,
         availableBalance: {
           money: {
-            amount: 0,
+            amount: '0',
             currency: params.currency ?? 'USD',
           },
           sign: MoneySign.POSITIVE,
         },
         currentBalance: {
           money: {
-            amount: 0,
+            amount: '0',
             currency: params.currency ?? 'USD',
           },
           sign: MoneySign.POSITIVE,
@@ -203,6 +188,7 @@ const broadNeutralizationRule = buildAnalysisRule({
 
 describe('TransactionAnalysisService', () => {
   let service: TransactionAnalysisService;
+  let cashFlows: CashFlowQueryService;
   let mockTransactionRepository: {
     find: jest.Mock;
     createQueryBuilder: jest.Mock;
@@ -210,6 +196,7 @@ describe('TransactionAnalysisService', () => {
   let mockCurrencyConversionService: {
     getPreferredCurrency: jest.Mock;
     getRateMap: jest.Mock;
+    getResolvedRates: jest.Mock;
     convertAmount: jest.Mock;
   };
   let mockAnalysisRuleService: {
@@ -221,45 +208,33 @@ describe('TransactionAnalysisService', () => {
     findOne: jest.Mock;
   };
 
-  const buildTransactionQueryBuilder = () => {
-    const params: Record<string, unknown> = {};
-    const queryBuilder = {
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
-      where: jest.fn((_query: string, nextParams?: Record<string, unknown>) => {
-        Object.assign(params, nextParams);
-        return queryBuilder;
-      }),
-      andWhere: jest.fn(
-        (_query: string, nextParams?: Record<string, unknown>) => {
-          Object.assign(params, nextParams);
-          return queryBuilder;
-        },
-      ),
-      getMany: jest.fn(() =>
-        mockTransactionRepository.find({
-          where: {
-            userId: params.userId,
-            providerDate: {
-              startDate: params.startDate,
-              endDate: params.endDate,
-            },
-          },
-          relations: ['account', 'category'],
-        }),
-      ),
-    };
-
-    return queryBuilder;
-  };
-
   beforeEach(async () => {
     mockTransactionRepository = {
       find: jest.fn(),
-      createQueryBuilder: jest.fn(() => buildTransactionQueryBuilder()),
+      createQueryBuilder: jest.fn(),
     };
     mockCurrencyConversionService = {
       getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
-      getRateMap: jest.fn().mockResolvedValue(new Map([['EUR', 1.1]])),
+      getRateMap: jest.fn().mockResolvedValue(new Map([['EUR', '1.1']])),
+      getResolvedRates: jest.fn(async (requests) => {
+        const fixtures = await mockCurrencyConversionService.getRateMap();
+        return new Map(
+          requests
+            .filter((request) => fixtures.has(request.baseCurrency))
+            .map((request) => [
+              fxRequestKey(request),
+              {
+                ...request,
+                rate: String(fixtures.get(request.baseCurrency)),
+                ratio: decimalRateRatio(
+                  String(fixtures.get(request.baseCurrency)),
+                ),
+                rateDate: request.requestedDate,
+                source: 'DB',
+              },
+            ]),
+        );
+      }),
       convertAmount: jest.fn().mockImplementation(realConvertAmount),
     };
     const scopeSpecificity = (scope: AnalysisCategoryScope | null) => {
@@ -314,31 +289,49 @@ describe('TransactionAnalysisService', () => {
       }),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TransactionAnalysisService,
-        {
-          provide: getRepositoryToken(TransactionEntity),
-          useValue: mockTransactionRepository,
-        },
-        {
-          provide: CurrencyConversionService,
-          useValue: mockCurrencyConversionService,
-        },
-        {
-          provide: AnalysisRuleService,
-          useValue: mockAnalysisRuleService,
-        },
-        {
-          provide: UserService,
-          useValue: mockUserService,
-        },
-      ],
-    }).compile();
-
-    service = module.get<TransactionAnalysisService>(
-      TransactionAnalysisService,
+    const manager = {
+      getRepository: (entity: { name: string }) =>
+        entity.name === 'UserEntity'
+          ? {
+              findOne: async () => {
+                const user = await mockUserService.findOne();
+                return user
+                  ? {
+                      ...user,
+                      settings: {
+                        ...user.settings,
+                        currency:
+                          await mockCurrencyConversionService.getPreferredCurrency(),
+                      },
+                    }
+                  : null;
+              },
+            }
+          : {
+              find: (...args: unknown[]) =>
+                mockAnalysisRuleService.findActiveForAnalysis(...args),
+            },
+    };
+    const dataSource = {
+      transaction: async (
+        _isolation: string,
+        callback: (manager: unknown) => Promise<unknown>,
+      ) => callback(manager),
+    };
+    const transactionQueries = {
+      readAnalysis: (userId: string, startDate: string, endDate: string) =>
+        mockTransactionRepository.find({
+          where: { userId, providerDate: { startDate, endDate } },
+          relations: ['account', 'category'],
+        }),
+    };
+    cashFlows = new CashFlowQueryService(
+      dataSource as any,
+      transactionQueries as any,
+      mockCurrencyConversionService as any,
+      mockAnalysisRuleService as any,
     );
+    service = new TransactionAnalysisService(cashFlows);
   });
 
   afterEach(() => {
@@ -346,28 +339,194 @@ describe('TransactionAnalysisService', () => {
   });
 
   describe('getAnalysis', () => {
-    it('logs only safe analysis lifecycle messages', async () => {
+    it('derives summary audit and drilldown from one request-local snapshot', async () => {
       mockTransactionRepository.find.mockResolvedValue([]);
-      const logger = (
-        service as unknown as {
-          logger: { log: (message: string) => void };
-        }
-      ).logger;
-      const logSpy = jest.spyOn(logger, 'log');
+      const report = await service.getReport(
+        '2026-08-01',
+        '2026-08-17',
+        mockUserId,
+      );
+      expect(report.summary.totalInflow).toBe('0');
+      expect(report.audit.rows).toEqual([]);
+      expect(
+        cashFlows.categoryTransactions(report, 'INCOME', 'inflow'),
+      ).toEqual([]);
+      expect(mockTransactionRepository.find).toHaveBeenCalledTimes(1);
+      expect(
+        mockAnalysisRuleService.findActiveForAnalysis,
+      ).toHaveBeenCalledTimes(1);
+      expect(mockUserService.findOne).toHaveBeenCalledTimes(1);
+      expect(
+        mockCurrencyConversionService.getResolvedRates,
+      ).toHaveBeenCalledTimes(1);
+    });
 
-      await service.getAnalysis('2026-08-01', '2026-08-17', mockUserId);
+    it('sums once-rounded rows so two EUR cents at 1.5 reconcile to four USD cents', async () => {
+      mockTransactionRepository.find.mockResolvedValue(
+        ['first', 'second'].map((id) =>
+          buildTransaction({
+            id,
+            amount: '1',
+            currency: 'EUR',
+            sign: MoneySign.NEGATIVE,
+            providerDate: '2024-01-10',
+            primary: 'FOOD',
+          }),
+        ),
+      );
+      mockCurrencyConversionService.getRateMap.mockResolvedValue(
+        new Map([['EUR', '1.5']]),
+      );
+      const report = await service.getReport(
+        '2024-01-01',
+        '2024-01-31',
+        mockUserId,
+      );
+      const rows = cashFlows.categoryTransactions(report, 'FOOD', 'outflow');
+      expect(report.summary.totalOutflow).toBe('4');
+      expect(
+        rows.reduce(
+          (sum, row) => sum + BigInt(row.convertedAmount!.money.amount),
+          0n,
+        ),
+      ).toBe(4n);
+    });
 
-      expect(logSpy.mock.calls).toEqual([
-        ['Getting transaction analysis'],
-        ['Transaction analysis rows loaded'],
+    it('uses reporting overrides and changing daily rates for the same currency', async () => {
+      mockAnalysisRuleService.findActiveForAnalysis.mockResolvedValue([]);
+      mockTransactionRepository.find.mockResolvedValue([
+        buildTransaction({
+          id: 'first',
+          amount: '100',
+          currency: 'EUR',
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-10',
+          reportingDateOverride: '2024-01-12',
+          primary: 'FOOD',
+        }),
+        buildTransaction({
+          id: 'second',
+          amount: '100',
+          currency: 'EUR',
+          sign: MoneySign.NEGATIVE,
+          providerDate: '2024-01-11',
+          primary: 'FOOD',
+        }),
       ]);
+      mockCurrencyConversionService.getResolvedRates.mockImplementation(
+        async (requests) =>
+          new Map(
+            requests.map((request) => [
+              fxRequestKey(request),
+              {
+                ...request,
+                rate: request.requestedDate === '2024-01-12' ? '1.5' : '2',
+                ratio: decimalRateRatio(
+                  request.requestedDate === '2024-01-12' ? '1.5' : '2',
+                ),
+                rateDate: request.requestedDate,
+                source: 'DB',
+              },
+            ]),
+          ),
+      );
+      const report = await service.getReport(
+        '2024-01-01',
+        '2024-01-31',
+        mockUserId,
+      );
+      expect(report.summary.totalOutflow).toBe('350');
+      expect(
+        cashFlows
+          .categoryTransactions(report, 'FOOD', 'outflow')
+          .map((row) => row.convertedAmount!.money.amount),
+      ).toEqual(['150', '200']);
+      expect(
+        mockCurrencyConversionService.getResolvedRates,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('reconciles randomized currencies signs categories and daily rates exactly', async () => {
+      mockAnalysisRuleService.findActiveForAnalysis.mockResolvedValue([]);
+      let seed = 4181;
+      const random = () => {
+        seed = (seed * 48271) % 2147483647;
+        return seed;
+      };
+      const currencies = ['USD', 'EUR', 'JPY', 'BTC', 'ETH'];
+      const transactions = Array.from({ length: 180 }, (_, index) =>
+        buildTransaction({
+          id: `random-${index}`,
+          amount: (BigInt(random()) * BigInt(random())).toString(),
+          currency: currencies[random() % currencies.length],
+          sign: random() % 2 ? MoneySign.POSITIVE : MoneySign.NEGATIVE,
+          providerDate: `2024-01-${String(1 + (random() % 28)).padStart(2, '0')}`,
+          primary: `CATEGORY_${random() % 3}`,
+        }),
+      );
+      mockTransactionRepository.find.mockResolvedValue(transactions);
+      mockCurrencyConversionService.getResolvedRates.mockImplementation(
+        async (requests) =>
+          new Map(
+            requests.map((request) => {
+              const rate = `1.${Number(request.requestedDate.slice(-2))}`;
+              return [
+                fxRequestKey(request),
+                {
+                  ...request,
+                  rate,
+                  ratio: decimalRateRatio(rate),
+                  rateDate: request.requestedDate,
+                  source: 'DB',
+                },
+              ];
+            }),
+          ),
+      );
+      const report = await service.getReport(
+        '2024-01-01',
+        '2024-01-31',
+        mockUserId,
+      );
+      for (const [direction, categories] of [
+        ['inflow', report.summary.inflows],
+        ['outflow', report.summary.outflows],
+      ] as const) {
+        let total = 0n;
+        for (const category of categories) {
+          const rows = cashFlows.categoryTransactions(
+            report,
+            category.primaryCategory,
+            direction,
+          );
+          const sum = rows.reduce(
+            (subtotal, row) =>
+              subtotal +
+              BigInt((row.convertedAmount ?? row.amount).money.amount),
+            0n,
+          );
+          expect(category.totalAmount).toBe(sum.toString());
+          total += sum;
+        }
+        expect(
+          direction === 'inflow'
+            ? report.summary.totalInflow
+            : report.summary.totalOutflow,
+        ).toBe(total.toString());
+      }
+      expect(report.summary.netFlow).toBe(
+        (
+          BigInt(report.summary.totalInflow) -
+          BigInt(report.summary.totalOutflow)
+        ).toString(),
+      );
     });
 
     it('includes pending transactions in analysis', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'pending-purchase',
-          amount: 4200,
+          amount: '4200',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           pending: true,
@@ -378,13 +537,13 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 0,
-        totalOutflow: 4200,
+        totalInflow: '0',
+        totalOutflow: '4200',
         inflows: [],
         outflows: [
           expect.objectContaining({
             primaryCategory: 'FOOD_AND_DRINK',
-            totalAmount: 4200,
+            totalAmount: '4200',
             transactionCount: 1,
           }),
         ],
@@ -405,7 +564,7 @@ describe('TransactionAnalysisService', () => {
       const rows = [
         buildTransaction({
           id: 'salary',
-          amount: 560520,
+          amount: '560520',
           sign: MoneySign.POSITIVE,
           providerDate: '2026-04-29',
           reportingDateOverride: '2026-05-01',
@@ -413,7 +572,7 @@ describe('TransactionAnalysisService', () => {
         }),
         buildTransaction({
           id: 'purchase',
-          amount: 1200,
+          amount: '1200',
           sign: MoneySign.NEGATIVE,
           providerDate: '2026-04-30',
           primary: 'FOOD_AND_DRINK',
@@ -455,13 +614,13 @@ describe('TransactionAnalysisService', () => {
       expect(april.outflows).toEqual([
         expect.objectContaining({
           primaryCategory: 'FOOD_AND_DRINK',
-          totalAmount: 1200,
+          totalAmount: '1200',
         }),
       ]);
       expect(may.inflows).toEqual([
         expect.objectContaining({
           primaryCategory: 'INCOME',
-          totalAmount: 560520,
+          totalAmount: '560520',
         }),
       ]);
       expect(may.outflows).toEqual([]);
@@ -471,14 +630,14 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'expense',
-          amount: 243360,
+          amount: '243360',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-28',
           primary: 'LOAN_PAYMENTS',
         }),
         buildTransaction({
           id: 'mirror-income',
-          amount: 243360,
+          amount: '243360',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-28',
           primary: 'INCOME',
@@ -488,8 +647,8 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 0,
-        totalOutflow: 0,
+        totalInflow: '0',
+        totalOutflow: '0',
         inflows: [],
         outflows: [],
       });
@@ -499,14 +658,14 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'settled-purchase',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'pending-refund',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-16',
           pending: true,
@@ -517,8 +676,8 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 0,
-        totalOutflow: 0,
+        totalInflow: '0',
+        totalOutflow: '0',
         inflows: [],
         outflows: [],
       });
@@ -529,14 +688,14 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'expense',
-          amount: 10000,
+          amount: '10000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-28',
           primary: 'LOAN_PAYMENTS',
         }),
         buildTransaction({
           id: 'mirror-income',
-          amount: 10000,
+          amount: '10000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-28',
           primary: 'INCOME',
@@ -546,18 +705,18 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 10000,
-        totalOutflow: 10000,
+        totalInflow: '10000',
+        totalOutflow: '10000',
         inflows: [
           expect.objectContaining({
             primaryCategory: 'INCOME',
-            totalAmount: 10000,
+            totalAmount: '10000',
           }),
         ],
         outflows: [
           expect.objectContaining({
             primaryCategory: 'LOAN_PAYMENTS',
-            totalAmount: 10000,
+            totalAmount: '10000',
           }),
         ],
       });
@@ -578,14 +737,14 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'ignored',
-          amount: 10000,
+          amount: '10000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-28',
           primary: 'IGNORE',
         }),
         buildTransaction({
           id: 'kept',
-          amount: 20000,
+          amount: '20000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-28',
           primary: 'FOOD_AND_DRINK',
@@ -595,11 +754,11 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalOutflow: 20000,
+        totalOutflow: '20000',
         outflows: [
           expect.objectContaining({
             primaryCategory: 'FOOD_AND_DRINK',
-            totalAmount: 20000,
+            totalAmount: '20000',
           }),
         ],
       });
@@ -627,21 +786,21 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'rent',
-          amount: 10000,
+          amount: '10000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-01',
           primary: 'RENT',
         }),
         buildTransaction({
           id: 'groceries',
-          amount: 10000,
+          amount: '10000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-10',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'rent-reimbursement',
-          amount: 10000,
+          amount: '10000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-10',
           primary: 'REIMBURSEMENT',
@@ -651,12 +810,12 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 0,
-        totalOutflow: 10000,
+        totalInflow: '0',
+        totalOutflow: '10000',
         outflows: [
           expect.objectContaining({
             primaryCategory: 'FOOD_AND_DRINK',
-            totalAmount: 10000,
+            totalAmount: '10000',
           }),
         ],
       });
@@ -666,7 +825,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'overridden',
-          amount: 1200,
+          amount: '1200',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
@@ -683,7 +842,7 @@ describe('TransactionAnalysisService', () => {
       expect(result.outflows).toEqual([
         expect.objectContaining({
           primaryCategory: 'GENERAL_MERCHANDISE',
-          totalAmount: 1200,
+          totalAmount: '1200',
           transactionCount: 1,
           color: '#228be6',
         }),
@@ -699,7 +858,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'small-travel',
-          amount: 1200,
+          amount: '1200',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           primary: 'Travel',
@@ -708,7 +867,7 @@ describe('TransactionAnalysisService', () => {
         }),
         buildTransaction({
           id: 'large-travel',
-          amount: 4800,
+          amount: '4800',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-16',
           primary: 'Travel',
@@ -726,7 +885,7 @@ describe('TransactionAnalysisService', () => {
       expect(result.outflows).toEqual([
         expect.objectContaining({
           primaryCategory: 'Travel',
-          totalAmount: 6000,
+          totalAmount: '6000',
           transactionCount: 2,
           color: '#eeeeee',
         }),
@@ -737,7 +896,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'large-travel-outflow',
-          amount: 9000,
+          amount: '9000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           primary: 'Travel',
@@ -746,7 +905,7 @@ describe('TransactionAnalysisService', () => {
         }),
         buildTransaction({
           id: 'small-travel-inflow',
-          amount: 1200,
+          amount: '1200',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-16',
           primary: 'Travel',
@@ -764,7 +923,7 @@ describe('TransactionAnalysisService', () => {
       expect(result.inflows).toEqual([
         expect.objectContaining({
           primaryCategory: 'Travel',
-          totalAmount: 1200,
+          totalAmount: '1200',
           transactionCount: 1,
           color: '#22cc22',
         }),
@@ -772,7 +931,7 @@ describe('TransactionAnalysisService', () => {
       expect(result.outflows).toEqual([
         expect.objectContaining({
           primaryCategory: 'Travel',
-          totalAmount: 9000,
+          totalAmount: '9000',
           transactionCount: 1,
           color: '#cc2222',
         }),
@@ -783,21 +942,21 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'neg-near',
-          amount: 6000,
+          amount: '6000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'neg-far',
-          amount: 6000,
+          amount: '6000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-01',
           primary: 'RENT_AND_UTILITIES',
         }),
         buildTransaction({
           id: 'pos',
-          amount: 6000,
+          amount: '6000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-14',
           primary: 'INCOME',
@@ -807,11 +966,11 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalOutflow: 6000,
+        totalOutflow: '6000',
         outflows: [
           expect.objectContaining({
             primaryCategory: 'FOOD_AND_DRINK',
-            totalAmount: 6000,
+            totalAmount: '6000',
             transactionCount: 1,
           }),
         ],
@@ -822,28 +981,28 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'neg-late',
-          amount: 6000,
+          amount: '6000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'neg-early-b',
-          amount: 6000,
+          amount: '6000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-10',
           primary: 'GENERAL_SERVICES',
         }),
         buildTransaction({
           id: 'neg-early-a',
-          amount: 6000,
+          amount: '6000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-10',
           primary: 'RENT_AND_UTILITIES',
         }),
         buildTransaction({
           id: 'pos-early',
-          amount: 6000,
+          amount: '6000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-10',
           primary: 'INCOME',
@@ -853,16 +1012,16 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalOutflow: 12000,
+        totalOutflow: '12000',
         outflows: expect.arrayContaining([
           expect.objectContaining({
             primaryCategory: 'GENERAL_SERVICES',
-            totalAmount: 6000,
+            totalAmount: '6000',
             transactionCount: 1,
           }),
           expect.objectContaining({
             primaryCategory: 'FOOD_AND_DRINK',
-            totalAmount: 6000,
+            totalAmount: '6000',
             transactionCount: 1,
           }),
         ]),
@@ -872,7 +1031,7 @@ describe('TransactionAnalysisService', () => {
     it('does not cancel across different currencies', async () => {
       const usdExpense = buildTransaction({
         id: 'usd-expense',
-        amount: 10000,
+        amount: '10000',
         sign: MoneySign.NEGATIVE,
         currency: 'USD',
         providerDate: '2024-01-10',
@@ -880,7 +1039,7 @@ describe('TransactionAnalysisService', () => {
       });
       const eurIncome = buildTransaction({
         id: 'eur-income',
-        amount: 10000,
+        amount: '10000',
         sign: MoneySign.POSITIVE,
         currency: 'EUR',
         providerDate: '2024-01-10',
@@ -895,13 +1054,13 @@ describe('TransactionAnalysisService', () => {
         mockUserId,
       );
 
-      expect(result.totalInflow).toBe(11000);
-      expect(result.totalOutflow).toBe(10000);
-      expect(result.netFlow).toBe(1000);
+      expect(result.totalInflow).toBe('11000');
+      expect(result.totalOutflow).toBe('10000');
+      expect(result.netFlow).toBe('1000');
       expect(result.inflows).toEqual([
         expect.objectContaining({
           primaryCategory: 'INCOME',
-          totalAmount: 11000,
+          totalAmount: '11000',
           currency: 'USD',
           transactionCount: 1,
         }),
@@ -909,16 +1068,24 @@ describe('TransactionAnalysisService', () => {
       expect(result.outflows).toEqual([
         expect.objectContaining({
           primaryCategory: 'GENERAL_SERVICES',
-          totalAmount: 10000,
+          totalAmount: '10000',
           currency: 'USD',
           transactionCount: 1,
         }),
       ]);
 
-      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
-        ['EUR'],
-        'USD',
-        '2024-01-31',
+      expect(
+        mockCurrencyConversionService.getResolvedRates,
+      ).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            baseCurrency: 'EUR',
+            targetCurrency: 'USD',
+            requestedDate: '2024-01-10',
+          }),
+        ]),
+        expect.objectContaining({ getRepository: expect.any(Function) }),
+        { allowMissing: true },
       );
     });
 
@@ -926,7 +1093,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'eur-income',
-          amount: 10000,
+          amount: '10000',
           sign: MoneySign.POSITIVE,
           currency: 'EUR',
           providerDate: '2024-01-10',
@@ -944,7 +1111,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'eur-zero',
-          amount: 0,
+          amount: '0',
           sign: MoneySign.POSITIVE,
           currency: 'EUR',
           providerDate: '2024-01-10',
@@ -956,28 +1123,30 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 0,
-        totalOutflow: 0,
-        netFlow: 0,
+        totalInflow: '0',
+        totalOutflow: '0',
+        netFlow: '0',
       });
-      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
+      expect(
+        mockCurrencyConversionService.getResolvedRates,
+      ).toHaveBeenCalledWith(
         [],
-        'USD',
-        '2024-01-31',
+        expect.objectContaining({ getRepository: expect.any(Function) }),
+        { allowMissing: true },
       );
     });
 
     it('does not cancel transactions that fall in different analysis windows', async () => {
       const februaryExpense = buildTransaction({
         id: 'feb-expense',
-        amount: 9000,
+        amount: '9000',
         sign: MoneySign.NEGATIVE,
         providerDate: '2024-02-29',
         primary: 'GENERAL_SERVICES',
       });
       const marchIncome = buildTransaction({
         id: 'march-income',
-        amount: 9000,
+        amount: '9000',
         sign: MoneySign.POSITIVE,
         providerDate: '2024-03-01',
         primary: 'INCOME',
@@ -998,24 +1167,24 @@ describe('TransactionAnalysisService', () => {
         mockUserId,
       );
 
-      expect(februaryResult.totalOutflow).toBe(9000);
-      expect(februaryResult.totalInflow).toBe(0);
+      expect(februaryResult.totalOutflow).toBe('9000');
+      expect(februaryResult.totalInflow).toBe('0');
       expect(februaryResult.outflows).toEqual([
         expect.objectContaining({
           primaryCategory: 'GENERAL_SERVICES',
-          totalAmount: 9000,
+          totalAmount: '9000',
           currency: 'USD',
           transactionCount: 1,
         }),
       ]);
       expect(februaryResult.inflows).toEqual([]);
 
-      expect(marchResult.totalInflow).toBe(9000);
-      expect(marchResult.totalOutflow).toBe(0);
+      expect(marchResult.totalInflow).toBe('9000');
+      expect(marchResult.totalOutflow).toBe('0');
       expect(marchResult.inflows).toEqual([
         expect.objectContaining({
           primaryCategory: 'INCOME',
-          totalAmount: 9000,
+          totalAmount: '9000',
           currency: 'USD',
           transactionCount: 1,
         }),
@@ -1047,14 +1216,14 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'bilt-negative',
-          amount: 243360,
+          amount: '243360',
           sign: MoneySign.NEGATIVE,
           providerDate: '2026-02-28',
           primary: 'LOAN_PAYMENTS',
         }),
         buildTransaction({
           id: 'bilt-positive',
-          amount: 243360,
+          amount: '243360',
           sign: MoneySign.POSITIVE,
           providerDate: '2026-02-28',
           primary: 'INCOME',
@@ -1064,8 +1233,8 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2026-02-01', '2026-02-28', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 0,
-        totalOutflow: 0,
+        totalInflow: '0',
+        totalOutflow: '0',
         inflows: [],
         outflows: [],
       });
@@ -1075,14 +1244,14 @@ describe('TransactionAnalysisService', () => {
       const rows = [
         buildTransaction({
           id: 'purchase',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-28',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'refund',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-02-03',
           primary: 'INCOME',
@@ -1093,8 +1262,8 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 0,
-        totalOutflow: 0,
+        totalInflow: '0',
+        totalOutflow: '0',
         inflows: [],
         outflows: [],
       });
@@ -1105,14 +1274,14 @@ describe('TransactionAnalysisService', () => {
       const rows = [
         buildTransaction({
           id: 'purchase',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-28',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'refund',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-02-03',
           primary: 'INCOME',
@@ -1123,13 +1292,13 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 0,
-        totalOutflow: 5000,
+        totalInflow: '0',
+        totalOutflow: '5000',
         inflows: [],
         outflows: [
           expect.objectContaining({
             primaryCategory: 'FOOD_AND_DRINK',
-            totalAmount: 5000,
+            totalAmount: '5000',
           }),
         ],
       });
@@ -1139,14 +1308,14 @@ describe('TransactionAnalysisService', () => {
       const rows = [
         buildTransaction({
           id: 'refund-first',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.POSITIVE,
           providerDate: '2023-12-28',
           primary: 'INCOME',
         }),
         buildTransaction({
           id: 'purchase-later',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-05',
           primary: 'FOOD_AND_DRINK',
@@ -1157,12 +1326,12 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 0,
-        totalOutflow: 5000,
+        totalInflow: '0',
+        totalOutflow: '5000',
         outflows: [
           expect.objectContaining({
             primaryCategory: 'FOOD_AND_DRINK',
-            totalAmount: 5000,
+            totalAmount: '5000',
           }),
         ],
       });
@@ -1172,21 +1341,21 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'older-purchase',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-01',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'closer-purchase',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-09',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'refund',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-10',
           primary: 'INCOME',
@@ -1210,7 +1379,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'unmatched-transfer-in',
-          amount: 25000,
+          amount: '25000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-06',
           primary: 'TRANSFER_IN',
@@ -1218,7 +1387,7 @@ describe('TransactionAnalysisService', () => {
         }),
         buildTransaction({
           id: 'unmatched-transfer-out',
-          amount: 150000,
+          amount: '150000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-07',
           primary: 'TRANSFER_OUT',
@@ -1226,7 +1395,7 @@ describe('TransactionAnalysisService', () => {
         }),
         buildTransaction({
           id: 'unmatched-loan-payment',
-          amount: 45000,
+          amount: '45000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-08',
           primary: 'LOAN_PAYMENTS',
@@ -1237,24 +1406,24 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 25000,
-        totalOutflow: 195000,
+        totalInflow: '25000',
+        totalOutflow: '195000',
         inflows: [
           expect.objectContaining({
             primaryCategory: 'TRANSFER_IN',
-            totalAmount: 25000,
+            totalAmount: '25000',
             transactionCount: 1,
           }),
         ],
         outflows: expect.arrayContaining([
           expect.objectContaining({
             primaryCategory: 'TRANSFER_OUT',
-            totalAmount: 150000,
+            totalAmount: '150000',
             transactionCount: 1,
           }),
           expect.objectContaining({
             primaryCategory: 'LOAN_PAYMENTS',
-            totalAmount: 45000,
+            totalAmount: '45000',
             transactionCount: 1,
           }),
         ]),
@@ -1265,21 +1434,21 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'paycheck',
-          amount: 300000,
+          amount: '300000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-05',
           primary: 'INCOME',
         }),
         buildTransaction({
           id: 'rent',
-          amount: 150000,
+          amount: '150000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-07',
           primary: 'RENT_AND_UTILITIES',
         }),
         buildTransaction({
           id: 'groceries',
-          amount: 50000,
+          amount: '50000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-08',
           primary: 'FOOD_AND_DRINK',
@@ -1289,24 +1458,24 @@ describe('TransactionAnalysisService', () => {
       await expect(
         service.getAnalysis('2024-01-01', '2024-01-31', mockUserId),
       ).resolves.toMatchObject({
-        totalInflow: 300000,
-        totalOutflow: 200000,
+        totalInflow: '300000',
+        totalOutflow: '200000',
         inflows: [
           expect.objectContaining({
             primaryCategory: 'INCOME',
-            totalAmount: 300000,
+            totalAmount: '300000',
             transactionCount: 1,
           }),
         ],
         outflows: [
           expect.objectContaining({
             primaryCategory: 'RENT_AND_UTILITIES',
-            totalAmount: 150000,
+            totalAmount: '150000',
             transactionCount: 1,
           }),
           expect.objectContaining({
             primaryCategory: 'FOOD_AND_DRINK',
-            totalAmount: 50000,
+            totalAmount: '50000',
             transactionCount: 1,
           }),
         ],
@@ -1331,42 +1500,42 @@ describe('TransactionAnalysisService', () => {
       const rows = [
         buildTransaction({
           id: 'out-of-range-ignored',
-          amount: 1000,
+          amount: '1000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-03',
           primary: 'IGNORE',
         }),
         buildTransaction({
           id: 'ignored',
-          amount: 1000,
+          amount: '1000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-12',
           primary: 'IGNORE',
         }),
         buildTransaction({
           id: 'outside-outflow',
-          amount: 2500,
+          amount: '2500',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-04',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'outside-inflow',
-          amount: 2500,
+          amount: '2500',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-05',
           primary: 'INCOME',
         }),
         buildTransaction({
           id: 'purchase',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'refund',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-02-03',
           primary: 'INCOME',
@@ -1397,7 +1566,7 @@ describe('TransactionAnalysisService', () => {
           accountName: 'Checking',
           categoryPrimary: 'IGNORE',
           amount: {
-            amount: 1000,
+            amount: '1000',
             currency: 'USD',
             sign: 'negative',
           },
@@ -1435,14 +1604,14 @@ describe('TransactionAnalysisService', () => {
       const rows = [
         buildTransaction({
           id: 'purchase',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'excluded-refund',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-16',
           primary: 'INCOME',
@@ -1456,8 +1625,8 @@ describe('TransactionAnalysisService', () => {
         mockUserId,
       );
 
-      expect(result.totalOutflow).toBe(5000);
-      expect(result.totalInflow).toBe(0);
+      expect(result.totalOutflow).toBe('5000');
+      expect(result.totalInflow).toBe('0');
     });
   });
 
@@ -1466,7 +1635,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'pending-purchase',
-          amount: 4200,
+          amount: '4200',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           pending: true,
@@ -1494,14 +1663,14 @@ describe('TransactionAnalysisService', () => {
       const rows = [
         buildTransaction({
           id: 'purchase',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-28',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'refund',
-          amount: 5000,
+          amount: '5000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-02-03',
           primary: 'INCOME',
@@ -1524,21 +1693,21 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'bilt-negative',
-          amount: 243360,
+          amount: '243360',
           sign: MoneySign.NEGATIVE,
           providerDate: '2026-02-28',
           primary: 'LOAN_PAYMENTS',
         }),
         buildTransaction({
           id: 'bilt-positive',
-          amount: 243360,
+          amount: '243360',
           sign: MoneySign.POSITIVE,
           providerDate: '2026-02-28',
           primary: 'INCOME',
         }),
         buildTransaction({
           id: 'interest',
-          amount: 4083,
+          amount: '4083',
           sign: MoneySign.POSITIVE,
           providerDate: '2026-02-28',
           primary: 'INCOME',
@@ -1560,7 +1729,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'overridden',
-          amount: 1200,
+          amount: '1200',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-15',
           primary: 'FOOD_AND_DRINK',
@@ -1586,7 +1755,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'bilt-negative',
-          amount: 243360,
+          amount: '243360',
           sign: MoneySign.NEGATIVE,
           providerDate: '2026-02-28',
           primary: 'LOAN_PAYMENTS',
@@ -1594,7 +1763,7 @@ describe('TransactionAnalysisService', () => {
         }),
         buildTransaction({
           id: 'bilt-positive',
-          amount: 243360,
+          amount: '243360',
           sign: MoneySign.POSITIVE,
           providerDate: '2026-02-28',
           primary: 'INCOME',
@@ -1602,7 +1771,7 @@ describe('TransactionAnalysisService', () => {
         }),
         buildTransaction({
           id: 'real-loan-payment',
-          amount: 1887,
+          amount: '1887',
           sign: MoneySign.NEGATIVE,
           providerDate: '2026-02-19',
           primary: 'LOAN_PAYMENTS',
@@ -1623,11 +1792,11 @@ describe('TransactionAnalysisService', () => {
       ]);
     });
 
-    it('converts drilldown rows with rates anchored to endDate', async () => {
+    it('converts drilldown rows using each effective reporting date', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'eur-income',
-          amount: 10000,
+          amount: '10000',
           sign: MoneySign.POSITIVE,
           currency: 'EUR',
           providerDate: '2024-01-10',
@@ -1647,19 +1816,27 @@ describe('TransactionAnalysisService', () => {
         mockUserId,
       );
 
-      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
-        ['EUR'],
-        'USD',
-        '2024-01-31',
+      expect(
+        mockCurrencyConversionService.getResolvedRates,
+      ).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            baseCurrency: 'EUR',
+            targetCurrency: 'USD',
+            requestedDate: '2024-01-10',
+          }),
+        ]),
+        expect.objectContaining({ getRepository: expect.any(Function) }),
+        { allowMissing: true },
       );
-      expect(result[0]?.convertedAmount?.money.amount).toBe(11000);
+      expect(result[0]?.convertedAmount?.money.amount).toBe('11000');
     });
 
     it('does not return an unconverted foreign drilldown row', async () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'eur-income',
-          amount: 10000,
+          amount: '10000',
           sign: MoneySign.POSITIVE,
           currency: 'EUR',
           providerDate: '2024-01-10',
@@ -1683,7 +1860,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'eur-zero',
-          amount: 0,
+          amount: '0',
           sign: MoneySign.POSITIVE,
           currency: 'EUR',
           providerDate: '2024-01-10',
@@ -1700,14 +1877,16 @@ describe('TransactionAnalysisService', () => {
         mockUserId,
       );
 
-      expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
+      expect(
+        mockCurrencyConversionService.getResolvedRates,
+      ).toHaveBeenCalledWith(
         [],
-        'USD',
-        '2024-01-31',
+        expect.objectContaining({ getRepository: expect.any(Function) }),
+        { allowMissing: true },
       );
       expect(result).toHaveLength(1);
       expect(result[0]?.convertedAmount).toEqual({
-        money: { amount: 0, currency: 'USD' },
+        money: { amount: '0', currency: 'USD' },
         sign: MoneySign.POSITIVE,
       });
     });
@@ -1716,21 +1895,21 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'older-id',
-          amount: 1000,
+          amount: '1000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-10',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'newer-id',
-          amount: 2000,
+          amount: '2000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-12',
           primary: 'FOOD_AND_DRINK',
         }),
         buildTransaction({
           id: 'same-day-b',
-          amount: 3000,
+          amount: '3000',
           sign: MoneySign.NEGATIVE,
           providerDate: '2024-01-10',
           primary: 'FOOD_AND_DRINK',
@@ -1756,7 +1935,7 @@ describe('TransactionAnalysisService', () => {
       mockTransactionRepository.find.mockResolvedValue([
         buildTransaction({
           id: 'paycheck',
-          amount: 10000,
+          amount: '10000',
           sign: MoneySign.POSITIVE,
           providerDate: '2024-01-10',
           primary: 'INCOME',

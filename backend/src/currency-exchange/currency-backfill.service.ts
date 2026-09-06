@@ -206,7 +206,7 @@ export class CurrencyBackfillService {
           pair.targetCurrency,
         );
 
-        if (rate === 0) {
+        if (rate === '0') {
           this.logger.warn(
             {
               baseCurrency: pair.baseCurrency,
@@ -498,7 +498,7 @@ export class CurrencyBackfillService {
         snapshotDate,
       );
 
-      if (rate === 0) {
+      if (rate === '0') {
         this.logger.warn(
           { snapshotCurrency, userCurrency },
           'Received zero exchange rate',

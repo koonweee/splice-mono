@@ -62,7 +62,7 @@ function buildTransaction(params: {
     {
       accountId,
       amount: {
-        money: { amount: 100_00, currency: 'USD' },
+        money: { amount: '10000', currency: 'USD' },
         sign: MoneySign.POSITIVE,
       },
       merchantName: params.merchantName,
@@ -83,7 +83,7 @@ function buildTransaction(params: {
   transaction.activity.createdAt = transaction.createdAt;
   transaction.activity.updatedAt = transaction.updatedAt;
   transaction.amount = BalanceColumns.fromMoneyWithSign({
-    money: { amount: 100_00, currency: 'USD' },
+    money: { amount: '10000', currency: 'USD' },
     sign: MoneySign.POSITIVE,
   });
   transaction.source = params.source ?? 'provider';

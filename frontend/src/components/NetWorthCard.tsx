@@ -54,7 +54,7 @@ export function NetWorthCard({
   )
 
   const displayValue = hoveredPoint
-    ? formatMoneyNumber({ value: hoveredPoint.value })
+    ? formatMoneyWithSign({ value: hoveredPoint.money })
     : formatMoneyWithSign({ value: netWorth })
   const visibleDisplayValue = balancesHidden
     ? HIDDEN_BALANCE_PLACEHOLDER
@@ -131,7 +131,11 @@ export function NetWorthCard({
             valueFormatter={(value) =>
               balancesHidden
                 ? HIDDEN_BALANCE_PLACEHOLDER
-                : formatMoneyNumber({ value, decimals: 0 })
+                : formatMoneyNumber({
+                    value,
+                    currency: netWorth.money.currency,
+                    decimals: 0,
+                  })
             }
             onDataPointHover={setHoveredPoint}
           />

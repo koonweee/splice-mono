@@ -12,13 +12,16 @@ const createBalance = (
   convertedCurrency?: string,
 ) => ({
   balance: {
-    money: { amount, currency },
+    money: { amount: String(amount), currency },
     sign: MoneySign.POSITIVE,
   },
   ...(convertedAmount !== undefined && convertedCurrency
     ? {
         convertedBalance: {
-          money: { amount: convertedAmount, currency: convertedCurrency },
+          money: {
+            amount: String(convertedAmount),
+            currency: convertedCurrency,
+          },
           sign: MoneySign.POSITIVE,
         },
       }
@@ -73,10 +76,17 @@ describe('BalanceHistorySurfaceService', () => {
   let service: BalanceHistorySurfaceService;
   const mockBalanceQueryService = {
     getAllBalancesForDateRange: jest.fn(),
+    loadBalanceProjection: jest.fn(),
     getBalancesForDateRange: jest.fn(),
   };
 
   beforeEach(async () => {
+    mockBalanceQueryService.loadBalanceProjection.mockImplementation(
+      async () => ({
+        balances: await mockBalanceQueryService.getAllBalancesForDateRange(),
+        reportingCurrency: 'EUR',
+      }),
+    );
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BalanceHistorySurfaceService,
@@ -161,17 +171,20 @@ describe('BalanceHistorySurfaceService', () => {
       endDate: '2026-03-02',
     });
 
-    expect(
-      mockBalanceQueryService.getAllBalancesForDateRange,
-    ).toHaveBeenCalledWith('2026-03-01', '2026-03-02', mockUserId);
+    expect(mockBalanceQueryService.loadBalanceProjection).toHaveBeenCalledWith(
+      mockUserId,
+      '2026-03-01',
+      '2026-03-02',
+      { accountIds: undefined, includeLatestSync: true },
+    );
     expect(result.netWorth).toEqual({
-      money: { amount: 54000, currency: 'EUR' },
+      money: { amount: '54000', currency: 'EUR' },
       sign: MoneySign.POSITIVE,
     });
     expect(result.changePercent).toBe(100);
     expect(result.chartData).toEqual([
-      expect.objectContaining({ date: '2026-03-01', value: 270 }),
-      expect.objectContaining({ date: '2026-03-02', value: 540 }),
+      expect.objectContaining({ date: '2026-03-01', value: '270' }),
+      expect.objectContaining({ date: '2026-03-02', value: '540' }),
     ]);
     expect(result.assets).toHaveLength(2);
     expect(result.assets.map((account) => account.id)).toEqual([
@@ -194,7 +207,7 @@ describe('BalanceHistorySurfaceService', () => {
       changePercent: 100,
     });
     expect(result.assets[1].convertedEffectiveBalance).toEqual({
-      money: { amount: 10000, currency: 'EUR' },
+      money: { amount: '10000', currency: 'EUR' },
       sign: MoneySign.POSITIVE,
     });
     expect(result.liabilities).toHaveLength(2);

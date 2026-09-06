@@ -1,3 +1,4 @@
+import { decimalRateRatio } from '../../src/common/exact-money';
 import { gzipSync } from 'node:zlib';
 import {
   DashboardSeriesResponseSchema,
@@ -24,8 +25,8 @@ describe('DashboardQueryService', () => {
     const fixture = createDashboardFixture(0);
     const summary = await fixture.dashboard.getSummary(userId, query);
     expect(summary).toMatchObject({
-      netWorth: { money: { amount: 0, currency: 'USD' }, sign: 'positive' },
-      changeAmount: { money: { amount: 0 } },
+      netWorth: { money: { amount: '0', currency: 'USD' }, sign: 'positive' },
+      changeAmount: { money: { amount: '0' } },
       assets: [],
       liabilities: [],
     });
@@ -68,11 +69,11 @@ describe('DashboardQueryService', () => {
     // Prior: JPY 10,000 -> USD 70; plus USD 300 less USD 50 = USD 320.
     // Latest: USD -200 plus USD 400 less USD 60 = USD 140.
     expect(summary.netWorth).toEqual({
-      money: { amount: 14000, currency: 'USD' },
+      money: { amount: '14000', currency: 'USD' },
       sign: MoneySign.POSITIVE,
     });
     expect(summary.changeAmount).toEqual({
-      money: { amount: 18000, currency: 'USD' },
+      money: { amount: '18000', currency: 'USD' },
       sign: MoneySign.NEGATIVE,
     });
     expect(summary.changePercent).toBe(-56.25);
@@ -87,7 +88,7 @@ describe('DashboardQueryService', () => {
     expect(assetSummary.archivedAt).toBe('2026-01-01T12:00:00.000Z');
     expect(assetSummary.syncedAt).toBe('2026-10-01T12:00:00.000Z');
     expect(assetSummary.changeAmount).toEqual({
-      money: { amount: 27000, currency: 'USD' },
+      money: { amount: '27000', currency: 'USD' },
       sign: MoneySign.NEGATIVE,
     });
     expect(
@@ -100,14 +101,14 @@ describe('DashboardQueryService', () => {
       period: 'month',
       endDate: query.endDate,
     });
-    expect(series.points[0].netWorth.money.amount).toBe(32000);
+    expect(series.points[0].netWorth.money.amount).toBe('32000');
     expect(series.points.at(-1)?.netWorth).toEqual(summary.netWorth);
     expect(series.points).toHaveLength(31);
   });
 
   it('uses the authenticated JPY reporting currency with integer zero-decimal conversions', async () => {
     const fixture = createDashboardFixture(1);
-    fixture.users.findOne = async (id) => ({
+    fixture.users.findSettings = async (id) => ({
       id,
       settings: { currency: 'JPY' },
     });
@@ -116,7 +117,8 @@ describe('DashboardQueryService', () => {
         date,
         rates: pairs.map((pair) => ({
           ...pair,
-          rate: 150,
+          rate: '150',
+          ratio: decimalRateRatio('150'),
           source: 'synthetic',
         })),
       },
@@ -132,9 +134,12 @@ describe('DashboardQueryService', () => {
       period: 'day',
     });
     expect(summary.reportingCurrency).toBe('JPY');
-    expect(summary.netWorth.money).toEqual({ amount: 10000, currency: 'JPY' });
+    expect(summary.netWorth.money).toEqual({
+      amount: '10000',
+      currency: 'JPY',
+    });
     expect(summary.changeAmount).toEqual({
-      money: { amount: 5000, currency: 'JPY' },
+      money: { amount: '5000', currency: 'JPY' },
       sign: 'negative',
     });
     expect(summary.assets[0].effectiveBalance.money.currency).toBe('JPY');
@@ -168,7 +173,7 @@ describe('DashboardQueryService', () => {
     await expect(
       fixture.dashboard.getSummary(userId, { ...query, period: 'year' }),
     ).resolves.toMatchObject({
-      netWorth: { money: { amount: 7000, currency: 'USD' } },
+      netWorth: { money: { amount: '7000', currency: 'USD' } },
     });
   });
 
@@ -189,7 +194,7 @@ describe('DashboardQueryService', () => {
     });
     expect(summary.assets[0].effectiveBalance.money.currency).toBe('JPY');
     expect(summary.assets[0].convertedEffectiveBalance?.money).toEqual({
-      amount: 0,
+      amount: '0',
       currency: 'USD',
     });
     await expect(
@@ -266,17 +271,17 @@ describe('DashboardQueryService', () => {
           return (
             sum +
             (liability || money.sign === 'negative'
-              ? -money.money.amount
-              : money.money.amount)
+              ? -BigInt(money.money.amount)
+              : BigInt(money.money.amount))
           );
-        }, 0),
+        }, 0n),
       }));
     expect(
       series.points.map((point) => ({
         date: point.date,
         amount:
-          (point.netWorth.sign === 'negative' ? -1 : 1) *
-          point.netWorth.money.amount,
+          (point.netWorth.sign === 'negative' ? -1n : 1n) *
+          BigInt(point.netWorth.money.amount),
       })),
     ).toEqual(expectedPoints);
     expect(series.points.at(-1)?.netWorth).toEqual(summary.netWorth);
@@ -303,10 +308,12 @@ describe('DashboardQueryService', () => {
     await expect(
       fixture.dashboard.getSummary('different-user', query),
     ).rejects.toThrow('Unauthorized');
-    expect(accountFind).toHaveBeenCalledWith({
-      where: { userId: 'different-user' },
-      relations: ['bankLink'],
-    });
+    expect(accountFind).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'different-user' },
+        relations: ['bankLink'],
+      }),
+    );
     expect(fixture.reads.snapshots).toBe(0);
   });
 });

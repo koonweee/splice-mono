@@ -1,3 +1,10 @@
+import { ExactDecimal } from '../common/exact-money';
+import { getDecimalPlaces } from '../common/currency-scales';
+import {
+  sampleHistory,
+  type HistoryResolution,
+  type HistorySampling,
+} from './history-sampling';
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import dayjs from 'dayjs';
 import {
@@ -22,12 +29,14 @@ import {
   calculateNetWorthForDate,
   calculateChangePercent,
   createMoneyWithSign,
+  compareBalanceAmounts,
 } from './balance-projection';
 
 export interface BalanceHistorySurfaceChartPoint {
   date: string;
   label: string;
-  value: number;
+  /** Exact signed major-unit value; currency is the summary reporting currency. */
+  value: string;
 }
 
 export interface BalanceHistorySurfaceAccountSummary {
@@ -53,6 +62,7 @@ export interface BalanceHistorySurfaceSummary {
   netWorth: SerializedMoneyWithSign;
   changePercent?: number;
   chartData: BalanceHistorySurfaceChartPoint[];
+  sampling: HistorySampling;
   assets: BalanceHistorySurfaceAccountSummary[];
   liabilities: BalanceHistorySurfaceAccountSummary[];
 }
@@ -61,6 +71,8 @@ export interface BalanceHistorySurfaceOptions {
   startDate: string;
   endDate: string;
   accountIds?: string[];
+  resolution?: HistoryResolution;
+  maxPoints?: number;
 }
 
 function resolveEffectiveBalance(
@@ -68,7 +80,7 @@ function resolveEffectiveBalance(
 ): SerializedMoneyWithSign {
   if (!balance) {
     return {
-      money: { amount: 0, currency: 'USD' },
+      money: { amount: '0', currency: 'USD' },
       sign: MoneySign.POSITIVE,
     };
   }
@@ -85,7 +97,7 @@ function assertSingleEffectiveCurrency(
   Object.values(balances).forEach((result) => {
     const effectiveBalance = resolveEffectiveBalance(result.effectiveBalance);
     fallbackCurrency ??= effectiveBalance.money.currency;
-    if (effectiveBalance.money.amount === 0) {
+    if (effectiveBalance.money.amount === '0') {
       return;
     }
     if (
@@ -100,46 +112,6 @@ function assertSingleEffectiveCurrency(
   });
 
   return nonZeroCurrency ?? fallbackCurrency ?? 'USD';
-}
-
-function getLatestSyncedAt(
-  results: BalanceQueryPerDateResult[],
-  accountId: string,
-): Date | undefined {
-  let latest: Date | undefined;
-
-  results.forEach((result) => {
-    const balance =
-      accountId in result.balances ? result.balances[accountId] : undefined;
-    if (balance?.syncedAt) {
-      const syncedAt = new Date(balance.syncedAt);
-      if (!latest || syncedAt > latest) {
-        latest = syncedAt;
-      }
-    }
-  });
-
-  return latest;
-}
-
-function getLatestAccountSyncedAt(
-  results: BalanceQueryPerDateResult[],
-  accountId: string,
-): Date | undefined {
-  let latest: Date | undefined;
-
-  results.forEach((result) => {
-    const balance =
-      accountId in result.balances ? result.balances[accountId] : undefined;
-    if (balance?.latestSyncedAt) {
-      const latestSyncedAt = new Date(balance.latestSyncedAt);
-      if (!latest || latestSyncedAt > latest) {
-        latest = latestSyncedAt;
-      }
-    }
-  });
-
-  return latest ?? getLatestSyncedAt(results, accountId);
 }
 
 @Injectable()
@@ -176,56 +148,67 @@ export class BalanceHistorySurfaceService {
     userId: string,
     options: BalanceHistorySurfaceOptions,
   ): Promise<BalanceHistorySurfaceSummary> {
-    const results = options.accountIds?.length
-      ? await this.getBalancesForDateRange(
-          options.accountIds,
-          options.startDate,
-          options.endDate,
-          userId,
-        )
-      : await this.getAllBalancesForDateRange(
-          options.startDate,
-          options.endDate,
-          userId,
-        );
-
-    return this.buildSummary(results);
+    const projection = await this.balanceQueryService.loadBalanceProjection(
+      userId,
+      options.startDate,
+      options.endDate,
+      { accountIds: options.accountIds, includeLatestSync: true },
+    );
+    return this.buildSummary(
+      projection.balances,
+      projection.reportingCurrency,
+      options,
+    );
   }
 
   private buildSummary(
-    results: BalanceQueryPerDateResult[],
+    results: Iterable<BalanceQueryPerDateResult>,
+    reportingCurrency = 'USD',
+    options: Pick<
+      BalanceHistorySurfaceOptions,
+      'resolution' | 'maxPoints'
+    > = {},
   ): BalanceHistorySurfaceSummary {
-    if (results.length === 0) {
+    let firstResult: BalanceQueryPerDateResult | undefined;
+    let lastResult: BalanceQueryPerDateResult | undefined;
+    const chartPoints: BalanceHistorySurfaceChartPoint[] = [];
+    for (const result of results) {
+      firstResult ??= result;
+      lastResult = result;
+      const minor = calculateNetWorthForDate(result.balances);
+      chartPoints.push({
+        date: result.date,
+        label: dayjs(result.date).format('MMM D'),
+        value: new ExactDecimal(minor.toString())
+          .div(new ExactDecimal(10).pow(getDecimalPlaces(reportingCurrency)))
+          .toFixed(),
+      });
+    }
+    const resolution = options.resolution ?? 'daily';
+    const maxPoints =
+      resolution === 'compact' ? (options.maxPoints ?? 240) : null;
+    const chartData =
+      maxPoints === null ? chartPoints : sampleHistory(chartPoints, maxPoints);
+    const sampling: HistorySampling = {
+      resolution,
+      sourcePointCount: chartPoints.length,
+      returnedPointCount: chartData.length,
+      maxPoints,
+    };
+    if (!firstResult || !lastResult) {
       return {
-        netWorth: createMoneyWithSign(0, 'USD'),
+        netWorth: createMoneyWithSign(0n, reportingCurrency),
         changePercent: undefined,
-        chartData: [],
+        chartData,
+        sampling,
         assets: [],
         liabilities: [],
       };
     }
-
-    const sortedResults = [...results].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-    );
-
-    const firstResult = sortedResults[0];
-    const lastResult = sortedResults[sortedResults.length - 1];
-
     const firstNetWorth = calculateNetWorthForDate(firstResult.balances);
     const lastNetWorth = calculateNetWorthForDate(lastResult.balances);
     const changePercent = calculateChangePercent(lastNetWorth, firstNetWorth);
-
-    const currency = lastResult
-      ? assertSingleEffectiveCurrency(lastResult.balances)
-      : 'USD';
-
-    const chartData = sortedResults.map((result) => ({
-      date: result.date,
-      label: dayjs(result.date).format('MMM D'),
-      value: calculateNetWorthForDate(result.balances),
-    }));
-
+    const currency = assertSingleEffectiveCurrency(lastResult.balances);
     const assets: BalanceHistorySurfaceAccountSummary[] = [];
     const liabilities: BalanceHistorySurfaceAccountSummary[] = [];
 
@@ -274,9 +257,8 @@ export class BalanceHistorySurfaceService {
             changePercent: accountChangePercent,
             institutionName:
               accountResult.account.bankLink?.institutionName ?? null,
-            syncedAt: getLatestAccountSyncedAt(
-              sortedResults,
-              accountId,
+            syncedAt: (
+              accountResult.latestSyncedAt ?? accountResult.syncedAt
             )?.toISOString(),
             archivedAt: accountResult.account.archivedAt?.toISOString() ?? null,
           };
@@ -294,15 +276,20 @@ export class BalanceHistorySurfaceService {
       left: BalanceHistorySurfaceAccountSummary,
       right: BalanceHistorySurfaceAccountSummary,
     ) =>
-      getSignedAmount(
-        right.convertedEffectiveBalance ?? right.effectiveBalance,
-      ) -
-      getSignedAmount(left.convertedEffectiveBalance ?? left.effectiveBalance);
+      compareBalanceAmounts(
+        getSignedAmount(
+          right.convertedEffectiveBalance ?? right.effectiveBalance,
+        ),
+        getSignedAmount(
+          left.convertedEffectiveBalance ?? left.effectiveBalance,
+        ),
+      );
 
     return {
       netWorth: createMoneyWithSign(lastNetWorth, currency),
       changePercent,
       chartData,
+      sampling,
       assets: assets.sort(sortByBalance),
       liabilities: liabilities.sort(sortByBalance),
     };

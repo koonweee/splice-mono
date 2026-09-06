@@ -26,11 +26,11 @@ describe('ZodValidationPipe', () => {
       type: 'depository',
       subType: null,
       availableBalance: {
-        money: { amount: 10000, currency: 'USD' },
+        money: { amount: '10000', currency: 'USD' },
         sign: MoneySign.POSITIVE,
       },
       currentBalance: {
-        money: { amount: 10000, currency: 'USD' },
+        money: { amount: '10000', currency: 'USD' },
         sign: MoneySign.POSITIVE,
       },
     };
@@ -62,11 +62,11 @@ describe('ZodValidationPipe', () => {
         type: 'depository',
         subType: null,
         availableBalance: {
-          money: { amount: -10000, currency: 'USD' },
+          money: { amount: '-10000', currency: 'USD' },
           sign: MoneySign.NEGATIVE,
         },
         currentBalance: {
-          money: { amount: -10000, currency: 'USD' },
+          money: { amount: '-10000', currency: 'USD' },
           sign: MoneySign.NEGATIVE,
         },
       }),
@@ -83,7 +83,7 @@ describe('ZodValidationPipe', () => {
       UpdateTransactionReportingDateDtoSchema.parse({
         reportingDateOverride: '2026-08-15',
         amount: {
-          money: { amount: 100, currency: 'USD' },
+          money: { amount: '100', currency: 'USD' },
           sign: MoneySign.POSITIVE,
         },
       }),
@@ -94,7 +94,7 @@ describe('ZodValidationPipe', () => {
     expect(() =>
       UpdateBalanceBodySchema.parse({
         balance: {
-          money: { amount: 100, currency: 'USD' },
+          money: { amount: '100', currency: 'USD' },
           sign: MoneySign.POSITIVE,
         },
         bankLinkId: '00000000-0000-4000-8000-000000000001',
@@ -133,14 +133,14 @@ describe('ZodValidationPipe', () => {
         availableBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
@@ -159,14 +159,14 @@ describe('ZodValidationPipe', () => {
         availableBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
@@ -194,14 +194,14 @@ describe('ZodValidationPipe', () => {
         availableBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
@@ -217,14 +217,14 @@ describe('ZodValidationPipe', () => {
         availableBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
@@ -242,7 +242,7 @@ describe('ZodValidationPipe', () => {
         currentBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
@@ -252,7 +252,7 @@ describe('ZodValidationPipe', () => {
       expect(() => pipe.transform(invalidDto)).toThrow(BadRequestException);
     });
 
-    it('should throw BadRequestException when money amount is not a number', () => {
+    it('should throw BadRequestException when money amount is not canonical integer text', () => {
       const invalidDto = {
         name: 'Test Account',
         availableBalance: {
@@ -265,7 +265,7 @@ describe('ZodValidationPipe', () => {
         currentBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
@@ -281,14 +281,14 @@ describe('ZodValidationPipe', () => {
         availableBalance: {
           money: {
             currency: 'USD',
-            amount: 10.99, // Decimal not allowed - must be integer cents (1099)
+            amount: '10.99', // Decimal not allowed - must be integer cents (1099)
           },
           sign: 'positive',
         },
         currentBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
@@ -305,14 +305,14 @@ describe('ZodValidationPipe', () => {
         availableBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'invalid-sign',
         },
         currentBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },
@@ -335,7 +335,7 @@ describe('ZodValidationPipe', () => {
         currentBalance: {
           money: {
             currency: 'USD',
-            amount: 1000,
+            amount: '1000',
           },
           sign: 'positive',
         },

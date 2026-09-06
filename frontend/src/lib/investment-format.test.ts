@@ -70,6 +70,16 @@ describe('investment display formatting', () => {
     expect(formatInvestmentQuantity('10.1234567')).toBe('10.123457')
   })
 
+  it('formats large provider decimals without rounding away significant digits', () => {
+    expect(
+      formatInvestmentValue({ value: '9007199254740993.01', currency: 'USD' }),
+    ).toBe('$9,007,199,254,740,993.01')
+    expect(formatInvestmentQuantity('9007199254740993.123456')).toBe(
+      '9,007,199,254,740,993.123456',
+    )
+    expect(formatInvestmentQuantity('-0.123456')).toBe('-0.123456')
+  })
+
   it('preserves missing and invalid provider values', () => {
     for (const format of [formatInvestmentQuote, formatInvestmentValue]) {
       expect(format({ value: null, currency: 'USD' })).toBe('--')

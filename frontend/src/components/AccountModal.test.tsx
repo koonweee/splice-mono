@@ -119,7 +119,7 @@ vi.mock('@mantine/notifications', () => ({
 
 function createMoney(amount: number, currency = 'USD') {
   return {
-    money: { amount, currency },
+    money: { amount: String(amount), currency },
     sign: MoneyWithSignSign.positive,
   }
 }
@@ -222,7 +222,7 @@ function createLatestBalance(
           ...account.currentBalance,
           money: {
             ...account.currentBalance.money,
-            amount: snapshotBalanceAmount,
+            amount: String(snapshotBalanceAmount),
           },
         }
   const balance = {
@@ -652,7 +652,7 @@ describe('AccountModal balance history', () => {
         id: 'account-id',
         data: {
           balance: {
-            money: { amount: 2550, currency: 'USD' },
+            money: { amount: '2550', currency: 'USD' },
             sign: MoneyWithSignSign.positive,
           },
         },
@@ -696,7 +696,7 @@ describe('AccountModal balance history', () => {
     const input = screen.getByRole<HTMLInputElement>('textbox', {
       name: 'Current balance',
     })
-    expect(input.value).toBe('100.00 SGD')
+    expect(input.value).toBe('100')
 
     fireEvent.change(input, { target: { value: '125.00' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save balance' }))
@@ -705,7 +705,7 @@ describe('AccountModal balance history', () => {
       expect.objectContaining({
         data: {
           balance: {
-            money: { amount: 12500, currency: 'SGD' },
+            money: { amount: '12500', currency: 'SGD' },
             sign: MoneyWithSignSign.positive,
           },
         },
@@ -728,7 +728,7 @@ describe('AccountModal balance history', () => {
     const input = screen.getByRole<HTMLInputElement>('textbox', {
       name: 'Current balance',
     })
-    expect(input.value).toContain('2133.40')
+    expect(input.value).toBe('2133.4')
     expect(input.value).not.toContain('9999.00')
   })
 })

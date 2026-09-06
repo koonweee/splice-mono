@@ -31,18 +31,18 @@ export const analysisQueryOptions = (params: {
     query: { staleTime: FINANCIAL_STALE_TIME },
   })
 export function transactionsQueryOptions(
-  params: TransactionControllerFindAllParams,
+  params: Omit<
+    TransactionControllerFindAllParams,
+    'pageIndex' | 'cursor' | 'includeTotal'
+  >,
 ) {
   return infiniteQueryOptions({
     queryKey: [...getTransactionControllerFindAllQueryKey(params), 'infinite'],
     queryFn: ({ pageParam, signal }) =>
-      transactionControllerFindAll(
-        { ...params, pageIndex: String(pageParam) },
-        signal,
-      ),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, pages) =>
-      pages.length * PAGE_SIZE < lastPage.total ? pages.length : undefined,
+      transactionControllerFindAll({ ...params, cursor: pageParam }, signal),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? (lastPage.nextCursor ?? undefined) : undefined,
     staleTime: FINANCIAL_STALE_TIME,
   })
 }

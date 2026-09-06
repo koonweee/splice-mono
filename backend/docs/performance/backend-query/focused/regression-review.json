@@ -1,0 +1,49 @@
+{
+  "completed": true,
+  "scope": "All diagnostic regression flags reviewed from captured plans/raw data. No additional application changes or broad recapture requested under shortened scope.",
+  "followup": "regression-sparse-fx/diagnosis.json",
+  "candidates": [
+    {
+      "suite": "scale-1000000",
+      "name": "transactions.activityDate.page-1998",
+      "medianBeforeMs": 121.8231250000099,
+      "medianAfterMs": 157.2896249999976,
+      "explanation": "Retained deep-offset compatibility path sorts wide projection rows before OFFSET 99900, spills to disk; adopted count-free date cursor preserves ordered results without the spill."
+    },
+    {
+      "suite": "scale-1000000",
+      "name": "transactions.merchantName.page-1998",
+      "medianBeforeMs": 138.13899999999558,
+      "medianAfterMs": 183.19933399999718,
+      "explanation": "Retained deep-offset compatibility path sorts wide projection rows before OFFSET 99900, spills to disk; count-free merchant cursor improves over original offset but still inspects many account rows."
+    },
+    {
+      "suite": "scale-1000000",
+      "name": "transactions.pending.page-1998",
+      "medianBeforeMs": 129.66745899998932,
+      "medianAfterMs": 195.70566699999472,
+      "explanation": "Retained deep-offset compatibility path sorts wide projection rows before OFFSET 99900, spills to disk; count-free pending cursor improves over original offset but still inspects many account rows."
+    },
+    {
+      "suite": "scale-1000000",
+      "name": "history.year.20-accounts.daily",
+      "medianBeforeMs": 9.953125,
+      "medianAfterMs": 8.990167000003566,
+      "explanation": "One 24.35 ms first final call followed by 8.99/7.85 ms; final median improves. Three calls cannot establish a persistent tail change; repeated 10k identical-history lane improves median and p95."
+    },
+    {
+      "suite": "shape",
+      "name": "shape.history.year.20-accounts.sparse-prior-fx.daily",
+      "medianBeforeMs": 12.041207999999642,
+      "medianAfterMs": 19.095332999999755,
+      "explanation": "Persistent variable correctness cost confirmed by 5 warmups / 20 calls. Exact coherent historical quote coverage/provenance returns one result per requested date; source rows 314→667 despite 8→6 SELECTs. Request-local conversion reuse already reduces intermediate implementation CPU."
+    },
+    {
+      "suite": "sync",
+      "name": "sync.holdings.0-positions",
+      "medianBeforeMs": 0.4182920000166632,
+      "medianAfterMs": 5.580958999998984,
+      "explanation": "Intentional owned/generation-fenced transactional completed-empty header publication costs about 5 ms over original delete-only apply."
+    }
+  ]
+}

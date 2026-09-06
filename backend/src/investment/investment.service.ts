@@ -1,10 +1,15 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Not, Repository } from 'typeorm';
-import { AccountActivityService } from '../account-activity/account-activity.service';
+import { DataSource, EntityManager, In, IsNull, Repository } from 'typeorm';
+import { AccountActivityEntity } from '../account-activity/account-activity.entity';
 import { AccountEntity } from '../account/account.entity';
-import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
-import { BalanceSnapshotType } from '../types/BalanceSnapshot';
+import { BankLinkEntity } from '../bank-link/bank-link.entity';
 import type {
   InvestmentActivity,
   InvestmentActivityQuery,
@@ -19,6 +24,15 @@ import type {
 import { InvestmentHoldingSnapshotEntity } from './investment-holding-snapshot.entity';
 import { InvestmentSecurityEntity } from './investment-security.entity';
 import { InvestmentTransactionEntity } from './investment-transaction.entity';
+import { HoldingsQueryService } from './holdings-query.service';
+import { investmentWriteValues } from './investment-write-values';
+import {
+  InvestmentSyncStateEntity,
+  type InvestmentSyncKind,
+  type InvestmentSyncToken,
+} from './investment-sync-state.entity';
+
+const WRITE_CHUNK_SIZE = 300;
 
 @Injectable()
 export class InvestmentService {
@@ -33,141 +47,168 @@ export class InvestmentService {
     private readonly transactionRepository: Repository<InvestmentTransactionEntity>,
     @InjectRepository(AccountEntity)
     private readonly accountRepository: Repository<AccountEntity>,
-    @InjectRepository(BalanceSnapshotEntity)
-    private readonly balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
-    private readonly accountActivityService: AccountActivityService,
+    private readonly dataSource: DataSource,
+    private readonly holdingsQueryService: HoldingsQueryService,
   ) {}
+
+  async beginProviderSync(
+    userId: string,
+    bankLinkId: string,
+    kind: InvestmentSyncKind,
+  ): Promise<InvestmentSyncToken> {
+    return this.dataSource.transaction(async (manager) => {
+      await this.lockBankLink(manager, userId, bankLinkId);
+      const rows: Array<{ requestedGeneration: string }> = await manager.query(
+        `
+        INSERT INTO investment_sync_state_entity ("userId","bankLinkId",kind,"requestedGeneration") VALUES ($1,$2,$3,1)
+        ON CONFLICT ("bankLinkId",kind) DO UPDATE SET "requestedGeneration"=investment_sync_state_entity."requestedGeneration"+1,"updatedAt"=now()
+        RETURNING "requestedGeneration"::text`,
+        [userId, bankLinkId, kind],
+      );
+      return { bankLinkId, kind, generation: rows[0].requestedGeneration };
+    });
+  }
 
   async upsertPlaidHoldings(
     userId: string,
     accountIdMap: Map<string, string>,
     snapshotDate: string,
     response: ProviderInvestmentHoldingsResponse,
+    token: InvestmentSyncToken,
   ): Promise<InvestmentHoldingsSyncResult> {
-    const securityMap = await this.upsertSecurities(userId, response);
-    const mappedAccountIds = response.externalAccountIds
-      .map((externalAccountId) => accountIdMap.get(externalAccountId))
-      .filter((accountId): accountId is string => !!accountId);
-
-    const savedHoldingIds: string[] = [];
-
-    for (const providerHolding of response.holdings) {
-      const accountId = accountIdMap.get(providerHolding.externalAccountId);
-      const security = securityMap.get(providerHolding.externalSecurityId);
-      if (!accountId || !security) {
-        this.logger.warn(
-          {
-            hasAccountMapping: !!accountId,
-            hasSecurityMapping: !!security,
-          },
-          'Skipping investment holding without account or security mapping',
-        );
-        continue;
-      }
-
-      const existing = await this.holdingRepository.findOne({
-        where: {
-          userId,
-          accountId,
-          securityId: security.id,
-          snapshotDate,
-        },
-      });
-
-      const holding =
-        existing ??
-        InvestmentHoldingSnapshotEntity.fromProvider(
-          providerHolding,
-          userId,
-          accountId,
-          security.id,
-          snapshotDate,
-        );
-
-      if (existing) {
-        existing.applyProviderHolding(providerHolding);
-      }
-
-      const saved = await this.holdingRepository.save(holding);
-      savedHoldingIds.push(saved.id);
-    }
-
-    const deletedStaleHoldings = await this.deleteStaleSameDayHoldings(
+    return this.applyProviderSync(
       userId,
-      mappedAccountIds,
-      snapshotDate,
-      savedHoldingIds,
-    );
-
-    this.logger.log(
-      {
-        accountCount: mappedAccountIds.length,
-        securityCount: securityMap.size,
-        holdingCount: savedHoldingIds.length,
-        deletedStaleHoldings,
+      accountIdMap,
+      response.externalAccountIds,
+      token,
+      'holdings',
+      async (manager, mappedAccountIds) => {
+        const securityMap = await this.upsertSecurities(
+          manager,
+          userId,
+          response.securities,
+        );
+        const uniqueHoldings = new Map(
+          response.holdings.map((holding) => [
+            `${holding.externalAccountId}:${holding.externalSecurityId}`,
+            holding,
+          ]),
+        );
+        const declared = new Set(response.externalAccountIds);
+        for (const holding of uniqueHoldings.values()) {
+          if (
+            !declared.has(holding.externalAccountId) ||
+            !accountIdMap.has(holding.externalAccountId) ||
+            !securityMap.has(holding.externalSecurityId)
+          ) {
+            throw new BadRequestException(
+              'Investment holdings response references an unknown account or security',
+            );
+          }
+        }
+        const headerRows: Array<{ id: string; accountId: string }> =
+          mappedAccountIds.length
+            ? await manager.query(
+                `
+        INSERT INTO holdings_snapshot_header_entity ("userId","accountId",provider,"snapshotDate","completedAt")
+        SELECT $1, id, 'plaid', $3::date, now() FROM unnest($2::uuid[]) id
+        ON CONFLICT ("accountId",provider,"snapshotDate") DO UPDATE SET revision=holdings_snapshot_header_entity.revision+1,"completedAt"=now(),"updatedAt"=now()
+        RETURNING id,"accountId"`,
+                [userId, mappedAccountIds, snapshotDate],
+              )
+            : [];
+        const headers = new Map(
+          headerRows.map((row) => [row.accountId, row.id]),
+        );
+        const holdings = [...uniqueHoldings.values()].map((providerHolding) => {
+          const accountId = accountIdMap.get(
+            providerHolding.externalAccountId,
+          )!;
+          const security = securityMap.get(providerHolding.externalSecurityId)!;
+          const holding = InvestmentHoldingSnapshotEntity.fromProvider(
+            providerHolding,
+            userId,
+            accountId,
+            security.id,
+            snapshotDate,
+          );
+          holding.headerId = headers.get(accountId)!;
+          return holding;
+        });
+        const repository = manager.getRepository(
+          InvestmentHoldingSnapshotEntity,
+        );
+        // Capture obsolete row IDs before the upsert; identity remains stable for existing positions.
+        const existing = mappedAccountIds.length
+          ? await repository.find({
+              where: {
+                userId,
+                accountId: In(mappedAccountIds),
+                provider: 'plaid',
+                snapshotDate,
+              },
+              select: { id: true, accountId: true, securityId: true },
+              loadEagerRelations: false,
+            })
+          : [];
+        const incomingKeys = new Set(
+          holdings.map(
+            (holding) => `${holding.accountId}:${holding.securityId}`,
+          ),
+        );
+        const staleIds = existing
+          .filter(
+            (holding) =>
+              !incomingKeys.has(`${holding.accountId}:${holding.securityId}`),
+          )
+          .map((holding) => holding.id);
+        for (
+          let start = 0;
+          start < holdings.length;
+          start += WRITE_CHUNK_SIZE
+        ) {
+          await repository.upsert(
+            investmentWriteValues(
+              repository,
+              holdings.slice(start, start + WRITE_CHUNK_SIZE),
+            ),
+            {
+              conflictPaths: ['accountId', 'snapshotDate', 'securityId'],
+              skipUpdateIfNoValuesChanged: true,
+            },
+          );
+        }
+        let deletedStaleHoldings = 0;
+        for (
+          let start = 0;
+          start < staleIds.length;
+          start += WRITE_CHUNK_SIZE
+        ) {
+          const result = await repository.delete({
+            userId,
+            id: In(staleIds.slice(start, start + WRITE_CHUNK_SIZE)),
+          });
+          deletedStaleHoldings += result.affected ?? 0;
+        }
+        return {
+          accounts: mappedAccountIds.length,
+          securities: securityMap.size,
+          holdings: holdings.length,
+          deletedStaleHoldings,
+        };
       },
-      'Upserted investment holding snapshots',
     );
-
-    return {
-      accounts: mappedAccountIds.length,
-      securities: securityMap.size,
-      holdings: savedHoldingIds.length,
-      deletedStaleHoldings,
-    };
   }
 
   async findLatestHoldingsForAccount(
     userId: string,
     accountId: string,
   ): Promise<InvestmentHoldingsResponse> {
-    const account = await this.ensureAccountOwned(userId, accountId);
-
-    if (account.valuationMode === 'holdings') {
-      const latestBalance = await this.balanceSnapshotRepository.findOne({
-        where: {
-          userId,
-          accountId,
-          snapshotType: Not(BalanceSnapshotType.FORWARD_FILL),
-        },
-        order: { snapshotDate: 'DESC', updatedAt: 'DESC' },
-      });
-      if (!latestBalance) {
-        return {
-          accountId,
-          snapshotDate: null,
-          accountCurrency: account.currentBalance.currency,
-          accountValue: account.currentBalance.toMoneyWithSign(),
-          holdings: [],
-        };
-      }
-      return this.findHoldingsForAccountOnDate(
-        userId,
-        accountId,
-        latestBalance.snapshotDate,
-      );
-    }
-
-    const latest = await this.holdingRepository.findOne({
-      where: { userId, accountId },
-      order: { snapshotDate: 'DESC', updatedAt: 'DESC' },
+    const [result] = await this.holdingsQueryService.read(userId, {
+      accountIds: [accountId],
+      includeArchived: true,
     });
-
-    if (!latest) {
-      return {
-        accountId,
-        snapshotDate: null,
-        accountCurrency: null,
-        accountValue: null,
-        holdings: [],
-      };
-    }
-
-    return this.findHoldingsForAccountOnDate(
-      userId,
-      accountId,
-      latest.snapshotDate,
-    );
+    return result.snapshot;
   }
 
   async findHoldingsForAccountOnDate(
@@ -175,115 +216,291 @@ export class InvestmentService {
     accountId: string,
     snapshotDate: string,
   ): Promise<InvestmentHoldingsResponse> {
-    const account = await this.ensureAccountOwned(userId, accountId);
-
-    const holdings = await this.holdingRepository.find({
-      where: { userId, accountId, snapshotDate },
-      order: {
-        institutionValue: 'DESC',
-        updatedAt: 'DESC',
-      },
-    });
-
-    const balanceSnapshot =
-      account.valuationMode === 'holdings'
-        ? await this.balanceSnapshotRepository.findOne({
-            where: { userId, accountId, snapshotDate },
-          })
-        : null;
-    return {
-      accountId,
+    const [result] = await this.holdingsQueryService.read(userId, {
+      accountIds: [accountId],
       snapshotDate,
-      accountCurrency:
-        account.valuationMode === 'holdings'
-          ? account.currentBalance.currency
-          : null,
-      accountValue: balanceSnapshot?.currentBalance.toMoneyWithSign() ?? null,
-      holdings: holdings.map((holding) => holding.toObject()),
-    };
+      includeArchived: true,
+    });
+    return result.snapshot;
   }
 
   async upsertPlaidInvestmentTransactions(
     userId: string,
     accountIdMap: Map<string, string>,
     response: ProviderInvestmentTransactionsResponse,
+    token: InvestmentSyncToken,
   ): Promise<InvestmentTransactionsSyncResult> {
-    const securityMap = await this.upsertSecurities(userId, response);
-    const mappedAccountIds = response.externalAccountIds
-      .map((externalAccountId) => accountIdMap.get(externalAccountId))
-      .filter((accountId): accountId is string => !!accountId);
-
-    let transactionCount = 0;
-    let skippedMissingAccount = 0;
-
-    for (const providerTransaction of response.transactions) {
-      const accountId = accountIdMap.get(providerTransaction.externalAccountId);
-      if (!accountId) {
-        skippedMissingAccount++;
-        this.logger.warn(
-          {
-            externalAccountId: providerTransaction.externalAccountId,
-            externalActivityId: providerTransaction.externalActivityId,
+    return this.applyProviderSync(
+      userId,
+      accountIdMap,
+      response.externalAccountIds,
+      token,
+      'transactions',
+      async (manager, mappedAccountIds, bankLink) => {
+        const securityMap = await this.upsertSecurities(
+          manager,
+          userId,
+          response.securities,
+        );
+        const unique = new Map(
+          response.transactions.map((transaction) => [
+            `${transaction.externalAccountId}:${transaction.externalActivityId}`,
+            transaction,
+          ]),
+        );
+        const declared = new Set(response.externalAccountIds);
+        let skippedMissingAccount = 0;
+        const transactions = [...unique.values()].filter((transaction) => {
+          if (!declared.has(transaction.externalAccountId))
+            throw new BadRequestException(
+              'Investment transaction references an undeclared account',
+            );
+          if (!accountIdMap.has(transaction.externalAccountId)) {
+            skippedMissingAccount++;
+            return false;
+          }
+          if (
+            transaction.externalSecurityId &&
+            !securityMap.has(transaction.externalSecurityId)
+          )
+            throw new BadRequestException(
+              'Investment transaction references an unknown security',
+            );
+          return true;
+        });
+        const activityRepository = manager.getRepository(AccountActivityEntity);
+        const activities = transactions.map((transaction) =>
+          AccountActivityEntity.create({
+            userId,
+            accountId: accountIdMap.get(transaction.externalAccountId)!,
+            provider: 'plaid',
+            externalActivityId: transaction.externalActivityId,
+            activityKind: 'investment_transaction',
+            activityDate: transaction.providerDate,
+            providerDate: transaction.providerDate,
+            providerDatetime: transaction.providerDatetime,
+            amount: transaction.amount,
+          }),
+        );
+        for (
+          let start = 0;
+          start < activities.length;
+          start += WRITE_CHUNK_SIZE
+        ) {
+          await activityRepository.upsert(
+            investmentWriteValues(
+              activityRepository,
+              activities.slice(start, start + WRITE_CHUNK_SIZE),
+            ),
+            {
+              conflictPaths: [
+                'userId',
+                'accountId',
+                'provider',
+                'activityKind',
+                'externalActivityId',
+              ],
+              indexPredicate: '"externalActivityId" IS NOT NULL',
+              skipUpdateIfNoValuesChanged: true,
+            },
+          );
+        }
+        const activityByIdentity = new Map<string, string>();
+        for (
+          let start = 0;
+          start < activities.length;
+          start += WRITE_CHUNK_SIZE
+        ) {
+          const batch = activities.slice(start, start + WRITE_CHUNK_SIZE);
+          const saved = await activityRepository.find({
+            where: {
+              userId,
+              accountId: In(mappedAccountIds),
+              provider: 'plaid',
+              activityKind: 'investment_transaction',
+              externalActivityId: In(
+                batch.map((activity) => activity.externalActivityId!),
+              ),
+            },
+            select: { id: true, accountId: true, externalActivityId: true },
+          });
+          for (const activity of saved)
+            activityByIdentity.set(
+              `${activity.accountId}:${activity.externalActivityId}`,
+              activity.id,
+            );
+        }
+        const details = transactions.map((transaction) =>
+          InvestmentTransactionEntity.fromProvider(
+            transaction,
+            userId,
+            activityByIdentity.get(
+              `${accountIdMap.get(transaction.externalAccountId)}:${transaction.externalActivityId}`,
+            )!,
+            transaction.externalSecurityId
+              ? securityMap.get(transaction.externalSecurityId)!.id
+              : null,
+          ),
+        );
+        const detailRepository = manager.getRepository(
+          InvestmentTransactionEntity,
+        );
+        for (let start = 0; start < details.length; start += WRITE_CHUNK_SIZE) {
+          await detailRepository.upsert(
+            investmentWriteValues(
+              detailRepository,
+              details.slice(start, start + WRITE_CHUNK_SIZE),
+            ),
+            {
+              conflictPaths: ['activityId'],
+              skipUpdateIfNoValuesChanged: true,
+            },
+          );
+        }
+        bankLink.authentication = {
+          ...bankLink.authentication,
+          investmentTransactionsSync: {
+            lastSyncedAt: new Date().toISOString(),
+            lastStartDate: response.startDate,
+            lastEndDate: response.endDate,
           },
-          'Skipping investment transaction without account mapping',
-        );
-        continue;
-      }
-
-      const securityId = providerTransaction.externalSecurityId
-        ? (securityMap.get(providerTransaction.externalSecurityId)?.id ?? null)
-        : null;
-
-      const activity = await this.accountActivityService.upsertExternal({
-        userId,
-        accountId,
-        provider: 'plaid',
-        externalActivityId: providerTransaction.externalActivityId,
-        activityKind: 'investment_transaction',
-        activityDate: providerTransaction.providerDate,
-        providerDate: providerTransaction.providerDate,
-        providerDatetime: providerTransaction.providerDatetime,
-        amount: providerTransaction.amount,
-      });
-
-      const existing = await this.transactionRepository.findOne({
-        where: {
-          userId,
-          activityId: activity.id,
-        },
-      });
-      const transaction =
-        existing ??
-        InvestmentTransactionEntity.fromProvider(
-          providerTransaction,
-          userId,
-          activity.id,
-          securityId,
-        );
-      if (existing) {
-        existing.applyProviderTransaction(providerTransaction, securityId);
-      }
-
-      await this.transactionRepository.save(transaction);
-      transactionCount++;
-    }
-
-    this.logger.log(
-      {
-        accountCount: mappedAccountIds.length,
-        securityCount: securityMap.size,
-        transactionCount,
-        skippedMissingAccount,
+        };
+        await manager
+          .getRepository(BankLinkEntity)
+          .update(
+            { id: bankLink.id, userId },
+            { authentication: bankLink.authentication },
+          );
+        return {
+          accounts: mappedAccountIds.length,
+          securities: securityMap.size,
+          transactions: transactions.length,
+          skippedMissingAccount,
+        };
       },
-      'Upserted investment transactions',
     );
+  }
 
-    return {
-      accounts: mappedAccountIds.length,
-      securities: securityMap.size,
-      transactions: transactionCount,
-      skippedMissingAccount,
-    };
+  private async upsertSecurities(
+    manager: EntityManager,
+    userId: string,
+    input: ProviderInvestmentSecurity[],
+  ): Promise<Map<string, InvestmentSecurityEntity>> {
+    const unique = new Map(
+      input.map((security) => [security.externalSecurityId, security]),
+    );
+    if (!unique.size) return new Map();
+    const repository = manager.getRepository(InvestmentSecurityEntity);
+    const securities = [...unique.values()].map((security) =>
+      InvestmentSecurityEntity.fromProvider(security, userId),
+    );
+    for (let start = 0; start < securities.length; start += WRITE_CHUNK_SIZE) {
+      await repository.upsert(
+        investmentWriteValues(
+          repository,
+          securities.slice(start, start + WRITE_CHUNK_SIZE),
+        ),
+        {
+          conflictPaths: ['userId', 'provider', 'externalSecurityId'],
+          skipUpdateIfNoValuesChanged: true,
+        },
+      );
+    }
+    const saved = await repository.find({
+      where: {
+        userId,
+        provider: 'plaid',
+        externalSecurityId: In([...unique.keys()]),
+      },
+    });
+    return new Map(
+      saved.map((security) => [security.externalSecurityId, security]),
+    );
+  }
+
+  private async lockBankLink(
+    manager: EntityManager,
+    userId: string,
+    bankLinkId: string,
+  ): Promise<BankLinkEntity> {
+    const bankLink = await manager.getRepository(BankLinkEntity).findOne({
+      where: { id: bankLinkId, userId, archivedAt: IsNull() },
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (!bankLink) throw new NotFoundException('Active bank link not found');
+    return bankLink;
+  }
+
+  private async applyProviderSync<T>(
+    userId: string,
+    accountIdMap: Map<string, string>,
+    externalAccountIds: string[],
+    token: InvestmentSyncToken,
+    kind: InvestmentSyncKind,
+    apply: (
+      manager: EntityManager,
+      accountIds: string[],
+      bankLink: BankLinkEntity,
+    ) => Promise<T>,
+  ): Promise<T> {
+    if (!token || token.kind !== kind)
+      throw new BadRequestException(
+        'A matching investment sync generation is required',
+      );
+    return this.dataSource.transaction(async (manager) => {
+      const bankLink = await this.lockBankLink(
+        manager,
+        userId,
+        token.bankLinkId,
+      );
+      const state = await manager
+        .getRepository(InvestmentSyncStateEntity)
+        .findOne({
+          where: { userId, bankLinkId: token.bankLinkId, kind },
+          lock: { mode: 'pessimistic_write' },
+        });
+      if (
+        !state ||
+        String(state.requestedGeneration) !== token.generation ||
+        BigInt(state.completedGeneration) >= BigInt(token.generation)
+      )
+        throw new ConflictException(
+          'Investment sync was superseded or already applied; retry the sync',
+        );
+      const accountIds = [
+        ...new Set(
+          externalAccountIds
+            .map((id) => accountIdMap.get(id))
+            .filter((id): id is string => !!id),
+        ),
+      ].sort();
+      const accounts = accountIds.length
+        ? await manager
+            .getRepository(AccountEntity)
+            .createQueryBuilder('account')
+            .where('account.id IN (:...accountIds)', { accountIds })
+            .andWhere('account."userId"=:userId', { userId })
+            .andWhere('account."bankLinkId"=:bankLinkId', {
+              bankLinkId: token.bankLinkId,
+            })
+            .andWhere('account."archivedAt" IS NULL')
+            .orderBy('account.id', 'ASC')
+            .setLock('pessimistic_write')
+            .getMany()
+        : [];
+      if (accounts.length !== accountIds.length)
+        throw new ConflictException(
+          'An investment account changed or was archived during sync',
+        );
+      const result = await apply(manager, accountIds, bankLink);
+      await manager
+        .getRepository(InvestmentSyncStateEntity)
+        .update(
+          { id: state.id, userId },
+          { completedGeneration: token.generation, completedAt: new Date() },
+        );
+      return result;
+    });
   }
 
   async findActivityForAccount(
@@ -309,9 +526,18 @@ export class InvestmentService {
     const queryBuilder = this.transactionRepository
       .createQueryBuilder('investmentTransaction')
       .leftJoinAndSelect('investmentTransaction.activity', 'activity')
-      .leftJoinAndSelect('activity.account', 'account')
+      .leftJoin('activity.account', 'account')
+      .addSelect([
+        'account.id',
+        'account.userId',
+        'account.name',
+        'account.customName',
+      ])
       .leftJoinAndSelect('investmentTransaction.security', 'security')
       .where('investmentTransaction.userId = :userId', { userId })
+      .andWhere('activity.userId = :userId AND account.userId = :userId', {
+        userId,
+      })
       .andWhere('activity.activityKind = :activityKind', {
         activityKind: 'investment_transaction',
       });
@@ -357,73 +583,6 @@ export class InvestmentService {
       pageIndex: query.pageIndex,
       pageSize: query.pageSize,
     };
-  }
-
-  private async upsertSecurities(
-    userId: string,
-    response: { securities: ProviderInvestmentSecurity[] },
-  ): Promise<Map<string, InvestmentSecurityEntity>> {
-    const uniqueSecurities = new Map(
-      response.securities.map((security) => [
-        security.externalSecurityId,
-        security,
-      ]),
-    );
-
-    if (uniqueSecurities.size === 0) {
-      return new Map();
-    }
-
-    const existingSecurities = await this.securityRepository.find({
-      where: {
-        userId,
-        provider: 'plaid',
-        externalSecurityId: In(Array.from(uniqueSecurities.keys())),
-      },
-    });
-    const existingByExternalId = new Map(
-      existingSecurities.map((security) => [
-        security.externalSecurityId,
-        security,
-      ]),
-    );
-
-    const savedSecurities = new Map<string, InvestmentSecurityEntity>();
-    for (const providerSecurity of uniqueSecurities.values()) {
-      const existing = existingByExternalId.get(
-        providerSecurity.externalSecurityId,
-      );
-      const security =
-        existing ??
-        InvestmentSecurityEntity.fromProvider(providerSecurity, userId);
-      if (existing) {
-        existing.applyProviderSecurity(providerSecurity);
-      }
-      const saved = await this.securityRepository.save(security);
-      savedSecurities.set(saved.externalSecurityId, saved);
-    }
-
-    return savedSecurities;
-  }
-
-  private async deleteStaleSameDayHoldings(
-    userId: string,
-    accountIds: string[],
-    snapshotDate: string,
-    savedHoldingIds: string[],
-  ): Promise<number> {
-    if (accountIds.length === 0) {
-      return 0;
-    }
-
-    const result = await this.holdingRepository.delete({
-      userId,
-      accountId: In(accountIds),
-      snapshotDate,
-      ...(savedHoldingIds.length > 0 ? { id: Not(In(savedHoldingIds)) } : {}),
-    });
-
-    return result.affected ?? 0;
   }
 
   private async ensureAccountOwned(

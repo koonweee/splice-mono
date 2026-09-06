@@ -13,6 +13,9 @@ import { InvestmentService } from './investment.service';
 import { InvestmentTransactionEntity } from './investment-transaction.entity';
 import { ManualBrokerageService } from './manual-brokerage.service';
 import { ManualBrokerageScheduledService } from './manual-brokerage.scheduled';
+import { HoldingsQueryService } from './holdings-query.service';
+import { HoldingsSnapshotHeaderEntity } from './holdings-snapshot-header.entity';
+import { InvestmentSyncStateEntity } from './investment-sync-state.entity';
 
 @Module({
   imports: [
@@ -26,14 +29,17 @@ import { ManualBrokerageScheduledService } from './manual-brokerage.scheduled';
       InvestmentSecurityEntity,
       InvestmentTransactionEntity,
       BalanceSnapshotEntity,
+      HoldingsSnapshotHeaderEntity,
+      InvestmentSyncStateEntity,
     ]),
   ],
   controllers: [InvestmentController],
   providers: [
     InvestmentService,
+    HoldingsQueryService,
     ManualBrokerageService,
     ManualBrokerageScheduledService,
   ],
-  exports: [InvestmentService, ManualBrokerageService],
+  exports: [InvestmentService, ManualBrokerageService, HoldingsQueryService],
 })
 export class InvestmentModule {}

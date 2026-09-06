@@ -17,11 +17,11 @@ export const mockApiAccount: APIAccount = {
   type: AccountType.Depository,
   subType: null,
   availableBalance: {
-    money: { currency: 'USD', amount: 100000 },
+    money: { currency: 'USD', amount: '100000' },
     sign: MoneySign.POSITIVE,
   },
   currentBalance: {
-    money: { currency: 'USD', amount: 100000 },
+    money: { currency: 'USD', amount: '100000' },
     sign: MoneySign.POSITIVE,
   },
 };
@@ -108,7 +108,7 @@ export const mockInvestmentTransactionsResponse = {
       name: 'Buy VWRA',
       quantity: '2',
       amount: {
-        money: { currency: 'USD', amount: 12345 },
+        money: { currency: 'USD', amount: '12345' },
         sign: MoneySign.NEGATIVE,
       },
       price: '61.725',

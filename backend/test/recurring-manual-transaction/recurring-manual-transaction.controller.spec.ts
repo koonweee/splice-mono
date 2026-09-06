@@ -16,7 +16,7 @@ const schedule: RecurringManualTransactionSchedule = {
   accountId: '00000000-0000-4000-8000-000000000010',
   accountName: 'Checking',
   amount: {
-    money: { amount: 125000, currency: 'USD' },
+    money: { amount: '125000', currency: 'USD' },
     sign: MoneySign.NEGATIVE,
   },
   merchantName: 'Rent',

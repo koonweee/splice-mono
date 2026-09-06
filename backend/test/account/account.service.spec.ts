@@ -181,11 +181,11 @@ describe('AccountService', () => {
       const createDto = {
         name: null,
         availableBalance: {
-          money: { currency: 'USD', amount: 100 },
+          money: { currency: 'USD', amount: '100' },
           sign: MoneySign.POSITIVE,
         },
         currentBalance: {
-          money: { currency: 'USD', amount: 100 },
+          money: { currency: 'USD', amount: '100' },
           sign: MoneySign.POSITIVE,
         },
         type: AccountType.Depository,
@@ -689,7 +689,7 @@ describe('AccountService', () => {
 
   describe('updateManualBalance', () => {
     const newBalance = {
-      money: { currency: 'USD', amount: 75000 },
+      money: { currency: 'USD', amount: '75000' },
       sign: MoneySign.POSITIVE,
     };
 
@@ -714,12 +714,12 @@ describe('AccountService', () => {
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           currentBalance: expect.objectContaining({
-            amount: 75000,
+            amount: '75000',
             currency: 'USD',
             sign: MoneySign.POSITIVE,
           }),
           availableBalance: expect.objectContaining({
-            amount: 75000,
+            amount: '75000',
             currency: 'USD',
             sign: MoneySign.POSITIVE,
           }),
@@ -753,18 +753,18 @@ describe('AccountService', () => {
 
       expect(result.currentBalance).toEqual(newBalance);
       expect(result.availableBalance).toEqual({
-        money: { currency: 'USD', amount: 0 },
+        money: { currency: 'USD', amount: '0' },
         sign: MoneySign.POSITIVE,
       });
       expect(mockRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           currentBalance: expect.objectContaining({
-            amount: 75000,
+            amount: '75000',
             currency: 'USD',
             sign: MoneySign.POSITIVE,
           }),
           availableBalance: expect.objectContaining({
-            amount: 0,
+            amount: '0',
             currency: 'USD',
             sign: MoneySign.POSITIVE,
           }),

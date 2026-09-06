@@ -1019,7 +1019,7 @@ describe('PlaidProvider', () => {
             investment_transaction_id: 'investment-transaction-buy',
           }),
           amount: {
-            money: { currency: 'USD', amount: 12345 },
+            money: { currency: 'USD', amount: '12345' },
             sign: 'negative',
           },
         }),
@@ -1030,7 +1030,7 @@ describe('PlaidProvider', () => {
           externalSecurityId: null,
           cancelExternalActivityId: 'cancel-id',
           amount: {
-            money: { currency: 'USD', amount: 456 },
+            money: { currency: 'USD', amount: '456' },
             sign: 'positive',
           },
         }),

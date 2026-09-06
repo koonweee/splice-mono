@@ -2,7 +2,7 @@ import { Collapse, Divider, Group, Paper, Stack, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { AccountType } from '../api/models'
-import { getSignedAmount } from '../lib/balance-utils'
+import { compareIntegers, ratioPercent, signedMinorUnits } from '../lib/money'
 import { CompactAccountRow } from './CompactAccountRow'
 import { Pressable } from './Pressable'
 import type { AccountSummaryData } from '../lib/balance-utils'
@@ -19,11 +19,11 @@ function getAssetTypeGroup(type: string): string {
   return ASSET_TYPE_LABELS[type] ?? 'Other'
 }
 
-function getGroupTotal(accounts: Array<AccountSummaryData>): number {
+function getGroupTotal(accounts: Array<AccountSummaryData>): bigint {
   return accounts.reduce(
     (sum, a) =>
-      sum + getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance),
-    0,
+      sum + signedMinorUnits(a.convertedEffectiveBalance ?? a.effectiveBalance),
+    0n,
   )
 }
 
@@ -35,13 +35,14 @@ function groupAccountsByType(accounts: Array<AccountSummaryData>): Array<{
   const groupOrder = ['Investment', 'Depository', 'Other']
   const grouped = new Map<string, Array<AccountSummaryData>>()
 
-  accounts.sort(
-    (a, b) =>
-      getSignedAmount(b.convertedEffectiveBalance ?? b.effectiveBalance) -
-      getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance),
+  const sorted = [...accounts].sort((a, b) =>
+    compareIntegers(
+      signedMinorUnits(b.convertedEffectiveBalance ?? b.effectiveBalance),
+      signedMinorUnits(a.convertedEffectiveBalance ?? a.effectiveBalance),
+    ),
   )
 
-  accounts.forEach((account) => {
+  sorted.forEach((account) => {
     const group = getAssetTypeGroup(account.type)
     const existing = grouped.get(group) ?? []
     existing.push(account)
@@ -55,7 +56,7 @@ function groupAccountsByType(accounts: Array<AccountSummaryData>): Array<{
     .map((label) => {
       const groupAccounts = grouped.get(label)!
       const groupTotal = getGroupTotal(groupAccounts)
-      const percent = totalAssets === 0 ? 0 : (groupTotal / totalAssets) * 100
+      const percent = ratioPercent(groupTotal, totalAssets)
       return { label, accounts: groupAccounts, percent }
     })
 }

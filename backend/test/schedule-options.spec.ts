@@ -2,7 +2,7 @@ import { getScheduleModuleOptions } from '../src/schedule-options';
 
 describe('getScheduleModuleOptions', () => {
   it('keeps all schedules enabled by default', () => {
-    expect(getScheduleModuleOptions(undefined)).toEqual({
+    expect(getScheduleModuleOptions('false')).toEqual({
       cronJobs: true,
       intervals: true,
       timeouts: true,

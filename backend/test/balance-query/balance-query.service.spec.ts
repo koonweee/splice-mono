@@ -1,3 +1,4 @@
+import { decimalRateRatio } from '../../src/common/exact-money';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AccountType } from 'plaid';
@@ -28,20 +29,20 @@ const createMockAccountEntity = (
   bankLinkId,
   bankLink: bankLinkId ? { id: bankLinkId } : null,
   availableBalance: {
-    amount: 100000,
+    amount: '100000',
     currency,
     sign: MoneySign.POSITIVE,
     toMoneyWithSign: jest.fn().mockReturnValue({
-      money: { amount: 100000, currency },
+      money: { amount: '100000', currency },
       sign: MoneySign.POSITIVE,
     }),
   },
   currentBalance: {
-    amount: 100000,
+    amount: '100000',
     currency,
     sign: MoneySign.POSITIVE,
     toMoneyWithSign: jest.fn().mockReturnValue({
-      money: { amount: 100000, currency },
+      money: { amount: '100000', currency },
       sign: MoneySign.POSITIVE,
     }),
   },
@@ -58,11 +59,11 @@ const createMockAccountEntity = (
     bankLinkId,
     bankLink: bankLinkId ? { id: bankLinkId } : null,
     availableBalance: {
-      money: { amount: 100000, currency },
+      money: { amount: '100000', currency },
       sign: MoneySign.POSITIVE,
     },
     currentBalance: {
-      money: { amount: 100000, currency },
+      money: { amount: '100000', currency },
       sign: MoneySign.POSITIVE,
     },
     createdAt: new Date('2024-01-01'),
@@ -74,8 +75,8 @@ const createMockAccountEntity = (
 const createMockSnapshotEntity = (
   accountId: string,
   snapshotDate: string,
-  availableAmount: number,
-  currentAmount: number,
+  availableAmount: number | string,
+  currentAmount: number | string,
   currency = 'USD',
   updatedAt = new Date('2024-01-01'),
 ) => ({
@@ -85,20 +86,20 @@ const createMockSnapshotEntity = (
   snapshotDate,
   snapshotType: BalanceSnapshotType.SYNC,
   availableBalance: {
-    amount: availableAmount,
+    amount: String(availableAmount),
     currency,
     sign: MoneySign.POSITIVE,
     toMoneyWithSign: jest.fn().mockReturnValue({
-      money: { amount: availableAmount, currency },
+      money: { amount: String(availableAmount), currency },
       sign: MoneySign.POSITIVE,
     }),
   },
   currentBalance: {
-    amount: currentAmount,
+    amount: String(currentAmount),
     currency,
     sign: MoneySign.POSITIVE,
     toMoneyWithSign: jest.fn().mockReturnValue({
-      money: { amount: currentAmount, currency },
+      money: { amount: String(currentAmount), currency },
       sign: MoneySign.POSITIVE,
     }),
   },
@@ -129,6 +130,7 @@ const createMockUser = (currency = 'USD') => ({
 describe('BalanceQueryService', () => {
   let service: BalanceQueryService;
   let mockAccountRepository: {
+    manager: { transaction: jest.Mock; withRepository: jest.Mock };
     find: jest.Mock;
   };
   let mockSnapshotRepository: {
@@ -139,11 +141,16 @@ describe('BalanceQueryService', () => {
     getRatesForDateRange: jest.Mock;
   };
   let mockUserService: {
-    findOne: jest.Mock;
+    findSettings: jest.Mock;
   };
 
   beforeEach(async () => {
+    const manager = {
+      transaction: jest.fn(async (_isolation, callback) => callback(manager)),
+      withRepository: jest.fn((repository) => repository),
+    };
     mockAccountRepository = {
+      manager,
       find: jest.fn(),
     };
     mockSnapshotRepository = {
@@ -154,7 +161,7 @@ describe('BalanceQueryService', () => {
       getRatesForDateRange: jest.fn(),
     };
     mockUserService = {
-      findOne: jest.fn().mockResolvedValue(createMockUser('USD')),
+      findSettings: jest.fn().mockResolvedValue(createMockUser('USD')),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -211,10 +218,10 @@ describe('BalanceQueryService', () => {
       expect(result[0].balances['acc-1']).toBeDefined();
       expect(
         result[0].balances['acc-1'].availableBalance.balance.money.amount,
-      ).toBe(95000);
+      ).toBe('95000');
       expect(
         result[0].balances['acc-1'].currentBalance.balance.money.amount,
-      ).toBe(100000);
+      ).toBe('100000');
     });
 
     it('should return balances for multiple dates in range', async () => {
@@ -266,7 +273,7 @@ describe('BalanceQueryService', () => {
       // Should use the Jan 10 snapshot for Jan 15
       expect(
         result[0].balances['acc-1'].availableBalance.balance.money.amount,
-      ).toBe(90000);
+      ).toBe('90000');
     });
 
     it('should include latestSyncedAt for forward-filled account balances', async () => {
@@ -288,8 +295,8 @@ describe('BalanceQueryService', () => {
         snapshotEntity,
       ]);
       mockSnapshotRepository.createQueryBuilder
-        .mockReturnValueOnce(latestSyncQueryBuilder)
-        .mockReturnValueOnce(priorSnapshotQueryBuilder);
+        .mockReturnValueOnce(priorSnapshotQueryBuilder)
+        .mockReturnValueOnce(latestSyncQueryBuilder);
 
       const result = await service.getSnapshotBalancesForDateRange(
         ['acc-1'],
@@ -325,10 +332,10 @@ describe('BalanceQueryService', () => {
       expect(result).toHaveLength(1);
       expect(
         result[0].balances['acc-1'].availableBalance.balance.money.amount,
-      ).toBe(0);
+      ).toBe('0');
       expect(
         result[0].balances['acc-1'].currentBalance.balance.money.amount,
-      ).toBe(0);
+      ).toBe('0');
     });
 
     it('should handle multiple accounts', async () => {
@@ -368,10 +375,10 @@ describe('BalanceQueryService', () => {
       expect(result[0].balances['acc-2']).toBeDefined();
       expect(
         result[0].balances['acc-1'].availableBalance.balance.money.amount,
-      ).toBe(95000);
+      ).toBe('95000');
       expect(
         result[0].balances['acc-2'].availableBalance.balance.money.amount,
-      ).toBe(200000);
+      ).toBe('200000');
     });
 
     it('should skip accounts not found or not owned', async () => {
@@ -433,7 +440,7 @@ describe('BalanceQueryService', () => {
         // effectiveBalance should equal currentBalance for depository
         expect(
           result[0].balances['acc-1'].effectiveBalance.balance.money.amount,
-        ).toBe(100000);
+        ).toBe('100000');
       });
 
       it('should use currentBalance for investment accounts', async () => {
@@ -461,7 +468,7 @@ describe('BalanceQueryService', () => {
         // effectiveBalance should equal currentBalance for investment
         expect(
           result[0].balances['acc-1'].effectiveBalance.balance.money.amount,
-        ).toBe(100000);
+        ).toBe('100000');
       });
 
       it('should use currentBalance for brokerage accounts', async () => {
@@ -489,7 +496,7 @@ describe('BalanceQueryService', () => {
         // effectiveBalance should equal currentBalance for brokerage
         expect(
           result[0].balances['acc-1'].effectiveBalance.balance.money.amount,
-        ).toBe(70000);
+        ).toBe('70000');
       });
     });
 
@@ -509,7 +516,7 @@ describe('BalanceQueryService', () => {
         );
 
         // User's preferred currency is USD
-        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockUserService.findSettings.mockResolvedValue(createMockUser('USD'));
         mockAccountRepository.find.mockResolvedValue([accountEntity]);
         mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
         mockCurrencyExchangeService.getRatesForDateRange.mockResolvedValue([
@@ -519,7 +526,8 @@ describe('BalanceQueryService', () => {
               {
                 baseCurrency: 'EUR',
                 targetCurrency: 'USD',
-                rate: 1.1,
+                rate: '1.1',
+                ratio: decimalRateRatio('1.1'),
                 source: 'DB',
               },
             ],
@@ -540,7 +548,7 @@ describe('BalanceQueryService', () => {
           result[0].balances['acc-1'].availableBalance.convertedBalance?.money
             .amount,
         ).toBe(
-          110000, // 100000 * 1.1
+          '110000', // 100000 * 1.1
         );
         expect(
           result[0].balances['acc-1'].availableBalance.convertedBalance?.money
@@ -551,7 +559,8 @@ describe('BalanceQueryService', () => {
         ).toEqual({
           baseCurrency: 'EUR',
           targetCurrency: 'USD',
-          rate: 1.1,
+          rate: '1.1',
+          ratio: decimalRateRatio('1.1'),
           source: 'DB',
         });
       });
@@ -571,7 +580,7 @@ describe('BalanceQueryService', () => {
         );
 
         // User's preferred currency is USD (same as account)
-        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockUserService.findSettings.mockResolvedValue(createMockUser('USD'));
         mockAccountRepository.find.mockResolvedValue([accountEntity]);
         mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
 
@@ -610,7 +619,7 @@ describe('BalanceQueryService', () => {
           'EUR',
         );
 
-        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockUserService.findSettings.mockResolvedValue(createMockUser('USD'));
         mockAccountRepository.find.mockResolvedValue([accountEntity]);
         mockSnapshotRepository.find.mockResolvedValue([]);
         mockSnapshotRepository.createQueryBuilder
@@ -623,7 +632,8 @@ describe('BalanceQueryService', () => {
               {
                 baseCurrency: 'EUR',
                 targetCurrency: 'USD',
-                rate: 1.1,
+                rate: '1.1',
+                ratio: decimalRateRatio('1.1'),
                 source: 'DB',
               },
             ],
@@ -643,11 +653,12 @@ describe('BalanceQueryService', () => {
           [{ baseCurrency: 'EUR', targetCurrency: 'USD' }],
           '2024-01-15',
           '2024-01-15',
+          mockAccountRepository.manager,
         );
         expect(
           result[0].balances['acc-1'].effectiveBalance.convertedBalance,
         ).toEqual({
-          money: { amount: 110000, currency: 'USD' },
+          money: { amount: '110000', currency: 'USD' },
           sign: MoneySign.POSITIVE,
         });
       });
@@ -685,7 +696,7 @@ describe('BalanceQueryService', () => {
           'GBP',
         );
 
-        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockUserService.findSettings.mockResolvedValue(createMockUser('USD'));
         mockAccountRepository.find.mockResolvedValue([usdAccount, gbpAccount]);
         mockSnapshotRepository.find.mockResolvedValue([
           exactStartUsdSnapshot,
@@ -708,7 +719,8 @@ describe('BalanceQueryService', () => {
               {
                 baseCurrency: 'GBP',
                 targetCurrency: 'USD',
-                rate: 1.25,
+                rate: '1.25',
+                ratio: decimalRateRatio('1.25'),
                 source: 'DB',
               },
             ],
@@ -728,6 +740,7 @@ describe('BalanceQueryService', () => {
           [{ baseCurrency: 'GBP', targetCurrency: 'USD' }],
           '2024-01-15',
           '2024-01-15',
+          mockAccountRepository.manager,
         );
         expect(
           result[0].balances['acc-usd'].effectiveBalance.convertedBalance,
@@ -735,7 +748,7 @@ describe('BalanceQueryService', () => {
         expect(
           result[0].balances['acc-gbp'].effectiveBalance.convertedBalance,
         ).toEqual({
-          money: { amount: 125000, currency: 'USD' },
+          money: { amount: '125000', currency: 'USD' },
           sign: MoneySign.POSITIVE,
         });
       });
@@ -766,7 +779,7 @@ describe('BalanceQueryService', () => {
           'GBP',
         );
 
-        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockUserService.findSettings.mockResolvedValue(createMockUser('USD'));
         mockAccountRepository.find
           .mockResolvedValueOnce([eurAccount, gbpAccount])
           .mockResolvedValueOnce([eurAccount, gbpAccount]);
@@ -781,7 +794,8 @@ describe('BalanceQueryService', () => {
               {
                 baseCurrency: 'EUR',
                 targetCurrency: 'USD',
-                rate: 1.1,
+                rate: '1.1',
+                ratio: decimalRateRatio('1.1'),
                 source: 'DB',
               },
             ],
@@ -806,6 +820,7 @@ describe('BalanceQueryService', () => {
           ],
           '2024-01-15',
           '2024-01-15',
+          mockAccountRepository.manager,
         );
       });
 
@@ -824,7 +839,7 @@ describe('BalanceQueryService', () => {
         );
 
         // User's preferred currency is USD
-        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockUserService.findSettings.mockResolvedValue(createMockUser('USD'));
         mockAccountRepository.find.mockResolvedValue([accountEntity]);
         mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
         mockCurrencyExchangeService.getRatesForDateRange.mockRejectedValue(
@@ -857,7 +872,7 @@ describe('BalanceQueryService', () => {
           'EUR',
         );
 
-        mockUserService.findOne.mockResolvedValue(createMockUser('USD'));
+        mockUserService.findSettings.mockResolvedValue(createMockUser('USD'));
         mockAccountRepository.find.mockResolvedValue([accountEntity]);
         mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
         mockCurrencyExchangeService.getRatesForDateRange.mockRejectedValue(
@@ -874,7 +889,7 @@ describe('BalanceQueryService', () => {
         expect(
           result[0].balances['acc-1'].effectiveBalance.convertedBalance,
         ).toEqual({
-          money: { amount: 0, currency: 'USD' },
+          money: { amount: '0', currency: 'USD' },
           sign: MoneySign.POSITIVE,
         });
         expect(
@@ -889,7 +904,7 @@ describe('BalanceQueryService', () => {
           'ETH',
         );
         // 1 ETH = 10^18 wei
-        const ethAmount = 1000000000000000000;
+        const ethAmount = '1000000000000000000';
         const snapshotEntity = createMockSnapshotEntity(
           'acc-1',
           '2024-01-15',
@@ -899,7 +914,7 @@ describe('BalanceQueryService', () => {
         );
 
         // User's preferred currency is SGD (2 decimals)
-        mockUserService.findOne.mockResolvedValue(createMockUser('SGD'));
+        mockUserService.findSettings.mockResolvedValue(createMockUser('SGD'));
         mockAccountRepository.find.mockResolvedValue([accountEntity]);
         mockSnapshotRepository.find.mockResolvedValue([snapshotEntity]);
 
@@ -911,7 +926,8 @@ describe('BalanceQueryService', () => {
               {
                 baseCurrency: 'ETH',
                 targetCurrency: 'SGD',
-                rate: 3000,
+                rate: '3000',
+                ratio: decimalRateRatio('3000'),
                 source: 'DB',
               },
             ],
@@ -935,7 +951,7 @@ describe('BalanceQueryService', () => {
         expect(
           result[0].balances['acc-1'].availableBalance.convertedBalance?.money
             .amount,
-        ).toBe(300000);
+        ).toBe('300000');
 
         expect(
           result[0].balances['acc-1'].availableBalance.convertedBalance?.money
@@ -976,22 +992,22 @@ describe('BalanceQueryService', () => {
         // Jan 10: exact match to snapshot1
         expect(
           result[0].balances['acc-1'].availableBalance.balance.money.amount,
-        ).toBe(100000);
+        ).toBe('100000');
         // Jan 11: fill-forward from snapshot1
         expect(
           result[1].balances['acc-1'].availableBalance.balance.money.amount,
-        ).toBe(100000);
+        ).toBe('100000');
         // Jan 12: exact match to snapshot2
         expect(
           result[2].balances['acc-1'].availableBalance.balance.money.amount,
-        ).toBe(150000);
+        ).toBe('150000');
         // Jan 13-14: fill-forward from snapshot2
         expect(
           result[3].balances['acc-1'].availableBalance.balance.money.amount,
-        ).toBe(150000);
+        ).toBe('150000');
         expect(
           result[4].balances['acc-1'].availableBalance.balance.money.amount,
-        ).toBe(150000);
+        ).toBe('150000');
       });
     });
   });
@@ -1025,7 +1041,7 @@ describe('BalanceQueryService', () => {
       expect(result[0].balances['acc-1']).toBeDefined();
       expect(
         result[0].balances['acc-1'].availableBalance.balance.money.amount,
-      ).toBe(95000);
+      ).toBe('95000');
     });
   });
 

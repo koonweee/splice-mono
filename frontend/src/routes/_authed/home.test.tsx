@@ -80,7 +80,7 @@ vi.mock('../../components/AccountModal', () => ({
 function createMoney(amount: number, currency = 'USD') {
   return {
     money: {
-      amount: Math.round(Math.abs(amount) * 100),
+      amount: String(Math.round(Math.abs(amount) * 100)),
       currency,
     },
     sign: amount < 0 ? MoneyWithSignSign.negative : MoneyWithSignSign.positive,

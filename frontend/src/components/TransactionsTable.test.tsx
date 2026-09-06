@@ -361,12 +361,12 @@ describe('TransactionsTable', () => {
     renderTable([
       makeTransaction({
         amount: {
-          money: { amount: 1200, currency: 'EUR' },
+          money: { amount: '1200', currency: 'EUR' },
           sign: 'negative',
         },
         category: foodCategory,
         convertedAmount: {
-          money: { amount: 1300, currency: 'USD' },
+          money: { amount: '1300', currency: 'USD' },
           sign: 'negative',
         },
       }),
@@ -451,7 +451,7 @@ function makeTransaction(
   return {
     id: params.id ?? 'txn-1',
     amount: params.amount ?? {
-      money: { amount: 1200, currency: 'USD' },
+      money: { amount: '1200', currency: 'USD' },
       sign: 'negative',
     },
     accountId: 'account-1',

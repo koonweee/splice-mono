@@ -7,20 +7,20 @@ const mockBalanceSnapshotEntity = {
   accountId: 'account-id-123',
   snapshotDate: '2024-01-01',
   currentBalance: {
-    amount: 100000,
+    amount: '100000',
     currency: 'USD',
     sign: MoneySign.POSITIVE,
     toMoneyWithSign: jest.fn().mockReturnValue({
-      money: { currency: 'USD', amount: 100000 },
+      money: { currency: 'USD', amount: '100000' },
       sign: MoneySign.POSITIVE,
     }),
   },
   availableBalance: {
-    amount: 95000,
+    amount: '95000',
     currency: 'USD',
     sign: MoneySign.POSITIVE,
     toMoneyWithSign: jest.fn().mockReturnValue({
-      money: { currency: 'USD', amount: 95000 },
+      money: { currency: 'USD', amount: '95000' },
       sign: MoneySign.POSITIVE,
     }),
   },

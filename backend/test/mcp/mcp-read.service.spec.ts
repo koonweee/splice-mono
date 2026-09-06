@@ -2,6 +2,7 @@ import { CategoryEntity } from '../../src/category/category.entity';
 import { McpReadService } from '../../src/mcp/mcp-read.service';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { MoneySign } from '../../src/types/MoneyWithSign';
+import { convertMinorUnits } from '../../src/common/exact-money';
 
 describe('McpReadService', () => {
   const queryBuilder = {
@@ -21,6 +22,11 @@ describe('McpReadService', () => {
     getRawMany: jest.fn(),
   };
 
+  const snapshotManager = {};
+  const transactionQueries = {
+    withReadSnapshot: jest.fn(async (reader) => reader(snapshotManager)),
+    readMcpCandidates: jest.fn(() => queryBuilder.getMany()),
+  };
   const transactionRepository = {
     createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
   };
@@ -33,10 +39,7 @@ describe('McpReadService', () => {
     find: jest.fn(),
   };
 
-  const investmentHoldingRepository = {
-    findOne: jest.fn(),
-    createQueryBuilder: jest.fn(),
-  };
+  const holdingsQueries = { read: jest.fn() };
 
   const investmentTransactionRepository = {
     createQueryBuilder: jest.fn(),
@@ -44,7 +47,7 @@ describe('McpReadService', () => {
 
   const currencyConversionService = {
     convertAmount: jest.fn(),
-    getRateForDate: jest.fn(),
+    getResolvedRates: jest.fn().mockResolvedValue(new Map()),
     getRateMap: jest.fn(),
   };
 
@@ -72,6 +75,9 @@ describe('McpReadService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    currencyConversionService.convertAmount.mockImplementation(
+      convertMinorUnits,
+    );
     queryBuilder.getMany.mockResolvedValue([
       buildTransaction({
         categoryPrimary: 'GENERAL_MERCHANDISE',
@@ -81,11 +87,26 @@ describe('McpReadService', () => {
     queryBuilder.getRawMany.mockResolvedValue([]);
     categoryRepository.find.mockResolvedValue([]);
     currencyConversionService.getRateMap.mockResolvedValue(new Map());
+    currencyConversionService.getResolvedRates.mockImplementation(
+      async (requests) =>
+        new Map(
+          requests.map((request) => [
+            `${request.baseCurrency}:${request.targetCurrency}:${request.requestedDate}`,
+            {
+              ...request,
+              rateDate: request.requestedDate,
+              rate: '1',
+              ratio: { numerator: '1', denominator: '1' },
+              source: 'IDENTITY',
+            },
+          ]),
+        ),
+    );
     service = new McpReadService(
       transactionRepository as never,
       balanceSnapshotRepository as never,
       categoryRepository as never,
-      investmentHoldingRepository as never,
+      holdingsQueries as never,
       investmentTransactionRepository as never,
       currencyConversionService as never,
       accountService as never,
@@ -93,6 +114,7 @@ describe('McpReadService', () => {
       analysisRuleService as never,
       transactionCategorizationService as never,
       categorizationRuleRecommendationService as never,
+      transactionQueries as never,
     );
   });
 
@@ -103,13 +125,12 @@ describe('McpReadService', () => {
       pageSize: 1,
     });
 
-    expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
-      'transaction.category',
-      'category',
-    );
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      'category.primary = :categoryPrimary',
-      { categoryPrimary: 'GENERAL_MERCHANDISE' },
+    expect(transactionQueries.readMcpCandidates).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ categoryPrimary: 'GENERAL_MERCHANDISE' }),
+      undefined,
+      expect.any(Number),
+      snapshotManager,
     );
     expect(result.data[0]).toMatchObject({
       id: 'txn-1',
@@ -129,8 +150,12 @@ describe('McpReadService', () => {
       pageSize: 1,
     });
 
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      'transaction.categoryId IS NULL',
+    expect(transactionQueries.readMcpCandidates).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ categoryPrimary: 'UNCATEGORIZED' }),
+      undefined,
+      expect.any(Number),
+      snapshotManager,
     );
   });
 
@@ -144,13 +169,21 @@ describe('McpReadService', () => {
       pageSize: 1,
     });
 
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      'transaction.categoryId = :categoryId',
-      { categoryId: '22222222-2222-4222-8222-222222222222' },
+    expect(transactionQueries.readMcpCandidates).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({
+        categoryId: '22222222-2222-4222-8222-222222222222',
+      }),
+      undefined,
+      expect.any(Number),
+      snapshotManager,
     );
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      'activity.amountSign = :amountSign',
-      { amountSign: MoneySign.NEGATIVE },
+    expect(transactionQueries.readMcpCandidates).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ amountSign: MoneySign.NEGATIVE }),
+      undefined,
+      expect.any(Number),
+      snapshotManager,
     );
 
     jest.clearAllMocks();
@@ -163,13 +196,21 @@ describe('McpReadService', () => {
       pageSize: 1,
     });
 
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      'category.primary = :categoryPrimary',
-      { categoryPrimary: 'FOOD_AND_DRINK' },
+    expect(transactionQueries.readMcpCandidates).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ categoryPrimary: 'FOOD_AND_DRINK' }),
+      undefined,
+      expect.any(Number),
+      snapshotManager,
     );
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      'category.detailed = :categoryDetailed',
-      { categoryDetailed: 'FOOD_AND_DRINK_RESTAURANT' },
+    expect(transactionQueries.readMcpCandidates).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({
+        categoryDetailed: 'FOOD_AND_DRINK_RESTAURANT',
+      }),
+      undefined,
+      expect.any(Number),
+      snapshotManager,
     );
   });
 
@@ -181,6 +222,127 @@ describe('McpReadService', () => {
         categoryPrimary: 'FOOD_AND_DRINK',
       }),
     ).rejects.toThrow('categoryId cannot be combined');
+  });
+
+  it('converts one hundred foreign rows in a batch and marks an exactly full final page complete', async () => {
+    const rows = Array.from({ length: 100 }, (_, index) => {
+      const row = buildTransaction({
+        categoryPrimary: null,
+        categoryDetailed: null,
+      });
+      row.id = `row-${index}`;
+      row.amount.currency = ['EUR', 'JPY', 'GBP'][index % 3];
+      const date = new Date('2026-01-01T00:00:00Z');
+      date.setUTCDate(date.getUTCDate() + index);
+      row.providerDate = date.toISOString().slice(0, 10);
+      return row;
+    });
+    queryBuilder.getMany.mockResolvedValue(rows);
+    const result = await service.listTransactions('user-1', {
+      reportingCurrency: 'USD',
+      pageSize: 100,
+    });
+    expect(result.data).toHaveLength(100);
+    expect(result.pageInfo).toEqual({ hasMore: false, nextCursor: null });
+    expect(currencyConversionService.getResolvedRates).toHaveBeenCalledTimes(1);
+    expect(result.conversion.rates).toHaveLength(100);
+    expect(
+      result.conversion.rates.every(
+        (rate) => rate.requestedDate === rate.rateDate,
+      ),
+    ).toBe(true);
+  });
+
+  it('returns an advancing scan-budget continuation for a rare converted amount filter without claiming completion', async () => {
+    const rows = Array.from({ length: 5001 }, (_, index) => {
+      const row = buildTransaction({
+        categoryPrimary: null,
+        categoryDetailed: null,
+      });
+      row.id = `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
+      return row;
+    });
+    queryBuilder.getMany.mockResolvedValueOnce(rows).mockResolvedValueOnce([]);
+    const options = {
+      reportingCurrency: 'USD',
+      pageSize: 100,
+      amountFilter: { currency: 'USD', min: '99999' },
+    };
+    const first = await service.listTransactions('user-1', options);
+    expect(first.data).toHaveLength(0);
+    expect(first.pageInfo).toMatchObject({
+      hasMore: true,
+      continuationReason: 'scan_budget',
+      nextCursor: expect.any(String),
+    });
+    const next = await service.listTransactions('user-1', {
+      ...options,
+      cursor: first.pageInfo.nextCursor!,
+    });
+    expect(next.pageInfo).toEqual({ hasMore: false, nextCursor: null });
+    expect(transactionQueries.readMcpCandidates).toHaveBeenLastCalledWith(
+      'user-1',
+      expect.objectContaining(options),
+      expect.objectContaining({ id: rows[4999].id }),
+      5001,
+      snapshotManager,
+    );
+  });
+
+  it('converts zero foreign money without requesting a missing exchange rate', async () => {
+    const row = buildTransaction({
+      categoryPrimary: null,
+      categoryDetailed: null,
+    });
+    row.amount.amount = '0';
+    row.amount.currency = 'EUR';
+    queryBuilder.getMany.mockResolvedValue([row]);
+    currencyConversionService.getResolvedRates.mockRejectedValue(
+      new Error('No rates'),
+    );
+    const result = await service.listTransactions('user-1', {
+      reportingCurrency: 'USD',
+    });
+    expect(result.data[0].convertedAmount.amount).toBe('0');
+    expect(currencyConversionService.getResolvedRates).not.toHaveBeenCalled();
+    expect(result.conversion.rates).toEqual([]);
+  });
+
+  it('rejects cursor reuse after ownership, filter or reporting currency changes', async () => {
+    const rows = [0, 1].map((index) => {
+      const row = buildTransaction({
+        categoryPrimary: null,
+        categoryDetailed: null,
+      });
+      row.id = `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
+      return row;
+    });
+    queryBuilder.getMany.mockResolvedValue(rows);
+    const options = { reportingCurrency: 'USD', pageSize: 1 };
+    const first = await service.listTransactions('user-1', options);
+    const cursor = first.pageInfo.nextCursor!;
+    for (const changed of [
+      { reportingCurrency: 'EUR' },
+      { accountIds: ['account-1'] },
+      { amountFilter: { currency: 'USD', min: '1' } },
+      { includePending: true },
+      { merchantQuery: 'coffee' },
+    ]) {
+      await expect(
+        service.listTransactions('user-1', { ...options, ...changed, cursor }),
+      ).rejects.toThrow('cursor');
+    }
+    await expect(
+      service.listTransactions('another-user', { ...options, cursor }),
+    ).rejects.toThrow('cursor');
+    const body = JSON.parse(Buffer.from(cursor, 'base64url').toString());
+    body.activityDate = '2026-02-30';
+    await expect(
+      service.listTransactions('user-1', {
+        ...options,
+        cursor: Buffer.from(JSON.stringify(body)).toString('base64url'),
+      }),
+    ).rejects.toThrow('cursor');
   });
 
   it('exposes provider category hint as guidance', async () => {
@@ -244,13 +406,6 @@ describe('McpReadService', () => {
   });
 
   it('lists latest investment holdings for owned investment accounts', async () => {
-    const holdingQueryBuilder = createQueryBuilderMock();
-    const latestHolding = buildInvestmentHolding({
-      id: 'holding-latest',
-      accountId: 'investment-account',
-      snapshotDate: '2026-05-20',
-      institutionValue: '123.45',
-    });
     const holdings = [
       buildInvestmentHolding({
         id: 'holding-1',
@@ -259,33 +414,41 @@ describe('McpReadService', () => {
         institutionValue: '123.45',
       }),
     ];
-    accountService.findAll.mockResolvedValue([
+    const account = {
+      id: 'investment-account',
+      name: 'Brokerage',
+      customName: null,
+      type: 'investment',
+      subType: 'brokerage',
+    };
+    holdingsQueries.read.mockResolvedValue([
       {
-        id: 'investment-account',
-        name: 'Brokerage',
-        customName: null,
-        type: 'investment',
-        subType: 'brokerage',
+        account: { ...account, toObject: () => account },
+        snapshot: { snapshotDate: '2026-05-20', holdings },
       },
     ]);
-    investmentHoldingRepository.findOne.mockResolvedValue(latestHolding);
-    investmentHoldingRepository.createQueryBuilder.mockReturnValue(
-      holdingQueryBuilder,
-    );
-    holdingQueryBuilder.getMany.mockResolvedValue(holdings);
-
     const result = await service.listInvestmentHoldings('user-1', {});
-
-    expect(investmentHoldingRepository.findOne).toHaveBeenCalledWith({
-      where: { userId: 'user-1', accountId: 'investment-account' },
-      order: { snapshotDate: 'DESC', updatedAt: 'DESC' },
-    });
+    expect(holdingsQueries.read).toHaveBeenCalledWith(
+      'user-1',
+      {
+        accountIds: undefined,
+        snapshotDate: undefined,
+      },
+      undefined,
+    );
+    expect(result.snapshots).toEqual([
+      {
+        accountId: 'investment-account',
+        snapshotDate: '2026-05-20',
+        holdingCount: 1,
+      },
+    ]);
     expect(result.data[0]).toMatchObject({
       id: 'holding-1',
       accountId: 'investment-account',
       accountName: 'Brokerage',
       institutionValue: {
-        amount: 123.45,
+        amount: '123.45',
         currency: 'USD',
         sign: MoneySign.POSITIVE,
       },
@@ -295,16 +458,9 @@ describe('McpReadService', () => {
   it('rejects unowned investment account IDs before reading holdings', async () => {
     const ownedAccountId = '11111111-1111-4111-8111-111111111111';
     const foreignAccountId = '99999999-9999-4999-8999-999999999999';
-    accountService.findAll.mockResolvedValue([
-      {
-        id: ownedAccountId,
-        name: 'Owned brokerage',
-        customName: null,
-        type: 'investment',
-        subType: 'brokerage',
-      },
-    ]);
-
+    holdingsQueries.read.mockRejectedValueOnce(
+      new Error(`Unknown accountIds: ${foreignAccountId}`),
+    );
     await expect(
       service.listInvestmentHoldings('user-1', {
         accountIds: [ownedAccountId, foreignAccountId],
@@ -312,10 +468,8 @@ describe('McpReadService', () => {
       }),
     ).rejects.toThrow(`Unknown accountIds: ${foreignAccountId}`);
 
-    expect(investmentHoldingRepository.findOne).not.toHaveBeenCalled();
-    expect(
-      investmentHoldingRepository.createQueryBuilder,
-    ).not.toHaveBeenCalled();
+    expect(holdingsQueries.read).toHaveBeenCalledTimes(1);
+    expect(currencyConversionService.getResolvedRates).not.toHaveBeenCalled();
   });
 
   it('rejects ambiguous investment holdings query options', async () => {
@@ -364,7 +518,7 @@ describe('McpReadService', () => {
       id: 'investment-txn-1',
       accountId: 'investment-account',
       amount: {
-        amount: 42,
+        amount: '42',
         currency: 'USD',
         sign: MoneySign.NEGATIVE,
       },
@@ -421,7 +575,7 @@ function buildTransaction(params: {
   const transaction = TransactionEntity.fromDto(
     {
       amount: {
-        money: { amount: 1200, currency: 'USD' },
+        money: { amount: '1200', currency: 'USD' },
         sign: MoneySign.NEGATIVE,
       },
       accountId: 'account-1',
@@ -549,7 +703,7 @@ function buildInvestmentTransaction(id: string, activityDate: string): any {
       providerDatetime: null,
       amount: {
         toMoneyWithSign: () => ({
-          money: { amount: 4200, currency: 'USD' },
+          money: { amount: '4200', currency: 'USD' },
           sign: MoneySign.NEGATIVE,
         }),
       },
