@@ -83,11 +83,11 @@ describe('AccountService archive', () => {
       {
         ...mockCreateAccountDto,
         availableBalance: {
-          money: { currency: 'USD', amount: 25000 },
+          money: { currency: 'USD', amount: '25000' },
           sign: MoneySign.POSITIVE,
         },
         currentBalance: {
-          money: { currency: 'USD', amount: 50000 },
+          money: { currency: 'USD', amount: '50000' },
           sign: MoneySign.POSITIVE,
         },
       },
@@ -101,11 +101,11 @@ describe('AccountService archive', () => {
 
     expect(result?.archivedAt?.toISOString()).toBe('2026-04-05T12:00:00.000Z');
     expect(result?.currentBalance).toEqual({
-      money: { currency: 'USD', amount: 0 },
+      money: { currency: 'USD', amount: '0' },
       sign: MoneySign.POSITIVE,
     });
     expect(result?.availableBalance).toEqual({
-      money: { currency: 'USD', amount: 0 },
+      money: { currency: 'USD', amount: '0' },
       sign: MoneySign.POSITIVE,
     });
     expect(mockSnapshotRepository.save).toHaveBeenCalledWith(

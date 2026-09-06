@@ -64,6 +64,7 @@ import { SettingsArchiveFilter } from './SettingsArchiveFilter'
 import {
   TransactionConditionInput,
   getDefaultCategorizationCondition,
+  isCompleteAmountCondition,
   toApiConditions,
 } from './categorization/TransactionConditionInput'
 import type { MRT_ColumnDef } from 'mantine-react-table'
@@ -130,7 +131,7 @@ function getConditionLabel(
 
   if (condition.field === 'amount' && condition.operator === 'between') {
     const value =
-      typeof condition.value === 'object' ? condition.value : { min: 0 }
+      typeof condition.value === 'object' ? condition.value : { min: '0' }
     return `${fieldLabels[condition.field]} is between ${
       value.min ?? 'any'
     } and ${value.max ?? 'any'}`
@@ -174,14 +175,7 @@ function isConditionComplete(condition: EditableCategorizationCondition) {
   }
 
   if (condition.field === 'amount') {
-    if (condition.operator === 'between') {
-      return (
-        typeof condition.value === 'object' &&
-        (condition.value.min !== undefined || condition.value.max !== undefined)
-      )
-    }
-
-    return typeof condition.value === 'number'
+    return isCompleteAmountCondition(condition)
   }
 
   if (condition.field === 'accountId') {

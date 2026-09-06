@@ -362,7 +362,7 @@ const schedules: Array<RecurringManualTransactionSchedule> = [
     accountId: 'account-1',
     accountName: 'Checking',
     amount: {
-      money: { amount: 125000, currency: 'USD' },
+      money: { amount: '125000', currency: 'USD' },
       sign: MoneyWithSignSign.negative,
     },
     merchantName: 'Rent',
@@ -390,11 +390,11 @@ const activeAccount: Account = {
   customName: null,
   mask: null,
   availableBalance: {
-    money: { amount: 10000, currency: 'USD' },
+    money: { amount: '10000', currency: 'USD' },
     sign: MoneyWithSignSign.positive,
   },
   currentBalance: {
-    money: { amount: 10000, currency: 'USD' },
+    money: { amount: '10000', currency: 'USD' },
     sign: MoneyWithSignSign.positive,
   },
   type: AccountType.depository,

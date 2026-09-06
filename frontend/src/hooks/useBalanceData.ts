@@ -12,9 +12,9 @@ import {
   getDateRange,
   getLatestAccountBalance,
   getLatestSyncedAt,
-  getSignedAmount,
   transformToAccountChartData,
 } from '../lib/balance-utils'
+import { moneyToChartNumber } from '../lib/money'
 import type { DashboardData } from '../lib/balance-utils'
 import type {
   AccountBalanceResult,
@@ -55,7 +55,8 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
           ? series.data.points.map((point) => ({
               date: point.date,
               label: dayjs(point.date).format('MMM D'),
-              value: getSignedAmount(point.netWorth),
+              value: moneyToChartNumber(point.netWorth),
+              money: point.netWorth,
             }))
           : [],
     }

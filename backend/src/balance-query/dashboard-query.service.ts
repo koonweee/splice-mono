@@ -11,6 +11,7 @@ import {
 import { BalanceQueryService } from './balance-query.service';
 import {
   calculateChangePercent,
+  compareBalanceAmounts,
   calculateNetWorthForDate,
   createMoneyWithSign,
   getSignedAmount,
@@ -41,8 +42,8 @@ export class DashboardQueryService {
       last = date;
     }
     const currency = projection.reportingCurrency;
-    const current = last ? calculateNetWorthForDate(last.balances) : 0;
-    const previous = first ? calculateNetWorthForDate(first.balances) : 0;
+    const current = last ? calculateNetWorthForDate(last.balances) : 0n;
+    const previous = first ? calculateNetWorthForDate(first.balances) : 0n;
     const assets: DashboardAccountSummary[] = [];
     const liabilities: DashboardAccountSummary[] = [];
     for (const [id, result] of Object.entries(last?.balances ?? {})) {
@@ -53,7 +54,7 @@ export class DashboardQueryService {
       );
       const previousAmount = initial
         ? getSignedAmount(initial.convertedBalance ?? initial.balance)
-        : 0;
+        : 0n;
       const account = result.account;
       const summary: DashboardAccountSummary = {
         id,
@@ -76,8 +77,10 @@ export class DashboardQueryService {
       (isLiabilityType(account.type) ? liabilities : assets).push(summary);
     }
     const sort = (a: DashboardAccountSummary, b: DashboardAccountSummary) =>
-      getSignedAmount(b.convertedEffectiveBalance ?? b.effectiveBalance) -
-      getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance);
+      compareBalanceAmounts(
+        getSignedAmount(b.convertedEffectiveBalance ?? b.effectiveBalance),
+        getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance),
+      );
     return {
       ...query,
       startDate,

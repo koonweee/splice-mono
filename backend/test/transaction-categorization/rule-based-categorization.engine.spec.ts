@@ -15,7 +15,7 @@ function buildTransaction(
     {
       accountId,
       amount: {
-        money: { amount: 1250, currency: 'USD' },
+        money: { amount: '1250', currency: 'USD' },
         sign: MoneySign.NEGATIVE,
       },
       merchantName: 'Uber Trip',
@@ -87,7 +87,7 @@ describe('RuleBasedCategorizationEngine', () => {
             {
               field: 'amount',
               operator: 'between',
-              value: { min: 10, max: 50 },
+              value: { min: '10', max: '50' },
             },
           ],
         }),
@@ -103,14 +103,14 @@ describe('RuleBasedCategorizationEngine', () => {
       [
         buildRule({
           conditions: [
-            { field: 'amount', operator: 'greaterThan', value: 12 },
-            { field: 'amount', operator: 'lessThan', value: 13 },
+            { field: 'amount', operator: 'greaterThan', value: '12' },
+            { field: 'amount', operator: 'lessThan', value: '13' },
           ],
         }),
       ],
       buildTransaction({
         amount: BalanceColumns.fromMoneyWithSign({
-          money: { amount: 1250, currency: 'EUR' },
+          money: { amount: '1250', currency: 'EUR' },
           sign: MoneySign.NEGATIVE,
         }),
       }),

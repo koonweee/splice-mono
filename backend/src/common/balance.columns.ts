@@ -10,7 +10,7 @@ import {
  * Use with TypeORM's embedded column pattern to reuse balance fields across entities.
  *
  * Creates 3 columns when embedded:
- * - {prefix}Amount (bigint) - Amount in smallest currency unit (e.g., cents)
+ * - {prefix}Amount (numeric(78,0)) - Amount in smallest currency unit (e.g., cents)
  * - {prefix}Currency (string) - ISO 4217 currency code
  * - {prefix}Sign (string) - 'positive' or 'negative'
  *
@@ -26,15 +26,15 @@ import {
  */
 export class BalanceColumns {
   /** Amount in smallest currency unit (e.g., cents) */
-  @Column({ type: 'bigint' })
-  amount: number;
+  @Column({ type: 'numeric', precision: 78, scale: 0 })
+  amount: string;
 
   /** ISO 4217 currency code (e.g., 'USD') */
-  @Column()
+  @Column({ type: 'varchar' })
   currency: string;
 
   /** Positive or negative sign */
-  @Column()
+  @Column({ type: 'varchar' })
   sign: MoneySign;
 
   /**
@@ -54,15 +54,10 @@ export class BalanceColumns {
    * Handles bigint columns that may be returned as strings by some DB drivers
    */
   toMoneyWithSign(): SerializedMoneyWithSign {
-    const amount =
-      typeof this.amount === 'string' ? parseInt(this.amount, 10) : this.amount;
-
-    return {
-      money: {
-        amount,
-        currency: this.currency,
-      },
-      sign: this.sign,
-    };
+    return new MoneyWithSign(
+      this.currency,
+      this.amount,
+      this.sign,
+    ).toSerialized();
   }
 }

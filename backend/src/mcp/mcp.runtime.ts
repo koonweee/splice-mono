@@ -23,6 +23,7 @@ import {
 import { resolveSpliceMcpUserId } from './mcp.identity';
 import { McpReadService } from './mcp-read.service';
 import { McpPortfolioVisualizationService } from './mcp-portfolio-visualization.service';
+import { installNodeRequestMetrics } from '../observability/node-request-metrics';
 
 export type SpliceMcpStartOptions = {
   readonly hostname?: string;
@@ -111,6 +112,13 @@ export class SpliceMcpRuntimeService {
           transactionAnalysisService: this.transactionAnalysisService,
         });
       },
+    });
+
+    installNodeRequestMetrics(this.running.server, (metrics, status) => {
+      this.logger.log(
+        { transport: 'mcp', status, ...metrics },
+        'Request performance',
+      );
     });
 
     this.logger.log(

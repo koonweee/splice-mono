@@ -52,4 +52,12 @@ export type TransactionControllerFindAllParams = {
    * Filter by exact category ID, or UNCATEGORIZED for transactions without a category
    */
   categoryId?: string
+  /**
+   * Continuation cursor; omit pageIndex to use cursor pagination.
+   */
+  cursor?: string
+  /**
+   * Request the exact count. Defaults to true on the first page and false on cursor continuations.
+   */
+  includeTotal?: boolean
 }

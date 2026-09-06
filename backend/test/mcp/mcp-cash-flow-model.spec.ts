@@ -6,11 +6,11 @@ import {
 } from '../../src/mcp/apps/cash-flow-model';
 
 function money(
-  amount: number,
+  amount: number | string,
   currency = 'USD',
   sign: 'positive' | 'negative' = 'positive',
 ) {
-  return { amount, currency, sign };
+  return { amount: String(amount), currency, sign };
 }
 
 function period(
@@ -97,17 +97,63 @@ describe('Cash Flow presentation model', () => {
       ),
     ).toEqual(['SIXTH', 'SEVENTH']);
     expect(presentation).toMatchObject({
-      otherAmount: 15,
+      otherAmount: '15',
       otherTransactionCount: 2,
       uncategorized: {
         primaryCategory: 'UNCATEGORIZED',
         transactionCount: 2,
         transactionCountKnown: true,
       },
-      maxCategoryAmount: 80,
+      maxCategoryAmount: '80',
       isEmpty: false,
     });
   });
+
+  it('preserves large cent differences in ranking, Other totals, and comparison deltas', () => {
+    const current = period(
+      Array.from({ length: 7 }, (_, index) => ({
+        code: 'C' + index,
+        amount: 1,
+      })),
+    );
+    current.analysis.outflows.forEach((category, index) => {
+      category.totalAmount.amount = '9007199254740993.0' + index;
+    });
+    const previous = period([{ code: 'C6', amount: 1 }]);
+    previous.analysis.outflows[0].totalAmount.amount = '9007199254740993.01';
+    const presentation = createCashFlowPresentation({
+      presentation: { direction: 'outflow' },
+      current,
+      comparison: previous,
+    });
+    expect(presentation?.topCategories[0]).toMatchObject({
+      primaryCategory: 'C6',
+      delta: '0.05',
+    });
+    expect(presentation?.otherAmount).toBe('18014398509481986.01');
+  });
+
+  it.each([123, 'NaN', 'Infinity', '1e3', '-1', '01', null])(
+    'rejects malformed money instead of showing a zero: %s',
+    (amount) => {
+      const current = period([]);
+      expect(
+        createCashFlowPresentation({
+          presentation: { direction: 'outflow' },
+          current: {
+            ...current,
+            analysis: {
+              ...current.analysis,
+              totals: {
+                ...current.analysis.totals,
+                totalInflow: { amount, currency: 'USD', sign: 'positive' },
+              },
+            },
+          },
+        }),
+      ).toBeNull();
+    },
+  );
 
   it('uses explicit inflow direction and only retains a present focus', () => {
     const focused = createCashFlowPresentation({
@@ -156,13 +202,13 @@ describe('Cash Flow presentation model', () => {
     });
 
     expect(presentation).toMatchObject({
-      netDelta: -150,
-      inflowDelta: 0,
-      outflowDelta: 0,
+      netDelta: '-150',
+      inflowDelta: '0',
+      outflowDelta: '0',
       topCategories: [
-        { primaryCategory: 'FOOD', comparisonAmount: 80, delta: 40 },
+        { primaryCategory: 'FOOD', comparisonAmount: '80', delta: '40' },
       ],
-      uncategorized: { comparisonAmount: 15, delta: 25 },
+      uncategorized: { comparisonAmount: '15', delta: '25' },
     });
     expect(presentation?.comparison).toMatchObject({
       startDate: '2026-03-01',

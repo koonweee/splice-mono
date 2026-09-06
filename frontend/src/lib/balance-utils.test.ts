@@ -10,70 +10,70 @@ import {
 
 describe('balance-utils', () => {
   describe('getSignedAmount', () => {
-    it('should return correct float amount for USD', () => {
+    it('should return exact decimal amount for USD', () => {
       const amount = getSignedAmount({
-        money: { amount: 12345, currency: 'USD' },
+        money: { amount: '12345', currency: 'USD' },
         sign: MoneyWithSignSign.positive,
       })
-      expect(amount).toBe(123.45)
+      expect(amount).toBe('123.45')
     })
 
     it('should return negative amount for negative USD', () => {
       const amount = getSignedAmount({
-        money: { amount: 12345, currency: 'USD' },
+        money: { amount: '12345', currency: 'USD' },
         sign: MoneyWithSignSign.negative,
       })
-      expect(amount).toBe(-123.45)
+      expect(amount).toBe('-123.45')
     })
 
     it('should return correct amount for ETH', () => {
       // 1.5 ETH
       const amount = getSignedAmount({
-        money: { amount: 1500000000000000000, currency: 'ETH' },
+        money: { amount: '1500000000000000000', currency: 'ETH' },
         sign: MoneyWithSignSign.positive,
       })
-      expect(amount).toBe(1.5)
+      expect(amount).toBe('1.5')
     })
 
     it('should return correct amount for BTC', () => {
       // 0.025 BTC
       const amount = getSignedAmount({
-        money: { amount: 2500000, currency: 'BTC' },
+        money: { amount: '2500000', currency: 'BTC' },
         sign: MoneyWithSignSign.positive,
       })
-      expect(amount).toBe(0.025)
+      expect(amount).toBe('0.025')
     })
   })
 
   describe('createMoneyWithSign', () => {
     it('should create correct object for USD', () => {
-      const result = createMoneyWithSign(123.45, 'USD')
+      const result = createMoneyWithSign('123.45', 'USD')
       expect(result).toEqual({
-        money: { amount: 12345, currency: 'USD' },
+        money: { amount: '12345', currency: 'USD' },
         sign: MoneyWithSignSign.positive,
       })
     })
 
     it('should create correct object for negative USD', () => {
-      const result = createMoneyWithSign(-123.45, 'USD')
+      const result = createMoneyWithSign('-123.45', 'USD')
       expect(result).toEqual({
-        money: { amount: 12345, currency: 'USD' },
+        money: { amount: '12345', currency: 'USD' },
         sign: MoneyWithSignSign.negative,
       })
     })
 
     it('should create correct object for ETH', () => {
-      const result = createMoneyWithSign(1.5, 'ETH')
+      const result = createMoneyWithSign('1.5', 'ETH')
       expect(result).toEqual({
-        money: { amount: 1500000000000000000, currency: 'ETH' },
+        money: { amount: '1500000000000000000', currency: 'ETH' },
         sign: MoneyWithSignSign.positive,
       })
     })
 
     it('should create correct object for BTC', () => {
-      const result = createMoneyWithSign(0.025, 'BTC')
+      const result = createMoneyWithSign('0.025', 'BTC')
       expect(result).toEqual({
-        money: { amount: 2500000, currency: 'BTC' },
+        money: { amount: '2500000', currency: 'BTC' },
         sign: MoneyWithSignSign.positive,
       })
     })
@@ -84,7 +84,7 @@ describe('balance-utils', () => {
       expect(
         isZeroBalanceAccount({
           effectiveBalance: {
-            money: { amount: 0, currency: 'USD' },
+            money: { amount: '0', currency: 'USD' },
             sign: MoneyWithSignSign.positive,
           },
         }),
@@ -95,11 +95,11 @@ describe('balance-utils', () => {
       expect(
         isZeroBalanceAccount({
           effectiveBalance: {
-            money: { amount: 12345, currency: 'USD' },
+            money: { amount: '12345', currency: 'USD' },
             sign: MoneyWithSignSign.positive,
           },
           convertedEffectiveBalance: {
-            money: { amount: 0, currency: 'EUR' },
+            money: { amount: '0', currency: 'EUR' },
             sign: MoneyWithSignSign.negative,
           },
         }),
@@ -110,7 +110,7 @@ describe('balance-utils', () => {
       expect(
         isZeroBalanceAccount({
           effectiveBalance: {
-            money: { amount: 1, currency: 'USD' },
+            money: { amount: '1', currency: 'USD' },
             sign: MoneyWithSignSign.positive,
           },
         }),
@@ -127,7 +127,7 @@ describe('balance-utils', () => {
       },
       effectiveBalance: {
         balance: {
-          money: { amount, currency },
+          money: { amount: String(amount), currency },
           sign: MoneyWithSignSign.positive,
         },
       },
@@ -155,7 +155,7 @@ describe('balance-utils', () => {
           } as any,
           'USD',
         ),
-      ).toBe(125)
+      ).toBe(12500n)
     })
   })
 })

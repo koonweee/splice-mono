@@ -6,8 +6,8 @@ export interface TransactionSurfaceSearchOptions {
   accountIds?: string[];
   categoryPrimary?: string;
   merchantQuery?: string;
-  minAmount?: number;
-  maxAmount?: number;
+  minAmount?: string;
+  maxAmount?: string;
   sign?: 'positive' | 'negative';
   includePending?: boolean;
   limit?: number;

@@ -24,7 +24,7 @@ describe('TransactionsSurfaceService', () => {
             date: '2024-01-10',
             categoryPrimary: 'FOOD_AND_DRINK',
             amount: {
-              money: { amount: 1250, currency: 'USD' },
+              money: { amount: '1250', currency: 'USD' },
               sign: 'negative',
             },
           },
@@ -37,7 +37,7 @@ describe('TransactionsSurfaceService', () => {
             date: '2024-01-11',
             categoryPrimary: null,
             amount: {
-              money: { amount: 500, currency: 'USD' },
+              money: { amount: '500', currency: 'USD' },
               sign: 'negative',
             },
           },
@@ -100,7 +100,7 @@ describe('TransactionsSurfaceService', () => {
               date: '2024-01-10',
               categoryPrimary: 'FOOD_AND_DRINK',
               amount: {
-                money: { amount: 1250, currency: 'USD' },
+                money: { amount: '1250', currency: 'USD' },
                 sign: 'negative',
               },
             },

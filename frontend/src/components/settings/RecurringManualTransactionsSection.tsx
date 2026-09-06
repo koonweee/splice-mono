@@ -16,6 +16,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Pause, Pencil, Play, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { moneyToMajorString, tryParseMoneyDraft } from '../../lib/money'
+import { DecimalInput } from '../forms/DecimalInput'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
   useAccountControllerFindAll,
@@ -27,7 +29,6 @@ import {
   useRecurringManualTransactionControllerResume,
   useRecurringManualTransactionControllerUpdate,
 } from '../../api/clients/spliceAPI'
-import { MoneyWithSignSign } from '../../api/models'
 import { getApiErrorMessage } from '../../lib/api-errors'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import {
@@ -118,12 +119,7 @@ function getSignedAmountDraft(
     return ''
   }
 
-  const decimals = getDecimalPlaces(schedule.amount.money.currency)
-  const unsignedAmount = schedule.amount.money.amount / Math.pow(10, decimals)
-
-  return schedule.amount.sign === MoneyWithSignSign.negative
-    ? -unsignedAmount
-    : unsignedAmount
+  return moneyToMajorString(schedule.amount)
 }
 
 function getDefaultAccountId(accounts: Array<Account>) {
@@ -152,7 +148,7 @@ function RecurringScheduleModal({
   onSaved,
 }: ScheduleModalProps) {
   const [accountId, setAccountId] = useState('')
-  const [amount, setAmount] = useState<NumberInputProps['value']>('')
+  const [amount, setAmount] = useState('')
   const [merchantName, setMerchantName] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [dayOfMonth, setDayOfMonth] = useState<NumberInputProps['value']>(1)
@@ -206,14 +202,17 @@ function RecurringScheduleModal({
 
   function validate() {
     const nextErrors: ScheduleFormErrors = {}
-    const numericAmount = getNumericAmount(amount)
+    const parsedAmount = tryParseMoneyDraft(amount, currency)
     const numericDay = getNumericAmount(dayOfMonth)
 
     if (!accountId) {
       nextErrors.accountId = 'Account is required'
     }
-    if (!Number.isFinite(numericAmount) || numericAmount === 0) {
-      nextErrors.amount = 'Enter a non-zero amount'
+    if (!parsedAmount || parsedAmount.money.amount === '0') {
+      nextErrors.amount =
+        'Enter a non-zero amount with at most ' +
+        decimalPlaces +
+        ' decimal places'
     }
     if (!merchantName.trim()) {
       nextErrors.merchantName = 'Merchant is required'
@@ -235,7 +234,7 @@ function RecurringScheduleModal({
     setErrors(nextErrors)
     return {
       isValid: Object.keys(nextErrors).length === 0,
-      numericAmount,
+      parsedAmount,
       numericDay,
     }
   }
@@ -244,28 +243,16 @@ function RecurringScheduleModal({
     event.preventDefault()
     if (submissionPending.current || isSaving) return
 
-    const { isValid, numericAmount, numericDay } = validate()
-    if (!isValid || !currency || !categoryId) {
+    const { isValid, parsedAmount, numericDay } = validate()
+    if (!isValid || !currency || !categoryId || !parsedAmount) {
       return
     }
     submissionPending.current = true
     setSaveError(null)
 
-    const minorUnits = Math.round(
-      Math.abs(numericAmount) * Math.pow(10, decimalPlaces),
-    )
     const payload = {
       accountId,
-      amount: {
-        money: {
-          amount: minorUnits,
-          currency,
-        },
-        sign:
-          numericAmount < 0
-            ? MoneyWithSignSign.negative
-            : MoneyWithSignSign.positive,
-      },
+      amount: parsedAmount,
       merchantName: merchantName.trim(),
       categoryId,
       frequency: 'monthly' as const,
@@ -352,11 +339,9 @@ function RecurringScheduleModal({
             value={accountId}
           />
           <Group align="flex-start" grow>
-            <NumberInput
+            <DecimalInput
               disabled={isSaving}
-              decimalScale={decimalPlaces}
               error={errors.amount}
-              fixedDecimalScale={decimalPlaces <= 6}
               label="Amount"
               onChange={(value) => {
                 setAmount(value)

@@ -12,5 +12,7 @@ export type RateWithSourceSource =
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const RateWithSourceSource = {
   DB: 'DB',
-  FILLED: 'FILLED',
+  FORWARD_FILLED: 'FORWARD_FILLED',
+  BACKWARD_FILLED: 'BACKWARD_FILLED',
+  IDENTITY: 'IDENTITY',
 } as const

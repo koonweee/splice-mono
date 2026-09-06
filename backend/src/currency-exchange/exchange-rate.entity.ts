@@ -23,7 +23,7 @@ export class ExchangeRateEntity extends TimestampedEntity {
 
   /** Exchange rate: 1 baseCurrency = rate targetCurrency */
   @Column({ type: 'decimal', precision: 20, scale: 10 })
-  rate: number;
+  rate: string;
 
   /** Date for which this rate applies (YYYY-MM-DD) */
   @Column({ type: 'date' })
@@ -49,7 +49,7 @@ export class ExchangeRateEntity extends TimestampedEntity {
       id: this.id,
       baseCurrency: this.baseCurrency,
       targetCurrency: this.targetCurrency,
-      rate: typeof this.rate === 'string' ? parseFloat(this.rate) : this.rate,
+      rate: this.rate,
       rateDate: this.rateDate,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,

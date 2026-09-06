@@ -18,9 +18,7 @@ export interface InvestmentActivity {
   provider: InvestmentActivityProvider
   /** @nullable */
   externalActivityId: string | null
-  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   activityDate: string
-  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   providerDate: string
   /** @nullable */
   providerDatetime: string | null

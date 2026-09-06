@@ -655,6 +655,11 @@ export function AccountModal({
                     </Text>
                     <Chart
                       data={balanceHistory.chartData}
+                      pointFormatter={(point) =>
+                        balancesHidden
+                          ? HIDDEN_BALANCE_PLACEHOLDER
+                          : formatMoneyWithSign({ value: point.money })
+                      }
                       height={200}
                       valueFormatter={(value) =>
                         balancesHidden

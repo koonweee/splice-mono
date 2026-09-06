@@ -21,7 +21,7 @@ function makeAnalysis(
     inflows: [
       {
         primaryCategory: 'Salary',
-        totalAmount: 250000,
+        totalAmount: '250000',
         currency: 'USD',
         transactionCount: 1,
         color: '#112233',
@@ -30,17 +30,17 @@ function makeAnalysis(
     outflows: [
       {
         primaryCategory: 'Groceries',
-        totalAmount: 12000,
+        totalAmount: '12000',
         currency: 'USD',
         transactionCount: 2,
         color: '#abcdef',
       },
     ],
-    totalInflow: 250000,
-    totalOutflow: 12000,
-    netFlow: 238000,
-    uncategorizedInflow: 0,
-    uncategorizedOutflow: 0,
+    totalInflow: '250000',
+    totalOutflow: '12000',
+    netFlow: '238000',
+    uncategorizedInflow: '0',
+    uncategorizedOutflow: '0',
     ...overrides,
   }
 }
@@ -111,13 +111,13 @@ describe('buildAnalysisSankeyData', () => {
   it('adds prior balance for negative net flow', () => {
     const data = buildAnalysisSankeyData(
       makeAnalysis({
-        totalInflow: 10000,
-        totalOutflow: 12000,
-        netFlow: -2000,
+        totalInflow: '10000',
+        totalOutflow: '12000',
+        netFlow: '-2000',
         inflows: [
           {
             primaryCategory: 'Salary',
-            totalAmount: 10000,
+            totalAmount: '10000',
             currency: 'USD',
             transactionCount: 1,
             color: '#112233',
@@ -141,9 +141,9 @@ describe('buildAnalysisSankeyData', () => {
   it('omits net nodes when inflow and outflow match', () => {
     const data = buildAnalysisSankeyData(
       makeAnalysis({
-        totalInflow: 12000,
-        totalOutflow: 12000,
-        netFlow: 0,
+        totalInflow: '12000',
+        totalOutflow: '12000',
+        netFlow: '0',
       }),
     )
 
@@ -154,9 +154,9 @@ describe('buildAnalysisSankeyData', () => {
     const data = buildAnalysisSankeyData(
       makeAnalysis({
         inflows: [],
-        totalInflow: 0,
-        totalOutflow: 12000,
-        netFlow: -12000,
+        totalInflow: '0',
+        totalOutflow: '12000',
+        netFlow: '-12000',
       }),
     )
 
@@ -187,9 +187,9 @@ describe('buildAnalysisSankeyData', () => {
     const data = buildAnalysisSankeyData(
       makeAnalysis({
         outflows: [],
-        totalInflow: 250000,
-        totalOutflow: 0,
-        netFlow: 250000,
+        totalInflow: '250000',
+        totalOutflow: '0',
+        netFlow: '250000',
       }),
     )
 

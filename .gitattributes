@@ -1,0 +1,4 @@
+# Retain machine-captured benchmark evidence; review the accompanying Markdown reports.
+backend/docs/performance/**/*.json linguist-generated=true
+backend/docs/performance/**/*.json.gz linguist-generated=true
+backend/docs/performance/**/*.tar.gz linguist-generated=true

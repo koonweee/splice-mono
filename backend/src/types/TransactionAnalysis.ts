@@ -1,7 +1,12 @@
+import { CalendarDateSchema } from '../common/query-bounds';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { CategoryColorSchema } from './Category';
-import { MoneySignSchema } from './MoneyWithSign';
+import {
+  MoneySignSchema,
+  MinorUnitAmountSchema,
+  SignedMinorUnitAmountSchema,
+} from './MoneyWithSign';
 import { TransactionSchema } from './Transaction';
 
 /**
@@ -11,9 +16,9 @@ export const TransactionAnalysisQuerySchema = registerSchema(
   'TransactionAnalysisQuery',
   z.object({
     /** Start date (YYYY-MM-DD, inclusive) */
-    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    startDate: CalendarDateSchema,
     /** End date (YYYY-MM-DD, inclusive) */
-    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    endDate: CalendarDateSchema,
   }),
 );
 export type TransactionAnalysisQuery = z.infer<
@@ -23,8 +28,8 @@ export type TransactionAnalysisQuery = z.infer<
 export const TransactionAnalysisTransactionsQuerySchema = registerSchema(
   'TransactionAnalysisTransactionsQuery',
   z.object({
-    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
-    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+    startDate: CalendarDateSchema,
+    endDate: CalendarDateSchema,
     categoryPrimary: z.string(),
     flowDirection: z.enum(['inflow', 'outflow']),
   }),
@@ -42,7 +47,7 @@ export const CategoryAggregateSchema = registerSchema(
     /** Primary category name (e.g., "FOOD_AND_DRINK") */
     primaryCategory: z.string(),
     /** Total amount in user's preferred currency (in smallest unit, e.g., cents) */
-    totalAmount: z.number(),
+    totalAmount: MinorUnitAmountSchema,
     /** Currency code */
     currency: z.string(),
     /** Number of transactions in this category */
@@ -70,15 +75,15 @@ export const TransactionAnalysisResponseSchema = registerSchema(
     /** Categories with net negative flow (spending) */
     outflows: z.array(CategoryAggregateSchema),
     /** Total inflow amount (in smallest unit) */
-    totalInflow: z.number(),
+    totalInflow: MinorUnitAmountSchema,
     /** Total outflow amount (in smallest unit) */
-    totalOutflow: z.number(),
+    totalOutflow: MinorUnitAmountSchema,
     /** Net flow = totalInflow - totalOutflow (in smallest unit) */
-    netFlow: z.number(),
+    netFlow: SignedMinorUnitAmountSchema,
     /** Uncategorized inflow amount (in smallest unit) */
-    uncategorizedInflow: z.number(),
+    uncategorizedInflow: MinorUnitAmountSchema,
     /** Uncategorized outflow amount (in smallest unit) */
-    uncategorizedOutflow: z.number(),
+    uncategorizedOutflow: MinorUnitAmountSchema,
   }),
 );
 export type TransactionAnalysisResponse = z.infer<
@@ -104,7 +109,7 @@ export const AnalysisAuditTransactionSchema = registerSchema(
     categoryPrimary: z.string(),
     categoryDetailed: z.string().nullable(),
     amount: z.object({
-      amount: z.number().int(),
+      amount: MinorUnitAmountSchema,
       currency: z.string(),
       sign: MoneySignSchema,
     }),

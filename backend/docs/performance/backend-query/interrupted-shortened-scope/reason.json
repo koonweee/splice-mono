@@ -1,0 +1,4 @@
+{
+  "reason": "User requested a shorter benchmark set. Original 1m run2 was interrupted; completed scenario artifacts retained only as partial diagnostic evidence, never included in strict full-run comparison.",
+  "stoppedAt": "2026-09-06T00:05:32.983Z"
+}

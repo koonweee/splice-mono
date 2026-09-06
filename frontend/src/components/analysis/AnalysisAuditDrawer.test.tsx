@@ -49,7 +49,7 @@ const auditResponse: TransactionAnalysisAuditResponse = {
         accountName: 'Checking',
         categoryPrimary: 'Income',
         categoryDetailed: 'Paycheck',
-        amount: { amount: 4200, currency: 'USD', sign: 'positive' },
+        amount: { amount: '4200', currency: 'USD', sign: 'positive' },
       },
     },
     {
@@ -67,7 +67,7 @@ const auditResponse: TransactionAnalysisAuditResponse = {
         accountName: 'Card',
         categoryPrimary: 'Shopping',
         categoryDetailed: 'Clothing',
-        amount: { amount: 9900, currency: 'USD', sign: 'negative' },
+        amount: { amount: '9900', currency: 'USD', sign: 'negative' },
       },
       inflow: {
         id: 'transaction-3',
@@ -77,7 +77,7 @@ const auditResponse: TransactionAnalysisAuditResponse = {
         accountName: 'Card',
         categoryPrimary: 'Shopping',
         categoryDetailed: 'Clothing',
-        amount: { amount: 9900, currency: 'USD', sign: 'positive' },
+        amount: { amount: '9900', currency: 'USD', sign: 'positive' },
       },
     },
   ],

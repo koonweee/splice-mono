@@ -43,7 +43,7 @@ const account = {
   name: 'Original',
   notes: 'Before',
   customName: null,
-  currentBalance: { money: { amount: 500, currency: 'USD' }, sign: 'positive' },
+  currentBalance: { money: { amount: '500', currency: 'USD' }, sign: 'positive' },
 }
 const accountKey = ['/account']
 const summaryKey = ['/balance-query/dashboard-summary', { period: 'month' }]

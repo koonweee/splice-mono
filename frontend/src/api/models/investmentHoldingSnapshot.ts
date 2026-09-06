@@ -13,7 +13,6 @@ export interface InvestmentHoldingSnapshot {
   accountId: string
   securityId: string
   provider: InvestmentHoldingSnapshotProvider
-  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   snapshotDate: string
   /** @nullable */
   quantity: string | null

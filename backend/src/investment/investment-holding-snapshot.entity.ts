@@ -14,12 +14,23 @@ import type {
   ProviderInvestmentHolding,
 } from '../types/Investment';
 import { InvestmentSecurityEntity } from './investment-security.entity';
+import { HoldingsSnapshotHeaderEntity } from './holdings-snapshot-header.entity';
 
 @Entity()
 @Unique(['accountId', 'snapshotDate', 'securityId'])
 export class InvestmentHoldingSnapshotEntity extends OwnedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'uuid' })
+  headerId: string;
+
+  @ManyToOne(() => HoldingsSnapshotHeaderEntity, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'headerId' })
+  header: HoldingsSnapshotHeaderEntity;
 
   @Column({ type: 'uuid' })
   accountId: string;

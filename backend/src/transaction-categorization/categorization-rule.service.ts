@@ -181,12 +181,35 @@ export class TransactionCategorizationService {
     userId: string,
     transaction: TransactionEntity,
   ): Promise<CategorizationRuleMatch | null> {
-    const rules = await this.ruleRepository.find({
+    const rules = await this.loadActiveRules(userId);
+
+    return this.engine.findFirstMatch(rules, transaction);
+  }
+
+  loadActiveRules(
+    userId: string,
+    manager?: EntityManager,
+  ): Promise<CategorizationRuleEntity[]> {
+    return (
+      manager?.getRepository(CategorizationRuleEntity) ?? this.ruleRepository
+    ).find({
       where: { userId, archivedAt: IsNull() },
       order: { priority: 'ASC', createdAt: 'ASC', id: 'ASC' },
     });
+  }
 
-    return this.engine.findFirstMatch(rules, transaction);
+  applyRulesFromSnapshot(
+    transaction: TransactionEntity,
+    rules: CategorizationRuleEntity[],
+  ): boolean {
+    if (
+      transaction.categoryAssignmentSource === 'manual' ||
+      transaction.categoryAssignmentSource === 'rule'
+    )
+      return false;
+    const match = this.engine.findFirstMatch(rules, transaction);
+    this.applyMatch(transaction, match);
+    return match !== null;
   }
 
   async previewDraftRuleApplication(
@@ -253,6 +276,7 @@ export class TransactionCategorizationService {
       return;
     }
 
+    transaction.category = null;
     transaction.categoryId = match.targetCategoryId;
     transaction.categoryAssignmentSource = 'rule';
     transaction.categoryAssignmentRuleId = match.rule.id;

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { type EntityManager, Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 import { UserEvents, UserSettingsUpdatedEvent } from '../events/user.events';
 import type { TokenResponse, User } from '../types/User';
@@ -116,7 +116,14 @@ export class UserService {
         profile.displayName ?? existingEmailUser.displayName ?? null;
       existingEmailUser.avatarUrl =
         profile.avatarUrl ?? existingEmailUser.avatarUrl ?? null;
-      const savedEntity = await this.repository.save(existingEmailUser);
+      await this.repository.update(existingEmailUser.id, {
+        googleSubject: existingEmailUser.googleSubject,
+        displayName: existingEmailUser.displayName,
+        avatarUrl: existingEmailUser.avatarUrl,
+      });
+      const savedEntity = await this.repository.findOneByOrFail({
+        id: existingEmailUser.id,
+      });
       this.logger.log(
         { userId: savedEntity.id },
         'Linked Google OAuth identity to existing user by verified email',
@@ -147,46 +154,54 @@ export class UserService {
     userId: string,
     settingsUpdate: UpdateUserSettingsDto,
   ): Promise<UserSettings | null> {
-    const entity = await this.repository.findOne({
-      where: { id: userId },
-    });
+    const result = await this.repository.manager.transaction(
+      async (manager) => {
+        const repository = manager.getRepository(UserEntity);
+        const entity = await repository.findOne({
+          where: { id: userId },
+          select: { id: true, settings: true },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!entity) return null;
 
-    if (!entity) {
+        // Merge existing settings with updates
+        const oldSettings = normalizeUserSettings(entity.settings);
+        const newSettings: UserSettings = {
+          currency: settingsUpdate.currency ?? oldSettings.currency,
+          timezone: settingsUpdate.timezone ?? oldSettings.timezone,
+          hideZeroBalanceAccounts:
+            settingsUpdate.hideZeroBalanceAccounts ??
+            oldSettings.hideZeroBalanceAccounts,
+          theme: settingsUpdate.theme ?? oldSettings.theme,
+          neutralizationLookaroundDays:
+            settingsUpdate.neutralizationLookaroundDays ??
+            oldSettings.neutralizationLookaroundDays,
+          analysisSankeyEnabled:
+            settingsUpdate.analysisSankeyEnabled ??
+            oldSettings.analysisSankeyEnabled,
+          notifications: {
+            transactions: {
+              newSyncedTransactions:
+                settingsUpdate.notifications?.transactions
+                  ?.newSyncedTransactions ??
+                oldSettings.notifications.transactions.newSyncedTransactions,
+            },
+            bankLinks: {
+              needsAttention:
+                settingsUpdate.notifications?.bankLinks?.needsAttention ??
+                oldSettings.notifications.bankLinks.needsAttention,
+            },
+          },
+        };
+        await repository.update(userId, { settings: newSettings });
+        return { oldSettings, newSettings };
+      },
+    );
+    if (!result) {
       this.logger.warn({ userId }, 'Cannot update settings: user not found');
       return null;
     }
-
-    // Merge existing settings with updates
-    const oldSettings = normalizeUserSettings(entity.settings);
-    const newSettings: UserSettings = {
-      currency: settingsUpdate.currency ?? oldSettings.currency,
-      timezone: settingsUpdate.timezone ?? oldSettings.timezone,
-      hideZeroBalanceAccounts:
-        settingsUpdate.hideZeroBalanceAccounts ??
-        oldSettings.hideZeroBalanceAccounts,
-      theme: settingsUpdate.theme ?? oldSettings.theme,
-      neutralizationLookaroundDays:
-        settingsUpdate.neutralizationLookaroundDays ??
-        oldSettings.neutralizationLookaroundDays,
-      analysisSankeyEnabled:
-        settingsUpdate.analysisSankeyEnabled ??
-        oldSettings.analysisSankeyEnabled,
-      notifications: {
-        transactions: {
-          newSyncedTransactions:
-            settingsUpdate.notifications?.transactions?.newSyncedTransactions ??
-            oldSettings.notifications.transactions.newSyncedTransactions,
-        },
-        bankLinks: {
-          needsAttention:
-            settingsUpdate.notifications?.bankLinks?.needsAttention ??
-            oldSettings.notifications.bankLinks.needsAttention,
-        },
-      },
-    };
-    entity.settings = newSettings;
-
-    await this.repository.save(entity);
+    const { oldSettings, newSettings } = result;
     this.logger.log({ userId }, 'Updated settings for user');
 
     // Emit event if settings actually changed
@@ -206,35 +221,22 @@ export class UserService {
   async enableDefaultNotificationsIfUnset(
     userId: string,
   ): Promise<UserSettings | null> {
-    const entity = await this.repository.findOne({
-      where: { id: userId },
+    return this.repository.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(UserEntity);
+      const entity = await repository.findOne({
+        where: { id: userId },
+        select: { id: true, settings: true },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!entity) return null;
+      const rawSettings = entity.settings as Partial<UserSettings> | null;
+      const settings = normalizeUserSettings(entity.settings);
+      if (rawSettings?.notifications !== undefined) return settings;
+      settings.notifications.transactions.newSyncedTransactions = true;
+      settings.notifications.bankLinks.needsAttention = true;
+      await repository.update(userId, { settings });
+      return settings;
     });
-
-    if (!entity) {
-      this.logger.warn(
-        { userId },
-        'Cannot initialize notification settings: user not found',
-      );
-      return null;
-    }
-
-    const rawSettings = entity.settings as Partial<UserSettings> | null;
-    if (rawSettings?.notifications !== undefined) {
-      return normalizeUserSettings(entity.settings);
-    }
-
-    const settings = normalizeUserSettings(entity.settings);
-    settings.notifications.transactions.newSyncedTransactions = true;
-    settings.notifications.bankLinks.needsAttention = true;
-    entity.settings = settings;
-    await this.repository.save(entity);
-
-    this.logger.log(
-      { userId },
-      'Initialized default notification settings for user',
-    );
-
-    return settings;
   }
 
   /**
@@ -246,13 +248,29 @@ export class UserService {
   async getTimezone(userId: string): Promise<string> {
     const entity = await this.repository.findOne({
       where: { id: userId },
+      select: { settings: true },
     });
 
     return entity?.settings?.timezone ?? 'UTC';
   }
 
+  async findSettings(
+    userId: string,
+    manager?: EntityManager,
+  ): Promise<Pick<UserEntity, 'id' | 'settings'> | null> {
+    return (
+      manager?.withRepository(this.repository) ?? this.repository
+    ).findOne({
+      where: { id: userId },
+      select: { id: true, settings: true },
+    });
+  }
+
   async getPreferredCurrency(userId: string): Promise<string> {
-    const entity = await this.repository.findOne({ where: { id: userId } });
+    const entity = await this.repository.findOne({
+      where: { id: userId },
+      select: { settings: true },
+    });
     return normalizeUserSettings(entity?.settings).currency.toUpperCase();
   }
 
@@ -269,6 +287,7 @@ export class UserService {
   ): Promise<Record<string, unknown> | undefined> {
     const entity = await this.repository.findOne({
       where: { id: userId },
+      select: { providerDetails: true },
     });
 
     if (!entity || !entity.providerDetails) {
@@ -293,31 +312,24 @@ export class UserService {
     providerName: string,
     details: Record<string, unknown>,
   ): Promise<User | null> {
-    const entity = await this.repository.findOne({
-      where: { id: userId },
+    return this.repository.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(UserEntity);
+      const entity = await repository.findOne({
+        where: { id: userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!entity) return null;
+      entity.providerDetails = {
+        ...(entity.providerDetails ?? {}),
+        [providerName]: details,
+      };
+      const saved = await repository.save({
+        id: userId,
+        providerDetails: entity.providerDetails,
+      });
+      entity.updatedAt = saved.updatedAt;
+      return entity.toObject();
     });
-
-    if (!entity) {
-      this.logger.warn(
-        { userId },
-        'Cannot update provider details: user not found',
-      );
-      return null;
-    }
-
-    // Initialize providerDetails if null, then replace for this provider
-    const currentDetails = entity.providerDetails ?? {};
-    entity.providerDetails = {
-      ...currentDetails,
-      [providerName]: details,
-    };
-
-    const savedEntity = await this.repository.save(entity);
-    this.logger.log(
-      { userId, providerName },
-      'Updated provider details for user',
-    );
-    return savedEntity.toObject();
   }
 
   private normalizeEmail(email: string): string {

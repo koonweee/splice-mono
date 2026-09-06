@@ -6,10 +6,18 @@
  * OpenAPI spec version: 1.0
  */
 import type { RateWithSourceSource } from './rateWithSourceSource'
+import type { RateWithSourceRatio } from './rateWithSourceRatio'
 
 export interface RateWithSource {
   baseCurrency: string
   targetCurrency: string
-  rate: number
+  requestedDate: string
+  rateDate: string
+  /**
+   * @maxLength 220
+   * @pattern ^(0|[1-9]\d*)(\.\d+)?$
+   */
+  rate: string
   source: RateWithSourceSource
+  ratio: RateWithSourceRatio
 }

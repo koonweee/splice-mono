@@ -1,6 +1,7 @@
 import { AreaChart } from '@mantine/charts'
 import { Paper, Text } from '@mantine/core'
 import isNumber from 'lodash/isNumber'
+import type { MoneyWithSign } from '../api/models'
 
 function ChartTooltip({ label, value }: { label: string; value?: string }) {
   return (
@@ -21,11 +22,13 @@ export interface ChartDataPoint {
   date: string
   label: string
   value: number
+  money: MoneyWithSign
 }
 
 interface ChartProps {
   data: Array<ChartDataPoint>
   valueFormatter: (value: number) => string
+  pointFormatter?: (point: ChartDataPoint) => string
   height?: number
   color?: string
   mb?: string
@@ -35,6 +38,7 @@ interface ChartProps {
 export function Chart({
   data,
   valueFormatter,
+  pointFormatter,
   height = 280,
   color = 'teal.6',
   mb,
@@ -95,7 +99,13 @@ export function Chart({
           return (
             <ChartTooltip
               label={point.payload.label || String(label)}
-              value={onDataPointHover ? undefined : valueFormatter(point.value)}
+              value={
+                onDataPointHover
+                  ? undefined
+                  : pointFormatter
+                    ? pointFormatter(point.payload)
+                    : valueFormatter(point.value)
+              }
             />
           )
         },

@@ -154,16 +154,17 @@ describe('CryptoBalanceService', () => {
       it('should fetch BTC balance from mempool.space', async () => {
         mockFetch.mockResolvedValueOnce({
           ok: true,
-          json: async () => ({
-            chain_stats: {
-              funded_txo_sum: 150000000, // 1.5 BTC in satoshis
-              spent_txo_sum: 0,
-            },
-            mempool_stats: {
-              funded_txo_sum: 0,
-              spent_txo_sum: 0,
-            },
-          }),
+          text: async () =>
+            JSON.stringify({
+              chain_stats: {
+                funded_txo_sum: 150000000, // 1.5 BTC in satoshis
+                spent_txo_sum: 0,
+              },
+              mempool_stats: {
+                funded_txo_sum: 0,
+                spent_txo_sum: 0,
+              },
+            }),
         });
 
         const balance = await service.getBalance('bitcoin', validBtcAddress);
@@ -174,19 +175,31 @@ describe('CryptoBalanceService', () => {
         );
       });
 
+      it('subtracts large cumulative satoshi totals without rounding the JSON numbers', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          text: async () =>
+            '{"chain_stats":{"funded_txo_sum":9007199254740993,"spent_txo_sum":9007199254740992},"mempool_stats":{"funded_txo_sum":0,"spent_txo_sum":0}}',
+        });
+        expect(await service.getBalance('bitcoin', validBtcAddress)).toBe(
+          '0.00000001',
+        );
+      });
+
       it('should include mempool balance', async () => {
         mockFetch.mockResolvedValueOnce({
           ok: true,
-          json: async () => ({
-            chain_stats: {
-              funded_txo_sum: 100000000, // 1 BTC confirmed
-              spent_txo_sum: 0,
-            },
-            mempool_stats: {
-              funded_txo_sum: 50000000, // 0.5 BTC unconfirmed
-              spent_txo_sum: 0,
-            },
-          }),
+          text: async () =>
+            JSON.stringify({
+              chain_stats: {
+                funded_txo_sum: 100000000, // 1 BTC confirmed
+                spent_txo_sum: 0,
+              },
+              mempool_stats: {
+                funded_txo_sum: 50000000, // 0.5 BTC unconfirmed
+                spent_txo_sum: 0,
+              },
+            }),
         });
 
         const balance = await service.getBalance('bitcoin', validBtcAddress);

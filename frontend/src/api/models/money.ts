@@ -7,7 +7,8 @@
  */
 
 export interface Money {
+  /** @minLength 1 */
   currency: string
-  /** @minimum 0 */
-  amount: number
+  /** @pattern ^(0|[1-9]\d{0,77})$ */
+  amount: string
 }

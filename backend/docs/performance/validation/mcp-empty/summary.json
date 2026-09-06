@@ -1,0 +1,42 @@
+{
+  "scenario": "empty",
+  "appFilter": "all",
+  "caseFilter": null,
+  "captures": [
+    {
+      "app": "cash-flow",
+      "tool": "visualize_cash_flow",
+      "resource": "ui://splice/cash-flow/v3.html",
+      "case": "overview",
+      "input": {
+        "startDate": "2026-04-01",
+        "endDate": "2026-04-30"
+      }
+    },
+    {
+      "app": "portfolio",
+      "tool": "visualize_portfolio",
+      "resource": "ui://splice/portfolio/v3.html",
+      "case": "concentrated",
+      "input": {}
+    }
+  ],
+  "generatedAt": "2026-09-05T22:42:37.603Z",
+  "officialHost": "modelcontextprotocol/ext-apps v1.7.5",
+  "contactSheets": [
+    "contact-sheet-desktop-dark.png",
+    "contact-sheet-mobile-dark.png",
+    "contact-sheet-mobile-light.png",
+    "contact-sheet-narrow-320-dark.png"
+  ],
+  "pageErrorCounts": {
+    "portfolio-concentrated-narrow-320-dark-errors.json": 3,
+    "cash-flow-overview-mobile-light-errors.json": 3,
+    "cash-flow-overview-narrow-320-dark-errors.json": 3,
+    "cash-flow-overview-desktop-dark-errors.json": 3,
+    "cash-flow-overview-mobile-dark-errors.json": 3,
+    "portfolio-concentrated-desktop-dark-errors.json": 3,
+    "portfolio-concentrated-mobile-dark-errors.json": 3,
+    "portfolio-concentrated-mobile-light-errors.json": 3
+  }
+}

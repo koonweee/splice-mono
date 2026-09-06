@@ -1,3 +1,4 @@
+import { CalendarDateSchema } from '../common/query-bounds';
 import {
   BadRequestException,
   Controller,
@@ -147,7 +148,7 @@ export class BalanceSnapshotController {
 
     // Validate date columns
     for (const dateStr of dateColumns) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      if (!CalendarDateSchema.safeParse(dateStr).success) {
         throw new BadRequestException(`Invalid date column header: ${dateStr}`);
       }
     }
@@ -177,6 +178,12 @@ export class BalanceSnapshotController {
         continue;
       }
 
+      if (account.valuationMode === 'holdings') {
+        throw new BadRequestException(
+          'Update holdings instead of importing balances for a holdings-valued account',
+        );
+      }
+
       if (account.currentBalance.money.currency !== currency) {
         throw new BadRequestException(
           `Currency mismatch for account ${accountId}. Expected ${account.currentBalance.money.currency}, got ${currency}`,
@@ -189,25 +196,25 @@ export class BalanceSnapshotController {
 
         if (!valueStr || valueStr.trim() === '') continue;
 
-        const amount = parseFloat(valueStr);
-        if (isNaN(amount)) {
+        const amountText = valueStr.trim();
+        const sign = amountText.startsWith('-')
+          ? MoneySign.NEGATIVE
+          : MoneySign.POSITIVE;
+        let moneyWithSign: ReturnType<MoneyWithSign['toSerialized']>;
+        try {
+          moneyWithSign = MoneyWithSign.fromMajorUnit(
+            currency,
+            amountText,
+            sign,
+          ).toSerialized();
+        } catch {
           throw new BadRequestException(
             `Invalid amount value at row ${i + 1}, date ${dateStr}: ${valueStr}`,
           );
         }
-
-        const sign = amount < 0 ? MoneySign.NEGATIVE : MoneySign.POSITIVE;
-        const absAmount = Math.abs(amount);
-
-        const moneyWithSign = MoneyWithSign.fromFloat(
+        const zeroMoneyWithSign = new MoneyWithSign(
           currency,
-          absAmount,
-          sign,
-        ).toSerialized();
-
-        const zeroMoneyWithSign = MoneyWithSign.fromFloat(
-          currency,
-          0,
+          '0',
           MoneySign.POSITIVE,
         ).toSerialized();
 

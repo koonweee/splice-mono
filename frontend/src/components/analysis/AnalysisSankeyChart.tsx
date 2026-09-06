@@ -1,5 +1,6 @@
 import { Box, Group, Paper, Progress, Stack, Text } from '@mantine/core'
 import { Sankey, Tooltip } from 'recharts'
+import { parseSignedMinorUnits, ratioPercent } from '../../lib/money'
 import { formatPrimaryCategory } from '../../lib/format'
 import { getDisplayCategoryColor } from '../../lib/category-colors'
 import { useDataListLayout } from '../../lib/responsive'
@@ -7,7 +8,6 @@ import { Pressable, usePressFeedback } from '../Pressable'
 import {
   buildAnalysisSankeyData,
   formatSankeyAmount,
-  formatSankeyMajorAmount,
 } from './AnalysisSankeyChart.data'
 import styles from './AnalysisSankeyChart.module.css'
 import type { LinkProps, NodeProps } from 'recharts/types/chart/Sankey'
@@ -175,8 +175,8 @@ function CategoryDrilldownList({
   compact?: boolean
 }) {
   const total = categories.reduce(
-    (sum, category) => sum + category.totalAmount,
-    0,
+    (sum, category) => sum + parseSignedMinorUnits(category.totalAmount),
+    0n,
   )
 
   return (
@@ -220,7 +220,10 @@ function CategoryDrilldownList({
             <Progress
               mt={8}
               size={4}
-              value={total > 0 ? (category.totalAmount / total) * 100 : 0}
+              value={ratioPercent(
+                parseSignedMinorUnits(category.totalAmount),
+                total,
+              )}
               color={getDisplayCategoryColor(
                 category.color,
                 category.primaryCategory,
@@ -291,9 +294,12 @@ export function AnalysisSankeyChart({
                 sort={false}
               >
                 <Tooltip
-                  formatter={(value) =>
-                    formatSankeyMajorAmount(Number(value), analysis.currency)
-                  }
+                  formatter={(_value, _name, item) => {
+                    const amount = item.payload?.exactAmount
+                    return typeof amount === 'string'
+                      ? formatSankeyAmount(amount, analysis.currency)
+                      : ''
+                  }}
                 />
               </Sankey>
             </Box>

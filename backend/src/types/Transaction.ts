@@ -160,7 +160,7 @@ export const CreateTransactionDtoSchema = z.object({
 export type CreateTransactionDto = z.infer<typeof CreateTransactionDtoSchema>;
 
 const ManualTransactionAmountSchema = MoneyWithSignSchema.refine(
-  (amount) => amount.money.amount > 0,
+  (amount) => amount.money.amount !== '0',
   {
     message: 'Manual transaction amount must be positive',
     path: ['money', 'amount'],
@@ -279,8 +279,10 @@ export const PaginatedTransactionResponseSchema = registerSchema(
   'PaginatedTransactionResponse',
   z.object({
     data: z.array(TransactionSchema),
-    total: z.number().int(),
-    pageIndex: z.number().int(),
+    total: z.number().int().nullable(),
+    pageIndex: z.number().int().nullable(),
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
     pageSize: z.number().int(),
   }),
 );

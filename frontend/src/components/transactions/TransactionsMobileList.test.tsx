@@ -310,11 +310,11 @@ describe('TransactionsMobileList', () => {
         id: 'txn-1',
         category: foodCategory,
         amount: {
-          money: { amount: 1200, currency: 'EUR' },
+          money: { amount: '1200', currency: 'EUR' },
           sign: MoneyWithSignSign.negative,
         },
         convertedAmount: {
-          money: { amount: 1300, currency: 'USD' },
+          money: { amount: '1300', currency: 'USD' },
           sign: MoneyWithSignSign.negative,
         },
       }),
@@ -408,7 +408,7 @@ function makeTransaction(
   return {
     id: overrides.id ?? 'txn-1',
     amount: overrides.amount ?? {
-      money: { amount: 1200, currency: 'USD' },
+      money: { amount: '1200', currency: 'USD' },
       sign: MoneyWithSignSign.negative,
     },
     accountId: 'account-1',

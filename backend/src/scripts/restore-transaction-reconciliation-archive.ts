@@ -1,3 +1,4 @@
+import { canonicalMinorUnits } from '../common/exact-money';
 import { AppDataSource } from '../data-source';
 
 type ArchiveRow = {
@@ -44,13 +45,16 @@ async function restoreTransactionReconciliationArchive(): Promise<void> {
       const archive = rows[0];
       if (
         !archive ||
-        archive.snapshot.schemaVersion !== 1 ||
+        archive.snapshot.schemaVersion !== 2 ||
         !archive.snapshot.activity ||
         !archive.snapshot.bankingTransaction
       ) {
-        throw new Error('Eligible version-1 archive not found');
+        throw new Error('Eligible version-2 exact-money archive not found');
       }
       const activity = archive.snapshot.activity;
+      if (typeof activity.amountAmount !== 'string')
+        throw new Error('Archive must contain exact money text');
+      canonicalMinorUnits(activity.amountAmount);
       if (
         activity.userId !== archive.userId ||
         activity.accountId !== archive.accountId ||

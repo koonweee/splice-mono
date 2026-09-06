@@ -33,7 +33,7 @@ function buildTransaction(params: {
     {
       accountId,
       amount: {
-        money: { amount: 1250, currency: 'USD' },
+        money: { amount: '1250', currency: 'USD' },
         sign: MoneySign.NEGATIVE,
       },
       merchantName: 'Uber Trip',
@@ -52,7 +52,7 @@ function buildTransaction(params: {
   transaction.createdAt = new Date('2026-02-14T00:00:00.000Z');
   transaction.updatedAt = new Date('2026-02-14T00:00:00.000Z');
   transaction.amount = BalanceColumns.fromMoneyWithSign({
-    money: { amount: 1250, currency: 'USD' },
+    money: { amount: '1250', currency: 'USD' },
     sign: MoneySign.NEGATIVE,
   });
   transaction.categoryAssignmentSource =

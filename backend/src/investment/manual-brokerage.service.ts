@@ -9,20 +9,22 @@ import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
-import Decimal from 'decimal.js';
-import { AccountSubtype, AccountType } from 'plaid';
 import {
-  DataSource,
-  EntityManager,
-  In,
-  IsNull,
-  Not,
-  Repository,
-} from 'typeorm';
+  ExactDecimal as Decimal,
+  canonicalMinorUnits,
+  divideHalfUp,
+  type ExactRateRatio,
+} from '../common/exact-money';
+import { AccountSubtype, AccountType } from 'plaid';
+import { DataSource, EntityManager, In, IsNull, Repository } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { BalanceColumns } from '../common/balance.columns';
-import { CurrencyExchangeService } from '../currency-exchange/currency-exchange.service';
+import {
+  CurrencyExchangeService,
+  fxRequestKey,
+  type FxRequest,
+} from '../currency-exchange/currency-exchange.service';
 import { isCryptoCurrency } from '../currency-exchange/utils/currency-pair.utils';
 import { MarketPriceService } from '../market-price/market-price.service';
 import type {
@@ -39,6 +41,8 @@ import { UserService } from '../user/user.service';
 import { InvestmentHoldingSnapshotEntity } from './investment-holding-snapshot.entity';
 import { InvestmentSecurityEntity } from './investment-security.entity';
 import { InvestmentService } from './investment.service';
+import { HoldingsQueryService } from './holdings-query.service';
+import { investmentWriteValues } from './investment-write-values';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -53,7 +57,7 @@ type ValuedPosition = {
 
 type Valuation = {
   positions: ValuedPosition[];
-  totalMinorUnits: number;
+  totalMinorUnits: string;
 };
 
 @Injectable()
@@ -70,6 +74,7 @@ export class ManualBrokerageService {
     private readonly currencyExchangeService: CurrencyExchangeService,
     private readonly userService: UserService,
     private readonly investmentService: InvestmentService,
+    private readonly holdingsQueryService: HoldingsQueryService,
   ) {}
 
   async createManualBrokerageAccount(
@@ -375,17 +380,24 @@ export class ManualBrokerageService {
       const currency = quotes.get(symbol)?.currency;
       if (currency) currencies.add(currency);
     }
-    const rates = new Map<string, string>();
+    const rates = new Map<string, ExactRateRatio>();
+    const requests: FxRequest[] = [];
     for (const currency of currencies) {
-      const rate =
-        currency === accountCurrency
-          ? 1
-          : await this.currencyExchangeService.getRate(
-              currency,
-              accountCurrency,
-              snapshotDate,
-            );
-      rates.set(currency, String(rate));
+      if (currency === accountCurrency) {
+        rates.set(currency, { numerator: '1', denominator: '1' });
+      } else {
+        // Retain provider fetching, then read the stored quote's exact fraction.
+        await this.currencyExchangeService.getRate(
+          currency,
+          accountCurrency,
+          snapshotDate,
+        );
+        requests.push({
+          baseCurrency: currency,
+          targetCurrency: accountCurrency,
+          requestedDate: snapshotDate,
+        });
+      }
     }
     const preferredCurrency =
       await this.userService.getPreferredCurrency(userId);
@@ -396,6 +408,18 @@ export class ManualBrokerageService {
         snapshotDate,
       );
     }
+    if (requests.length) {
+      const resolved =
+        await this.currencyExchangeService.resolveRequests(requests);
+      for (const request of requests) {
+        const quote = resolved.get(fxRequestKey(request));
+        if (!quote)
+          throw new BadRequestException(
+            `Missing FX rate for ${request.baseCurrency}`,
+          );
+        rates.set(request.baseCurrency, quote.ratio);
+      }
+    }
 
     const decimals = getDecimalPlaces(accountCurrency);
     const valued = positions.map((input) => {
@@ -405,13 +429,45 @@ export class ManualBrokerageService {
       const nativeValue = new Decimal(input.quantity)
         .mul(quote.price)
         .toDecimalPlaces(12, Decimal.ROUND_HALF_UP);
-      const exchangeRate = rates.get(quote.currency);
-      if (!exchangeRate) {
+      const ratio = rates.get(quote.currency);
+      if (!ratio) {
         throw new BadRequestException(`Missing FX rate for ${quote.currency}`);
       }
-      const accountValue = nativeValue
-        .mul(exchangeRate)
-        .toDecimalPlaces(decimals, Decimal.ROUND_HALF_UP);
+      // Native position value has 12 stored decimals. Apply the exact fraction and
+      // round target minor units once, including inverse-rate half-cent ties.
+      const accountMinorUnits = divideHalfUp(
+        BigInt(nativeValue.mul('1000000000000').toFixed(0)) *
+          BigInt(ratio.numerator) *
+          10n ** BigInt(decimals),
+        1000000000000n * BigInt(ratio.denominator),
+      );
+      const accountValue = new Decimal(accountMinorUnits.toString()).div(
+        new Decimal(10).pow(decimals),
+      );
+      // This informational column has a smaller scale than the valuation fraction.
+      const exchangeRate = new Decimal(ratio.numerator)
+        .div(ratio.denominator)
+        .toDecimalPlaces(12, Decimal.ROUND_HALF_UP)
+        .toFixed();
+      const storedDecimals = {
+        quantity: input.quantity,
+        price: quote.price,
+        nativeValue: nativeValue.toFixed(),
+        exchangeRate,
+        accountValue: accountValue.toFixed(decimals),
+      };
+      for (const [field, value] of Object.entries(storedDecimals)) {
+        const decimal = new Decimal(value);
+        if (
+          !decimal.isFinite() ||
+          decimal.abs().gte('1000000000000000000') ||
+          decimal.decimalPlaces() > 12
+        ) {
+          throw new BadRequestException(
+            `${input.symbol} ${field} exceeds position storage precision (18 integer and 12 fractional digits); reduce the quantity or price`,
+          );
+        }
+      }
       return {
         input,
         quote,
@@ -425,11 +481,18 @@ export class ManualBrokerageService {
       new Decimal(0),
     );
     const minorUnits = total.mul(new Decimal(10).pow(decimals));
-    const minorUnitNumber = minorUnits.toNumber();
-    if (!minorUnits.isInteger() || !Number.isSafeInteger(minorUnitNumber)) {
-      throw new BadRequestException('Portfolio value exceeds supported range');
+    try {
+      if (!minorUnits.isInteger())
+        throw new RangeError('Fractional minor unit');
+      return {
+        positions: valued,
+        totalMinorUnits: canonicalMinorUnits(minorUnits.toFixed(0)),
+      };
+    } catch {
+      throw new BadRequestException(
+        'Portfolio value exceeds the supported 78-digit minor-unit range',
+      );
     }
-    return { positions: valued, totalMinorUnits: minorUnitNumber };
   }
 
   private async writeExistingAccountValuation(
@@ -489,81 +552,115 @@ export class ManualBrokerageService {
     const holdingRepository = manager.getRepository(
       InvestmentHoldingSnapshotEntity,
     );
-    const symbols = valuation.positions.map(({ input }) => input.symbol);
-    const existingSecurities =
-      symbols.length === 0
-        ? []
-        : await securityRepository.find({
-            where: {
-              userId: account.userId,
-              provider: 'yahoo',
-              externalSecurityId: In(symbols),
-            },
-          });
+    const securities = valuation.positions.map(({ quote }) =>
+      Object.assign(new InvestmentSecurityEntity(), {
+        userId: account.userId,
+        provider: 'yahoo',
+        externalSecurityId: quote.symbol,
+        institutionId: quote.exchangeCode,
+        institutionSecurityId: quote.exchangeName,
+        name: quote.name,
+        tickerSymbol: quote.symbol,
+        isin: null,
+        cusip: null,
+        sedol: null,
+        type: quote.quoteType,
+        subtype: null,
+        isCashEquivalent: false,
+        closePrice: quote.price,
+        closePriceAsOf: quote.priceAsOf,
+        updateDatetime: quote.priceDatetime,
+        isoCurrencyCode: quote.currency,
+        unofficialCurrencyCode: null,
+        marketIdentifierCode: quote.marketIdentifierCode,
+        sector: null,
+        industry: null,
+      }),
+    );
+    for (let offset = 0; offset < securities.length; offset += 300) {
+      await securityRepository.upsert(
+        investmentWriteValues(
+          securityRepository,
+          securities.slice(offset, offset + 300),
+        ),
+        {
+          conflictPaths: ['userId', 'provider', 'externalSecurityId'],
+          skipUpdateIfNoValuesChanged: true,
+        },
+      );
+    }
+    const savedSecurities = securities.length
+      ? await securityRepository.find({
+          where: {
+            userId: account.userId,
+            provider: 'yahoo',
+            externalSecurityId: In(
+              securities.map((security) => security.externalSecurityId),
+            ),
+          },
+        })
+      : [];
     const bySymbol = new Map(
-      existingSecurities.map((security) => [
+      savedSecurities.map((security) => [
         security.externalSecurityId,
         security,
       ]),
     );
-    const holdings: InvestmentHoldingSnapshotEntity[] = [];
-    for (const position of valuation.positions) {
+    const headers: Array<{ id: string }> = await manager.query(
+      `
+      INSERT INTO holdings_snapshot_header_entity ("userId","accountId",provider,"snapshotDate","completedAt","accountCurrency","accountValueAmount","accountValueSign")
+      VALUES ($1,$2,'manual',$3,now(),$4,$5,$6)
+      ON CONFLICT ("accountId",provider,"snapshotDate") DO UPDATE SET revision=holdings_snapshot_header_entity.revision+1,
+        "completedAt"=now(),"accountCurrency"=EXCLUDED."accountCurrency","accountValueAmount"=EXCLUDED."accountValueAmount","accountValueSign"=EXCLUDED."accountValueSign","updatedAt"=now()
+      RETURNING id`,
+      [
+        account.userId,
+        account.id,
+        snapshotDate,
+        account.currentBalance.currency,
+        account.currentBalance.amount,
+        account.currentBalance.sign,
+      ],
+    );
+    const holdings = valuation.positions.map((position) => {
       const { quote } = position;
-      const security =
-        bySymbol.get(position.input.symbol) ?? new InvestmentSecurityEntity();
-      security.userId = account.userId;
-      security.provider = 'yahoo';
-      security.externalSecurityId = quote.symbol;
-      security.institutionId = quote.exchangeCode;
-      security.institutionSecurityId = quote.exchangeName;
-      security.name = quote.name;
-      security.tickerSymbol = quote.symbol;
-      security.isin = null;
-      security.cusip = null;
-      security.sedol = null;
-      security.type = quote.quoteType;
-      security.subtype = null;
-      security.isCashEquivalent = false;
-      security.closePrice = quote.price;
-      security.closePriceAsOf = quote.priceAsOf;
-      security.updateDatetime = quote.priceDatetime;
-      security.isoCurrencyCode = quote.currency;
-      security.unofficialCurrencyCode = null;
-      security.marketIdentifierCode = quote.marketIdentifierCode;
-      security.sector = null;
-      security.industry = null;
-      const savedSecurity = await securityRepository.save(security);
-
-      const holding = new InvestmentHoldingSnapshotEntity();
-      holding.userId = account.userId;
-      holding.accountId = account.id;
-      holding.securityId = savedSecurity.id;
-      holding.security = savedSecurity;
-      holding.provider = 'manual';
-      holding.snapshotDate = snapshotDate;
-      holding.quantity = position.input.quantity;
-      holding.costBasis = null;
-      holding.institutionPrice = quote.price;
-      holding.institutionPriceAsOf = quote.priceAsOf;
-      holding.institutionPriceDatetime = quote.priceDatetime;
-      holding.institutionValue = position.nativeValue;
-      holding.isoCurrencyCode = quote.currency;
-      holding.unofficialCurrencyCode = null;
-      holding.accountCurrency = account.currentBalance.currency;
-      holding.exchangeRateToAccountCurrency = position.exchangeRate;
-      holding.accountValue = position.accountValue;
-      holding.vestedQuantity = null;
-      holding.vestedValue = null;
-      holdings.push(holding);
-    }
-
+      const security = bySymbol.get(quote.symbol);
+      if (!security) throw new Error('Persisted security was not found');
+      return Object.assign(new InvestmentHoldingSnapshotEntity(), {
+        userId: account.userId,
+        headerId: headers[0].id,
+        accountId: account.id,
+        securityId: security.id,
+        provider: 'manual',
+        snapshotDate,
+        quantity: position.input.quantity,
+        costBasis: null,
+        institutionPrice: quote.price,
+        institutionPriceAsOf: quote.priceAsOf,
+        institutionPriceDatetime: quote.priceDatetime,
+        institutionValue: position.nativeValue,
+        isoCurrencyCode: quote.currency,
+        unofficialCurrencyCode: null,
+        accountCurrency: account.currentBalance.currency,
+        exchangeRateToAccountCurrency: position.exchangeRate,
+        accountValue: position.accountValue,
+        vestedQuantity: null,
+        vestedValue: null,
+      });
+    });
     await holdingRepository.delete({
       userId: account.userId,
       accountId: account.id,
       snapshotDate,
       provider: 'manual',
     });
-    if (holdings.length > 0) await holdingRepository.save(holdings);
+    for (let offset = 0; offset < holdings.length; offset += 300)
+      await holdingRepository.insert(
+        investmentWriteValues(
+          holdingRepository,
+          holdings.slice(offset, offset + 300),
+        ),
+      );
 
     const snapshotRepository = manager.getRepository(BalanceSnapshotEntity);
     let snapshot = await snapshotRepository.findOne({
@@ -591,14 +688,14 @@ export class ManualBrokerageService {
   private applyAccountBalance(
     account: AccountEntity,
     currency: string,
-    amount: number,
+    amount: string,
   ): void {
     account.currentBalance = BalanceColumns.fromMoneyWithSign({
       money: { amount, currency },
       sign: MoneySign.POSITIVE,
     });
     account.availableBalance = BalanceColumns.fromMoneyWithSign({
-      money: { amount: 0, currency },
+      money: { amount: '0', currency },
       sign: MoneySign.POSITIVE,
     });
   }
@@ -620,28 +717,12 @@ export class ManualBrokerageService {
     accountId: string,
     userId: string,
   ): Promise<ManualBrokeragePositionInput[]> {
-    const latestBalance = await manager
-      .getRepository(BalanceSnapshotEntity)
-      .findOne({
-        where: {
-          accountId,
-          userId,
-          snapshotType: Not(BalanceSnapshotType.FORWARD_FILL),
-        },
-        order: { snapshotDate: 'DESC', updatedAt: 'DESC' },
-      });
-    if (!latestBalance) return [];
-    const holdings = await manager
-      .getRepository(InvestmentHoldingSnapshotEntity)
-      .find({
-        where: {
-          accountId,
-          userId,
-          snapshotDate: latestBalance.snapshotDate,
-          provider: 'manual',
-        },
-      });
-    return holdings.map((holding) => ({
+    const [result] = await this.holdingsQueryService.read(
+      userId,
+      { accountIds: [accountId] },
+      manager,
+    );
+    return result.snapshot.holdings.map((holding) => ({
       symbol: holding.security.externalSecurityId,
       quantity: holding.quantity ?? '0',
     }));

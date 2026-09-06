@@ -70,6 +70,40 @@ describe('CryptoProvider', () => {
       });
     });
 
+    it('preserves every wei in an ordinary 10 ETH wallet', async () => {
+      cryptoBalanceService.validateAddress.mockReturnValue(true);
+      cryptoBalanceService.getBalance.mockResolvedValue(
+        '10.000000000000000001',
+      );
+      const result = await provider.initiateLinking({
+        userId: 'user-123',
+        providerUserDetails: {
+          walletAddress: validEthAddress,
+          network: 'ethereum',
+        },
+      });
+      expect(
+        result.immediateAccounts![0].accounts[0].currentBalance.money.amount,
+      ).toBe('10000000000000000001');
+    });
+
+    it.each(['NaN', '12junk', 'Infinity'])(
+      'rejects malformed provider money %s instead of publishing zero',
+      async (value) => {
+        cryptoBalanceService.validateAddress.mockReturnValue(true);
+        cryptoBalanceService.getBalance.mockResolvedValue(value);
+        await expect(
+          provider.initiateLinking({
+            userId: 'user-123',
+            providerUserDetails: {
+              walletAddress: validEthAddress,
+              network: 'ethereum',
+            },
+          }),
+        ).rejects.toThrow();
+      },
+    );
+
     it('should link a Bitcoin wallet successfully', async () => {
       cryptoBalanceService.validateAddress.mockReturnValue(true);
       cryptoBalanceService.getBalance.mockResolvedValue('0.5');

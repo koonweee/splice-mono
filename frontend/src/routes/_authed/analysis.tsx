@@ -15,6 +15,11 @@ import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { ArrowDownLeft, ArrowUpRight, ClipboardList } from 'lucide-react'
+import {
+  minorToChartNumber,
+  parseSignedMinorUnits,
+  ratioPercent,
+} from '../../lib/money'
 import { useCurrentUser } from '../../lib/session'
 import { loadQuery } from '../../lib/queries/loader'
 import { analysisQueryOptions } from '../../lib/queries/primary'
@@ -27,9 +32,9 @@ import { DateRangeControl } from '../../components/DateRangeControl'
 import { PageHeader } from '../../components/PageHeader'
 import { Pressable } from '../../components/Pressable'
 import {
+  formatMinorMoneyString,
   formatMoneyNumber,
   formatPrimaryCategory,
-  getDecimalPlaces,
 } from '../../lib/format'
 import { getDisplayCategoryColor } from '../../lib/category-colors'
 import type { CategoryAggregate } from '../../api/models'
@@ -99,17 +104,12 @@ export const Route = createFileRoute('/_authed/analysis')({
 
 // --- Helpers ---
 
-function toMajorUnits(amount: number, currency: string): number {
-  const decimals = getDecimalPlaces(currency)
-  return amount / Math.pow(10, decimals)
+function toMajorUnits(amount: string, currency: string): number {
+  return minorToChartNumber(amount, currency)
 }
 
-function formatAmount(amount: number, currency: string): string {
-  return formatMoneyNumber({
-    value: toMajorUnits(amount, currency),
-    currency,
-    decimals: 0,
-  })
+function formatAmount(amount: string, currency: string): string {
+  return formatMinorMoneyString({ value: amount, currency, decimals: 0 })
 }
 
 // --- Components ---
@@ -120,13 +120,16 @@ function SummaryStrip({
   netFlow,
   currency,
 }: {
-  totalInflow: number
-  totalOutflow: number
-  netFlow: number
+  totalInflow: string
+  totalOutflow: string
+  netFlow: string
   currency: string
 }) {
-  const total = totalInflow + totalOutflow
-  const inflowPct = total > 0 ? (totalInflow / total) * 100 : 0
+  const inflow = parseSignedMinorUnits(totalInflow)
+  const outflow = parseSignedMinorUnits(totalOutflow)
+  const net = parseSignedMinorUnits(netFlow)
+  const total = inflow + outflow
+  const inflowPct = ratioPercent(inflow, total)
 
   return (
     <Paper p="md" radius="md" withBorder>
@@ -134,7 +137,7 @@ function SummaryStrip({
         justify="space-between"
         wrap="wrap"
         gap="md"
-        mb={total > 0 ? 'sm' : 0}
+        mb={total > 0n ? 'sm' : 0}
       >
         <Group gap="lg">
           <Group gap={6}>
@@ -156,16 +159,13 @@ function SummaryStrip({
           <Text size="sm" c="dimmed" fw={500}>
             Net
           </Text>
-          <Text
-            fw={700}
-            c={netFlow === 0 ? undefined : netFlow > 0 ? 'teal' : 'red'}
-          >
-            {netFlow > 0 ? '+' : ''}
+          <Text fw={700} c={net === 0n ? undefined : net > 0n ? 'teal' : 'red'}>
+            {net > 0n ? '+' : ''}
             {formatAmount(netFlow, currency)}
           </Text>
         </Group>
       </Group>
-      {total > 0 && (
+      {total > 0n && (
         <Progress.Root size="sm" radius="xl">
           <Progress.Section
             value={inflowPct}
@@ -196,7 +196,7 @@ function FlowSection({
   icon: React.ComponentType<{ size: number }>
   iconColor: string
   categories: Array<CategoryAggregate>
-  total: number
+  total: string
   currency: string
   onCategoryClick: (category: string) => void
 }) {
@@ -218,6 +218,7 @@ function FlowSection({
     name: formatPrimaryCategory(cat.primaryCategory),
     value: toMajorUnits(cat.totalAmount, currency),
     color: getDisplayCategoryColor(cat.color, cat.primaryCategory, i),
+    exactAmount: cat.totalAmount,
   }))
 
   return (
@@ -243,6 +244,17 @@ function FlowSection({
                 size={160}
                 thickness={24}
                 tooltipDataSource="segment"
+                tooltipProps={{
+                  content: ({ payload }) => {
+                    const segment = payload[0]?.payload
+                    return segment?.exactAmount ? (
+                      <Paper p="xs" withBorder>
+                        {segment.name}:{' '}
+                        {formatAmount(segment.exactAmount, currency)}
+                      </Paper>
+                    ) : null
+                  },
+                }}
                 chartLabel={formatAmount(total, currency)}
                 valueFormatter={(value) =>
                   formatMoneyNumber({ value, currency, decimals: 0 })
@@ -254,7 +266,10 @@ function FlowSection({
         <Grid.Col span={{ base: 12, sm: 8 }}>
           <Stack gap={4}>
             {categories.map((cat, i) => {
-              const pct = total > 0 ? (cat.totalAmount / total) * 100 : 0
+              const pct = ratioPercent(
+                parseSignedMinorUnits(cat.totalAmount),
+                parseSignedMinorUnits(total),
+              )
 
               return (
                 <Pressable

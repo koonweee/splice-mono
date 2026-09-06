@@ -36,6 +36,31 @@ The equivalent CLI command is:
 gh workflow run deploy.yml -R koonweee/splice-mono --ref main -f confirm=deploy
 ```
 
+## Docker build cache
+
+Build the app directories with BuildKit (enabled by default in current Docker):
+
+```bash
+docker build -t splice-backend:local backend
+docker build --build-arg VITE_API_BASE_URL=https://splice-api.kw0.dev -t splice-frontend:local frontend
+```
+
+Both Dockerfiles keep Yarn downloads in locked BuildKit cache mounts, with
+separate cache IDs for each app and Node major version. Backend build and
+production installs share a package cache; the cache is not included in the
+runtime image. Frozen installs use Yarn's built-in network retries and a
+five-minute network timeout for slow registry requests.
+
+Dependency layers remain reusable when application source or the frontend API
+build argument changes. The Docker contexts exclude local dependencies, build
+output, and `.env` files; pass frontend build configuration through build args
+and backend runtime configuration through the deployment environment.
+
+Cache reuse requires the same persistent builder. Garbage collection can remove
+cache, so builds must also succeed from an empty cache. Shared builder retention
+is managed in `koonweee/stack` by `shared/prune-build-cache.sh` and the existing
+weekly Komodo maintenance procedure.
+
 ## Verification
 
 After deployment:

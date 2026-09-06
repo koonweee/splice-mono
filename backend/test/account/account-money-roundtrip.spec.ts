@@ -27,10 +27,10 @@ interface MoneyRoundTripCase {
   label: string;
   currency: string;
   sign: MoneySign;
-  createMinorAmount: number;
-  createMajorAmount: number;
-  updateMinorAmount: number;
-  updateMajorAmount: number;
+  createMinorAmount: string;
+  createMajorAmount: string;
+  updateMinorAmount: string;
+  updateMajorAmount: string;
 }
 
 const userId = '00000000-0000-4000-8000-000000000001';
@@ -42,44 +42,44 @@ const cases: MoneyRoundTripCase[] = [
     label: 'positive USD',
     currency: 'USD',
     sign: MoneySign.POSITIVE,
-    createMinorAmount: 12345,
-    createMajorAmount: 123.45,
-    updateMinorAmount: 6789,
-    updateMajorAmount: 67.89,
+    createMinorAmount: '12345',
+    createMajorAmount: '123.45',
+    updateMinorAmount: '6789',
+    updateMajorAmount: '67.89',
   },
   {
     label: 'negative USD',
     currency: 'USD',
     sign: MoneySign.NEGATIVE,
-    createMinorAmount: 12345,
-    createMajorAmount: -123.45,
-    updateMinorAmount: 6789,
-    updateMajorAmount: -67.89,
+    createMinorAmount: '12345',
+    createMajorAmount: '-123.45',
+    updateMinorAmount: '6789',
+    updateMajorAmount: '-67.89',
   },
   {
     label: 'positive JPY',
     currency: 'JPY',
     sign: MoneySign.POSITIVE,
-    createMinorAmount: 12345,
-    createMajorAmount: 12345,
-    updateMinorAmount: 6789,
-    updateMajorAmount: 6789,
+    createMinorAmount: '12345',
+    createMajorAmount: '12345',
+    updateMinorAmount: '6789',
+    updateMajorAmount: '6789',
   },
   {
     label: 'negative JPY',
     currency: 'JPY',
     sign: MoneySign.NEGATIVE,
-    createMinorAmount: 12345,
-    createMajorAmount: -12345,
-    updateMinorAmount: 6789,
-    updateMajorAmount: -6789,
+    createMinorAmount: '12345',
+    createMajorAmount: '-12345',
+    updateMinorAmount: '6789',
+    updateMajorAmount: '-6789',
   },
 ];
 
-function signedMajorAmount(balance: SerializedMoneyWithSign): number {
+function signedMajorAmount(balance: SerializedMoneyWithSign): string {
   const money = MoneyWithSign.fromSerialized(balance);
   const magnitude = money.toMajorUnit();
-  return money.getSign() === MoneySign.NEGATIVE ? -magnitude : magnitude;
+  return money.getSign() === MoneySign.NEGATIVE ? `-${magnitude}` : magnitude;
 }
 
 function serializeBalance(balance: BalanceColumns): SerializedMoneyWithSign {
@@ -95,7 +95,7 @@ function serializeBalance(balance: BalanceColumns): SerializedMoneyWithSign {
 function hydrateBigintBalance(balance: BalanceColumns): BalanceColumns {
   return Object.assign(new BalanceColumns(), balance, {
     // PostgreSQL bigint columns are hydrated as strings by the pg driver.
-    amount: String(balance.amount) as unknown as number,
+    amount: balance.amount,
   });
 }
 
@@ -162,9 +162,9 @@ describe('manual account money persistence round trips', () => {
         availableBalance: createBalance,
       });
 
-      expect(createRequest.currentBalance.money.amount).toBeGreaterThanOrEqual(
-        0,
-      );
+      expect(
+        BigInt(createRequest.currentBalance.money.amount),
+      ).toBeGreaterThanOrEqual(0n);
       expect(createRequest.currentBalance.sign).toBe(sign);
 
       const created = AccountSchema.parse(
@@ -187,7 +187,9 @@ describe('manual account money persistence round trips', () => {
         balance: updateBalance,
       });
 
-      expect(updateRequest.balance.money.amount).toBeGreaterThanOrEqual(0);
+      expect(BigInt(updateRequest.balance.money.amount)).toBeGreaterThanOrEqual(
+        0n,
+      );
       expect(updateRequest.balance.sign).toBe(sign);
 
       const updated = AccountSchema.parse(
@@ -212,7 +214,7 @@ describe('manual account money persistence round trips', () => {
     'rejects a negative %s magnitude at both public write schemas',
     (currency) => {
       const invalidBalance = {
-        money: { amount: -1, currency },
+        money: { amount: '-1', currency },
         sign: MoneySign.NEGATIVE,
       };
 

@@ -1,7 +1,8 @@
+import { ExactDecimal, minorToMajorString } from '../common/exact-money';
 import { Injectable } from '@nestjs/common';
 import { TransactionEntity } from '../transaction/transaction.entity';
 import type { CategorizationRuleCondition } from '../types/CategorizationRule';
-import { getDecimalPlaces, type MoneySign } from '../types/MoneyWithSign';
+import { type MoneySign } from '../types/MoneyWithSign';
 import type { CategorizationRuleEntity } from './categorization-rule.entity';
 
 type RuleTextField =
@@ -29,7 +30,7 @@ type TransactionCategorizationFeatures = {
   providerCategoryDetailed: string | null;
   accountId: string;
   amountSign: MoneySign;
-  amount: number;
+  amount: string;
 };
 
 export type CategorizationRuleMatch = {
@@ -75,6 +76,22 @@ export class RuleBasedCategorizationEngine {
         };
       }
 
+      if (condition.field === 'amount') {
+        return {
+          ...condition,
+          value:
+            typeof condition.value === 'string'
+              ? new ExactDecimal(condition.value).toFixed()
+              : {
+                  ...(condition.value.min !== undefined
+                    ? { min: new ExactDecimal(condition.value.min).toFixed() }
+                    : {}),
+                  ...(condition.value.max !== undefined
+                    ? { max: new ExactDecimal(condition.value.max).toFixed() }
+                    : {}),
+                },
+        };
+      }
       return condition;
     });
   }
@@ -101,9 +118,7 @@ export class RuleBasedCategorizationEngine {
       providerCategoryDetailed: transaction.providerCategoryDetailed,
       accountId: transaction.accountId,
       amountSign: amount.sign,
-      amount:
-        amount.money.amount /
-        Math.pow(10, getDecimalPlaces(amount.money.currency)),
+      amount: minorToMajorString(amount.money.amount, amount.money.currency),
     };
   }
 
@@ -126,7 +141,7 @@ export class RuleBasedCategorizationEngine {
       return condition.value === String(features.amountSign);
     }
 
-    const amount = features.amount;
+    const amount = new ExactDecimal(features.amount);
     if (condition.operator === 'between') {
       if (typeof condition.value !== 'object') {
         return false;
@@ -134,22 +149,22 @@ export class RuleBasedCategorizationEngine {
 
       const { min, max } = condition.value;
       return (
-        (min === undefined || amount >= min) &&
-        (max === undefined || amount <= max)
+        (min === undefined || amount.gte(min)) &&
+        (max === undefined || amount.lte(max))
       );
     }
 
-    if (typeof condition.value !== 'number') {
+    if (typeof condition.value !== 'string') {
       return false;
     }
 
     switch (condition.operator) {
       case 'equals':
-        return amount === condition.value;
+        return amount.eq(condition.value);
       case 'greaterThan':
-        return amount > condition.value;
+        return amount.gt(condition.value);
       case 'lessThan':
-        return amount < condition.value;
+        return amount.lt(condition.value);
     }
   }
 

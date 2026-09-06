@@ -43,7 +43,7 @@ export const mockTransaction: Transaction = {
   userId: mockUserId,
   source: 'provider',
   amount: {
-    money: { currency: 'USD', amount: 5000 }, // $50.00 in cents
+    money: { currency: 'USD', amount: '5000' }, // $50.00 in cents
     sign: MoneySign.NEGATIVE,
   },
   accountId: mockAccountId,
@@ -75,7 +75,7 @@ export const mockTransaction2: Transaction = {
   userId: mockUserId,
   source: 'provider',
   amount: {
-    money: { currency: 'USD', amount: 2500 }, // $25.00 in cents
+    money: { currency: 'USD', amount: '2500' }, // $25.00 in cents
     sign: MoneySign.NEGATIVE,
   },
   accountId: mockAccountId,
@@ -104,7 +104,7 @@ export const mockTransaction2: Transaction = {
  */
 export const mockCreateTransactionDto: CreateTransactionDto = {
   amount: {
-    money: { currency: 'USD', amount: 7500 }, // $75.00 in cents
+    money: { currency: 'USD', amount: '7500' }, // $75.00 in cents
     sign: MoneySign.NEGATIVE,
   },
   accountId: mockAccountId,
@@ -121,7 +121,7 @@ export const mockCreateTransactionDto: CreateTransactionDto = {
 
 export const mockCreateManualTransactionDto: CreateManualTransactionDto = {
   amount: {
-    money: { currency: 'USD', amount: 7500 },
+    money: { currency: 'USD', amount: '7500' },
     sign: MoneySign.NEGATIVE,
   },
   accountId: mockAccountId,

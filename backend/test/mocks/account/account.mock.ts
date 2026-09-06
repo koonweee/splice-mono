@@ -25,11 +25,11 @@ export const mockAccount: Account = {
   customName: null,
   notes: null,
   availableBalance: {
-    money: { currency: 'USD', amount: 100000 }, // $1,000.00 in cents
+    money: { currency: 'USD', amount: '100000' }, // $1,000.00 in cents
     sign: MoneySign.POSITIVE,
   },
   currentBalance: {
-    money: { currency: 'USD', amount: 100000 }, // $1,000.00 in cents
+    money: { currency: 'USD', amount: '100000' }, // $1,000.00 in cents
     sign: MoneySign.POSITIVE,
   },
   type: AccountType.Depository,
@@ -50,11 +50,11 @@ export const mockAccount2: Account = {
   customName: null,
   notes: null,
   availableBalance: {
-    money: { currency: 'USD', amount: 500000 }, // $5,000.00 in cents
+    money: { currency: 'USD', amount: '500000' }, // $5,000.00 in cents
     sign: MoneySign.POSITIVE,
   },
   currentBalance: {
-    money: { currency: 'USD', amount: 500000 }, // $5,000.00 in cents
+    money: { currency: 'USD', amount: '500000' }, // $5,000.00 in cents
     sign: MoneySign.POSITIVE,
   },
   type: AccountType.Depository,
@@ -78,11 +78,11 @@ export const mockManualAccount: Account = {
   customName: null,
   notes: null,
   availableBalance: {
-    money: { currency: 'USD', amount: 20000 },
+    money: { currency: 'USD', amount: '20000' },
     sign: MoneySign.POSITIVE,
   },
   currentBalance: {
-    money: { currency: 'USD', amount: 20000 },
+    money: { currency: 'USD', amount: '20000' },
     sign: MoneySign.POSITIVE,
   },
   type: AccountType.Depository,
@@ -99,11 +99,11 @@ export const mockManualAccount: Account = {
 export const mockCreateManualAccountDto: CreateManualAccountDto = {
   name: 'Manual Cash Account',
   availableBalance: {
-    money: { currency: 'USD', amount: 20000 },
+    money: { currency: 'USD', amount: '20000' },
     sign: MoneySign.POSITIVE,
   },
   currentBalance: {
-    money: { currency: 'USD', amount: 20000 },
+    money: { currency: 'USD', amount: '20000' },
     sign: MoneySign.POSITIVE,
   },
   type: AccountType.Depository,
@@ -113,11 +113,11 @@ export const mockCreateManualAccountDto: CreateManualAccountDto = {
 export const mockCreateAccountDto: CreateAccountDto = {
   name: 'New Test Account',
   availableBalance: {
-    money: { currency: 'USD', amount: 50000 }, // $500.00 in cents
+    money: { currency: 'USD', amount: '50000' }, // $500.00 in cents
     sign: MoneySign.POSITIVE,
   },
   currentBalance: {
-    money: { currency: 'USD', amount: 50000 }, // $500.00 in cents
+    money: { currency: 'USD', amount: '50000' }, // $500.00 in cents
     sign: MoneySign.POSITIVE,
   },
   type: AccountType.Depository,

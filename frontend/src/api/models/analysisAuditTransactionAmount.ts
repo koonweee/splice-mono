@@ -8,7 +8,8 @@
 import type { AnalysisAuditTransactionAmountSign } from './analysisAuditTransactionAmountSign'
 
 export type AnalysisAuditTransactionAmount = {
-  amount: number
+  /** @pattern ^(0|[1-9]\d{0,77})$ */
+  amount: string
   currency: string
   sign: AnalysisAuditTransactionAmountSign
 }

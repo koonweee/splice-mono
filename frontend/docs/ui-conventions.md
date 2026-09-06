@@ -123,6 +123,19 @@ remain visible after a failed refresh. Keep `PageHeader` outside the state
 boundary. `MobileTableList` also exposes retry/fetching props; wire them to the
 query rather than rendering a nonfunctional Retry button.
 
+API money amounts and analysis totals are exact **minor-unit strings**. Keep
+financial arithmetic in `lib/money.ts`: integer sums/comparisons and decimal text
+parsing. Use `DecimalInput` for money drafts so typing, editing, and sign changes
+preserve every digit. Counts and calendar inputs may still use `NumberInput`.
+Reject excessive currency precision on submit rather than silently rounding a
+draft. Categorization-rule amount conditions use exact **major-unit strings**.
+
+Use `formatMoneyWithSign` or `formatMinorMoneyString` for HTTP money, and
+`formatMajorMoneyString` for provider/major-unit text. Numeric chart coordinates
+must pass through `moneyToChartNumber`/`minorToChartNumber`; retain the exact money
+and currency on each point for tooltips and hover summaries. Never send BigInt
+or Decimal instances to the API, Query cache, or SSR serialization.
+
 For provider decimal strings in major units, use
 [investment formatters](../src/lib/investment-format.ts): `formatInvestmentQuote`
 preserves up to four decimals; `formatInvestmentValue` uses currency precision

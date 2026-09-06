@@ -8,7 +8,8 @@
 
 export interface CategoryAggregate {
   primaryCategory: string
-  totalAmount: number
+  /** @pattern ^(0|[1-9]\d{0,77})$ */
+  totalAmount: string
   currency: string
   transactionCount: number
   /** @pattern ^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$ */

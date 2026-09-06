@@ -1,3 +1,8 @@
+import { decimalRateRatio } from '../../../src/common/exact-money';
+import {
+  fxRequestKey,
+  type FxRequest,
+} from '../../../src/currency-exchange/currency-exchange.service';
 import { createTestJwtAuthority } from '@koonweee/mcp-kit/test';
 import { createServer, request as httpRequest } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -62,7 +67,7 @@ type PortfolioFixtureHolding = {
   costBasis: string | null;
   institutionPrice: string | null;
   institutionValue: {
-    amount: number;
+    amount: string;
     currency: string;
     sign: 'positive';
   };
@@ -107,7 +112,7 @@ function portfolioHolding(
       options.price === undefined
         ? String(value / (sequence * 10))
         : options.price,
-    institutionValue: { amount: value, currency, sign: 'positive' },
+    institutionValue: { amount: String(value), currency, sign: 'positive' },
     currency,
     vestedQuantity: null,
     vestedValue: null,
@@ -225,7 +230,7 @@ function portfolioFixtureFor(accountIds?: readonly string[]) {
 
 type FixtureCategory = {
   primaryCategory: string;
-  totalAmount: number;
+  totalAmount: string;
   currency: string;
   transactionCount: number;
   color: string;
@@ -239,7 +244,7 @@ function fixtureCategory(
 ): FixtureCategory {
   return {
     primaryCategory,
-    totalAmount,
+    totalAmount: String(totalAmount),
     currency: 'USD',
     transactionCount,
     color,
@@ -288,11 +293,11 @@ function fixtureAnalysis(startDate: string, endDate: string) {
       currency: 'USD',
       inflows: [],
       outflows: [],
-      totalInflow: 0,
-      totalOutflow: 0,
-      netFlow: 0,
-      uncategorizedInflow: 0,
-      uncategorizedOutflow: 0,
+      totalInflow: String(0),
+      totalOutflow: String(0),
+      netFlow: String(0),
+      uncategorizedInflow: String(0),
+      uncategorizedOutflow: String(0),
     };
   }
 
@@ -304,16 +309,16 @@ function fixtureAnalysis(startDate: string, endDate: string) {
     currency: 'USD',
     inflows: isComparison ? comparisonInflows : currentInflows,
     outflows: isComparison ? comparisonOutflows : currentOutflows,
-    totalInflow: isComparison ? 580000 : 625000,
-    totalOutflow: isComparison ? 340000 : 312000,
-    netFlow: isComparison ? 240000 : 313000,
-    uncategorizedInflow: isComparison ? 0 : 0,
-    uncategorizedOutflow: isComparison ? 12000 : 15000,
+    totalInflow: String(isComparison ? 580000 : 625000),
+    totalOutflow: String(isComparison ? 340000 : 312000),
+    netFlow: String(isComparison ? 240000 : 313000),
+    uncategorizedInflow: String(isComparison ? 0 : 0),
+    uncategorizedOutflow: String(isComparison ? 12000 : 15000),
   };
 }
 
 function fixtureMoney(amount: number, sign: 'positive' | 'negative') {
-  return { money: { amount, currency: 'USD' }, sign };
+  return { money: { amount: String(amount), currency: 'USD' }, sign };
 }
 
 function fixtureTransaction(
@@ -330,7 +335,7 @@ function fixtureTransaction(
     merchantName,
     originalDescription: `${merchantName} fixture purchase`,
     amount: {
-      money: { amount, currency },
+      money: { amount: String(amount), currency },
       sign: 'negative' as const,
     },
     convertedAmount: fixtureMoney(convertedAmount, 'negative'),
@@ -405,7 +410,7 @@ function fixtureAuditTransaction(
     accountName: 'Fixture Checking',
     categoryPrimary: 'TRANSFER',
     categoryDetailed: null,
-    amount: { amount, currency: 'USD', sign },
+    amount: { amount: String(amount), currency: 'USD', sign },
   };
 }
 
@@ -563,7 +568,7 @@ async function main(): Promise<void> {
               id: '00000000-0000-4000-8000-000000000101',
               displayName: 'Fixture Checking',
               groupingLabel: 'Cash',
-              balance: { amount: 2400, currency: 'USD', sign: 'positive' },
+              balance: { amount: '2400', currency: 'USD', sign: 'positive' },
             },
           ]
         : [],
@@ -577,6 +582,9 @@ async function main(): Promise<void> {
   };
   let investmentActivityCalls = 0;
   const mcpReadService = {
+    withReadSnapshot: async <T>(
+      callback: (manager: unknown) => Promise<T>,
+    ): Promise<T> => callback({}),
     listTransactions: async () => ({ data: [], pageInfo: {}, query: {} }),
     listBalanceSnapshots: async () => ({ data: [], pageInfo: {}, query: {} }),
     listCategories: async () => ({
@@ -641,6 +649,23 @@ async function main(): Promise<void> {
     applyRule: async () => ({ updated: 0 }),
   };
   const transactionAnalysisService = {
+    getReport: async (startDate: string, endDate: string) => {
+      if (primaryShouldFail) {
+        throw new Error('Fixture primary cash-flow failure.');
+      }
+      return {
+        summary: fixtureAnalysis(startDate, endDate),
+        audit: {
+          startDate,
+          endDate,
+          neutralizationLookaroundDays: 7,
+          rows: fixtureAuditRows(
+            startDate === COMPARISON_START_DATE &&
+              endDate === COMPARISON_END_DATE,
+          ),
+        },
+      };
+    },
     getAnalysis: async (startDate: string, endDate: string) => {
       if (primaryShouldFail) {
         throw new Error('Fixture primary cash-flow failure.');
@@ -700,16 +725,28 @@ async function main(): Promise<void> {
     error: () => undefined,
   };
   const currencyConversionService = {
-    getRateMap: async (currencies: string[]) => {
+    getResolvedRates: async (requests: FxRequest[]) => {
       const fixtureRates = new Map([
-        ['EUR', 1.1],
-        ['GBP', 1.25],
-        ['SGD', 0.75],
+        ['EUR', '1.1'],
+        ['GBP', '1.25'],
+        ['SGD', '0.75'],
       ]);
       return new Map(
-        currencies.flatMap((currency) => {
-          const rate = fixtureRates.get(currency);
-          return rate === undefined ? [] : [[currency, rate] as const];
+        requests.flatMap((request) => {
+          const rate = fixtureRates.get(request.baseCurrency);
+          return rate === undefined
+            ? []
+            : [
+                [
+                  fxRequestKey(request),
+                  {
+                    ...request,
+                    rate,
+                    rateDate: request.requestedDate,
+                    ratio: decimalRateRatio(rate),
+                  },
+                ] as const,
+              ];
         }),
       );
     },

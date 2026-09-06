@@ -21,7 +21,7 @@ const activity: InvestmentActivity = {
   providerDate: '2026-05-20',
   providerDatetime: null,
   amount: {
-    money: { currency: 'USD', amount: 120025 },
+    money: { currency: 'USD', amount: '120025' },
     sign: MoneyWithSignSign.negative,
   },
   security: {
@@ -126,7 +126,7 @@ describe('InvestmentActivityTable', () => {
           fees: '1.1234',
           amount: {
             ...activity.amount,
-            money: { currency: 'EUR', amount: 120025 },
+            money: { currency: 'EUR', amount: '120025' },
           },
           investmentType: 'cash',
           investmentSubtype: 'deposit',

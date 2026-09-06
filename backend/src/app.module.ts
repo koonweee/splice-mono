@@ -29,6 +29,7 @@ import { TransactionCategorizationModule } from './transaction-categorization/tr
 import { TransactionModule } from './transaction/transaction.module';
 import { UserModule } from './user/user.module';
 import { getScheduleModuleOptions } from './schedule-options';
+import { RequestMetricsModule } from './observability/request-metrics.module';
 
 @Module({
   imports: [
@@ -107,6 +108,7 @@ import { getScheduleModuleOptions } from './schedule-options';
     CategoryModule,
     CurrencyExchangeModule,
     HealthModule,
+    RequestMetricsModule,
     InvestmentModule,
     McpModule,
     NotificationModule,

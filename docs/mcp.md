@@ -226,6 +226,29 @@ JSON-equivalent text fallback.
   `apply_categorization_rule` is the separate destructive/idempotent historical
   write.
 
+MCP money amounts are exact decimal strings in **major units**, such as
+`{"amount":"12.34","currency":"USD","sign":"negative"}`. HTTP money
+amounts use integer minor-unit strings. Keep strings exact when parsing or
+formatting; do not round them through JavaScript numbers. Transaction FX uses
+the effective reporting date, including manual overrides, and exposes requested
+and observed quote dates plus fallback provenance. Cash-flow totals add the
+same once-rounded rows exposed by drilldown.
+
+`list_transactions` cursors are versioned and bind their owner, filters and
+reporting currency. Start again when those inputs change. Converted-amount
+filters scan at most 5,000 candidates per call; a `scan_budget` continuation may
+have no matches yet. Follow `nextCursor` until `hasMore` is false.
+`get_balance_history` defaults to exact daily output. Use `resolution: "compact"`
+for charts (240 points by default, 4–1,000 configurable), and inspect its sampling
+metadata. It preserves exact account summaries and extrema while reducing chart
+output. Requests are limited to 10,000 days and 1,000,000 account-days.
+Completed empty holdings snapshots are authoritative and their dates remain
+visible in `list_investment_holdings.snapshots`.
+
+Shared service contracts and release implications are documented in
+[the query guide](../backend/docs/shared-query-services.md) and
+[release notes](../backend/docs/backend-query-release-notes.md).
+
 The 27 non-mutating tools require `splice:read`. The five categorization writes
 require `splice:write`. Every write must receive the matching preview token
 produced for the authenticated user and exact normalized input. Rule edits and

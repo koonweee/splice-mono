@@ -481,7 +481,7 @@ export class RecurringManualTransactionService {
     amount: CreateRecurringManualTransactionScheduleDto['amount'] | undefined,
     account: AccountEntity,
   ): BalanceColumns {
-    if (!amount || amount.money.amount <= 0) {
+    if (!amount || amount.money.amount === '0') {
       throw new BadRequestException(
         'Recurring manual transaction amount must be positive',
       );

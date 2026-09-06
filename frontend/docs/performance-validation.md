@@ -180,3 +180,7 @@ change infrastructure topology.
 Rollback the frontend first; old clients still use the existing history endpoints.
 Rollback backend changes afterward only if needed. Keep private-response headers
 in place. Presentation cookies are optional hints that older clients can ignore.
+
+### PostgreSQL command update after the backend query refactor
+
+The results above describe the earlier SSR implementation. The current dashboard PostgreSQL suite now shares `backend/test/helpers/isolated-postgres.ts` with the backend query tests. For `yarn test --config test/jest-dashboard-postgres.json --runInBand`, securely provide `BACKEND_BENCHMARK_DATABASE_URL` for the dedicated loopback `splice_backend_benchmark` database. The former `DASHBOARD_TEST_DATABASE_URL` setup applies only to the frozen earlier source. All current 109 backend suites / 1,148 tests, including the dashboard database cases, passed with the shared guard enabled; see [backend validation](../../backend/docs/performance/validation/backend-checks.md).

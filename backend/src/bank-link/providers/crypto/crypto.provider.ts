@@ -160,11 +160,10 @@ export class CryptoProvider implements IBankLinkProvider {
     balanceString: string,
   ): APIAccount {
     const currency = NETWORK_CURRENCIES[network];
-    const balanceFloat = parseFloat(balanceString) || 0;
-    const sign = balanceFloat >= 0 ? MoneySign.POSITIVE : MoneySign.NEGATIVE;
-
-    // MoneyWithSign.fromFloat now handles crypto currencies natively
-    const balance = MoneyWithSign.fromFloat(currency, balanceFloat, sign);
+    const sign = balanceString.startsWith('-')
+      ? MoneySign.NEGATIVE
+      : MoneySign.POSITIVE;
+    const balance = MoneyWithSign.fromMajorUnit(currency, balanceString, sign);
 
     // Format display name
     const networkName = network.charAt(0).toUpperCase() + network.slice(1);

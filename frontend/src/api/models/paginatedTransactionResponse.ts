@@ -9,7 +9,12 @@ import type { Transaction } from './transaction'
 
 export interface PaginatedTransactionResponse {
   data: Transaction[]
-  total: number
-  pageIndex: number
+  /** @nullable */
+  total: number | null
+  /** @nullable */
+  pageIndex: number | null
+  /** @nullable */
+  nextCursor: string | null
+  hasMore: boolean
   pageSize: number
 }

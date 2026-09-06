@@ -117,7 +117,7 @@ Test Account,${validUuid},depository,USD,100.00,-50.50
             accountId: validUuid,
             snapshotDate: '2025-01-01',
             currentBalance: expect.objectContaining({
-              money: expect.objectContaining({ amount: 10000 }), // 100.00 * 100
+              money: expect.objectContaining({ amount: '10000' }), // 100.00 * 100
               sign: MoneySign.POSITIVE,
             }),
             snapshotType: BalanceSnapshotType.CSV_IMPORT,
@@ -126,13 +126,77 @@ Test Account,${validUuid},depository,USD,100.00,-50.50
             accountId: validUuid,
             snapshotDate: '2025-01-15',
             currentBalance: expect.objectContaining({
-              money: expect.objectContaining({ amount: 5050 }), // 50.50 * 100
+              money: expect.objectContaining({ amount: '5050' }), // 50.50 * 100
               sign: MoneySign.NEGATIVE,
             }),
             snapshotType: BalanceSnapshotType.CSV_IMPORT,
           }),
         ]),
         mockUserId,
+      );
+    });
+
+    it('imports every wei of a large ETH balance', async () => {
+      const id = '123e4567-e89b-12d3-a456-426614174000';
+      accountService.findAll.mockResolvedValue([
+        {
+          id,
+          valuationMode: 'balance',
+          currentBalance: { money: { currency: 'ETH' } },
+        },
+      ]);
+      const file = {
+        buffer: Buffer.from(
+          `Name,UUID,Type,Currency,2026-09-05\nWallet,${id},crypto,ETH,10.000000000000000001\n`,
+        ),
+      } as Express.Multer.File;
+      await controller.importCsv(mockUser, file);
+      expect(balanceSnapshotService.bulkUpsert).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            currentBalance: expect.objectContaining({
+              money: { currency: 'ETH', amount: '10000000000000000001' },
+            }),
+          }),
+        ]),
+        mockUserId,
+      );
+    });
+
+    it.each(['12junk', 'Infinity', 'NaN'])(
+      'rejects invalid complete decimal entry %s',
+      async (value) => {
+        const id = '123e4567-e89b-12d3-a456-426614174000';
+        accountService.findAll.mockResolvedValue([
+          { id, currentBalance: { money: { currency: 'USD' } } },
+        ]);
+        const file = {
+          buffer: Buffer.from(
+            `Name,UUID,Type,Currency,2026-09-05\nAccount,${id},depository,USD,${value}\n`,
+          ),
+        } as Express.Multer.File;
+        await expect(controller.importCsv(mockUser, file)).rejects.toThrow(
+          BadRequestException,
+        );
+      },
+    );
+
+    it('requires holdings edits instead of importing a standalone brokerage balance', async () => {
+      const id = '123e4567-e89b-12d3-a456-426614174000';
+      accountService.findAll.mockResolvedValue([
+        {
+          id,
+          valuationMode: 'holdings',
+          currentBalance: { money: { currency: 'USD' } },
+        },
+      ]);
+      const file = {
+        buffer: Buffer.from(
+          `Name,UUID,Type,Currency,2026-09-05\nAccount,${id},investment,USD,10\n`,
+        ),
+      } as Express.Multer.File;
+      await expect(controller.importCsv(mockUser, file)).rejects.toThrow(
+        'Update holdings instead',
       );
     });
 

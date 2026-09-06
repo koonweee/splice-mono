@@ -67,7 +67,7 @@ describe('format utils', () => {
     it('should format USD correctly', () => {
       const result = formatMoneyWithSign({
         value: {
-          money: { amount: 12345, currency: 'USD' },
+          money: { amount: '12345', currency: 'USD' },
           sign: MoneyWithSignSign.positive,
         },
       })
@@ -77,7 +77,7 @@ describe('format utils', () => {
     it('should format negative USD correctly', () => {
       const result = formatMoneyWithSign({
         value: {
-          money: { amount: 12345, currency: 'USD' },
+          money: { amount: '12345', currency: 'USD' },
           sign: MoneyWithSignSign.negative,
         },
       })
@@ -87,7 +87,7 @@ describe('format utils', () => {
     it('should format JPY correctly (0 decimals)', () => {
       const result = formatMoneyWithSign({
         value: {
-          money: { amount: 12345, currency: 'JPY' },
+          money: { amount: '12345', currency: 'JPY' },
           sign: MoneyWithSignSign.positive,
         },
       })
@@ -97,7 +97,7 @@ describe('format utils', () => {
     it('should format JPY correctly with 0 decimals override', () => {
       const result = formatMoneyWithSign({
         value: {
-          money: { amount: 12345, currency: 'JPY' },
+          money: { amount: '12345', currency: 'JPY' },
           sign: MoneyWithSignSign.positive,
         },
         decimals: 0,
@@ -109,7 +109,7 @@ describe('format utils', () => {
       // 0.01234567 BTC = 1234567 satoshis
       const result = formatMoneyWithSign({
         value: {
-          money: { amount: 1234567, currency: 'BTC' },
+          money: { amount: '1234567', currency: 'BTC' },
           sign: MoneyWithSignSign.positive,
         },
       })
@@ -121,7 +121,7 @@ describe('format utils', () => {
       // 1.5 ETH = 1.5 * 10^18
       const result = formatMoneyWithSign({
         value: {
-          money: { amount: 1500000000000000000, currency: 'ETH' },
+          money: { amount: '1500000000000000000', currency: 'ETH' },
           sign: MoneyWithSignSign.positive,
         },
         appendCurrency: true,
@@ -133,7 +133,7 @@ describe('format utils', () => {
     it('should format BTC with appendCurrency correctly', () => {
       const result = formatMoneyWithSign({
         value: {
-          money: { amount: 123456789, currency: 'BTC' }, // 123456789 satoshis = 1.23456789 BTC
+          money: { amount: '123456789', currency: 'BTC' }, // 123456789 satoshis = 1.23456789 BTC
           sign: MoneyWithSignSign.positive,
         },
         appendCurrency: true,

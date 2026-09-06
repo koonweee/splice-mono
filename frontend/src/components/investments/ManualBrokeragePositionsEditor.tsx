@@ -40,8 +40,7 @@ export function isPositiveDecimal(value: string): boolean {
   if (!/^(?:0|[1-9]\d{0,17})(?:\.\d{1,12})?$/.test(value.trim())) {
     return false
   }
-  const numericValue = Number(value)
-  return Number.isFinite(numericValue) && numericValue > 0
+  return /[1-9]/.test(value)
 }
 
 export function ManualBrokeragePositionsEditor({

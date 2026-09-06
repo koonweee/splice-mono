@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # Build stage
 FROM node:24-alpine AS builder
 
@@ -10,7 +12,8 @@ RUN apk add --no-cache python3 make g++
 COPY package.json yarn.lock ./
 
 # Install all dependencies (including dev for build)
-RUN yarn install --frozen-lockfile
+RUN --mount=type=cache,id=splice-backend-yarn-node24,target=/yarn-cache,sharing=locked \
+    YARN_CACHE_FOLDER=/yarn-cache yarn install --frozen-lockfile --non-interactive --network-timeout 300000
 
 # Copy source code
 COPY . .
@@ -34,8 +37,8 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY package.json yarn.lock ./
 
 # Install only production dependencies
-RUN yarn install --frozen-lockfile --production && \
-    yarn cache clean && \
+RUN --mount=type=cache,id=splice-backend-yarn-node24,target=/yarn-cache,sharing=locked \
+    YARN_CACHE_FOLDER=/yarn-cache yarn install --frozen-lockfile --production --non-interactive --network-timeout 300000 && \
     apk del .build-deps
 
 # Copy built application from builder stage

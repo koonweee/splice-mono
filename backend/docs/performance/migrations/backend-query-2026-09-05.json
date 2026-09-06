@@ -1,0 +1,442 @@
+{
+  "kind": "local-migration-runtime-and-locks",
+  "recordedAt": "2026-09-05T22:01:14.486Z",
+  "node": "v25.9.0",
+  "cpu": "Apple M4",
+  "rows": 1000000,
+  "fixture": "benchmark-runner seed version1 plus10000 holdings/12100 balance snapshots",
+  "transactionMode": "all",
+  "lockSamplingMs": 50,
+  "caveat": "Lock durations sampled from first observed granted AccessExclusiveLock until completion; at most polling/observer scheduling error, not production estimates. Blocked SELECT launched after activity-table exclusive lock was observed.",
+  "results": [
+    {
+      "repetition": 1,
+      "rows": 1000000,
+      "postgres": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+      "migrations": [
+        {
+          "name": "ExactMoney1788642000000",
+          "milliseconds": 4084.8319580000025
+        },
+        {
+          "name": "AddHoldingsSnapshots1788643000000",
+          "milliseconds": 285.48599999999715
+        },
+        {
+          "name": "CanonicalTransactionActivityDates1788644000000",
+          "milliseconds": 2909.1381249999977
+        }
+      ],
+      "totalMs": 7352.438707999994,
+      "blockedReadMs": 7223.098125000004,
+      "accessExclusiveLocks": [
+        {
+          "relation": "UQ_account_user_bank_link_external",
+          "firstSeenMs": 13.81199999999808,
+          "heldUntilCommitMsApprox": 7338.626707999996
+        },
+        {
+          "relation": "balance_snapshot_entity",
+          "firstSeenMs": 13.81199999999808,
+          "heldUntilCommitMsApprox": 7338.626707999996
+        },
+        {
+          "relation": "pg_toast_56555_index",
+          "firstSeenMs": 13.81199999999808,
+          "heldUntilCommitMsApprox": 7338.626707999996
+        },
+        {
+          "relation": "account_entity",
+          "firstSeenMs": 13.81199999999808,
+          "heldUntilCommitMsApprox": 7338.626707999996
+        },
+        {
+          "relation": "pg_toast_56555",
+          "firstSeenMs": 13.81199999999808,
+          "heldUntilCommitMsApprox": 7338.626707999996
+        },
+        {
+          "relation": "PK_b482dad15becff9a89ad707dcbe",
+          "firstSeenMs": 13.81199999999808,
+          "heldUntilCommitMsApprox": 7338.626707999996
+        },
+        {
+          "relation": "PK_b9d16eb4814be222f64a1439b30",
+          "firstSeenMs": 67.55033299999923,
+          "heldUntilCommitMsApprox": 7284.888374999995
+        },
+        {
+          "relation": "UQ_4aa8e3a1519c764a6f4ebb2e97c",
+          "firstSeenMs": 67.55033299999923,
+          "heldUntilCommitMsApprox": 7284.888374999995
+        },
+        {
+          "relation": "pg_toast_56603_index",
+          "firstSeenMs": 67.55033299999923,
+          "heldUntilCommitMsApprox": 7284.888374999995
+        },
+        {
+          "relation": "account_activity_entity",
+          "firstSeenMs": 67.55033299999923,
+          "heldUntilCommitMsApprox": 7284.888374999995
+        },
+        {
+          "relation": "pg_toast_56603",
+          "firstSeenMs": 67.55033299999923,
+          "heldUntilCommitMsApprox": 7284.888374999995
+        },
+        {
+          "relation": "PK_account_activity_entity",
+          "firstSeenMs": 652.375,
+          "heldUntilCommitMsApprox": 6700.063707999994
+        },
+        {
+          "relation": "IDX_account_activity_user_date_id",
+          "firstSeenMs": 864.8812079999989,
+          "heldUntilCommitMsApprox": 6487.557499999995
+        },
+        {
+          "relation": "IDX_account_activity_account_date",
+          "firstSeenMs": 1286.8648329999996,
+          "heldUntilCommitMsApprox": 6065.573874999995
+        },
+        {
+          "relation": "IDX_account_activity_provider_identity",
+          "firstSeenMs": 1549.9567909999969,
+          "heldUntilCommitMsApprox": 5802.481916999997
+        },
+        {
+          "relation": "UQ_account_activity_provider_external",
+          "firstSeenMs": 3186.8209579999966,
+          "heldUntilCommitMsApprox": 4165.617749999998
+        },
+        {
+          "relation": "pg_toast_56835_index",
+          "firstSeenMs": 4022.3643749999974,
+          "heldUntilCommitMsApprox": 3330.074332999997
+        },
+        {
+          "relation": "pg_toast_56835",
+          "firstSeenMs": 4022.3643749999974,
+          "heldUntilCommitMsApprox": 3330.074332999997
+        },
+        {
+          "relation": "pg_toast_56907",
+          "firstSeenMs": 4128.342124999996,
+          "heldUntilCommitMsApprox": 3224.0965829999986
+        },
+        {
+          "relation": "recurring_manual_transaction_schedule_entity",
+          "firstSeenMs": 4128.342124999996,
+          "heldUntilCommitMsApprox": 3224.0965829999986
+        },
+        {
+          "relation": "PK_recurring_manual_transaction_schedule",
+          "firstSeenMs": 4128.342124999996,
+          "heldUntilCommitMsApprox": 3224.0965829999986
+        },
+        {
+          "relation": "pg_toast_56907_index",
+          "firstSeenMs": 4128.342124999996,
+          "heldUntilCommitMsApprox": 3224.0965829999986
+        },
+        {
+          "relation": "IDX_recurring_manual_schedule_user_next",
+          "firstSeenMs": 4128.342124999996,
+          "heldUntilCommitMsApprox": 3224.0965829999986
+        },
+        {
+          "relation": "investment_holding_snapshot_entity",
+          "firstSeenMs": 4287.232624999997,
+          "heldUntilCommitMsApprox": 3065.2060829999973
+        }
+      ]
+    },
+    {
+      "repetition": 2,
+      "rows": 1000000,
+      "postgres": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+      "migrations": [
+        {
+          "name": "ExactMoney1788642000000",
+          "milliseconds": 6491.310624999998
+        },
+        {
+          "name": "AddHoldingsSnapshots1788643000000",
+          "milliseconds": 266.6489169999986
+        },
+        {
+          "name": "CanonicalTransactionActivityDates1788644000000",
+          "milliseconds": 1605.4086249999964
+        }
+      ],
+      "totalMs": 8435.082624999995,
+      "blockedReadMs": 8307.091750000007,
+      "accessExclusiveLocks": [
+        {
+          "relation": "UQ_account_user_bank_link_external",
+          "firstSeenMs": 19.691374999994878,
+          "heldUntilCommitMsApprox": 8415.39125
+        },
+        {
+          "relation": "account_entity",
+          "firstSeenMs": 19.691374999994878,
+          "heldUntilCommitMsApprox": 8415.39125
+        },
+        {
+          "relation": "pg_toast_57905_index",
+          "firstSeenMs": 19.691374999994878,
+          "heldUntilCommitMsApprox": 8415.39125
+        },
+        {
+          "relation": "pg_toast_57905",
+          "firstSeenMs": 19.691374999994878,
+          "heldUntilCommitMsApprox": 8415.39125
+        },
+        {
+          "relation": "PK_b482dad15becff9a89ad707dcbe",
+          "firstSeenMs": 19.691374999994878,
+          "heldUntilCommitMsApprox": 8415.39125
+        },
+        {
+          "relation": "account_activity_entity",
+          "firstSeenMs": 72.93433399999049,
+          "heldUntilCommitMsApprox": 8362.148291000005
+        },
+        {
+          "relation": "balance_snapshot_entity",
+          "firstSeenMs": 72.93433399999049,
+          "heldUntilCommitMsApprox": 8362.148291000005
+        },
+        {
+          "relation": "pg_toast_57953_index",
+          "firstSeenMs": 72.93433399999049,
+          "heldUntilCommitMsApprox": 8362.148291000005
+        },
+        {
+          "relation": "PK_b9d16eb4814be222f64a1439b30",
+          "firstSeenMs": 72.93433399999049,
+          "heldUntilCommitMsApprox": 8362.148291000005
+        },
+        {
+          "relation": "pg_toast_57953",
+          "firstSeenMs": 72.93433399999049,
+          "heldUntilCommitMsApprox": 8362.148291000005
+        },
+        {
+          "relation": "UQ_4aa8e3a1519c764a6f4ebb2e97c",
+          "firstSeenMs": 72.93433399999049,
+          "heldUntilCommitMsApprox": 8362.148291000005
+        },
+        {
+          "relation": "PK_account_activity_entity",
+          "firstSeenMs": 2836.811833999993,
+          "heldUntilCommitMsApprox": 5598.270791000003
+        },
+        {
+          "relation": "IDX_account_activity_user_date_id",
+          "firstSeenMs": 2994.354124999998,
+          "heldUntilCommitMsApprox": 5440.728499999997
+        },
+        {
+          "relation": "IDX_account_activity_account_date",
+          "firstSeenMs": 3411.2214999999997,
+          "heldUntilCommitMsApprox": 5023.861124999996
+        },
+        {
+          "relation": "IDX_account_activity_provider_identity",
+          "firstSeenMs": 3621.346624999991,
+          "heldUntilCommitMsApprox": 4813.736000000004
+        },
+        {
+          "relation": "UQ_account_activity_provider_external",
+          "firstSeenMs": 5079.039249999987,
+          "heldUntilCommitMsApprox": 3356.0433750000084
+        },
+        {
+          "relation": "pg_toast_58185",
+          "firstSeenMs": 6442.865249999988,
+          "heldUntilCommitMsApprox": 1992.2173750000075
+        },
+        {
+          "relation": "pg_toast_58185_index",
+          "firstSeenMs": 6442.865249999988,
+          "heldUntilCommitMsApprox": 1992.2173750000075
+        },
+        {
+          "relation": "PK_recurring_manual_transaction_schedule",
+          "firstSeenMs": 6493.184958999991,
+          "heldUntilCommitMsApprox": 1941.8976660000044
+        },
+        {
+          "relation": "IDX_recurring_manual_schedule_user_next",
+          "firstSeenMs": 6493.184958999991,
+          "heldUntilCommitMsApprox": 1941.8976660000044
+        },
+        {
+          "relation": "pg_toast_58257_index",
+          "firstSeenMs": 6493.184958999991,
+          "heldUntilCommitMsApprox": 1941.8976660000044
+        },
+        {
+          "relation": "recurring_manual_transaction_schedule_entity",
+          "firstSeenMs": 6493.184958999991,
+          "heldUntilCommitMsApprox": 1941.8976660000044
+        },
+        {
+          "relation": "pg_toast_58257",
+          "firstSeenMs": 6493.184958999991,
+          "heldUntilCommitMsApprox": 1941.8976660000044
+        },
+        {
+          "relation": "investment_holding_snapshot_entity",
+          "firstSeenMs": 6703.829833999989,
+          "heldUntilCommitMsApprox": 1731.2527910000063
+        }
+      ]
+    },
+    {
+      "repetition": 3,
+      "rows": 1000000,
+      "postgres": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+      "migrations": [
+        {
+          "name": "ExactMoney1788642000000",
+          "milliseconds": 6639.941249999974
+        },
+        {
+          "name": "AddHoldingsSnapshots1788643000000",
+          "milliseconds": 268.4566249999916
+        },
+        {
+          "name": "CanonicalTransactionActivityDates1788644000000",
+          "milliseconds": 1881.0314589999907
+        }
+      ],
+      "totalMs": 8857.580999999976,
+      "blockedReadMs": 8733.851374999998,
+      "accessExclusiveLocks": [
+        {
+          "relation": "pg_toast_58585_index",
+          "firstSeenMs": 25.12054099998204,
+          "heldUntilCommitMsApprox": 8832.460458999994
+        },
+        {
+          "relation": "PK_b482dad15becff9a89ad707dcbe",
+          "firstSeenMs": 25.12054099998204,
+          "heldUntilCommitMsApprox": 8832.460458999994
+        },
+        {
+          "relation": "UQ_account_user_bank_link_external",
+          "firstSeenMs": 25.12054099998204,
+          "heldUntilCommitMsApprox": 8832.460458999994
+        },
+        {
+          "relation": "balance_snapshot_entity",
+          "firstSeenMs": 25.12054099998204,
+          "heldUntilCommitMsApprox": 8832.460458999994
+        },
+        {
+          "relation": "account_entity",
+          "firstSeenMs": 25.12054099998204,
+          "heldUntilCommitMsApprox": 8832.460458999994
+        },
+        {
+          "relation": "pg_toast_58585",
+          "firstSeenMs": 25.12054099998204,
+          "heldUntilCommitMsApprox": 8832.460458999994
+        },
+        {
+          "relation": "account_activity_entity",
+          "firstSeenMs": 78.58474999997998,
+          "heldUntilCommitMsApprox": 8778.996249999997
+        },
+        {
+          "relation": "UQ_4aa8e3a1519c764a6f4ebb2e97c",
+          "firstSeenMs": 78.58474999997998,
+          "heldUntilCommitMsApprox": 8778.996249999997
+        },
+        {
+          "relation": "pg_toast_58633_index",
+          "firstSeenMs": 78.58474999997998,
+          "heldUntilCommitMsApprox": 8778.996249999997
+        },
+        {
+          "relation": "PK_b9d16eb4814be222f64a1439b30",
+          "firstSeenMs": 78.58474999997998,
+          "heldUntilCommitMsApprox": 8778.996249999997
+        },
+        {
+          "relation": "pg_toast_58633",
+          "firstSeenMs": 78.58474999997998,
+          "heldUntilCommitMsApprox": 8778.996249999997
+        },
+        {
+          "relation": "PK_account_activity_entity",
+          "firstSeenMs": 820.5443749999977,
+          "heldUntilCommitMsApprox": 8037.036624999979
+        },
+        {
+          "relation": "IDX_account_activity_user_date_id",
+          "firstSeenMs": 978.4248329999973,
+          "heldUntilCommitMsApprox": 7879.156166999979
+        },
+        {
+          "relation": "IDX_account_activity_account_date",
+          "firstSeenMs": 2776.9667079999927,
+          "heldUntilCommitMsApprox": 6080.614291999984
+        },
+        {
+          "relation": "IDX_account_activity_provider_identity",
+          "firstSeenMs": 3489.6630409999925,
+          "heldUntilCommitMsApprox": 5367.917958999984
+        },
+        {
+          "relation": "UQ_account_activity_provider_external",
+          "firstSeenMs": 5220.767832999991,
+          "heldUntilCommitMsApprox": 3636.8131669999857
+        },
+        {
+          "relation": "pg_toast_58865",
+          "firstSeenMs": 6544.41399999999,
+          "heldUntilCommitMsApprox": 2313.1669999999867
+        },
+        {
+          "relation": "pg_toast_58865_index",
+          "firstSeenMs": 6544.41399999999,
+          "heldUntilCommitMsApprox": 2313.1669999999867
+        },
+        {
+          "relation": "recurring_manual_transaction_schedule_entity",
+          "firstSeenMs": 6648.066124999983,
+          "heldUntilCommitMsApprox": 2209.5148749999935
+        },
+        {
+          "relation": "pg_toast_58937",
+          "firstSeenMs": 6648.066124999983,
+          "heldUntilCommitMsApprox": 2209.5148749999935
+        },
+        {
+          "relation": "pg_toast_58937_index",
+          "firstSeenMs": 6648.066124999983,
+          "heldUntilCommitMsApprox": 2209.5148749999935
+        },
+        {
+          "relation": "PK_recurring_manual_transaction_schedule",
+          "firstSeenMs": 6648.066124999983,
+          "heldUntilCommitMsApprox": 2209.5148749999935
+        },
+        {
+          "relation": "IDX_recurring_manual_schedule_user_next",
+          "firstSeenMs": 6648.066124999983,
+          "heldUntilCommitMsApprox": 2209.5148749999935
+        },
+        {
+          "relation": "investment_holding_snapshot_entity",
+          "firstSeenMs": 6859.534165999998,
+          "heldUntilCommitMsApprox": 1998.0468339999788
+        }
+      ]
+    }
+  ]
+}

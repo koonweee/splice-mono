@@ -104,50 +104,44 @@ export class PersonalAccessTokenService {
       return null;
     }
 
-    const tokenHash = this.hashToken(rawToken);
-    const entity = await this.personalAccessTokenRepository.findOne({
-      where: {
-        tokenHash,
-        revokedAt: IsNull(),
-      },
-    });
-
-    if (!entity) {
-      return null;
-    }
-
-    if (entity.revokedAt) {
-      return null;
-    }
-
-    if (entity.expiresAt && entity.expiresAt.getTime() <= Date.now()) {
-      return null;
-    }
-
-    const user = await this.userRepository.findOne({
-      where: { id: entity.userId },
-    });
-
-    if (!user) {
-      return null;
-    }
-
-    const updateResult = await this.personalAccessTokenRepository.update(
-      {
-        id: entity.id,
-        revokedAt: IsNull(),
-      },
-      { lastUsedAt: new Date() },
+    const escape = (path: string) =>
+      path
+        .split('.')
+        .map((part) =>
+          this.personalAccessTokenRepository.manager.connection.driver.escape(
+            part,
+          ),
+        )
+        .join('.');
+    const tokens = escape(
+      this.personalAccessTokenRepository.metadata.tablePath,
     );
-
-    if (!updateResult.affected) {
-      return null;
-    }
-
-    return {
-      userId: user.id,
-      email: user.email,
-    };
+    const users = escape(this.userRepository.metadata.tablePath);
+    // The row lock lasts only for this statement. Revocation and user deletion
+    // (which cascades to this row) cannot pass validation while waiting on a
+    // coalesced usage write. A valid row remains valid when no usage write is due.
+    const rows: JwtUser[] = await this.personalAccessTokenRepository.query(
+      `WITH valid_token AS MATERIALIZED (
+        SELECT token.id, token."userId", token."lastUsedAt", token."expiresAt", account.email
+        FROM ${tokens} token
+        INNER JOIN ${users} account ON account.id = token."userId"
+        WHERE token."tokenHash" = $1 AND token."revokedAt" IS NULL
+          AND (token."expiresAt" IS NULL OR token."expiresAt" > clock_timestamp())
+        FOR UPDATE OF token
+      ), usage AS (
+        UPDATE ${tokens} token
+        SET "lastUsedAt" = clock_timestamp(), "updatedAt" = clock_timestamp()
+        FROM valid_token valid
+        WHERE token.id = valid.id
+          AND (valid."expiresAt" IS NULL OR valid."expiresAt" > clock_timestamp())
+          AND (valid."lastUsedAt" IS NULL OR valid."lastUsedAt" <= clock_timestamp() - interval '60 seconds')
+        RETURNING token.id
+      )
+      SELECT "userId", email FROM valid_token
+      WHERE "expiresAt" IS NULL OR "expiresAt" > clock_timestamp()`,
+      [this.hashToken(rawToken)],
+    );
+    return rows[0] ?? null;
   }
 
   private generateRawToken(): { token: string; prefix: string } {

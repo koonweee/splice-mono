@@ -159,11 +159,11 @@ const account: Account = {
   valuationMode: 'balance',
   subType: 'checking',
   availableBalance: {
-    money: { amount: 10000, currency: 'USD' },
+    money: { amount: '10000', currency: 'USD' },
     sign: 'positive',
   },
   currentBalance: {
-    money: { amount: 10000, currency: 'USD' },
+    money: { amount: '10000', currency: 'USD' },
     sign: 'positive',
   },
   createdAt: '2026-02-14T00:00:00.000Z',

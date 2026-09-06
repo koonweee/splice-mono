@@ -74,11 +74,11 @@ const account: Account = {
   customName: null,
   mask: null,
   availableBalance: {
-    money: { amount: 10000, currency: 'USD' },
+    money: { amount: '10000', currency: 'USD' },
     sign: MoneyWithSignSign.positive,
   },
   currentBalance: {
-    money: { amount: 10000, currency: 'USD' },
+    money: { amount: '10000', currency: 'USD' },
     sign: MoneyWithSignSign.positive,
   },
   type: AccountType.depository,
