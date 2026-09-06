@@ -1,0 +1,12 @@
+{
+  "recordedAt": "2026-09-05T22:35:33.002Z",
+  "kind": "local-backup-restore-rehearsal",
+  "backupBytes": 102378,
+  "backupSha256": "e4b778d5909e2a6f360cead6c4f6f49ab1d510bdd9472a385fe8ef94b6885630",
+  "lossyDowngradeRefused": true,
+  "finalDataPreservedAfterRefusal": true,
+  "originalBaselineRestored": true,
+  "exactJsonPreservedAndRemigrated": true,
+  "postBackupWritesReverted": true,
+  "scope": "one synthetic test-owned schema; not a production backup validation"
+}

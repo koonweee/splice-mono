@@ -1,0 +1,28 @@
+{
+  "completed": true,
+  "applicationSourceChanged": false,
+  "comparison": {
+    "strong10kScenarioRunPairs": 105,
+    "strong10kMaterialRegressionShapes": 0,
+    "focusedDiagnosticPairs": 130,
+    "focusedMixedPhasePairs": 8,
+    "sourceFinancialQueryGates": "passed",
+    "allSixDiagnosticRegressionsReviewed": true
+  },
+  "tests": {
+    "command": "yarn test --runInBand test/performance/benchmark-safety.spec.ts test/performance/comparison.spec.ts test/performance/provenance.spec.ts",
+    "suites": 3,
+    "passed": 16
+  },
+  "syntax": {
+    "maintainedCjsFiles": 22,
+    "result": "passed"
+  },
+  "format": "Reporting/orchestration files, provenance test and report pass Prettier; measured workload/observer helpers retain captured formatting and approved hashes.",
+  "lint": {
+    "typed": "yarn eslint test/performance/provenance.spec.ts",
+    "cjs": "yarn eslint --config test/performance/eslint.config.mjs test/performance/focused-runner.cjs test/performance/focused-comparison.cjs test/performance/comparison.cjs test/performance/provenance.cjs test/performance/mixed-workload.cjs",
+    "result": "passed"
+  },
+  "cleanup": "cleanup.json"
+}

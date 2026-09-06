@@ -1,0 +1,121 @@
+{
+  "protocol": "user-approved-focused-v1",
+  "completed": true,
+  "stages": [
+    {
+      "label": "scale/after/100000",
+      "startedAt": "2026-09-06T00:09:40.319Z",
+      "completedAt": "2026-09-06T00:09:52.909Z"
+    },
+    {
+      "label": "scale/after/1000000",
+      "startedAt": "2026-09-06T00:09:52.911Z",
+      "completedAt": "2026-09-06T00:11:03.416Z"
+    },
+    {
+      "label": "shape/before/10000",
+      "startedAt": "2026-09-06T00:11:03.421Z",
+      "completedAt": "2026-09-06T00:11:10.274Z"
+    },
+    {
+      "label": "shape/after/10000",
+      "startedAt": "2026-09-06T00:11:10.276Z",
+      "completedAt": "2026-09-06T00:11:16.341Z"
+    },
+    {
+      "label": "filters/before/100000",
+      "startedAt": "2026-09-06T00:11:16.342Z",
+      "completedAt": "2026-09-06T00:11:21.530Z"
+    },
+    {
+      "label": "filters/after/100000",
+      "startedAt": "2026-09-06T00:11:21.531Z",
+      "completedAt": "2026-09-06T00:11:27.297Z"
+    },
+    {
+      "label": "auth-settings/before/10000",
+      "startedAt": "2026-09-06T00:11:27.298Z",
+      "completedAt": "2026-09-06T00:11:29.180Z"
+    },
+    {
+      "label": "auth-settings/after/10000",
+      "startedAt": "2026-09-06T00:11:29.181Z",
+      "completedAt": "2026-09-06T00:11:31.163Z"
+    },
+    {
+      "label": "extended/before/1000000",
+      "startedAt": "2026-09-06T00:11:31.164Z",
+      "completedAt": "2026-09-06T00:17:18.587Z"
+    },
+    {
+      "label": "extended/after/1000000",
+      "startedAt": "2026-09-06T00:17:18.592Z",
+      "completedAt": "2026-09-06T00:18:19.240Z"
+    },
+    {
+      "label": "sync/before/10000",
+      "startedAt": "2026-09-06T00:18:19.244Z",
+      "completedAt": "2026-09-06T00:23:15.909Z"
+    },
+    {
+      "label": "sync/after/10000",
+      "startedAt": "2026-09-06T00:23:15.912Z",
+      "completedAt": "2026-09-06T00:23:51.925Z"
+    },
+    {
+      "label": "mixed/before",
+      "startedAt": "2026-09-06T00:23:51.929Z",
+      "completedAt": "2026-09-06T00:27:56.966Z"
+    },
+    {
+      "label": "mixed/after",
+      "startedAt": "2026-09-06T00:27:56.967Z",
+      "completedAt": "2026-09-06T00:32:00.738Z"
+    },
+    {
+      "label": "memory/history.ten-years.20-accounts.daily/before/10000",
+      "startedAt": "2026-09-06T00:32:00.739Z",
+      "completedAt": "2026-09-06T00:32:03.254Z"
+    },
+    {
+      "label": "memory/history.ten-years.20-accounts.daily/after/10000",
+      "startedAt": "2026-09-06T00:32:03.255Z",
+      "completedAt": "2026-09-06T00:32:05.581Z"
+    },
+    {
+      "label": "memory/history.ten-years.100-accounts.daily/before/10000",
+      "startedAt": "2026-09-06T00:32:05.582Z",
+      "completedAt": "2026-09-06T00:32:09.265Z"
+    },
+    {
+      "label": "memory/history.ten-years.100-accounts.daily/after/10000",
+      "startedAt": "2026-09-06T00:32:09.266Z",
+      "completedAt": "2026-09-06T00:32:12.368Z"
+    },
+    {
+      "label": "memory/extended.history.ten-years.20-accounts.compact/before/10000",
+      "startedAt": "2026-09-06T00:32:12.370Z",
+      "completedAt": "2026-09-06T00:32:14.445Z"
+    },
+    {
+      "label": "memory/extended.history.ten-years.20-accounts.compact/after/10000",
+      "startedAt": "2026-09-06T00:32:14.447Z",
+      "completedAt": "2026-09-06T00:32:16.715Z"
+    },
+    {
+      "label": "memory/extended.history.ten-years.100-accounts.compact/before/10000",
+      "startedAt": "2026-09-06T00:32:16.716Z",
+      "completedAt": "2026-09-06T00:32:20.514Z"
+    },
+    {
+      "label": "memory/extended.history.ten-years.100-accounts.compact/after/10000",
+      "startedAt": "2026-09-06T00:32:20.515Z",
+      "completedAt": "2026-09-06T00:32:23.584Z"
+    },
+    {
+      "label": "comparison",
+      "startedAt": "2026-09-06T00:32:23.585Z",
+      "completedAt": "2026-09-06T00:32:24.954Z"
+    }
+  ]
+}

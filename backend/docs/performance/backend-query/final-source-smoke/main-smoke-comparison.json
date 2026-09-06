@@ -1,0 +1,1439 @@
+[
+  {
+    "name": "matching.500-equal-amount-rows",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 15.899917000000187,
+      "p95": 16.38741600000003,
+      "min": 15.221917000000303,
+      "max": 17.39120899999989
+    },
+    "after": {
+      "p50": 0.3026669999999285,
+      "p95": 0.3026669999999285,
+      "min": 0.3026669999999285,
+      "max": 0.3026669999999285
+    },
+    "beforeCpu": {
+      "p50": 15.907,
+      "p95": 16.877,
+      "min": 15.224,
+      "max": 22.112
+    },
+    "afterCpu": {
+      "p50": 0.576,
+      "p95": 0.576,
+      "min": 0.576,
+      "max": 0.576
+    },
+    "p50ImprovementPercent": 98.09642402535859,
+    "p95ImprovementPercent": 98.15305231770569,
+    "beforeQueries": 0,
+    "afterQueries": 0,
+    "beforeBytes": 20026,
+    "afterBytes": 20026,
+    "beforeGzipBytes": 1256,
+    "afterGzipBytes": 1256,
+    "beforeSqlBytes": 0,
+    "afterSqlBytes": 0,
+    "queryBudget": 0,
+    "regression": []
+  },
+  {
+    "name": "matching.1000-equal-amount-rows",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 64.08008400000017,
+      "p95": 65.83074999999963,
+      "min": 62.75329099999999,
+      "max": 67.64558400000078
+    },
+    "after": {
+      "p50": 0.37454200000001947,
+      "p95": 0.37454200000001947,
+      "min": 0.37454200000001947,
+      "max": 0.37454200000001947
+    },
+    "beforeCpu": {
+      "p50": 64.097,
+      "p95": 65.793,
+      "min": 62.757,
+      "max": 67.65
+    },
+    "afterCpu": {
+      "p50": 0.429,
+      "p95": 0.429,
+      "min": 0.429,
+      "max": 0.429
+    },
+    "p50ImprovementPercent": 99.41550950526216,
+    "p95ImprovementPercent": 99.43105311727419,
+    "beforeQueries": 0,
+    "afterQueries": 0,
+    "beforeBytes": 40026,
+    "afterBytes": 40026,
+    "beforeGzipBytes": 2502,
+    "afterGzipBytes": 2502,
+    "beforeSqlBytes": 0,
+    "afterSqlBytes": 0,
+    "queryBudget": 0,
+    "regression": []
+  },
+  {
+    "name": "matching.2000-equal-amount-rows",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 260.14137499999924,
+      "p95": 284.8788749999985,
+      "min": 254.567665999999,
+      "max": 304.69416600000113
+    },
+    "after": {
+      "p50": 0.5399589999997261,
+      "p95": 0.5399589999997261,
+      "min": 0.5399589999997261,
+      "max": 0.5399589999997261
+    },
+    "beforeCpu": {
+      "p50": 260.32,
+      "p95": 284.879,
+      "min": 254.795,
+      "max": 301.761
+    },
+    "afterCpu": {
+      "p50": 0.852,
+      "p95": 0.852,
+      "min": 0.852,
+      "max": 0.852
+    },
+    "p50ImprovementPercent": 99.79243632428724,
+    "p95ImprovementPercent": 99.81046014731709,
+    "beforeQueries": 0,
+    "afterQueries": 0,
+    "beforeBytes": 80026,
+    "afterBytes": 80026,
+    "beforeGzipBytes": 4949,
+    "afterGzipBytes": 4949,
+    "beforeSqlBytes": 0,
+    "afterSqlBytes": 0,
+    "queryBudget": 0,
+    "regression": []
+  },
+  {
+    "name": "transactions.activityDate.page-0",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 6.416165999995428,
+      "p95": 7.557667000000947,
+      "min": 4.829166999996232,
+      "max": 13.836458000005223
+    },
+    "after": {
+      "p50": 8.727499999999964,
+      "p95": 8.727499999999964,
+      "min": 8.727499999999964,
+      "max": 8.727499999999964
+    },
+    "beforeCpu": {
+      "p50": 2.714,
+      "p95": 8.329,
+      "min": 1.93,
+      "max": 61.531
+    },
+    "afterCpu": {
+      "p50": 3.383,
+      "p95": 3.383,
+      "min": 3.383,
+      "max": 3.383
+    },
+    "p50ImprovementPercent": -36.02360038699408,
+    "p95ImprovementPercent": -15.478758193485763,
+    "beforeQueries": 3,
+    "afterQueries": 2,
+    "beforeBytes": 50213,
+    "afterBytes": 50313,
+    "beforeGzipBytes": 2628,
+    "afterGzipBytes": 2608,
+    "beforeSqlBytes": 365808,
+    "afterSqlBytes": 122712,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "transactions.activityDate.page-18",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 7.581500000000233,
+      "p95": 10.998957999996492,
+      "min": 4.806917000001704,
+      "max": 15.037416000006488
+    },
+    "after": {
+      "p50": 6.248207999999977,
+      "p95": 6.248207999999977,
+      "min": 6.248207999999977,
+      "max": 6.248207999999977
+    },
+    "beforeCpu": {
+      "p50": 2.824,
+      "p95": 6.626,
+      "min": 1.739,
+      "max": 12.613
+    },
+    "afterCpu": {
+      "p50": 3.267,
+      "p95": 3.267,
+      "min": 3.267,
+      "max": 3.267
+    },
+    "p50ImprovementPercent": 17.586124117921454,
+    "p95ImprovementPercent": 43.192727892933405,
+    "beforeQueries": 3,
+    "afterQueries": 2,
+    "beforeBytes": 50265,
+    "afterBytes": 50365,
+    "beforeGzipBytes": 2714,
+    "afterGzipBytes": 2691,
+    "beforeSqlBytes": 365860,
+    "afterSqlBytes": 122765,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "transactions.amount.page-0",
+    "rows": 10000,
+    "run": 1,
+    "baselineFailure": "Cannot read properties of undefined (reading 'databaseName')",
+    "corrected": true,
+    "queryBudget": 3,
+    "afterQueries": 2
+  },
+  {
+    "name": "transactions.amount.page-18",
+    "rows": 10000,
+    "run": 1,
+    "baselineFailure": "Cannot read properties of undefined (reading 'databaseName')",
+    "corrected": true,
+    "queryBudget": 3,
+    "afterQueries": 2
+  },
+  {
+    "name": "transactions.merchantName.page-0",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 8.507749999997031,
+      "p95": 11.918041999997513,
+      "min": 4.847542000003159,
+      "max": 16.980250000000524
+    },
+    "after": {
+      "p50": 4.656041000000187,
+      "p95": 4.656041000000187,
+      "min": 4.656041000000187,
+      "max": 4.656041000000187
+    },
+    "beforeCpu": {
+      "p50": 3.211,
+      "p95": 8.883,
+      "min": 1.637,
+      "max": 12.759
+    },
+    "afterCpu": {
+      "p50": 2.165,
+      "p95": 2.165,
+      "min": 2.165,
+      "max": 2.165
+    },
+    "p50ImprovementPercent": 45.2729452557749,
+    "p95ImprovementPercent": 60.932836115184365,
+    "beforeQueries": 3,
+    "afterQueries": 2,
+    "beforeBytes": 50265,
+    "afterBytes": 50365,
+    "beforeGzipBytes": 2716,
+    "afterGzipBytes": 2696,
+    "beforeSqlBytes": 367910,
+    "afterSqlBytes": 124041,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "transactions.merchantName.page-18",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 8.273292000005313,
+      "p95": 11.486375000000407,
+      "min": 5.088917000000947,
+      "max": 16.738916999995126
+    },
+    "after": {
+      "p50": 4.260874999999942,
+      "p95": 4.260874999999942,
+      "min": 4.260874999999942,
+      "max": 4.260874999999942
+    },
+    "beforeCpu": {
+      "p50": 2.821,
+      "p95": 8.686,
+      "min": 1.725,
+      "max": 12.456
+    },
+    "afterCpu": {
+      "p50": 3.92,
+      "p95": 3.92,
+      "min": 3.92,
+      "max": 3.92
+    },
+    "p50ImprovementPercent": 48.498433271819664,
+    "p95ImprovementPercent": 62.904963489353335,
+    "beforeQueries": 3,
+    "afterQueries": 2,
+    "beforeBytes": 50263,
+    "afterBytes": 50363,
+    "beforeGzipBytes": 2748,
+    "afterGzipBytes": 2731,
+    "beforeSqlBytes": 367908,
+    "afterSqlBytes": 124037,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "transactions.pending.page-0",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 8.005250000001979,
+      "p95": 14.393917000001238,
+      "min": 4.799750000005588,
+      "max": 16.85545899999852
+    },
+    "after": {
+      "p50": 4.60608400000001,
+      "p95": 4.60608400000001,
+      "min": 4.60608400000001,
+      "max": 4.60608400000001
+    },
+    "beforeCpu": {
+      "p50": 2.987,
+      "p95": 7.065,
+      "min": 1.671,
+      "max": 15.079
+    },
+    "afterCpu": {
+      "p50": 3.207,
+      "p95": 3.207,
+      "min": 3.207,
+      "max": 3.207
+    },
+    "p50ImprovementPercent": 42.46170950315267,
+    "p95ImprovementPercent": 67.99978768809342,
+    "beforeQueries": 3,
+    "afterQueries": 2,
+    "beforeBytes": 50207,
+    "afterBytes": 50307,
+    "beforeGzipBytes": 2708,
+    "afterGzipBytes": 2665,
+    "beforeSqlBytes": 367152,
+    "afterSqlBytes": 123627,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "transactions.pending.page-18",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 8.684000000001106,
+      "p95": 14.741167000000132,
+      "min": 4.806958000001032,
+      "max": 17.072999999996682
+    },
+    "after": {
+      "p50": 7.272207999999864,
+      "p95": 7.272207999999864,
+      "min": 7.272207999999864,
+      "max": 7.272207999999864
+    },
+    "beforeCpu": {
+      "p50": 2.976,
+      "p95": 6.08,
+      "min": 1.644,
+      "max": 14.499
+    },
+    "afterCpu": {
+      "p50": 2.067,
+      "p95": 2.067,
+      "min": 2.067,
+      "max": 2.067
+    },
+    "p50ImprovementPercent": 16.25739290650693,
+    "p95ImprovementPercent": 50.667352184533286,
+    "beforeQueries": 3,
+    "afterQueries": 2,
+    "beforeBytes": 50270,
+    "afterBytes": 50370,
+    "beforeGzipBytes": 2721,
+    "afterGzipBytes": 2697,
+    "beforeSqlBytes": 367265,
+    "afterSqlBytes": 123740,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "transactions.date-filter",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 7.459750000001804,
+      "p95": 17.86445800000365,
+      "min": 4.31933299999946,
+      "max": 19.235374999996566
+    },
+    "after": {
+      "p50": 3.223167000000103,
+      "p95": 3.223167000000103,
+      "min": 3.223167000000103,
+      "max": 3.223167000000103
+    },
+    "beforeCpu": {
+      "p50": 2.41,
+      "p95": 5.916,
+      "min": 1.265,
+      "max": 15.54
+    },
+    "afterCpu": {
+      "p50": 2.549,
+      "p95": 2.549,
+      "min": 2.549,
+      "max": 2.549
+    },
+    "p50ImprovementPercent": 56.79256007239755,
+    "p95ImprovementPercent": 81.95765581021577,
+    "beforeQueries": 3,
+    "afterQueries": 2,
+    "beforeBytes": 50419,
+    "afterBytes": 50519,
+    "beforeGzipBytes": 2304,
+    "afterGzipBytes": 2314,
+    "beforeSqlBytes": 160614,
+    "afterSqlBytes": 122923,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "transactions.search",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 32.59975000000122,
+      "p95": 34.44754199999443,
+      "min": 31.458708999998635,
+      "max": 39.69020900000032
+    },
+    "after": {
+      "p50": 7.704541999999947,
+      "p95": 7.704541999999947,
+      "min": 7.704541999999947,
+      "max": 7.704541999999947
+    },
+    "beforeCpu": {
+      "p50": 32.755,
+      "p95": 41.44,
+      "min": 30.26,
+      "max": 104.154
+    },
+    "afterCpu": {
+      "p50": 1.249,
+      "p95": 1.249,
+      "min": 1.249,
+      "max": 1.249
+    },
+    "p50ImprovementPercent": 76.36625434244233,
+    "p95ImprovementPercent": 77.63398619268338,
+    "beforeQueries": 1,
+    "afterQueries": 2,
+    "beforeBytes": 7956,
+    "afterBytes": 7996,
+    "beforeGzipBytes": 980,
+    "afterGzipBytes": 974,
+    "beforeSqlBytes": 8574808,
+    "afterSqlBytes": 46326,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "mcp-transactions.fx-1-dates-1-currencies",
+    "rows": 10000,
+    "run": 1,
+    "policy": "date-fx-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 6.872083000002021,
+      "p95": 10.153958000002604,
+      "min": 4.072834000005969,
+      "max": 11.340250000001106
+    },
+    "after": {
+      "p50": 4.231332999999722,
+      "p95": 4.231332999999722,
+      "min": 4.231332999999722,
+      "max": 4.231332999999722
+    },
+    "beforeCpu": {
+      "p50": 2.919,
+      "p95": 5.737,
+      "min": 2.312,
+      "max": 7.526
+    },
+    "afterCpu": {
+      "p50": 3.329,
+      "p95": 3.329,
+      "min": 3.329,
+      "max": 3.329
+    },
+    "p50ImprovementPercent": 38.42721340824205,
+    "p95ImprovementPercent": 58.32824008136889,
+    "beforeQueries": 5,
+    "afterQueries": 2,
+    "beforeBytes": 62777,
+    "afterBytes": 63203,
+    "beforeGzipBytes": 3252,
+    "afterGzipBytes": 3209,
+    "beforeSqlBytes": 350162,
+    "afterSqlBytes": 178990,
+    "queryBudget": 4,
+    "regression": []
+  },
+  {
+    "name": "mcp-transactions.fx-1-dates-3-currencies",
+    "rows": 10000,
+    "run": 1,
+    "policy": "date-fx-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 9.038542000002053,
+      "p95": 12.187375000001339,
+      "min": 5.560332999993989,
+      "max": 14.006833999999799
+    },
+    "after": {
+      "p50": 3.6333749999998872,
+      "p95": 3.6333749999998872,
+      "min": 3.6333749999998872,
+      "max": 3.6333749999998872
+    },
+    "beforeCpu": {
+      "p50": 3.294,
+      "p95": 7.246,
+      "min": 2.614,
+      "max": 10.848
+    },
+    "afterCpu": {
+      "p50": 2.808,
+      "p95": 2.808,
+      "min": 2.808,
+      "max": 2.808
+    },
+    "p50ImprovementPercent": 59.80131530064183,
+    "p95ImprovementPercent": 70.18738653730202,
+    "beforeQueries": 11,
+    "afterQueries": 2,
+    "beforeBytes": 62934,
+    "afterBytes": 63599,
+    "beforeGzipBytes": 3464,
+    "afterGzipBytes": 3435,
+    "beforeSqlBytes": 350698,
+    "afterSqlBytes": 179182,
+    "queryBudget": 4,
+    "regression": []
+  },
+  {
+    "name": "mcp-transactions.fx-10-dates-1-currencies",
+    "rows": 10000,
+    "run": 1,
+    "policy": "date-fx-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 9.024250000002212,
+      "p95": 9.731165999997756,
+      "min": 8.6103329999969,
+      "max": 10.506874999999127
+    },
+    "after": {
+      "p50": 3.920792000000347,
+      "p95": 3.920792000000347,
+      "min": 3.920792000000347,
+      "max": 3.920792000000347
+    },
+    "beforeCpu": {
+      "p50": 3.688,
+      "p95": 6.765,
+      "min": 3.522,
+      "max": 13.532
+    },
+    "afterCpu": {
+      "p50": 3.862,
+      "p95": 3.862,
+      "min": 3.862,
+      "max": 3.862
+    },
+    "p50ImprovementPercent": 56.552710751592805,
+    "p95ImprovementPercent": 59.708918746209335,
+    "beforeQueries": 32,
+    "afterQueries": 2,
+    "beforeBytes": 63326,
+    "afterBytes": 64829,
+    "beforeGzipBytes": 3479,
+    "afterGzipBytes": 3449,
+    "beforeSqlBytes": 354246,
+    "afterSqlBytes": 179954,
+    "queryBudget": 4,
+    "regression": []
+  },
+  {
+    "name": "mcp-transactions.fx-10-dates-3-currencies",
+    "rows": 10000,
+    "run": 1,
+    "policy": "date-fx-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 16.946875000001455,
+      "p95": 18.01179200000479,
+      "min": 15.735458000002836,
+      "max": 19.36662499999511
+    },
+    "after": {
+      "p50": 4.166999999999916,
+      "p95": 4.166999999999916,
+      "min": 4.166999999999916,
+      "max": 4.166999999999916
+    },
+    "beforeCpu": {
+      "p50": 6.405,
+      "p95": 11.218,
+      "min": 5.713,
+      "max": 16.08
+    },
+    "afterCpu": {
+      "p50": 3.103,
+      "p95": 3.103,
+      "min": 3.103,
+      "max": 3.103
+    },
+    "p50ImprovementPercent": 75.41139590632751,
+    "p95ImprovementPercent": 76.86515589343466,
+    "beforeQueries": 92,
+    "afterQueries": 2,
+    "beforeBytes": 64599,
+    "afterBytes": 68468,
+    "beforeGzipBytes": 3658,
+    "afterGzipBytes": 3680,
+    "beforeSqlBytes": 362750,
+    "afterSqlBytes": 181874,
+    "queryBudget": 4,
+    "regression": []
+  },
+  {
+    "name": "mcp-transactions.fx-100-dates-1-currencies",
+    "rows": 10000,
+    "run": 1,
+    "policy": "date-fx-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 45.6339169999992,
+      "p95": 48.57420799999818,
+      "min": 40.98287500000151,
+      "max": 50.84104099999968
+    },
+    "after": {
+      "p50": 6.879917000000205,
+      "p95": 6.879917000000205,
+      "min": 6.879917000000205,
+      "max": 6.879917000000205
+    },
+    "beforeCpu": {
+      "p50": 15.481,
+      "p95": 23.589,
+      "min": 12.949,
+      "max": 34.171
+    },
+    "afterCpu": {
+      "p50": 4.231,
+      "p95": 4.231,
+      "min": 4.231,
+      "max": 4.231
+    },
+    "p50ImprovementPercent": 84.9236763962201,
+    "p95ImprovementPercent": 85.83627549830464,
+    "beforeQueries": 302,
+    "afterQueries": 2,
+    "beforeBytes": 68816,
+    "afterBytes": 81173,
+    "beforeGzipBytes": 4220,
+    "afterGzipBytes": 4329,
+    "beforeSqlBytes": 402832,
+    "afterSqlBytes": 188694,
+    "queryBudget": 4,
+    "regression": []
+  },
+  {
+    "name": "mcp-transactions.fx-100-dates-3-currencies",
+    "rows": 10000,
+    "run": 1,
+    "policy": "date-fx-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 46.43149999999878,
+      "p95": 52.84641600000032,
+      "min": 43.604458000001614,
+      "max": 69.31983300000138
+    },
+    "after": {
+      "p50": 6.652125000000069,
+      "p95": 6.652125000000069,
+      "min": 6.652125000000069,
+      "max": 6.652125000000069
+    },
+    "beforeCpu": {
+      "p50": 15.559,
+      "p95": 29.116,
+      "min": 13.782,
+      "max": 106.655
+    },
+    "afterCpu": {
+      "p50": 10.606,
+      "p95": 10.606,
+      "min": 10.606,
+      "max": 10.606
+    },
+    "p50ImprovementPercent": 85.67324984116334,
+    "p95ImprovementPercent": 87.41234410295671,
+    "beforeQueries": 302,
+    "afterQueries": 2,
+    "beforeBytes": 68915,
+    "afterBytes": 81173,
+    "beforeGzipBytes": 4379,
+    "afterGzipBytes": 4550,
+    "beforeSqlBytes": 402832,
+    "afterSqlBytes": 188694,
+    "queryBudget": 4,
+    "regression": []
+  },
+  {
+    "name": "holdings.1-accounts-100-positions",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 65.91391699999804,
+      "p95": 68.46445899999526,
+      "min": 61.93825000000652,
+      "max": 72.76937499998894
+    },
+    "after": {
+      "p50": 3.9714169999997466,
+      "p95": 3.9714169999997466,
+      "min": 3.9714169999997466,
+      "max": 3.9714169999997466
+    },
+    "beforeCpu": {
+      "p50": 65.709,
+      "p95": 75.205,
+      "min": 58.85,
+      "max": 128.83
+    },
+    "afterCpu": {
+      "p50": 2.045,
+      "p95": 2.045,
+      "min": 2.045,
+      "max": 2.045
+    },
+    "p50ImprovementPercent": 93.97484297587737,
+    "p95ImprovementPercent": 94.19930127542521,
+    "beforeQueries": 5,
+    "afterQueries": 3,
+    "beforeBytes": 53476,
+    "afterBytes": 53790,
+    "beforeGzipBytes": 5861,
+    "afterGzipBytes": 5883,
+    "beforeSqlBytes": 9814145,
+    "afterSqlBytes": 175605,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "holdings.20-accounts-100-positions",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 151.9005829999951,
+      "p95": 160.80037500000617,
+      "min": 123.03045800000837,
+      "max": 181.85599999999977
+    },
+    "after": {
+      "p50": 38.78820799999994,
+      "p95": 38.78820799999994,
+      "min": 38.78820799999994,
+      "max": 38.78820799999994
+    },
+    "beforeCpu": {
+      "p50": 110.124,
+      "p95": 124.514,
+      "min": 101.08,
+      "max": 210.048
+    },
+    "afterCpu": {
+      "p50": 37.016,
+      "p95": 37.016,
+      "min": 37.016,
+      "max": 37.016
+    },
+    "p50ImprovementPercent": 74.4647405336152,
+    "p95ImprovementPercent": 75.87803635408285,
+    "beforeQueries": 62,
+    "afterQueries": 3,
+    "beforeBytes": 1069613,
+    "afterBytes": 1075627,
+    "beforeGzipBytes": 101494,
+    "afterGzipBytes": 101638,
+    "beforeSqlBytes": 14517055,
+    "afterSqlBytes": 3512054,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "holdings.100-accounts-100-positions",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 546.2746670000197,
+      "p95": 613.9741249999934,
+      "min": 452.01508399999875,
+      "max": 655.7290419999918
+    },
+    "after": {
+      "p50": 178.34979199999998,
+      "p95": 178.34979199999998,
+      "min": 178.34979199999998,
+      "max": 178.34979199999998
+    },
+    "beforeCpu": {
+      "p50": 345.799,
+      "p95": 443.321,
+      "min": 279.988,
+      "max": 486.967
+    },
+    "afterCpu": {
+      "p50": 194.739,
+      "p95": 194.739,
+      "min": 194.739,
+      "max": 194.739
+    },
+    "p50ImprovementPercent": 67.35162679619673,
+    "p95ImprovementPercent": 70.95157845617649,
+    "beforeQueries": 302,
+    "afterQueries": 3,
+    "beforeBytes": 5351553,
+    "afterBytes": 5381567,
+    "beforeGzipBytes": 506795,
+    "afterGzipBytes": 507123,
+    "beforeSqlBytes": 34322266,
+    "afterSqlBytes": 17560295,
+    "queryBudget": 3,
+    "regression": []
+  },
+  {
+    "name": "history.month.20-accounts.daily",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 6.798957999999402,
+      "p95": 13.858540999994148,
+      "min": 3.6829580000194255,
+      "max": 16.42362499999581
+    },
+    "after": {
+      "p50": 4.6811250000000655,
+      "p95": 4.6811250000000655,
+      "min": 4.6811250000000655,
+      "max": 4.6811250000000655
+    },
+    "beforeCpu": {
+      "p50": 2.677,
+      "p95": 7.491,
+      "min": 1.354,
+      "max": 16.595
+    },
+    "afterCpu": {
+      "p50": 3.076,
+      "p95": 3.076,
+      "min": 3.076,
+      "max": 3.076
+    },
+    "p50ImprovementPercent": 31.149376124981544,
+    "p95ImprovementPercent": 66.22209365327821,
+    "beforeQueries": 5,
+    "afterQueries": 5,
+    "beforeBytes": 10892,
+    "afterBytes": 11093,
+    "beforeGzipBytes": 779,
+    "afterGzipBytes": 831,
+    "beforeSqlBytes": 72457,
+    "afterSqlBytes": 69124,
+    "queryBudget": 7,
+    "regression": []
+  },
+  {
+    "name": "history.month.100-accounts.daily",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 12.827959000016563,
+      "p95": 15.000916999997571,
+      "min": 8.472333999990951,
+      "max": 17.64075000002049
+    },
+    "after": {
+      "p50": 12.112208999999893,
+      "p95": 12.112208999999893,
+      "min": 12.112208999999893,
+      "max": 12.112208999999893
+    },
+    "beforeCpu": {
+      "p50": 5.257,
+      "p95": 9.195,
+      "min": 3.924,
+      "max": 11.612
+    },
+    "afterCpu": {
+      "p50": 6.523,
+      "p95": 6.523,
+      "min": 6.523,
+      "max": 6.523
+    },
+    "p50ImprovementPercent": 5.579609351852033,
+    "p95ImprovementPercent": 19.256876096295617,
+    "beforeQueries": 5,
+    "afterQueries": 5,
+    "beforeBytes": 47486,
+    "afterBytes": 47847,
+    "beforeGzipBytes": 1795,
+    "afterGzipBytes": 1856,
+    "beforeSqlBytes": 360458,
+    "afterSqlBytes": 345045,
+    "queryBudget": 7,
+    "regression": []
+  },
+  {
+    "name": "history.year.20-accounts.daily",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 11.000500000023749,
+      "p95": 12.355874999979278,
+      "min": 8.86216700001387,
+      "max": 14.536625000007916
+    },
+    "after": {
+      "p50": 10.091416999999637,
+      "p95": 10.091416999999637,
+      "min": 10.091416999999637,
+      "max": 10.091416999999637
+    },
+    "beforeCpu": {
+      "p50": 5.941,
+      "p95": 7.935,
+      "min": 5.399,
+      "max": 9.922
+    },
+    "afterCpu": {
+      "p50": 15.775,
+      "p95": 15.775,
+      "min": 15.775,
+      "max": 15.775
+    },
+    "p50ImprovementPercent": 8.264015272234426,
+    "p95ImprovementPercent": 18.326974010205177,
+    "beforeQueries": 5,
+    "afterQueries": 5,
+    "beforeBytes": 28547,
+    "afterBytes": 29420,
+    "beforeGzipBytes": 2762,
+    "afterGzipBytes": 2833,
+    "beforeSqlBytes": 243177,
+    "afterSqlBytes": 239844,
+    "queryBudget": 7,
+    "regression": []
+  },
+  {
+    "name": "history.year.100-accounts.daily",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 36.73070899999584,
+      "p95": 42.96537499999977,
+      "min": 26.442749999987427,
+      "max": 48.04095900000539
+    },
+    "after": {
+      "p50": 25.33720799999992,
+      "p95": 25.33720799999992,
+      "min": 25.33720799999992,
+      "max": 25.33720799999992
+    },
+    "beforeCpu": {
+      "p50": 27.171,
+      "p95": 37.478,
+      "min": 22.994,
+      "max": 97.778
+    },
+    "afterCpu": {
+      "p50": 25.276,
+      "p95": 25.276,
+      "min": 25.276,
+      "max": 25.276
+    },
+    "p50ImprovementPercent": 31.019006466761134,
+    "p95ImprovementPercent": 41.02877491468407,
+    "beforeQueries": 5,
+    "afterQueries": 5,
+    "beforeBytes": 65476,
+    "afterBytes": 66509,
+    "beforeGzipBytes": 3877,
+    "afterGzipBytes": 3942,
+    "beforeSqlBytes": 1214058,
+    "afterSqlBytes": 1198645,
+    "queryBudget": 7,
+    "regression": []
+  },
+  {
+    "name": "history.ten-years.20-accounts.daily",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 67.77899999998044,
+      "p95": 83.81341599998996,
+      "min": 61.63741699999082,
+      "max": 106.79712500001187
+    },
+    "after": {
+      "p50": 46.490416000000096,
+      "p95": 46.490416000000096,
+      "min": 46.490416000000096,
+      "max": 46.490416000000096
+    },
+    "beforeCpu": {
+      "p50": 84.522,
+      "p95": 118.648,
+      "min": 67.975,
+      "max": 212.101
+    },
+    "afterCpu": {
+      "p50": 57.377,
+      "p95": 57.377,
+      "min": 57.377,
+      "max": 57.377
+    },
+    "p50ImprovementPercent": 31.408819840933756,
+    "p95ImprovementPercent": 44.531056937226296,
+    "beforeQueries": 5,
+    "afterQueries": 5,
+    "beforeBytes": 201682,
+    "afterBytes": 209127,
+    "beforeGzipBytes": 13275,
+    "afterGzipBytes": 13392,
+    "beforeSqlBytes": 1919337,
+    "afterSqlBytes": 1916004,
+    "queryBudget": 7,
+    "regression": []
+  },
+  {
+    "name": "history.ten-years.100-accounts.daily",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 297.4065830000036,
+      "p95": 330.187042000005,
+      "min": 286.71779100000276,
+      "max": 351.4126669999969
+    },
+    "after": {
+      "p50": 179.24758399999973,
+      "p95": 179.24758399999973,
+      "min": 179.24758399999973,
+      "max": 179.24758399999973
+    },
+    "beforeCpu": {
+      "p50": 385.526,
+      "p95": 502.961,
+      "min": 342.706,
+      "max": 580.531
+    },
+    "afterCpu": {
+      "p50": 187.649,
+      "p95": 187.649,
+      "min": 187.649,
+      "max": 187.649
+    },
+    "p50ImprovementPercent": 39.72978600813366,
+    "p95ImprovementPercent": 45.713319664435225,
+    "beforeQueries": 5,
+    "afterQueries": 5,
+    "beforeBytes": 241896,
+    "afterBytes": 249501,
+    "beforeGzipBytes": 14506,
+    "afterGzipBytes": 14571,
+    "beforeSqlBytes": 9594858,
+    "afterSqlBytes": 9579445,
+    "queryBudget": 7,
+    "regression": []
+  },
+  {
+    "name": "cashflow.month.summary-audit",
+    "rows": 10000,
+    "run": 1,
+    "policy": "row-rounding-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 29.423209000000497,
+      "p95": 33.98741600001813,
+      "min": 23.44933299999684,
+      "max": 37.39870900000096
+    },
+    "after": {
+      "p50": 12.840541999999914,
+      "p95": 12.840541999999914,
+      "min": 12.840541999999914,
+      "max": 12.840541999999914
+    },
+    "beforeCpu": {
+      "p50": 22.95,
+      "p95": 26.493,
+      "min": 19.4,
+      "max": 66.164
+    },
+    "afterCpu": {
+      "p50": 11.8,
+      "p95": 11.8,
+      "min": 11.8,
+      "max": 11.8
+    },
+    "p50ImprovementPercent": 56.35913812120323,
+    "p95ImprovementPercent": 62.219716850515894,
+    "beforeQueries": 10,
+    "afterQueries": 4,
+    "beforeBytes": 550,
+    "afterBytes": 564,
+    "beforeGzipBytes": 267,
+    "afterGzipBytes": 266,
+    "beforeSqlBytes": 4013178,
+    "afterSqlBytes": 1291581,
+    "queryBudget": 4,
+    "regression": []
+  },
+  {
+    "name": "cashflow.year.summary-audit",
+    "rows": 10000,
+    "run": 1,
+    "policy": "row-rounding-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 74.11979200001224,
+      "p95": 77.91270800001803,
+      "min": 72.04358299999149,
+      "max": 95.45879099998274
+    },
+    "after": {
+      "p50": 27.011124999999993,
+      "p95": 27.011124999999993,
+      "min": 27.011124999999993,
+      "max": 27.011124999999993
+    },
+    "beforeCpu": {
+      "p50": 75.579,
+      "p95": 93.412,
+      "min": 71.075,
+      "max": 159.144
+    },
+    "afterCpu": {
+      "p50": 24.568,
+      "p95": 24.568,
+      "min": 24.568,
+      "max": 24.568
+    },
+    "p50ImprovementPercent": 63.557473285953726,
+    "p95ImprovementPercent": 65.33155412850785,
+    "beforeQueries": 10,
+    "afterQueries": 4,
+    "beforeBytes": 555,
+    "afterBytes": 569,
+    "beforeGzipBytes": 265,
+    "afterGzipBytes": 269,
+    "beforeSqlBytes": 17614168,
+    "afterSqlBytes": 3726624,
+    "queryBudget": 4,
+    "regression": []
+  },
+  {
+    "name": "http.transactions.convert",
+    "rows": 10000,
+    "run": 1,
+    "policy": "date-fx-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 13.053209000005154,
+      "p95": 19.99312500000815,
+      "min": 8.50037500000326,
+      "max": 27.04441699999734
+    },
+    "after": {
+      "p50": 9.569042000000081,
+      "p95": 9.569042000000081,
+      "min": 9.569042000000081,
+      "max": 9.569042000000081
+    },
+    "beforeCpu": {
+      "p50": 4.942,
+      "p95": 8.872,
+      "min": 3.67,
+      "max": 11.537
+    },
+    "afterCpu": {
+      "p50": 14.668,
+      "p95": 14.668,
+      "min": 14.668,
+      "max": 14.668
+    },
+    "p50ImprovementPercent": 26.692034119760876,
+    "p95ImprovementPercent": 52.13833755355313,
+    "beforeQueries": 9,
+    "afterQueries": 5,
+    "beforeBytes": 108654,
+    "afterBytes": 109294,
+    "beforeGzipBytes": 4260,
+    "afterGzipBytes": 4533,
+    "beforeSqlBytes": 327682,
+    "afterSqlBytes": 243946,
+    "queryBudget": null,
+    "regression": []
+  },
+  {
+    "name": "mcp.transport.transactions.fx-100",
+    "rows": 10000,
+    "run": 1,
+    "policy": "date-fx-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 50.07362500001909,
+      "p95": 54.565833000000566,
+      "min": 48.182208000012906,
+      "max": 64.51879100000951
+    },
+    "after": {
+      "p50": 11.977124999999432,
+      "p95": 11.977124999999432,
+      "min": 11.977124999999432,
+      "max": 11.977124999999432
+    },
+    "beforeCpu": {
+      "p50": 22.116,
+      "p95": 32.624,
+      "min": 17.815,
+      "max": 117.02
+    },
+    "afterCpu": {
+      "p50": 9.56,
+      "p95": 9.56,
+      "min": 9.56,
+      "max": 9.56
+    },
+    "p50ImprovementPercent": 76.08097077055062,
+    "p95ImprovementPercent": 78.05013807816458,
+    "beforeQueries": 303,
+    "afterQueries": 3,
+    "beforeBytes": 179028,
+    "afterBytes": 213040,
+    "beforeGzipBytes": 8937,
+    "afterGzipBytes": 9355,
+    "beforeSqlBytes": 403294,
+    "afterSqlBytes": 189156,
+    "queryBudget": 5,
+    "regression": []
+  },
+  {
+    "name": "mcp.transport.holdings-20",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 170.7536249999539,
+      "p95": 189.4512499999837,
+      "min": 136.70274999999674,
+      "max": 226.22912500001257
+    },
+    "after": {
+      "p50": 54.12970899999982,
+      "p95": 54.12970899999982,
+      "min": 54.12970899999982,
+      "max": 54.12970899999982
+    },
+    "beforeCpu": {
+      "p50": 127.405,
+      "p95": 172.469,
+      "min": 116.429,
+      "max": 237.267
+    },
+    "afterCpu": {
+      "p50": 129.791,
+      "p95": 129.791,
+      "min": 129.791,
+      "max": 129.791
+    },
+    "p50ImprovementPercent": 68.29952570552196,
+    "p95ImprovementPercent": 71.42815948693688,
+    "beforeQueries": 63,
+    "afterQueries": 4,
+    "beforeBytes": 2687633,
+    "afterBytes": 2704652,
+    "beforeGzipBytes": 213586,
+    "afterGzipBytes": 214028,
+    "beforeSqlBytes": 14517517,
+    "afterSqlBytes": 3512516,
+    "queryBudget": 4,
+    "regression": []
+  },
+  {
+    "name": "mcp.transport.cashflow-comparison",
+    "rows": 10000,
+    "run": 1,
+    "policy": "row-rounding-policy",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 38.15616700000828,
+      "p95": 46.590166999958456,
+      "min": 29.73250000004191,
+      "max": 59.68599999998696
+    },
+    "after": {
+      "p50": 20.934915999999248,
+      "p95": 20.934915999999248,
+      "min": 20.934915999999248,
+      "max": 20.934915999999248
+    },
+    "beforeCpu": {
+      "p50": 36.88,
+      "p95": 45.116,
+      "min": 32.126,
+      "max": 123.927
+    },
+    "afterCpu": {
+      "p50": 21.738,
+      "p95": 21.738,
+      "min": 21.738,
+      "max": 21.738
+    },
+    "p50ImprovementPercent": 45.13359793190258,
+    "p95ImprovementPercent": 55.065806052985565,
+    "beforeQueries": 21,
+    "afterQueries": 9,
+    "beforeBytes": 6812,
+    "afterBytes": 6896,
+    "beforeGzipBytes": 1168,
+    "afterGzipBytes": 1168,
+    "beforeSqlBytes": 5691018,
+    "afterSqlBytes": 1656556,
+    "queryBudget": 9,
+    "regression": []
+  },
+  {
+    "name": "mcp.transport.history-month",
+    "rows": 10000,
+    "run": 1,
+    "policy": "equivalent",
+    "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+    "before": {
+      "p50": 8.585166999953799,
+      "p95": 12.055958999961149,
+      "min": 5.758250000013504,
+      "max": 17.090749999973923
+    },
+    "after": {
+      "p50": 10.297416999999768,
+      "p95": 10.297416999999768,
+      "min": 10.297416999999768,
+      "max": 10.297416999999768
+    },
+    "beforeCpu": {
+      "p50": 4.133,
+      "p95": 10.897,
+      "min": 3.302,
+      "max": 17.75
+    },
+    "afterCpu": {
+      "p50": 7.086,
+      "p95": 7.086,
+      "min": 7.086,
+      "max": 7.086
+    },
+    "p50ImprovementPercent": -19.9442829714924,
+    "p95ImprovementPercent": 14.586496188043174,
+    "beforeQueries": 6,
+    "afterQueries": 6,
+    "beforeBytes": 27998,
+    "afterBytes": 28553,
+    "beforeGzipBytes": 1665,
+    "afterGzipBytes": 1765,
+    "beforeSqlBytes": 72919,
+    "afterSqlBytes": 69586,
+    "queryBudget": 8,
+    "regression": []
+  }
+]

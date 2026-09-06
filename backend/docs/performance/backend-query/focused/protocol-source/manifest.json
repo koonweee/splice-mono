@@ -1,0 +1,27 @@
+{
+  "scope": "Exact maintained harness sources at focused measurement/report completion, before reporting/orchestration formatting. Application snapshots, compiled identities and approved measurement profiles remain separate.",
+  "files": {
+    "amount-page-oracle.cjs": "5e80632d8cf2332b85f3bf1a513d4c16d43bf4306446f2ffd97bbb5bcfef627d",
+    "auth-settings-workloads.cjs": "40c80022f202def5f547e05811a775710776d7a57c447b8dd7af933400b66b21",
+    "benchmark-runner.cjs": "b84a3bf3a9ca4c95db41cc778987c332c50038c63e232002bbc0b47724513646",
+    "compare-all.cjs": "fc2611352f38102e58bf01dadd28a2146c164854900610e5d7d73948d1480c19",
+    "comparison.cjs": "cec032f8f112d2b550a4033d09e64fc0557b5f05eb0a65b954e050d8e12355da",
+    "correctness-probes.cjs": "bbc7776a637f6163ad36ab3fc822f84ffae44bcd210caad6cb78159e1ff9a066",
+    "edge-correctness-probes.cjs": "5dedb515c8073f3c02b102cd02a308a3f03aa9ff31823b4451562c2c34004665",
+    "extended-workloads.cjs": "4f9ac1650d00e1b1935fc8a1d375e2aeb5aa658bfa6772704d31b15c38e188a7",
+    "filter-workloads.cjs": "3eb98e7ba119d6a01317cbd2875a77d714e2b79c78c919f16466bdfd976e4030",
+    "focused-comparison.cjs": "3d6b4a4e29fdd751218aa4f384f877066bea60b27a4377a012e3f76e04e407f6",
+    "focused-runner.cjs": "b034317ccb49284c6a1defca5e53616a8a36571e0e7bf33f4a57931f41dccc36",
+    "matrix-child.cjs": "51a2b6af3b7af8b44bd26a633ca62a90a074384c6008aa274dae8d6ba7c8d218",
+    "matrix-runner.cjs": "d0b7ecc16cfa7b07466be9d352c93b804aa3c029dc5053385981c9bc1e090c05",
+    "memory-observer.cjs": "24dd4543a0d0607c84ff349823c74ccf34961f075c375dacd8c314e537331adc",
+    "mixed-workload.cjs": "636483c9c1d07bedb6775d3136cc9309b6ba3e6157394e7b72e73a438e288425",
+    "output-artifacts.cjs": "bf57365f6560062a28789c7746ee98e787012c3c758ba3e4aad3b40325dace23",
+    "provenance.cjs": "f75ce0514a73297edb1ed8e2573d64cc1d38a7d24fefb5739dd672fff39d076e",
+    "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+    "shape-workloads.cjs": "ddb3399146f87721a616783b842d9065345c2369ae2815488343f24cf7b1b5ae",
+    "sync-workloads.cjs": "667acec2f3fa9ec34fe031e075dc24f02c7a49202caac9a955139d76350cf449",
+    "validate-schema-fixture.cjs": "3810305727dcd21bfedef060e1dac0e8c2c99092a98dcda0cd075fcdc1b757b7",
+    "write-plan-probe.cjs": "4e2e40d3dabab673956988cdad2f1bd41dea97b72cc2f28b4900124877b62445"
+  }
+}

@@ -1,0 +1,982 @@
+{
+  "exploratory": true,
+  "comparisons": [
+    {
+      "name": "extended.holdings.1-accounts.0-positions",
+      "rows": 10000,
+      "run": 1,
+      "policy": "equivalent",
+      "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+      "before": {
+        "p50": 64.78208300000006,
+        "p95": 64.78208300000006,
+        "min": 64.78208300000006,
+        "max": 64.78208300000006
+      },
+      "after": {
+        "p50": 1.8113329999998768,
+        "p95": 1.8113329999998768,
+        "min": 1.8113329999998768,
+        "max": 1.8113329999998768
+      },
+      "beforeCpu": {
+        "p50": 79.774,
+        "p95": 79.774,
+        "min": 79.774,
+        "max": 79.774
+      },
+      "afterCpu": {
+        "p50": 1.31,
+        "p95": 1.31,
+        "min": 1.31,
+        "max": 1.31
+      },
+      "p50ImprovementPercent": 97.20395992824147,
+      "p95ImprovementPercent": 97.20395992824147,
+      "beforeQueries": 3,
+      "afterQueries": 3,
+      "beforeBytes": 93,
+      "afterBytes": 205,
+      "beforeGzipBytes": 88,
+      "afterGzipBytes": 138,
+      "beforeSqlBytes": 9566686,
+      "afterSqlBytes": 1236,
+      "queryBudget": 3,
+      "regression": []
+    },
+    {
+      "name": "extended.holdings.20-accounts.0-positions",
+      "rows": 10000,
+      "run": 1,
+      "policy": "equivalent",
+      "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+      "before": {
+        "p50": 70.7672500000001,
+        "p95": 70.7672500000001,
+        "min": 70.7672500000001,
+        "max": 70.7672500000001
+      },
+      "after": {
+        "p50": 1.8917089999999916,
+        "p95": 1.8917089999999916,
+        "min": 1.8917089999999916,
+        "max": 1.8917089999999916
+      },
+      "beforeCpu": {
+        "p50": 67.723,
+        "p95": 67.723,
+        "min": 67.723,
+        "max": 67.723
+      },
+      "afterCpu": {
+        "p50": 1.113,
+        "p95": 1.113,
+        "min": 1.113,
+        "max": 1.113
+      },
+      "p50ImprovementPercent": 97.32685811586576,
+      "p95ImprovementPercent": 97.32685811586576,
+      "beforeQueries": 22,
+      "afterQueries": 3,
+      "beforeBytes": 834,
+      "afterBytes": 2808,
+      "beforeGzipBytes": 153,
+      "afterGzipBytes": 252,
+      "beforeSqlBytes": 9566724,
+      "afterSqlBytes": 24655,
+      "queryBudget": 3,
+      "regression": []
+    },
+    {
+      "name": "extended.holdings.100-accounts.0-positions",
+      "rows": 10000,
+      "run": 1,
+      "policy": "equivalent",
+      "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+      "before": {
+        "p50": 87.0424579999999,
+        "p95": 87.0424579999999,
+        "min": 87.0424579999999,
+        "max": 87.0424579999999
+      },
+      "after": {
+        "p50": 3.171500000000151,
+        "p95": 3.171500000000151,
+        "min": 3.171500000000151,
+        "max": 3.171500000000151
+      },
+      "beforeCpu": {
+        "p50": 85.72,
+        "p95": 85.72,
+        "min": 85.72,
+        "max": 85.72
+      },
+      "afterCpu": {
+        "p50": 2.873,
+        "p95": 2.873,
+        "min": 2.873,
+        "max": 2.873
+      },
+      "p50ImprovementPercent": 96.35637587348445,
+      "p95ImprovementPercent": 96.35637587348445,
+      "beforeQueries": 102,
+      "afterQueries": 3,
+      "beforeBytes": 3954,
+      "afterBytes": 13768,
+      "beforeGzipBytes": 333,
+      "afterGzipBytes": 679,
+      "beforeSqlBytes": 9566884,
+      "afterSqlBytes": 123296,
+      "queryBudget": 3,
+      "regression": []
+    },
+    {
+      "name": "extended.holdings.1-accounts.10-positions",
+      "rows": 10000,
+      "run": 1,
+      "policy": "equivalent",
+      "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+      "before": {
+        "p50": 56.55383299999994,
+        "p95": 56.55383299999994,
+        "min": 56.55383299999994,
+        "max": 56.55383299999994
+      },
+      "after": {
+        "p50": 1.9137499999999363,
+        "p95": 1.9137499999999363,
+        "min": 1.9137499999999363,
+        "max": 1.9137499999999363
+      },
+      "beforeCpu": {
+        "p50": 62.013,
+        "p95": 62.013,
+        "min": 62.013,
+        "max": 62.013
+      },
+      "afterCpu": {
+        "p50": 1.59,
+        "p95": 1.59,
+        "min": 1.59,
+        "max": 1.59
+      },
+      "p50ImprovementPercent": 96.61605606820683,
+      "p95ImprovementPercent": 96.61605606820683,
+      "beforeQueries": 5,
+      "afterQueries": 3,
+      "beforeBytes": 5430,
+      "afterBytes": 5563,
+      "beforeGzipBytes": 886,
+      "afterGzipBytes": 912,
+      "beforeSqlBytes": 9594296,
+      "afterSqlBytes": 18677,
+      "queryBudget": 3,
+      "regression": []
+    },
+    {
+      "name": "extended.holdings.20-accounts.10-positions",
+      "rows": 10000,
+      "run": 1,
+      "policy": "equivalent",
+      "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+      "before": {
+        "p50": 101.02079099999992,
+        "p95": 101.02079099999992,
+        "min": 101.02079099999992,
+        "max": 101.02079099999992
+      },
+      "after": {
+        "p50": 5.82483400000001,
+        "p95": 5.82483400000001,
+        "min": 5.82483400000001,
+        "max": 5.82483400000001
+      },
+      "beforeCpu": {
+        "p50": 76.513,
+        "p95": 76.513,
+        "min": 76.513,
+        "max": 76.513
+      },
+      "afterCpu": {
+        "p50": 10.692,
+        "p95": 10.692,
+        "min": 10.692,
+        "max": 10.692
+      },
+      "p50ImprovementPercent": 94.23402455837035,
+      "p95ImprovementPercent": 94.23402455837035,
+      "beforeQueries": 62,
+      "afterQueries": 3,
+      "beforeBytes": 107703,
+      "afterBytes": 110097,
+      "beforeGzipBytes": 6934,
+      "afterGzipBytes": 7044,
+      "beforeSqlBytes": 10119085,
+      "afterSqlBytes": 373494,
+      "queryBudget": 3,
+      "regression": []
+    },
+    {
+      "name": "extended.holdings.100-accounts.10-positions",
+      "rows": 10000,
+      "run": 1,
+      "policy": "equivalent",
+      "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+      "before": {
+        "p50": 178.35266600000023,
+        "p95": 178.35266600000023,
+        "min": 178.35266600000023,
+        "max": 178.35266600000023
+      },
+      "after": {
+        "p50": 20.899166999999807,
+        "p95": 20.899166999999807,
+        "min": 20.899166999999807,
+        "max": 20.899166999999807
+      },
+      "beforeCpu": {
+        "p50": 128.628,
+        "p95": 128.628,
+        "min": 128.628,
+        "max": 128.628
+      },
+      "afterCpu": {
+        "p50": 24.236,
+        "p95": 24.236,
+        "min": 24.236,
+        "max": 24.236
+      },
+      "p50ImprovementPercent": 88.28211124133138,
+      "p95ImprovementPercent": 88.28211124133138,
+      "beforeQueries": 302,
+      "afterQueries": 3,
+      "beforeBytes": 538673,
+      "afterBytes": 550587,
+      "beforeGzipBytes": 32080,
+      "afterGzipBytes": 32361,
+      "beforeSqlBytes": 12329068,
+      "afterSqlBytes": 1867495,
+      "queryBudget": 3,
+      "regression": []
+    },
+    {
+      "name": "extended.portfolio.1-accounts.100-positions",
+      "rows": 10000,
+      "run": 1,
+      "policy": "equivalent",
+      "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+      "before": {
+        "p50": 56.066625000000386,
+        "p95": 56.066625000000386,
+        "min": 56.066625000000386,
+        "max": 56.066625000000386
+      },
+      "after": {
+        "p50": 5.713999999999942,
+        "p95": 5.713999999999942,
+        "min": 5.713999999999942,
+        "max": 5.713999999999942
+      },
+      "beforeCpu": {
+        "p50": 63.442,
+        "p95": 63.442,
+        "min": 63.442,
+        "max": 63.442
+      },
+      "afterCpu": {
+        "p50": 11.361,
+        "p95": 11.361,
+        "min": 11.361,
+        "max": 11.361
+      },
+      "p50ImprovementPercent": 89.80855366271841,
+      "p95ImprovementPercent": 89.80855366271841,
+      "beforeQueries": 5,
+      "afterQueries": 3,
+      "beforeBytes": 51619,
+      "afterBytes": 52221,
+      "beforeGzipBytes": 3576,
+      "afterGzipBytes": 3559,
+      "beforeSqlBytes": 9814145,
+      "afterSqlBytes": 175617,
+      "queryBudget": null,
+      "regression": []
+    },
+    {
+      "name": "extended.portfolio.20-accounts.100-positions",
+      "rows": 10000,
+      "run": 1,
+      "policy": "equivalent",
+      "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+      "before": {
+        "p50": 156.36125000000038,
+        "p95": 156.36125000000038,
+        "min": 156.36125000000038,
+        "max": 156.36125000000038
+      },
+      "after": {
+        "p50": 40.1998329999999,
+        "p95": 40.1998329999999,
+        "min": 40.1998329999999,
+        "max": 40.1998329999999
+      },
+      "beforeCpu": {
+        "p50": 130.557,
+        "p95": 130.557,
+        "min": 130.557,
+        "max": 130.557
+      },
+      "afterCpu": {
+        "p50": 54.67,
+        "p95": 54.67,
+        "min": 54.67,
+        "max": 54.67
+      },
+      "p50ImprovementPercent": 74.29041210658025,
+      "p95ImprovementPercent": 74.29041210658025,
+      "beforeQueries": 62,
+      "afterQueries": 3,
+      "beforeBytes": 536261,
+      "afterBytes": 544463,
+      "beforeGzipBytes": 8141,
+      "afterGzipBytes": 7765,
+      "beforeSqlBytes": 14517055,
+      "afterSqlBytes": 3512294,
+      "queryBudget": null,
+      "regression": []
+    },
+    {
+      "name": "extended.portfolio.100-accounts.100-positions",
+      "rows": 10000,
+      "run": 1,
+      "policy": "equivalent",
+      "semanticValidation": "exact economic/selection parity after documented representation and metadata changes",
+      "before": {
+        "p50": 481.8854160000001,
+        "p95": 481.8854160000001,
+        "min": 481.8854160000001,
+        "max": 481.8854160000001
+      },
+      "after": {
+        "p50": 189.20041700000002,
+        "p95": 189.20041700000002,
+        "min": 189.20041700000002,
+        "max": 189.20041700000002
+      },
+      "beforeCpu": {
+        "p50": 358.182,
+        "p95": 358.182,
+        "min": 358.182,
+        "max": 358.182
+      },
+      "afterCpu": {
+        "p50": 204.085,
+        "p95": 204.085,
+        "min": 204.085,
+        "max": 204.085
+      },
+      "p50ImprovementPercent": 60.73746772199473,
+      "p95ImprovementPercent": 60.73746772199473,
+      "beforeQueries": 302,
+      "afterQueries": 3,
+      "beforeBytes": 2579682,
+      "afterBytes": 2619884,
+      "beforeGzipBytes": 33424,
+      "afterGzipBytes": 27567,
+      "beforeSqlBytes": 34322266,
+      "afterSqlBytes": 17561495,
+      "queryBudget": null,
+      "regression": []
+    },
+    {
+      "name": "extended.transactions.no-match-amount",
+      "rows": 10000,
+      "run": 1,
+      "policy": "bounded-continuation",
+      "semanticValidation": "bounded first call; full advancing continuation checked against ordered SQL oracle",
+      "before": {
+        "p50": 42.7417089999999,
+        "p95": 42.7417089999999,
+        "min": 42.7417089999999,
+        "max": 42.7417089999999
+      },
+      "after": {
+        "p50": 16.350165999999717,
+        "p95": 16.350165999999717,
+        "min": 16.350165999999717,
+        "max": 16.350165999999717
+      },
+      "beforeCpu": {
+        "p50": 46.046,
+        "p95": 46.046,
+        "min": 46.046,
+        "max": 46.046
+      },
+      "afterCpu": {
+        "p50": 16.843,
+        "p95": 16.843,
+        "min": 16.843,
+        "max": 16.843
+      },
+      "p50ImprovementPercent": 61.746578734135895,
+      "p95ImprovementPercent": 61.746578734135895,
+      "beforeQueries": 8,
+      "afterQueries": 1,
+      "beforeBytes": 21805,
+      "afterBytes": 56482,
+      "beforeGzipBytes": 1196,
+      "afterGzipBytes": 2430,
+      "beforeSqlBytes": 7223513,
+      "afterSqlBytes": 1696406,
+      "queryBudget": null,
+      "regression": []
+    },
+    {
+      "name": "extended.transactions.rare-match-amount",
+      "rows": 10000,
+      "run": 1,
+      "policy": "bounded-continuation",
+      "semanticValidation": "bounded first call; full advancing continuation checked against ordered SQL oracle",
+      "before": {
+        "p50": 42.380167000000256,
+        "p95": 42.380167000000256,
+        "min": 42.380167000000256,
+        "max": 42.380167000000256
+      },
+      "after": {
+        "p50": 18.086874999999964,
+        "p95": 18.086874999999964,
+        "min": 18.086874999999964,
+        "max": 18.086874999999964
+      },
+      "beforeCpu": {
+        "p50": 32.125,
+        "p95": 32.125,
+        "min": 32.125,
+        "max": 32.125
+      },
+      "afterCpu": {
+        "p50": 13.189,
+        "p95": 13.189,
+        "min": 13.189,
+        "max": 13.189
+      },
+      "p50ImprovementPercent": 57.32231305270729,
+      "p95ImprovementPercent": 57.32231305270729,
+      "beforeQueries": 8,
+      "afterQueries": 1,
+      "beforeBytes": 21815,
+      "afterBytes": 56494,
+      "beforeGzipBytes": 1204,
+      "afterGzipBytes": 2440,
+      "beforeSqlBytes": 7223513,
+      "afterSqlBytes": 1696406,
+      "queryBudget": null,
+      "regression": []
+    },
+    {
+      "name": "extended.history.ten-years.20-accounts.compact",
+      "rows": 10000,
+      "run": 1,
+      "policy": "compact-resolution",
+      "semanticValidation": "exact boundaries/accounts; selected original daily points; explicit compact chart",
+      "before": {
+        "p50": 67.40291700000034,
+        "p95": 67.40291700000034,
+        "min": 67.40291700000034,
+        "max": 67.40291700000034
+      },
+      "after": {
+        "p50": 56.93024999999989,
+        "p95": 56.93024999999989,
+        "min": 56.93024999999989,
+        "max": 56.93024999999989
+      },
+      "beforeCpu": {
+        "p50": 89.418,
+        "p95": 89.418,
+        "min": 89.418,
+        "max": 89.418
+      },
+      "afterCpu": {
+        "p50": 67.269,
+        "p95": 67.269,
+        "min": 67.269,
+        "max": 67.269
+      },
+      "p50ImprovementPercent": 15.53740915990387,
+      "p95ImprovementPercent": 15.53740915990387,
+      "beforeQueries": 5,
+      "afterQueries": 5,
+      "beforeBytes": 201682,
+      "afterBytes": 12748,
+      "beforeGzipBytes": 13275,
+      "afterGzipBytes": 944,
+      "beforeSqlBytes": 1919337,
+      "afterSqlBytes": 1916004,
+      "queryBudget": null,
+      "regression": []
+    },
+    {
+      "name": "extended.history.ten-years.100-accounts.compact",
+      "rows": 10000,
+      "run": 1,
+      "policy": "compact-resolution",
+      "semanticValidation": "exact boundaries/accounts; selected original daily points; explicit compact chart",
+      "before": {
+        "p50": 309.9392909999997,
+        "p95": 309.9392909999997,
+        "min": 309.9392909999997,
+        "max": 309.9392909999997
+      },
+      "after": {
+        "p50": 188.92654099999982,
+        "p95": 188.92654099999982,
+        "min": 188.92654099999982,
+        "max": 188.92654099999982
+      },
+      "beforeCpu": {
+        "p50": 426.557,
+        "p95": 426.557,
+        "min": 426.557,
+        "max": 426.557
+      },
+      "afterCpu": {
+        "p50": 202.125,
+        "p95": 202.125,
+        "min": 202.125,
+        "max": 202.125
+      },
+      "p50ImprovementPercent": 39.044017171737025,
+      "p95ImprovementPercent": 39.044017171737025,
+      "beforeQueries": 5,
+      "afterQueries": 5,
+      "beforeBytes": 241896,
+      "afterBytes": 49533,
+      "beforeGzipBytes": 14506,
+      "afterGzipBytes": 1983,
+      "beforeSqlBytes": 9594858,
+      "afterSqlBytes": 9579445,
+      "queryBudget": null,
+      "regression": []
+    }
+  ],
+  "summary": [
+    {
+      "name": "extended.holdings.1-accounts.0-positions",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 64.78208300000006,
+        "min": 64.78208300000006,
+        "max": 64.78208300000006
+      },
+      "p50After": {
+        "median": 1.8113329999998768,
+        "min": 1.8113329999998768,
+        "max": 1.8113329999998768
+      },
+      "p95Before": {
+        "median": 64.78208300000006,
+        "min": 64.78208300000006,
+        "max": 64.78208300000006
+      },
+      "p95After": {
+        "median": 1.8113329999998768,
+        "min": 1.8113329999998768,
+        "max": 1.8113329999998768
+      },
+      "cpuMedianBefore": 79.774,
+      "cpuMedianAfter": 1.31,
+      "queriesBefore": 3,
+      "queriesAfter": 3,
+      "bytesBefore": 93,
+      "bytesAfter": 205,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.holdings.20-accounts.0-positions",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 70.7672500000001,
+        "min": 70.7672500000001,
+        "max": 70.7672500000001
+      },
+      "p50After": {
+        "median": 1.8917089999999916,
+        "min": 1.8917089999999916,
+        "max": 1.8917089999999916
+      },
+      "p95Before": {
+        "median": 70.7672500000001,
+        "min": 70.7672500000001,
+        "max": 70.7672500000001
+      },
+      "p95After": {
+        "median": 1.8917089999999916,
+        "min": 1.8917089999999916,
+        "max": 1.8917089999999916
+      },
+      "cpuMedianBefore": 67.723,
+      "cpuMedianAfter": 1.113,
+      "queriesBefore": 22,
+      "queriesAfter": 3,
+      "bytesBefore": 834,
+      "bytesAfter": 2808,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.holdings.100-accounts.0-positions",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 87.0424579999999,
+        "min": 87.0424579999999,
+        "max": 87.0424579999999
+      },
+      "p50After": {
+        "median": 3.171500000000151,
+        "min": 3.171500000000151,
+        "max": 3.171500000000151
+      },
+      "p95Before": {
+        "median": 87.0424579999999,
+        "min": 87.0424579999999,
+        "max": 87.0424579999999
+      },
+      "p95After": {
+        "median": 3.171500000000151,
+        "min": 3.171500000000151,
+        "max": 3.171500000000151
+      },
+      "cpuMedianBefore": 85.72,
+      "cpuMedianAfter": 2.873,
+      "queriesBefore": 102,
+      "queriesAfter": 3,
+      "bytesBefore": 3954,
+      "bytesAfter": 13768,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.holdings.1-accounts.10-positions",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 56.55383299999994,
+        "min": 56.55383299999994,
+        "max": 56.55383299999994
+      },
+      "p50After": {
+        "median": 1.9137499999999363,
+        "min": 1.9137499999999363,
+        "max": 1.9137499999999363
+      },
+      "p95Before": {
+        "median": 56.55383299999994,
+        "min": 56.55383299999994,
+        "max": 56.55383299999994
+      },
+      "p95After": {
+        "median": 1.9137499999999363,
+        "min": 1.9137499999999363,
+        "max": 1.9137499999999363
+      },
+      "cpuMedianBefore": 62.013,
+      "cpuMedianAfter": 1.59,
+      "queriesBefore": 5,
+      "queriesAfter": 3,
+      "bytesBefore": 5430,
+      "bytesAfter": 5563,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.holdings.20-accounts.10-positions",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 101.02079099999992,
+        "min": 101.02079099999992,
+        "max": 101.02079099999992
+      },
+      "p50After": {
+        "median": 5.82483400000001,
+        "min": 5.82483400000001,
+        "max": 5.82483400000001
+      },
+      "p95Before": {
+        "median": 101.02079099999992,
+        "min": 101.02079099999992,
+        "max": 101.02079099999992
+      },
+      "p95After": {
+        "median": 5.82483400000001,
+        "min": 5.82483400000001,
+        "max": 5.82483400000001
+      },
+      "cpuMedianBefore": 76.513,
+      "cpuMedianAfter": 10.692,
+      "queriesBefore": 62,
+      "queriesAfter": 3,
+      "bytesBefore": 107703,
+      "bytesAfter": 110097,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.holdings.100-accounts.10-positions",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 178.35266600000023,
+        "min": 178.35266600000023,
+        "max": 178.35266600000023
+      },
+      "p50After": {
+        "median": 20.899166999999807,
+        "min": 20.899166999999807,
+        "max": 20.899166999999807
+      },
+      "p95Before": {
+        "median": 178.35266600000023,
+        "min": 178.35266600000023,
+        "max": 178.35266600000023
+      },
+      "p95After": {
+        "median": 20.899166999999807,
+        "min": 20.899166999999807,
+        "max": 20.899166999999807
+      },
+      "cpuMedianBefore": 128.628,
+      "cpuMedianAfter": 24.236,
+      "queriesBefore": 302,
+      "queriesAfter": 3,
+      "bytesBefore": 538673,
+      "bytesAfter": 550587,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.portfolio.1-accounts.100-positions",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 56.066625000000386,
+        "min": 56.066625000000386,
+        "max": 56.066625000000386
+      },
+      "p50After": {
+        "median": 5.713999999999942,
+        "min": 5.713999999999942,
+        "max": 5.713999999999942
+      },
+      "p95Before": {
+        "median": 56.066625000000386,
+        "min": 56.066625000000386,
+        "max": 56.066625000000386
+      },
+      "p95After": {
+        "median": 5.713999999999942,
+        "min": 5.713999999999942,
+        "max": 5.713999999999942
+      },
+      "cpuMedianBefore": 63.442,
+      "cpuMedianAfter": 11.361,
+      "queriesBefore": 5,
+      "queriesAfter": 3,
+      "bytesBefore": 51619,
+      "bytesAfter": 52221,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.portfolio.20-accounts.100-positions",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 156.36125000000038,
+        "min": 156.36125000000038,
+        "max": 156.36125000000038
+      },
+      "p50After": {
+        "median": 40.1998329999999,
+        "min": 40.1998329999999,
+        "max": 40.1998329999999
+      },
+      "p95Before": {
+        "median": 156.36125000000038,
+        "min": 156.36125000000038,
+        "max": 156.36125000000038
+      },
+      "p95After": {
+        "median": 40.1998329999999,
+        "min": 40.1998329999999,
+        "max": 40.1998329999999
+      },
+      "cpuMedianBefore": 130.557,
+      "cpuMedianAfter": 54.67,
+      "queriesBefore": 62,
+      "queriesAfter": 3,
+      "bytesBefore": 536261,
+      "bytesAfter": 544463,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.portfolio.100-accounts.100-positions",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 481.8854160000001,
+        "min": 481.8854160000001,
+        "max": 481.8854160000001
+      },
+      "p50After": {
+        "median": 189.20041700000002,
+        "min": 189.20041700000002,
+        "max": 189.20041700000002
+      },
+      "p95Before": {
+        "median": 481.8854160000001,
+        "min": 481.8854160000001,
+        "max": 481.8854160000001
+      },
+      "p95After": {
+        "median": 189.20041700000002,
+        "min": 189.20041700000002,
+        "max": 189.20041700000002
+      },
+      "cpuMedianBefore": 358.182,
+      "cpuMedianAfter": 204.085,
+      "queriesBefore": 302,
+      "queriesAfter": 3,
+      "bytesBefore": 2579682,
+      "bytesAfter": 2619884,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.transactions.no-match-amount",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 42.7417089999999,
+        "min": 42.7417089999999,
+        "max": 42.7417089999999
+      },
+      "p50After": {
+        "median": 16.350165999999717,
+        "min": 16.350165999999717,
+        "max": 16.350165999999717
+      },
+      "p95Before": {
+        "median": 42.7417089999999,
+        "min": 42.7417089999999,
+        "max": 42.7417089999999
+      },
+      "p95After": {
+        "median": 16.350165999999717,
+        "min": 16.350165999999717,
+        "max": 16.350165999999717
+      },
+      "cpuMedianBefore": 46.046,
+      "cpuMedianAfter": 16.843,
+      "queriesBefore": 8,
+      "queriesAfter": 1,
+      "bytesBefore": 21805,
+      "bytesAfter": 56482,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.transactions.rare-match-amount",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 42.380167000000256,
+        "min": 42.380167000000256,
+        "max": 42.380167000000256
+      },
+      "p50After": {
+        "median": 18.086874999999964,
+        "min": 18.086874999999964,
+        "max": 18.086874999999964
+      },
+      "p95Before": {
+        "median": 42.380167000000256,
+        "min": 42.380167000000256,
+        "max": 42.380167000000256
+      },
+      "p95After": {
+        "median": 18.086874999999964,
+        "min": 18.086874999999964,
+        "max": 18.086874999999964
+      },
+      "cpuMedianBefore": 32.125,
+      "cpuMedianAfter": 13.189,
+      "queriesBefore": 8,
+      "queriesAfter": 1,
+      "bytesBefore": 21815,
+      "bytesAfter": 56494,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.history.ten-years.20-accounts.compact",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 67.40291700000034,
+        "min": 67.40291700000034,
+        "max": 67.40291700000034
+      },
+      "p50After": {
+        "median": 56.93024999999989,
+        "min": 56.93024999999989,
+        "max": 56.93024999999989
+      },
+      "p95Before": {
+        "median": 67.40291700000034,
+        "min": 67.40291700000034,
+        "max": 67.40291700000034
+      },
+      "p95After": {
+        "median": 56.93024999999989,
+        "min": 56.93024999999989,
+        "max": 56.93024999999989
+      },
+      "cpuMedianBefore": 89.418,
+      "cpuMedianAfter": 67.269,
+      "queriesBefore": 5,
+      "queriesAfter": 5,
+      "bytesBefore": 201682,
+      "bytesAfter": 12748,
+      "regressionRuns": []
+    },
+    {
+      "name": "extended.history.ten-years.100-accounts.compact",
+      "rows": 10000,
+      "runs": 1,
+      "p50Before": {
+        "median": 309.9392909999997,
+        "min": 309.9392909999997,
+        "max": 309.9392909999997
+      },
+      "p50After": {
+        "median": 188.92654099999982,
+        "min": 188.92654099999982,
+        "max": 188.92654099999982
+      },
+      "p95Before": {
+        "median": 309.9392909999997,
+        "min": 309.9392909999997,
+        "max": 309.9392909999997
+      },
+      "p95After": {
+        "median": 188.92654099999982,
+        "min": 188.92654099999982,
+        "max": 188.92654099999982
+      },
+      "cpuMedianBefore": 426.557,
+      "cpuMedianAfter": 202.125,
+      "queriesBefore": 5,
+      "queriesAfter": 5,
+      "bytesBefore": 241896,
+      "bytesAfter": 49533,
+      "regressionRuns": []
+    }
+  ]
+}

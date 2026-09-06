@@ -1,0 +1,281 @@
+{
+  "approvedAt": "2026-09-06T00:07:42.589Z",
+  "approvedRunnerHashes": [
+    "b84a3bf3a9ca4c95db41cc778987c332c50038c63e232002bbc0b47724513646"
+  ],
+  "variants": {
+    "before": {
+      "sourceHash": "fc7d798d8d48bd984b5ded8dd3ccbf94db740c356c4a8061e8216e06abdcd43a",
+      "compiledHash": "1a420c05cb94a7a219e62547528d4d3309b66555c6672e5d2dd193d26384e764",
+      "root": "/tmp/splice-backend-baseline-20260905-135633/backend"
+    },
+    "after": {
+      "sourceHash": "7f7946623040e56f307d1a88edfc1b8708027e186acf15d02af5e1eb7d4c9bbf",
+      "compiledHash": "5e01eb99ee97eb73fb91a3eb41f4366e7f3401f22b97d3ba3c1bebc8ea7ffab6",
+      "root": "/tmp/splice-backend-final-20260905-224946/backend"
+    }
+  },
+  "profiles": {
+    "main": {
+      "family": "main",
+      "components": {
+        "instrument": "0481e91ca167920af627b3e6b3028e80c77d29fecb1cbb820735cda7d5403bc1",
+        "stats": "5be244667d5d24b3c152f86f06816e6ebfd5a96a119c96324135e146da62218e",
+        "seed": "04a727b3625b08b0ee332d2af1f575c125623e1255f1dd26b7842284f25b4c5d",
+        "makeServices": "03fa54c84938db47dc682f55c675c613f742a7422fd8084db55fcb9cb236943b",
+        "createDatabase": "a36e8d69a930503754b44c7be8c608c71aeddab13cb9c716f9687457a22a4dd6",
+        "transports": "8f37e4df5d8b6286eacb44e406199b57b7e43ed1cb75f87d3afcfa34878ab338",
+        "workloads": "c4434e36b296bfa845954369899c0c166d80db7b9d8b544b35f180706339e9ec",
+        "sampling": "282f0f258268d09fb06dcc1c3c9fe43f810f974085eb419a72ebac14c6315f62",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b"
+      },
+      "hash": "799859d10009ae3cbc3d82be1d076dcbf67015f07bd50e0dbd7e72add437aa79"
+    },
+    "extended": {
+      "family": "extended",
+      "components": {
+        "instrument": "0481e91ca167920af627b3e6b3028e80c77d29fecb1cbb820735cda7d5403bc1",
+        "stats": "5be244667d5d24b3c152f86f06816e6ebfd5a96a119c96324135e146da62218e",
+        "seed": "04a727b3625b08b0ee332d2af1f575c125623e1255f1dd26b7842284f25b4c5d",
+        "makeServices": "03fa54c84938db47dc682f55c675c613f742a7422fd8084db55fcb9cb236943b",
+        "createDatabase": "a36e8d69a930503754b44c7be8c608c71aeddab13cb9c716f9687457a22a4dd6",
+        "transports": "8f37e4df5d8b6286eacb44e406199b57b7e43ed1cb75f87d3afcfa34878ab338",
+        "workloads": "c4434e36b296bfa845954369899c0c166d80db7b9d8b544b35f180706339e9ec",
+        "sampling": "282f0f258268d09fb06dcc1c3c9fe43f810f974085eb419a72ebac14c6315f62",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+        "extended-workloads.cjs": "4f9ac1650d00e1b1935fc8a1d375e2aeb5aa658bfa6772704d31b15c38e188a7"
+      },
+      "hash": "707a6ee63133a3e1d838cd1b8a5d359e3117ba44f423844db1f45e2ec07b3f49"
+    },
+    "shape": {
+      "family": "shape",
+      "components": {
+        "instrument": "0481e91ca167920af627b3e6b3028e80c77d29fecb1cbb820735cda7d5403bc1",
+        "stats": "5be244667d5d24b3c152f86f06816e6ebfd5a96a119c96324135e146da62218e",
+        "seed": "04a727b3625b08b0ee332d2af1f575c125623e1255f1dd26b7842284f25b4c5d",
+        "makeServices": "03fa54c84938db47dc682f55c675c613f742a7422fd8084db55fcb9cb236943b",
+        "createDatabase": "a36e8d69a930503754b44c7be8c608c71aeddab13cb9c716f9687457a22a4dd6",
+        "transports": "8f37e4df5d8b6286eacb44e406199b57b7e43ed1cb75f87d3afcfa34878ab338",
+        "workloads": "c4434e36b296bfa845954369899c0c166d80db7b9d8b544b35f180706339e9ec",
+        "sampling": "282f0f258268d09fb06dcc1c3c9fe43f810f974085eb419a72ebac14c6315f62",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+        "shape-workloads.cjs": "ddb3399146f87721a616783b842d9065345c2369ae2815488343f24cf7b1b5ae"
+      },
+      "hash": "9cbb55f3a2cbcef5a18c1071e103ae9fd0ce31b00253d45d63ced4660938164a"
+    },
+    "sync": {
+      "family": "sync",
+      "components": {
+        "instrument": "0481e91ca167920af627b3e6b3028e80c77d29fecb1cbb820735cda7d5403bc1",
+        "stats": "5be244667d5d24b3c152f86f06816e6ebfd5a96a119c96324135e146da62218e",
+        "seed": "04a727b3625b08b0ee332d2af1f575c125623e1255f1dd26b7842284f25b4c5d",
+        "makeServices": "03fa54c84938db47dc682f55c675c613f742a7422fd8084db55fcb9cb236943b",
+        "createDatabase": "a36e8d69a930503754b44c7be8c608c71aeddab13cb9c716f9687457a22a4dd6",
+        "transports": "8f37e4df5d8b6286eacb44e406199b57b7e43ed1cb75f87d3afcfa34878ab338",
+        "workloads": "c4434e36b296bfa845954369899c0c166d80db7b9d8b544b35f180706339e9ec",
+        "sampling": "282f0f258268d09fb06dcc1c3c9fe43f810f974085eb419a72ebac14c6315f62",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+        "sync-workloads.cjs": "667acec2f3fa9ec34fe031e075dc24f02c7a49202caac9a955139d76350cf449"
+      },
+      "hash": "9924088ce18929b1aefd368ff48bfe7c4e03875e06de65d702429c9bac5d8d12"
+    },
+    "filters": {
+      "family": "filters",
+      "components": {
+        "instrument": "0481e91ca167920af627b3e6b3028e80c77d29fecb1cbb820735cda7d5403bc1",
+        "stats": "5be244667d5d24b3c152f86f06816e6ebfd5a96a119c96324135e146da62218e",
+        "seed": "04a727b3625b08b0ee332d2af1f575c125623e1255f1dd26b7842284f25b4c5d",
+        "makeServices": "03fa54c84938db47dc682f55c675c613f742a7422fd8084db55fcb9cb236943b",
+        "createDatabase": "a36e8d69a930503754b44c7be8c608c71aeddab13cb9c716f9687457a22a4dd6",
+        "transports": "8f37e4df5d8b6286eacb44e406199b57b7e43ed1cb75f87d3afcfa34878ab338",
+        "workloads": "c4434e36b296bfa845954369899c0c166d80db7b9d8b544b35f180706339e9ec",
+        "sampling": "282f0f258268d09fb06dcc1c3c9fe43f810f974085eb419a72ebac14c6315f62",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+        "filter-workloads.cjs": "3eb98e7ba119d6a01317cbd2875a77d714e2b79c78c919f16466bdfd976e4030"
+      },
+      "hash": "a4d9f8de066b7ec0c55684db8c620e3f5cb17a8ca9864252f0d40b05adf1e07d"
+    },
+    "auth-settings": {
+      "family": "auth-settings",
+      "components": {
+        "instrument": "0481e91ca167920af627b3e6b3028e80c77d29fecb1cbb820735cda7d5403bc1",
+        "stats": "5be244667d5d24b3c152f86f06816e6ebfd5a96a119c96324135e146da62218e",
+        "seed": "04a727b3625b08b0ee332d2af1f575c125623e1255f1dd26b7842284f25b4c5d",
+        "makeServices": "03fa54c84938db47dc682f55c675c613f742a7422fd8084db55fcb9cb236943b",
+        "createDatabase": "a36e8d69a930503754b44c7be8c608c71aeddab13cb9c716f9687457a22a4dd6",
+        "transports": "8f37e4df5d8b6286eacb44e406199b57b7e43ed1cb75f87d3afcfa34878ab338",
+        "workloads": "c4434e36b296bfa845954369899c0c166d80db7b9d8b544b35f180706339e9ec",
+        "sampling": "282f0f258268d09fb06dcc1c3c9fe43f810f974085eb419a72ebac14c6315f62",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+        "auth-settings-workloads.cjs": "40c80022f202def5f547e05811a775710776d7a57c447b8dd7af933400b66b21"
+      },
+      "hash": "f870558959434518753f2c1daf6c50c71357653aa877780fd4292b0b61c593b4"
+    },
+    "memory": {
+      "family": "memory",
+      "components": {
+        "instrument": "0481e91ca167920af627b3e6b3028e80c77d29fecb1cbb820735cda7d5403bc1",
+        "stats": "5be244667d5d24b3c152f86f06816e6ebfd5a96a119c96324135e146da62218e",
+        "seed": "04a727b3625b08b0ee332d2af1f575c125623e1255f1dd26b7842284f25b4c5d",
+        "makeServices": "03fa54c84938db47dc682f55c675c613f742a7422fd8084db55fcb9cb236943b",
+        "createDatabase": "a36e8d69a930503754b44c7be8c608c71aeddab13cb9c716f9687457a22a4dd6",
+        "transports": "8f37e4df5d8b6286eacb44e406199b57b7e43ed1cb75f87d3afcfa34878ab338",
+        "workloads": "c4434e36b296bfa845954369899c0c166d80db7b9d8b544b35f180706339e9ec",
+        "sampling": "282f0f258268d09fb06dcc1c3c9fe43f810f974085eb419a72ebac14c6315f62",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+        "memory-observer.cjs": "24dd4543a0d0607c84ff349823c74ccf34961f075c375dacd8c314e537331adc",
+        "extended-workloads.cjs": "4f9ac1650d00e1b1935fc8a1d375e2aeb5aa658bfa6772704d31b15c38e188a7"
+      },
+      "hash": "e49536e9053b7f22d571b446b61b59942c736a1eddb6566783a1a3c8aaffc35d"
+    },
+    "mixed": {
+      "family": "mixed",
+      "components": {
+        "instrument": "0481e91ca167920af627b3e6b3028e80c77d29fecb1cbb820735cda7d5403bc1",
+        "stats": "5be244667d5d24b3c152f86f06816e6ebfd5a96a119c96324135e146da62218e",
+        "seed": "04a727b3625b08b0ee332d2af1f575c125623e1255f1dd26b7842284f25b4c5d",
+        "makeServices": "03fa54c84938db47dc682f55c675c613f742a7422fd8084db55fcb9cb236943b",
+        "createDatabase": "a36e8d69a930503754b44c7be8c608c71aeddab13cb9c716f9687457a22a4dd6",
+        "transports": "8f37e4df5d8b6286eacb44e406199b57b7e43ed1cb75f87d3afcfa34878ab338",
+        "workloads": "c4434e36b296bfa845954369899c0c166d80db7b9d8b544b35f180706339e9ec",
+        "sampling": "282f0f258268d09fb06dcc1c3c9fe43f810f974085eb419a72ebac14c6315f62",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+        "mixed-workload.cjs": "636483c9c1d07bedb6775d3136cc9309b6ba3e6157394e7b72e73a438e288425",
+        "sync-workloads.cjs": "667acec2f3fa9ec34fe031e075dc24f02c7a49202caac9a955139d76350cf449"
+      },
+      "hash": "739606715728a93e502941ff126090129802842154a2aa57664a3065119e1f07"
+    }
+  },
+  "legacyBeforeMainRunnerHashes": [
+    "80bd58b86566c8214c175a3b9b77184713098db4a209b4dab092205a5eee6623",
+    "03925dfd27bab5a3f857145b8f1014f05e0930c5aca621696083b6de016b16eb",
+    "f12eff9e39e7ffbbc31a5de136e8db6008303db8c33ba9c0127b79a8dc1c89ec",
+    "e5c62447904c93272a4b40c349bf3c201bc524e1d849c5faa338e80831ae732d",
+    "f8091b2749f65c218cc5c35ea4841eb50d3e3b7ad3fd8e6e440ef3798af7ec77"
+  ],
+  "legacyBeforeMain": [
+    {
+      "file": "before-10000-run1.json",
+      "runnerHash": "80bd58b86566c8214c175a3b9b77184713098db4a209b4dab092205a5eee6623",
+      "capturedHarness": {
+        "benchmark-runner.cjs": "80bd58b86566c8214c175a3b9b77184713098db4a209b4dab092205a5eee6623",
+        "comparison.cjs": "d01c205bfa9f3ab4af839f66079d96cbdbce8442841dc0fcffc786e64422802a",
+        "correctness-probes.cjs": "bbc7776a637f6163ad36ab3fc822f84ffae44bcd210caad6cb78159e1ff9a066",
+        "extended-workloads.cjs": "5aa81246a07efc3148c0b7cadf0af525fc4a41d5c64c8a41e18fdef1a0cef3f8",
+        "matrix-child.cjs": "51a2b6af3b7af8b44bd26a633ca62a90a074384c6008aa274dae8d6ba7c8d218",
+        "matrix-runner.cjs": "d095b8fe1de63ef65dadb3b8d9ffd32c933d882082426c215bc990ffc4480ff9",
+        "memory-observer.cjs": "24dd4543a0d0607c84ff349823c74ccf34961f075c375dacd8c314e537331adc",
+        "mixed-workload.cjs": "9ebc70c6cd7f50727f6d4f553178b1fda8554c2b5c31c6aab263eb3fd613de2e",
+        "output-artifacts.cjs": "bf57365f6560062a28789c7746ee98e787012c3c758ba3e4aad3b40325dace23",
+        "shape-workloads.cjs": "5e3477b23f5a3b92d27cefd14fadc0c1c1ef4cd112398522b46c2395ded157d9",
+        "sync-workloads.cjs": "3c1d0bb7000fd1710a4a6b83b17bd81e978b31c433189423f1d1fd872ba91042"
+      }
+    },
+    {
+      "file": "before-10000-run2.json",
+      "runnerHash": "03925dfd27bab5a3f857145b8f1014f05e0930c5aca621696083b6de016b16eb",
+      "capturedHarness": {
+        "benchmark-runner.cjs": "03925dfd27bab5a3f857145b8f1014f05e0930c5aca621696083b6de016b16eb",
+        "comparison.cjs": "1d434d2ef268e82d7017aff40c1cdf8e2afc25128ee163a142cb936e22c00f84",
+        "correctness-probes.cjs": "bbc7776a637f6163ad36ab3fc822f84ffae44bcd210caad6cb78159e1ff9a066",
+        "extended-workloads.cjs": "2e0d55e0a805f637bda1c24b057f1fe1713975fc35f83aaa635327d9f9dfbe73",
+        "matrix-child.cjs": "51a2b6af3b7af8b44bd26a633ca62a90a074384c6008aa274dae8d6ba7c8d218",
+        "matrix-runner.cjs": "d095b8fe1de63ef65dadb3b8d9ffd32c933d882082426c215bc990ffc4480ff9",
+        "memory-observer.cjs": "24dd4543a0d0607c84ff349823c74ccf34961f075c375dacd8c314e537331adc",
+        "mixed-workload.cjs": "9ebc70c6cd7f50727f6d4f553178b1fda8554c2b5c31c6aab263eb3fd613de2e",
+        "output-artifacts.cjs": "bf57365f6560062a28789c7746ee98e787012c3c758ba3e4aad3b40325dace23",
+        "shape-workloads.cjs": "ddb3399146f87721a616783b842d9065345c2369ae2815488343f24cf7b1b5ae",
+        "sync-workloads.cjs": "3c1d0bb7000fd1710a4a6b83b17bd81e978b31c433189423f1d1fd872ba91042"
+      }
+    },
+    {
+      "file": "before-10000-run3.json",
+      "runnerHash": "03925dfd27bab5a3f857145b8f1014f05e0930c5aca621696083b6de016b16eb",
+      "capturedHarness": {
+        "benchmark-runner.cjs": "03925dfd27bab5a3f857145b8f1014f05e0930c5aca621696083b6de016b16eb",
+        "compare-all.cjs": "c331a6754e11e9625193a26d3d2ba6be49d86573b044ec984c155954f3232169",
+        "comparison.cjs": "0a119303eb75666f18ddf37d4f7b9ab1ba27964dd5c8c5611cd9778624a8bd25",
+        "correctness-probes.cjs": "bbc7776a637f6163ad36ab3fc822f84ffae44bcd210caad6cb78159e1ff9a066",
+        "extended-workloads.cjs": "2e0d55e0a805f637bda1c24b057f1fe1713975fc35f83aaa635327d9f9dfbe73",
+        "matrix-child.cjs": "51a2b6af3b7af8b44bd26a633ca62a90a074384c6008aa274dae8d6ba7c8d218",
+        "matrix-runner.cjs": "d095b8fe1de63ef65dadb3b8d9ffd32c933d882082426c215bc990ffc4480ff9",
+        "memory-observer.cjs": "24dd4543a0d0607c84ff349823c74ccf34961f075c375dacd8c314e537331adc",
+        "mixed-workload.cjs": "a7ae479a4bb5d7ad91ae0773c573d99fe424d3299f1ef45af13f047a9fde93d2",
+        "output-artifacts.cjs": "bf57365f6560062a28789c7746ee98e787012c3c758ba3e4aad3b40325dace23",
+        "shape-workloads.cjs": "ddb3399146f87721a616783b842d9065345c2369ae2815488343f24cf7b1b5ae",
+        "sync-workloads.cjs": "3c1d0bb7000fd1710a4a6b83b17bd81e978b31c433189423f1d1fd872ba91042"
+      }
+    },
+    {
+      "file": "before-100000-run1.json",
+      "runnerHash": "f12eff9e39e7ffbbc31a5de136e8db6008303db8c33ba9c0127b79a8dc1c89ec",
+      "capturedHarness": {
+        "benchmark-runner.cjs": "f12eff9e39e7ffbbc31a5de136e8db6008303db8c33ba9c0127b79a8dc1c89ec",
+        "compare-all.cjs": "c210b74df960f3f4b0e8ec0658568d182e1b29111349948beb51efc42ce56acc",
+        "comparison.cjs": "bc35b217f7cd06fb485c3b91b76bc973d3cc87cb40bdeff1d31cc93bab930dff",
+        "correctness-probes.cjs": "bbc7776a637f6163ad36ab3fc822f84ffae44bcd210caad6cb78159e1ff9a066",
+        "extended-workloads.cjs": "4f9ac1650d00e1b1935fc8a1d375e2aeb5aa658bfa6772704d31b15c38e188a7",
+        "matrix-child.cjs": "51a2b6af3b7af8b44bd26a633ca62a90a074384c6008aa274dae8d6ba7c8d218",
+        "matrix-runner.cjs": "d7c1be397a6c8f0a04042716fb8d1c71f6d21e32f6d652a1bad094236c347dce",
+        "memory-observer.cjs": "24dd4543a0d0607c84ff349823c74ccf34961f075c375dacd8c314e537331adc",
+        "mixed-workload.cjs": "44b9e91572deda10d9d8464e87dcd37905af912a3b8df2cffeda042fd20b455e",
+        "output-artifacts.cjs": "bf57365f6560062a28789c7746ee98e787012c3c758ba3e4aad3b40325dace23",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+        "shape-workloads.cjs": "ddb3399146f87721a616783b842d9065345c2369ae2815488343f24cf7b1b5ae",
+        "sync-workloads.cjs": "667acec2f3fa9ec34fe031e075dc24f02c7a49202caac9a955139d76350cf449",
+        "validate-schema-fixture.cjs": "3810305727dcd21bfedef060e1dac0e8c2c99092a98dcda0cd075fcdc1b757b7"
+      }
+    },
+    {
+      "file": "before-100000-run2.json",
+      "runnerHash": "e5c62447904c93272a4b40c349bf3c201bc524e1d849c5faa338e80831ae732d",
+      "capturedHarness": {
+        "benchmark-runner.cjs": "e5c62447904c93272a4b40c349bf3c201bc524e1d849c5faa338e80831ae732d",
+        "compare-all.cjs": "0f949627f06af781017a61ccf16b66577a2e3f5dacd2c0537dfac6c05c37078d",
+        "comparison.cjs": "bc35b217f7cd06fb485c3b91b76bc973d3cc87cb40bdeff1d31cc93bab930dff",
+        "correctness-probes.cjs": "bbc7776a637f6163ad36ab3fc822f84ffae44bcd210caad6cb78159e1ff9a066",
+        "extended-workloads.cjs": "4f9ac1650d00e1b1935fc8a1d375e2aeb5aa658bfa6772704d31b15c38e188a7",
+        "filter-workloads.cjs": "adbf2e79197128dcdd58037b1fb243bfcf8d078721bc363f8862199bea03538c",
+        "matrix-child.cjs": "51a2b6af3b7af8b44bd26a633ca62a90a074384c6008aa274dae8d6ba7c8d218",
+        "matrix-runner.cjs": "a5c391e9dc44c58225ab75480618135e9cbb90dee996607db6535e7b7c21f1da",
+        "memory-observer.cjs": "24dd4543a0d0607c84ff349823c74ccf34961f075c375dacd8c314e537331adc",
+        "mixed-workload.cjs": "44b9e91572deda10d9d8464e87dcd37905af912a3b8df2cffeda042fd20b455e",
+        "output-artifacts.cjs": "bf57365f6560062a28789c7746ee98e787012c3c758ba3e4aad3b40325dace23",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+        "shape-workloads.cjs": "ddb3399146f87721a616783b842d9065345c2369ae2815488343f24cf7b1b5ae",
+        "sync-workloads.cjs": "667acec2f3fa9ec34fe031e075dc24f02c7a49202caac9a955139d76350cf449",
+        "validate-schema-fixture.cjs": "3810305727dcd21bfedef060e1dac0e8c2c99092a98dcda0cd075fcdc1b757b7",
+        "write-plan-probe.cjs": "2a36916a3f5a9cf09883e8c1ac2f9e57c31c8ec650c59ee09e821abcf757c9ef"
+      }
+    },
+    {
+      "file": "before-100000-run3.json",
+      "runnerHash": "f8091b2749f65c218cc5c35ea4841eb50d3e3b7ad3fd8e6e440ef3798af7ec77",
+      "capturedHarness": {
+        "amount-page-oracle.cjs": "5fa1f6f477ade36568f3adbf3fe5324e972bddabeb1e5330bbc7f74a7253745c",
+        "benchmark-runner.cjs": "f8091b2749f65c218cc5c35ea4841eb50d3e3b7ad3fd8e6e440ef3798af7ec77",
+        "compare-all.cjs": "0f949627f06af781017a61ccf16b66577a2e3f5dacd2c0537dfac6c05c37078d",
+        "comparison.cjs": "168cff3199d9cf159343a83ca6742a65909e103c59981fb6faab2a84a7f0fb98",
+        "correctness-probes.cjs": "bbc7776a637f6163ad36ab3fc822f84ffae44bcd210caad6cb78159e1ff9a066",
+        "edge-correctness-probes.cjs": "4916c01c00c9a885458b685a3e9f6812505857731e7f212011b9e73ce0be7aeb",
+        "extended-workloads.cjs": "4f9ac1650d00e1b1935fc8a1d375e2aeb5aa658bfa6772704d31b15c38e188a7",
+        "filter-workloads.cjs": "adbf2e79197128dcdd58037b1fb243bfcf8d078721bc363f8862199bea03538c",
+        "matrix-child.cjs": "51a2b6af3b7af8b44bd26a633ca62a90a074384c6008aa274dae8d6ba7c8d218",
+        "matrix-runner.cjs": "a5c391e9dc44c58225ab75480618135e9cbb90dee996607db6535e7b7c21f1da",
+        "memory-observer.cjs": "24dd4543a0d0607c84ff349823c74ccf34961f075c375dacd8c314e537331adc",
+        "mixed-workload.cjs": "44b9e91572deda10d9d8464e87dcd37905af912a3b8df2cffeda042fd20b455e",
+        "output-artifacts.cjs": "bf57365f6560062a28789c7746ee98e787012c3c758ba3e4aad3b40325dace23",
+        "schema-fixture-adapter.cjs": "bf36abc7bfb6c0b75c94899fb65abfdb86cf6041fe01e1a65a0029d8286e0c5b",
+        "shape-workloads.cjs": "ddb3399146f87721a616783b842d9065345c2369ae2815488343f24cf7b1b5ae",
+        "sync-workloads.cjs": "667acec2f3fa9ec34fe031e075dc24f02c7a49202caac9a955139d76350cf449",
+        "validate-schema-fixture.cjs": "3810305727dcd21bfedef060e1dac0e8c2c99092a98dcda0cd075fcdc1b757b7",
+        "write-plan-probe.cjs": "2a36916a3f5a9cf09883e8c1ac2f9e57c31c8ec650c59ee09e821abcf757c9ef"
+      }
+    }
+  ],
+  "legacyEvidence": "These explicitly enumerated original main captures predate per-function fingerprints. Their saved full harness hashes and observer-v2 label were audited during this task. Subsequent edits added disjoint suites, schema handling gated to the final schema, final-only production metrics, output oracles, and reporting/provenance fields; the original sampling/observer interval stayed unchanged. The baseline source/build remained the same frozen on-disk snapshot. Legacy compiled hashes are established by that frozen build, not represented as originally captured per-report evidence. Unknown source/harness revisions and observer-v1 captures are rejected.",
+  "focusedScopeAmendment": {
+    "reason": "User requested a shorter benchmark set. Mixed-load selection now accepts explicit1/10 concurrency; the original1/5/10 default and phase measurements are unchanged. No application, observer, main or other workload functions changed.",
+    "previousMixedProfile": "4ef00ad5fffdb583566dc28872d3159be447150a81f55166d95d1f14122b9940"
+  }
+}

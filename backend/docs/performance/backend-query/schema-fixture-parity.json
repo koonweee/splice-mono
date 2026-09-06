@@ -1,0 +1,27 @@
+{
+  "completed": true,
+  "method": "Same10k seed; actual final migrations on original schema versus fresh final schema with derived-header adapter. Compare every header owner/provider/date/revision/valuation/completion time and position count, excluding generated header UUIDs.",
+  "migrations": [
+    "ExactMoney1788642000000",
+    "AddHoldingsSnapshots1788643000000",
+    "CanonicalTransactionActivityDates1788644000000"
+  ],
+  "snapshots": [
+    {
+      "variant": "migrated",
+      "headerCount": 12200,
+      "latestAccounts": 100,
+      "positionsPerLatestAccount": 100,
+      "headerFactsDigest": "7f84338f5a548f3dab4fda84ff09e5349ec116e939bd21b039d2ad89d73e3b14",
+      "sourceHash": "fc7d798d8d48bd984b5ded8dd3ccbf94db740c356c4a8061e8216e06abdcd43a"
+    },
+    {
+      "variant": "fresh-final",
+      "headerCount": 12200,
+      "latestAccounts": 100,
+      "positionsPerLatestAccount": 100,
+      "headerFactsDigest": "7f84338f5a548f3dab4fda84ff09e5349ec116e939bd21b039d2ad89d73e3b14",
+      "sourceHash": "7f7946623040e56f307d1a88edfc1b8708027e186acf15d02af5e1eb7d4c9bbf"
+    }
+  ]
+}
