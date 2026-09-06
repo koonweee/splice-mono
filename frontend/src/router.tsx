@@ -34,6 +34,9 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
+    defaultPendingMs: 150,
+    defaultPendingMinMs: 0,
+    defaultPendingComponent: () => <div role="status">Loading page…</div>,
   })
 
   setupRouterSsrQueryIntegration({
