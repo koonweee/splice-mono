@@ -1,6 +1,6 @@
 import { AreaChart } from '@mantine/charts'
-import { Paper, Text } from '@mantine/core'
-import isNumber from 'lodash/isNumber'
+import { Box, Paper, Text } from '@mantine/core'
+import { useRef, useState } from 'react'
 import type { MoneyWithSign } from '../api/models'
 
 function ChartTooltip({ label, value }: { label: string; value?: string }) {
@@ -44,6 +44,9 @@ export function Chart({
   mb,
   onDataPointHover,
 }: ChartProps) {
+  const interacting = useRef(false)
+  const [interactionActive, setInteractionActive] = useState(false)
+
   if (data.length === 0) {
     return null
   }
@@ -57,59 +60,83 @@ export function Chart({
   const domainMin = minValue - padding
   const domainMax = maxValue + padding
 
-  const handleMove = (state: { activeIndex?: unknown }) => {
-    const { activeIndex } = state
-    if (activeIndex != null && isNumber(Number(activeIndex))) {
-      const point = data[Number(activeIndex)]
-      onDataPointHover?.(point)
-    } else {
-      onDataPointHover?.()
-    }
+  const handleStart = () => {
+    interacting.current = true
+    setInteractionActive(true)
   }
 
-  const handleLeave = () => onDataPointHover?.()
+  const handleLeave = () => {
+    interacting.current = false
+    setInteractionActive(false)
+    onDataPointHover?.()
+  }
+
+  const handleMove = (state: {
+    activeIndex?: unknown
+    isTooltipActive?: boolean
+  }) => {
+    // Recharts queues movement callbacks; a callback can arrive after leave.
+    if (!interacting.current) return
+    const index = Number(state.activeIndex)
+    const point =
+      state.isTooltipActive &&
+      state.activeIndex != null &&
+      Number.isInteger(index)
+        ? data[index]
+        : undefined
+    onDataPointHover?.(point)
+  }
 
   return (
-    <AreaChart
-      h={height}
+    <Box
       mb={mb}
-      data={data}
-      dataKey="date"
-      series={[{ name: 'value', color }]}
-      curveType="monotone"
-      withDots
-      gridAxis="none"
-      withXAxis={false}
-      withYAxis={false}
-      withGradient
-      yAxisProps={{
-        domain: [domainMin, domainMax],
-      }}
-      valueFormatter={valueFormatter}
-      areaChartProps={{
-        onMouseMove: handleMove,
-        onMouseLeave: handleLeave,
-        onTouchMove: handleMove,
-        onTouchEnd: handleLeave,
-      }}
-      tooltipProps={{
-        content: ({ label, payload }) => {
-          if (!payload.length) return null
-          const point = payload[0]
-          return (
-            <ChartTooltip
-              label={point.payload.label || String(label)}
-              value={
-                onDataPointHover
-                  ? undefined
-                  : pointFormatter
-                    ? pointFormatter(point.payload)
-                    : valueFormatter(point.value)
-              }
-            />
-          )
-        },
-      }}
-    />
+      onMouseEnter={handleStart}
+      onMouseLeave={handleLeave}
+      onTouchStart={handleStart}
+      onTouchEnd={handleLeave}
+      onTouchCancel={handleLeave}
+      onKeyDown={handleStart}
+      onBlur={handleLeave}
+    >
+      <AreaChart
+        h={height}
+        data={data}
+        dataKey="date"
+        series={[{ name: 'value', color }]}
+        curveType="monotone"
+        withDots
+        gridAxis="none"
+        withXAxis={false}
+        withYAxis={false}
+        withGradient
+        yAxisProps={{
+          domain: [domainMin, domainMax],
+        }}
+        valueFormatter={valueFormatter}
+        areaChartProps={{
+          onMouseMove: handleMove,
+          onTouchMove: handleMove,
+        }}
+        tooltipProps={{
+          active: interactionActive ? undefined : false,
+          content: ({ label, payload }) => {
+            if (!payload.length) return null
+            const point = payload[0]
+            return (
+              <ChartTooltip
+                label={point.payload.label || String(label)}
+                value={
+                  onDataPointHover
+                    ? undefined
+                    : pointFormatter
+                      ? pointFormatter(point.payload)
+                      : valueFormatter(point.value)
+                }
+              />
+            )
+          },
+        }}
+      />
+    </Box>
   )
 }
