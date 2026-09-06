@@ -1,4 +1,4 @@
-import { Alert, Button, Grid, Group, Loader, Select } from '@mantine/core'
+import { Alert, Button, Grid, Group, Loader, Select, Text } from '@mantine/core'
 import { useNavigate } from '@tanstack/react-router'
 import { lazy, useMemo } from 'react'
 import { usePresentationPreferences } from '../../lib/presentation-preferences'
@@ -49,6 +49,7 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
     error,
     refetch,
     isFetching,
+    isChangingPeriod,
     seriesError,
     seriesLoading,
     refetchSeries,
@@ -102,7 +103,11 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
 
   const handlePeriodChange = (value: string | null) => {
     if (value && isValidTimePeriod(value)) {
-      navigate({ to: '/home', search: { accountId, period: value } })
+      navigate({
+        to: '/home',
+        search: { accountId, period: value },
+        resetScroll: false,
+      })
     }
   }
 
@@ -116,6 +121,7 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
         title="Home"
         actions={
           <Select
+            aria-label="Comparison period"
             value={period}
             onChange={handlePeriodChange}
             data={PERIOD_OPTIONS}
@@ -124,6 +130,13 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
           />
         }
       />
+
+      {isChangingPeriod && dashboard && (
+        <Text role="status" size="sm" c="dimmed" mb="sm">
+          Updating period… Showing{' '}
+          {TIME_PERIOD_LABELS[dashboard.comparisonPeriod]} results.
+        </Text>
+      )}
 
       {isLoading && (
         <Group justify="center" py="xl">

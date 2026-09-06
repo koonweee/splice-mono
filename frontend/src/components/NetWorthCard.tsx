@@ -12,6 +12,7 @@ import {
 } from '@mantine/core'
 import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
+import { ClientOnly } from '@tanstack/react-router'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
   formatMoneyNumber,
@@ -112,35 +113,41 @@ export function NetWorthCard({
           </Text>
         </Group>
       </Box>
-      {chartError && (
-        <Alert color="red" mt="md" title="Chart unavailable">
-          The summary is still available.{' '}
-          <Button variant="subtle" onClick={onRetryChart}>
-            Retry chart
-          </Button>
-        </Alert>
-      )}
-      {chartLoading && !hasChartData && (
-        <Skeleton height={200} mt="md" aria-label="Loading chart" />
-      )}
-      {hasChartData && (
-        <Box mt="md">
-          <Chart
-            data={chartData}
-            height={200}
-            valueFormatter={(value) =>
-              balancesHidden
-                ? HIDDEN_BALANCE_PLACEHOLDER
-                : formatMoneyNumber({
-                    value,
-                    currency: netWorth.money.currency,
-                    decimals: 0,
-                  })
-            }
-            onDataPointHover={setHoveredPoint}
-          />
-        </Box>
-      )}
+      {/* The streamed series can settle between SSR and hydration. Keep this
+          region deterministic without making the summary wait for the chart. */}
+      <ClientOnly
+        fallback={<Skeleton height={200} mt="md" aria-label="Loading chart" />}
+      >
+        {chartError && (
+          <Alert color="red" mt="md" title="Chart unavailable">
+            The summary is still available.{' '}
+            <Button variant="subtle" onClick={onRetryChart}>
+              Retry chart
+            </Button>
+          </Alert>
+        )}
+        {chartLoading && !hasChartData && (
+          <Skeleton height={200} mt="md" aria-label="Loading chart" />
+        )}
+        {hasChartData && (
+          <Box mt="md">
+            <Chart
+              data={chartData}
+              height={200}
+              valueFormatter={(value) =>
+                balancesHidden
+                  ? HIDDEN_BALANCE_PLACEHOLDER
+                  : formatMoneyNumber({
+                      value,
+                      currency: netWorth.money.currency,
+                      decimals: 0,
+                    })
+              }
+              onDataPointHover={setHoveredPoint}
+            />
+          </Box>
+        )}
+      </ClientOnly>
     </Paper>
   )
 }

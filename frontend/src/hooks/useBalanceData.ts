@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import {
   dashboardSeriesOptions,
@@ -15,10 +15,12 @@ import {
   transformToAccountChartData,
 } from '../lib/balance-utils'
 import { moneyToChartNumber } from '../lib/money'
+import { isValidTimePeriod } from '../lib/route-search'
 import type { DashboardData } from '../lib/balance-utils'
 import type {
   AccountBalanceResult,
   BalanceQueryPerDateResult,
+  DashboardSummaryResponse,
 } from '../api/models'
 import type { ChartDataPoint } from '../components/Chart'
 import { TimePeriod } from '@/lib/types'
@@ -28,11 +30,34 @@ import { TimePeriod } from '@/lib/types'
  */
 export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
   const { today } = usePresentationPreferences()
-  const summary = useQuery(dashboardSummaryOptions(period, today))
+  const queryClient = useQueryClient()
+  const summary = useQuery({
+    ...dashboardSummaryOptions(period, today),
+    // Keep the cards mounted during period changes, with their original label.
+    // Never revive a removed private cache or carry values across currencies/days.
+    placeholderData: (previous, previousQuery) =>
+      previous?.endDate === today &&
+      previous.reportingCurrency === reportingCurrency &&
+      previousQuery &&
+      queryClient
+        .getQueryCache()
+        .get<DashboardSummaryResponse, void>(previousQuery.queryHash) ===
+        previousQuery
+        ? previous
+        : undefined,
+  })
   const series = useQuery(dashboardSeriesOptions(period, today))
+  const seriesMatchesSummary =
+    series.data !== undefined &&
+    summary.data !== undefined &&
+    series.data.reportingCurrency === summary.data.reportingCurrency &&
+    series.data.period === summary.data.period &&
+    series.data.startDate === summary.data.startDate &&
+    series.data.endDate === summary.data.endDate
   const data = useMemo<DashboardData | undefined>(() => {
     if (
       !summary.data ||
+      !isValidTimePeriod(summary.data.period) ||
       (reportingCurrency &&
         summary.data.reportingCurrency !== reportingCurrency)
     )
@@ -47,20 +72,19 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
       netWorth: summary.data.netWorth,
       changeAmount: summary.data.changeAmount,
       changePercent: summary.data.changePercent,
-      comparisonPeriod: period,
+      comparisonPeriod: summary.data.period,
       assets: summary.data.assets.map(account),
       liabilities: summary.data.liabilities.map(account),
-      chartData:
-        series.data?.reportingCurrency === summary.data.reportingCurrency
-          ? series.data.points.map((point) => ({
-              date: point.date,
-              label: dayjs(point.date).format('MMM D'),
-              value: moneyToChartNumber(point.netWorth),
-              money: point.netWorth,
-            }))
-          : [],
+      chartData: seriesMatchesSummary
+        ? series.data.points.map((point) => ({
+            date: point.date,
+            label: dayjs(point.date).format('MMM D'),
+            value: moneyToChartNumber(point.netWorth),
+            money: point.netWorth,
+          }))
+        : [],
     }
-  }, [summary.data, series.data, period, reportingCurrency])
+  }, [summary.data, series.data, seriesMatchesSummary, reportingCurrency])
   return {
     data,
     isLoading: summary.isPending,
@@ -75,9 +99,11 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
           )
         : undefined),
     isFetching: summary.isFetching,
+    isChangingPeriod: summary.isPlaceholderData,
     refetch: summary.refetch,
     seriesError: series.error,
-    seriesLoading: series.isPending,
+    seriesLoading:
+      series.isPending || (!seriesMatchesSummary && summary.isFetching),
     refetchSeries: series.refetch,
   }
 }
