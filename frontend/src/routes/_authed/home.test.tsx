@@ -331,3 +331,25 @@ it('offers a retry while keeping matching cached dashboard data visible', () => 
   fireEvent.click(screen.getByRole('button', { name: 'Retry dashboard' }))
   expect(refetch).toHaveBeenCalledOnce()
 })
+
+it('keeps cards visible and labels the previous period while switching', () => {
+  mockFns.useSearchMock.mockReturnValue({ period: TimePeriod.week })
+  mockFns.useBalanceDataMock.mockReturnValue({
+    data: { ...dashboard, comparisonPeriod: TimePeriod.month },
+    isLoading: false,
+    isFetching: true,
+    isChangingPeriod: true,
+    seriesLoading: true,
+  })
+  renderHomePage()
+  expect(screen.getByRole('status').textContent).toBe(
+    'Updating period… Showing Month results.',
+  )
+  expect(screen.getByText('Cash')).toBeTruthy()
+  expect(screen.getByText('Brokerage')).toBeTruthy()
+  expect(screen.getByText('Card')).toBeTruthy()
+  expect(screen.getByText('from last month')).toBeTruthy()
+  expect(
+    screen.getByRole('textbox', { name: 'Comparison period' }),
+  ).toBeTruthy()
+})
