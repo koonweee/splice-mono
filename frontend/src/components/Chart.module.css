@@ -1,0 +1,3 @@
+.softArea :global(linearGradient) > stop:last-child {
+  stop-opacity: 0;
+}

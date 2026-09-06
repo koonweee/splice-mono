@@ -3,6 +3,7 @@ import { useReducedMotion } from '@mantine/hooks'
 import { Box, Paper, Text } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
 import placeholderStyles from './loading/ChartSkeleton.module.css'
+import styles from './Chart.module.css'
 import type { MoneyWithSign } from '../api/models'
 
 function ChartTooltip({ label, value }: { label: string; value?: string }) {
@@ -193,6 +194,7 @@ export function Chart({
       onBlur={handleLeave}
     >
       <AreaChart
+        className={minimal ? styles.softArea : undefined}
         h={height}
         data={plottedData}
         dataKey="date"
@@ -204,6 +206,7 @@ export function Chart({
         withXAxis={false}
         withYAxis={false}
         withGradient
+        fillOpacity={minimal ? 0.12 : 0.2}
         yAxisProps={{
           domain: [domainMin, domainMax],
         }}
