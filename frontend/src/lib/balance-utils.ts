@@ -1,6 +1,14 @@
 import dayjs from 'dayjs'
-import { AccountType, MoneyWithSignSign } from '../api/models'
-import { getDecimalPlaces } from './format'
+import { AccountType } from '../api/models'
+import {
+  compareIntegers,
+  moneyFromSignedMinorUnits,
+  moneyToChartNumber,
+  moneyToMajorString,
+  parseMoneyDraft,
+  ratioPercent,
+  signedMinorUnits,
+} from './money'
 import { TimePeriod } from './types'
 import type { ChartDataPoint } from '../components/Chart'
 import type {
@@ -58,10 +66,8 @@ export function getDateRange(period: TimePeriod): {
 /**
  * Extract a signed numeric value from a MoneyWithSign (in dollars)
  */
-export function getSignedAmount(balance: MoneyWithSign): number {
-  const decimalPlaces = getDecimalPlaces(balance.money.currency)
-  const dollars = balance.money.amount / Math.pow(10, decimalPlaces)
-  return balance.sign === MoneyWithSignSign.negative ? -dollars : dollars
+export function getSignedAmount(balance: MoneyWithSign): string {
+  return moneyToMajorString(balance)
 }
 
 /**
@@ -99,7 +105,7 @@ function resolveConsistentCurrency(
   // Zero does not establish or change a total's unit. This lets a later
   // non-zero balance choose the reporting currency when user settings have not
   // loaded yet, while callers may retain a zero-only display fallback.
-  if (balance.money.amount === 0) return expectedCurrency
+  if (balance.money.amount === '0') return expectedCurrency
 
   if (expectedCurrency !== undefined && actualCurrency !== expectedCurrency) {
     throw new BalanceCurrencyMismatchError(expectedCurrency, actualCurrency)
@@ -113,10 +119,10 @@ function resolveDifferenceCurrency(
   previous: MoneyWithSign,
   fallbackCurrency: string,
 ): string {
-  if (current.money.amount !== 0) {
+  if (current.money.amount !== '0') {
     return normalizeCurrency(current.money.currency)
   }
-  if (previous.money.amount !== 0) {
+  if (previous.money.amount !== '0') {
     return normalizeCurrency(previous.money.currency)
   }
   return fallbackCurrency
@@ -130,7 +136,7 @@ export function isZeroBalanceAccount(
 ): boolean {
   const effectiveBalance =
     account.convertedEffectiveBalance ?? account.effectiveBalance
-  return effectiveBalance.money.amount === 0
+  return effectiveBalance.money.amount === '0'
 }
 
 /**
@@ -140,8 +146,8 @@ export function isZeroBalanceAccount(
 export function calculateNetWorthForDate(
   balances: Record<string, AccountBalanceResult>,
   expectedCurrency?: string,
-): number {
-  let netWorth = 0
+): bigint {
+  let netWorth = 0n
   let currency = expectedCurrency
     ? normalizeCurrency(expectedCurrency)
     : undefined
@@ -149,12 +155,12 @@ export function calculateNetWorthForDate(
   Object.values(balances).forEach((result) => {
     const effectiveBalance = resolveEffectiveBalance(result.effectiveBalance)
     currency = resolveConsistentCurrency(effectiveBalance, currency)
-    const amount = getSignedAmount(effectiveBalance)
+    const amount = signedMinorUnits(effectiveBalance)
 
     if (isLiabilityType(result.account.type)) {
       // Liabilities subtract from net worth
       // Note: liability balances are typically positive amounts owed
-      netWorth -= Math.abs(amount)
+      netWorth -= amount < 0n ? -amount : amount
     } else {
       // Assets add to net worth
       netWorth += amount
@@ -169,29 +175,19 @@ export function calculateNetWorthForDate(
  * Returns null if previous value is 0 (can't calculate percentage change)
  */
 export function calculateChangePercent(
-  current: number,
-  previous: number,
+  current: bigint,
+  previous: bigint,
 ): number | undefined {
-  if (previous === 0) return undefined
-  return ((current - previous) / Math.abs(previous)) * 100
+  if (previous === 0n) return undefined
+  return ratioPercent(current - previous, previous < 0n ? -previous : previous)
 }
 
-/**
- * Create a MoneyWithSign object from a dollar amount
- */
+/** Parse a decimal text draft in major units into the HTTP minor-unit contract. */
 export function createMoneyWithSign(
-  amount: number,
+  amount: string,
   currency: string,
 ): MoneyWithSign {
-  const isNegative = amount < 0
-  const decimalPlaces = getDecimalPlaces(currency)
-  return {
-    money: {
-      amount: Math.round(Math.abs(amount) * Math.pow(10, decimalPlaces)),
-      currency,
-    },
-    sign: isNegative ? MoneyWithSignSign.negative : MoneyWithSignSign.positive,
-  }
+  return parseMoneyDraft(amount, currency)
 }
 
 function downsampleChartResults(
@@ -272,13 +268,13 @@ export function transformToDashboardData(
     ? normalizeCurrency(reportingCurrency)
     : undefined
   let zeroOnlyCurrency: string | undefined
-  const netWorthByDate = new Map<string, number>()
+  const netWorthByDate = new Map<string, bigint>()
   sortedResults.forEach((result) => {
     const effectiveBalances = Object.values(result.balances).map((balance) =>
       resolveEffectiveBalance(balance.effectiveBalance),
     )
     effectiveBalances.forEach((balance) => {
-      if (balance.money.amount === 0) {
+      if (balance.money.amount === '0') {
         zeroOnlyCurrency ??= normalizeCurrency(balance.money.currency)
       }
       currency = resolveConsistentCurrency(balance, currency)
@@ -290,17 +286,17 @@ export function transformToDashboardData(
   })
 
   const firstNetWorth = firstResult
-    ? (netWorthByDate.get(firstResult.date) ?? 0)
-    : 0
+    ? (netWorthByDate.get(firstResult.date) ?? 0n)
+    : 0n
   const lastNetWorth = lastResult
-    ? (netWorthByDate.get(lastResult.date) ?? 0)
-    : 0
+    ? (netWorthByDate.get(lastResult.date) ?? 0n)
+    : 0n
 
   // Calculate period change
   const changePercent = calculateChangePercent(lastNetWorth, firstNetWorth)
 
   const displayCurrency = currency ?? zeroOnlyCurrency ?? 'USD'
-  const changeAmount = createMoneyWithSign(
+  const changeAmount = moneyFromSignedMinorUnits(
     lastNetWorth - firstNetWorth,
     displayCurrency,
   )
@@ -312,7 +308,16 @@ export function transformToDashboardData(
   ).map((result) => ({
     date: result.date,
     label: dayjs(result.date).format('MMM D'),
-    value: netWorthByDate.get(result.date) ?? 0,
+    value: moneyToChartNumber(
+      moneyFromSignedMinorUnits(
+        netWorthByDate.get(result.date) ?? 0n,
+        displayCurrency,
+      ),
+    ),
+    money: moneyFromSignedMinorUnits(
+      netWorthByDate.get(result.date) ?? 0n,
+      displayCurrency,
+    ),
   }))
 
   // Build account summaries from last result
@@ -328,7 +333,7 @@ export function transformToDashboardData(
         const currentEffective = resolveEffectiveBalance(
           accountResult.effectiveBalance,
         )
-        const currentAmount = getSignedAmount(currentEffective)
+        const currentAmount = signedMinorUnits(currentEffective)
 
         let accountChangePercent: number | undefined = undefined
         let accountChangeAmount: MoneyWithSign | undefined = undefined
@@ -336,12 +341,12 @@ export function transformToDashboardData(
           const previousEffective = resolveEffectiveBalance(
             firstAccountResult.effectiveBalance,
           )
-          const previousAmount = getSignedAmount(previousEffective)
+          const previousAmount = signedMinorUnits(previousEffective)
           accountChangePercent = calculateChangePercent(
             currentAmount,
             previousAmount,
           )
-          accountChangeAmount = createMoneyWithSign(
+          accountChangeAmount = moneyFromSignedMinorUnits(
             currentAmount - previousAmount,
             resolveDifferenceCurrency(
               currentEffective,
@@ -381,19 +386,21 @@ export function transformToDashboardData(
     )
   }
   // Sort assets and liabilities by effective balance of the last result (descending)
-  const sortedAssets = assets.sort(
-    (a, b) =>
-      getSignedAmount(b.convertedEffectiveBalance ?? b.effectiveBalance) -
-      getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance),
+  const sortedAssets = assets.sort((a, b) =>
+    compareIntegers(
+      signedMinorUnits(b.convertedEffectiveBalance ?? b.effectiveBalance),
+      signedMinorUnits(a.convertedEffectiveBalance ?? a.effectiveBalance),
+    ),
   )
-  const sortedLiabilities = liabilities.sort(
-    (a, b) =>
-      getSignedAmount(b.convertedEffectiveBalance ?? b.effectiveBalance) -
-      getSignedAmount(a.convertedEffectiveBalance ?? a.effectiveBalance),
+  const sortedLiabilities = liabilities.sort((a, b) =>
+    compareIntegers(
+      signedMinorUnits(b.convertedEffectiveBalance ?? b.effectiveBalance),
+      signedMinorUnits(a.convertedEffectiveBalance ?? a.effectiveBalance),
+    ),
   )
 
   return {
-    netWorth: createMoneyWithSign(lastNetWorth, displayCurrency),
+    netWorth: moneyFromSignedMinorUnits(lastNetWorth, displayCurrency),
     changePercent,
     changeAmount,
     comparisonPeriod: period,
@@ -428,12 +435,11 @@ export function transformToAccountChartData(
         accountResult.effectiveBalance,
       )
       currency = resolveConsistentCurrency(effectiveBalance, currency)
-      const amount = getSignedAmount(effectiveBalance)
-
       return {
         date: result.date,
         label: dayjs(result.date).format('MMM D'),
-        value: amount,
+        value: moneyToChartNumber(effectiveBalance),
+        money: effectiveBalance,
       }
     })
     .filter((point): point is ChartDataPoint => point !== null)

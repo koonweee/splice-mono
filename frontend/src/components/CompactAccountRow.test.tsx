@@ -38,11 +38,11 @@ const account: AccountSummaryData = {
   type: AccountType.depository,
   valuationMode: 'balance',
   effectiveBalance: {
-    money: { amount: 125000, currency: 'USD' },
+    money: { amount: '125000', currency: 'USD' },
     sign: MoneyWithSignSign.positive,
   },
   changeAmount: {
-    money: { amount: 2500, currency: 'USD' },
+    money: { amount: '2500', currency: 'USD' },
     sign: MoneyWithSignSign.positive,
   },
   changePercent: 2,

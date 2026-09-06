@@ -59,7 +59,7 @@ export class InvestmentTransactionEntity extends OwnedEntity {
   @Column({ type: 'varchar', nullable: true })
   cancelExternalActivityId: string | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, select: false })
   providerPayload: Record<string, unknown> | null;
 
   static fromProvider(
@@ -107,7 +107,7 @@ export class InvestmentTransactionEntity extends OwnedEntity {
       investmentType: this.investmentType,
       investmentSubtype: this.investmentSubtype,
       cancelExternalActivityId: this.cancelExternalActivityId,
-      providerPayload: this.providerPayload,
+      providerPayload: this.providerPayload ?? null,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

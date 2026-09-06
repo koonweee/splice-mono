@@ -16,7 +16,7 @@ export const mockExchangeRate: ExchangeRate = {
   id: 'rate-uuid-123',
   baseCurrency: 'EUR',
   targetCurrency: 'USD',
-  rate: 1.08,
+  rate: '1.08',
   rateDate: '2024-01-15',
   ...mockTimestamps,
 };
@@ -28,7 +28,7 @@ export const mockExchangeRate2: ExchangeRate = {
   id: 'rate-uuid-456',
   baseCurrency: 'GBP',
   targetCurrency: 'USD',
-  rate: 1.27,
+  rate: '1.27',
   rateDate: '2024-01-15',
   ...mockTimestamps,
 };
@@ -40,7 +40,7 @@ export const mockExchangeRateOlderDate: ExchangeRate = {
   id: 'rate-uuid-789',
   baseCurrency: 'EUR',
   targetCurrency: 'USD',
-  rate: 1.05,
+  rate: '1.05',
   rateDate: '2024-01-10',
   ...mockTimestamps,
 };
@@ -51,6 +51,6 @@ export const mockExchangeRateOlderDate: ExchangeRate = {
 export const mockCreateExchangeRateDto: CreateExchangeRateDto = {
   baseCurrency: 'EUR',
   targetCurrency: 'USD',
-  rate: 1.08,
+  rate: '1.08',
   rateDate: '2024-01-15',
 };

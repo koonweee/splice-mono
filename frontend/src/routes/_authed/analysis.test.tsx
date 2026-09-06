@@ -191,7 +191,7 @@ const analysisResponse: TransactionAnalysisResponse = {
   inflows: [
     {
       primaryCategory: 'Salary',
-      totalAmount: 250000,
+      totalAmount: '250000',
       currency: 'USD',
       transactionCount: 1,
       color: '#112233',
@@ -200,17 +200,17 @@ const analysisResponse: TransactionAnalysisResponse = {
   outflows: [
     {
       primaryCategory: 'Groceries',
-      totalAmount: 12000,
+      totalAmount: '12000',
       currency: 'USD',
       transactionCount: 2,
       color: '#abcdef',
     },
   ],
-  totalInflow: 250000,
-  totalOutflow: 12000,
-  netFlow: 238000,
-  uncategorizedInflow: 0,
-  uncategorizedOutflow: 0,
+  totalInflow: '250000',
+  totalOutflow: '12000',
+  netFlow: '238000',
+  uncategorizedInflow: '0',
+  uncategorizedOutflow: '0',
 }
 
 beforeEach(() => {
@@ -256,9 +256,9 @@ describe('Analysis route', () => {
         ...analysisResponse,
         inflows: [],
         outflows: [],
-        totalInflow: 0,
-        totalOutflow: 0,
-        netFlow: 0,
+        totalInflow: '0',
+        totalOutflow: '0',
+        netFlow: '0',
       },
       isPending: false,
       isError: false,

@@ -1,3 +1,5 @@
+import { ExactDecimal } from '../common/exact-money';
+import { DecimalAmountSchema } from './MoneyWithSign';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { CategoryColorSchema } from './Category';
@@ -44,8 +46,8 @@ const AmountSignRuleConditionSchema = z.object({
 
 const AmountBetweenValueSchema = z
   .object({
-    min: z.number().optional(),
-    max: z.number().optional(),
+    min: DecimalAmountSchema.optional(),
+    max: DecimalAmountSchema.optional(),
   })
   .refine((value) => value.min !== undefined || value.max !== undefined, {
     message: 'between requires at least a min or max',
@@ -54,7 +56,7 @@ const AmountBetweenValueSchema = z
     (value) =>
       value.min === undefined ||
       value.max === undefined ||
-      value.min <= value.max,
+      new ExactDecimal(value.min).lte(value.max),
     { message: 'min must be less than or equal to max' },
   );
 
@@ -62,16 +64,16 @@ const AmountRuleConditionSchema = z
   .object({
     field: z.literal('amount'),
     operator: z.enum(['equals', 'greaterThan', 'lessThan', 'between']),
-    value: z.union([z.number(), AmountBetweenValueSchema]),
+    value: z.union([DecimalAmountSchema, AmountBetweenValueSchema]),
   })
   .refine(
     (condition) =>
       condition.operator === 'between'
         ? typeof condition.value === 'object'
-        : typeof condition.value === 'number',
+        : typeof condition.value === 'string',
     {
       message:
-        'amount between requires a range; other operators require a number',
+        'amount between requires a range; other operators require decimal text',
     },
   );
 

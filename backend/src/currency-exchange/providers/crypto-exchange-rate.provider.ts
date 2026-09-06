@@ -1,3 +1,4 @@
+import { ExactDecimal } from '../../common/exact-money';
 import { Injectable, Logger } from '@nestjs/common';
 import dayjs from 'dayjs';
 import type { ICurrencyRateProvider } from './currency-rate-provider.interface';
@@ -43,13 +44,13 @@ export class CryptoExchangeRateProvider implements ICurrencyRateProvider {
    * @param baseCurrency - Crypto symbol (ETH or BTC)
    * @param targetCurrency - Fiat symbol (e.g., USD)
    * @param date - Optional date (YYYY-MM-DD) for historical rate
-   * @returns Exchange rate as a number
+   * @returns Exchange rate as exact decimal text
    */
   async getRate(
     baseCurrency: string,
     targetCurrency: string,
     date?: string,
-  ): Promise<number> {
+  ): Promise<string> {
     const coinId = COINGECKO_IDS[baseCurrency.toUpperCase()];
     if (!coinId) {
       throw new Error(`Unsupported cryptocurrency: ${baseCurrency}`);
@@ -74,7 +75,7 @@ export class CryptoExchangeRateProvider implements ICurrencyRateProvider {
     fiatLower: string,
     baseCurrency: string,
     targetCurrency: string,
-  ): Promise<number> {
+  ): Promise<string> {
     const url = `${this.baseUrl}/simple/price?ids=${coinId}&vs_currencies=${fiatLower}`;
 
     this.logger.log(
@@ -102,7 +103,7 @@ export class CryptoExchangeRateProvider implements ICurrencyRateProvider {
         'Fetched current rate',
       );
 
-      return rate;
+      return new ExactDecimal(String(rate)).toFixed();
     } catch (error) {
       this.logger.error(
         {
@@ -125,7 +126,7 @@ export class CryptoExchangeRateProvider implements ICurrencyRateProvider {
     fiatLower: string,
     date: string,
     baseCurrency: string,
-  ): Promise<number> {
+  ): Promise<string> {
     // Convert YYYY-MM-DD to dd-mm-yyyy for CoinGecko
     const geckoDate = dayjs(date).format('DD-MM-YYYY');
     const url = `${this.baseUrl}/coins/${coinId}/history?date=${geckoDate}`;
@@ -157,7 +158,7 @@ export class CryptoExchangeRateProvider implements ICurrencyRateProvider {
         'Fetched historical rate',
       );
 
-      return rate;
+      return new ExactDecimal(String(rate)).toFixed();
     } catch (error) {
       this.logger.error(
         {
@@ -190,13 +191,13 @@ export class CryptoExchangeRateProvider implements ICurrencyRateProvider {
     targetCurrencies: string[],
     startDate: string,
     endDate: string,
-  ): Promise<Map<string, Map<string, number>>> {
+  ): Promise<Map<string, Map<string, string>>> {
     const coinId = COINGECKO_IDS[baseCurrency.toUpperCase()];
     if (!coinId) {
       throw new Error(`Unsupported cryptocurrency: ${baseCurrency}`);
     }
 
-    const result = new Map<string, Map<string, number>>();
+    const result = new Map<string, Map<string, string>>();
 
     // CoinGecko only supports one vs_currency per request for market_chart
     for (const targetCurrency of targetCurrencies) {
@@ -228,10 +229,10 @@ export class CryptoExchangeRateProvider implements ICurrencyRateProvider {
         const data = (await response.json()) as CoinGeckoMarketChartResponse;
 
         // Group prices by date and take the last price of each day
-        const dailyPrices = new Map<string, number>();
+        const dailyPrices = new Map<string, string>();
         data.prices.forEach(([timestampMs, price]) => {
           const date = dayjs(timestampMs).format('YYYY-MM-DD');
-          dailyPrices.set(date, price); // Later entries overwrite earlier (take last price of day)
+          dailyPrices.set(date, new ExactDecimal(String(price)).toFixed()); // Later entries overwrite earlier (take last price of day)
         });
 
         // Add to result map

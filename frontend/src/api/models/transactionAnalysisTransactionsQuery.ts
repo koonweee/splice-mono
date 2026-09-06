@@ -8,9 +8,7 @@
 import type { TransactionAnalysisTransactionsQueryFlowDirection } from './transactionAnalysisTransactionsQueryFlowDirection'
 
 export interface TransactionAnalysisTransactionsQuery {
-  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   startDate: string
-  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   endDate: string
   categoryPrimary: string
   flowDirection: TransactionAnalysisTransactionsQueryFlowDirection

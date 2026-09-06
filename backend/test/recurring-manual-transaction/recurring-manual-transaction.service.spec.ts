@@ -28,13 +28,13 @@ function buildAccount(overrides: Partial<AccountEntity> = {}): AccountEntity {
   account.availableBalance =
     overrides.availableBalance ??
     BalanceColumns.fromMoneyWithSign({
-      money: { amount: 10000, currency: 'USD' },
+      money: { amount: '10000', currency: 'USD' },
       sign: MoneySign.POSITIVE,
     });
   account.currentBalance =
     overrides.currentBalance ??
     BalanceColumns.fromMoneyWithSign({
-      money: { amount: 10000, currency: 'USD' },
+      money: { amount: '10000', currency: 'USD' },
       sign: MoneySign.POSITIVE,
     });
   account.type = overrides.type ?? 'depository';
@@ -77,7 +77,7 @@ function buildCreateDto(
   return {
     accountId,
     amount: {
-      money: { amount: 125000, currency: 'USD' },
+      money: { amount: '125000', currency: 'USD' },
       sign: MoneySign.NEGATIVE,
     },
     merchantName: 'Rent',
@@ -101,7 +101,7 @@ function buildSchedule(
   schedule.amount =
     overrides.amount ??
     BalanceColumns.fromMoneyWithSign({
-      money: { amount: 125000, currency: 'USD' },
+      money: { amount: '125000', currency: 'USD' },
       sign: MoneySign.NEGATIVE,
     });
   schedule.merchantName = overrides.merchantName ?? 'Rent';
@@ -277,7 +277,7 @@ describe('RecurringManualTransactionService', () => {
         userId,
         buildCreateDto({
           amount: {
-            money: { amount: 1200, currency: 'EUR' },
+            money: { amount: '1200', currency: 'EUR' },
             sign: MoneySign.NEGATIVE,
           },
         }),

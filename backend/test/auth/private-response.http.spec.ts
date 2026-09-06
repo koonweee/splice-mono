@@ -17,6 +17,7 @@ import { GoogleOAuthService } from '../../src/auth/google-oauth.service';
 import { HealthController } from '../../src/health/health.controller';
 import { TransactionController } from '../../src/transaction/transaction.controller';
 import { TransactionService } from '../../src/transaction/transaction.service';
+import { TransactionQueryService } from '../../src/transaction/transaction-query.service';
 import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { UserController } from '../../src/user/user.controller';
 import { UserService } from '../../src/user/user.service';
@@ -64,7 +65,23 @@ describe('Private API response headers', () => {
         { provide: PersonalAccessTokenService, useValue: pats },
         {
           provide: TransactionService,
-          useValue: { findAllPaginated: async () => ({ data: [], total: 0 }) },
+          useValue: {},
+        },
+        {
+          provide: TransactionQueryService,
+          useValue: {
+            withReadSnapshot: async (
+              reader: (manager: unknown) => Promise<unknown>,
+            ) => reader({}),
+            readPage: async () => ({
+              entities: [],
+              total: 0,
+              pageIndex: null,
+              pageSize: 20,
+              hasMore: false,
+              nextCursor: null,
+            }),
+          },
         },
         { provide: CurrencyConversionService, useValue: {} },
       ],

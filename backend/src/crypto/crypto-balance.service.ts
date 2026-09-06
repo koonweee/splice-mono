@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Alchemy, Network } from 'alchemy-sdk';
 import type { CryptoNetwork } from '../bank-link/providers/crypto/crypto.types';
-import { NETWORK_DECIMALS } from '../bank-link/providers/crypto/crypto.types';
+import { minorToMajorString } from '../common/exact-money';
 import {
   CRYPTO_BALANCE_CONFIG,
   type CryptoBalanceConfig,
@@ -13,12 +13,12 @@ const BITCOIN_API_URL = 'https://mempool.space/api';
 /** Response shape from mempool.space address endpoint */
 interface MempoolAddressResponse {
   chain_stats: {
-    funded_txo_sum: number;
-    spent_txo_sum: number;
+    funded_txo_sum: bigint;
+    spent_txo_sum: bigint;
   };
   mempool_stats: {
-    funded_txo_sum: number;
-    spent_txo_sum: number;
+    funded_txo_sum: bigint;
+    spent_txo_sum: bigint;
   };
 }
 
@@ -104,7 +104,20 @@ export class CryptoBalanceService {
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      const data = (await response.json()) as MempoolAddressResponse;
+      // JSON.parse source text preserves integer provider values beyond Number.MAX_SAFE_INTEGER.
+      const data = JSON.parse(
+        await response.text(),
+        (
+          key: string,
+          value: unknown,
+          context?: { source?: string },
+        ): unknown => {
+          if (key !== 'funded_txo_sum' && key !== 'spent_txo_sum') return value;
+          if (!context?.source || !/^(0|[1-9]\d*)$/.test(context.source))
+            throw new Error('Invalid Bitcoin satoshi amount');
+          return BigInt(context.source);
+        },
+      ) as MempoolAddressResponse;
 
       // Calculate balance in satoshis (confirmed + unconfirmed)
       const chainBalance =
@@ -130,28 +143,13 @@ export class CryptoBalanceService {
    * Convert wei (BigInt) to ETH string with full precision
    */
   private weiToEth(wei: bigint): string {
-    const decimals = NETWORK_DECIMALS.ethereum;
-    const divisor = BigInt(10 ** decimals);
-    const wholePart = wei / divisor;
-    const fractionalPart = wei % divisor;
-
-    if (fractionalPart === 0n) {
-      return wholePart.toString();
-    }
-
-    // Pad fractional part to full precision, then trim trailing zeros
-    const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
-    const trimmed = fractionalStr.replace(/0+$/, '');
-    return `${wholePart}.${trimmed}`;
+    return minorToMajorString(wei, 'ETH');
   }
 
   /**
    * Convert satoshis to BTC string
    */
-  private satoshisToBtc(satoshis: number): string {
-    const decimals = NETWORK_DECIMALS.bitcoin;
-    const btc = satoshis / Math.pow(10, decimals);
-    // Remove trailing zeros after decimal point
-    return btc.toFixed(decimals).replace(/\.?0+$/, '');
+  private satoshisToBtc(satoshis: bigint): string {
+    return minorToMajorString(satoshis, 'BTC');
   }
 }

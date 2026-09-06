@@ -1,3 +1,4 @@
+import { sumDecimals } from '../../src/mcp/apps/exact-money';
 type RuntimeState =
   | { status: 'loading' }
   | { status: 'ready'; result: Record<string, unknown> }
@@ -189,8 +190,11 @@ function actionTarget(action: string, dataset: Record<string, string> = {}) {
   return target;
 }
 
-function mcpMoney(amount: number, sign: 'positive' | 'negative' = 'positive') {
-  return { amount, currency: 'USD', sign };
+function mcpMoney(
+  amount: number | string,
+  sign: 'positive' | 'negative' = 'positive',
+) {
+  return { amount: String(amount), currency: 'USD', sign };
 }
 
 function cashFlowPeriod(
@@ -316,7 +320,7 @@ function portfolioResult(
     data: {
       reportingCurrency: 'USD',
       totalValueUsd: mcpMoney(
-        positions.reduce((sum, item) => sum + item.valueUsd.amount, 0),
+        sumDecimals(positions.map((item) => item.valueUsd.amount)),
       ),
       snapshotRange: {
         earliest: '2026-08-15',

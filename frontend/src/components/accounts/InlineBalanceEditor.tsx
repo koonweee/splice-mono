@@ -1,4 +1,4 @@
-import { ActionIcon, Group, NumberInput, Tooltip } from '@mantine/core'
+import { ActionIcon, Group, Tooltip } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
@@ -7,7 +7,8 @@ import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { useCoarsePointer } from '../../lib/responsive'
 import { useAccountControllerUpdateBalance } from '../../api/clients/spliceAPI'
 import { createMoneyWithSign, getSignedAmount } from '../../lib/balance-utils'
-import { getDecimalPlaces } from '../../lib/format'
+import { tryParseMoneyDraft } from '../../lib/money'
+import { DecimalInput } from '../forms/DecimalInput'
 import type { Account, MoneyWithSign } from '../../api/models'
 
 interface InlineBalanceEditorProps {
@@ -31,9 +32,14 @@ export function InlineBalanceEditor({
     initialValues: {
       amount: getSignedAmount(balance),
     },
+    validate: {
+      amount: (value) =>
+        tryParseMoneyDraft(value, currency) ? null : 'Enter a valid balance',
+    },
   })
 
   const handleSubmit = (values: typeof form.values) => {
+    if (updateBalance.isPending) return
     updateBalance.mutate(
       {
         id: account.id,
@@ -69,17 +75,14 @@ export function InlineBalanceEditor({
       style={{ alignItems: 'center', display: 'flex', minHeight: 44 }}
     >
       <Group gap={4} justify="flex-end" wrap="nowrap">
-        <NumberInput
+        <DecimalInput
           aria-label="Current balance"
-          decimalScale={getDecimalPlaces(currency)}
-          fixedDecimalScale
-          hideControls
-          prefix={currency === 'USD' ? '$' : undefined}
           size={isTouch ? 'md' : 'sm'}
           style={{ width: isTouch ? '8rem' : '7.5rem' }}
           styles={{ input: { minHeight: isTouch ? 44 : 36 } }}
-          suffix={currency === 'USD' ? undefined : ` ${currency}`}
           {...form.getInputProps('amount')}
+          value={form.values.amount}
+          onChange={(value) => form.setFieldValue('amount', value)}
         />
         <Tooltip label="Save balance">
           <ActionIcon

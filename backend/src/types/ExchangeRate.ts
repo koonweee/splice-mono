@@ -1,3 +1,6 @@
+import { DECIMAL_PATTERN } from '../common/exact-money';
+import { CalendarDateSchema } from '../common/query-bounds';
+import { DecimalAmountSchema } from './MoneyWithSign';
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 import { TimestampsSchema } from './Timestamps';
@@ -19,9 +22,9 @@ export const ExchangeRateSchema = registerSchema(
       /** The target currency (ISO 4217 code, e.g., 'USD') */
       targetCurrency: z.string(),
       /** Exchange rate: 1 baseCurrency = rate targetCurrency */
-      rate: z.number(),
+      rate: DecimalAmountSchema,
       /** Date for which this rate applies (YYYY-MM-DD) */
-      rateDate: z.string(),
+      rateDate: CalendarDateSchema,
     })
     .merge(TimestampsSchema),
 );
@@ -38,9 +41,9 @@ export const CreateExchangeRateDtoSchema = registerSchema(
     /** The target currency (ISO 4217 code, e.g., 'USD') */
     targetCurrency: z.string(),
     /** Exchange rate: 1 baseCurrency = rate targetCurrency */
-    rate: z.number(),
+    rate: DecimalAmountSchema,
     /** Date for which this rate applies (YYYY-MM-DD) */
-    rateDate: z.string(),
+    rateDate: CalendarDateSchema,
   }),
 );
 
@@ -61,16 +64,29 @@ export interface CurrencyPair {
   targetCurrency: string;
 }
 
-/** Source of an exchange rate value */
-export type RateSource = 'DB' | 'FILLED';
-
-/** Exchange rate with source indicator */
-export interface RateWithSource {
-  baseCurrency: string;
-  targetCurrency: string;
-  rate: number;
-  source: RateSource;
-}
+export const RateSourceSchema = z.enum([
+  'DB',
+  'FORWARD_FILLED',
+  'BACKWARD_FILLED',
+  'IDENTITY',
+]);
+export type RateSource = z.infer<typeof RateSourceSchema>;
+export const RateWithSourceSchema = registerSchema(
+  'RateWithSource',
+  z.object({
+    baseCurrency: z.string(),
+    targetCurrency: z.string(),
+    requestedDate: CalendarDateSchema,
+    rateDate: CalendarDateSchema,
+    rate: z.string().max(220).regex(DECIMAL_PATTERN),
+    source: RateSourceSchema,
+    ratio: z.object({
+      numerator: z.string().regex(/^[1-9]\d*$/),
+      denominator: z.string().regex(/^[1-9]\d*$/),
+    }),
+  }),
+);
+export type RateWithSource = z.infer<typeof RateWithSourceSchema>;
 
 /** Response for getRatesForDateRange - rates for a single date */
 export interface DateRangeRateResponse {

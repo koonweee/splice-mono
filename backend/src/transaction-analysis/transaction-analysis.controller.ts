@@ -74,7 +74,7 @@ export class TransactionAnalysisController {
     description:
       'Get unmatched transactions for a category drilldown within an activity date range. ' +
       'Transactions are neutralized using the same exact equal-and-opposite matching pipeline as the summary analysis before category and flow filtering. ' +
-      'Returned rows include converted amounts using exchange rates anchored to the requested endDate.',
+      'Returned rows include exact once-rounded amounts using each transaction’s effective reporting date for conversion.',
   })
   @ApiQuery({
     name: 'startDate',

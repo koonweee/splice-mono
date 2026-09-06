@@ -18,7 +18,7 @@ describe('browser cache identity lifecycle', () => {
     })
     bindBrowserQueryClient(client)
     client.setQueryData(['/account'], [{ id: 'old-account' }])
-    client.setQueryData(['/balance-query/dashboard-summary'], { amount: 123 })
+    client.setQueryData(['/balance-query/dashboard-summary'], { amount: '123' })
     let finish: ((value: string) => void) | undefined
     let signal: AbortSignal | undefined
     const generation = getAuthGeneration()

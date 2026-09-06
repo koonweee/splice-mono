@@ -1,67 +1,42 @@
+import { minorToMajorString } from '../common/exact-money';
 import {
-  getDecimalPlaces,
+  MoneyWithSignSchema,
   type SerializedMoneyWithSign,
 } from '../types/MoneyWithSign';
 
 export interface McpMoney {
-  amount: number;
+  amount: string;
   currency: string;
   sign: SerializedMoneyWithSign['sign'];
 }
 
-function isSerializedMoneyWithSign(
-  value: unknown,
-): value is SerializedMoneyWithSign {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const record = value as Record<string, unknown>;
-  const money = record.money;
-
-  return (
-    typeof money === 'object' &&
-    money !== null &&
-    typeof (money as Record<string, unknown>).amount === 'number' &&
-    typeof (money as Record<string, unknown>).currency === 'string' &&
-    typeof record.sign === 'string'
-  );
-}
-
 export function toMcpMoney(value: SerializedMoneyWithSign): McpMoney {
-  const currency = value.money.currency;
-  const decimals = getDecimalPlaces(currency);
-
+  MoneyWithSignSchema.parse(value);
   return {
-    amount: Number(
-      (value.money.amount / Math.pow(10, decimals)).toFixed(decimals),
-    ),
-    currency,
+    amount: minorToMajorString(value.money.amount, value.money.currency),
+    currency: value.money.currency,
     sign: value.sign,
   };
 }
 
 export function normalizeMcpMoney(value: unknown): unknown {
-  if (isSerializedMoneyWithSign(value)) {
-    return toMcpMoney(value);
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => normalizeMcpMoney(item));
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
+  if (Array.isArray(value)) return value.map((item) => normalizeMcpMoney(item));
+  if (value instanceof Date) return value.toISOString();
   if (typeof value === 'object' && value !== null) {
+    const record = value as Record<string, unknown>;
+    if (
+      typeof record.money === 'object' &&
+      record.money !== null &&
+      'sign' in record
+    ) {
+      return toMcpMoney(MoneyWithSignSchema.parse(record));
+    }
     return Object.fromEntries(
-      Object.entries(value).map(([key, nestedValue]) => [
+      Object.entries(record).map(([key, nested]) => [
         key,
-        normalizeMcpMoney(nestedValue),
+        normalizeMcpMoney(nested),
       ]),
     );
   }
-
   return value;
 }

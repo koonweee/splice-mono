@@ -7,6 +7,14 @@
  */
 
 export type CategorizationRuleConditionAnyOfOnetwoValueAnyOf = {
-  min?: number
-  max?: number
+  /**
+   * @maxLength 156
+   * @pattern ^-?(0|[1-9]\d*)(\.\d+)?$
+   */
+  min?: string
+  /**
+   * @maxLength 156
+   * @pattern ^-?(0|[1-9]\d*)(\.\d+)?$
+   */
+  max?: string
 }

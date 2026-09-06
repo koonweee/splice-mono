@@ -15,9 +15,15 @@ describe('PersonalAccessTokenService', () => {
     find: jest.fn(),
     findOne: jest.fn(),
     update: jest.fn(),
+    query: jest.fn(),
+    metadata: { tablePath: 'personal_access_token' },
+    manager: {
+      connection: { driver: { escape: (name: string) => `"${name}"` } },
+    },
   };
 
   const mockUserRepository = {
+    metadata: { tablePath: 'user_entity' },
     findOne: jest.fn(),
   };
 
@@ -166,90 +172,27 @@ describe('PersonalAccessTokenService', () => {
     expect(mockPatRepository.update).not.toHaveBeenCalled();
   });
 
-  it('validates a personal access token and returns user identity', async () => {
-    const entity = new PersonalAccessTokenEntity();
-    entity.id = 'pat-123';
-    entity.userId = 'user-123';
-    entity.name = 'codex-local';
-    entity.prefix = 'deadbeef';
-    entity.tokenHash =
-      '3f4b1c2d3e4f5a6b7c8d9e0f1234567890abcdef1234567890abcdef12345678';
-    entity.lastUsedAt = null;
-    entity.expiresAt = null;
-    entity.revokedAt = null;
-    entity.createdAt = new Date('2024-01-01T00:00:00Z');
-    entity.updatedAt = new Date('2024-01-01T00:00:00Z');
-
-    mockPatRepository.findOne.mockResolvedValue(entity);
-    mockUserRepository.findOne.mockResolvedValue({
-      id: 'user-123',
-      email: 'user@example.com',
-    } as UserEntity);
-    mockPatRepository.update.mockResolvedValue({ affected: 1 });
-
-    const result = await service.validateToken('splice_pat_deadbeef');
-    const expectedHash = crypto
-      .createHash('sha256')
-      .update('splice_pat_deadbeef')
-      .digest('hex');
-
-    expect(result).toEqual({
-      userId: 'user-123',
-      email: 'user@example.com',
-    });
-    expect(mockPatRepository.findOne).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          tokenHash: expectedHash,
-        }),
-      }),
-    );
-    expect(mockPatRepository.findOne.mock.calls[0][0].where.tokenHash).not.toBe(
-      'splice_pat_deadbeef',
-    );
-    expect(mockPatRepository.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'pat-123',
-        revokedAt: expect.any(Object),
-      }),
-      expect.objectContaining({
-        lastUsedAt: expect.any(Date),
-      }),
-    );
+  it('hashes a token and returns only the identity from the authoritative statement', async () => {
+    mockPatRepository.query.mockResolvedValue([mockUser]);
+    const raw = 'splice_pat_deadbeef';
+    expect(await service.validateToken(raw)).toEqual(mockUser);
+    expect(mockPatRepository.query).toHaveBeenCalledTimes(1);
+    expect(mockPatRepository.query.mock.calls[0][1]).toEqual([
+      crypto.createHash('sha256').update(raw).digest('hex'),
+    ]);
+    expect(mockPatRepository.findOne).not.toHaveBeenCalled();
+    expect(mockUserRepository.findOne).not.toHaveBeenCalled();
   });
 
-  it('returns null for expired personal access tokens', async () => {
-    const expiredEntity = new PersonalAccessTokenEntity();
-    expiredEntity.id = 'pat-expired';
-    expiredEntity.userId = 'user-123';
-    expiredEntity.name = 'expired';
-    expiredEntity.prefix = 'deadbeef';
-    expiredEntity.tokenHash =
-      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-    expiredEntity.lastUsedAt = null;
-    expiredEntity.expiresAt = new Date('2024-01-01T00:00:00Z');
-    expiredEntity.revokedAt = null;
-    expiredEntity.createdAt = new Date('2024-01-01T00:00:00Z');
-    expiredEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
-
-    mockPatRepository.findOne.mockResolvedValue(expiredEntity);
-    mockUserRepository.findOne.mockResolvedValue({
-      id: 'user-123',
-      email: 'user@example.com',
-    } as UserEntity);
-
-    await expect(
-      service.validateToken('splice_pat_expired'),
-    ).resolves.toBeNull();
-  });
-
-  it('returns null for revoked personal access tokens', async () => {
-    mockPatRepository.findOne.mockResolvedValue(null);
-
+  it('returns null when no authoritative identity exists', async () => {
+    mockPatRepository.query.mockResolvedValue([]);
     await expect(
       service.validateToken('splice_pat_revoked'),
     ).resolves.toBeNull();
-    expect(mockPatRepository.update).not.toHaveBeenCalled();
-    expect(mockUserRepository.findOne).not.toHaveBeenCalled();
+  });
+
+  it('avoids the database for other authentication schemes', async () => {
+    await expect(service.validateToken('jwt')).resolves.toBeNull();
+    expect(mockPatRepository.query).not.toHaveBeenCalled();
   });
 });

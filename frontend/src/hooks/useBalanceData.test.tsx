@@ -16,7 +16,7 @@ const transport = vi.hoisted(() => vi.fn())
 vi.mock('../api/axios', () => ({ axios: transport }))
 const date = '2026-09-05'
 const money = {
-  money: { amount: 12345, currency: 'USD' },
+  money: { amount: '12345', currency: 'USD' },
   sign: 'positive' as const,
 }
 const summary: DashboardSummaryResponse = {
@@ -64,7 +64,7 @@ describe('compact dashboard queries', () => {
     )
     expect(result.current.data?.netWorth).toEqual(money)
     expect(result.current.data?.chartData).toEqual([
-      { date, label: 'Sep 5', value: 123.45 },
+      { date, label: 'Sep 5', value: 123.45, money },
     ])
     expect(transport).not.toHaveBeenCalled()
     unmount()

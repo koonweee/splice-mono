@@ -13,9 +13,14 @@ export interface TransactionAnalysisResponse {
   currency: string
   inflows: CategoryAggregate[]
   outflows: CategoryAggregate[]
-  totalInflow: number
-  totalOutflow: number
-  netFlow: number
-  uncategorizedInflow: number
-  uncategorizedOutflow: number
+  /** @pattern ^(0|[1-9]\d{0,77})$ */
+  totalInflow: string
+  /** @pattern ^(0|[1-9]\d{0,77})$ */
+  totalOutflow: string
+  /** @pattern ^(0|-?[1-9]\d{0,77})$ */
+  netFlow: string
+  /** @pattern ^(0|[1-9]\d{0,77})$ */
+  uncategorizedInflow: string
+  /** @pattern ^(0|[1-9]\d{0,77})$ */
+  uncategorizedOutflow: string
 }

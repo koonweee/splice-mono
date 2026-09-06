@@ -1,4 +1,8 @@
 import {
+  TransactionQueryService,
+  type TransactionPageOptions,
+} from './transaction-query.service';
+import {
   BadRequestException,
   Injectable,
   Logger,
@@ -6,7 +10,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac, timingSafeEqual, randomUUID } from 'crypto';
+import { mappedWriteValues } from '../common/write-values';
 import {
   EntityManager,
   In,
@@ -14,7 +19,6 @@ import {
   LessThanOrEqual,
   Not,
   Repository,
-  SelectQueryBuilder,
 } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { AccountActivityEntity } from '../account-activity/account-activity.entity';
@@ -42,25 +46,10 @@ import type {
   TransactionSurfaceSearchResult,
 } from './transaction-surface.types';
 import {
-  TRANSACTION_ACTIVITY_DATE_EXPRESSION,
-  TRANSACTION_ACTIVITY_DATETIME_EXPRESSION,
-} from './transaction-date';
-import {
   ProviderTransactionsSyncedEvent,
   TransactionEvents,
 } from '../events/transaction.events';
 
-type TransactionFilterOptions = {
-  accountId?: string;
-  startDate?: string;
-  endDate?: string;
-  categoryId?: string;
-  categoryPrimary?: string;
-  amountSign?: string;
-};
-
-const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
-const ACTIVITY_DATETIME_SORT_ALIAS = 'activity_datetime_sort';
 const BULK_CATEGORY_UNDO_TTL_MS = 5 * 60 * 1000;
 
 type BulkCategoryUndoSnapshot = {
@@ -134,6 +123,9 @@ export class TransactionService extends OwnedCrudService<
     private readonly categoryService: CategoryService,
     private readonly transactionCategorizationService: TransactionCategorizationService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly transactionQueries: TransactionQueryService = new TransactionQueryService(
+      repository,
+    ),
   ) {
     super(repository);
   }
@@ -361,7 +353,7 @@ export class TransactionService extends OwnedCrudService<
     dto: CreateManualTransactionDto,
     account: AccountEntity,
   ): BalanceColumns {
-    if (dto.amount.money.amount <= 0) {
+    if (dto.amount.money.amount === '0') {
       throw new BadRequestException(
         'Manual transaction amount must be positive',
       );
@@ -548,17 +540,6 @@ export class TransactionService extends OwnedCrudService<
     return true;
   }
 
-  async findOne(id: string, userId: string): Promise<Transaction | null> {
-    const entity = await this.repository.findOne({
-      where: {
-        id,
-        activity: { userId },
-      },
-      relations: this.relations,
-    });
-    return entity?.toObject() ?? null;
-  }
-
   async findStalePendingProviderTransactions(
     userId: string,
     accountIds: string[],
@@ -622,6 +603,7 @@ export class TransactionService extends OwnedCrudService<
     return {
       ...dto,
       categoryId: undefined,
+      reportingDateOverride: undefined,
       personalFinanceCategory: dto.personalFinanceCategory ?? {
         primary: null,
         detailed: null,
@@ -667,13 +649,6 @@ export class TransactionService extends OwnedCrudService<
       posted.categoryAssignmentRuleId = pending.categoryAssignmentRuleId;
     }
   }
-
-  private static readonly SORTABLE_COLUMNS = new Set([
-    'activityDate',
-    'merchantName',
-    'pending',
-    'amount',
-  ]);
 
   private getUndoSigningSecret(): string {
     const secret = process.env.JWT_SECRET;
@@ -757,199 +732,28 @@ export class TransactionService extends OwnedCrudService<
     }
   }
 
-  private applyTransactionOrder(
-    query: SelectQueryBuilder<TransactionEntity>,
-    sortColumn: string,
-    order: 'ASC' | 'DESC',
-  ): SelectQueryBuilder<TransactionEntity> {
-    query
-      .addSelect(TRANSACTION_ACTIVITY_DATE_EXPRESSION, ACTIVITY_DATE_SORT_ALIAS)
-      .addSelect(
-        TRANSACTION_ACTIVITY_DATETIME_EXPRESSION,
-        ACTIVITY_DATETIME_SORT_ALIAS,
-      );
-
-    let sortExpression = `transaction.${sortColumn}`;
-    if (sortColumn === 'amount') {
-      sortExpression = 'activity.amountAmount';
-    } else if (sortColumn === 'activityDate') {
-      sortExpression = ACTIVITY_DATE_SORT_ALIAS;
-    }
-    const chronologicalTieOrder =
-      sortColumn === 'activityDate' ? order : 'DESC';
-
-    query.orderBy(sortExpression, order);
-    if (sortColumn !== 'activityDate') {
-      query.addOrderBy(ACTIVITY_DATE_SORT_ALIAS, 'DESC');
-    }
-    query
-      .addOrderBy(
-        ACTIVITY_DATETIME_SORT_ALIAS,
-        chronologicalTieOrder,
-        'NULLS LAST',
-      )
-      .addOrderBy('transaction.id', chronologicalTieOrder);
-
-    return query;
+  async findOne(id: string, userId: string): Promise<Transaction> {
+    return (await this.transactionQueries.readDetail(userId, id)).toObject();
   }
 
-  private applyActivityDateFilters(
-    query: SelectQueryBuilder<TransactionEntity>,
-    startDate?: string,
-    endDate?: string,
-  ): void {
-    if (startDate && endDate) {
-      query.andWhere(
-        `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} BETWEEN :startDate AND :endDate`,
-        { startDate, endDate },
-      );
-    } else if (startDate) {
-      query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
-        startDate,
-      });
-    } else if (endDate) {
-      query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
-        endDate,
-      });
-    }
+  async findPage(userId: string, options: TransactionPageOptions) {
+    const { entities, ...page } = await this.transactionQueries.readPage(
+      userId,
+      options,
+    );
+    return { ...page, data: entities.map((entity) => entity.toObject()) };
   }
 
-  private applyQueryFilters(
-    query: SelectQueryBuilder<TransactionEntity>,
-    options: TransactionFilterOptions,
-  ): void {
-    const {
-      accountId,
-      startDate,
-      endDate,
-      categoryId,
-      categoryPrimary,
-      amountSign,
-    } = options;
-
-    if (accountId) {
-      query.andWhere('activity.accountId = :accountId', { accountId });
-    }
-    this.applyActivityDateFilters(query, startDate, endDate);
-    if (amountSign === 'positive' || amountSign === 'negative') {
-      query.andWhere('activity.amountSign = :amountSign', { amountSign });
-    }
-    if (categoryId) {
-      if (categoryId === 'UNCATEGORIZED') {
-        query.andWhere('transaction.categoryId IS NULL');
-      } else {
-        query.andWhere('transaction.categoryId = :categoryId', {
-          categoryId,
-        });
-      }
-    } else if (categoryPrimary) {
-      if (categoryPrimary === 'UNCATEGORIZED') {
-        query.andWhere('transaction.categoryId IS NULL');
-      } else {
-        query.andWhere('category.primary = :categoryPrimary', {
-          categoryPrimary,
-        });
-      }
-    }
-  }
-
-  private buildFilteredTransactionQuery(
-    userId: string,
-    options: TransactionFilterOptions,
-  ): SelectQueryBuilder<TransactionEntity> {
-    const query = this.repository
-      .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.activity', 'activity')
-      .leftJoinAndSelect('activity.account', 'account')
-      .leftJoinAndSelect('transaction.category', 'category')
-      .where('activity.userId = :userId', { userId });
-
-    this.applyQueryFilters(query, options);
-
-    return query;
-  }
-
-  /**
-   * Find all transactions with pagination, sorting, and optional filters
-   */
+  /** Explicit offset adapter for callers that still need a page index. */
   async findAllPaginated(
     userId: string,
-    options: {
-      pageIndex: number;
-      pageSize: number;
-      sortBy?: string;
-      sortOrder?: 'ASC' | 'DESC';
-      accountId?: string;
-      startDate?: string;
-      endDate?: string;
-      categoryId?: string;
-      categoryPrimary?: string;
-      amountSign?: string;
-    },
+    options: TransactionPageOptions & { pageIndex: number },
   ): Promise<{ data: Transaction[]; total: number }> {
-    const {
-      pageIndex,
-      pageSize,
-      sortBy,
-      sortOrder = 'DESC',
-      accountId,
-      startDate,
-      endDate,
-      categoryId,
-      categoryPrimary,
-      amountSign,
-    } = options;
-
-    const sortColumn =
-      sortBy && TransactionService.SORTABLE_COLUMNS.has(sortBy)
-        ? sortBy
-        : 'activityDate';
-    const order: 'ASC' | 'DESC' = sortOrder === 'ASC' ? 'ASC' : 'DESC';
-
-    this.logger.log(
-      {
-        userId,
-        pageIndex,
-        pageSize,
-        sortColumn,
-        order,
-        accountId,
-        startDate,
-        endDate,
-        categoryId,
-        categoryPrimary,
-        amountSign,
-      },
-      'Finding paginated transactions',
-    );
-
-    const query = this.buildFilteredTransactionQuery(userId, {
-      accountId,
-      startDate,
-      endDate,
-      categoryId,
-      categoryPrimary,
-      amountSign,
+    const result = await this.findPage(userId, {
+      ...options,
+      includeTotal: true,
     });
-
-    const [entities, total] = await this.applyTransactionOrder(
-      query,
-      sortColumn,
-      order,
-    )
-      .skip(pageIndex * pageSize)
-      .take(pageSize)
-      .getManyAndCount();
-
-    this.logger.log(
-      { userId, count: entities.length, total },
-      'Found paginated transactions',
-    );
-
-    return {
-      data: entities.map((entity) => entity.toObject()),
-      total,
-    };
+    return { data: result.data, total: result.total! };
   }
 
   /**
@@ -1196,83 +1000,25 @@ export class TransactionService extends OwnedCrudService<
     });
   }
 
-  private async findMatchingTransactions(
-    userId: string,
-    options: {
-      startDate?: string;
-      endDate?: string;
-      accountIds?: string[];
-      includePending?: boolean;
-      categoryPrimary?: string;
-      merchantQuery?: string;
-      sign?: 'positive' | 'negative';
-      minAmount?: number;
-      maxAmount?: number;
-    },
-  ): Promise<Transaction[]> {
-    const query = this.buildFilteredTransactionQuery(userId, {
-      categoryPrimary: options.categoryPrimary,
-    });
-
-    if (options.accountIds?.length === 1) {
-      query.andWhere('activity.accountId = :accountId', {
-        accountId: options.accountIds[0],
-      });
-    } else if (options.accountIds && options.accountIds.length > 1) {
-      query.andWhere('activity.accountId IN (:...accountIds)', {
-        accountIds: options.accountIds,
-      });
-    }
-
-    this.applyActivityDateFilters(query, options.startDate, options.endDate);
-
-    if (!options.includePending) {
-      query.andWhere('transaction.pending = false');
-    }
-
-    if (options.sign === 'positive' || options.sign === 'negative') {
-      query.andWhere('activity.amountSign = :amountSign', {
-        amountSign: options.sign,
-      });
-    }
-
-    this.applyTransactionOrder(query, 'activityDate', 'DESC');
-
-    const entities = await query.getMany();
-
-    return entities
-      .map((entity) => entity.toObject())
-      .filter((transaction) => {
-        const merchantQuery = options.merchantQuery?.trim().toLowerCase();
-        if (
-          merchantQuery &&
-          !transaction.merchantName?.toLowerCase().includes(merchantQuery)
-        ) {
-          return false;
-        }
-
-        const amount = transaction.amount.money.amount;
-        if (options.minAmount !== undefined && amount < options.minAmount) {
-          return false;
-        }
-        if (options.maxAmount !== undefined && amount > options.maxAmount) {
-          return false;
-        }
-
-        return true;
-      });
-  }
-
   async searchForSurface(
     userId: string,
     options: TransactionSurfaceSearchOptions,
   ): Promise<TransactionSurfaceSearchResult> {
-    const matches = await this.findMatchingTransactions(userId, options);
     const limit = options.limit ?? 20;
+    const { entities, total } = await this.transactionQueries.search(
+      userId,
+      {
+        ...options,
+        amountSign: options.sign,
+        includePending: options.includePending ?? false,
+      },
+      limit,
+    );
+    const matches = entities.map((entity) => entity.toObject());
 
     return {
-      matchedCount: matches.length,
-      truncated: matches.length > limit,
+      matchedCount: total,
+      truncated: total > limit,
       transactions: matches.slice(0, limit).map((transaction) => ({
         id: transaction.id,
         accountId: transaction.accountId,
@@ -1347,194 +1093,195 @@ export class TransactionService extends OwnedCrudService<
       await hooks.beforeChanges?.(manager);
       const txnRepo = manager.getRepository(TransactionEntity);
 
-      // Process added transactions
-      if (added.length > 0) {
-        const newEntities: TransactionEntity[] = [];
-
-        for (const dto of added) {
-          const internalAccountId = getInternalAccountId(dto.accountId);
-
-          const existingPosted = dto.externalTransactionId
-            ? await txnRepo.findOne({
-                where: {
-                  activity: {
-                    externalActivityId: dto.externalTransactionId,
-                    accountId: internalAccountId,
-                    userId,
-                  },
-                },
-                relations: this.relations,
-              })
-            : null;
-
-          let matchedPending: TransactionEntity | null = null;
-          if (dto.pendingTransactionId) {
-            matchedPending = await txnRepo.findOne({
-              where: {
-                activity: {
-                  externalActivityId: dto.pendingTransactionId,
-                  accountId: internalAccountId,
-                  userId,
-                },
-                pending: true,
-              },
-              relations: this.relations,
-            });
-          }
-
-          if (
-            existingPosted &&
-            matchedPending &&
-            existingPosted.id !== matchedPending.id
-          ) {
-            this.preserveUserMetadataFromPendingDuplicate(
-              existingPosted,
-              matchedPending,
+      const accountIds = [...new Set(accountIdMap.values())].sort();
+      // Serialize overlapping batches, including identities not yet present, and exclude archived accounts.
+      const accounts = accountIds.length
+        ? await manager
+            .getRepository(AccountEntity)
+            .createQueryBuilder('account')
+            .select('account.id')
+            .where('account.id IN (:...accountIds)', { accountIds })
+            .andWhere('account."userId" = :userId', { userId })
+            .andWhere('account."archivedAt" IS NULL')
+            .orderBy('account.id', 'ASC')
+            .setLock('pessimistic_write')
+            .getMany()
+        : [];
+      if (accounts.length !== accountIds.length)
+        throw new BadRequestException(
+          'Transaction sync contains unavailable accounts',
+        );
+      const batch = [...added, ...modified];
+      const rules = batch.length
+        ? await this.transactionCategorizationService.loadActiveRules(
+            userId,
+            manager,
+          )
+        : [];
+      const identity = (accountId: string, externalId: string) =>
+        `${accountId}\0${externalId}`;
+      const externalIds = [
+        ...new Set(
+          batch.flatMap((dto) =>
+            [dto.externalTransactionId, dto.pendingTransactionId].filter(
+              (id): id is string => Boolean(id),
+            ),
+          ),
+        ),
+      ];
+      const identities = new Map<string, TransactionEntity>();
+      const replacements = new Map<string, TransactionEntity>();
+      const chunkSize = 250;
+      for (let offset = 0; offset < externalIds.length; offset += chunkSize) {
+        const rows = await this.transactionQueries.readSyncIdentities(
+          userId,
+          accountIds,
+          externalIds.slice(offset, offset + chunkSize),
+          manager,
+        );
+        for (const row of rows) {
+          if (row.externalTransactionId)
+            identities.set(
+              identity(row.accountId, row.externalTransactionId),
+              row,
             );
-            existingPosted.source = 'provider';
-            this.applyUpdate(
-              existingPosted,
-              this.buildProviderSyncUpdateDto(dto, internalAccountId),
+          if (!row.pending && row.pendingTransactionId)
+            replacements.set(
+              identity(row.accountId, row.pendingTransactionId),
+              row,
             );
-            if (
-              await this.applyAutomaticCategoryIfEligible(
-                userId,
-                existingPosted,
-              )
-            ) {
-              automaticallyCategorizedCount += 1;
-            }
-            await txnRepo.save(existingPosted);
-            await manager
-              .getRepository(AccountActivityEntity)
-              .delete({ id: matchedPending.activityId });
-            this.logger.log(
-              {
-                pendingExternalTransactionId: dto.pendingTransactionId,
-                postedExternalTransactionId: dto.externalTransactionId,
-              },
-              'Consolidated duplicate pending and posted transactions from explicit provider replacement',
+        }
+      }
+      const changed = new Map<string, TransactionEntity>();
+      const inserted = new Set<string>();
+      const deletedActivities = new Set<string>();
+      for (const dto of batch) {
+        const accountId = getInternalAccountId(dto.accountId);
+        // Provider pages can arrive with an old pending record after its completed replacement.
+        if (
+          dto.pending &&
+          dto.externalTransactionId &&
+          replacements.has(identity(accountId, dto.externalTransactionId))
+        )
+          continue;
+        const posted = dto.externalTransactionId
+          ? identities.get(identity(accountId, dto.externalTransactionId))
+          : undefined;
+        const pendingCandidate = dto.pendingTransactionId
+          ? identities.get(identity(accountId, dto.pendingTransactionId))
+          : undefined;
+        const pending = pendingCandidate?.pending
+          ? pendingCandidate
+          : undefined;
+        let entity = posted ?? pending;
+        if (posted && pending && posted.id !== pending.id) {
+          this.preserveUserMetadataFromPendingDuplicate(posted, pending);
+          identities.delete(
+            identity(accountId, pending.externalTransactionId!),
+          );
+          changed.delete(pending.id);
+          if (!inserted.delete(pending.id))
+            deletedActivities.add(pending.activityId);
+        }
+        if (entity) {
+          if (entity.externalTransactionId)
+            identities.delete(
+              identity(accountId, entity.externalTransactionId),
             );
-            continue;
-          }
-
-          if (existingPosted) {
-            existingPosted.source = 'provider';
-            this.applyUpdate(
-              existingPosted,
-              this.buildProviderSyncUpdateDto(dto, internalAccountId),
-            );
-            if (
-              await this.applyAutomaticCategoryIfEligible(
-                userId,
-                existingPosted,
-              )
-            ) {
-              automaticallyCategorizedCount += 1;
-            }
-            await txnRepo.save(existingPosted);
-            continue;
-          }
-
-          if (matchedPending) {
-            matchedPending.source = 'provider';
-            this.applyUpdate(
-              matchedPending,
-              this.buildProviderSyncUpdateDto(dto, internalAccountId),
-            );
-            if (
-              await this.applyAutomaticCategoryIfEligible(
-                userId,
-                matchedPending,
-              )
-            ) {
-              automaticallyCategorizedCount += 1;
-            }
-            await txnRepo.save(matchedPending);
-            this.logger.log(
-              {
-                pendingExternalTransactionId: dto.pendingTransactionId,
-                postedExternalTransactionId: dto.externalTransactionId,
-              },
-              'Updated pending transaction from posted sync addition',
-            );
-            continue;
-          }
-
-          const entity = TransactionEntity.fromDto(
-            { ...dto, accountId: internalAccountId, categoryId: null },
+          entity.source = 'provider';
+          this.applyUpdate(
+            entity,
+            this.buildProviderSyncUpdateDto(dto, accountId),
+          );
+          if (dto.providerPayload !== undefined)
+            entity.providerPayload = dto.providerPayload;
+        } else {
+          entity = TransactionEntity.fromDto(
+            { ...dto, accountId, categoryId: null },
             userId,
           );
-          const wasAutomaticallyCategorized =
-            await this.applyAutomaticCategoryIfEligible(userId, entity);
-          if (wasAutomaticallyCategorized) {
-            automaticallyCategorizedCount += 1;
-          }
-          newEntities.push(entity);
+          entity.id = randomUUID();
+          entity.activity.id = randomUUID();
+          entity.activityId = entity.activity.id;
+          inserted.add(entity.id);
         }
-
-        if (newEntities.length > 0) {
-          const savedEntities = await txnRepo.save(newEntities);
-          uncategorizedInsertedTransactions.push(
-            ...savedEntities.filter(
-              (transaction) => transaction.categoryId === null,
+        if (
+          this.transactionCategorizationService.applyRulesFromSnapshot(
+            entity,
+            rules,
+          )
+        )
+          automaticallyCategorizedCount++;
+        changed.set(entity.id, entity);
+        if (!entity.pending && entity.pendingTransactionId)
+          replacements.set(
+            identity(accountId, entity.pendingTransactionId),
+            entity,
+          );
+        if (entity.externalTransactionId)
+          identities.set(
+            identity(accountId, entity.externalTransactionId),
+            entity,
+          );
+      }
+      const activityRepo = manager.getRepository(AccountActivityEntity);
+      const deletedIds = [...deletedActivities];
+      for (let offset = 0; offset < deletedIds.length; offset += chunkSize) {
+        await activityRepo.delete({
+          id: In(deletedIds.slice(offset, offset + chunkSize)),
+        });
+      }
+      const changedRows = [...changed.values()];
+      // Explicit two-table bulk writes avoid cascading save's per-row existence checks and parameter overflow.
+      for (let offset = 0; offset < changedRows.length; offset += chunkSize) {
+        const rows = changedRows.slice(offset, offset + chunkSize);
+        const activityColumns = activityRepo.metadata.columns
+          .filter(
+            (column) =>
+              !column.isPrimary &&
+              !column.isCreateDate &&
+              !column.isUpdateDate &&
+              !column.isGenerated,
+          )
+          .map((column) => column.databaseName);
+        const transactionColumns = txnRepo.metadata.columns
+          .filter(
+            (column) =>
+              !column.isPrimary &&
+              !column.isCreateDate &&
+              !column.isUpdateDate &&
+              !column.isGenerated,
+          )
+          .map((column) => column.databaseName);
+        await activityRepo
+          .createQueryBuilder()
+          .insert()
+          .values(
+            mappedWriteValues(
+              activityRepo,
+              rows.map((row) => row.activity),
             ),
-          );
-          this.logger.log(
-            { count: newEntities.length },
-            'Inserted new transactions',
-          );
-        }
+          )
+          .orUpdate(activityColumns, ['id'])
+          .execute();
+        await txnRepo
+          .createQueryBuilder()
+          .insert()
+          .values(mappedWriteValues(txnRepo, rows))
+          .orUpdate(transactionColumns, ['id'])
+          .execute();
       }
-
-      // Process modified transactions
-      if (modified.length > 0) {
-        for (const dto of modified) {
-          const internalAccountId = getInternalAccountId(dto.accountId);
-
-          const existing = await txnRepo.findOne({
-            where: {
-              activity: {
-                externalActivityId: dto.externalTransactionId ?? undefined,
-                accountId: internalAccountId,
-                userId,
-              },
-            },
-            relations: this.relations,
-          });
-
-          if (!existing) {
-            this.logger.warn(
-              { externalTransactionId: dto.externalTransactionId },
-              'Modified transaction not found locally, inserting as new',
-            );
-            const entity = TransactionEntity.fromDto(
-              { ...dto, accountId: internalAccountId, categoryId: null },
-              userId,
-            );
-            const wasAutomaticallyCategorized =
-              await this.applyAutomaticCategoryIfEligible(userId, entity);
-            if (wasAutomaticallyCategorized) {
-              automaticallyCategorizedCount += 1;
-            }
-            const savedEntity = await txnRepo.save(entity);
-            if (savedEntity.categoryId === null) {
-              uncategorizedInsertedTransactions.push(savedEntity);
-            }
-            continue;
-          }
-
-          existing.source = 'provider';
-          this.applyUpdate(
-            existing,
-            this.buildProviderSyncUpdateDto(dto, internalAccountId),
-          );
-          if (await this.applyAutomaticCategoryIfEligible(userId, existing)) {
-            automaticallyCategorizedCount += 1;
-          }
-          await txnRepo.save(existing);
-        }
-      }
+      // A response may also remove a newly supplied identity; it must not enqueue work for a deleted row.
+      const removedIds = new Set(removed);
+      uncategorizedInsertedTransactions.push(
+        ...changedRows.filter(
+          (row) =>
+            inserted.has(row.id) &&
+            row.categoryId === null &&
+            (!row.externalTransactionId ||
+              !removedIds.has(row.externalTransactionId)),
+        ),
+      );
 
       // Process removed transactions
       if (removed.length > 0) {
@@ -1558,20 +1305,21 @@ export class TransactionService extends OwnedCrudService<
           (externalId) => !authoritativeAbsenceIds.has(externalId),
         );
 
-        const normalEntitiesToRemove =
-          normalRemovalIds.length > 0
-            ? await txnRepo.find({
-                where: {
-                  activity: {
-                    externalActivityId: In(normalRemovalIds),
-                    accountId: In(internalAccountIds),
-                    userId,
-                  },
-                  source: 'provider',
-                },
-                relations: this.relations,
-              })
-            : [];
+        const normalActivityIds: string[] = [];
+        for (
+          let offset = 0;
+          offset < normalRemovalIds.length;
+          offset += chunkSize
+        ) {
+          normalActivityIds.push(
+            ...(await this.transactionQueries.readRemovalActivityIds(
+              userId,
+              internalAccountIds,
+              normalRemovalIds.slice(offset, offset + chunkSize),
+              manager,
+            )),
+          );
+        }
         const authoritativeAbsenceActivityIds: string[] = [];
         for (const removal of authoritativeAbsenceRemovals) {
           const lockedRows: LockedAuthoritativeAbsenceRow[] =
@@ -1637,8 +1385,8 @@ export class TransactionService extends OwnedCrudService<
                   activity."accountId",
                   activity."externalActivityId",
                   jsonb_build_object(
-                    'schemaVersion', 1,
-                    'activity', to_jsonb(activity),
+                    'schemaVersion', 2,
+                    'activity', to_jsonb(activity) || jsonb_build_object('amountAmount', activity."amountAmount"::text),
                     'bankingTransaction', to_jsonb(banking)
                   ),
                   $2::jsonb,
@@ -1698,19 +1446,22 @@ export class TransactionService extends OwnedCrudService<
         }
 
         const activityRepo = manager.getRepository(AccountActivityEntity);
-        const normalActivityIds = normalEntitiesToRemove.map(
-          (entity) => entity.activityId,
+        const deleteChunks = async (ids: string[]) => {
+          let affected = 0;
+          for (let offset = 0; offset < ids.length; offset += chunkSize) {
+            affected +=
+              (
+                await activityRepo.delete({
+                  id: In(ids.slice(offset, offset + chunkSize)),
+                })
+              ).affected ?? 0;
+          }
+          return { affected };
+        };
+        const normalDeleteResult = await deleteChunks(normalActivityIds);
+        const authoritativeDeleteResult = await deleteChunks(
+          authoritativeAbsenceActivityIds,
         );
-        const normalDeleteResult =
-          normalActivityIds.length > 0
-            ? await activityRepo.delete({ id: In(normalActivityIds) })
-            : { affected: 0 };
-        const authoritativeDeleteResult =
-          authoritativeAbsenceActivityIds.length > 0
-            ? await activityRepo.delete({
-                id: In(authoritativeAbsenceActivityIds),
-              })
-            : { affected: 0 };
         processingResult.normalRemovedCount = normalDeleteResult.affected ?? 0;
         processingResult.authoritativeAbsenceArchivedCount =
           authoritativeAbsenceActivityIds.length;

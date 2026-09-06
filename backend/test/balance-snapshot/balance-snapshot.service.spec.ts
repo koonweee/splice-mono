@@ -175,7 +175,7 @@ describe('BalanceSnapshotService', () => {
     it('should update balance fields when provided', async () => {
       const updateDto = {
         currentBalance: {
-          money: { currency: 'USD', amount: 200000 },
+          money: { currency: 'USD', amount: '200000' },
           sign: MoneySign.POSITIVE,
         },
       };

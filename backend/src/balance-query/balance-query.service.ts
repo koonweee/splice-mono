@@ -1,7 +1,8 @@
+import { assertDateRange } from '../common/query-bounds';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import dayjs from 'dayjs';
-import { Between, In, Repository } from 'typeorm';
+import { Between, In, Repository, type EntityManager } from 'typeorm';
 import { AccountEntity } from '../account/account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { calculateEffectiveBalance as calculateSharedEffectiveBalance } from '../common/effective-balance';
@@ -11,7 +12,6 @@ import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import type {
   AccountBalanceResult,
   BalanceQueryPerDateResult,
-  BalanceWithConvertedBalance,
   RateWithSource,
 } from '../types/BalanceQuery';
 import type { CurrencyPair } from '../types/ExchangeRate';
@@ -21,7 +21,7 @@ import {
 } from '../types/MoneyWithSign';
 import { UserService } from '../user/user.service';
 import {
-  buildBalanceWithConversion,
+  createBalanceConverter,
   createSnapshotCursor,
 } from './balance-projection';
 
@@ -54,122 +54,13 @@ export class BalanceQueryService {
     endDate: string,
     userId: string,
   ): Promise<BalanceQueryPerDateResult[]> {
-    this.logger.log(
-      { accountCount: accountIds.length, startDate, endDate },
-      'Getting snapshot balances for accounts',
-    );
-
-    // Fetch user's preferred currency for conversion
-    const user = await this.userService.findOne(userId);
-    const targetCurrency = user?.settings?.currency;
-
-    // Step 1: Fetch accounts (ensures user ownership and gets account details)
-    const accounts = await this.accountRepository.find({
-      where: {
-        id: In(accountIds),
-        userId,
-      },
-      relations: ['bankLink'],
-    });
-
-    // Create a map for quick lookup
-    const accountMap = new Map<string, Account>();
-    accounts.forEach((a) => accountMap.set(a.id, a.toObject()));
-
-    // Validate all requested accounts were found
-    const foundIds = new Set(accounts.map((a) => a.id));
-    const missingIds = accountIds.filter((id) => !foundIds.has(id));
-    if (missingIds.length > 0) {
-      this.logger.warn(
-        { missingIds },
-        'Accounts not found or not owned by user',
-      );
-    }
-
-    // Only process accounts that were found
-    const validAccountIds = accountIds.filter((id) => foundIds.has(id));
-    if (validAccountIds.length === 0) {
-      return [];
-    }
-
-    const latestSyncedAtByAccount = await this.getLatestSyncedAtByAccount(
-      validAccountIds,
-      userId,
-    );
-
-    const snapshots = await this.loadRangeSnapshots(
-      validAccountIds,
+    const projection = await this.loadBalanceProjection(
       userId,
       startDate,
       endDate,
+      { accountIds, includeLatestSync: true },
     );
-
-    // Group snapshots by accountId, then by date
-    const snapshotsByAccount = new Map<
-      string,
-      Map<string, BalanceSnapshotEntity>
-    >();
-    snapshots.forEach((snapshot) => {
-      if (!snapshotsByAccount.has(snapshot.accountId)) {
-        snapshotsByAccount.set(snapshot.accountId, new Map());
-      }
-      snapshotsByAccount
-        .get(snapshot.accountId)!
-        .set(snapshot.snapshotDate, snapshot);
-    });
-
-    // Step 3: Fetch exchange rates if targetCurrency provided
-    let ratesByDate: Map<string, Map<string, RateWithSource>> | null = null;
-
-    if (targetCurrency) {
-      const selectableSnapshots = snapshots.filter(
-        (snapshot) =>
-          snapshot.snapshotDate >= startDate ||
-          !snapshotsByAccount.get(snapshot.accountId)?.has(startDate),
-      );
-      ratesByDate = await this.fetchExchangeRates(
-        selectableSnapshots,
-        targetCurrency,
-        startDate,
-        endDate,
-      );
-    }
-
-    // Step 4: Iterate over date range and build results
-    const results: BalanceQueryPerDateResult[] = [];
-    const selectSnapshot = createSnapshotCursor(snapshots);
-    let currentDate = dayjs(startDate);
-    const end = dayjs(endDate);
-
-    while (currentDate.diff(end, 'day') <= 0) {
-      const dateStr = currentDate.format('YYYY-MM-DD');
-      const balances: Record<string, AccountBalanceResult> = {};
-
-      validAccountIds.forEach((accountId) => {
-        const account = accountMap.get(accountId);
-        if (!account) return;
-
-        // Find snapshot for this date or most recent before
-        const snapshot = selectSnapshot(accountId, dateStr);
-
-        // Build balance result
-        const result = this.buildAccountBalanceResult(
-          account,
-          snapshot,
-          dateStr,
-          latestSyncedAtByAccount.get(accountId),
-          targetCurrency,
-          ratesByDate?.get(dateStr),
-        );
-
-        balances[accountId] = result;
-      });
-
-      results.push({ date: dateStr, balances });
-      currentDate = currentDate.add(1, 'day');
-    }
-
-    return results;
+    return [...projection.balances];
   }
 
   /**
@@ -212,27 +103,13 @@ export class BalanceQueryService {
     endDate: string,
     userId: string,
   ): Promise<BalanceQueryPerDateResult[]> {
-    this.logger.log(
-      { startDate, endDate, userId },
-      'Getting all balances for user',
-    );
-
-    // Fetch all accounts for the user
-    const accounts = await this.accountRepository.find({
-      where: { userId },
-    });
-
-    if (accounts.length === 0) {
-      return [];
-    }
-
-    const accountIds = accounts.map((a) => a.id);
-    return this.getSnapshotBalancesForDateRange(
-      accountIds,
+    const projection = await this.loadBalanceProjection(
+      userId,
       startDate,
       endDate,
-      userId,
+      { includeLatestSync: true },
     );
+    return [...projection.balances];
   }
 
   /**
@@ -243,6 +120,7 @@ export class BalanceQueryService {
     targetCurrency: string,
     startDate: string,
     endDate: string,
+    manager: EntityManager,
   ): Promise<Map<string, Map<string, RateWithSource>>> {
     // Determine which currency pairs we need
     const currencyPairs: CurrencyPair[] = [];
@@ -264,10 +142,10 @@ export class BalanceQueryService {
     };
 
     snapshots.forEach((snapshot) => {
-      if (Number(snapshot.availableBalance.amount) !== 0) {
+      if (snapshot.availableBalance.amount !== '0') {
         addCurrencyPair(snapshot.availableBalance.currency);
       }
-      if (Number(snapshot.currentBalance.amount) !== 0) {
+      if (snapshot.currentBalance.amount !== '0') {
         addCurrencyPair(snapshot.currentBalance.currency);
       }
     });
@@ -282,6 +160,7 @@ export class BalanceQueryService {
           currencyPairs,
           startDate,
           endDate,
+          manager,
         );
 
       // Build lookup: date -> (baseCurrency:targetCurrency -> rate)
@@ -310,9 +189,10 @@ export class BalanceQueryService {
     userId: string,
     startDate: string,
     endDate: string,
+    manager: EntityManager,
   ): Promise<BalanceSnapshotEntity[]> {
     const [inRange, prior] = await Promise.all([
-      this.snapshotRepository.find({
+      manager.withRepository(this.snapshotRepository).find({
         where: {
           accountId: In(accountIds),
           userId,
@@ -320,7 +200,8 @@ export class BalanceQueryService {
         },
         order: { snapshotDate: 'ASC' },
       }),
-      this.snapshotRepository
+      manager
+        .withRepository(this.snapshotRepository)
         .createQueryBuilder('snapshot')
         .distinctOn(['snapshot.accountId'])
         .where('snapshot.accountId IN (:...accountIds)', { accountIds })
@@ -337,8 +218,10 @@ export class BalanceQueryService {
     accountIds: string[],
     userId: string,
     date: string,
+    manager: EntityManager,
   ) {
-    return this.snapshotRepository
+    return manager
+      .withRepository(this.snapshotRepository)
       .createQueryBuilder('snapshot')
       .distinctOn(['snapshot.accountId'])
       .where('snapshot.accountId IN (:...accountIds)', { accountIds })
@@ -354,83 +237,216 @@ export class BalanceQueryService {
    * is retained. Boundary reads select at most two snapshots per account;
    * series reads retain complete daily FX validation, even on omitted dates.
    */
-  async loadDashboardProjection(
+  loadDashboardProjection(
     userId: string,
     startDate: string,
     endDate: string,
     boundaryOnly: boolean,
   ) {
-    const [user, entities] = await Promise.all([
-      this.userService.findOne(userId),
-      this.accountRepository.find({
-        where: { userId },
-        relations: ['bankLink'],
-      }),
-    ]);
-    if (!user) throw new UnauthorizedException();
-    const reportingCurrency = user.settings.currency;
-    const accounts = entities.map((entity) => entity.toObject());
-    const accountIds = accounts.map((account) => account.id);
-    if (accountIds.length === 0) {
+    return this.loadBalanceProjection(userId, startDate, endDate, {
+      boundaryOnly,
+      includeLatestSync: boundaryOnly,
+    });
+  }
+
+  async loadBalanceProjection(
+    userId: string,
+    startDate: string,
+    endDate: string,
+    options: {
+      accountIds?: string[];
+      boundaryOnly?: boolean;
+      includeLatestSync?: boolean;
+    } = {},
+  ) {
+    assertDateRange(startDate, endDate, { maxDays: 10_000 });
+    const boundaryOnly = options.boundaryOnly ?? false;
+    const { reportingCurrency, accounts, snapshots, latestSync, rates } =
+      await this.accountRepository.manager.transaction(
+        'REPEATABLE READ',
+        async (manager) => {
+          const [user, entities] = await Promise.all([
+            this.userService.findSettings(userId, manager),
+            manager.withRepository(this.accountRepository).find({
+              where: {
+                userId,
+                ...(options.accountIds
+                  ? { id: In([...new Set(options.accountIds)]) }
+                  : {}),
+              },
+              select: {
+                id: true,
+                userId: true,
+                name: true,
+                customName: true,
+                notes: true,
+                mask: true,
+                type: true,
+                subType: true,
+                valuationMode: true,
+                externalAccountId: true,
+                bankLinkId: true,
+                availableBalance: { amount: true, currency: true, sign: true },
+                currentBalance: { amount: true, currency: true, sign: true },
+                archivedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                bankLink: {
+                  id: true,
+                  userId: true,
+                  providerName: true,
+                  accountIds: true,
+                  institutionId: true,
+                  institutionName: true,
+                  status: true,
+                  statusDate: true,
+                  statusBody: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
+              relations: ['bankLink'],
+            }),
+          ]);
+          if (!user) throw new UnauthorizedException();
+          const reportingCurrency = user.settings.currency ?? 'USD';
+          assertDateRange(startDate, endDate, {
+            maxDays: 10_000,
+            maxAccountDays: 1_000_000,
+            accountCount: entities.length,
+          });
+          const accounts = entities.map((entity) => entity.toObject());
+          const accountIds = accounts.map((account) => account.id);
+          if (accountIds.length === 0) {
+            return {
+              reportingCurrency,
+              accounts,
+              snapshots: [] as BalanceSnapshotEntity[],
+              latestSync: new Map<string, Date>(),
+              rates: new Map<string, Map<string, RateWithSource>>(),
+            };
+          }
+          const [snapshots, latestSync] = await Promise.all([
+            boundaryOnly
+              ? Promise.all([
+                  this.loadBoundarySnapshots(
+                    accountIds,
+                    userId,
+                    startDate,
+                    manager,
+                  ),
+                  this.loadBoundarySnapshots(
+                    accountIds,
+                    userId,
+                    endDate,
+                    manager,
+                  ),
+                ]).then((groups) => groups.flat())
+              : this.loadRangeSnapshots(
+                  accountIds,
+                  userId,
+                  startDate,
+                  endDate,
+                  manager,
+                ),
+            options.includeLatestSync
+              ? this.getLatestSyncedAtByAccount(accountIds, userId, manager)
+              : Promise.resolve(new Map<string, Date>()),
+          ]);
+          // A prior snapshot superseded on the first day must not require unused FX.
+          const firstDayAccounts = new Set(
+            snapshots
+              .filter((snapshot) => snapshot.snapshotDate === startDate)
+              .map((snapshot) => snapshot.accountId),
+          );
+          const selectableSnapshots = snapshots.filter(
+            (snapshot) =>
+              snapshot.snapshotDate >= startDate ||
+              !firstDayAccounts.has(snapshot.accountId),
+          );
+          let rates: Map<string, Map<string, RateWithSource>>;
+          if (boundaryOnly) {
+            const select = createSnapshotCursor(snapshots);
+            const selectedAt = (date: string) =>
+              accounts
+                .map((account) => select(account.id, date))
+                .filter(
+                  (snapshot): snapshot is BalanceSnapshotEntity => !!snapshot,
+                );
+            const first = selectedAt(startDate);
+            const last = selectedAt(endDate);
+            const boundaryRates = await Promise.all([
+              this.fetchExchangeRates(
+                first,
+                reportingCurrency,
+                startDate,
+                startDate,
+                manager,
+              ),
+              this.fetchExchangeRates(
+                last,
+                reportingCurrency,
+                endDate,
+                endDate,
+                manager,
+              ),
+            ]);
+            rates = new Map(boundaryRates.flatMap((map) => [...map]));
+          } else {
+            rates = await this.fetchExchangeRates(
+              selectableSnapshots,
+              reportingCurrency,
+              startDate,
+              endDate,
+              manager,
+            );
+          }
+          return { reportingCurrency, accounts, snapshots, latestSync, rates };
+        },
+      );
+    // Release the database snapshot before expanding daily balances or serializing results.
+    if (accounts.length === 0)
       return {
         reportingCurrency,
         balances: [] as Iterable<BalanceQueryPerDateResult>,
       };
-    }
-    const [snapshots, latestSync] = await Promise.all([
-      boundaryOnly
-        ? Promise.all([
-            this.loadBoundarySnapshots(accountIds, userId, startDate),
-            this.loadBoundarySnapshots(accountIds, userId, endDate),
-          ]).then((groups) => groups.flat())
-        : this.loadRangeSnapshots(accountIds, userId, startDate, endDate),
-      boundaryOnly
-        ? this.getLatestSyncedAtByAccount(accountIds, userId)
-        : Promise.resolve(new Map<string, Date>()),
-    ]);
-    // A prior snapshot superseded on the first day must not require unused FX.
-    const firstDayAccounts = new Set(
-      snapshots
-        .filter((snapshot) => snapshot.snapshotDate === startDate)
-        .map((snapshot) => snapshot.accountId),
-    );
-    const selectableSnapshots = snapshots.filter(
-      (snapshot) =>
-        snapshot.snapshotDate >= startDate ||
-        !firstDayAccounts.has(snapshot.accountId),
-    );
-    let rates: Map<string, Map<string, RateWithSource>>;
-    if (boundaryOnly) {
-      const select = createSnapshotCursor(snapshots);
-      const selectedAt = (date: string) =>
-        accounts
-          .map((account) => select(account.id, date))
-          .filter((snapshot): snapshot is BalanceSnapshotEntity => !!snapshot);
-      const first = selectedAt(startDate);
-      const last = selectedAt(endDate);
-      const boundaryRates = await Promise.all([
-        this.fetchExchangeRates(first, reportingCurrency, startDate, startDate),
-        this.fetchExchangeRates(last, reportingCurrency, endDate, endDate),
-      ]);
-      rates = new Map(boundaryRates.flatMap((map) => [...map]));
-    } else {
-      rates = await this.fetchExchangeRates(
-        selectableSnapshots,
-        reportingCurrency,
-        startDate,
-        endDate,
-      );
-    }
     const select = createSnapshotCursor(snapshots);
-    const build = (account: Account, date: string) =>
-      this.buildAccountBalanceResult(
+    const convert = createBalanceConverter(reportingCurrency);
+    // Keep only the active snapshot's native balances per account, not a daily matrix.
+    const nativeBalances = new Map<
+      string,
+      {
+        snapshot: BalanceSnapshotEntity | undefined;
+        available: SerializedMoneyWithSign;
+        current: SerializedMoneyWithSign;
+      }
+    >();
+    const build = (account: Account, date: string) => {
+      const snapshot = select(account.id, date);
+      let native = nativeBalances.get(account.id);
+      if (!native || native.snapshot !== snapshot) {
+        native = {
+          snapshot,
+          available: snapshot
+            ? snapshot.availableBalance.toMoneyWithSign()
+            : this.createZeroBalance(account.availableBalance.money.currency),
+          current: snapshot
+            ? snapshot.currentBalance.toMoneyWithSign()
+            : this.createZeroBalance(account.currentBalance.money.currency),
+        };
+        nativeBalances.set(account.id, native);
+      }
+      return this.buildAccountBalanceResult(
         account,
-        select(account.id, date),
+        snapshot,
         date,
         latestSync.get(account.id),
-        reportingCurrency,
+        native.available,
+        native.current,
+        convert,
         rates.get(date),
       );
+    };
     function* iterate(): Generator<BalanceQueryPerDateResult> {
       let date = startDate;
       while (date <= endDate) {
@@ -451,12 +467,14 @@ export class BalanceQueryService {
   private async getLatestSyncedAtByAccount(
     accountIds: string[],
     userId: string,
+    manager: EntityManager,
   ): Promise<Map<string, Date>> {
     if (accountIds.length === 0) {
       return new Map();
     }
 
-    const snapshots = await this.snapshotRepository
+    const snapshots = await manager
+      .withRepository(this.snapshotRepository)
       .createQueryBuilder('snapshot')
       .distinctOn(['snapshot.accountId'])
       .where('snapshot.accountId IN (:...accountIds)', { accountIds })
@@ -486,18 +504,11 @@ export class BalanceQueryService {
     snapshot: BalanceSnapshotEntity | undefined,
     targetDate: string,
     latestSyncedAt: Date | undefined,
-    targetCurrency: string | undefined,
+    availableBalance: SerializedMoneyWithSign,
+    currentBalance: SerializedMoneyWithSign,
+    convert: ReturnType<typeof createBalanceConverter>,
     dateRates: Map<string, RateWithSource> | undefined,
   ): AccountBalanceResult {
-    // Get balances (zero if no snapshot)
-    const availableBalance = snapshot
-      ? snapshot.availableBalance.toMoneyWithSign()
-      : this.createZeroBalance(account.availableBalance.money.currency);
-
-    const currentBalance = snapshot
-      ? snapshot.currentBalance.toMoneyWithSign()
-      : this.createZeroBalance(account.currentBalance.money.currency);
-
     // Calculate effective balance based on account type
     const effectiveBalance = this.calculateEffectiveBalance(currentBalance);
 
@@ -509,24 +520,9 @@ export class BalanceQueryService {
     // Build result with optional conversion
     return {
       account,
-      availableBalance: this.buildBalanceWithConversion(
-        availableBalance,
-        targetCurrency,
-        dateRates,
-        targetDate,
-      ),
-      currentBalance: this.buildBalanceWithConversion(
-        currentBalance,
-        targetCurrency,
-        dateRates,
-        targetDate,
-      ),
-      effectiveBalance: this.buildBalanceWithConversion(
-        effectiveBalance,
-        targetCurrency,
-        dateRates,
-        targetDate,
-      ),
+      availableBalance: convert(availableBalance, dateRates, targetDate),
+      currentBalance: convert(currentBalance, dateRates, targetDate),
+      effectiveBalance: convert(effectiveBalance, dateRates, targetDate),
       syncedAt,
       latestSyncedAt,
     };
@@ -544,28 +540,11 @@ export class BalanceQueryService {
   }
 
   /**
-   * Build a BalanceWithConvertedBalance, applying currency conversion if needed.
-   */
-  private buildBalanceWithConversion(
-    balance: SerializedMoneyWithSign,
-    targetCurrency: string | undefined,
-    dateRates: Map<string, RateWithSource> | undefined,
-    targetDate: string,
-  ): BalanceWithConvertedBalance {
-    return buildBalanceWithConversion(
-      balance,
-      targetCurrency,
-      dateRates,
-      targetDate,
-    );
-  }
-
-  /**
    * Create a zero balance with the given currency.
    */
   private createZeroBalance(currency: string): SerializedMoneyWithSign {
     return {
-      money: { amount: 0, currency },
+      money: { amount: '0', currency },
       sign: MoneySign.POSITIVE,
     };
   }

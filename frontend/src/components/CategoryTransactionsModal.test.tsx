@@ -74,7 +74,7 @@ function makeTransaction(
     source: overrides.source ?? TransactionSource.provider,
     amount: overrides.amount ?? {
       money: {
-        amount: 1250,
+        amount: '1250',
         currency: 'USD',
       },
       sign: 'negative',

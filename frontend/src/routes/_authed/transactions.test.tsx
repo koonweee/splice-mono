@@ -28,7 +28,7 @@ import type {
 } from '../../api/models'
 
 type InfiniteQueryOptions = {
-  queryFn: (context: { pageParam?: number }) => unknown
+  queryFn: (context: { pageParam?: string }) => unknown
 }
 
 type BulkUpdateMutateOptions = {
@@ -310,11 +310,11 @@ const account: Account = {
   customName: 'Everyday Checking',
   mask: '1234',
   availableBalance: {
-    money: { amount: 10000, currency: 'USD' },
+    money: { amount: '10000', currency: 'USD' },
     sign: MoneyWithSignSign.positive,
   },
   currentBalance: {
-    money: { amount: 10000, currency: 'USD' },
+    money: { amount: '10000', currency: 'USD' },
     sign: MoneyWithSignSign.positive,
   },
   type: AccountType.depository,
@@ -344,6 +344,8 @@ const transactionsPageData: PaginatedTransactionResponse = {
   total: 125,
   pageIndex: 0,
   pageSize: 50,
+  nextCursor: 'next-page',
+  hasMore: true,
 }
 
 function renderTransactionsPage() {
@@ -476,7 +478,7 @@ describe('TransactionsPage category assignment workflow', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Outflows' }))
 
-    await latestInfiniteQueryOptions.queryFn({ pageParam: 2 })
+    await latestInfiniteQueryOptions.queryFn({ pageParam: 'next-page' })
 
     expect(mockFns.transactionControllerFindAllMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -485,7 +487,7 @@ describe('TransactionsPage category assignment workflow', () => {
         endDate: '2026-02-28',
         categoryId: category.id,
         amountSign: 'negative',
-        pageIndex: '2',
+        cursor: 'next-page',
         pageSize: '50',
       }),
       undefined,
@@ -504,12 +506,12 @@ describe('TransactionsPage category assignment workflow', () => {
 
     renderTransactionsPage()
 
-    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+    await latestInfiniteQueryOptions.queryFn({ pageParam: undefined })
 
     expect(mockFns.transactionControllerFindAllMock).toHaveBeenCalledWith(
       expect.objectContaining({
         categoryId: 'UNCATEGORIZED',
-        pageIndex: '0',
+        cursor: undefined,
         pageSize: '50',
       }),
       undefined,
@@ -798,7 +800,7 @@ describe('TransactionsPage category assignment workflow', () => {
       target: { value: category.id },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Outflows' }))
-    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+    await latestInfiniteQueryOptions.queryFn({ pageParam: undefined })
 
     expect(mockFns.transactionControllerFindAllMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -812,7 +814,7 @@ describe('TransactionsPage category assignment workflow', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Clear dates' }))
-    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+    await latestInfiniteQueryOptions.queryFn({ pageParam: undefined })
     const withoutDates =
       mockFns.transactionControllerFindAllMock.mock.calls.at(-1)?.[0]
     expect(withoutDates).toMatchObject({
@@ -824,11 +826,11 @@ describe('TransactionsPage category assignment workflow', () => {
     expect(withoutDates).not.toHaveProperty('endDate')
 
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
-    await latestInfiniteQueryOptions.queryFn({ pageParam: 0 })
+    await latestInfiniteQueryOptions.queryFn({ pageParam: undefined })
     expect(mockFns.transactionControllerFindAllMock).toHaveBeenLastCalledWith(
       {
         pageSize: '50',
-        pageIndex: '0',
+        cursor: undefined,
         convert: true,
         sortBy: 'activityDate',
         sortOrder: 'DESC',
@@ -849,7 +851,7 @@ function makeTransaction(id: string): Transaction {
     userId: 'user-1',
     accountId: account.id,
     amount: {
-      money: { amount: 1200, currency: 'USD' },
+      money: { amount: '1200', currency: 'USD' },
       sign: MoneyWithSignSign.negative,
     },
     merchantName: 'Whole Foods Market',

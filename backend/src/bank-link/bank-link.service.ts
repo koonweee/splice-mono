@@ -1598,6 +1598,11 @@ export class BankLinkService extends OwnedCrudService<
       'Starting investment holdings sync for bank link',
     );
 
+    const syncToken = await this.investmentService.beginProviderSync(
+      userId,
+      bankLinkId,
+      'holdings',
+    );
     const holdingsResponse = await provider.syncInvestmentHoldings(
       bankLink.authentication,
     );
@@ -1612,6 +1617,7 @@ export class BankLinkService extends OwnedCrudService<
       accountIdMap,
       snapshotDate,
       holdingsResponse,
+      syncToken,
     );
 
     this.logger.log(
@@ -1678,6 +1684,11 @@ export class BankLinkService extends OwnedCrudService<
       'Starting investment transaction sync for bank link',
     );
 
+    const syncToken = await this.investmentService.beginProviderSync(
+      userId,
+      bankLinkId,
+      'transactions',
+    );
     const response = await provider.syncInvestmentTransactions(
       bankLink.authentication,
       startDate,
@@ -1693,15 +1704,8 @@ export class BankLinkService extends OwnedCrudService<
         userId,
         accountIdMap,
         response,
+        syncToken,
       );
-
-    await this.mergeBankLinkAuthentication(bankLink.id, userId, {
-      investmentTransactionsSync: {
-        lastSyncedAt: new Date().toISOString(),
-        lastStartDate: startDate,
-        lastEndDate: endDate,
-      },
-    });
 
     this.logger.log(
       {

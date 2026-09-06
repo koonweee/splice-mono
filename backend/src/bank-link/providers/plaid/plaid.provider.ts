@@ -40,6 +40,7 @@ import type {
   ProviderInvestmentTransactionsResponse,
 } from '../../../types/Investment';
 import { MoneySign, MoneyWithSign } from '../../../types/MoneyWithSign';
+import { ExactDecimal } from '../../../common/exact-money';
 import type { CreateTransactionDto } from '../../../types/Transaction';
 import {
   PlaidUserDetails,
@@ -1548,13 +1549,13 @@ export class PlaidProvider implements IBankLinkProvider {
       providerDate: transaction.date,
       providerDatetime: null,
       name: transaction.name,
-      quantity: transaction.quantity.toString(),
+      quantity: this.toDecimalString(transaction.quantity)!,
       amount: MoneyWithSign.fromFloat(
         currency,
         invertedAmount,
         sign,
       ).toSerialized(),
-      price: transaction.price.toString(),
+      price: this.toDecimalString(transaction.price)!,
       fees: this.toDecimalString(transaction.fees),
       investmentType: transaction.type,
       investmentSubtype: transaction.subtype,
@@ -1564,7 +1565,10 @@ export class PlaidProvider implements IBankLinkProvider {
   }
 
   private toDecimalString(value: number | null | undefined): string | null {
-    return value === null || value === undefined ? null : value.toString();
+    if (value === null || value === undefined) return null;
+    if (!Number.isFinite(value))
+      throw new Error('Provider decimal amount must be finite');
+    return new ExactDecimal(String(value)).toFixed();
   }
 
   // TODO: Implement Plaid link 'update' flow for using same access token to fix broken links

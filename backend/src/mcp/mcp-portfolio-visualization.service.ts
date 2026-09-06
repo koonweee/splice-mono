@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { McpPublicError } from '@koonweee/mcp-kit';
-import Decimal from 'decimal.js';
+import type Decimal from 'decimal.js';
+import {
+  ExactDecimal,
+  DECIMAL_PATTERN,
+  type ExactRateRatio,
+} from '../common/exact-money';
+import { fxRequestKey } from '../currency-exchange/currency-exchange.service';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
 import { getDecimalPlaces, MoneySign } from '../types/MoneyWithSign';
 import type { McpMoney } from './mcp-money';
@@ -9,7 +15,7 @@ import type { PortfolioVisualizationData } from './mcp-schemas';
 
 const REPORTING_CURRENCY = 'USD' as const;
 const USD_DECIMAL_PLACES = 2;
-const MAX_SAFE_MINOR_UNITS = new Decimal(Number.MAX_SAFE_INTEGER);
+const MAX_MINOR_UNITS = new ExactDecimal('9'.repeat(78));
 
 type PortfolioContribution =
   PortfolioVisualizationData['positions'][number]['contributions'][number];
@@ -47,7 +53,7 @@ function normalizeCurrency(currency: string | null): string {
 function decimalOrNull(value: string | null): Decimal | null {
   if (value === null) return null;
   try {
-    const decimal = new Decimal(value);
+    const decimal = new ExactDecimal(value);
     return decimal.isFinite() ? decimal : null;
   } catch {
     return null;
@@ -58,37 +64,47 @@ function moneyDecimal(money: McpMoney | null, currency: string): Decimal {
   if (
     !money ||
     money.sign !== MoneySign.POSITIVE ||
-    !Number.isFinite(money.amount) ||
+    typeof money.amount !== 'string' ||
+    !DECIMAL_PATTERN.test(money.amount) ||
     normalizeCurrency(money.currency) !== currency
   ) {
     throw unavailable();
   }
-  const amount = new Decimal(money.amount);
+  const amount = new ExactDecimal(money.amount);
   const nativeMinorUnits = amount.mul(
-    new Decimal(10).pow(getDecimalPlaces(currency)),
+    new ExactDecimal(10).pow(getDecimalPlaces(currency)),
   );
   if (
     !amount.isFinite() ||
     amount.isNegative() ||
     !nativeMinorUnits.isInteger() ||
-    nativeMinorUnits.greaterThan(MAX_SAFE_MINOR_UNITS)
+    nativeMinorUnits.greaterThan(MAX_MINOR_UNITS)
   ) {
     throw unavailable();
   }
   return amount;
 }
 
+function hasOnlyZeroValues(holding: McpInvestmentHolding): boolean {
+  const zero = /^0(?:\.0+)?$/;
+  return (
+    typeof holding.institutionValue?.amount === 'string' &&
+    zero.test(holding.institutionValue.amount) &&
+    (holding.institutionPrice === null || zero.test(holding.institutionPrice))
+  );
+}
+
 function roundUsd(value: Decimal): Decimal {
   const rounded = value.toDecimalPlaces(
     USD_DECIMAL_PLACES,
-    Decimal.ROUND_HALF_UP,
+    ExactDecimal.ROUND_HALF_UP,
   );
   const cents = rounded.mul(100);
   if (
     !rounded.isFinite() ||
     rounded.isNegative() ||
     !cents.isInteger() ||
-    cents.greaterThan(MAX_SAFE_MINOR_UNITS)
+    cents.greaterThan(MAX_MINOR_UNITS)
   ) {
     throw unavailable();
   }
@@ -97,8 +113,7 @@ function roundUsd(value: Decimal): Decimal {
 
 function usdMoney(value: Decimal): PortfolioUsdMoney {
   const rounded = roundUsd(value);
-  const amount = rounded.toNumber();
-  if (!Number.isFinite(amount)) throw unavailable();
+  const amount = rounded.toFixed();
   return {
     amount,
     currency: REPORTING_CURRENCY,
@@ -180,54 +195,58 @@ export class McpPortfolioVisualizationService {
     const selectedAccountIds = accountIds?.length
       ? [...new Set(accountIds)]
       : undefined;
-    const holdingsResult = await this.mcpReadService.listInvestmentHoldings(
-      userId,
-      {
-        ...(selectedAccountIds ? { accountIds: selectedAccountIds } : {}),
-        latestOnly: true,
-      },
-    );
-    const holdings = holdingsResult.data;
-
-    const currenciesByDate = new Map<string, Set<string>>();
-    for (const holding of holdings) {
-      const currency = normalizeCurrency(holding.currency);
-      moneyDecimal(holding.institutionValue, currency);
-      if (currency !== REPORTING_CURRENCY) {
-        const currencies =
-          currenciesByDate.get(holding.snapshotDate) ?? new Set();
-        currencies.add(currency);
-        currenciesByDate.set(holding.snapshotDate, currencies);
-      }
-    }
-
-    const rateByCurrencyDate = new Map<string, Decimal>();
-    try {
-      await Promise.all(
-        [...currenciesByDate.entries()].map(
-          async ([snapshotDate, currencies]) => {
-            const rateMap = await this.currencyConversionService.getRateMap(
-              [...currencies].sort(),
-              REPORTING_CURRENCY,
-              snapshotDate,
-            );
-            for (const currency of currencies) {
-              const rateValue = rateMap.get(currency);
-              if (
-                rateValue === undefined ||
-                !Number.isFinite(rateValue) ||
-                rateValue <= 0
-              ) {
-                throw unavailable();
-              }
-              rateByCurrencyDate.set(
-                `${snapshotDate}:${currency}`,
-                new Decimal(rateValue),
-              );
-            }
+    const { holdings, requests, resolved } =
+      await this.mcpReadService.withReadSnapshot(async (manager) => {
+        const holdingsResult = await this.mcpReadService.listInvestmentHoldings(
+          userId,
+          {
+            ...(selectedAccountIds ? { accountIds: selectedAccountIds } : {}),
+            latestOnly: true,
           },
-        ),
-      );
+          manager,
+        );
+        const requests = holdingsResult.data
+          .filter(
+            (holding) =>
+              normalizeCurrency(holding.currency) !== REPORTING_CURRENCY &&
+              !hasOnlyZeroValues(holding),
+          )
+          .map((holding) => ({
+            baseCurrency: normalizeCurrency(holding.currency),
+            targetCurrency: REPORTING_CURRENCY,
+            requestedDate: holding.snapshotDate,
+          }));
+        try {
+          const resolved =
+            await this.currencyConversionService.getResolvedRates(
+              requests,
+              manager,
+            );
+          return { holdings: holdingsResult.data, requests, resolved };
+        } catch {
+          throw unavailable();
+        }
+      });
+    // All valuation, grouping and formatting runs after the input snapshot commits.
+    const rateByCurrencyDate = new Map<string, ExactRateRatio>();
+    try {
+      for (const request of requests) {
+        const rate = resolved.get(fxRequestKey(request));
+        if (!rate) throw unavailable();
+        const numerator = new ExactDecimal(rate.ratio.numerator);
+        const denominator = new ExactDecimal(rate.ratio.denominator);
+        if (
+          !numerator.isFinite() ||
+          !numerator.isPositive() ||
+          !denominator.isFinite() ||
+          !denominator.isPositive()
+        )
+          throw unavailable();
+        rateByCurrencyDate.set(
+          `${request.requestedDate}:${request.baseCurrency}`,
+          rate.ratio,
+        );
+      }
     } catch {
       throw unavailable();
     }
@@ -244,18 +263,20 @@ export class McpPortfolioVisualizationService {
         const contributions = securityHoldings.map((holding) => {
           const currency = normalizeCurrency(holding.currency);
           const rate =
-            currency === REPORTING_CURRENCY
-              ? new Decimal(1)
+            currency === REPORTING_CURRENCY || hasOnlyZeroValues(holding)
+              ? { numerator: '1', denominator: '1' }
               : rateByCurrencyDate.get(`${holding.snapshotDate}:${currency}`);
           if (!rate) throw unavailable();
           const valueUsdDecimal = roundUsd(
-            moneyDecimal(holding.institutionValue, currency).mul(rate),
+            moneyDecimal(holding.institutionValue, currency)
+              .mul(rate.numerator)
+              .div(rate.denominator),
           );
           const nativePrice = decimalOrNull(holding.institutionPrice);
           const priceUsdDecimal = nativePrice?.isNegative()
             ? null
             : nativePrice
-              ? roundUsd(nativePrice.mul(rate))
+              ? roundUsd(nativePrice.mul(rate.numerator).div(rate.denominator))
               : null;
           const quantity = decimalOrNull(holding.quantity);
 
@@ -274,7 +295,7 @@ export class McpPortfolioVisualizationService {
         const quantity = quantityParts.every(
           (item): item is Decimal => item !== null,
         )
-          ? Decimal.sum(...quantityParts).toString()
+          ? ExactDecimal.sum(...quantityParts).toString()
           : null;
 
         return {
@@ -292,7 +313,7 @@ export class McpPortfolioVisualizationService {
             securityHoldings.map((holding) => holding.subtype),
           ),
           quantity,
-          valueUsdDecimal: Decimal.sum(
+          valueUsdDecimal: ExactDecimal.sum(
             ...contributions.map((item) => item.valueUsdDecimal),
           ),
           contributions: contributions.sort(contributionSort),
@@ -302,11 +323,11 @@ export class McpPortfolioVisualizationService {
     pendingPositions.sort(positionSort);
     const total = pendingPositions.length
       ? roundUsd(
-          Decimal.sum(
+          ExactDecimal.sum(
             ...pendingPositions.map((position) => position.valueUsdDecimal),
           ),
         )
-      : new Decimal(0);
+      : new ExactDecimal(0);
     const allocations = allocationBasisPoints(pendingPositions, total);
     const dates = holdings.map((holding) => holding.snapshotDate).sort();
 

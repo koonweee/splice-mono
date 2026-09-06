@@ -1,6 +1,24 @@
+import { createHash } from 'node:crypto';
+import { TransactionQueryService } from '../transaction/transaction-query.service';
+import {
+  ExactDecimal,
+  type ExactRateRatio,
+  exactDecimal,
+} from '../common/exact-money';
+import { HoldingsQueryService } from '../investment/holdings-query.service';
+import type { InvestmentHoldingSnapshot } from '../types/Investment';
+import { fxRequestKey } from '../currency-exchange/currency-exchange.service';
+import { CalendarDateSchema, assertDateRange } from '../common/query-bounds';
+import type { RateSource } from '../types/ExchangeRate';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, IsNull, Repository, SelectQueryBuilder } from 'typeorm';
+import {
+  Brackets,
+  IsNull,
+  Repository,
+  SelectQueryBuilder,
+  type EntityManager,
+} from 'typeorm';
 import {
   formatAccountLabel,
   getAccountGrouping,
@@ -11,7 +29,6 @@ import { AccountService } from '../account/account.service';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { CategoryEntity } from '../category/category.entity';
 import { CurrencyConversionService } from '../currency-exchange/currency-conversion.service';
-import { InvestmentHoldingSnapshotEntity } from '../investment/investment-holding-snapshot.entity';
 import { InvestmentTransactionEntity } from '../investment/investment-transaction.entity';
 import { RecurringManualTransactionService } from '../recurring-manual-transaction/recurring-manual-transaction.service';
 import {
@@ -28,7 +45,7 @@ import type { CategorizationRuleView } from '../types/CategorizationRule';
 import type { CategorizationRuleRecommendationListResponse } from '../types/CategorizationRuleSuggestion';
 import type { RecurringManualTransactionSchedule } from '../types/RecurringManualTransaction';
 import {
-  getDecimalPlaces,
+  MoneyWithSign,
   MoneySign,
   type SerializedMoneyWithSign,
 } from '../types/MoneyWithSign';
@@ -38,10 +55,8 @@ const TRANSACTION_DEFAULT_PAGE_SIZE = 50;
 const TRANSACTION_MAX_PAGE_SIZE = 100;
 const SNAPSHOT_DEFAULT_PAGE_SIZE = 100;
 const SNAPSHOT_MAX_PAGE_SIZE = 250;
-const CANDIDATE_BATCH_SIZE = 250;
 const INVESTMENT_ACTIVITY_DEFAULT_PAGE_SIZE = 50;
 const INVESTMENT_ACTIVITY_MAX_PAGE_SIZE = 100;
-const ACTIVITY_DATE_SORT_ALIAS = 'activity_date_sort';
 
 interface CursorPayload {
   date: string;
@@ -61,13 +76,17 @@ interface InvestmentActivityCursorPayload {
 export interface McpPageInfo {
   nextCursor: string | null;
   hasMore: boolean;
+  continuationReason?: 'scan_budget';
 }
 
 export interface McpConversionRate {
   from: string;
   to: string;
-  rate: number;
+  rate: string;
   rateDate: string;
+  requestedDate: string;
+  source: RateSource;
+  ratio: ExactRateRatio;
 }
 
 export interface McpConversionMetadata {
@@ -76,8 +95,8 @@ export interface McpConversionMetadata {
 }
 
 export interface McpAmountFilter {
-  min?: number;
-  max?: number;
+  min?: string;
+  max?: string;
   currency: string;
 }
 
@@ -239,6 +258,11 @@ export interface McpInvestmentHolding {
 
 export interface McpListInvestmentHoldingsResult {
   data: McpInvestmentHolding[];
+  snapshots: Array<{
+    accountId: string;
+    snapshotDate: string | null;
+    holdingCount: number;
+  }>;
   query: {
     accountIds?: string[];
     snapshotDate?: string;
@@ -337,7 +361,10 @@ function formatCategoryLabel(rawLabel: string | null): string {
 }
 
 function encodeCursor(
-  payload: CursorPayload | TransactionCursorPayload,
+  payload: (CursorPayload | TransactionCursorPayload) & {
+    version?: number;
+    scope?: string;
+  },
 ): string {
   return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
 }
@@ -363,24 +390,33 @@ function decodeCursor(cursor: string | undefined): CursorPayload | undefined {
 
 function decodeTransactionCursor(
   cursor: string | undefined,
+  scope: string,
 ): TransactionCursorPayload | undefined {
   if (!cursor) {
     return undefined;
   }
 
   try {
+    if (cursor.length > 2048) throw new Error();
     const parsed = JSON.parse(
       Buffer.from(cursor, 'base64url').toString('utf8'),
-    ) as Partial<TransactionCursorPayload & CursorPayload>;
+    ) as Partial<TransactionCursorPayload> & {
+      version?: number;
+      scope?: string;
+    };
     if (
-      typeof parsed.activityDate === 'string' &&
-      typeof parsed.id === 'string'
-    ) {
-      return { activityDate: parsed.activityDate, id: parsed.id };
-    }
-    if (typeof parsed.date === 'string' && typeof parsed.id === 'string') {
-      return { activityDate: parsed.date, id: parsed.id };
-    }
+      parsed.version !== 1 ||
+      parsed.scope !== scope ||
+      typeof parsed.id !== 'string' ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        parsed.id,
+      )
+    )
+      throw new Error();
+    return {
+      activityDate: CalendarDateSchema.parse(parsed.activityDate),
+      id: parsed.id,
+    };
   } catch {
     // Throw below with a stable client-facing message.
   }
@@ -426,7 +462,7 @@ function clampPageSize(
 function convertMoney(
   money: SerializedMoneyWithSign,
   targetCurrency: string,
-  rate: number,
+  rate: ExactRateRatio,
   currencyConversionService: CurrencyConversionService,
 ): SerializedMoneyWithSign {
   if (money.money.currency === targetCurrency) {
@@ -450,31 +486,19 @@ function convertMoney(
   };
 }
 
-function signedMajorAmount(money: McpMoney): number {
-  return money.sign === MoneySign.NEGATIVE ? -money.amount : money.amount;
-}
-
 function mcpMoneyFromDecimalString(
   value: string | null,
   currency: string | null,
 ): McpMoney | null {
-  if (!value || !currency) {
-    return null;
-  }
-
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) {
-    return null;
-  }
-
-  const normalizedCurrency = normalizeCurrency(currency);
-  const decimals = getDecimalPlaces(normalizedCurrency);
-
-  return {
-    amount: Number(Math.abs(amount).toFixed(decimals)),
-    currency: normalizedCurrency,
-    sign: amount < 0 ? MoneySign.NEGATIVE : MoneySign.POSITIVE,
-  };
+  if (value === null || currency === null) return null;
+  const amount = exactDecimal(value);
+  return toMcpMoney(
+    MoneyWithSign.fromMajorUnit(
+      normalizeCurrency(currency),
+      amount.abs().toFixed(),
+      amount.isNegative() ? MoneySign.NEGATIVE : MoneySign.POSITIVE,
+    ).toSerialized(),
+  );
 }
 
 @Injectable()
@@ -486,8 +510,7 @@ export class McpReadService {
     private readonly balanceSnapshotRepository: Repository<BalanceSnapshotEntity>,
     @InjectRepository(CategoryEntity)
     private readonly categoryRepository: Repository<CategoryEntity>,
-    @InjectRepository(InvestmentHoldingSnapshotEntity)
-    private readonly investmentHoldingRepository: Repository<InvestmentHoldingSnapshotEntity>,
+    private readonly holdingsQueryService: HoldingsQueryService,
     @InjectRepository(InvestmentTransactionEntity)
     private readonly investmentTransactionRepository: Repository<InvestmentTransactionEntity>,
     private readonly currencyConversionService: CurrencyConversionService,
@@ -496,7 +519,16 @@ export class McpReadService {
     private readonly analysisRuleService: AnalysisRuleService,
     private readonly transactionCategorizationService: TransactionCategorizationService,
     private readonly categorizationRuleRecommendationService: CategorizationRuleRecommendationService,
+    private readonly transactionQueries: TransactionQueryService = new TransactionQueryService(
+      transactionRepository,
+    ),
   ) {}
+
+  withReadSnapshot<T>(
+    reader: (manager: EntityManager) => Promise<T>,
+  ): Promise<T> {
+    return this.transactionQueries.withReadSnapshot(reader);
+  }
 
   async listTransactions(
     userId: string,
@@ -522,61 +554,127 @@ export class McpReadService {
       TRANSACTION_DEFAULT_PAGE_SIZE,
       TRANSACTION_MAX_PAGE_SIZE,
     );
-    const query = this.buildTransactionQuery(userId, options);
+    if (options.startDate || options.endDate)
+      assertDateRange(
+        options.startDate ?? '0001-01-01',
+        options.endDate ?? '9999-12-31',
+      );
+    if (amountFilter?.min !== undefined) exactDecimal(amountFilter.min);
+    if (amountFilter?.max !== undefined) exactDecimal(amountFilter.max);
+    if (
+      amountFilter?.min !== undefined &&
+      amountFilter.max !== undefined &&
+      new ExactDecimal(amountFilter.min).gt(amountFilter.max)
+    )
+      throw new BadRequestException('amountFilter.min must be <= max');
+    const cursorScope = createHash('sha256')
+      .update(
+        JSON.stringify({
+          userId,
+          startDate: options.startDate,
+          endDate: options.endDate,
+          accountIds: options.accountIds
+            ? [...new Set(options.accountIds)].sort()
+            : undefined,
+          categoryId: options.categoryId,
+          categoryPrimary: options.categoryPrimary,
+          categoryDetailed: options.categoryDetailed,
+          amountSign: options.amountSign,
+          merchantQuery: options.merchantQuery?.trim() || undefined,
+          includePending: options.includePending ?? false,
+          reportingCurrency,
+          amountFilter,
+        }),
+      )
+      .digest('hex');
+    const scanLimit = amountFilter ? 5000 : pageSize + 1;
+    const cursor = decodeTransactionCursor(options.cursor, cursorScope);
+    const { candidates, availableRates } = await this.withReadSnapshot(
+      async (manager) => {
+        const candidates = await this.transactionQueries.readMcpCandidates(
+          userId,
+          { ...options, includePending: options.includePending ?? false },
+          cursor,
+          scanLimit + 1,
+          manager,
+        );
+        // Optional coverage keeps unused lookahead rows from requiring FX, while
+        // every quote used below belongs to the same snapshot as these rows.
+        const availableRates = await this.loadRates(
+          candidates.slice(0, scanLimit),
+          reportingCurrency,
+          manager,
+        );
+        return { candidates, availableRates };
+      },
+    );
     const conversionRates = new Map<string, McpConversionRate>();
     const data: McpTransaction[] = [];
-    let cursor = decodeTransactionCursor(options.cursor);
-    let hasMore = false;
     let nextCursor: string | null = null;
-
-    while (data.length < pageSize) {
-      const batch = await this.applyTransactionCursor(query.clone(), cursor)
-        .take(CANDIDATE_BATCH_SIZE)
-        .getMany();
-
-      if (batch.length === 0) {
-        hasMore = false;
-        nextCursor = null;
-        break;
-      }
-
-      for (const transaction of batch) {
-        const mapped = await this.toMcpTransaction(
-          transaction,
-          reportingCurrency,
-          conversionRates,
-        );
-
-        if (amountFilter && !this.matchesAmountFilter(mapped, amountFilter)) {
-          continue;
-        }
-
-        data.push(mapped);
-        if (data.length === pageSize) {
-          nextCursor = encodeCursor({
-            activityDate: this.getActivityDate(transaction),
-            id: transaction.id,
+    let hasMore = false;
+    let scanBudgetReached = false;
+    let lastReturned: TransactionEntity | undefined;
+    let lastScanned: TransactionEntity | undefined;
+    for (
+      let index = 0;
+      index < Math.min(candidates.length, scanLimit);
+      index++
+    ) {
+      if (index % 100 === 0) {
+        for (const row of candidates.slice(
+          index,
+          Math.min(index + 100, scanLimit),
+        )) {
+          const key = fxRequestKey({
+            baseCurrency: row.amount.currency,
+            targetCurrency: reportingCurrency,
+            requestedDate: this.getActivityDate(row),
           });
-          hasMore = true;
-          break;
+          const rate = availableRates.get(key);
+          if (row.amount.amount !== '0' && rate) conversionRates.set(key, rate);
         }
       }
-
+      const transaction = candidates[index];
+      lastScanned = transaction;
+      if (!amountFilter && data.length === pageSize) {
+        hasMore = true;
+        nextCursor = encodeCursor({
+          version: 1,
+          scope: cursorScope,
+          activityDate: this.getActivityDate(lastReturned!),
+          id: lastReturned!.id,
+        });
+        break;
+      }
+      const mapped = this.toMcpTransaction(
+        transaction,
+        reportingCurrency,
+        conversionRates,
+      );
+      if (amountFilter && !this.matchesAmountFilter(mapped, amountFilter))
+        continue;
       if (data.length === pageSize) {
+        hasMore = true;
+        nextCursor = encodeCursor({
+          version: 1,
+          scope: cursorScope,
+          activityDate: this.getActivityDate(lastReturned!),
+          id: lastReturned!.id,
+        });
         break;
       }
-
-      const lastCandidate = batch[batch.length - 1];
-      cursor = {
-        activityDate: this.getActivityDate(lastCandidate),
-        id: lastCandidate.id,
-      };
-      hasMore = batch.length === CANDIDATE_BATCH_SIZE;
-
-      if (!hasMore) {
-        nextCursor = null;
-        break;
-      }
+      data.push(mapped);
+      lastReturned = transaction;
+    }
+    if (!hasMore && candidates.length > scanLimit && lastScanned) {
+      hasMore = true;
+      scanBudgetReached = !!amountFilter;
+      nextCursor = encodeCursor({
+        version: 1,
+        scope: cursorScope,
+        activityDate: this.getActivityDate(lastScanned),
+        id: lastScanned.id,
+      });
     }
 
     return {
@@ -584,6 +682,9 @@ export class McpReadService {
       pageInfo: {
         nextCursor,
         hasMore,
+        ...(scanBudgetReached
+          ? { continuationReason: 'scan_budget' as const }
+          : {}),
       },
       conversion: {
         reportingCurrency,
@@ -745,6 +846,7 @@ export class McpReadService {
   async listInvestmentHoldings(
     userId: string,
     options: McpListInvestmentHoldingsOptions,
+    manager?: EntityManager,
   ): Promise<McpListInvestmentHoldingsResult> {
     if (options.snapshotDate && options.latestOnly !== undefined) {
       throw new BadRequestException(
@@ -757,30 +859,28 @@ export class McpReadService {
       );
     }
 
-    const accounts = await this.accountService.findAll(userId);
-    const accountById = new Map(
-      accounts.map((account) => [account.id, account]),
+    const results = await this.holdingsQueryService.read(
+      userId,
+      {
+        accountIds: options.accountIds,
+        snapshotDate: options.snapshotDate,
+      },
+      manager,
     );
-    const targetAccountIds = options.accountIds?.length
-      ? options.accountIds
-      : accounts
-          .filter((account) => this.isInvestmentAccount(account))
-          .map((account) => account.id);
-
-    this.assertOwnedAccountIds(targetAccountIds, accountById);
-
-    const holdings = options.snapshotDate
-      ? await this.findHoldingsForSnapshotDate(
-          userId,
-          targetAccountIds,
-          options.snapshotDate,
-        )
-      : await this.findLatestHoldings(userId, targetAccountIds);
-
+    const accountById = new Map(
+      results.map((result) => [result.account.id, result.account.toObject()]),
+    );
     return {
-      data: holdings.map((holding) =>
-        this.toMcpInvestmentHolding(holding, accountById),
+      data: results.flatMap((result) =>
+        result.snapshot.holdings.map((holding) =>
+          this.toMcpInvestmentHolding(holding, accountById),
+        ),
       ),
+      snapshots: results.map((result) => ({
+        accountId: result.account.id,
+        snapshotDate: result.snapshot.snapshotDate,
+        holdingCount: result.snapshot.holdings.length,
+      })),
       query: {
         accountIds: options.accountIds,
         snapshotDate: options.snapshotDate,
@@ -937,63 +1037,8 @@ export class McpReadService {
     }
   }
 
-  private async findLatestHoldings(
-    userId: string,
-    accountIds: string[],
-  ): Promise<InvestmentHoldingSnapshotEntity[]> {
-    const holdings: InvestmentHoldingSnapshotEntity[] = [];
-
-    for (const accountId of accountIds) {
-      const latest = await this.investmentHoldingRepository.findOne({
-        where: { userId, accountId },
-        order: { snapshotDate: 'DESC', updatedAt: 'DESC' },
-      });
-
-      if (!latest) {
-        continue;
-      }
-
-      holdings.push(
-        ...(await this.findHoldingsForSnapshotDate(
-          userId,
-          [accountId],
-          latest.snapshotDate,
-        )),
-      );
-    }
-
-    return holdings.sort((left, right) =>
-      `${right.snapshotDate}:${right.accountId}:${right.id}`.localeCompare(
-        `${left.snapshotDate}:${left.accountId}:${left.id}`,
-      ),
-    );
-  }
-
-  private findHoldingsForSnapshotDate(
-    userId: string,
-    accountIds: string[],
-    snapshotDate: string,
-  ): Promise<InvestmentHoldingSnapshotEntity[]> {
-    if (accountIds.length === 0) {
-      return Promise.resolve([]);
-    }
-
-    return this.investmentHoldingRepository
-      .createQueryBuilder('holding')
-      .leftJoinAndSelect('holding.account', 'account')
-      .leftJoinAndSelect('holding.security', 'security')
-      .where('holding.userId = :userId', { userId })
-      .andWhere('holding.accountId IN (:...accountIds)', { accountIds })
-      .andWhere('holding.snapshotDate = :snapshotDate', { snapshotDate })
-      .orderBy('holding.snapshotDate', 'DESC')
-      .addOrderBy('holding.accountId', 'ASC')
-      .addOrderBy('holding.institutionValue', 'DESC')
-      .addOrderBy('holding.id', 'ASC')
-      .getMany();
-  }
-
   private toMcpInvestmentHolding(
-    holding: InvestmentHoldingSnapshotEntity,
+    holding: InvestmentHoldingSnapshot,
     accountById: Map<string, Account>,
   ): McpInvestmentHolding {
     const currency =
@@ -1003,12 +1048,7 @@ export class McpReadService {
     return {
       id: holding.id,
       accountId: holding.accountId,
-      accountName:
-        holding.account?.customName ??
-        fallbackAccount?.customName ??
-        holding.account?.name ??
-        fallbackAccount?.name ??
-        null,
+      accountName: fallbackAccount?.customName ?? fallbackAccount?.name ?? null,
       snapshotDate: holding.snapshotDate,
       provider: holding.provider,
       securityId: holding.securityId,
@@ -1122,117 +1162,24 @@ export class McpReadService {
     };
   }
 
-  private buildTransactionQuery(
-    userId: string,
-    options: McpListTransactionsOptions,
-  ): SelectQueryBuilder<TransactionEntity> {
-    const query = this.transactionRepository
-      .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.activity', 'activity')
-      .leftJoinAndSelect('activity.account', 'account')
-      .leftJoinAndSelect('account.bankLink', 'bankLink')
-      .leftJoinAndSelect('transaction.category', 'category')
-      .addSelect(TRANSACTION_ACTIVITY_DATE_EXPRESSION, ACTIVITY_DATE_SORT_ALIAS)
-      .where('activity.userId = :userId', { userId })
-      .orderBy(ACTIVITY_DATE_SORT_ALIAS, 'DESC')
-      .addOrderBy('transaction.id', 'DESC');
-
-    if (options.startDate) {
-      query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} >= :startDate`, {
-        startDate: options.startDate,
-      });
-    }
-    if (options.endDate) {
-      query.andWhere(`${TRANSACTION_ACTIVITY_DATE_EXPRESSION} <= :endDate`, {
-        endDate: options.endDate,
-      });
-    }
-    if (options.accountIds?.length) {
-      query.andWhere('activity.accountId IN (:...accountIds)', {
-        accountIds: options.accountIds,
-      });
-    }
-    if (!options.includePending) {
-      query.andWhere('transaction.pending = false');
-    }
-    if (options.amountSign) {
-      query.andWhere('activity.amountSign = :amountSign', {
-        amountSign: options.amountSign,
-      });
-    }
-    if (options.categoryId) {
-      if (options.categoryId === 'UNCATEGORIZED') {
-        query.andWhere('transaction.categoryId IS NULL');
-      } else {
-        query.andWhere('transaction.categoryId = :categoryId', {
-          categoryId: options.categoryId,
-        });
-      }
-    }
-    if (options.categoryPrimary) {
-      if (options.categoryPrimary === 'UNCATEGORIZED') {
-        query.andWhere('transaction.categoryId IS NULL');
-      } else {
-        query.andWhere('category.primary = :categoryPrimary', {
-          categoryPrimary: options.categoryPrimary,
-        });
-      }
-    }
-    if (options.categoryDetailed) {
-      query.andWhere('category.detailed = :categoryDetailed', {
-        categoryDetailed: options.categoryDetailed,
-      });
-    }
-    const merchantQuery = options.merchantQuery?.trim();
-    if (merchantQuery) {
-      query.andWhere('transaction.merchantName ILIKE :merchantQuery', {
-        merchantQuery: `%${merchantQuery}%`,
-      });
-    }
-
-    return query;
-  }
-
-  private applyTransactionCursor(
-    query: SelectQueryBuilder<TransactionEntity>,
-    cursor: TransactionCursorPayload | undefined,
-  ): SelectQueryBuilder<TransactionEntity> {
-    if (!cursor) {
-      return query;
-    }
-
-    return query.andWhere(
-      new Brackets((qb) => {
-        qb.where(
-          `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} < :cursorActivityDate`,
-          {
-            cursorActivityDate: cursor.activityDate,
-          },
-        ).orWhere(
-          `${TRANSACTION_ACTIVITY_DATE_EXPRESSION} = :cursorActivityDate AND transaction.id < :cursorId`,
-          {
-            cursorActivityDate: cursor.activityDate,
-            cursorId: cursor.id,
-          },
-        );
-      }),
-    );
-  }
-
-  private async toMcpTransaction(
+  private toMcpTransaction(
     transaction: TransactionEntity,
     reportingCurrency: string,
     conversionRates: Map<string, McpConversionRate>,
-  ): Promise<McpTransaction> {
+  ): McpTransaction {
     const nativeAmount = transaction.amount.toMoneyWithSign();
     const category = transaction.category;
     const providerCategoryHint = transaction.toObject().providerCategoryHint;
-    const rate = await this.getRate(
-      nativeAmount.money.currency,
-      reportingCurrency,
-      this.getActivityDate(transaction),
-      conversionRates,
-    );
+    const rate =
+      nativeAmount.money.amount === '0' ||
+      nativeAmount.money.currency === reportingCurrency
+        ? { numerator: '1', denominator: '1' }
+        : this.getRate(
+            nativeAmount.money.currency,
+            reportingCurrency,
+            this.getActivityDate(transaction),
+            conversionRates,
+          );
     const convertedAmount = convertMoney(
       nativeAmount,
       reportingCurrency,
@@ -1268,40 +1215,55 @@ export class McpReadService {
     };
   }
 
-  private async getRate(
+  private async loadRates(
+    transactions: TransactionEntity[],
+    to: string,
+    manager: EntityManager,
+  ): Promise<Map<string, McpConversionRate>> {
+    const conversionRates = new Map<string, McpConversionRate>();
+    const requests = transactions
+      .filter((transaction) => transaction.amount.amount !== '0')
+      .map((transaction) => ({
+        baseCurrency: transaction.amount.currency,
+        targetCurrency: to,
+        requestedDate: this.getActivityDate(transaction),
+      }));
+    if (!requests.length) return conversionRates;
+    const resolved = await this.currencyConversionService.getResolvedRates(
+      requests,
+      manager,
+      { allowMissing: true },
+    );
+    for (const [key, rate] of resolved)
+      conversionRates.set(key, {
+        from: rate.baseCurrency,
+        to: rate.targetCurrency,
+        rate: rate.rate,
+        ratio: rate.ratio,
+        requestedDate: rate.requestedDate,
+        rateDate: rate.rateDate,
+        source: rate.source,
+      });
+    return conversionRates;
+  }
+
+  private getRate(
     fromCurrency: string,
     toCurrency: string,
-    rateDate: string,
+    requestedDate: string,
     conversionRates: Map<string, McpConversionRate>,
-  ): Promise<number> {
-    const from = normalizeCurrency(fromCurrency);
-    const to = normalizeCurrency(toCurrency);
-    const key = `${rateDate}:${from}:${to}`;
+  ): ExactRateRatio {
+    const key = fxRequestKey({
+      baseCurrency: fromCurrency,
+      targetCurrency: toCurrency,
+      requestedDate,
+    });
     const cached = conversionRates.get(key);
-    if (cached) {
-      return cached.rate;
-    }
-
-    if (from === to) {
-      const sameCurrencyRate = { from, to, rate: 1, rateDate };
-      conversionRates.set(key, sameCurrencyRate);
-      return 1;
-    }
-
-    const rateMap = await this.currencyConversionService.getRateMap(
-      [from],
-      to,
-      rateDate,
-    );
-    const rate = rateMap.get(from);
-    if (rate === undefined) {
+    if (!cached)
       throw new BadRequestException(
-        `Missing conversion rate from ${from} to ${to} for ${rateDate}.`,
+        'Required transaction conversion was not resolved',
       );
-    }
-
-    conversionRates.set(key, { from, to, rate, rateDate });
-    return rate;
+    return cached.ratio;
   }
 
   private getActivityDate(transaction: TransactionEntity): string {
@@ -1312,14 +1274,11 @@ export class McpReadService {
     transaction: McpTransaction,
     amountFilter: McpAmountFilter,
   ): boolean {
-    const amount = Math.abs(signedMajorAmount(transaction.convertedAmount));
-    const min = amountFilter.min ?? Number.NEGATIVE_INFINITY;
-    const max = amountFilter.max ?? Number.POSITIVE_INFINITY;
-
+    const amount = new ExactDecimal(transaction.convertedAmount.amount);
     return (
       transaction.convertedAmount.currency === amountFilter.currency &&
-      amount >= min &&
-      amount <= max
+      (amountFilter.min === undefined || amount.gte(amountFilter.min)) &&
+      (amountFilter.max === undefined || amount.lte(amountFilter.max))
     );
   }
 

@@ -60,7 +60,7 @@ export async function fetchUncategorizedTransactionCount(): Promise<number> {
     params: UNCATEGORIZED_BADGE_PARAMS,
   })
 
-  return response.total
+  return response.total ?? 0
 }
 
 export async function refreshUncategorizedTransactionBadge(): Promise<number> {

@@ -4,7 +4,6 @@ import {
   Button,
   Group,
   MultiSelect,
-  NumberInput,
   Select,
   SimpleGrid,
   Stack,
@@ -13,6 +12,8 @@ import {
   Tooltip,
 } from '@mantine/core'
 import { Plus, Trash2 } from 'lucide-react'
+import { DecimalInput } from '../../forms/DecimalInput'
+import { decimalFromString, isNonnegativeDecimal } from '../../../lib/money'
 import { useCompactLayout } from '../../../lib/responsive'
 import type { Account, CategorizationRuleCondition } from '../../../api/models'
 
@@ -46,7 +47,7 @@ export type EditableCategorizationCondition =
   | {
       field: 'amount'
       operator: 'equals' | 'greaterThan' | 'lessThan' | 'between'
-      value: number | { min?: number; max?: number }
+      value: string | { min?: string; max?: string }
     }
 
 type TransactionConditionInputProps = {
@@ -143,11 +144,36 @@ function getDefaultConditionForField(
     return { field, operator: 'equals', value: 'negative' }
   }
 
-  return { field: 'amount', operator: 'between', value: { min: 10, max: 50 } }
+  return {
+    field: 'amount',
+    operator: 'between',
+    value: { min: '10', max: '50' },
+  }
 }
 
 function getAccountLabel(account: Account) {
   return account.customName ?? account.name ?? 'Account'
+}
+
+export function isCompleteAmountCondition(
+  condition: Extract<EditableCategorizationCondition, { field: 'amount' }>,
+): boolean {
+  if (condition.operator !== 'between') {
+    return (
+      typeof condition.value === 'string' &&
+      isNonnegativeDecimal(condition.value)
+    )
+  }
+  if (typeof condition.value !== 'object') return false
+  const { min, max } = condition.value
+  if (min === undefined && max === undefined) return false
+  if (min !== undefined && !isNonnegativeDecimal(min)) return false
+  if (max !== undefined && !isNonnegativeDecimal(max)) return false
+  return (
+    min === undefined ||
+    max === undefined ||
+    decimalFromString(min).lte(decimalFromString(max))
+  )
 }
 
 function conditionToApi(
@@ -273,7 +299,7 @@ export function TransactionConditionInput({
 
     if (condition.operator === 'between') {
       const value =
-        typeof condition.value === 'object' ? condition.value : { min: 0 }
+        typeof condition.value === 'object' ? condition.value : { min: '0' }
 
       return (
         <Stack gap={4}>
@@ -281,17 +307,15 @@ export function TransactionConditionInput({
             Value
           </Text>
           <Group gap="xs" wrap="nowrap">
-            <NumberInput
+            <DecimalInput
               aria-label="Minimum amount"
-              decimalScale={2}
-              min={0}
               value={value.min ?? ''}
               onChange={(next) =>
                 updateCondition(index, {
                   ...condition,
                   value: {
                     ...value,
-                    min: typeof next === 'number' ? next : undefined,
+                    min: next === '' ? undefined : next,
                   },
                 })
               }
@@ -300,17 +324,15 @@ export function TransactionConditionInput({
             <Text c="dimmed" size="sm">
               and
             </Text>
-            <NumberInput
+            <DecimalInput
               aria-label="Maximum amount"
-              decimalScale={2}
-              min={0}
               value={value.max ?? ''}
               onChange={(next) =>
                 updateCondition(index, {
                   ...condition,
                   value: {
                     ...value,
-                    max: typeof next === 'number' ? next : undefined,
+                    max: next === '' ? undefined : next,
                   },
                 })
               }
@@ -322,16 +344,14 @@ export function TransactionConditionInput({
     }
 
     return (
-      <NumberInput
+      <DecimalInput
         aria-label="Condition amount"
-        decimalScale={2}
         label="Value"
-        min={0}
-        value={typeof condition.value === 'number' ? condition.value : 0}
+        value={typeof condition.value === 'string' ? condition.value : ''}
         onChange={(value) =>
           updateCondition(index, {
             ...condition,
-            value: typeof value === 'number' ? value : 0,
+            value,
           })
         }
       />
@@ -393,7 +413,7 @@ export function TransactionConditionInput({
                       | 'greaterThan'
                       | 'lessThan'
                       | 'between',
-                    value: value === 'between' ? { min: 10, max: 50 } : 0,
+                    value: value === 'between' ? { min: '10', max: '50' } : '0',
                   })
                 }
               }}

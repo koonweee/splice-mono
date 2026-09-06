@@ -11,7 +11,7 @@
     "lint:fix": "eslint --fix",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "orval": "orval && prettier --write src/api/"
+    "orval": "node ../backend/scripts/generate-currency-scales.mjs && orval && prettier --write src/api/"
   },
   "dependencies": {
     "@mantine/charts": "^8.3.9",
@@ -30,6 +30,7 @@
     "@tanstack/router-plugin": "^1.132.0",
     "axios": "^1.13.2",
     "dayjs": "^1.11.19",
+    "decimal.js": "^10.6.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.544.0",
     "mantine-react-table": "2.0.0-beta.9",

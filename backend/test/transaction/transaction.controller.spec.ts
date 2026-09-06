@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
+import { TransactionQueryService } from '../../src/transaction/transaction-query.service';
 import { TransactionController } from '../../src/transaction/transaction.controller';
 import { TransactionService } from '../../src/transaction/transaction.service';
 import { mockTransactionService } from '../mocks/transaction/transaction-service.mock';
@@ -13,8 +14,41 @@ import {
 
 const mockCurrencyConversionService = {
   getPreferredCurrency: jest.fn().mockResolvedValue('USD'),
-  getRateMap: jest.fn().mockResolvedValue(new Map()),
-  convertAmount: jest.fn().mockImplementation((amount: number) => amount),
+  getResolvedRates: jest.fn().mockResolvedValue(new Map()),
+  convertAmount: jest.fn().mockImplementation((amount: string) => amount),
+};
+
+let snapshotActive = false;
+const snapshotManager = { getRepository: jest.fn() };
+const mockTransactionQueries = {
+  withReadSnapshot: jest.fn(async (reader) => {
+    snapshotActive = true;
+    try {
+      return await reader(snapshotManager);
+    } finally {
+      snapshotActive = false;
+    }
+  }),
+  readPage: jest.fn(async (userId, options, manager) => {
+    expect(manager).toBe(snapshotManager);
+    expect(snapshotActive).toBe(true);
+    const page = await mockTransactionService.findPage(userId, options);
+    return {
+      ...page,
+      entities: page.data.map((transaction) => ({
+        ...transaction,
+        amount: {
+          amount: transaction.amount.money.amount,
+          currency: transaction.amount.money.currency,
+          sign: transaction.amount.sign,
+        },
+        toObject: () => {
+          expect(snapshotActive).toBe(false);
+          return transaction;
+        },
+      })),
+    };
+  }),
 };
 
 describe('TransactionController', () => {
@@ -26,6 +60,7 @@ describe('TransactionController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TransactionController],
       providers: [
+        { provide: TransactionQueryService, useValue: mockTransactionQueries },
         {
           provide: TransactionService,
           useValue: mockTransactionService,
@@ -40,9 +75,12 @@ describe('TransactionController', () => {
     controller = module.get<TransactionController>(TransactionController);
     jest.clearAllMocks();
     mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue('USD');
-    mockCurrencyConversionService.getRateMap.mockResolvedValue(new Map());
+    mockCurrencyConversionService.getResolvedRates.mockResolvedValue(new Map());
     mockCurrencyConversionService.convertAmount.mockImplementation(
-      (amount: number) => amount,
+      (amount: string) => {
+        expect(snapshotActive).toBe(false);
+        return amount;
+      },
     );
   });
 
@@ -65,8 +103,10 @@ describe('TransactionController', () => {
       total: 2,
       pageIndex: 2,
       pageSize: 10,
+      nextCursor: null,
+      hasMore: false,
     });
-    expect(mockTransactionService.findAllPaginated).toHaveBeenCalledWith(
+    expect(mockTransactionService.findPage).toHaveBeenCalledWith(
       mockUser.userId,
       {
         pageIndex: 2,
@@ -79,16 +119,21 @@ describe('TransactionController', () => {
         categoryId: undefined,
         categoryPrimary: 'UNCATEGORIZED',
         amountSign: 'negative',
+        cursor: undefined,
+        includeTotal: undefined,
       },
     );
   });
 
   it('converts transaction amounts when requested', async () => {
     mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue('EUR');
-    mockCurrencyConversionService.getRateMap.mockResolvedValue(
-      new Map([['USD', 2]]),
+    mockCurrencyConversionService.getResolvedRates.mockResolvedValue(
+      new Map([
+        ['USD:EUR:2024-01-14', { ratio: { numerator: '2', denominator: '1' } }],
+        ['USD:EUR:2024-01-16', { ratio: { numerator: '2', denominator: '1' } }],
+      ]),
     );
-    mockCurrencyConversionService.convertAmount.mockReturnValue(10000);
+    mockCurrencyConversionService.convertAmount.mockReturnValue('10000');
 
     const result = await controller.findAll(
       mockUser,
@@ -105,7 +150,7 @@ describe('TransactionController', () => {
     );
 
     expect(result.data[0].convertedAmount).toEqual({
-      money: { currency: 'EUR', amount: 10000 },
+      money: { currency: 'EUR', amount: '10000' },
       sign: mockTransaction.amount.sign,
     });
   });
@@ -116,19 +161,21 @@ describe('TransactionController', () => {
       source: 'manual' as const,
       externalTransactionId: null,
       amount: {
-        money: { currency: 'EUR', amount: 4500 },
+        money: { currency: 'EUR', amount: '4500' },
         sign: mockTransaction.amount.sign,
       },
     };
-    mockTransactionService.findAllPaginated.mockResolvedValueOnce({
+    mockTransactionService.findPage.mockResolvedValueOnce({
       data: [manualEurTransaction],
       total: 1,
     });
     mockCurrencyConversionService.getPreferredCurrency.mockResolvedValue('USD');
-    mockCurrencyConversionService.getRateMap.mockResolvedValue(
-      new Map([['EUR', 1.2]]),
+    mockCurrencyConversionService.getResolvedRates.mockResolvedValue(
+      new Map([
+        ['EUR:USD:2024-01-14', { ratio: { numerator: '6', denominator: '5' } }],
+      ]),
     );
-    mockCurrencyConversionService.convertAmount.mockReturnValue(5400);
+    mockCurrencyConversionService.convertAmount.mockReturnValue('5400');
 
     const result = await controller.findAll(
       mockUser,
@@ -144,23 +191,69 @@ describe('TransactionController', () => {
       'true',
     );
 
-    expect(mockCurrencyConversionService.getRateMap).toHaveBeenCalledWith(
-      ['EUR'],
-      'USD',
-      expect.any(String),
+    expect(mockCurrencyConversionService.getResolvedRates).toHaveBeenCalledWith(
+      [
+        {
+          baseCurrency: 'EUR',
+          targetCurrency: 'USD',
+          requestedDate: '2024-01-14',
+        },
+      ],
+      snapshotManager,
     );
     expect(mockCurrencyConversionService.convertAmount).toHaveBeenCalledWith(
-      4500,
+      '4500',
       'EUR',
       'USD',
-      1.2,
+      { numerator: '6', denominator: '5' },
     );
     expect(result.data[0]).toMatchObject({
       source: 'manual',
       convertedAmount: {
-        money: { currency: 'USD', amount: 5400 },
+        money: { currency: 'USD', amount: '5400' },
         sign: mockTransaction.amount.sign,
       },
+    });
+  });
+
+  it('converts a foreign zero without requiring an exchange rate', async () => {
+    mockTransactionService.findPage.mockResolvedValueOnce({
+      data: [
+        {
+          ...mockTransaction,
+          amount: {
+            money: { amount: '0', currency: 'EUR' },
+            sign: mockTransaction.amount.sign,
+          },
+        },
+      ],
+      total: 1,
+      nextCursor: null,
+      hasMore: false,
+    });
+    mockCurrencyConversionService.getResolvedRates.mockResolvedValueOnce(
+      new Map(),
+    );
+    const result = await controller.findAll(
+      mockUser,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'true',
+    );
+    expect(mockCurrencyConversionService.getResolvedRates).toHaveBeenCalledWith(
+      [],
+      snapshotManager,
+    );
+    expect(result.data[0].convertedAmount?.money).toEqual({
+      amount: '0',
+      currency: 'USD',
     });
   });
 

@@ -1,3 +1,4 @@
+import { sumDecimals } from '../../src/mcp/apps/exact-money';
 import {
   createPortfolioPresentation,
   formatPortfolioMoney,
@@ -11,8 +12,8 @@ import {
   type PortfolioPosition,
 } from '../../src/mcp/apps/portfolio-model';
 
-function money(amount: number) {
-  return { amount, currency: 'USD', sign: 'positive' } as const;
+function money(amount: number | string) {
+  return { amount: String(amount), currency: 'USD', sign: 'positive' } as const;
 }
 
 function position(
@@ -48,7 +49,7 @@ function payload(positions: readonly PortfolioPosition[]) {
   return {
     reportingCurrency: 'USD',
     totalValueUsd: money(
-      positions.reduce((sum, item) => sum + item.valueUsd.amount, 0),
+      sumDecimals(positions.map((item) => item.valueUsd.amount)),
     ),
     snapshotRange: {
       earliest: '2026-08-15',
@@ -85,6 +86,39 @@ describe('portfolio presentation model', () => {
     expect(presentation?.otherValueUsd).toEqual(money(30.04));
     expect(presentation?.otherAllocationBps).toBe(301);
   });
+
+  it('preserves large exact values in sorting, Other totals, formatting and context', () => {
+    const positions = Array.from({ length: 7 }, (_, index) =>
+      position(String(index), 1, 1000, {
+        valueUsd: money('9007199254740993.0' + index),
+      }),
+    );
+    const presentation = createPortfolioPresentation(payload(positions));
+    expect(presentation?.topPositions[0].securityId).toBe('6');
+    expect(presentation?.otherValueUsd.amount).toBe('18014398509481986.01');
+    expect(formatPortfolioMoney(money('9007199254740993.01'))).toBe(
+      '$9,007,199,254,740,993.01',
+    );
+    if (!presentation) throw new Error('Expected valid portfolio');
+    expect(
+      JSON.stringify(
+        portfolioSelectionContext(presentation, presentation.positions[0]),
+      ),
+    ).toContain('"amount":"9007199254740993.06"');
+  });
+
+  it.each([123, 'NaN', 'Infinity', '1e3', '-1', '01'])(
+    'rejects invalid money: %s',
+    (amount) => {
+      const result = payload([]);
+      expect(
+        createPortfolioPresentation({
+          ...result,
+          totalValueUsd: { amount, currency: 'USD', sign: 'positive' },
+        }),
+      ).toBeNull();
+    },
+  );
 
   it('uses label then security identity to break equal-value ties', () => {
     const presentation = createPortfolioPresentation(

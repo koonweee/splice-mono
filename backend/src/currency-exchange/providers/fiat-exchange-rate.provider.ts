@@ -1,3 +1,4 @@
+import { ExactDecimal } from '../../common/exact-money';
 import { Injectable, Logger } from '@nestjs/common';
 import type { ICurrencyRateProvider } from './currency-rate-provider.interface';
 
@@ -53,13 +54,13 @@ export class FiatExchangeRateProvider implements ICurrencyRateProvider {
    * @param baseCurrency - Source currency (e.g., 'EUR')
    * @param targetCurrency - Target currency (e.g., 'USD')
    * @param date - Optional date for historical rate (YYYY-MM-DD)
-   * @returns Exchange rate as a number
+   * @returns Exchange rate as exact decimal text
    */
   async getRate(
     baseCurrency: string,
     targetCurrency: string,
     date?: string,
-  ): Promise<number> {
+  ): Promise<string> {
     const endpoint = date ?? 'latest';
     const url = `${this.baseUrl}/${endpoint}?base=${baseCurrency}&symbols=${targetCurrency}`;
 
@@ -82,7 +83,7 @@ export class FiatExchangeRateProvider implements ICurrencyRateProvider {
       );
     }
 
-    return rate;
+    return new ExactDecimal(String(rate)).toFixed();
   }
 
   /**
@@ -91,7 +92,7 @@ export class FiatExchangeRateProvider implements ICurrencyRateProvider {
   async getLatestRates(
     baseCurrency: string,
     targetCurrencies: string[],
-  ): Promise<Map<string, number>> {
+  ): Promise<Map<string, string>> {
     const symbols = targetCurrencies.join(',');
     const url = `${this.baseUrl}/latest?base=${baseCurrency}&symbols=${symbols}`;
 
@@ -105,9 +106,9 @@ export class FiatExchangeRateProvider implements ICurrencyRateProvider {
       return new Map();
     }
 
-    const rates = new Map<string, number>();
+    const rates = new Map<string, string>();
     Object.entries(data.rates).forEach(([currency, rate]) => {
-      rates.set(currency, rate);
+      rates.set(currency, new ExactDecimal(String(rate)).toFixed());
     });
 
     this.logger.log(
@@ -137,7 +138,7 @@ export class FiatExchangeRateProvider implements ICurrencyRateProvider {
     targetCurrencies: string[],
     startDate: string,
     endDate: string,
-  ): Promise<Map<string, Map<string, number>>> {
+  ): Promise<Map<string, Map<string, string>>> {
     const symbols = targetCurrencies.join(',');
     const url = `${this.baseUrl}/${startDate}..${endDate}?base=${baseCurrency}&symbols=${symbols}`;
 
@@ -154,11 +155,11 @@ export class FiatExchangeRateProvider implements ICurrencyRateProvider {
     }
 
     // Parse the time series response
-    const rates = new Map<string, Map<string, number>>();
+    const rates = new Map<string, Map<string, string>>();
     Object.entries(data.rates).forEach(([date, currencyRates]) => {
-      const dateRates = new Map<string, number>();
+      const dateRates = new Map<string, string>();
       Object.entries(currencyRates).forEach(([currency, rate]) => {
-        dateRates.set(currency, rate);
+        dateRates.set(currency, new ExactDecimal(String(rate)).toFixed());
       });
       rates.set(date, dateRates);
     });

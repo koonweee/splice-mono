@@ -13,22 +13,21 @@ describe('MoneyWithSign', () => {
     it('should create instance with integer amount in cents', () => {
       const money = new MoneyWithSign('USD', 19999, MoneySign.POSITIVE);
 
-      expect(money.getAmount()).toBe(19999);
+      expect(money.getAmount()).toBe('19999');
       expect(money.getCurrency()).toBe('USD');
       expect(money.getSign()).toBe(MoneySign.POSITIVE);
     });
 
-    it('should store absolute value of negative amounts', () => {
-      const money = new MoneyWithSign('USD', -5000, MoneySign.NEGATIVE);
-
-      expect(money.getAmount()).toBe(5000);
-      expect(money.getSign()).toBe(MoneySign.NEGATIVE);
+    it('rejects negative minor-unit magnitudes', () => {
+      expect(
+        () => new MoneyWithSign('USD', -5000, MoneySign.NEGATIVE),
+      ).toThrow();
     });
 
     it('should handle zero amount', () => {
       const money = new MoneyWithSign('USD', 0, MoneySign.POSITIVE);
 
-      expect(money.getAmount()).toBe(0);
+      expect(money.getAmount()).toBe('0');
     });
 
     it('should work with different currencies', () => {
@@ -44,7 +43,7 @@ describe('MoneyWithSign', () => {
     it('should convert float to integer cents', () => {
       const money = MoneyWithSign.fromFloat('USD', 199.99, MoneySign.POSITIVE);
 
-      expect(money.getAmount()).toBe(19999);
+      expect(money.getAmount()).toBe('19999');
       expect(money.getCurrency()).toBe('USD');
       expect(money.getSign()).toBe(MoneySign.POSITIVE);
     });
@@ -52,53 +51,53 @@ describe('MoneyWithSign', () => {
     it('should handle whole dollar amounts', () => {
       const money = MoneyWithSign.fromFloat('USD', 100.0, MoneySign.POSITIVE);
 
-      expect(money.getAmount()).toBe(10000);
+      expect(money.getAmount()).toBe('10000');
     });
 
     it('should handle small amounts', () => {
       const money = MoneyWithSign.fromFloat('USD', 0.01, MoneySign.POSITIVE);
 
-      expect(money.getAmount()).toBe(1);
+      expect(money.getAmount()).toBe('1');
     });
 
     it('should convert negative float to positive cents with sign', () => {
       const money = MoneyWithSign.fromFloat('USD', -50.25, MoneySign.NEGATIVE);
 
-      expect(money.getAmount()).toBe(5025);
+      expect(money.getAmount()).toBe('5025');
       expect(money.getSign()).toBe(MoneySign.NEGATIVE);
     });
 
     it('should handle zero amount', () => {
       const money = MoneyWithSign.fromFloat('USD', 0, MoneySign.POSITIVE);
 
-      expect(money.getAmount()).toBe(0);
+      expect(money.getAmount()).toBe('0');
     });
 
     it('should round to nearest cent for imprecise floats', () => {
       // 19.999... should round to 2000 cents ($20.00)
       const money = MoneyWithSign.fromFloat('USD', 19.999, MoneySign.POSITIVE);
 
-      expect(money.getAmount()).toBe(2000);
+      expect(money.getAmount()).toBe('2000');
     });
   });
 
   describe('fromSerialized', () => {
     it('should reconstruct from serialized data', () => {
       const serialized: SerializedMoneyWithSign = {
-        money: { currency: 'USD', amount: 12345 },
+        money: { currency: 'USD', amount: '12345' },
         sign: MoneySign.POSITIVE,
       };
 
       const money = MoneyWithSign.fromSerialized(serialized);
 
-      expect(money.getAmount()).toBe(12345);
+      expect(money.getAmount()).toBe('12345');
       expect(money.getCurrency()).toBe('USD');
       expect(money.getSign()).toBe(MoneySign.POSITIVE);
     });
 
     it('should handle negative sign', () => {
       const serialized: SerializedMoneyWithSign = {
-        money: { currency: 'EUR', amount: 500 },
+        money: { currency: 'EUR', amount: '500' },
         sign: MoneySign.NEGATIVE,
       };
 
@@ -111,7 +110,7 @@ describe('MoneyWithSign', () => {
   describe('getters', () => {
     it('getAmount should return amount in cents', () => {
       const money = new MoneyWithSign('USD', 9999, MoneySign.POSITIVE);
-      expect(money.getAmount()).toBe(9999);
+      expect(money.getAmount()).toBe('9999');
     });
 
     it('getCurrency should return currency code', () => {
@@ -131,28 +130,28 @@ describe('MoneyWithSign', () => {
   describe('toMajorUnit', () => {
     it('should convert cents to dollars for USD (2 decimals)', () => {
       const money = new MoneyWithSign('USD', 19999, MoneySign.POSITIVE);
-      expect(money.toMajorUnit()).toBe(199.99);
+      expect(money.toMajorUnit()).toBe('199.99');
     });
 
     it('should convert wei to ETH (18 decimals)', () => {
       // 1.5 ETH = 1.5 * 10^18 wei
       const money = new MoneyWithSign(
         'ETH',
-        1500000000000000000,
+        '1500000000000000000',
         MoneySign.POSITIVE,
       );
-      expect(money.toMajorUnit()).toBe(1.5);
+      expect(money.toMajorUnit()).toBe('1.5');
     });
 
     it('should convert satoshis to BTC (8 decimals)', () => {
       // 0.025 BTC = 2500000 satoshis
       const money = new MoneyWithSign('BTC', 2500000, MoneySign.POSITIVE);
-      expect(money.toMajorUnit()).toBe(0.025);
+      expect(money.toMajorUnit()).toBe('0.025');
     });
 
     it('should handle zero-decimal currencies like JPY', () => {
       const money = new MoneyWithSign('JPY', 1000, MoneySign.POSITIVE);
-      expect(money.toMajorUnit()).toBe(1000);
+      expect(money.toMajorUnit()).toBe('1000');
     });
   });
 
@@ -191,7 +190,7 @@ describe('MoneyWithSign', () => {
       const serialized = money.toSerialized();
 
       expect(serialized).toEqual({
-        money: { currency: 'USD', amount: 12345 },
+        money: { currency: 'USD', amount: '12345' },
         sign: MoneySign.POSITIVE,
       });
     });
@@ -202,7 +201,7 @@ describe('MoneyWithSign', () => {
       const serialized = money.toSerialized();
 
       expect(serialized).toEqual({
-        money: { currency: 'GBP', amount: 999 },
+        money: { currency: 'GBP', amount: '999' },
         sign: MoneySign.NEGATIVE,
       });
     });
@@ -222,7 +221,7 @@ describe('MoneyWithSign', () => {
       const parsed = JSON.parse(jsonString) as SerializedMoneyWithSign;
 
       expect(parsed).toEqual({
-        money: { currency: 'USD', amount: 19999 },
+        money: { currency: 'USD', amount: '19999' },
         sign: MoneySign.POSITIVE,
       });
     });
@@ -260,7 +259,7 @@ describe('MoneyWithSign', () => {
       const eth = MoneyWithSign.fromFloat('ETH', 1.5, MoneySign.POSITIVE);
 
       // 1.5 ETH = 1.5 * 10^18 wei
-      expect(eth.getAmount()).toBe(1500000000000000000);
+      expect(eth.getAmount()).toBe('1500000000000000000');
       expect(eth.getCurrency()).toBe('ETH');
     });
 
@@ -268,14 +267,14 @@ describe('MoneyWithSign', () => {
       const btc = MoneyWithSign.fromFloat('BTC', 0.025, MoneySign.POSITIVE);
 
       // 0.025 BTC = 0.025 * 10^8 satoshi = 2500000
-      expect(btc.getAmount()).toBe(2500000);
+      expect(btc.getAmount()).toBe('2500000');
       expect(btc.getCurrency()).toBe('BTC');
     });
 
     it('should format ETH with currency suffix', () => {
       const eth = new MoneyWithSign(
         'ETH',
-        1500000000000000000,
+        '1500000000000000000',
         MoneySign.POSITIVE,
       );
 
@@ -296,7 +295,7 @@ describe('MoneyWithSign', () => {
       const jpy = MoneyWithSign.fromFloat('JPY', 1000, MoneySign.POSITIVE);
 
       // JPY has 0 decimal places, so 1000 JPY = 1000 (no conversion)
-      expect(jpy.getAmount()).toBe(1000);
+      expect(jpy.getAmount()).toBe('1000');
     });
   });
 });
@@ -306,7 +305,7 @@ describe('MoneyWithSign Zod Schemas', () => {
     it('should validate correct money object', () => {
       const result = MoneySchema.safeParse({
         currency: 'USD',
-        amount: 1000,
+        amount: '1000',
       });
 
       expect(result.success).toBe(true);
@@ -315,7 +314,7 @@ describe('MoneyWithSign Zod Schemas', () => {
     it('should reject non-integer amounts', () => {
       const result = MoneySchema.safeParse({
         currency: 'USD',
-        amount: 10.99,
+        amount: '10.99',
       });
 
       expect(result.success).toBe(false);
@@ -324,7 +323,7 @@ describe('MoneyWithSign Zod Schemas', () => {
     it('should reject negative magnitudes', () => {
       const result = MoneySchema.safeParse({
         currency: 'USD',
-        amount: -1000,
+        amount: '-1000',
       });
 
       expect(result.success).toBe(false);
@@ -332,7 +331,7 @@ describe('MoneyWithSign Zod Schemas', () => {
 
     it('should reject missing currency', () => {
       const result = MoneySchema.safeParse({
-        amount: 1000,
+        amount: '1000',
       });
 
       expect(result.success).toBe(false);
@@ -346,10 +345,10 @@ describe('MoneyWithSign Zod Schemas', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should reject string amounts', () => {
+    it('should reject numeric amounts', () => {
       const result = MoneySchema.safeParse({
         currency: 'USD',
-        amount: '1000',
+        amount: 1000,
       });
 
       expect(result.success).toBe(false);
@@ -357,15 +356,13 @@ describe('MoneyWithSign Zod Schemas', () => {
   });
 
   describe('BalanceColumns', () => {
-    it('should canonicalize trusted internal negative magnitudes', () => {
-      const balance = BalanceColumns.fromMoneyWithSign({
-        money: { currency: 'USD', amount: -1000 },
-        sign: MoneySign.NEGATIVE,
-      });
-
-      expect(balance.amount).toBe(1000);
-      expect(balance.currency).toBe('USD');
-      expect(balance.sign).toBe(MoneySign.NEGATIVE);
+    it('rejects invalid stored magnitudes', () => {
+      expect(() =>
+        BalanceColumns.fromMoneyWithSign({
+          money: { currency: 'USD', amount: '-1000' },
+          sign: MoneySign.NEGATIVE,
+        }),
+      ).toThrow();
     });
   });
 
@@ -389,7 +386,7 @@ describe('MoneyWithSign Zod Schemas', () => {
   describe('MoneyWithSignSchema', () => {
     it('should validate complete MoneyWithSign object', () => {
       const result = MoneyWithSignSchema.safeParse({
-        money: { currency: 'USD', amount: 5000 },
+        money: { currency: 'USD', amount: '5000' },
         sign: 'positive',
       });
 
@@ -398,7 +395,7 @@ describe('MoneyWithSign Zod Schemas', () => {
 
     it('should reject decimal amounts', () => {
       const result = MoneyWithSignSchema.safeParse({
-        money: { currency: 'USD', amount: 50.99 },
+        money: { currency: 'USD', amount: '50.99' },
         sign: 'positive',
       });
 
@@ -407,7 +404,7 @@ describe('MoneyWithSign Zod Schemas', () => {
 
     it('should reject invalid sign', () => {
       const result = MoneyWithSignSchema.safeParse({
-        money: { currency: 'USD', amount: 5000 },
+        money: { currency: 'USD', amount: '5000' },
         sign: 'credit',
       });
 
@@ -424,7 +421,7 @@ describe('MoneyWithSign Zod Schemas', () => {
 
     it('should reject missing sign field', () => {
       const result = MoneyWithSignSchema.safeParse({
-        money: { currency: 'USD', amount: 5000 },
+        money: { currency: 'USD', amount: '5000' },
       });
 
       expect(result.success).toBe(false);

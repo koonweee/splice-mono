@@ -11,13 +11,18 @@ import { notifications } from '@mantine/notifications'
 import dayjs from 'dayjs'
 import { Minus, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import {
+  moneyToMajorString,
+  toggleMoneyDraftSign,
+  tryParseMoneyDraft,
+} from '../../lib/money'
+import { DecimalInput } from '../forms/DecimalInput'
 import { useCompactLayout } from '../../lib/responsive'
 import {
   useRecurringManualTransactionControllerCreate,
   useTransactionControllerCreateManual,
   useTransactionControllerUpdateManual,
 } from '../../api/clients/spliceAPI'
-import { MoneyWithSignSign } from '../../api/models'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import { getDecimalPlaces } from '../../lib/format'
 import {
@@ -82,13 +87,7 @@ function getSignedAmountDraft(transaction: Transaction | null | undefined) {
     return ''
   }
 
-  const decimals = getDecimalPlaces(transaction.amount.money.currency)
-  const unsignedAmount =
-    transaction.amount.money.amount / Math.pow(10, decimals)
-
-  return transaction.amount.sign === MoneyWithSignSign.negative
-    ? -unsignedAmount
-    : unsignedAmount
+  return moneyToMajorString(transaction.amount)
 }
 
 function getCategorySelectOption(
@@ -124,20 +123,6 @@ function getNumericAmount(value: NumberInputProps['value']) {
   return Number.NaN
 }
 
-function toggleAmountSign(value: NumberInputProps['value']) {
-  const numericAmount = getNumericAmount(value)
-
-  if (!Number.isFinite(numericAmount)) {
-    return '-'
-  }
-
-  if (numericAmount === 0) {
-    return value
-  }
-
-  return -numericAmount
-}
-
 function getDateDayOfMonth(value: string) {
   const parsed = dayjs(value)
   return parsed.isValid() ? parsed.date() : 1
@@ -154,7 +139,7 @@ export function ManualTransactionModal({
 }: ManualTransactionModalProps) {
   const isMobile = useCompactLayout()
   const [accountId, setAccountId] = useState('')
-  const [amount, setAmount] = useState<NumberInputProps['value']>('')
+  const [amount, setAmount] = useState('')
   const [merchantName, setMerchantName] = useState('')
   const [providerDate, setProviderDate] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
@@ -201,10 +186,7 @@ export function ManualTransactionModal({
     createManualTransaction.isPending ||
     updateManualTransaction.isPending ||
     createRecurringManualTransaction.isPending
-  const displayedNumericAmount = getNumericAmount(amount)
-  const amountIsNegative =
-    (Number.isFinite(displayedNumericAmount) && displayedNumericAmount < 0) ||
-    (typeof amount === 'string' && amount.trim().startsWith('-'))
+  const amountIsNegative = amount.trim().startsWith('-')
 
   useEffect(() => {
     if (!opened) {
@@ -224,13 +206,16 @@ export function ManualTransactionModal({
 
   function validate() {
     const nextErrors: FormErrors = {}
-    const numericAmount = getNumericAmount(amount)
+    const parsedAmount = tryParseMoneyDraft(amount, currency)
 
     if (!accountId) {
       nextErrors.accountId = 'Account is required'
     }
-    if (!Number.isFinite(numericAmount) || numericAmount === 0) {
-      nextErrors.amount = 'Enter a non-zero amount'
+    if (!parsedAmount || parsedAmount.money.amount === '0') {
+      nextErrors.amount =
+        'Enter a non-zero amount with at most ' +
+        decimalPlaces +
+        ' decimal places'
     }
     if (!merchantName.trim()) {
       nextErrors.merchantName = 'Merchant is required'
@@ -260,7 +245,7 @@ export function ManualTransactionModal({
 
     return {
       isValid: Object.keys(nextErrors).length === 0,
-      numericAmount,
+      parsedAmount,
       numericRecurrenceDay,
     }
   }
@@ -268,26 +253,14 @@ export function ManualTransactionModal({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const { isValid, numericAmount, numericRecurrenceDay } = validate()
-    if (!isValid || !currency || !categoryId) {
+    const { isValid, parsedAmount, numericRecurrenceDay } = validate()
+    if (isSaving || !isValid || !currency || !categoryId || !parsedAmount) {
       return
     }
 
-    const minorUnits = Math.round(
-      Math.abs(numericAmount) * Math.pow(10, decimalPlaces),
-    )
     const payload = {
       accountId,
-      amount: {
-        money: {
-          amount: minorUnits,
-          currency,
-        },
-        sign:
-          numericAmount < 0
-            ? MoneyWithSignSign.negative
-            : MoneyWithSignSign.positive,
-      },
+      amount: parsedAmount,
       merchantName: merchantName.trim(),
       providerDate,
       categoryId,
@@ -363,10 +336,8 @@ export function ManualTransactionModal({
             value={accountId}
           />
           <Group align="flex-start" grow>
-            <NumberInput
-              decimalScale={decimalPlaces}
+            <DecimalInput
               error={errors.amount}
-              fixedDecimalScale={decimalPlaces <= 6}
               label="Amount"
               onChange={(value) => {
                 setAmount(value)
@@ -382,7 +353,7 @@ export function ManualTransactionModal({
                       : 'Make amount negative'
                   }
                   onClick={() => {
-                    setAmount((current) => toggleAmountSign(current))
+                    setAmount((current) => toggleMoneyDraftSign(current))
                     setErrors((current) => ({ ...current, amount: undefined }))
                   }}
                   size="sm"

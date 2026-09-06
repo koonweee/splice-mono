@@ -1,0 +1,2041 @@
+{
+  "plan": "plans/backend-query-performance-and-correctness.md",
+  "status": "complete",
+  "baseline": {
+    "snapshot": "/tmp/splice-backend-baseline-20260905-135633",
+    "revision": "f5f12988713e123ec700b31650a8eb53520256d2",
+    "sourceTreeSha256": "b90c484a3ccd636fd02e8254508ec5367b166ac25dc425b59de5cd2d90184a56",
+    "initialArtifact": "backend/docs/performance/backend-query/initial/before-10000-run1.json",
+    "preImplementationTests": "141 passing tests across6 suites; 2026-09-05"
+  },
+  "entries": [
+    {
+      "id": "B001",
+      "section": "Goal",
+      "subsection": "",
+      "milestone": null,
+      "text": "Use each transaction's **effective reporting date** for transaction/spending FX across web and MCP. A reporting-date override therefore changes both reporting inclusion and conversion date. Balance history, current balances, and portfolio valuations retain their existing valuation-date meaning.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction/transaction-query.postgres.spec.ts",
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B002",
+      "section": "Goal",
+      "subsection": "",
+      "milestone": null,
+      "text": "The user explicitly allows changing money contracts from numbers to exact decimal strings, with frontend and MCP Apps updated together. **No staged rollout, compatibility API, dual-write period, or retained numeric-money contract is required.** Prepare one coordinated release.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-release-notes.md",
+        "backend/docs/shared-query-services.md",
+        "docs/mcp.md"
+      ]
+    },
+    {
+      "id": "B003",
+      "section": "Goal",
+      "subsection": "",
+      "milestone": null,
+      "text": "Cash-flow totals sum the same once-rounded converted transaction amounts shown in drilldowns. This is the chosen reconciliation rule for fixing the audited mismatch.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction-analysis/cash-flow-matching.spec.ts",
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B004",
+      "section": "Goal",
+      "subsection": "",
+      "milestone": null,
+      "text": "Preserve exact daily history as the default existing history behavior; add an explicit compact chart resolution for callers that want smaller output. Benchmark daily and compact results separately.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/comparison.json: daily/compact exact-boundary/account/selected-point checks and all four isolated20/100-account ten-year memory shapes passed; full daily series remains exact.",
+        "backend/test/balance-query PostgreSQL/unit tests and backend/docs/performance/validation/backend-checks.md: no retained daily account matrix; Home point selection and consistent snapshots covered."
+      ]
+    },
+    {
+      "id": "B005",
+      "section": "Goal",
+      "subsection": "",
+      "milestone": null,
+      "text": "Preserve the approved 30-second, tab-memory-only frontend query policy and mutation/sync invalidation. Shared backend reads use request-local reuse, not a new persistent financial-data cache.",
+      "status": "verified",
+      "evidence": [
+        "frontend/src/lib/query-policy.test.ts",
+        "frontend/src/lib/query-invalidation.test.ts",
+        "Frontend435 tests passed"
+      ]
+    },
+    {
+      "id": "B006",
+      "section": "Target Data Shape",
+      "subsection": "",
+      "milestone": null,
+      "text": "HTTP minor-unit fields remain minor units, but become strings. This includes raw monetary aggregates and signed net-flow fields, not just nested `MoneyWithSign`. MCP major-unit fields remain major units and become decimal strings. Counts, percentages, dates, and revisions keep their appropriate existing types. Rate strings are not rounded through JavaScript numbers.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-release-notes.md",
+        "backend/docs/shared-query-services.md",
+        "docs/mcp.md"
+      ]
+    },
+    {
+      "id": "B007",
+      "section": "Target Data Shape",
+      "subsection": "",
+      "milestone": null,
+      "text": "Use BigInt for integer money arithmetic and `decimal.js` for rate/price/major-unit operations. Backend already depends on `decimal.js`; add the frontend dependency when needed. Configure a dedicated decimal context with sufficient precision for the permitted 78-digit amounts, currency scales, and intermediate rate operations; the library default must not silently truncate large values. Test conversion ties and inverse rates at the supported limits, using integer-ratio rounding where necessary. Quantize converted magnitudes once using decimal half-up rounding, then apply sign. Sum exact integers afterward.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/types/exact-money.spec.ts",
+        "backend/test/types/money-with-sign.spec.ts",
+        "frontend/src/lib/money.test.ts",
+        "Production scan: remaining number conversions are chart geometry/percentage/basis-point boundaries"
+      ]
+    },
+    {
+      "id": "B008",
+      "section": "Target Data Shape",
+      "subsection": "",
+      "milestone": null,
+      "text": "Define backend currency scales in one pure source and generate the frontend currency metadata from it during client generation; remove the hand-copied table in `frontend/src/lib/format.ts`. Preserve current supported currencies/default behavior unless separately validated. Do not introduce a new monorepo/package manager solely for this registry.",
+      "status": "verified",
+      "evidence": [
+        "backend/scripts/generate-currency-scales.mjs",
+        "frontend/src/lib/currency-scales.generated.ts"
+      ]
+    },
+    {
+      "id": "B009",
+      "section": "Target Data Shape",
+      "subsection": "",
+      "milestone": null,
+      "text": "Keep exact values through persistence, service computations, JSON, parsing, sorting, filtering, and formatting. Converting a bounded value to `number` is allowed only at an explicit chart geometry/percentage boundary; tooltips and reported totals still use exact values.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/types/exact-money.spec.ts",
+        "backend/test/types/money-with-sign.spec.ts",
+        "frontend/src/lib/money.test.ts",
+        "Production scan: remaining number conversions are chart geometry/percentage/basis-point boundaries"
+      ]
+    },
+    {
+      "id": "B010",
+      "section": "Target Data Shape",
+      "subsection": "",
+      "milestone": null,
+      "text": "Use `numeric(78,0)` for integer minor-unit storage with nonnegative checks where sign is separate, including all columns embedded through `BalanceColumns`. Inspect JSONB persisted payloads containing money, recurring schedules/occurrences, reconciliation archives, undo payloads, and provider adapters as part of the contract inventory. Reject invalid/noncanonical/over-limit inputs; never silently clamp.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/types/exact-money-migration.postgres.spec.ts",
+        "backend/docs/performance/migrations/backend-query-2026-09-05.json"
+      ]
+    },
+    {
+      "id": "B011",
+      "section": "Target Data Shape",
+      "subsection": "",
+      "milestone": null,
+      "text": "Holdings headers are unique by account/provider/date, belong to the authenticated account, and are committed atomically with all corresponding positions. Preserve daily same-day replacement semantics. Explicit request results identify a latest empty snapshot rather than falling back to older positions.",
+      "status": "verified",
+      "evidence": ["backend/test/investment/holdings.postgres.spec.ts"]
+    },
+    {
+      "id": "B012",
+      "section": "Target Data Shape",
+      "subsection": "",
+      "milestone": null,
+      "text": "Strengthen the existing regex-only date schemas with real calendar validation, ordered ranges, and work budgets shared across HTTP and MCP. Return actionable limit errors or explicit continuation; never silently truncate a financial total.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction/transaction-query.postgres.spec.ts",
+        "backend/test/balance-query/history-sampling.spec.ts",
+        "backend/src/common/query-bounds.ts"
+      ]
+    },
+    {
+      "id": "B013",
+      "section": "Milestones",
+      "subsection": "1. Freeze the baseline and build the benchmark/regression harness",
+      "milestone": 1,
+      "text": "Add `backend/test/performance/` with deterministic fixtures, service adapters for the original and changed contracts, SQL counting/timing, workload runners, and a result summarizer. Add `backend/test/jest-performance-postgres.json` and an explicit `backend/scripts/benchmark-backend.ts` entry point.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/performance/ and backend/scripts/benchmark-backend.ts: maintained runner, guarded fixtures, service/HTTP/MCP adapters, metrics, comparator and matrix CLI.",
+        "Pass6 read-only review cleared harness protocol; 16 pure harness tests and production-instrumented both-source smoke passed."
+      ]
+    },
+    {
+      "id": "B014",
+      "section": "Milestones",
+      "subsection": "1. Freeze the baseline and build the benchmark/regression harness",
+      "milestone": 1,
+      "text": "Reuse the isolated database guard/schema lifecycle from `backend/test/balance-query/dashboard-query.postgres.spec.ts`, extending it to all relevant entities and real migrations. Require `BACKEND_BENCHMARK_DATABASE_URL` to reference a dedicated loopback database named `splice_backend_benchmark`. Never use the user's development or production database for seeding, synchronization, truncation, or load tests.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/performance/benchmark-runner.cjs guardDatabase/createDatabase; backend/test/helpers/isolated-postgres.ts.",
+        "Dedicated loopback splice_backend_benchmark database only; random task-owned schema lifecycle validated by PostgreSQL suites and all completed captures."
+      ]
+    },
+    {
+      "id": "B015",
+      "section": "Milestones",
+      "subsection": "1. Freeze the baseline and build the benchmark/regression harness",
+      "milestone": 1,
+      "text": "Freeze the complete functional baseline, including tracked/untracked prior work, in an isolated snapshot/worktree before functional edits. Record revision, dirty-content hashes, fixture checksum, schema/index definitions, Node/PostgreSQL versions, CPU, pool configuration, code build mode, and fixed clock. Do not copy secrets or personal data into the snapshot artifacts.",
+      "status": "verified",
+      "evidence": [
+        "baseline-manifest.json / sourceTreeSha256 b90c484a3ccd636fd02e8254508ec5367b166ac25dc425b59de5cd2d90184a56",
+        "backend/docs/performance/backend-query/initial/before-10000-run1.json inspected before app edits"
+      ]
+    },
+    {
+      "id": "B016",
+      "section": "Milestones",
+      "subsection": "1. Freeze the baseline and build the benchmark/regression harness",
+      "milestone": 1,
+      "text": "Add baseline cases for each audit reproduction before changing its behavior: cleared holdings, partial writes, duplicate/overlapping sync, missing FX, summary/detail rounding, large/exact ETH, settings lost updates, and full-final-page continuation.",
+      "status": "verified",
+      "evidence": [
+        "Frozen original source retained before edits; real PostgreSQL baseline correctness probes in backend/docs/performance/backend-query/probes/before-10000-run1.json.",
+        "backend/docs/performance/backend-query/final-instrumented-smoke/{before,after}-10000-run1.json: duplicate response, late pending retry and history missing-FX probes independently compare frozen sources; final strict correctness checks pass.",
+        "backend/test/transaction/transaction-sync.postgres.spec.ts and backend/test/investment/holdings.postgres.spec.ts cover actual overlap/rollback/retry invariants."
+      ]
+    },
+    {
+      "id": "B017",
+      "section": "Milestones",
+      "subsection": "1. Freeze the baseline and build the benchmark/regression harness",
+      "milestone": 1,
+      "text": "Capture real PostgreSQL plans and row/byte counts for transaction listing/count/search, holdings, FX, and snapshot reads. Benchmark the actual HTTP controllers and real MCP runtime/tool pipeline with database-backed services; adapt the test JWT authority/client pattern from `backend/test/mcp/mcp.runtime.spec.ts` to avoid live Auth0 or model calls.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/comparison-10000.json and paired before/after raw captures retain actual PostgreSQL plans, row/byte observations, service/HTTP/PAT/MCP timings and source/environment identity."
+      ]
+    },
+    {
+      "id": "B018",
+      "section": "Milestones",
+      "subsection": "1. Freeze the baseline and build the benchmark/regression harness",
+      "milestone": 1,
+      "text": "Use provider stubs with deterministic responses/delays for sync workloads, separate from measured database application time. Set `DISABLE_SCHEDULES=true` through the existing `backend/src/schedule-options.ts` boundary, disable external notification/log shipping, and inject test-owned provider/auth adapters. Do not contact Plaid/Alchemy/Yahoo/FX providers during comparison runs.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/performance/benchmark-runner.cjs makeServices/transports and sync-workloads.cjs use forbidden external-provider adapters, deterministic fixture responses and local JWT authority.",
+        "Schedules/log shipping/provider network calls disabled; both-source production-instrumented smoke passed."
+      ]
+    },
+    {
+      "id": "B019",
+      "section": "Milestones",
+      "subsection": "1. Freeze the baseline and build the benchmark/regression harness",
+      "milestone": 1,
+      "text": "Store manifests, raw samples, plans, and comparisons in `backend/docs/performance/backend-query/`, with a readable `backend/docs/backend-query-performance.md` report. Promote the audit scripts into this maintained harness rather than depending on `/tmp` or a thread artifact path.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/backend-query-performance.md: completed rigorous35-shape10k evidence and user-approved130-pair focused set, eight mixed pairs, isolated memory, compact chart/response distinction, explicit sampling omissions and shared/web/MCP/HTTP-token/indirect benefits.",
+        "backend/docs/performance/backend-query/focused/regression-review.json and regression-sparse-fx/diagnosis.json: all six diagnostic flags investigated using plans/raw samples and one bounded20-call follow-up. Retained deep-offset spill, sparse historical quote cost, completed-empty publication cost and inconclusive single tail explicitly documented.",
+        "backend/docs/performance/backend-query/focused/checks.json: strict financial/source/query gates and16 focused tests,22 CJS syntax checks, focused lint/format pass. cleanup.json confirms zero owned connections/schemas.",
+        "backend/docs/performance/validation/backend-checks.md and frontend-and-mcp-apps.md: full application, real PostgreSQL/migration/recovery, production browser and official MCP App checks passed; all749 current app source files match the measured final. Final independent whole-ledger review passed; see backend/docs/performance/validation/final-review.md."
+      ]
+    },
+    {
+      "id": "B020",
+      "section": "Milestones",
+      "subsection": "1. Freeze the baseline and build the benchmark/regression harness",
+      "milestone": 1,
+      "text": "A fresh disposable database can reproduce the baseline from documented commands, and cleanup affects only test-owned schemas/processes.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-performance.md reproduction commands, frozen source archives/manifests, guard and actual migration-based isolated lifecycle.",
+        "Six completed 100-call baseline captures at10k/100k plus paired final smoke reproduced fresh schemas; source/build/profile provenance validated."
+      ]
+    },
+    {
+      "id": "B021",
+      "section": "Milestones",
+      "subsection": "1. Freeze the baseline and build the benchmark/regression harness",
+      "milestone": 1,
+      "text": "Baseline results and exact source identity are saved before any functional optimization. Existing tests pass except new intentionally failing correctness cases recorded as baseline failures.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/initial/before-10000-run1.json saved exploratory original result before functional changes.",
+        "Frozen complete baseline manifest b90c484a3ccd636fd02e8254508ec5367b166ac25dc425b59de5cd2d90184a56 and pre-edit 141tests/6suites passed; known baseline correctness failures retained separately."
+      ]
+    },
+    {
+      "id": "B022",
+      "section": "Milestones",
+      "subsection": "1. Freeze the baseline and build the benchmark/regression harness",
+      "milestone": 1,
+      "text": "Each benchmark states whether it measures SQL, service CPU, HTTP, MCP, or provider-stub sync; no production or model-latency claims appear in local measurements.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-performance.md measurement scope; each scenario layer and policy recorded.",
+        "SQL/service/HTTP/MCP/provider-apply measurements kept distinct; local Auth0 authority and deterministic providers exclude network/model latency."
+      ]
+    },
+    {
+      "id": "B023",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "Inventory and update `backend/src/types/MoneyWithSign.ts`, `common/balance.columns.ts`, `types/BalanceQuery.ts`, `types/TransactionAnalysis.ts`, `types/Transaction.ts`, `types/RecurringManualTransaction.ts`, investment/manual brokerage types, and all financial arithmetic consumers. Include CSV/backfill and provider ingestion paths, not only display serializers.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/types/exact-money.spec.ts",
+        "backend/test/types/money-with-sign.spec.ts",
+        "frontend/src/lib/money.test.ts",
+        "Production scan: remaining number conversions are chart geometry/percentage/basis-point boundaries"
+      ]
+    },
+    {
+      "id": "B024",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "Add migration(s) that widen minor-unit storage, preserve exact stored integers, validate sign/amount constraints, and migrate affected persisted money JSON. Use the existing migration runner and unique migration identities. Measure lock duration and migration runtime on the large fixture.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/types/exact-money-migration.postgres.spec.ts",
+        "backend/docs/performance/migrations/backend-query-2026-09-05.json"
+      ]
+    },
+    {
+      "id": "B025",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "Remove float conversion from `CryptoProvider.createAPIAccount`; preserve `CryptoBalanceService`'s exact decimal string through ingestion. Handle provider APIs that originate as JSON numbers explicitly at their adapter boundary without claiming to recover precision the provider never supplied.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/crypto/crypto-balance.service.spec.ts",
+        "backend/test/bank-link/crypto.provider.spec.ts"
+      ]
+    },
+    {
+      "id": "B026",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "Update rate and monetary helpers to exact arithmetic; preserve missing-rate failures. Replace safe-integer bottlenecks in `ManualBrokerageService` with explicit exact limits while keeping holdings quantities and prices as decimals. Respect and validate the separate precision limits of position/price/value columns; widening balance integers alone does not widen every investment decimal column.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/investment/manual-brokerage.service.spec.ts: 30 tests passed; inverse1.1/7 ties and position bounds",
+        "backend/test/investment/holdings.postgres.spec.ts: 12 tests passed"
+      ]
+    },
+    {
+      "id": "B027",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "Update `mcp-money.ts`, `mcp-schemas.ts`, `mcp.definition.ts`, portfolio/cash-flow result builders and `apps/cash-flow-model.ts` / `apps/portfolio-model.ts`. Keep HTTP/MCP units explicit and remove permissive invalid-money-to-zero fallbacks.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/mcp/mcp-money.spec.ts",
+        "backend/test/mcp/mcp-portfolio-visualization.service.spec.ts",
+        "backend/test/mcp/mcp-cash-flow-model.spec.ts",
+        "backend/test/mcp/mcp-portfolio-model.spec.ts"
+      ]
+    },
+    {
+      "id": "B028",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "Regenerate frontend clients and update `lib/format.ts`, `lib/balance-utils.ts`, investment formatters, charts, manual transaction/balance/holding editors, recurring schedules, settings previews, and SSR serialization. User input must be parsed from decimal text without a number round trip. Keep masked balances and saved drafts working.",
+      "status": "verified",
+      "evidence": [
+        "frontend/src/lib/money.test.ts",
+        "frontend/src/routes/_authed/transactions.test.tsx",
+        "frontend/src/routes/_authed/analysis.test.tsx",
+        "frontend/src/routes/_authed/settings.test.tsx",
+        "backend/docs/performance/validation/frontend-and-mcp-apps.md"
+      ]
+    },
+    {
+      "id": "B029",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "Prepare one coordinated contract release. Document the changed schemas and required client updates. Do not implement old numeric-money endpoints or a staged migration. Existing stored precision loss cannot be repaired by widening columns: preserve history faithfully and document that only a provider refresh can recover current source values.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-release-notes.md",
+        "backend/docs/shared-query-services.md",
+        "docs/mcp.md"
+      ]
+    },
+    {
+      "id": "B030",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "Exact round trips for USD cents, JPY, BTC satoshis, 1.000000000000000001 ETH, 10 ETH, and large permitted values pass across PostgreSQL, HTTP, MCP, frontend parsing, and form submission.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/frontend-and-mcp-apps.md",
+        "Production desktop/phone/official MCP host all passed; exact10.000000000000000001ETH readback, empty/error/current states;1148 backend and435frontend tests passed"
+      ]
+    },
+    {
+      "id": "B031",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "No production arithmetic or aggregate converts canonical money to a JS number before an explicitly bounded presentation boundary. All relevant contracts agree on units and string representation.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/types/exact-money.spec.ts",
+        "backend/test/types/money-with-sign.spec.ts",
+        "frontend/src/lib/money.test.ts",
+        "Production scan: remaining number conversions are chart geometry/percentage/basis-point boundaries"
+      ]
+    },
+    {
+      "id": "B032",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "Migration up/data checks pass; downgrade refuses out-of-range values rather than truncating them. Restore/forward-fix procedures are documented for values that cannot fit the old schema.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/types/exact-money-migration.postgres.spec.ts",
+        "backend/docs/performance/migrations/backend-query-2026-09-05.json"
+      ]
+    },
+    {
+      "id": "B033",
+      "section": "Milestones",
+      "subsection": "2. Migrate the shared money representation end to end",
+      "milestone": 2,
+      "text": "Backend/frontend typecheck, relevant tests, generated-client checks, MCP App build, and production builds pass together. Browser verification covers exact entry/display, negative/zero values, masked SSR, and ETH values above the old storage limit.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/frontend-and-mcp-apps.md",
+        "Production desktop/phone/official MCP host all passed; exact10.000000000000000001ETH readback, empty/error/current states;1148 backend and435frontend tests passed"
+      ]
+    },
+    {
+      "id": "B034",
+      "section": "Milestones",
+      "subsection": "3. Commit complete investment snapshots and centralize holdings reads",
+      "milestone": 3,
+      "text": "Add a holdings snapshot header entity/migration and a `HoldingsQueryService` in the investment module. Backfill headers from known position dates and valid manual factual balance headers; do not invent historical empty provider snapshots from balance syncs.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/investment/holdings.postgres.spec.ts",
+        "backend/test/investment/investment.service.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B035",
+      "section": "Milestones",
+      "subsection": "3. Commit complete investment snapshots and centralize holdings reads",
+      "milestone": 3,
+      "text": "Replace MCP's per-account latest-row loop and web's separate interpretation with a batched latest-header/positions read. Use one coherent SQL snapshot for headers, positions, and required account/security metadata. Preserve explicit-date lookup and archived-account policies.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/investment/holdings.postgres.spec.ts",
+        "backend/test/investment/investment.service.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B036",
+      "section": "Milestones",
+      "subsection": "3. Commit complete investment snapshots and centralize holdings reads",
+      "milestone": 3,
+      "text": "Make `InvestmentService.upsertPlaidHoldings` and `upsertPlaidInvestmentTransactions` atomic, conflict-aware batch operations. Persist activity/detail pairs and completion metadata in the same transaction. Avoid raw provider payload hydration in read projections.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/investment/holdings.postgres.spec.ts",
+        "backend/test/investment/investment.service.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B037",
+      "section": "Milestones",
+      "subsection": "3. Commit complete investment snapshots and centralize holdings reads",
+      "milestone": 3,
+      "text": "Reuse bank-link lifecycle coordination and manual brokerage account/signature protections. Fetch remote responses before the apply transaction. Add a persisted generation/fencing check allocated before provider fetch so an older response cannot overwrite a newer completed sync; lock affected accounts consistently and reject archived/obsolete work at commit.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/investment/holdings.postgres.spec.ts",
+        "backend/test/investment/investment.service.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B038",
+      "section": "Milestones",
+      "subsection": "3. Commit complete investment snapshots and centralize holdings reads",
+      "milestone": 3,
+      "text": "Batch securities and positions with chunked statements; do not assume `Repository.save(array)` removes all per-row database work. Delete stale same-day positions only inside the successful snapshot transaction, including empty portfolios. Update existing lifecycle cleanup/deletion paths for the new headers.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/investment/holdings.postgres.spec.ts",
+        "backend/test/investment/investment.service.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B039",
+      "section": "Milestones",
+      "subsection": "3. Commit complete investment snapshots and centralize holdings reads",
+      "milestone": 3,
+      "text": "Migrate HTTP investment controllers, `ManualBrokerageService` readers, `McpReadService`, MCP resources, and `McpPortfolioVisualizationService` to the shared reader. Keep native holdings values and account valuation modes distinct.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/investment/holdings.postgres.spec.ts",
+        "backend/test/investment/investment.service.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B040",
+      "section": "Milestones",
+      "subsection": "3. Commit complete investment snapshots and centralize holdings reads",
+      "milestone": 3,
+      "text": "Real PostgreSQL tests prove rollback after injected failures, simultaneous sync idempotency, stale-generation rejection, no orphan investment activities, and correct cleanup after clear/archive/delete.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/investment/holdings.postgres.spec.ts",
+        "backend/test/investment/investment.service.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B041",
+      "section": "Milestones",
+      "subsection": "3. Commit complete investment snapshots and centralize holdings reads",
+      "milestone": 3,
+      "text": "Web and MCP show the same completed snapshot date and positions, including zero holdings. Failed syncs leave the last complete snapshot intact.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/investment/holdings.postgres.spec.ts",
+        "backend/test/investment/investment.service.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B042",
+      "section": "Milestones",
+      "subsection": "3. Commit complete investment snapshots and centralize holdings reads",
+      "milestone": 3,
+      "text": "For 1, 20, and 100 accounts, latest holdings uses at most three domain SELECT statements for account/header/positions data, excluding authentication and separately counted FX; it never performs two queries per account.",
+      "status": "verified",
+      "evidence": ["backend/test/investment/holdings.postgres.spec.ts"]
+    },
+    {
+      "id": "B043",
+      "section": "Milestones",
+      "subsection": "3. Commit complete investment snapshots and centralize holdings reads",
+      "milestone": 3,
+      "text": "Manual clear/refresh and MCP portfolio empty/current states pass focused browser/official-host checks.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/frontend-and-mcp-apps.md",
+        "Production desktop/phone/official MCP host all passed; exact10.000000000000000001ETH readback, empty/error/current states;1148 backend and435frontend tests passed"
+      ]
+    },
+    {
+      "id": "B044",
+      "section": "Milestones",
+      "subsection": "4. Centralize transaction projections, indexed filtering, and pagination",
+      "milestone": 4,
+      "text": "Extract `TransactionQueryService` from the existing web/MCP builders. Support explicit list, detail, analysis-candidate, and sync-identity projections. Share user/account/date/category/pending/sign/merchant filters while retaining each endpoint's documented defaults. Never route mutation logic through a slim read projection that omits required provenance.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction/transaction-query.postgres.spec.ts",
+        "frontend/src/lib/queries/primary.test.ts",
+        "frontend/src/routes/_authed/transactions.test.tsx"
+      ]
+    },
+    {
+      "id": "B045",
+      "section": "Milestones",
+      "subsection": "4. Centralize transaction projections, indexed filtering, and pagination",
+      "milestone": 4,
+      "text": "Verify and backfill `activity.activityDate = COALESCE(reportingDateOverride, authorizedDate, providerDate)` for banking rows. Centralize maintenance for creation, provider modifications, pending replacement, manual edits, reporting overrides, and recurring generation. Enforce the invariant with targeted real-database tests.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction/transaction-query.postgres.spec.ts",
+        "backend/test/transaction/transaction-sync.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B046",
+      "section": "Milestones",
+      "subsection": "4. Centralize transaction projections, indexed filtering, and pagination",
+      "milestone": 4,
+      "text": "Switch filters to stored activity dates. Preserve web chronological tie behavior and stable public transaction IDs; do not assume the existing activity-ID index fully covers sorting by banking transaction ID. Add/update indexes only after before/after plans justify them; document ordering and write cost. If an index requires concurrent creation, explicitly configure the migration transaction mode instead of placing it inside the default all-migrations transaction.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-performance.md: representative activity date/index and exact-count plans; existing account/date indexes reused, no speculative index added.",
+        "backend/test/transaction/transaction-query.postgres.spec.ts and transaction-page.postgres.spec.ts cover all sorts, tie ordering, stored reporting dates and cursor continuation."
+      ]
+    },
+    {
+      "id": "B047",
+      "section": "Milestones",
+      "subsection": "4. Centralize transaction projections, indexed filtering, and pagination",
+      "milestone": 4,
+      "text": "Select only fields needed by each projection. Remove unused bank-link joins and raw provider JSON from list/analysis reads. Push legacy merchant/native-amount predicates and limits to SQL. Return an exact count separately when required, rather than fetching all matching entities to count.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction/transaction-query.postgres.spec.ts",
+        "frontend/src/lib/queries/primary.test.ts",
+        "frontend/src/routes/_authed/transactions.test.tsx"
+      ]
+    },
+    {
+      "id": "B048",
+      "section": "Milestones",
+      "subsection": "4. Centralize transaction projections, indexed filtering, and pagination",
+      "milestone": 4,
+      "text": "Add cursor pagination to the shared list contract and move `frontend/src/lib/queries/primary.ts` and Transactions infinite scrolling to it. Preserve every existing sortable column, direction, filter, and exact total display; obtain the count on the initial query, not every continuation. Retain page-index compatibility only for callers that still need it, backed by the same reader.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction/transaction-query.postgres.spec.ts",
+        "frontend/src/lib/queries/primary.test.ts",
+        "frontend/src/routes/_authed/transactions.test.tsx"
+      ]
+    },
+    {
+      "id": "B049",
+      "section": "Milestones",
+      "subsection": "4. Centralize transaction projections, indexed filtering, and pagination",
+      "milestone": 4,
+      "text": "Bind/version cursors to sort/filter identity, include complete null/date/ID tie-breaks, and reject incompatible cursors clearly. Fix full-final-page lookahead. For converted-amount searches, batch conversion and cap candidates at 5,000 per call; return an advancing continuation with an explicit scan-budget reason instead of claiming an exact exhausted result.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/mcp/mcp-read.service.spec.ts",
+        "backend/test/mcp/mcp-read-snapshot.postgres.spec.ts",
+        "backend/test/transaction/transaction-query.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B050",
+      "section": "Milestones",
+      "subsection": "4. Centralize transaction projections, indexed filtering, and pagination",
+      "milestone": 4,
+      "text": "HTTP/MCP parity covers user isolation, reporting overrides, all filters/sorts, equal-date ties, pending rows, null categories, literal merchant matching, and decimal amount bounds.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction/transaction-query.postgres.spec.ts",
+        "frontend/src/lib/queries/primary.test.ts",
+        "frontend/src/routes/_authed/transactions.test.tsx"
+      ]
+    },
+    {
+      "id": "B051",
+      "section": "Milestones",
+      "subsection": "4. Centralize transaction projections, indexed filtering, and pagination",
+      "milestone": 4,
+      "text": "Real query plans use date bounds on the canonical activity path for representative date-filtered workloads; explanations accompany any remaining scans/sorts. No redundant index is added solely from its name or an ORM decorator inventory.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/backend-query-performance.md: final date page reads about54 ordered activity rows to return51; separate count scans matching rows. Header sorting and remaining scans explained using retained ANALYZE/BUFFERS plans."
+      ]
+    },
+    {
+      "id": "B052",
+      "section": "Milestones",
+      "subsection": "4. Centralize transaction projections, indexed filtering, and pagination",
+      "milestone": 4,
+      "text": "Typical unfiltered cursor pages require at most two domain SELECTs, with at most one separate initial count; FX/auth are reported separately. Deep continuations contain no OFFSET. Exact final pages terminate; filtered-budget continuations advance without dropping or repeating processed candidates.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction/transaction-query.postgres.spec.ts",
+        "frontend/src/lib/queries/primary.test.ts",
+        "frontend/src/routes/_authed/transactions.test.tsx"
+      ]
+    },
+    {
+      "id": "B053",
+      "section": "Milestones",
+      "subsection": "4. Centralize transaction projections, indexed filtering, and pagination",
+      "milestone": 4,
+      "text": "Browser scrolling, sorting/filter resets, selected transactions, editing, totals, and stale refresh behavior pass without regressions.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/frontend-and-mcp-apps.md",
+        "Real production browser: cursor50\u2192100\u2192126, exactETHedit, cashflow126rowsreconciled, holdingsclearrefresh, stale-tabsettings, loading/error/retry"
+      ]
+    },
+    {
+      "id": "B054",
+      "section": "Milestones",
+      "subsection": "5. Batch FX lookup and apply the agreed valuation policy",
+      "milestone": 5,
+      "text": "Extend `CurrencyExchangeService` / `CurrencyConversionService` with a typed batch resolver for unique pairs and requested dates. Normalize identity/inversion once, retrieve only the requested pair combinations, and reuse exact decimal quotes within the request.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/currency-exchange/currency-exchange.postgres.spec.ts",
+        "backend/test/currency-exchange/currency-conversion.service.spec.ts"
+      ]
+    },
+    {
+      "id": "B055",
+      "section": "Milestones",
+      "subsection": "5. Batch FX lookup and apply the agreed valuation policy",
+      "milestone": 5,
+      "text": "Load bounded in-range/prior/future data in set-based statements; future fallback is fetched only for missing coverage. Sparse date requests must not allocate every day of an arbitrarily large span. Preserve the existing prior-first/future-fallback behavior and expose its actual observation date/source rather than treating filled quotes as exact-date observations.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/currency-exchange/currency-exchange.postgres.spec.ts",
+        "backend/test/currency-exchange/currency-conversion.service.spec.ts"
+      ]
+    },
+    {
+      "id": "B056",
+      "section": "Milestones",
+      "subsection": "5. Batch FX lookup and apply the agreed valuation policy",
+      "milestone": 5,
+      "text": "Route transaction HTTP conversion, MCP list conversion, analysis, balance projection, and portfolio conversion through the resolver. Transactions use effective reporting date; balance/holdings continue using their own valuation dates. Same-currency and zero-only paths do not require unnecessary FX queries.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/mcp/mcp-read-snapshot.postgres.spec.ts",
+        "backend/test/transaction/transaction-page.postgres.spec.ts",
+        "backend/test/balance-query/balance-consistency.postgres.spec.ts",
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B057",
+      "section": "Milestones",
+      "subsection": "5. Batch FX lookup and apply the agreed valuation policy",
+      "milestone": 5,
+      "text": "Preserve a coherent rate set for each report. Keep rate loading inside the report's short read snapshot, with CPU/formatting after the database transaction is released. Never use a global user-financial result cache.",
+      "status": "verified",
+      "evidence": [
+        "Read-only review pass4: B057 code and concurrent PostgreSQL regressions verified",
+        "backend/test/mcp/mcp-read-snapshot.postgres.spec.ts",
+        "backend/test/transaction/transaction-page.postgres.spec.ts",
+        "backend/test/balance-query/balance-consistency.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B058",
+      "section": "Milestones",
+      "subsection": "5. Batch FX lookup and apply the agreed valuation policy",
+      "milestone": 5,
+      "text": "The 100-date foreign transaction fixture drops from the baseline's per-date rate queries to at most three FX SELECTs for the whole batch; 1/10/100 dates do not increase query count within the configured batch size.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/currency-exchange/currency-exchange.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B059",
+      "section": "Milestones",
+      "subsection": "5. Batch FX lookup and apply the agreed valuation policy",
+      "milestone": 5,
+      "text": "Cross-surface historical amounts agree using transaction-date FX. Identity, inversion, missing/invalid rate, weekend gaps, early-date fallback, JPY/BTC/ETH scale, zero values, and reporting-date edits pass exact tests.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/currency-exchange/currency-exchange.postgres.spec.ts",
+        "backend/test/currency-exchange/currency-conversion.service.spec.ts"
+      ]
+    },
+    {
+      "id": "B060",
+      "section": "Milestones",
+      "subsection": "5. Batch FX lookup and apply the agreed valuation policy",
+      "milestone": 5,
+      "text": "The report separates speed measured under equivalent valuation settings from changed totals caused by the newly accepted policy. No difference is dismissed as harmless numerical drift.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/backend-query-performance.md: equivalent-output 10k comparisons, explicitly named sparse EUR exact-arithmetic correction and effective-reporting-date/row-rounding correctness cases.",
+        "backend/test/performance comparator preserves descriptive numeric strings and rejects unnamed financial differences; protocol review6 cleared."
+      ]
+    },
+    {
+      "id": "B061",
+      "section": "Milestones",
+      "subsection": "6. Compute cash-flow reports once and make totals reconcile",
+      "milestone": 6,
+      "text": "Extract a `CashFlowQueryService` / report-context seam from `TransactionAnalysisService`: load settings, full lookaround candidates, rules, and FX once, then derive summary, audit, and category drilldown. Existing public methods become adapters to this pipeline.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts",
+        "backend/test/transaction-analysis/cash-flow-matching.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B062",
+      "section": "Milestones",
+      "subsection": "6. Compute cash-flow reports once and make totals reconcile",
+      "milestone": 6,
+      "text": "Change the cash-flow App handler in `mcp.definition.ts` to request one combined report per period. Use the same candidate/rule snapshot for totals and adjustment metadata. Retain specific-before-broad neutralization precedence, exclusion semantics, ownership, and lookaround matches across report boundaries.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts",
+        "backend/test/transaction-analysis/cash-flow-matching.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B063",
+      "section": "Milestones",
+      "subsection": "6. Compute cash-flow reports once and make totals reconcile",
+      "milestone": 6,
+      "text": "Pre-sort/index amount/currency matching buckets so each inflow does not refilter/resort all outflows. Preserve nearest-earlier matching and exact same-date/ID tie-breaking. Do not aggregate or page candidates before cancellation rules finish.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts",
+        "backend/test/transaction-analysis/cash-flow-matching.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B064",
+      "section": "Milestones",
+      "subsection": "6. Compute cash-flow reports once and make totals reconcile",
+      "milestone": 6,
+      "text": "Convert surviving transactions once using effective-date quotes; sum those exact rounded results for category and overall totals. Derive colors/counts/audit amounts consistently from the same result. A paged drilldown can then select from the evaluated result; do not truncate the total computation.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts",
+        "backend/test/transaction-analysis/cash-flow-matching.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B065",
+      "section": "Milestones",
+      "subsection": "6. Compute cash-flow reports once and make totals reconcile",
+      "milestone": 6,
+      "text": "Reuse settings/rules within a combined invocation and release SQL snapshots before CPU work. Add a no-rules/SQL aggregation fast path only if it demonstrates a measurable gain and matches row-wise rounding semantics; it is not required to satisfy this milestone.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts",
+        "backend/test/transaction-analysis/cash-flow-matching.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B066",
+      "section": "Milestones",
+      "subsection": "6. Compute cash-flow reports once and make totals reconcile",
+      "milestone": 6,
+      "text": "One period loads its candidate set and evaluates rules once; comparison evaluates exactly two periods. Summary, audit, and detail derive from the same version of the data/rules.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts",
+        "backend/test/transaction-analysis/cash-flow-matching.spec.ts",
+        "backend/docs/investment-and-cash-flow-queries.md"
+      ]
+    },
+    {
+      "id": "B067",
+      "section": "Milestones",
+      "subsection": "6. Compute cash-flow reports once and make totals reconcile",
+      "milestone": 6,
+      "text": "Two EUR 0.01 outflows at 1.5 produce a USD 0.04 summary and USD 0.04 summed drilldown. Reconciliation holds across randomized currencies, signs, categories, and changing daily rates.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction-analysis/cash-flow-matching.spec.ts",
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B068",
+      "section": "Milestones",
+      "subsection": "6. Compute cash-flow reports once and make totals reconcile",
+      "milestone": 6,
+      "text": "Matching parity holds for overlapping rules, same-date duplicates, partial pools, and boundary counterparts. The 2,000-row pathological bucket improves by at least 50% median CPU on matched runs; typical reports do not incur an unexplained regression.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/comparison-10000.json: constructed2000-row matching median CPU260.32\u21920.404ms; main cash-flow scenarios have no material regression flags across three paired runs.",
+        "41 matching/unit/property and7 cash-flow PostgreSQL/HTTP tests passed; backend/docs/performance/validation/backend-checks.md."
+      ]
+    },
+    {
+      "id": "B069",
+      "section": "Milestones",
+      "subsection": "6. Compute cash-flow reports once and make totals reconcile",
+      "milestone": 6,
+      "text": "Web analysis and the MCP cash-flow App display consistent amounts and truthful empty/error/adjustment states.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/frontend-and-mcp-apps.md",
+        "Production desktop/phone/official MCP host all passed; exact10.000000000000000001ETH readback, empty/error/current states;1148 backend and435frontend tests passed"
+      ]
+    },
+    {
+      "id": "B070",
+      "section": "Milestones",
+      "subsection": "7. Batch banking sync identities and categorization rules",
+      "milestone": 7,
+      "text": "Add a batch categorization context in `TransactionCategorizationService` and load the ordered active rule set once per provider batch using the transaction's manager. Evaluate the existing pure rule engine against that immutable snapshot.",
+      "status": "verified",
+      "evidence": ["backend/test/transaction/transaction-sync.postgres.spec.ts"]
+    },
+    {
+      "id": "B071",
+      "section": "Milestones",
+      "subsection": "7. Batch banking sync identities and categorization rules",
+      "milestone": 7,
+      "text": "Bulk-load existing posted/pending identities for `TransactionService.processSyncResults` using user/account/provider/kind/external identity. Deduplicate same-response identities and update the in-memory identity map as replacements occur; preserve manual category and reporting-date metadata.",
+      "status": "verified",
+      "evidence": ["backend/test/transaction/transaction-sync.postgres.spec.ts"]
+    },
+    {
+      "id": "B072",
+      "section": "Milestones",
+      "subsection": "7. Batch banking sync identities and categorization rules",
+      "milestone": 7,
+      "text": "Batch inserts/updates/deletes in bounded chunks while preserving the existing bank-link cursor transaction hooks, category revision behavior, reconciliation archives, archived-account exclusions, and pending-to-posted identity merge rules.",
+      "status": "verified",
+      "evidence": ["backend/test/transaction/transaction-sync.postgres.spec.ts"]
+    },
+    {
+      "id": "B073",
+      "section": "Milestones",
+      "subsection": "7. Batch banking sync identities and categorization rules",
+      "milestone": 7,
+      "text": "Emit notifications/events only after commit and once per actual change. Reuse the batch path for scheduled, webhook, and manual triggers; keep network calls outside the apply transaction.",
+      "status": "verified",
+      "evidence": ["backend/test/transaction/transaction-sync.postgres.spec.ts"]
+    },
+    {
+      "id": "B074",
+      "section": "Milestones",
+      "subsection": "7. Batch banking sync identities and categorization rules",
+      "milestone": 7,
+      "text": "Five hundred eligible transactions load the rule set once; identity reads scale by configured chunks, not individual transactions. Measure actual SQL from ORM writes to verify batching.",
+      "status": "verified",
+      "evidence": ["backend/test/transaction/transaction-sync.postgres.spec.ts"]
+    },
+    {
+      "id": "B075",
+      "section": "Milestones",
+      "subsection": "7. Batch banking sync identities and categorization rules",
+      "milestone": 7,
+      "text": "Failure, retry, repeated provider IDs, simultaneous triggers, pending replacement, manual metadata, rule edits, and archived identities pass PostgreSQL integration tests.",
+      "status": "verified",
+      "evidence": ["backend/test/transaction/transaction-sync.postgres.spec.ts"]
+    },
+    {
+      "id": "B076",
+      "section": "Milestones",
+      "subsection": "7. Batch banking sync identities and categorization rules",
+      "milestone": 7,
+      "text": "Cursor/data commit and existing side-effect semantics remain atomic. Read workloads under concurrent sync show reduced query contention or an explicitly explained result in the benchmark report.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/comparison.json: eight paired30-second HTTP/PAT versus Auth0 MCP phases, concurrency1/10 with/without saturated50-row sync; zero errors, observed throughput/pool/loop/tails saved. At10clients+sync HTTP229\u2192250reads/s while sync1.10\u219232.11batches/s; MCP39.21\u2192144.86reads/s while sync2.62\u219217.75batches/s. These are diagnostic and offered write rates differ.",
+        "backend/test/transaction/transaction-sync.postgres.spec.ts and focused/auth-settings: atomic cursor/events plus physical token writes and persisted settings assertions passed."
+      ]
+    },
+    {
+      "id": "B077",
+      "section": "Milestones",
+      "subsection": "8. Reuse balance projection for history and bound response work",
+      "milestone": 8,
+      "text": "Generalize `BalanceQueryService.loadDashboardProjection` to explicit user/date/account inputs and projection modes. Retain shared snapshot cursors, historical FX validation, archived account semantics, liabilities, missing-data behavior, and true sync timestamps.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/balance-query/balance-consistency.postgres.spec.ts",
+        "backend/test/balance-query/dashboard-query.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B078",
+      "section": "Milestones",
+      "subsection": "8. Reuse balance projection for history and bound response work",
+      "milestone": 8,
+      "text": "Adapt `BalanceHistorySurfaceService.getBalanceHistorySummary` to derive first/last account summaries and daily net-worth values without retaining a daily account-object matrix. Explicit full-detail legacy reads may materialize rows from the same projection; they must not carry a second calculation implementation.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/balance-query/dashboard-query.service.spec.ts",
+        "backend/src/balance-query/balance-query.service.ts"
+      ]
+    },
+    {
+      "id": "B079",
+      "section": "Milestones",
+      "subsection": "8. Reuse balance projection for history and bound response work",
+      "milestone": 8,
+      "text": "Add `resolution: daily | compact` and `maxPoints` to history contracts. Default remains daily. Compact mode defaults to 240 points, preserves endpoints and material extrema deterministically, returns sampling metadata, and always computes totals/change from exact requested boundaries. Requests below the point budget return every point. Require 4\u20131,000 for a requested compact budget.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/balance-query/history-sampling.spec.ts",
+        "backend/test/balance-query/balance-history-surface.service.spec.ts"
+      ]
+    },
+    {
+      "id": "B080",
+      "section": "Milestones",
+      "subsection": "8. Reuse balance projection for history and bound response work",
+      "milestone": 8,
+      "text": "Start interactive work limits at 10,000 returned daily points and 1,000,000 projected account-days per call, validated before allocating the matrix/series. Reject excessive requests with an actionable supported-range/resolution message; compact mode is not allowed to hide an exceeded computation budget. Record any benchmark-justified limit adjustment explicitly in the results and contract docs.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/balance-query/history-sampling.spec.ts",
+        "backend/test/balance-query/balance-history-surface.service.spec.ts"
+      ]
+    },
+    {
+      "id": "B081",
+      "section": "Milestones",
+      "subsection": "8. Reuse balance projection for history and bound response work",
+      "milestone": 8,
+      "text": "Update MCP descriptions/examples to request compact output for chart/trend questions and daily output for exact-date work. Preserve exact structured/text money values and complete account summaries regardless of chart resolution.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-release-notes.md",
+        "backend/docs/shared-query-services.md",
+        "docs/mcp.md"
+      ]
+    },
+    {
+      "id": "B082",
+      "section": "Milestones",
+      "subsection": "8. Reuse balance projection for history and bound response work",
+      "milestone": 8,
+      "text": "Daily history matches the normalized baseline exactly, except documented money representation fixes. Home retains existing point selection and total behavior.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/comparison.json: daily/compact exact-boundary/account/selected-point checks and all four isolated20/100-account ten-year memory shapes passed; full daily series remains exact.",
+        "backend/test/balance-query PostgreSQL/unit tests and backend/docs/performance/validation/backend-checks.md: no retained daily account matrix; Home point selection and consistent snapshots covered."
+      ]
+    },
+    {
+      "id": "B083",
+      "section": "Milestones",
+      "subsection": "8. Reuse balance projection for history and bound response work",
+      "milestone": 8,
+      "text": "Ten-year 20/100-account history does not retain a full per-account daily matrix when a summary/series was requested. Daily and compact CPU/memory/payload measurements are published separately.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/comparison.json: daily/compact exact-boundary/account/selected-point checks and all four isolated20/100-account ten-year memory shapes passed; full daily series remains exact.",
+        "backend/test/balance-query PostgreSQL/unit tests and backend/docs/performance/validation/backend-checks.md: no retained daily account matrix; Home point selection and consistent snapshots covered."
+      ]
+    },
+    {
+      "id": "B084",
+      "section": "Milestones",
+      "subsection": "8. Reuse balance projection for history and bound response work",
+      "milestone": 8,
+      "text": "Compact output obeys its budget and reports sampling; endpoints/extrema and exact totals pass tests. Oversized/invalid date work fails before heavy allocation, with no silent financial truncation.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/balance-query/history-sampling.spec.ts",
+        "backend/test/balance-query/balance-history-surface.service.spec.ts"
+      ]
+    },
+    {
+      "id": "B085",
+      "section": "Milestones",
+      "subsection": "9. Make settings atomic and remove avoidable auth overhead",
+      "milestone": 9,
+      "text": "Update `UserService.updateSettings` and default-notification initialization to read/merge/write under a row lock or apply equivalent atomic nested patches. Emit settings events from committed before/after values. Apply the same treatment to `updateProviderDetails` if concurrent provider patches can overwrite unrelated keys.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/user/settings-auth.postgres.spec.ts",
+        "backend/test/user/user.service.spec.ts",
+        "backend/test/auth/personal-access-token.service.spec.ts"
+      ]
+    },
+    {
+      "id": "B086",
+      "section": "Milestones",
+      "subsection": "9. Make settings atomic and remove avoidable auth overhead",
+      "milestone": 9,
+      "text": "Reuse narrow user/settings projections within each financial invocation. Do not share OAuth identity/financial data across users or cache revocation decisions.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/balance-query/balance-consistency.postgres.spec.ts",
+        "backend/test/transaction/transaction-page.postgres.spec.ts",
+        "backend/test/user/settings-auth.postgres.spec.ts",
+        "backend/src/user/user.service.ts"
+      ]
+    },
+    {
+      "id": "B087",
+      "section": "Milestones",
+      "subsection": "9. Make settings atomic and remove avoidable auth overhead",
+      "milestone": 9,
+      "text": "Benchmark `PersonalAccessTokenService.validateToken`, then replace full token/user hydration with a narrow joined validation query. Coalesce `lastUsedAt` writes to at most once per token per 60 seconds using a conditional update. A skipped usage write is not an authentication failure; revoked/expired/deleted-user tokens still fail authoritative validation, including races already protected by the current flow.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/auth-settings/{before,after}-10000-run1.json: short paired real-service timings; recent-use physical token updates1\u21920 and due updates1\u21921 with successful identity checks.",
+        "The same focused captures preserve both disjoint/nested settings patches in every final observation (5/5 each); original loses an edit in5/5 each. Full PostgreSQL expiry/revocation/deleted-user/lock-wait and settings/provider/default races passed."
+      ]
+    },
+    {
+      "id": "B088",
+      "section": "Milestones",
+      "subsection": "9. Make settings atomic and remove avoidable auth overhead",
+      "milestone": 9,
+      "text": "Keep the standalone Auth0 MCP benchmark separate from PAT HTTP authentication. Measure identity resolution once per tool invocation and reuse it only within that invocation.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/comparison-10000.json: real Auth0 MCP transport has one database identity lookup per invocation; separate PAT HTTP cases.",
+        "backend/docs/backend-query-performance.md and shared-query-services.md explicitly distinguish PAT benefit from Auth0 MCP."
+      ]
+    },
+    {
+      "id": "B089",
+      "section": "Milestones",
+      "subsection": "9. Make settings atomic and remove avoidable auth overhead",
+      "milestone": 9,
+      "text": "Add sanitized query/SQL/serialization counters and timings at the shared read/transport boundaries, with request-local collection. Do not log financial values, raw SQL parameters, tokens, or provider payloads. Record pool wait/queueing and errors under concurrency before changing pool sizes/timeouts.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/observability/request-metrics.spec.ts",
+        "backend/docs/request-metrics.md"
+      ]
+    },
+    {
+      "id": "B090",
+      "section": "Milestones",
+      "subsection": "9. Make settings atomic and remove avoidable auth overhead",
+      "milestone": 9,
+      "text": "Real simultaneous settings patches preserve disjoint keys and nested notification changes; emitted events describe committed changes. Provider/default initialization cannot revert another patch.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/user/settings-auth.postgres.spec.ts",
+        "backend/test/user/user.service.spec.ts",
+        "backend/test/auth/personal-access-token.service.spec.ts"
+      ]
+    },
+    {
+      "id": "B091",
+      "section": "Milestones",
+      "subsection": "9. Make settings atomic and remove avoidable auth overhead",
+      "milestone": 9,
+      "text": "PAT repeated requests have at most one usage write per 60-second window, remain correctly authenticated, and reject revocation/expiry races without an authorization cache. No Auth0 latency improvement is falsely credited to PAT work.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/user/settings-auth.postgres.spec.ts",
+        "backend/test/user/user.service.spec.ts",
+        "backend/test/auth/personal-access-token.service.spec.ts"
+      ]
+    },
+    {
+      "id": "B092",
+      "section": "Milestones",
+      "subsection": "9. Make settings atomic and remove avoidable auth overhead",
+      "milestone": 9,
+      "text": "Instrumentation can attribute time and query counts without logging business values, and its measured overhead is included in both benchmark variants.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/backend-checks.md: observability and real pool-contention checks passed; protocol review6 cleared final production instrumentation and shared observer wiring.",
+        "backend/docs/backend-query-performance.md: common observer included both variants; final production metrics are a measured implementation difference, logging disabled. SQL/acquisition overlap and process CPU limitations explicit."
+      ]
+    },
+    {
+      "id": "B093",
+      "section": "Milestones",
+      "subsection": "10. Run the matched comparison and complete caller/contract verification",
+      "milestone": 10,
+      "text": "Recreate both baseline and final schemas from the same seed and replay the same workloads. Apply final migrations only to the final copy. Compare with the frozen baseline implementation, not a partially optimized intermediate revision.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/focused/comparison.json: completed=true,130 diagnostic pairs and8 paired mixed phases; strict approved source/build/observer/fixture/economic/order/query gates pass. originalFullMatrixCompleted=false honors the user-requested shorter protocol.",
+        "backend/docs/performance/backend-query/comparison-10000.json:35scenarios with100 calls\u00d73paired processes; transport/service timing and handshake separation retained.",
+        "Final749 application source files match the frozen final byte for byte; independent protocol reviews6/7, schema-fixture-parity.json, mutable resets, isolated RSS sampler and baseline named failures verified."
+      ]
+    },
+    {
+      "id": "B094",
+      "section": "Milestones",
+      "subsection": "10. Run the matched comparison and complete caller/contract verification",
+      "milestone": 10,
+      "text": "Run the user-approved focused benchmark matrix and publish before/after tables for measured shared services, HTTP/MCP paths and representative sync operations. Retain raw SQL/count/row/byte/CPU/serialization/memory/pool/throughput/error evidence. Use reliable p50/p95 only from the completed 10k 100-call \u00d7 three-process matrix; label shorter measurements diagnostic and state unavailable metrics.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/backend-query-performance.md: completed rigorous35-shape10k evidence and user-approved130-pair focused set, eight mixed pairs, isolated memory, compact chart/response distinction, explicit sampling omissions and shared/web/MCP/HTTP-token/indirect benefits.",
+        "backend/docs/performance/backend-query/focused/regression-review.json and regression-sparse-fx/diagnosis.json: all six diagnostic flags investigated using plans/raw samples and one bounded20-call follow-up. Retained deep-offset spill, sparse historical quote cost, completed-empty publication cost and inconclusive single tail explicitly documented.",
+        "backend/docs/performance/backend-query/focused/checks.json: strict financial/source/query gates and16 focused tests,22 CJS syntax checks, focused lint/format pass. cleanup.json confirms zero owned connections/schemas.",
+        "backend/docs/performance/validation/backend-checks.md and frontend-and-mcp-apps.md: full application, real PostgreSQL/migration/recovery, production browser and official MCP App checks passed; all749 current app source files match the measured final. Final independent whole-ledger review passed; see backend/docs/performance/validation/final-review.md."
+      ],
+      "originalText": "Run the matrix below, retain raw samples, and publish a readable before/after table per HTTP endpoint, MCP tool, and sync operation. Include SQL count/time, returned rows, DB-to-app bytes where measurable, CPU/mapping/serialization, RSS/heap/event-loop delay, JSON/gzip bytes, p50/p95, throughput, and errors. State unavailable metrics rather than estimating them as measurements.",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    },
+    {
+      "id": "B095",
+      "section": "Milestones",
+      "subsection": "10. Run the matched comparison and complete caller/contract verification",
+      "milestone": 10,
+      "text": "Separate equivalent-output, intentional FX/rounding corrections, exact-money representation, and compact-history comparisons. Use a semantic normalizer that preserves units and exact values; whitelist named expected corrections only. Never remove financial differences to force parity.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/focused/comparison.json and comparison-10000.json: exact-output/order normalization plus named amount-sort/5000-added-row failures, sparse EUR rounding correction and compact/bounded-scan contracts are distinguished. Full19-step converted-search continuation oracle passed for0/10matches."
+      ]
+    },
+    {
+      "id": "B096",
+      "section": "Milestones",
+      "subsection": "10. Run the matched comparison and complete caller/contract verification",
+      "milestone": 10,
+      "text": "Regenerate API bindings, run full impacted checks, and use `$agent-browser` plus the documented official MCP App host to validate browser-observable changes. Read each skill at execution time. Run agent-browser outside the sandbox and close only task-owned sessions/processes.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/backend-checks.md: 109 backend suites / 1148 tests, lint/typecheck/build and Orval passed.",
+        "backend/docs/performance/validation/frontend-and-mcp-apps.md: 435 frontend tests, production browser cases, official ext-apps v1.7.5 lifecycle/empty/error/updated-result checks passed; task-owned processes and schemas cleaned."
+      ]
+    },
+    {
+      "id": "B097",
+      "section": "Milestones",
+      "subsection": "10. Run the matched comparison and complete caller/contract verification",
+      "milestone": 10,
+      "text": "Finish developer documentation describing shared query entry points, projection selection, ownership/transaction requirements, conversion rules, cursor/work budgets, exact money, and benchmark commands. Update `docs/mcp.md` for changed tool contracts and existing consumers. Mark this plan Done only after all exit criteria pass.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-performance.md: completed rigorous35-shape10k evidence and user-approved130-pair focused set, eight mixed pairs, isolated memory, compact chart/response distinction, explicit sampling omissions and shared/web/MCP/HTTP-token/indirect benefits.",
+        "backend/docs/performance/backend-query/focused/regression-review.json and regression-sparse-fx/diagnosis.json: all six diagnostic flags investigated using plans/raw samples and one bounded20-call follow-up. Retained deep-offset spill, sparse historical quote cost, completed-empty publication cost and inconclusive single tail explicitly documented.",
+        "backend/docs/performance/backend-query/focused/checks.json: strict financial/source/query gates and16 focused tests,22 CJS syntax checks, focused lint/format pass. cleanup.json confirms zero owned connections/schemas.",
+        "backend/docs/performance/validation/backend-checks.md and frontend-and-mcp-apps.md: full application, real PostgreSQL/migration/recovery, production browser and official MCP App checks passed; all749 current app source files match the measured final. Final independent whole-ledger review passed; see backend/docs/performance/validation/final-review.md."
+      ]
+    },
+    {
+      "id": "B098",
+      "section": "Milestones",
+      "subsection": "10. Run the matched comparison and complete caller/contract verification",
+      "milestone": 10,
+      "text": "Prepare migration/release notes for one coordinated backend/frontend/MCP release. Use the existing protected main\u2192deploy workflow if deployment is subsequently requested; the earlier deployment task for SSR is independent. Before live stack work, read `/Users/jtkw/projects/stack/AGENTS.md` and its deployment gates. Do not turn this planning request into a live deployment.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-release-notes.md",
+        "backend/docs/shared-query-services.md",
+        "docs/mcp.md"
+      ]
+    },
+    {
+      "id": "B099",
+      "section": "Milestones",
+      "subsection": "10. Run the matched comparison and complete caller/contract verification",
+      "milestone": 10,
+      "text": "Every audited finding maps to an implemented fix, a direct regression test, and the relevant benchmark/verification result. Existing callers use the shared path rather than retaining parallel implementations.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/audit-coverage.md maps every finding to shared implementation, direct regression evidence and rigorous/focused/migration/probe measurement results. Existing caller adoption independently reviewed."
+      ]
+    },
+    {
+      "id": "B100",
+      "section": "Milestones",
+      "subsection": "10. Run the matched comparison and complete caller/contract verification",
+      "milestone": 10,
+      "text": "Deterministic query/shape budgets pass. Assess the original 30% median/p95 FX/holdings/cash-flow and 50% matching-CPU targets using the completed rigorous 10k matrix. Use short 100k/1m checks to inspect scaling and query work without full tail claims. Investigate material target misses and correctness-driven costs without weakening financial correctness.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/comparison-10000.json: large holdings median/p95540.9/608.5\u2192174.2/182.4ms, FX44.9/52.8\u21927.9/13.3ms, annual summary+audit74.1/79.7\u219230.5/32.7ms; all exceed30% improvement targets. Matching2000-row CPU260.32\u21920.404ms exceeds50%. Zero rigorous material-regression flags. Focused large-scale diagnostics separately retained."
+      ],
+      "originalText": "Deterministic query/shape budgets pass. Aim for at least 30% median and p95 improvement in the large FX/holdings/cash-flow workloads and at least 50% CPU improvement in the constructed matching case. Profile target misses and address avoidable work, then report the actual gain and any correctness-driven cost. These are optimization targets, not measured claims or a reason to weaken financial correctness.",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    },
+    {
+      "id": "B101",
+      "section": "Milestones",
+      "subsection": "10. Run the matched comparison and complete caller/contract verification",
+      "milestone": 10,
+      "text": "Investigate median/p95 increases exceeding both 10% and 5 ms in the rigorous matched matrix, and substantial diagnostic slowdowns in the focused checks. Daily history does not retain a daily account matrix; compact chart JSON drops at least 80% in the ten-year fixture.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/backend-query-performance.md: completed rigorous35-shape10k evidence and user-approved130-pair focused set, eight mixed pairs, isolated memory, compact chart/response distinction, explicit sampling omissions and shared/web/MCP/HTTP-token/indirect benefits.",
+        "backend/docs/performance/backend-query/focused/regression-review.json and regression-sparse-fx/diagnosis.json: all six diagnostic flags investigated using plans/raw samples and one bounded20-call follow-up. Retained deep-offset spill, sparse historical quote cost, completed-empty publication cost and inconclusive single tail explicitly documented.",
+        "backend/docs/performance/backend-query/focused/checks.json: strict financial/source/query gates and16 focused tests,22 CJS syntax checks, focused lint/format pass. cleanup.json confirms zero owned connections/schemas.",
+        "backend/docs/performance/validation/backend-checks.md and frontend-and-mcp-apps.md: full application, real PostgreSQL/migration/recovery, production browser and official MCP App checks passed; all749 current app source files match the measured final. Final independent whole-ledger review passed; see backend/docs/performance/validation/final-review.md."
+      ],
+      "originalText": "No material unexplained regression: investigate median/p95 increases exceeding both 10% and 5 ms on matched scenarios; account for host noise with repeated runs. Full daily history does not grow a daily account matrix; compact chart bytes drop by at least 80% in the ten-year fixture.",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    },
+    {
+      "id": "B102",
+      "section": "Milestones",
+      "subsection": "10. Run the matched comparison and complete caller/contract verification",
+      "milestone": 10,
+      "text": "Migration, frontend, HTTP, MCP, sync concurrency, financial parity/corrections, and browser checks pass. The final report explicitly distinguishes web-only, MCP-only, shared, and indirect sync benefits.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-performance.md: completed rigorous35-shape10k evidence and user-approved130-pair focused set, eight mixed pairs, isolated memory, compact chart/response distinction, explicit sampling omissions and shared/web/MCP/HTTP-token/indirect benefits.",
+        "backend/docs/performance/backend-query/focused/regression-review.json and regression-sparse-fx/diagnosis.json: all six diagnostic flags investigated using plans/raw samples and one bounded20-call follow-up. Retained deep-offset spill, sparse historical quote cost, completed-empty publication cost and inconclusive single tail explicitly documented.",
+        "backend/docs/performance/backend-query/focused/checks.json: strict financial/source/query gates and16 focused tests,22 CJS syntax checks, focused lint/format pass. cleanup.json confirms zero owned connections/schemas.",
+        "backend/docs/performance/validation/backend-checks.md and frontend-and-mcp-apps.md: full application, real PostgreSQL/migration/recovery, production browser and official MCP App checks passed; all749 current app source files match the measured final. Final independent whole-ledger review passed; see backend/docs/performance/validation/final-review.md."
+      ]
+    },
+    {
+      "id": "B103",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": null,
+      "text": "Keep SQL/service-only and end-to-end HTTP/MCP measurements separate. Auth0 tests use the local test authority; benchmark initialization/handshake separately from repeated tool invocations. No LLM inference, internet latency, or provider network time is included in backend gains.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/focused/comparison.json: completed=true,130 diagnostic pairs and8 paired mixed phases; strict approved source/build/observer/fixture/economic/order/query gates pass. originalFullMatrixCompleted=false honors the user-requested shorter protocol.",
+        "backend/docs/performance/backend-query/comparison-10000.json:35scenarios with100 calls\u00d73paired processes; transport/service timing and handshake separation retained.",
+        "Final749 application source files match the frozen final byte for byte; independent protocol reviews6/7, schema-fixture-parity.json, mutable resets, isolated RSS sampler and baseline named failures verified."
+      ]
+    },
+    {
+      "id": "B104",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": null,
+      "text": "User-approved shortened protocol: retain completed paired 10k 5-warmup/100-call/three-process evidence; use short final 100k/1m captures against saved originals, short paired representative supplements, one low/high-concurrency 30-second phase per selected HTTP/MCP and sync condition, and short isolated daily/compact memory runs. Enumerate executed cases and omitted exhaustive repeats; keep provenance, exact-output and deterministic-budget checks. No reliable p95 claim from small samples.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/focused/comparison.json: completed=true,130 diagnostic pairs and8 paired mixed phases; strict approved source/build/observer/fixture/economic/order/query gates pass. originalFullMatrixCompleted=false honors the user-requested shorter protocol.",
+        "backend/docs/performance/backend-query/comparison-10000.json:35scenarios with100 calls\u00d73paired processes; transport/service timing and handshake separation retained.",
+        "Final749 application source files match the frozen final byte for byte; independent protocol reviews6/7, schema-fixture-parity.json, mutable resets, isolated RSS sampler and baseline named failures verified."
+      ],
+      "originalText": "Warm each scenario five times, then collect at least 100 measured calls for p50/p95; repeat three independent process runs and report spread. Concurrency workloads run at least 30 seconds after warmup and report throughput/error rate. Smaller exploratory runs may guide fixes but do not replace final samples.",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    },
+    {
+      "id": "B105",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": null,
+      "text": "Label process-cold, database-warm, and repeated-request results truthfully. Do not claim a cold PostgreSQL cache without a dedicated disposable instance reset. Do not flush shared host caches or kill the user's dev servers.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-performance.md and focused reports explicitly identify database-warm repeated-request and diagnostic timing, separate MCP handshakes, and disclaim cold PostgreSQL cache. Isolated guarded schemas only; task-owned cancelled worker cleaned; existing user3000/4000 servers preserved."
+      ]
+    },
+    {
+      "id": "B106",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": null,
+      "text": "Reset mutable fixtures before each sync/settings repetition. Capture peak process memory in isolated processes; avoid comparing lifetime RSS maxima from unrelated workloads. Measure database statement counts including ORM hydration/count queries, separately from BEGIN/COMMIT and auth.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/comparison.json: completed=true,130 diagnostic pairs and8 paired mixed phases; strict approved source/build/observer/fixture/economic/order/query gates pass. originalFullMatrixCompleted=false honors the user-requested shorter protocol.",
+        "backend/docs/performance/backend-query/comparison-10000.json:35scenarios with100 calls\u00d73paired processes; transport/service timing and handshake separation retained.",
+        "Final749 application source files match the frozen final byte for byte; independent protocol reviews6/7, schema-fixture-parity.json, mutable resets, isolated RSS sampler and baseline named failures verified."
+      ]
+    },
+    {
+      "id": "B107",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": null,
+      "text": "Capture `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` for representative SELECTs and disposable sync operations; report index conditions, actual versus estimated rows, sorts, and buffers. An index name appearing in a plan alone is not proof of improvement.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/write-plans/{before,after}.json: completed actual-service EXPLAIN ANALYZE/BUFFERS probes for five banking/investment/empty/full holdings write workloads per variant; savepoint rollback followed by normal execution and persisted-state verification.",
+        "backend/docs/backend-query-performance.md and raw10k captures: representative activity date/index/count/search/header plans, actual/estimated rows, sorts and buffers, with remaining scans explained."
+      ]
+    },
+    {
+      "id": "B108",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": null,
+      "text": "Financial fixtures that expose baseline bugs are expected to differ: retain baseline failure evidence and assert the specified corrected result. Also keep an equivalent-policy benchmark lane for clean speed comparisons.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/focused/comparison.json: completed=true,130 diagnostic pairs and8 paired mixed phases; strict approved source/build/observer/fixture/economic/order/query gates pass. originalFullMatrixCompleted=false honors the user-requested shorter protocol.",
+        "backend/docs/performance/backend-query/comparison-10000.json:35scenarios with100 calls\u00d73paired processes; transport/service timing and handshake separation retained.",
+        "Final749 application source files match the frozen final byte for byte; independent protocol reviews6/7, schema-fixture-parity.json, mutable resets, isolated RSS sampler and baseline named failures verified."
+      ]
+    },
+    {
+      "id": "B109",
+      "section": "Tests",
+      "subsection": "Backend",
+      "milestone": null,
+      "text": "Extend existing transaction/service/controller/surface, currency, balance/history/dashboard, investment/manual brokerage, categorization, bank-link, recurring, user/settings, money/crypto, auth/PAT, MCP runtime/schema/money/App tests.",
+      "status": "verified",
+      "evidence": [
+        "Full backend run:105 suites/1130 tests passed before final targeted review regression additions"
+      ]
+    },
+    {
+      "id": "B110",
+      "section": "Tests",
+      "subsection": "Backend",
+      "milestone": null,
+      "text": "Add shared-query PostgreSQL parity tests with two owners, same-date ordering, reporting-date write consistency, duplicate identities, sparse FX boundaries, exact decimal scale, and cross-surface behavior.",
+      "status": "verified",
+      "evidence": [
+        "Full backend run:105 suites/1130 tests passed before final targeted review regression additions"
+      ]
+    },
+    {
+      "id": "B111",
+      "section": "Tests",
+      "subsection": "Backend",
+      "milestone": null,
+      "text": "Add real transaction/concurrency failure tests for complete snapshots, stale sync generations, orphan prevention, settings patches, rule-snapshot application, and PAT revocation/usage-write races. Do not rely only on repository mocks for these claims.",
+      "status": "verified",
+      "evidence": [
+        "Full backend run:105 suites/1130 tests passed before final targeted review regression additions"
+      ]
+    },
+    {
+      "id": "B112",
+      "section": "Tests",
+      "subsection": "Backend",
+      "milestone": null,
+      "text": "Run new migrations against a baseline schema/seed, including persisted JSON contracts, missing legacy headers, numeric limits, and downgrade refusal. Use only the dedicated benchmark/test database.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/types/exact-money-migration.postgres.spec.ts",
+        "backend/docs/performance/migrations/backend-query-2026-09-05.json"
+      ]
+    },
+    {
+      "id": "B113",
+      "section": "Tests",
+      "subsection": "Backend",
+      "milestone": null,
+      "text": "Add query-count and work-budget regression assertions at shared boundaries; avoid tests that merely assert implementation strings or index names.",
+      "status": "verified",
+      "evidence": [
+        "Full backend run:105 suites/1130 tests passed before final targeted review regression additions"
+      ]
+    },
+    {
+      "id": "B114",
+      "section": "Tests",
+      "subsection": "Frontend",
+      "milestone": null,
+      "text": "Update formatting/parsing/balance utility tests for exact strings and unit parity; cover decimal text inputs, zero/negative values, JPY/BTC/ETH, large values, and invalid input without silent coercion.",
+      "status": "verified",
+      "evidence": [
+        "Frontend69 files/435 tests, typecheck, productionbuild; lint0errors3existingwarnings; /tmp/splice-frontend-m9-validation.md"
+      ]
+    },
+    {
+      "id": "B115",
+      "section": "Tests",
+      "subsection": "Frontend",
+      "milestone": null,
+      "text": "Update Transactions infinite-query tests for cursor advancement, filters/sorts/reset, counts, edits/selection, terminal pages, and retry. Preserve query invalidation and 30-second session-scoped reuse tests.",
+      "status": "verified",
+      "evidence": [
+        "Frontend69 files/435 tests, typecheck, productionbuild; lint0errors3existingwarnings; /tmp/splice-frontend-m9-validation.md"
+      ]
+    },
+    {
+      "id": "B116",
+      "section": "Tests",
+      "subsection": "Frontend",
+      "milestone": null,
+      "text": "Update Home/Analysis/AccountModal/holdings/manual transaction/recurring/Settings tests for changed contracts and correct zero/empty/rounding behavior. Regenerate rather than hand-edit API models.",
+      "status": "verified",
+      "evidence": [
+        "Frontend69 files/435 tests, typecheck, productionbuild; lint0errors3existingwarnings; /tmp/splice-frontend-m9-validation.md"
+      ]
+    },
+    {
+      "id": "B117",
+      "section": "Tests",
+      "subsection": "Frontend",
+      "milestone": null,
+      "text": "Use `$agent-browser` for desktop/phone exact entry/display, deep scrolling and sorting, cash-flow drilldown reconciliation, cleared holdings, concurrent settings tabs, masked SSR, and loading/error recovery. Reuse local auth bypass and isolated seeded identities.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/frontend-and-mcp-apps.md",
+        "Production desktop/phone/official MCP host all passed; exact10.000000000000000001ETH readback, empty/error/current states;1148 backend and435frontend tests passed"
+      ]
+    },
+    {
+      "id": "B118",
+      "section": "Tests",
+      "subsection": "Frontend",
+      "milestone": null,
+      "text": "Use the documented official MCP App test host for both App result schemas, empty/error/current-result lifecycle, dark/light phone rendering, and exact total/tooltip formatting. This is a data/contract refactor, not an App redesign; no concept-generation step is needed.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/frontend-and-mcp-apps.md",
+        "Production desktop/phone/official MCP host all passed; exact10.000000000000000001ETH readback, empty/error/current states;1148 backend and435frontend tests passed"
+      ]
+    },
+    {
+      "id": "B119",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn test test/transaction test/transaction-analysis test/currency-exchange test/balance-query test/investment test/transaction-categorization test/bank-link test/recurring-manual-transaction test/user test/auth test/crypto test/types test/migrations --runInBand",
+      "status": "verified",
+      "evidence": [
+        "Full backend suite:109 suites/1148 tests passed after all application changes"
+      ]
+    },
+    {
+      "id": "B120",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn test --config test/jest-performance-postgres.json --runInBand",
+      "status": "verified",
+      "evidence": [
+        "yarn test --config test/jest-performance-postgres.json --runInBand:3 suites/14 tests passed"
+      ]
+    },
+    {
+      "id": "B121",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn test:mcp-apps",
+      "status": "verified",
+      "evidence": [
+        "All MCP App suites included in full109-suite/1148-test pass"
+      ]
+    },
+    {
+      "id": "B122",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn test test/mcp --runInBand",
+      "status": "verified",
+      "evidence": ["All MCP tests included in full109-suite/1148-test pass"]
+    },
+    {
+      "id": "B123",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn lint",
+      "status": "verified",
+      "evidence": ["yarn lint:passed"]
+    },
+    {
+      "id": "B124",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn typecheck",
+      "status": "verified",
+      "evidence": ["yarn typecheck:passed"]
+    },
+    {
+      "id": "B125",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn build",
+      "status": "verified",
+      "evidence": ["yarn build:passed including generated MCP App bundle"]
+    },
+    {
+      "id": "B126",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn ts-node -r tsconfig-paths/register scripts/benchmark-backend.ts capture --variant before",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/focused/comparison.json: completed=true,130 diagnostic pairs and8 paired mixed phases; strict approved source/build/observer/fixture/economic/order/query gates pass. originalFullMatrixCompleted=false honors the user-requested shorter protocol.",
+        "backend/docs/performance/backend-query/comparison-10000.json:35scenarios with100 calls\u00d73paired processes; transport/service timing and handshake separation retained.",
+        "Final749 application source files match the frozen final byte for byte; independent protocol reviews6/7, schema-fixture-parity.json, mutable resets, isolated RSS sampler and baseline named failures verified."
+      ]
+    },
+    {
+      "id": "B127",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn ts-node -r tsconfig-paths/register scripts/benchmark-backend.ts capture --variant after",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/focused/comparison.json: completed=true,130 diagnostic pairs and8 paired mixed phases; strict approved source/build/observer/fixture/economic/order/query gates pass. originalFullMatrixCompleted=false honors the user-requested shorter protocol.",
+        "backend/docs/performance/backend-query/comparison-10000.json:35scenarios with100 calls\u00d73paired processes; transport/service timing and handshake separation retained.",
+        "Final749 application source files match the frozen final byte for byte; independent protocol reviews6/7, schema-fixture-parity.json, mutable resets, isolated RSS sampler and baseline named failures verified."
+      ]
+    },
+    {
+      "id": "B128",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "Run the rigorous main comparison scoped to10k and node test/performance/focused-runner.cjs with approved frozen source roots; its focused comparator validates all required shortened cases.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/focused/comparison.json: completed=true,130 diagnostic pairs and8 paired mixed phases; strict approved source/build/observer/fixture/economic/order/query gates pass. originalFullMatrixCompleted=false honors the user-requested shorter protocol.",
+        "backend/docs/performance/backend-query/comparison-10000.json:35scenarios with100 calls\u00d73paired processes; transport/service timing and handshake separation retained.",
+        "Final749 application source files match the frozen final byte for byte; independent protocol reviews6/7, schema-fixture-parity.json, mutable resets, isolated RSS sampler and baseline named failures verified."
+      ],
+      "originalText": "yarn ts-node -r tsconfig-paths/register scripts/benchmark-backend.ts compare",
+      "scopeRevision": "User-approved shortened benchmark protocol; unqualified full-matrix compare is optional."
+    },
+    {
+      "id": "B129",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn orval",
+      "status": "verified",
+      "evidence": [
+        "Final Orval regenerated from15-controller OpenAPI export; only RateWithSource documentation changed; frontend typecheck passed"
+      ]
+    },
+    {
+      "id": "B130",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn test",
+      "status": "verified",
+      "evidence": [
+        "Frontend69 files/435 tests, typecheck, productionbuild; lint0errors3existingwarnings; /tmp/splice-frontend-m9-validation.md"
+      ]
+    },
+    {
+      "id": "B131",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn lint",
+      "status": "verified",
+      "evidence": [
+        "Frontend69 files/435 tests, typecheck, productionbuild; lint0errors3existingwarnings; /tmp/splice-frontend-m9-validation.md"
+      ]
+    },
+    {
+      "id": "B132",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn typecheck",
+      "status": "verified",
+      "evidence": [
+        "Frontend69 files/435 tests, typecheck, productionbuild; lint0errors3existingwarnings; /tmp/splice-frontend-m9-validation.md"
+      ]
+    },
+    {
+      "id": "B133",
+      "section": "Validation Commands",
+      "subsection": "",
+      "milestone": null,
+      "text": "yarn build",
+      "status": "verified",
+      "evidence": [
+        "Frontend69 files/435 tests, typecheck, productionbuild; lint0errors3existingwarnings; /tmp/splice-frontend-m9-validation.md"
+      ]
+    },
+    {
+      "id": "B134",
+      "section": "Overall Exit Criteria",
+      "subsection": "",
+      "milestone": null,
+      "text": "Shared transaction, FX, holdings, cash-flow, and balance projection paths are used by all identified HTTP/MCP callers and documented for future features.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/shared-query-services.md",
+        "Read-only reviews1\u20134 confirm identified callers share domain paths"
+      ]
+    },
+    {
+      "id": "B135",
+      "section": "Overall Exit Criteria",
+      "subsection": "",
+      "milestone": null,
+      "text": "Exact monetary persistence and contracts support ordinary and precise ETH balances; HTTP minor units and MCP major units are unambiguous. All affected frontend/App callers are updated for one coordinated contract change.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/validation/frontend-and-mcp-apps.md",
+        "Production desktop/phone/official MCP host all passed; exact10.000000000000000001ETH readback, empty/error/current states;1148 backend and435frontend tests passed"
+      ]
+    },
+    {
+      "id": "B136",
+      "section": "Overall Exit Criteria",
+      "subsection": "",
+      "milestone": null,
+      "text": "Effective-date FX is consistent across transaction/spending views; every report reconciles exactly to its corresponding rounded rows, with preserved rule semantics and clear rate provenance.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts",
+        "backend/test/transaction/transaction-page.postgres.spec.ts",
+        "backend/test/mcp/mcp-read-snapshot.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B137",
+      "section": "Overall Exit Criteria",
+      "subsection": "",
+      "milestone": null,
+      "text": "Completed empty holdings snapshots stay empty in web/MCP; sync failures and stale generations cannot publish partial or obsolete portfolios. Banking cursor/reconciliation/manual-metadata guarantees remain intact under batching.",
+      "status": "verified",
+      "evidence": [
+        "backend/test/investment/holdings.postgres.spec.ts",
+        "backend/test/transaction/transaction-sync.postgres.spec.ts"
+      ]
+    },
+    {
+      "id": "B138",
+      "section": "Overall Exit Criteria",
+      "subsection": "",
+      "milestone": null,
+      "text": "Settings patches do not lose unrelated edits; authentication still enforces expiry/revocation while reducing measured overhead.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/auth-settings/{before,after}-10000-run1.json: short paired real-service timings; recent-use physical token updates1\u21920 and due updates1\u21921 with successful identity checks.",
+        "The same focused captures preserve both disjoint/nested settings patches in every final observation (5/5 each); original loses an edit in5/5 each. Full PostgreSQL expiry/revocation/deleted-user/lock-wait and settings/provider/default races passed."
+      ]
+    },
+    {
+      "id": "B139",
+      "section": "Overall Exit Criteria",
+      "subsection": "",
+      "milestone": null,
+      "text": "Query counts, bounded work/output, real PostgreSQL plans, transport timings, CPU/memory, and payload comparisons are saved with reproducible baseline/final identities. Expected corrections and compact-output tradeoffs are explicitly separated from equivalent-result speedups.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/focused/comparison.json: completed=true,130 diagnostic pairs and8 paired mixed phases; strict approved source/build/observer/fixture/economic/order/query gates pass. originalFullMatrixCompleted=false honors the user-requested shorter protocol.",
+        "backend/docs/performance/backend-query/comparison-10000.json:35scenarios with100 calls\u00d73paired processes; transport/service timing and handshake separation retained.",
+        "Final749 application source files match the frozen final byte for byte; independent protocol reviews6/7, schema-fixture-parity.json, mutable resets, isolated RSS sampler and baseline named failures verified."
+      ]
+    },
+    {
+      "id": "B140",
+      "section": "Overall Exit Criteria",
+      "subsection": "",
+      "milestone": null,
+      "text": "All milestone exit criteria and required tests/builds/browser checks pass. No claimed production gains are inferred solely from local measurements. No staged compatibility rollout is introduced.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-performance.md: completed rigorous35-shape10k evidence and user-approved130-pair focused set, eight mixed pairs, isolated memory, compact chart/response distinction, explicit sampling omissions and shared/web/MCP/HTTP-token/indirect benefits.",
+        "backend/docs/performance/backend-query/focused/regression-review.json and regression-sparse-fx/diagnosis.json: all six diagnostic flags investigated using plans/raw samples and one bounded20-call follow-up. Retained deep-offset spill, sparse historical quote cost, completed-empty publication cost and inconclusive single tail explicitly documented.",
+        "backend/docs/performance/backend-query/focused/checks.json: strict financial/source/query gates and16 focused tests,22 CJS syntax checks, focused lint/format pass. cleanup.json confirms zero owned connections/schemas.",
+        "backend/docs/performance/validation/backend-checks.md and frontend-and-mcp-apps.md: full application, real PostgreSQL/migration/recovery, production browser and official MCP App checks passed; all749 current app source files match the measured final. Final independent whole-ledger review passed; see backend/docs/performance/validation/final-review.md."
+      ]
+    },
+    {
+      "id": "B141",
+      "section": "Risks And Resolved Questions",
+      "subsection": "",
+      "milestone": null,
+      "text": "**Resolved by user:** transaction-date FX consistency; exact string money contract changes; no staged rollout.",
+      "status": "verified",
+      "evidence": [
+        "User authorized effective-date FX, exact string contracts, no staged rollout"
+      ]
+    },
+    {
+      "id": "B142",
+      "section": "Risks And Resolved Questions",
+      "subsection": "",
+      "milestone": null,
+      "text": "**Engineering choices recorded here:** row-wise half-up conversion then exact summation; daily history default plus explicit compact sampling; initial query/output budgets; one-minute PAT usage-write coalescing with authoritative auth checks.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/shared-query-services.md",
+        "backend/docs/backend-query-release-notes.md",
+        "Full1148 backend regression tests passed"
+      ]
+    },
+    {
+      "id": "B143",
+      "section": "Risks And Resolved Questions",
+      "subsection": "",
+      "milestone": null,
+      "text": "**Migration risk:** widening storage does not recover previously rounded crypto history, and values above the old integer limit prevent a lossless schema downgrade. Validate copy/restore and forward-fix paths before release; never promise a reversible cast of arbitrary new balances.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/migrations/exact-money-recovery.json",
+        "backend/test/migrations/verify-exact-money-recovery.cjs",
+        "backend/docs/backend-query-release-notes.md"
+      ]
+    },
+    {
+      "id": "B144",
+      "section": "Risks And Resolved Questions",
+      "subsection": "",
+      "milestone": null,
+      "text": "**Baseline risk:** previous SSR/performance changes are still present in the working tree and have an independent deployment task. Freeze the actual input tree and do not overwrite or wait on that task to perform local benchmarks.",
+      "status": "verified",
+      "evidence": [
+        "Frozen baseline manifest/tree and durable source archive; unrelated SSR work preserved"
+      ]
+    },
+    {
+      "id": "B145",
+      "section": "Risks And Resolved Questions",
+      "subsection": "",
+      "milestone": null,
+      "text": "**Correctness risk:** shared builders must not erase different pending/archive/account-mode semantics. Put these choices in typed options and caller parity tests rather than implicit endpoint-specific branches.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/shared-query-services.md",
+        "backend/docs/backend-query-release-notes.md",
+        "Full1148 backend regression tests passed"
+      ]
+    },
+    {
+      "id": "B146",
+      "section": "Risks And Resolved Questions",
+      "subsection": "",
+      "milestone": null,
+      "text": "**Measurement risk:** wider exact strings and decimal arithmetic may add work in isolated cases. Measure this honestly alongside the larger I/O reductions; prioritize correctness and resolve material missed budgets explicitly rather than weakening the contract to meet a headline number.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-performance.md: completed rigorous35-shape10k evidence and user-approved130-pair focused set, eight mixed pairs, isolated memory, compact chart/response distinction, explicit sampling omissions and shared/web/MCP/HTTP-token/indirect benefits.",
+        "backend/docs/performance/backend-query/focused/regression-review.json and regression-sparse-fx/diagnosis.json: all six diagnostic flags investigated using plans/raw samples and one bounded20-call follow-up. Retained deep-offset spill, sparse historical quote cost, completed-empty publication cost and inconclusive single tail explicitly documented.",
+        "backend/docs/performance/backend-query/focused/checks.json: strict financial/source/query gates and16 focused tests,22 CJS syntax checks, focused lint/format pass. cleanup.json confirms zero owned connections/schemas.",
+        "backend/docs/performance/validation/backend-checks.md and frontend-and-mcp-apps.md: full application, real PostgreSQL/migration/recovery, production browser and official MCP App checks passed; all749 current app source files match the measured final. Final independent whole-ledger review passed; see backend/docs/performance/validation/final-review.md."
+      ]
+    },
+    {
+      "id": "B147",
+      "section": "Risks And Resolved Questions",
+      "subsection": "",
+      "milestone": null,
+      "text": "**Operational unknowns:** production cardinality, query plans, and migration lock duration remain unmeasured. Resolve locally first through milestone 1 and migration tests; any subsequent production validation follows the stack repository and existing deployment workflow. No material product decision remains open for starting implementation.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/backend-query-release-notes.md; local million-row migration/blocked-read measurements and backup/restore rehearsal passed. Production cardinality/locks remain explicitly unmeasured, no deployment performed, no staged rollout introduced."
+      ]
+    },
+    {
+      "id": "B148",
+      "section": "Current Behavior",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Audit observation: Holdings          | `InvestmentService.findLatestHoldingsForAccount` understands the factual balance header for manual holdings; `McpReadService.findLatestHoldings` does not. Twenty accounts caused 40 sequential holdings reads. Cleared manual portfolios can show old positions in MCP. Provider holdings have no explicit empty snapshot header.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/test/investment/holdings.postgres.spec.ts; backend/docs/performance/validation/frontend-and-mcp-apps.md cleared-portfolio/empty-host checks.",
+        "backend/docs/performance/backend-query/comparison-10000.json:100-account holdings SELECTs302\u21923, median540.9\u2192174.2ms; shared web/MCP header interpretation."
+      ]
+    },
+    {
+      "id": "B149",
+      "section": "Current Behavior",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Audit observation: Cash flow         | Summary, category detail, and audit reload candidates and rerun rules. `mcp.definition.ts` calls summary and audit separately per App period. Equal-amount neutralization repeatedly filters/sorts candidates. Aggregate conversion and row conversion disagree on rounding.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/test/transaction-analysis/cash-flow.postgres.spec.ts and cash-flow-matching.spec.ts; shared report inputs, exact row sums and concurrent snapshots passed.",
+        "backend/docs/performance/backend-query/comparison-10000.json: combined annual summary/audit74.1\u219230.5ms and10\u21924SELECTs; real MCP App client36.4\u219219.5ms."
+      ]
+    },
+    {
+      "id": "B150",
+      "section": "Current Behavior",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Audit observation: Balances          | `BalanceQueryService.loadDashboardProjection` and `balance-projection.ts` already support compact Home output. `BalanceHistorySurfaceService.getBalanceHistorySummary` still constructs the legacy daily account matrix.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/comparison.json: daily/compact exact-boundary/account/selected-point checks and all four isolated20/100-account ten-year memory shapes passed; full daily series remains exact.",
+        "backend/test/balance-query PostgreSQL/unit tests and backend/docs/performance/validation/backend-checks.md: no retained daily account matrix; Home point selection and consistent snapshots covered."
+      ]
+    },
+    {
+      "id": "B151",
+      "section": "Current Behavior",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Audit observation: Sync              | Banking sync preserves atomic cursor/data commits but performs per-row identity/rule reads. `InvestmentService.upsertPlaidHoldings` and `upsertPlaidInvestmentTransactions` perform separate writes without a containing transaction. Manual brokerage already uses a transaction, account lock, and positions-signature concurrency check; retain those protections.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/comparison.json:17 paired short sync shapes at50/500/5000 banking/investment rows and0/100holdings; persisted results verified, original5000-added-row bind failure corrected. Banking modified5000reads25000\u219222/writes10000\u219240; investment5000reads10000\u219220.",
+        "14banking+12holdings real PostgreSQL correctness cases cover overlap, rollback, complete/empty publication, stale generations, pending replacement and manual guards."
+      ]
+    },
+    {
+      "id": "B152",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Focused holdings/portfolio evidence: retain rigorous 1/20/100-account main holdings comparisons and short representative empty/10-position, mixed-currency and snapshot-date checks; full PostgreSQL/browser/MCP correctness coverage remains required.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/comparison-10000.json and focused/extended captures:1/20/100accounts,0/10/100positions, mixed currency/snapshot dates; exact full/empty shared-read checks pass. Production cleared-holdings and official MCP App evidence also passed."
+      ],
+      "originalText": "Benchmark matrix: Holdings/portfolio         | 1/20/100 accounts; 0/10/100 positions each; empty latest versus older nonempty snapshot; mixed currency and snapshot dates                                                    | Does batching remove account fanout, and do HTTP/MCP report the same complete snapshot?",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    },
+    {
+      "id": "B153",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Focused cash-flow evidence: rigorous main month/year/comparison and 500/1k/2k matching CPU cases, plus short paired rules/lookaround variants. Preserve all matching/reconciliation regression tests.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/comparison-10000.json and focused/shape captures: month/year/combined comparison reports, rules/lookaround and500/1000/2000matching cases all passed exact result and query-work assertions."
+      ],
+      "originalText": "Benchmark matrix: Cash flow                  | Month/year ranges; rules off/on; lookaround boundaries; comparison periods; 500/1k/2k equal-amount matching rows                                                              | Are candidates/rules evaluated once per period, matching scalable, and summary/drilldown exact?",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    },
+    {
+      "id": "B154",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Focused provider-sync evidence: short paired representative 50/500/5000-row banking/investment workloads, including rules and modified rows where applicable; full duplicate/pending/partial-failure/retry/overlap correctness coverage remains required.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/comparison.json:17 paired short sync shapes at50/500/5000 banking/investment rows and0/100holdings; persisted results verified, original5000-added-row bind failure corrected. Banking modified5000reads25000\u219222/writes10000\u219240; investment5000reads10000\u219220.",
+        "14banking+12holdings real PostgreSQL correctness cases cover overlap, rollback, complete/empty publication, stale generations, pending replacement and manual guards."
+      ],
+      "originalText": "Benchmark matrix: Provider sync              | 50/500/5k added/modified rows; rules on/off; duplicates/pending replacements; investment empty/full/partial-failure batches                                                   | Do reads/writes scale by batches, commits stay atomic, and retry/overlap semantics hold?",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    },
+    {
+      "id": "B155",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Focused mixed/auth/settings evidence: one low/high-concurrency 30-second phase with and without sync for PAT HTTP and Auth0 MCP separately; short paired PAT/settings samples with physical-write and persisted-patch verification.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/comparison.json: eight paired30-second HTTP/PAT versus Auth0 MCP phases, concurrency1/10 with/without saturated50-row sync; zero errors, observed throughput/pool/loop/tails saved. At10clients+sync HTTP229\u2192250reads/s while sync1.10\u219232.11batches/s; MCP39.21\u2192144.86reads/s while sync2.62\u219217.75batches/s. These are diagnostic and offered write rates differ.",
+        "backend/test/transaction/transaction-sync.postgres.spec.ts and focused/auth-settings: atomic cursor/events plus physical token writes and persisted settings assertions passed."
+      ],
+      "originalText": "Benchmark matrix: Mixed load/auth/settings   | Read concurrency 1/5/10 with and without sync; standalone Auth0 MCP and PAT HTTP separately; parallel settings patches                                                        | Do latency tails/pool waits improve without weakening consistency or authentication?",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    },
+    {
+      "id": "B156",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Focused transaction evidence: completed rigorous 10k sorting/pagination/search results, short 100k/1m scale checks against saved original captures, representative filter diagnostics and query plans; all ordering/filter/cursor correctness tests remain required.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/comparison-10000.json and focused scale-100000/scale-1000000/filters/extended cursor results: all sorts, first/deep pages, category/combined filters, search and source/order/query plans retained. Adopted date/merchant/pending cursor continuations use1SELECT with noCOUNT/OFFSET; legacy deep-offset cost is separately documented."
+      ],
+      "originalText": "Benchmark matrix: Transaction lists/search   | 10k/100k/1m total rows across users; target users with 1k/10k/100k rows; first and deep pages; each current sort; date/account/category/merchant filters; large provider JSON | Do date indexes, slim projections, keyset continuation, and count separation reduce work while preserving selection/order?",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    },
+    {
+      "id": "B157",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Focused MCP conversion evidence: completed rigorous 1/10/100-date and 1/3-currency FX cases plus short 100k-candidate rare/no-match checks with truthful advancing continuation and an independent ordered SQL oracle. Avoid exhaustive old filtered scans.",
+      "status": "verified",
+      "evidence": [
+        "Completed rigorous evidence: backend/docs/performance/backend-query/comparison-10000.{json,md}; 35 scenarios, three paired independent processes, 100 calls per successful latency case. Strict economic/order/provenance/query-budget checks pass; zero material regression flags. The user-approved focused larger-data and supplemental set is also complete; exhaustive repeats were intentionally omitted.",
+        "backend/docs/performance/backend-query/comparison-10000.json: FX1/10/100dates\u00d71/3currencies and actualMCPtransport verified. Focused1m rare/no-match100k-candidate cases verify full continuation against independent SQL order/output oracle; finalfirst response fetches5001rows for5000budget with truthful continuation, not a false complete empty result."
+      ],
+      "originalText": "Benchmark matrix: MCP transaction conversion | 100 returned foreign rows on 1/10/100 dates; 1/3 currencies; no-match/rare converted-amount filters over 100k candidate rows                                                  | Does FX query count stay bounded, and does expensive filtered search return truthful advancing continuation?",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    },
+    {
+      "id": "B158",
+      "section": "Benchmark Matrix",
+      "subsection": "",
+      "milestone": 10,
+      "text": "Focused history evidence: retain rigorous daily month/year/ten-year cases; use short paired sparse/dense/fallback and compact variants plus isolated 20/100-account daily/compact memory captures. Missing-rate and exact-output regression checks remain required.",
+      "status": "verified",
+      "evidence": [
+        "backend/docs/performance/backend-query/focused/comparison.json: daily/compact exact-boundary/account/selected-point checks and all four isolated20/100-account ten-year memory shapes passed; full daily series remains exact.",
+        "backend/test/balance-query PostgreSQL/unit tests and backend/docs/performance/validation/backend-checks.md: no retained daily account matrix; Home point selection and consistent snapshots covered."
+      ],
+      "originalText": "Benchmark matrix: Balance history            | 20/100 accounts; 1 month/1 year/10 years; sparse/dense snapshots; missing/fallback rates; daily and compact separately                                                        | Is the matrix gone, are exact history results preserved, and what is the explicit payload/resolution tradeoff?",
+      "scopeRevision": "User requested shorter benchmark set; focused protocol in the plan supersedes unfinished exhaustive sampling."
+    }
+  ],
+  "reviewPasses": [
+    {
+      "reviewer": "backend_correctness_review",
+      "kind": "read-only pass1",
+      "result": "4 correctness findings and narrow-read gap; fixed and regression-tested"
+    },
+    {
+      "reviewer": "backend_correctness_review",
+      "kind": "read-only pass2",
+      "result": "Manual inverseFX rounding and cursor merchant scope follow-ups; fixed and regression-tested"
+    },
+    {
+      "reviewer": "backend_correctness_review",
+      "kind": "read-only pass3 small-diff recheck",
+      "result": "Prior code findings resolved; overall benchmark/browser/ledger signoff still pending"
+    },
+    {
+      "reviewer": "backend_correctness_review",
+      "kind": "read-only pass4 input/FX snapshot and reuse review",
+      "result": "All prior code findings closed; B057 addressed across HTTP/MCP transactions, portfolio and balances; final benchmark/browser/ledger signoff pending"
+    },
+    {
+      "reviewer": "backend_correctness_review",
+      "kind": "read-only pass5 benchmark protocol and coverage",
+      "result": "Seven measurement/coverage findings fixed: explicit provenance, production metrics, amount-sort oracle, descriptive text, isolated PAT/settings, edge probes, and accurate labels. Both frozen-source smoke runs passed."
+    },
+    {
+      "reviewer": "backend_correctness_review",
+      "kind": "read-only pass6 benchmark protocol closure",
+      "result": "All seven protocol findings closed in harness and smoke evidence; no remaining concrete defect. Full repeated sampling, performance analysis and final whole-ledger review remain pending."
+    },
+    {
+      "reviewer": "backend_correctness_review",
+      "kind": "Focused protocol review (pass7), read-only",
+      "result": "No material new defect. Retained10k35scenarios/three paired runs/non-exploratory/no regression; focused runner matches amended inventory; comparator preserves financial/order/budget/provenance checks. Small samples labeled diagnostic and originalFullMatrixCompleted remains false. Final artifacts/ledger signoff pending."
+    },
+    {
+      "reviewer": "backend_correctness_review",
+      "kind": "Final whole-ledger read-only review (pass8)",
+      "result": "No major issues remain. All158 verified criteria and10milestones supported; rigorous/focused metrics, mixed/memory, all six diagnostic regressions, migration/recovery, release/shared-service docs and browser/test evidence reviewed. Two stale historical wording issues corrected without application change or recapture.",
+      "evidence": "backend/docs/performance/validation/final-review.md"
+    }
+  ],
+  "migrationMeasurement": "backend/docs/performance/migrations/backend-query-2026-09-05.json",
+  "finalSource": {
+    "snapshot": "/tmp/splice-backend-final-20260905-224946",
+    "sourceTreeSha256": "70137903f5d0d2c7de14e62b98906720543075bcb238b7014efa4d4cf1886c83",
+    "capturedAt": "2026-09-05T22:49:46.875263+00:00",
+    "note": "Application unchanged after code review; final browser fixtures included; nonfunctional tmp screenshots excluded."
+  },
+  "scopeRevision": {
+    "userRequest": "Why do they take so long? Can we do a shorter benchmark set",
+    "effect": "All ten implementation milestones and correctness/review requirements remain. The unfinished full 100\u00d73 benchmark matrix is replaced by the focused protocol in the plan. Original criteria are retained as originalText for amended entries.",
+    "retainedRigorousEvidence": "backend/docs/performance/backend-query/comparison-10000.json",
+    "interruptedEvidence": "backend/docs/performance/backend-query/interrupted-shortened-scope/",
+    "status": "User-approved focused measurements complete; original exhaustive repeats intentionally omitted."
+  },
+  "finalVerification": {
+    "criteria": 158,
+    "verified": 158,
+    "strongScenarios": 35,
+    "strongIndependentRunsPerVariant": 3,
+    "strongCallsPerSuccessfulCase": 100,
+    "focusedDiagnosticPairs": 130,
+    "mixedPhasePairs": 8,
+    "isolatedMemoryShapes": 4,
+    "applicationSourceFilesCompared": 749,
+    "applicationSourceDifferences": 0,
+    "finalIndependentReview": "No major issues remain.",
+    "reviewPasses": 8
+  }
+}

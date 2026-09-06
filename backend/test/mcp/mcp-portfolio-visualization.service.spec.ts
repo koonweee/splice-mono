@@ -1,3 +1,4 @@
+import { decimalRateRatio } from '../../src/common/exact-money';
 import { McpPublicError } from '@koonweee/mcp-kit';
 import { CurrencyConversionService } from '../../src/currency-exchange/currency-conversion.service';
 import { McpPortfolioVisualizationService } from '../../src/mcp/mcp-portfolio-visualization.service';
@@ -32,7 +33,7 @@ function holding(
     costBasis: null,
     institutionPrice: '40',
     institutionValue: {
-      amount: 100,
+      amount: '100',
       currency: 'USD',
       sign: MoneySign.POSITIVE,
     },
@@ -44,8 +45,12 @@ function holding(
 }
 
 describe('McpPortfolioVisualizationService', () => {
-  const mcpReadService = { listInvestmentHoldings: jest.fn() };
-  const currencyConversionService = { getRateMap: jest.fn() };
+  const snapshotManager = {};
+  const mcpReadService = {
+    listInvestmentHoldings: jest.fn(),
+    withReadSnapshot: jest.fn(async (reader) => reader(snapshotManager)),
+  };
+  const currencyConversionService = { getResolvedRates: jest.fn() };
   let service: McpPortfolioVisualizationService;
 
   it('emits the concrete Nest provider types for production dependency injection', () => {
@@ -59,6 +64,7 @@ describe('McpPortfolioVisualizationService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    currencyConversionService.getResolvedRates.mockResolvedValue(new Map());
     service = new McpPortfolioVisualizationService(
       mcpReadService as never,
       currencyConversionService as never,
@@ -77,7 +83,7 @@ describe('McpPortfolioVisualizationService', () => {
           quantity: '1.25',
           institutionPrice: '61.1066666667',
           institutionValue: {
-            amount: 50.01,
+            amount: '50.01',
             currency: 'sgd',
             sign: MoneySign.POSITIVE,
           },
@@ -91,7 +97,7 @@ describe('McpPortfolioVisualizationService', () => {
           quantity: null,
           institutionPrice: null,
           institutionValue: {
-            amount: 25,
+            amount: '25',
             currency: 'EUR',
             sign: MoneySign.POSITIVE,
           },
@@ -100,12 +106,19 @@ describe('McpPortfolioVisualizationService', () => {
       ],
       query: { latestOnly: true },
     });
-    currencyConversionService.getRateMap.mockImplementation(
-      async (currencies: string[], _target: string, date: string) =>
+    currencyConversionService.getResolvedRates.mockImplementation(
+      async (requests) =>
         new Map(
-          currencies.map((currency) => [
-            currency,
-            currency === 'SGD' && date === '2026-08-16' ? 0.75 : 1.2,
+          requests.map((request) => [
+            `${request.baseCurrency}:${request.targetCurrency}:${request.requestedDate}`,
+            {
+              ratio: decimalRateRatio(
+                request.baseCurrency === 'SGD' &&
+                  request.requestedDate === '2026-08-16'
+                  ? '0.75'
+                  : '1.2',
+              ),
+            },
           ]),
         ),
     );
@@ -115,42 +128,48 @@ describe('McpPortfolioVisualizationService', () => {
     expect(mcpReadService.listInvestmentHoldings).toHaveBeenCalledWith(
       USER_ID,
       { accountIds: [ACCOUNT_A], latestOnly: true },
+      snapshotManager,
     );
     expect(mcpReadService.listInvestmentHoldings).toHaveBeenCalledTimes(1);
-    expect(currencyConversionService.getRateMap).toHaveBeenCalledTimes(2);
-    expect(currencyConversionService.getRateMap).toHaveBeenCalledWith(
-      ['EUR'],
-      'USD',
-      '2026-08-15',
-    );
-    expect(currencyConversionService.getRateMap).toHaveBeenCalledWith(
-      ['SGD'],
-      'USD',
-      '2026-08-16',
+    expect(currencyConversionService.getResolvedRates).toHaveBeenCalledTimes(1);
+    expect(currencyConversionService.getResolvedRates).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        {
+          baseCurrency: 'EUR',
+          targetCurrency: 'USD',
+          requestedDate: '2026-08-15',
+        },
+        {
+          baseCurrency: 'SGD',
+          targetCurrency: 'USD',
+          requestedDate: '2026-08-16',
+        },
+      ]),
+      snapshotManager,
     );
     expect(result).toMatchObject({
       reportingCurrency: 'USD',
-      totalValueUsd: { amount: 167.51, currency: 'USD', sign: 'positive' },
+      totalValueUsd: { amount: '167.51', currency: 'USD', sign: 'positive' },
       snapshotRange: { earliest: '2026-08-15', latest: '2026-08-16' },
       selectedAccountIds: [ACCOUNT_A],
       positions: [
         {
           securityId: SECURITY_A,
           quantity: '3.75',
-          valueUsd: { amount: 137.51 },
+          valueUsd: { amount: '137.51' },
           contributions: [
-            { accountId: ACCOUNT_A, valueUsd: { amount: 100 } },
+            { accountId: ACCOUNT_A, valueUsd: { amount: '100' } },
             {
               accountId: ACCOUNT_B,
-              valueUsd: { amount: 37.51 },
-              priceUsd: { amount: 45.83 },
+              valueUsd: { amount: '37.51' },
+              priceUsd: { amount: '45.83' },
             },
           ],
         },
         {
           securityId: SECURITY_B,
           quantity: null,
-          valueUsd: { amount: 30 },
+          valueUsd: { amount: '30' },
           contributions: [{ priceUsd: null }],
         },
       ],
@@ -162,7 +181,7 @@ describe('McpPortfolioVisualizationService', () => {
     expect(
       PortfolioVisualizationDataSchema.safeParse({
         ...result,
-        totalValueUsd: { ...result.totalValueUsd, amount: 167.511 },
+        totalValueUsd: { ...result.totalValueUsd, amount: '167.511' },
       }).success,
     ).toBe(false);
   });
@@ -175,11 +194,14 @@ describe('McpPortfolioVisualizationService', () => {
 
     await expect(service.visualize(USER_ID)).resolves.toEqual({
       reportingCurrency: 'USD',
-      totalValueUsd: { amount: 0, currency: 'USD', sign: 'positive' },
+      totalValueUsd: { amount: '0', currency: 'USD', sign: 'positive' },
       snapshotRange: null,
       positions: [],
     });
-    expect(currencyConversionService.getRateMap).not.toHaveBeenCalled();
+    expect(currencyConversionService.getResolvedRates).toHaveBeenCalledWith(
+      [],
+      snapshotManager,
+    );
   });
 
   it('defensively treats an empty account list as an unscoped latest request', async () => {
@@ -195,8 +217,33 @@ describe('McpPortfolioVisualizationService', () => {
       {
         latestOnly: true,
       },
+      snapshotManager,
     );
     expect(result).not.toHaveProperty('selectedAccountIds');
+  });
+
+  it('reports zero-only foreign values without requiring an exchange rate', async () => {
+    mcpReadService.listInvestmentHoldings.mockResolvedValue({
+      data: [
+        holding({
+          currency: 'EUR',
+          institutionPrice: null,
+          institutionValue: {
+            amount: '0',
+            currency: 'EUR',
+            sign: MoneySign.POSITIVE,
+          },
+        }),
+      ],
+      query: { latestOnly: true },
+    });
+    const result = await service.visualize(USER_ID);
+    expect(result.totalValueUsd.amount).toBe('0');
+    expect(result.positions[0].contributions[0].priceUsd).toBeNull();
+    expect(currencyConversionService.getResolvedRates).toHaveBeenCalledWith(
+      [],
+      snapshotManager,
+    );
   });
 
   it('keeps zero-value positions with zero allocation and a stable security tie-break', async () => {
@@ -205,7 +252,7 @@ describe('McpPortfolioVisualizationService', () => {
         holding({
           securityId: SECURITY_B,
           institutionValue: {
-            amount: 0,
+            amount: '0',
             currency: 'USD',
             sign: MoneySign.POSITIVE,
           },
@@ -213,7 +260,7 @@ describe('McpPortfolioVisualizationService', () => {
         holding({
           securityId: SECURITY_A,
           institutionValue: {
-            amount: 0,
+            amount: '0',
             currency: 'USD',
             sign: MoneySign.POSITIVE,
           },
@@ -224,7 +271,7 @@ describe('McpPortfolioVisualizationService', () => {
 
     const result = await service.visualize(USER_ID);
 
-    expect(result.totalValueUsd.amount).toBe(0);
+    expect(result.totalValueUsd.amount).toBe('0');
     expect(
       result.positions.map((position) => ({
         securityId: position.securityId,
@@ -243,7 +290,7 @@ describe('McpPortfolioVisualizationService', () => {
       'negative exposure',
       {
         institutionValue: {
-          amount: 10,
+          amount: '10',
           currency: 'USD',
           sign: MoneySign.NEGATIVE,
         },
@@ -274,8 +321,16 @@ describe('McpPortfolioVisualizationService', () => {
   });
 
   it.each([
-    ['missing', new Map<string, number>()],
-    ['invalid', new Map<string, number>([['EUR', Number.NaN]])],
+    ['missing', new Map()],
+    [
+      'invalid',
+      new Map([
+        [
+          'EUR:USD:2026-08-15',
+          { ratio: { numerator: 'invalid', denominator: '1' } },
+        ],
+      ]),
+    ],
   ])(
     'fails the entire portfolio when a historical rate is %s',
     async (_label, rates) => {
@@ -283,7 +338,7 @@ describe('McpPortfolioVisualizationService', () => {
         data: [
           holding({
             institutionValue: {
-              amount: 100,
+              amount: '100',
               currency: 'EUR',
               sign: MoneySign.POSITIVE,
             },
@@ -292,7 +347,7 @@ describe('McpPortfolioVisualizationService', () => {
         ],
         query: { latestOnly: true },
       });
-      currencyConversionService.getRateMap.mockResolvedValue(rates);
+      currencyConversionService.getResolvedRates.mockResolvedValue(rates);
 
       await expect(service.visualize(USER_ID)).rejects.toThrow(
         'Portfolio values are temporarily unavailable.',
@@ -307,6 +362,6 @@ describe('McpPortfolioVisualizationService', () => {
     await expect(service.visualize(USER_ID, [ACCOUNT_B])).rejects.toBe(
       ownershipError,
     );
-    expect(currencyConversionService.getRateMap).not.toHaveBeenCalled();
+    expect(currencyConversionService.getResolvedRates).not.toHaveBeenCalled();
   });
 });

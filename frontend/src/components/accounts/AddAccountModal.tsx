@@ -4,7 +4,6 @@ import {
   Button,
   Group,
   Loader,
-  NumberInput,
   Select,
   Stack,
   Text,
@@ -28,8 +27,9 @@ import {
 } from '../../api/clients/spliceAPI'
 import { AccountSubType, AccountType } from '../../api/models'
 import { getApiErrorMessage } from '../../lib/api-errors'
+import { DecimalInput } from '../forms/DecimalInput'
+import { tryParseMoneyDraft } from '../../lib/money'
 import { createMoneyWithSign } from '../../lib/balance-utils'
-import { getDecimalPlaces } from '../../lib/format'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
 import { Pressable } from '../Pressable'
@@ -147,7 +147,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
   const [network, setNetwork] = useState<InitiateLinkRequestNetwork>('ethereum')
   const [manualName, setManualName] = useState('')
   const [manualCurrency, setManualCurrency] = useState('USD')
-  const [manualBalance, setManualBalance] = useState<number | string>(0)
+  const [manualBalance, setManualBalance] = useState('0')
   const [manualTypeSelection, setManualTypeSelection] = useState('cash')
   const [manualPositions, setManualPositions] = useState<
     Array<ManualBrokeragePositionDraft>
@@ -161,7 +161,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
     setWalletAddress('')
     setNetwork('ethereum')
     setManualName('')
-    setManualBalance(0)
+    setManualBalance('0')
     setManualTypeSelection('cash')
     setManualPositions([])
     setSelectedProvider(undefined)
@@ -283,14 +283,13 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
       return
     }
 
+    if (!tryParseMoneyDraft(manualBalance, manualCurrency)) return
+
     // For 401(k) and HSA accounts, effective balance = available + current,
     // so set available to zero to avoid doubling.
     const isInvestmentType = typeDef.type === AccountType.investment
-    const balancePayload = createMoneyWithSign(
-      Number(manualBalance),
-      manualCurrency,
-    )
-    const zeroBalance = createMoneyWithSign(0, manualCurrency)
+    const balancePayload = createMoneyWithSign(manualBalance, manualCurrency)
+    const zeroBalance = createMoneyWithSign('0', manualCurrency)
 
     createAccount.mutate(
       {
@@ -391,11 +390,13 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
           />
         </>
       ) : (
-        <NumberInput
+        <DecimalInput
           label="Current balance"
-          decimalScale={getDecimalPlaces(manualCurrency)}
-          fixedDecimalScale
-          prefix={manualCurrency === 'USD' ? '$' : ''}
+          error={
+            tryParseMoneyDraft(manualBalance, manualCurrency)
+              ? undefined
+              : 'Enter a valid balance'
+          }
           size="md"
           value={manualBalance}
           onChange={setManualBalance}

@@ -7,7 +7,6 @@ import { CategoryService } from '../../src/category/category.service';
 import { BalanceColumns } from '../../src/common/balance.columns';
 import { TransactionEntity } from '../../src/transaction/transaction.entity';
 import { TransactionService } from '../../src/transaction/transaction.service';
-import { TransactionEvents } from '../../src/events/transaction.events';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 import type {
   CreateManualTransactionDto,
@@ -42,7 +41,7 @@ function buildCreateDto(
 ): CreateTransactionDto {
   return {
     amount: {
-      money: { amount: 1200, currency: 'USD' },
+      money: { amount: '1200', currency: 'USD' },
       sign: MoneySign.NEGATIVE,
     },
     accountId,
@@ -59,7 +58,7 @@ function buildManualDto(
   return {
     accountId,
     amount: {
-      money: { amount: 3400, currency: 'USD' },
+      money: { amount: '3400', currency: 'USD' },
       sign: MoneySign.NEGATIVE,
     },
     merchantName: 'Manual Store',
@@ -80,13 +79,13 @@ function buildAccount(overrides: Partial<AccountEntity> = {}): AccountEntity {
   account.availableBalance =
     overrides.availableBalance ??
     BalanceColumns.fromMoneyWithSign({
-      money: { amount: 100000, currency: 'USD' },
+      money: { amount: '100000', currency: 'USD' },
       sign: MoneySign.POSITIVE,
     });
   account.currentBalance =
     overrides.currentBalance ??
     BalanceColumns.fromMoneyWithSign({
-      money: { amount: 100000, currency: 'USD' },
+      money: { amount: '100000', currency: 'USD' },
       sign: MoneySign.POSITIVE,
     });
   account.type = overrides.type ?? 'depository';
@@ -273,7 +272,7 @@ describe('TransactionService', () => {
     });
     expect(result?.source).toBe('manual');
     expect(result?.amount.money.currency).toBe('USD');
-    expect(result?.amount.money.amount).toBe(3400);
+    expect(result?.amount.money.amount).toBe('3400');
     expect(result?.categoryAssignmentSource).toBe('manual');
     expect(result?.categoryAssignmentRuleId).toBeNull();
     expect(result?.categoryId).toBe(category.id);
@@ -317,7 +316,7 @@ describe('TransactionService', () => {
         userId,
         buildManualDto({
           amount: {
-            money: { amount: 0, currency: 'USD' },
+            money: { amount: '0', currency: 'USD' },
             sign: MoneySign.NEGATIVE,
           },
         }),
@@ -334,12 +333,12 @@ describe('TransactionService', () => {
         userId,
         buildManualDto({
           amount: {
-            money: { amount: -1200, currency: 'USD' },
+            money: { amount: '-1200', currency: 'USD' },
             sign: MoneySign.NEGATIVE,
           },
         }),
       ),
-    ).rejects.toThrow('Manual transaction amount must be positive');
+    ).rejects.toThrow('nonnegative');
 
     accountRepository.findOne.mockResolvedValueOnce(buildAccount());
     categoryService.findActiveAssignableCategory.mockResolvedValueOnce(
@@ -351,7 +350,7 @@ describe('TransactionService', () => {
         userId,
         buildManualDto({
           amount: {
-            money: { amount: 1200, currency: 'EUR' },
+            money: { amount: '1200', currency: 'EUR' },
             sign: MoneySign.NEGATIVE,
           },
         }),
@@ -366,14 +365,14 @@ describe('TransactionService', () => {
     const newAccount = buildAccount({
       id: '00000000-0000-4000-8000-000000000011',
       currentBalance: BalanceColumns.fromMoneyWithSign({
-        money: { amount: 200000, currency: 'EUR' },
+        money: { amount: '200000', currency: 'EUR' },
         sign: MoneySign.POSITIVE,
       }),
     });
     const updateDto = buildManualDto({
       accountId: newAccount.id,
       amount: {
-        money: { amount: 9900, currency: 'EUR' },
+        money: { amount: '9900', currency: 'EUR' },
         sign: MoneySign.POSITIVE,
       },
       merchantName: 'Updated Manual Store',
@@ -403,7 +402,7 @@ describe('TransactionService', () => {
     expect(updated?.source).toBe('manual');
     expect(manualTransaction.accountId).toBe(newAccount.id);
     expect(manualTransaction.amount.toMoneyWithSign()).toEqual({
-      money: { amount: 9900, currency: 'EUR' },
+      money: { amount: '9900', currency: 'EUR' },
       sign: MoneySign.POSITIVE,
     });
     expect(manualTransaction.merchantName).toBe('Updated Manual Store');
@@ -716,694 +715,7 @@ describe('TransactionService', () => {
     expect(transaction.categoryId).toBeNull();
   });
 
-  it('sync inserts provider hints without resolving provider categories into app categories', async () => {
-    const saved: TransactionEntity[] = [];
-    const txnRepo = {
-      save: jest.fn(
-        async (entities: TransactionEntity | TransactionEntity[]) => {
-          if (Array.isArray(entities)) {
-            entities.forEach((entity, index) => {
-              entity.id = `00000000-0000-4000-8000-00000000030${index}`;
-            });
-            saved.push(...entities);
-          } else {
-            saved.push(entities);
-          }
-          return entities;
-        },
-      ),
-      findOne: jest.fn(),
-      find: jest.fn().mockResolvedValue([]),
-      remove: jest.fn(),
-    };
-    repository.manager.transaction.mockImplementation(
-      async (
-        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
-      ) => callback({ getRepository: () => txnRepo }),
-    );
-
-    await service.processSyncResults(
-      userId,
-      new Map([['external-account-id', accountId]]),
-      {
-        added: [
-          buildCreateDto({
-            accountId: 'external-account-id',
-            externalTransactionId: 'external-txn-id',
-            personalFinanceCategory: {
-              primary: 'GENERAL_MERCHANDISE',
-              detailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
-            },
-          }),
-        ],
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor',
-        hasMore: false,
-      },
-    );
-
-    expect(saved[0].categoryId).toBeNull();
-    expect(saved[0].source).toBe('provider');
-    expect(saved[0].providerCategoryProvider).toBe('plaid');
-    expect(saved[0].providerCategoryPrimary).toBe('GENERAL_MERCHANDISE');
-    expect(eventEmitter.emit).toHaveBeenCalledWith(
-      TransactionEvents.PROVIDER_TRANSACTIONS_SYNCED,
-      expect.objectContaining({
-        userId,
-        transactionIds: [saved[0].id],
-        accountIds: [accountId],
-        count: 1,
-      }),
-    );
-  });
-
-  it('sync assigns rule categories to new provider transactions', async () => {
-    const ruleId = '00000000-0000-4000-8000-000000000999';
-    const saved: TransactionEntity[] = [];
-    const txnRepo = {
-      save: jest.fn(
-        async (entities: TransactionEntity | TransactionEntity[]) => {
-          if (Array.isArray(entities)) {
-            saved.push(...entities);
-          } else {
-            saved.push(entities);
-          }
-          return entities;
-        },
-      ),
-      findOne: jest.fn(),
-      find: jest.fn().mockResolvedValue([]),
-      remove: jest.fn(),
-    };
-    repository.manager.transaction.mockImplementation(
-      async (
-        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
-      ) => callback({ getRepository: () => txnRepo }),
-    );
-    transactionCategorizationService.applyRuleAssignmentIfEligible.mockImplementation(
-      async (_userId: string, transaction: TransactionEntity) => {
-        transaction.categoryId = category.id;
-        transaction.categoryAssignmentSource = 'rule';
-        transaction.categoryAssignmentRuleId = ruleId;
-        transaction.categoryUpdatedAt = new Date('2026-02-15T00:00:00.000Z');
-        return true;
-      },
-    );
-
-    await service.processSyncResults(
-      userId,
-      new Map([['external-account-id', accountId]]),
-      {
-        added: [
-          buildCreateDto({
-            accountId: 'external-account-id',
-            externalTransactionId: 'external-txn-id',
-            merchantName: 'Uber Trip',
-          }),
-        ],
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor',
-        hasMore: false,
-      },
-    );
-
-    expect(saved[0].categoryId).toBe(category.id);
-    expect(saved[0].categoryAssignmentSource).toBe('rule');
-    expect(saved[0].categoryAssignmentRuleId).toBe(ruleId);
-    expect(saved[0].categoryUpdatedAt).toBeInstanceOf(Date);
-    expect(eventEmitter.emit).not.toHaveBeenCalled();
-  });
-
-  it('sync notification includes only new uncategorized provider transactions', async () => {
-    const ruleId = '00000000-0000-4000-8000-000000000999';
-    const saved: TransactionEntity[] = [];
-    const txnRepo = {
-      save: jest.fn(
-        async (entities: TransactionEntity | TransactionEntity[]) => {
-          if (Array.isArray(entities)) {
-            entities.forEach((entity, index) => {
-              entity.id = `00000000-0000-4000-8000-00000000040${index}`;
-            });
-            saved.push(...entities);
-          } else {
-            saved.push(entities);
-          }
-          return entities;
-        },
-      ),
-      findOne: jest.fn(),
-      find: jest.fn().mockResolvedValue([]),
-      remove: jest.fn(),
-    };
-    repository.manager.transaction.mockImplementation(
-      async (
-        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
-      ) => callback({ getRepository: () => txnRepo }),
-    );
-    transactionCategorizationService.applyRuleAssignmentIfEligible.mockImplementation(
-      async (_userId: string, transaction: TransactionEntity) => {
-        if (transaction.merchantName !== 'Matched Merchant') {
-          return false;
-        }
-
-        transaction.categoryId = category.id;
-        transaction.categoryAssignmentSource = 'rule';
-        transaction.categoryAssignmentRuleId = ruleId;
-        transaction.categoryUpdatedAt = new Date('2026-02-15T00:00:00.000Z');
-        return true;
-      },
-    );
-
-    await service.processSyncResults(
-      userId,
-      new Map([['external-account-id', accountId]]),
-      {
-        added: [
-          buildCreateDto({
-            accountId: 'external-account-id',
-            externalTransactionId: 'categorized-external-id',
-            merchantName: 'Matched Merchant',
-          }),
-          buildCreateDto({
-            accountId: 'external-account-id',
-            externalTransactionId: 'uncategorized-external-id',
-            merchantName: 'Unknown Merchant',
-          }),
-        ],
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor',
-        hasMore: false,
-      },
-    );
-
-    expect(saved).toHaveLength(2);
-    expect(eventEmitter.emit).toHaveBeenCalledWith(
-      TransactionEvents.PROVIDER_TRANSACTIONS_SYNCED,
-      expect.objectContaining({
-        userId,
-        transactionIds: ['00000000-0000-4000-8000-000000000401'],
-        accountIds: [accountId],
-        count: 1,
-      }),
-    );
-  });
-
-  it('sync updates matched pending transactions to posted while preserving user metadata', async () => {
-    const categoryUpdatedAt = new Date('2026-02-14T12:00:00.000Z');
-    const pendingTransaction = buildTransaction({
-      id: '00000000-0000-4000-8000-000000000300',
-      accountId,
-      externalTransactionId: 'pending-external-id',
-      pending: true,
-      categoryId: category.id,
-      category,
-      categoryUpdatedAt,
-      reportingDateOverride: '2026-02-13',
-      providerCategoryProvider: 'plaid',
-      providerCategoryPrimary: 'GENERAL_MERCHANDISE',
-      providerCategoryDetailed: 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE',
-      categoryAssignmentSource: 'manual',
-      categoryAssignmentRuleId: null,
-    });
-    const saved: TransactionEntity[] = [];
-    const txnRepo = {
-      save: jest.fn(
-        async (entities: TransactionEntity | TransactionEntity[]) => {
-          if (Array.isArray(entities)) {
-            saved.push(...entities);
-          } else {
-            saved.push(entities);
-          }
-          return entities;
-        },
-      ),
-      findOne: jest
-        .fn()
-        .mockImplementation(async (options) =>
-          options.where.pending === true ? pendingTransaction : null,
-        ),
-      find: jest.fn().mockResolvedValue([]),
-      remove: jest.fn(),
-    };
-    repository.manager.transaction.mockImplementation(
-      async (
-        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
-      ) => callback({ getRepository: () => txnRepo }),
-    );
-
-    await service.processSyncResults(
-      userId,
-      new Map([['external-account-id', accountId]]),
-      {
-        added: [
-          buildCreateDto({
-            accountId: 'external-account-id',
-            externalTransactionId: 'posted-external-id',
-            pending: false,
-            pendingTransactionId: 'pending-external-id',
-            merchantName: 'Posted Store',
-            providerDate: '2026-02-15',
-            personalFinanceCategory: undefined,
-          }),
-        ],
-        modified: [],
-        removed: ['pending-external-id'],
-        nextCursor: 'cursor',
-        hasMore: false,
-      },
-    );
-
-    expect(txnRepo.findOne).toHaveBeenCalledWith({
-      where: {
-        activity: {
-          externalActivityId: 'pending-external-id',
-          accountId,
-          userId,
-        },
-        pending: true,
-      },
-      relations: ['activity', 'activity.account', 'category'],
-    });
-    expect(saved).toHaveLength(1);
-    expect(saved[0]).toBe(pendingTransaction);
-    expect(pendingTransaction.id).toBe('00000000-0000-4000-8000-000000000300');
-    expect(pendingTransaction.source).toBe('provider');
-    expect(pendingTransaction.externalTransactionId).toBe('posted-external-id');
-    expect(pendingTransaction.pending).toBe(false);
-    expect(pendingTransaction.pendingTransactionId).toBe('pending-external-id');
-    expect(pendingTransaction.merchantName).toBe('Posted Store');
-    expect(pendingTransaction.providerDate).toBe('2026-02-15');
-    expect(pendingTransaction.categoryId).toBe(category.id);
-    expect(pendingTransaction.category).toBe(category);
-    expect(pendingTransaction.categoryUpdatedAt).toBe(categoryUpdatedAt);
-    expect(pendingTransaction.categoryAssignmentSource).toBe('manual');
-    expect(pendingTransaction.categoryAssignmentRuleId).toBeNull();
-    expect(pendingTransaction.reportingDateOverride).toBe('2026-02-13');
-    expect(pendingTransaction.providerCategoryProvider).toBeNull();
-    expect(pendingTransaction.providerCategoryPrimary).toBeNull();
-    expect(pendingTransaction.providerCategoryDetailed).toBeNull();
-    expect(eventEmitter.emit).not.toHaveBeenCalled();
-    expect(txnRepo.find).toHaveBeenCalledWith({
-      where: {
-        activity: {
-          externalActivityId: expect.any(Object),
-          accountId: expect.any(Object),
-          userId,
-        },
-        source: 'provider',
-      },
-      relations: ['activity', 'activity.account', 'category'],
-    });
-    expect(txnRepo.remove).not.toHaveBeenCalled();
-  });
-
-  it('consolidates an existing posted row with its explicitly matched pending row', async () => {
-    const postedTransaction = buildTransaction({
-      id: '00000000-0000-4000-8000-000000000301',
-      externalTransactionId: 'posted-external-id',
-      pending: false,
-      categoryId: null,
-      category: null,
-      categoryAssignmentSource: null,
-      reportingDateOverride: null,
-    });
-    const pendingTransaction = buildTransaction({
-      id: '00000000-0000-4000-8000-000000000302',
-      activityId: '00000000-0000-4000-8000-000000000303',
-      externalTransactionId: 'pending-external-id',
-      pending: true,
-      categoryId: category.id,
-      category,
-      categoryUpdatedAt: new Date('2026-08-02T00:00:00.000Z'),
-      categoryAssignmentSource: 'manual',
-      reportingDateOverride: '2026-08-02',
-    });
-    const txnRepo = {
-      save: jest.fn().mockResolvedValue(postedTransaction),
-      findOne: jest
-        .fn()
-        .mockImplementation(async (options) =>
-          options.where.pending === true
-            ? pendingTransaction
-            : postedTransaction,
-        ),
-      find: jest.fn().mockResolvedValue([]),
-    };
-    const activityRepo = {
-      delete: jest.fn().mockResolvedValue({ affected: 1 }),
-    };
-    repository.manager.transaction.mockImplementation(
-      async (
-        callback: (manager: {
-          getRepository: (
-            entity: unknown,
-          ) => typeof txnRepo | typeof activityRepo;
-        }) => unknown,
-      ) =>
-        callback({
-          getRepository: (entity: unknown) =>
-            entity === AccountActivityEntity ? activityRepo : txnRepo,
-        }),
-    );
-
-    await service.processSyncResults(
-      userId,
-      new Map([['external-account-id', accountId]]),
-      {
-        added: [
-          buildCreateDto({
-            accountId: 'external-account-id',
-            externalTransactionId: 'posted-external-id',
-            pending: false,
-            pendingTransactionId: 'pending-external-id',
-            merchantName: 'Posted Store',
-          }),
-        ],
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor',
-        hasMore: false,
-      },
-    );
-
-    expect(txnRepo.save).toHaveBeenCalledWith(postedTransaction);
-    expect(activityRepo.delete).toHaveBeenCalledWith({
-      id: pendingTransaction.activityId,
-    });
-    expect(postedTransaction.categoryId).toBe(category.id);
-    expect(postedTransaction.categoryAssignmentSource).toBe('manual');
-    expect(postedTransaction.reportingDateOverride).toBe('2026-08-02');
-    expect(postedTransaction.merchantName).toBe('Posted Store');
-  });
-
-  it('sync removes account activity parents for provider removals', async () => {
-    const providerTransaction = buildTransaction({
-      source: 'provider',
-      externalTransactionId: 'removed-external-id',
-    });
-    const txnRepo = {
-      save: jest.fn(),
-      findOne: jest.fn(),
-      find: jest.fn().mockResolvedValue([providerTransaction]),
-      remove: jest.fn(),
-    };
-    const activityRepo = {
-      delete: jest.fn().mockResolvedValue({ affected: 1 }),
-    };
-    repository.manager.transaction.mockImplementation(
-      async (
-        callback: (manager: {
-          getRepository: (
-            entity: unknown,
-          ) => typeof txnRepo | typeof activityRepo;
-        }) => unknown,
-      ) =>
-        callback({
-          getRepository: (entity: unknown) =>
-            entity === AccountActivityEntity ? activityRepo : txnRepo,
-        }),
-    );
-
-    await service.processSyncResults(
-      userId,
-      new Map([['external-account-id', accountId]]),
-      {
-        added: [],
-        modified: [],
-        removed: ['removed-external-id'],
-        nextCursor: 'cursor',
-        hasMore: false,
-      },
-    );
-
-    expect(txnRepo.find).toHaveBeenCalledWith({
-      where: {
-        activity: {
-          externalActivityId: expect.any(Object),
-          accountId: expect.any(Object),
-          userId,
-        },
-        source: 'provider',
-      },
-      relations: ['activity', 'activity.account', 'category'],
-    });
-    expect(activityRepo.delete).toHaveBeenCalledWith({
-      id: expect.any(Object),
-    });
-    expect(txnRepo.remove).not.toHaveBeenCalled();
-  });
-
-  it('keeps an absence candidate that became posted before its row lock', async () => {
-    const txnRepo = {
-      save: jest.fn(),
-      findOne: jest.fn(),
-      find: jest.fn().mockResolvedValue([]),
-    };
-    const activityRepo = {
-      delete: jest.fn().mockResolvedValue({ affected: 0 }),
-    };
-    const manager = {
-      query: jest.fn().mockResolvedValueOnce([]),
-      getRepository: (entity: unknown) =>
-        entity === AccountActivityEntity ? activityRepo : txnRepo,
-    };
-    repository.manager.transaction.mockImplementation(async (callback) =>
-      callback(manager),
-    );
-
-    await expect(
-      service.processSyncResults(
-        userId,
-        new Map([['external-account-id', accountId]]),
-        {
-          added: [],
-          modified: [],
-          removed: ['stale-pending-id'],
-          nextCursor: '',
-          hasMore: false,
-        },
-        {
-          authoritativePendingAbsenceRemovals: [
-            {
-              internalAccountId: accountId,
-              externalTransactionId: 'stale-pending-id',
-              expectedProviderDate: '2026-07-01',
-              expectedLocalUpdatedAt: '2026-07-02T00:00:00.000Z',
-              evidence: { schemaVersion: 1 },
-            },
-          ],
-        },
-      ),
-    ).resolves.toEqual({
-      normalRemovedCount: 0,
-      authoritativeAbsenceArchivedCount: 0,
-      authoritativeAbsenceDeletedCount: 0,
-    });
-
-    expect(manager.query).toHaveBeenCalledTimes(1);
-    expect(activityRepo.delete).not.toHaveBeenCalled();
-  });
-
-  it('keeps a locked candidate when the archive insert produces no row', async () => {
-    const txnRepo = {
-      save: jest.fn(),
-      findOne: jest.fn(),
-      find: jest.fn().mockResolvedValue([]),
-    };
-    const activityRepo = {
-      delete: jest.fn().mockResolvedValue({ affected: 0 }),
-    };
-    const manager = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce([
-          {
-            activityId: 'activity-id',
-            accountId,
-            externalTransactionId: 'stale-pending-id',
-            providerDate: '2026-07-01',
-            localUpdatedAt: '2026-07-02T00:00:00.000123Z',
-            accountType: 'depository',
-            accountSubtype: 'checking',
-          },
-        ])
-        .mockResolvedValueOnce([]),
-      getRepository: (entity: unknown) =>
-        entity === AccountActivityEntity ? activityRepo : txnRepo,
-    };
-    repository.manager.transaction.mockImplementation(async (callback) =>
-      callback(manager),
-    );
-
-    await expect(
-      service.processSyncResults(
-        userId,
-        new Map([['external-account-id', accountId]]),
-        {
-          added: [],
-          modified: [],
-          removed: ['stale-pending-id'],
-          nextCursor: '',
-          hasMore: false,
-        },
-        {
-          authoritativePendingAbsenceRemovals: [
-            {
-              internalAccountId: accountId,
-              externalTransactionId: 'stale-pending-id',
-              expectedProviderDate: '2026-07-01',
-              expectedLocalUpdatedAt: '2026-07-02T00:00:00.000Z',
-              evidence: { schemaVersion: 1 },
-            },
-          ],
-        },
-      ),
-    ).resolves.toEqual({
-      normalRemovedCount: 0,
-      authoritativeAbsenceArchivedCount: 0,
-      authoritativeAbsenceDeletedCount: 0,
-    });
-
-    expect(manager.query).toHaveBeenCalledTimes(2);
-    expect(activityRepo.delete).not.toHaveBeenCalled();
-  });
-
-  it('deletes a locked candidate only after successfully archiving it', async () => {
-    const txnRepo = {
-      save: jest.fn(),
-      findOne: jest.fn(),
-      find: jest.fn().mockResolvedValue([]),
-    };
-    const activityRepo = {
-      delete: jest.fn().mockResolvedValue({ affected: 1 }),
-    };
-    const manager = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce([
-          {
-            activityId: 'activity-id',
-            accountId,
-            externalTransactionId: 'stale-pending-id',
-            providerDate: '2026-07-01',
-            localUpdatedAt: '2026-07-02T00:00:00.000123Z',
-            accountType: 'depository',
-            accountSubtype: 'checking',
-          },
-        ])
-        .mockResolvedValueOnce([{ id: 'archive-id' }]),
-      getRepository: (entity: unknown) =>
-        entity === AccountActivityEntity ? activityRepo : txnRepo,
-    };
-    repository.manager.transaction.mockImplementation(async (callback) =>
-      callback(manager),
-    );
-
-    await expect(
-      service.processSyncResults(
-        userId,
-        new Map([['external-account-id', accountId]]),
-        {
-          added: [],
-          modified: [],
-          removed: ['stale-pending-id'],
-          nextCursor: '',
-          hasMore: false,
-        },
-        {
-          authoritativePendingAbsenceRemovals: [
-            {
-              internalAccountId: accountId,
-              externalTransactionId: 'stale-pending-id',
-              expectedProviderDate: '2026-07-01',
-              expectedLocalUpdatedAt: '2026-07-02T00:00:00.000Z',
-              evidence: { schemaVersion: 1, providerSnapshotComplete: true },
-            },
-          ],
-        },
-      ),
-    ).resolves.toEqual({
-      normalRemovedCount: 0,
-      authoritativeAbsenceArchivedCount: 1,
-      authoritativeAbsenceDeletedCount: 1,
-    });
-
-    expect(manager.query).toHaveBeenCalledTimes(2);
-    expect(manager.query).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining(
-        'INSERT INTO "transaction_reconciliation_archive_entity"',
-      ),
-      expect.arrayContaining([
-        'activity-id',
-        JSON.stringify({ schemaVersion: 1, providerSnapshotComplete: true }),
-      ]),
-    );
-    expect(manager.query.mock.calls[1][0]).not.toContain(
-      'GREATEST(banking."updatedAt", activity."updatedAt") =',
-    );
-    expect(manager.query.mock.calls[1][1]).toHaveLength(6);
-    expect(activityRepo.delete).toHaveBeenCalledWith({
-      id: expect.any(Object),
-    });
-    expect(manager.query.mock.invocationCallOrder[1]).toBeLessThan(
-      activityRepo.delete.mock.invocationCallOrder[0],
-    );
-  });
-
-  it('sync emits one event for provider rows inserted from missing modified transactions', async () => {
-    const saved: TransactionEntity[] = [];
-    const txnRepo = {
-      save: jest.fn(async (entity: TransactionEntity | TransactionEntity[]) => {
-        if (Array.isArray(entity)) {
-          saved.push(...entity);
-        } else {
-          entity.id = '00000000-0000-4000-8000-000000000333';
-          saved.push(entity);
-        }
-        return entity;
-      }),
-      findOne: jest.fn().mockResolvedValue(null),
-      find: jest.fn().mockResolvedValue([]),
-      remove: jest.fn(),
-    };
-    repository.manager.transaction.mockImplementation(
-      async (
-        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
-      ) => callback({ getRepository: () => txnRepo }),
-    );
-
-    await service.processSyncResults(
-      userId,
-      new Map([['external-account-id', accountId]]),
-      {
-        added: [],
-        modified: [
-          buildCreateDto({
-            accountId: 'external-account-id',
-            externalTransactionId: 'modified-external-id',
-          }),
-        ],
-        removed: [],
-        nextCursor: 'cursor',
-        hasMore: false,
-      },
-    );
-
-    expect(saved).toHaveLength(1);
-    expect(eventEmitter.emit).toHaveBeenCalledWith(
-      TransactionEvents.PROVIDER_TRANSACTIONS_SYNCED,
-      expect.objectContaining({
-        userId,
-        transactionIds: ['00000000-0000-4000-8000-000000000333'],
-        accountIds: [accountId],
-        count: 1,
-      }),
-    );
-  });
+  // Sync persistence, replacements, archival and side effects are exercised against real PostgreSQL in transaction-sync.postgres.spec.ts.
 
   it('rejects unknown provider account IDs before opening a transaction', async () => {
     await expect(
@@ -1424,143 +736,5 @@ describe('TransactionService', () => {
     );
 
     expect(repository.manager.transaction).not.toHaveBeenCalled();
-  });
-
-  it('idempotently updates an existing posted transaction when an added page is replayed', async () => {
-    const existing = buildTransaction({
-      externalTransactionId: 'replayed-provider-transaction',
-      merchantName: 'Old Merchant',
-      source: 'provider',
-    });
-    const txnRepo = {
-      findOne: jest.fn().mockResolvedValue(existing),
-      find: jest.fn().mockResolvedValue([]),
-      save: jest.fn().mockResolvedValue(existing),
-    };
-    repository.manager.transaction.mockImplementation(
-      async (
-        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
-      ) => callback({ getRepository: () => txnRepo }),
-    );
-
-    await service.processSyncResults(
-      userId,
-      new Map([['external-account-id', accountId]]),
-      {
-        added: [
-          buildCreateDto({
-            accountId: 'external-account-id',
-            externalTransactionId: 'replayed-provider-transaction',
-            merchantName: 'Current Merchant',
-          }),
-        ],
-        modified: [],
-        removed: [],
-        nextCursor: 'cursor',
-        hasMore: false,
-      },
-    );
-
-    expect(txnRepo.findOne).toHaveBeenCalledWith({
-      where: {
-        activity: {
-          externalActivityId: 'replayed-provider-transaction',
-          accountId,
-          userId,
-        },
-      },
-      relations: ['activity', 'activity.account', 'category'],
-    });
-    expect(txnRepo.save).toHaveBeenCalledTimes(1);
-    expect(txnRepo.save).toHaveBeenCalledWith(existing);
-    expect(existing.merchantName).toBe('Current Merchant');
-    expect(eventEmitter.emit).not.toHaveBeenCalled();
-  });
-
-  it('rolls back the sync outcome and emits no event when cursor persistence fails', async () => {
-    const txnRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      find: jest.fn().mockResolvedValue([]),
-      save: jest.fn(
-        async (entities: TransactionEntity | TransactionEntity[]) => {
-          if (Array.isArray(entities)) {
-            entities[0].id = '00000000-0000-4000-8000-000000000777';
-          }
-          return entities;
-        },
-      ),
-    };
-    const manager = { getRepository: () => txnRepo };
-    repository.manager.transaction.mockImplementation(async (callback) =>
-      callback(manager),
-    );
-    const beforeChanges = jest.fn().mockResolvedValue(undefined);
-    const beforeCommit = jest
-      .fn()
-      .mockRejectedValue(new Error('cursor persistence failed'));
-
-    await expect(
-      service.processSyncResults(
-        userId,
-        new Map([['external-account-id', accountId]]),
-        {
-          added: [
-            buildCreateDto({
-              accountId: 'external-account-id',
-              externalTransactionId: 'new-provider-transaction',
-            }),
-          ],
-          modified: [],
-          removed: [],
-          nextCursor: 'cursor',
-          hasMore: false,
-        },
-        { beforeChanges, beforeCommit },
-      ),
-    ).rejects.toThrow('cursor persistence failed');
-
-    expect(beforeChanges).toHaveBeenCalledWith(manager);
-    expect(beforeCommit).toHaveBeenCalledWith(manager);
-    expect(eventEmitter.emit).not.toHaveBeenCalled();
-  });
-
-  it('does not swallow an individual modified transaction failure or advance the cursor', async () => {
-    const existing = buildTransaction({
-      externalTransactionId: 'modified-provider-transaction',
-    });
-    const txnRepo = {
-      findOne: jest.fn().mockResolvedValue(existing),
-      find: jest.fn().mockResolvedValue([]),
-      save: jest.fn().mockRejectedValue(new Error('row update failed')),
-    };
-    repository.manager.transaction.mockImplementation(
-      async (
-        callback: (manager: { getRepository: () => typeof txnRepo }) => unknown,
-      ) => callback({ getRepository: () => txnRepo }),
-    );
-    const beforeCommit = jest.fn().mockResolvedValue(undefined);
-
-    await expect(
-      service.processSyncResults(
-        userId,
-        new Map([['external-account-id', accountId]]),
-        {
-          added: [],
-          modified: [
-            buildCreateDto({
-              accountId: 'external-account-id',
-              externalTransactionId: 'modified-provider-transaction',
-            }),
-          ],
-          removed: [],
-          nextCursor: 'cursor',
-          hasMore: false,
-        },
-        { beforeCommit },
-      ),
-    ).rejects.toThrow('row update failed');
-
-    expect(beforeCommit).not.toHaveBeenCalled();
-    expect(eventEmitter.emit).not.toHaveBeenCalled();
   });
 });

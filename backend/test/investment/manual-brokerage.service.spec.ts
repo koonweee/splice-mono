@@ -1,3 +1,7 @@
+jest.mock('../../src/investment/investment-write-values', () => ({
+  investmentWriteValues: (_repository: unknown, entities: unknown[]) =>
+    entities,
+}));
 import {
   BadRequestException,
   ConflictException,
@@ -7,6 +11,11 @@ import { AccountSubtype, AccountType } from 'plaid';
 import { AccountEntity } from '../../src/account/account.entity';
 import { BalanceColumns } from '../../src/common/balance.columns';
 import { ManualBrokerageService } from '../../src/investment/manual-brokerage.service';
+import { decimalRateRatio, ExactDecimal } from '../../src/common/exact-money';
+import {
+  fxRequestKey,
+  type FxRequest,
+} from '../../src/currency-exchange/currency-exchange.service';
 import { MoneySign } from '../../src/types/MoneyWithSign';
 
 const userId = '11111111-1111-1111-1111-111111111111';
@@ -29,11 +38,11 @@ function buildAccount(): AccountEntity {
   account.bankLinkId = null;
   account.bankLink = null;
   account.currentBalance = BalanceColumns.fromMoneyWithSign({
-    money: { currency: 'USD', amount: 0 },
+    money: { currency: 'USD', amount: '0' },
     sign: MoneySign.POSITIVE,
   });
   account.availableBalance = BalanceColumns.fromMoneyWithSign({
-    money: { currency: 'USD', amount: 0 },
+    money: { currency: 'USD', amount: '0' },
     sign: MoneySign.POSITIVE,
   });
   account.createdAt = new Date('2026-08-16T00:00:00Z');
@@ -80,14 +89,22 @@ describe('ManualBrokerageService', () => {
     findOne: jest.fn(),
     save: jest.fn(),
   };
-  const securityRepository = { find: jest.fn(), save: jest.fn() };
+  const securityRepository = {
+    find: jest.fn(),
+    save: jest.fn(),
+    upsert: jest.fn(),
+  };
   const holdingRepository = {
     find: jest.fn(),
     delete: jest.fn(),
     save: jest.fn(),
+    insert: jest.fn(),
   };
   const snapshotRepository = { findOne: jest.fn(), save: jest.fn() };
   const manager = {
+    query: jest.fn(async () => [
+      { id: '77777777-7777-7777-7777-777777777777' },
+    ]),
     getRepository: jest.fn((entity) => {
       if (entity.name === 'AccountEntity') return accountRepository;
       if (entity.name === 'InvestmentSecurityEntity') return securityRepository;
@@ -104,12 +121,23 @@ describe('ManualBrokerageService', () => {
     resolveQuotes: jest.fn(),
     resolveQuotesForUsers: jest.fn(),
   };
-  const currencyExchangeService = { getRate: jest.fn() };
+  const currencyExchangeService = {
+    getRate: jest.fn(),
+    resolveRequests: jest.fn(),
+  };
+  const rateResults = (requests: FxRequest[], rate: string, inverted = false) =>
+    new Map(
+      requests.map((request) => [
+        fxRequestKey(request),
+        { ...request, rate, ratio: decimalRateRatio(rate, inverted) },
+      ]),
+    );
   const userService = {
     getTimezone: jest.fn(),
     getPreferredCurrency: jest.fn(),
   };
   const investmentService = { findLatestHoldingsForAccount: jest.fn() };
+  const holdingsQueryService = { read: jest.fn() };
 
   const service = new ManualBrokerageService(
     dataSource as any,
@@ -119,6 +147,7 @@ describe('ManualBrokerageService', () => {
     currencyExchangeService as any,
     userService as any,
     investmentService as any,
+    holdingsQueryService as any,
   );
 
   beforeEach(() => {
@@ -131,14 +160,29 @@ describe('ManualBrokerageService', () => {
       staleSymbols: [],
       missingSymbols: [],
     });
-    currencyExchangeService.getRate.mockResolvedValue(0.75);
+    currencyExchangeService.getRate.mockResolvedValue('0.75');
+    currencyExchangeService.resolveRequests.mockImplementation(
+      async (requests) => rateResults(requests, '0.75'),
+    );
     accountRepository.save.mockImplementation(async (account) => {
       account.id ??= accountId;
       account.createdAt ??= new Date('2026-08-16T00:00:00Z');
       account.updatedAt ??= new Date('2026-08-16T00:00:00Z');
       return account;
     });
-    securityRepository.find.mockResolvedValue([]);
+    const persistedSecurities: any[] = [];
+    securityRepository.find.mockImplementation(async () => persistedSecurities);
+    securityRepository.upsert.mockImplementation(async (securities) => {
+      for (const security of securities)
+        persistedSecurities.push(await securityRepository.save(security));
+    });
+    holdingRepository.find.mockResolvedValue([]);
+    holdingsQueryService.read.mockImplementation(async () => [
+      { snapshot: { holdings: await holdingRepository.find() } },
+    ]);
+    holdingRepository.insert.mockImplementation(async (holdings) =>
+      holdingRepository.save(holdings),
+    );
     let securityIndex = 0;
     securityRepository.save.mockImplementation(async (security) => {
       security.id ??= `33333333-3333-3333-3333-33333333333${securityIndex++}`;
@@ -155,7 +199,7 @@ describe('ManualBrokerageService', () => {
       snapshotDate: '2026-08-16',
       accountCurrency: 'USD',
       accountValue: {
-        money: { currency: 'USD', amount: 125750 },
+        money: { currency: 'USD', amount: '125750' },
         sign: MoneySign.POSITIVE,
       },
       holdings: [],
@@ -180,7 +224,7 @@ describe('ManualBrokerageService', () => {
     );
 
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
-    expect(response.account.currentBalance.money.amount).toBe(125750);
+    expect(response.account.currentBalance.money.amount).toBe('125750');
     expect(response.account.valuationMode).toBe('holdings');
     const savedHoldings = holdingRepository.save.mock.calls[0][0];
     expect(savedHoldings).toEqual(
@@ -265,7 +309,7 @@ describe('ManualBrokerageService', () => {
       userId,
     );
 
-    expect(response.account.currentBalance.money.amount).toBe(1672411);
+    expect(response.account.currentBalance.money.amount).toBe('1672411');
     expect(holdingRepository.save).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ quantity: '2', accountValue: '694.78' }),
@@ -307,7 +351,10 @@ describe('ManualBrokerageService', () => {
       staleSymbols: [],
       missingSymbols: [],
     });
-    currencyExchangeService.getRate.mockResolvedValueOnce(0.005);
+    currencyExchangeService.getRate.mockResolvedValueOnce('0.005');
+    currencyExchangeService.resolveRequests.mockImplementationOnce(
+      async (requests) => rateResults(requests, '0.005'),
+    );
 
     const response = await service.createManualBrokerageAccount(
       {
@@ -321,13 +368,91 @@ describe('ManualBrokerageService', () => {
       userId,
     );
 
-    expect(response.account.currentBalance.money.amount).toBe(2);
+    expect(response.account.currentBalance.money.amount).toBe('2');
     const savedHoldings = holdingRepository.save.mock.calls[0][0];
     expect(savedHoldings.map((holding) => holding.accountValue)).toEqual([
       '0.01',
       '0.01',
     ]);
   });
+
+  it.each([
+    {
+      price: '10',
+      quantity: '1',
+      nativeValue: '10',
+      canonicalRate: '1.1',
+      storedRate: '0.909090909091',
+      expectedMinorUnits: '909',
+      expectedAccountValue: '9.09',
+    },
+    {
+      price: '0.0055',
+      quantity: '1',
+      nativeValue: '0.0055',
+      canonicalRate: '1.1',
+      storedRate: '0.909090909091',
+      expectedMinorUnits: '1',
+      expectedAccountValue: '0.01',
+    },
+    {
+      price: '1',
+      quantity: '0.035',
+      nativeValue: '0.035',
+      canonicalRate: '7',
+      storedRate: '0.142857142857',
+      expectedMinorUnits: '1',
+      expectedAccountValue: '0.01',
+    },
+  ])(
+    'values $quantity shares at USD $price in EUR using the exact inverse quote and stores only a 12-decimal informational rate',
+    async ({
+      price,
+      quantity,
+      nativeValue,
+      canonicalRate,
+      storedRate,
+      expectedMinorUnits,
+      expectedAccountValue,
+    }) => {
+      marketPriceService.resolveQuotes.mockResolvedValueOnce({
+        quotes: new Map([['AAPL', { ...quotes.get('AAPL')!, price }]]),
+        staleSymbols: [],
+        missingSymbols: [],
+      });
+      userService.getPreferredCurrency.mockResolvedValueOnce('EUR');
+      currencyExchangeService.getRate.mockResolvedValueOnce(
+        new ExactDecimal(1).div(canonicalRate).toFixed(),
+      );
+      currencyExchangeService.resolveRequests.mockImplementationOnce(
+        async (requests) => rateResults(requests, canonicalRate, true),
+      );
+      const result = await service.createManualBrokerageAccount(
+        {
+          name: 'EUR portfolio',
+          accountCurrency: 'EUR',
+          positions: [{ symbol: 'AAPL', quantity }],
+        },
+        userId,
+      );
+      expect(result.account.currentBalance.money.amount).toBe(
+        expectedMinorUnits,
+      );
+      expect(holdingRepository.insert).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            institutionValue: nativeValue,
+            accountValue: expectedAccountValue,
+            exchangeRateToAccountCurrency: storedRate,
+          }),
+        ]),
+      );
+      expect(currencyExchangeService.resolveRequests).toHaveBeenCalledWith([
+        expect.objectContaining({ baseCurrency: 'USD', targetCurrency: 'EUR' }),
+      ]);
+      expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('rejects missing prices before opening a transaction', async () => {
     marketPriceService.resolveQuotes.mockResolvedValueOnce({
@@ -360,7 +485,7 @@ describe('ManualBrokerageService', () => {
     expect(dataSource.transaction).not.toHaveBeenCalled();
   });
 
-  it.each(['-1', 'NaN', '0', '1.1234567890123'])(
+  it.each(['-1', 'NaN', '0', '1.1234567890123', '1000000000000000000'])(
     'validates quantity %s inside the service boundary',
     async (quantity) => {
       await expect(
@@ -374,6 +499,101 @@ describe('ManualBrokerageService', () => {
         ),
       ).rejects.toThrow(BadRequestException);
       expect(marketPriceService.resolveQuotes).not.toHaveBeenCalled();
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['quantity', '999999999999999999.999999999999', '0.000000000001'],
+    ['price', '0.000000000001', '999999999999999999.999999999999'],
+  ])(
+    'preserves a supported 18-integer/12-fraction %s boundary',
+    async (_field, quantity, price) => {
+      marketPriceService.resolveQuotes.mockResolvedValueOnce({
+        quotes: new Map([['AAPL', { ...quotes.get('AAPL')!, price }]]),
+        staleSymbols: [],
+        missingSymbols: [],
+      });
+      const result = await service.createManualBrokerageAccount(
+        {
+          name: 'Exact position',
+          accountCurrency: 'USD',
+          positions: [{ symbol: 'AAPL', quantity }],
+        },
+        userId,
+      );
+      expect(result.account.currentBalance.money.amount).toBe('100000000');
+      expect(holdingRepository.insert).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            quantity,
+            institutionPrice: price,
+            institutionValue: '1000000',
+            accountValue: '1000000.00',
+          }),
+        ]),
+      );
+    },
+  );
+
+  it.each([
+    {
+      field: 'price',
+      quantity: '0.000000000001',
+      price: '1000000000000000000',
+      rate: '1',
+    },
+    { field: 'price', quantity: '1', price: '0.0000000000001', rate: '1' },
+    {
+      field: 'nativeValue',
+      quantity: '999999999999999999',
+      price: '2',
+      rate: '1',
+    },
+    {
+      field: 'accountValue',
+      quantity: '1',
+      price: '500000000000000000',
+      rate: '3',
+    },
+    {
+      field: 'exchangeRate',
+      quantity: '1',
+      price: '0.000000000001',
+      rate: '1000000000000000000',
+    },
+  ])(
+    'rejects unsupported $field precision with an actionable 400 before any write transaction',
+    async ({ field, quantity, price, rate }) => {
+      marketPriceService.resolveQuotes.mockResolvedValueOnce({
+        quotes: new Map([
+          ['AAPL', { ...quotes.get('AAPL')!, currency: 'EUR', price }],
+        ]),
+        staleSymbols: [],
+        missingSymbols: [],
+      });
+      currencyExchangeService.getRate.mockResolvedValueOnce(rate);
+      currencyExchangeService.resolveRequests.mockImplementationOnce(
+        async (requests) => rateResults(requests, rate),
+      );
+      const error = await service
+        .createManualBrokerageAccount(
+          {
+            name: 'Oversized position',
+            accountCurrency: 'USD',
+            positions: [{ symbol: 'AAPL', quantity }],
+          },
+          userId,
+        )
+        .catch((error) => error);
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect(error.getStatus()).toBe(400);
+      expect(error.message).toContain(
+        `AAPL ${field} exceeds position storage precision`,
+      );
+      expect(error.message).toContain('18 integer and 12 fractional digits');
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+      expect(accountRepository.save).not.toHaveBeenCalled();
     },
   );
 
@@ -433,7 +653,7 @@ describe('ManualBrokerageService', () => {
     jest.useFakeTimers({ now: new Date('2026-08-16T12:00:00.000Z') });
     const account = buildAccount();
     account.currentBalance = BalanceColumns.fromMoneyWithSign({
-      money: { currency: 'USD', amount: 20000 },
+      money: { currency: 'USD', amount: '20000' },
       sign: MoneySign.POSITIVE,
     });
     accountRepository.findOne.mockResolvedValue(account);
@@ -454,7 +674,7 @@ describe('ManualBrokerageService', () => {
       userId,
     );
 
-    expect(response.account.currentBalance.money.amount).toBe(0);
+    expect(response.account.currentBalance.money.amount).toBe('0');
     expect(holdingRepository.delete).toHaveBeenCalledWith({
       userId,
       accountId,
@@ -465,7 +685,7 @@ describe('ManualBrokerageService', () => {
     expect(snapshotRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         snapshotType: 'USER_UPDATE',
-        currentBalance: expect.objectContaining({ amount: 0 }),
+        currentBalance: expect.objectContaining({ amount: '0' }),
       }),
     );
   });
@@ -486,7 +706,7 @@ describe('ManualBrokerageService', () => {
     );
 
     expect(response.staleSymbols).toEqual(['AAPL']);
-    expect(response.account.currentBalance.money.amount).toBe(20000);
+    expect(response.account.currentBalance.money.amount).toBe('20000');
     expect(holdingRepository.save).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ institutionPrice: '100' }),

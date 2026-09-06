@@ -1,3 +1,4 @@
+import { TransactionQueryService } from './transaction-query.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountActivityModule } from '../account-activity/account-activity.module';
@@ -24,7 +25,15 @@ import { TransactionService } from './transaction.service';
     TransactionCategorizationModule,
   ],
   controllers: [TransactionController],
-  providers: [TransactionService, TransactionsSurfaceService],
-  exports: [TransactionService, TransactionsSurfaceService],
+  providers: [
+    TransactionService,
+    TransactionsSurfaceService,
+    TransactionQueryService,
+  ],
+  exports: [
+    TransactionService,
+    TransactionsSurfaceService,
+    TransactionQueryService,
+  ],
 })
 export class TransactionModule {}

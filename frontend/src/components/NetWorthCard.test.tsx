@@ -3,29 +3,19 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MoneyWithSignSign } from '../api/models'
 import { NetWorthCard } from './NetWorthCard'
+import type { ChartDataPoint } from './Chart'
 import { TimePeriod } from '@/lib/types'
 
 vi.mock('./Chart', () => ({
   Chart: ({
     onDataPointHover,
+    data,
   }: {
-    onDataPointHover?: (point?: {
-      date: string
-      label: string
-      value: number
-    }) => void
+    onDataPointHover?: (point?: ChartDataPoint) => void
+    data: Array<ChartDataPoint>
   }) => (
     <div>
-      <button
-        type="button"
-        onClick={() =>
-          onDataPointHover?.({
-            date: '2026-04-01',
-            label: 'Apr 1',
-            value: 4321,
-          })
-        }
-      >
+      <button type="button" onClick={() => onDataPointHover?.(data[0])}>
         hover point
       </button>
       <button type="button" onClick={() => onDataPointHover?.()}>
@@ -45,17 +35,27 @@ function renderNetWorthCard(
       <NetWorthCard
         balancesHidden={false}
         netWorth={{
-          money: { amount: 12345, currency: 'USD' },
+          money: { amount: '12345', currency: 'USD' },
           sign: MoneyWithSignSign.positive,
         }}
         onToggleBalancesHidden={onToggleBalancesHidden}
         changePercent={12.34}
         changeAmount={{
-          money: { amount: 4567, currency: 'USD' },
+          money: { amount: '4567', currency: 'USD' },
           sign: MoneyWithSignSign.positive,
         }}
         comparisonPeriod={TimePeriod.month}
-        chartData={[{ date: '2026-04-01', label: 'Apr 1', value: 4321 }]}
+        chartData={[
+          {
+            date: '2026-04-01',
+            label: 'Apr 1',
+            value: 4321,
+            money: {
+              money: { amount: '432100', currency: 'USD' },
+              sign: 'positive',
+            },
+          },
+        ]}
         {...props}
       />
     </MantineProvider>,
@@ -111,6 +111,24 @@ describe('NetWorthCard', () => {
     expect(screen.getByText('Net worth - Apr 1')).toBeTruthy()
     expect(screen.getByText('****')).toBeTruthy()
     expect(screen.queryByText('$4,321.00')).toBeNull()
+  })
+
+  it('uses exact money and its currency for the hovered summary', () => {
+    renderNetWorthCard({
+      chartData: [
+        {
+          date: '2026-04-01',
+          label: 'Apr 1',
+          value: 9007199254740994,
+          money: {
+            money: { amount: '900719925474099301', currency: 'EUR' },
+            sign: 'positive',
+          },
+        },
+      ],
+    })
+    fireEvent.click(screen.getByRole('button', { name: /hover point/i }))
+    expect(screen.getByText('€9,007,199,254,740,993.01')).toBeTruthy()
   })
 
   it('shows the absolute net worth change from the percentage trigger', async () => {

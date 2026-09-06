@@ -1,8 +1,5 @@
-import {
-  formatMoneyNumber,
-  formatPrimaryCategory,
-  getDecimalPlaces,
-} from '../../lib/format'
+import { minorToChartNumber, parseSignedMinorUnits } from '../../lib/money'
+import { formatMinorMoneyString, formatPrimaryCategory } from '../../lib/format'
 import { getDisplayCategoryColor } from '../../lib/category-colors'
 import type {
   CategoryAggregate,
@@ -21,9 +18,11 @@ export type AnalysisSankeyNode = {
   flowDirection?: FlowDirection
   color?: string
   value: number
+  exactAmount: string
 }
 
 export type AnalysisSankeyLink = {
+  exactAmount: string
   source: number
   target: number
   value: number
@@ -37,28 +36,12 @@ export type AnalysisSankeyData = {
   links: Array<AnalysisSankeyLink>
 }
 
-function toMajorUnits(amount: number, currency: string): number {
-  const decimals = getDecimalPlaces(currency)
-  return amount / Math.pow(10, decimals)
+function toMajorUnits(amount: string, currency: string): number {
+  return minorToChartNumber(amount, currency)
 }
 
-export function formatSankeyAmount(amount: number, currency: string): string {
-  return formatMoneyNumber({
-    value: toMajorUnits(amount, currency),
-    currency,
-    decimals: 0,
-  })
-}
-
-export function formatSankeyMajorAmount(
-  amount: number,
-  currency: string,
-): string {
-  return formatMoneyNumber({
-    value: amount,
-    currency,
-    decimals: 0,
-  })
+export function formatSankeyAmount(amount: string, currency: string): string {
+  return formatMinorMoneyString({ value: amount, currency, decimals: 0 })
 }
 
 function getCategoryNode(
@@ -81,6 +64,7 @@ function getCategoryNode(
       index,
     ),
     value: toMajorUnits(category.totalAmount, currency),
+    exactAmount: category.totalAmount,
   }
 }
 
@@ -93,17 +77,18 @@ export function buildAnalysisSankeyData(
     nodes.push(node)
     return nodes.length - 1
   }
-  const totalInflow = toMajorUnits(analysis.totalInflow, analysis.currency)
-  const totalOutflow = toMajorUnits(analysis.totalOutflow, analysis.currency)
-  const netFlow = toMajorUnits(analysis.netFlow, analysis.currency)
+  const totalInflow = parseSignedMinorUnits(analysis.totalInflow)
+  const totalOutflow = parseSignedMinorUnits(analysis.totalOutflow)
+  const netFlow = parseSignedMinorUnits(analysis.netFlow)
+  const available = (
+    totalInflow > totalOutflow ? totalInflow : totalOutflow
+  ).toString()
   const hubIndex = addNode({
     id: 'hub:available',
-    name: `Available: ${formatSankeyMajorAmount(
-      Math.max(totalInflow, totalOutflow),
-      analysis.currency,
-    )}`,
+    name: 'Available: ' + formatSankeyAmount(available, analysis.currency),
     kind: 'hub',
-    value: Math.max(totalInflow, totalOutflow),
+    value: toMajorUnits(available, analysis.currency),
+    exactAmount: available,
   })
 
   analysis.inflows.forEach((category, index) => {
@@ -114,6 +99,7 @@ export function buildAnalysisSankeyData(
         source: nodeIndex,
         target: hubIndex,
         value: node.value,
+        exactAmount: node.exactAmount,
         categoryPrimary: category.primaryCategory,
         flowDirection: 'inflow',
         color: node.color,
@@ -121,21 +107,24 @@ export function buildAnalysisSankeyData(
     }
   })
 
-  if (netFlow < 0) {
-    const value = Math.abs(netFlow)
+  if (netFlow < 0n) {
+    const exactAmount = (-netFlow).toString()
+    const value = toMajorUnits(exactAmount, analysis.currency)
     const priorBalanceIndex = addNode({
       id: 'net:prior-balance',
-      name: `Prior balance: ${formatSankeyMajorAmount(
-        value,
+      name: `Prior balance: ${formatSankeyAmount(
+        exactAmount,
         analysis.currency,
       )}`,
       kind: 'net',
       value,
+      exactAmount,
     })
     links.push({
       source: priorBalanceIndex,
       target: hubIndex,
       value,
+      exactAmount,
       color: 'var(--mantine-color-orange-6)',
     })
   }
@@ -148,6 +137,7 @@ export function buildAnalysisSankeyData(
         source: hubIndex,
         target: nodeIndex,
         value: node.value,
+        exactAmount: node.exactAmount,
         categoryPrimary: category.primaryCategory,
         flowDirection: 'outflow',
         color: node.color,
@@ -155,20 +145,20 @@ export function buildAnalysisSankeyData(
     }
   })
 
-  if (netFlow > 0) {
+  if (netFlow > 0n) {
+    const exactAmount = netFlow.toString()
     const netSavedIndex = addNode({
       id: 'net:saved',
-      name: `Net saved: ${formatSankeyMajorAmount(
-        netFlow,
-        analysis.currency,
-      )}`,
+      name: `Net saved: ${formatSankeyAmount(exactAmount, analysis.currency)}`,
       kind: 'net',
-      value: netFlow,
+      value: toMajorUnits(exactAmount, analysis.currency),
+      exactAmount,
     })
     links.push({
       source: hubIndex,
       target: netSavedIndex,
-      value: netFlow,
+      value: toMajorUnits(exactAmount, analysis.currency),
+      exactAmount,
       color: 'var(--mantine-color-teal-6)',
     })
   }

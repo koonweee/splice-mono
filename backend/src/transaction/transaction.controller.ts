@@ -1,3 +1,4 @@
+import { fxRequestKey } from '../currency-exchange/currency-exchange.service';
 import {
   Body,
   Controller,
@@ -10,7 +11,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import dayjs from 'dayjs';
 import {
   CurrentUser,
   type JwtUser,
@@ -42,6 +42,9 @@ import {
 } from '../types/Transaction';
 import { ZodValidationPipe } from '../zod-validation/zod-validation.pipe';
 import { TransactionService } from './transaction.service';
+import { TransactionQueryService } from './transaction-query.service';
+import { getTransactionActivityDate } from './transaction-date';
+import type { RateWithSource } from '../types/ExchangeRate';
 
 @ApiTags('transaction')
 @Controller('transaction')
@@ -49,6 +52,7 @@ export class TransactionController {
   constructor(
     private transactionService: TransactionService,
     private currencyConversionService: CurrencyConversionService,
+    private transactionQueries: TransactionQueryService,
   ) {}
 
   @Get()
@@ -121,6 +125,19 @@ export class TransactionController {
       'When true, adds convertedAmount in user preferred currency to each transaction',
     type: Boolean,
   })
+  @ApiQuery({
+    name: 'cursor',
+    required: false,
+    description:
+      'Continuation cursor; omit pageIndex to use cursor pagination.',
+  })
+  @ApiQuery({
+    name: 'includeTotal',
+    required: false,
+    type: Boolean,
+    description:
+      'Request the exact count. Defaults to true on the first page and false on cursor continuations.',
+  })
   async findAll(
     @CurrentUser() user: JwtUser,
     @Query('pageIndex') pageIndexStr?: string,
@@ -134,6 +151,8 @@ export class TransactionController {
     @Query('amountSign') amountSign?: string,
     @Query('convert') convertStr?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('cursor') cursor?: string,
+    @Query('includeTotal') includeTotalStr?: string,
   ): Promise<PaginatedTransactionResponse> {
     const pageIndex = Math.max(0, parseInt(pageIndexStr ?? '0', 10) || 0);
     const pageSize = Math.min(
@@ -142,58 +161,106 @@ export class TransactionController {
     );
     const order = sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
-    const { data, total } = await this.transactionService.findAllPaginated(
-      user.userId,
-      {
-        pageIndex,
-        pageSize,
-        sortBy,
-        sortOrder: order,
-        accountId,
-        startDate,
-        endDate,
-        categoryId,
-        categoryPrimary,
-        amountSign,
+    const staged = await this.transactionQueries.withReadSnapshot(
+      async (manager) => {
+        const page = await this.transactionQueries.readPage(
+          user.userId,
+          {
+            pageIndex: pageIndexStr === undefined ? undefined : pageIndex,
+            pageSize,
+            sortBy,
+            sortOrder: order,
+            accountId,
+            startDate,
+            endDate,
+            categoryId,
+            categoryPrimary,
+            amountSign,
+            cursor,
+            includeTotal:
+              includeTotalStr === undefined
+                ? undefined
+                : includeTotalStr === 'true',
+          },
+          manager,
+        );
+        if (convertStr !== 'true' || page.entities.length === 0) {
+          return {
+            page,
+            preferredCurrency: null,
+            rates: new Map<string, RateWithSource>(),
+          };
+        }
+        const preferredCurrency =
+          await this.currencyConversionService.getPreferredCurrency(
+            user.userId,
+            manager,
+          );
+        const requests = page.entities
+          .filter(
+            (transaction) =>
+              transaction.amount.currency !== preferredCurrency &&
+              transaction.amount.amount !== '0',
+          )
+          .map((transaction) => ({
+            baseCurrency: transaction.amount.currency,
+            targetCurrency: preferredCurrency,
+            requestedDate: getTransactionActivityDate(transaction),
+          }));
+        const rates = await this.currencyConversionService.getResolvedRates(
+          requests,
+          manager,
+        );
+        return { page, preferredCurrency, rates };
       },
     );
+    // All SQL has committed before DTO formatting or monetary conversion.
+    const { total, nextCursor, hasMore } = staged.page;
+    const data = staged.page.entities.map((transaction) =>
+      transaction.toObject(),
+    );
+    const { preferredCurrency, rates } = staged;
+    const pagination = {
+      total,
+      nextCursor,
+      hasMore,
+      pageIndex: pageIndexStr === undefined ? null : pageIndex,
+      pageSize,
+    };
 
-    // Optionally convert amounts to user's preferred currency
-    if (convertStr === 'true' && data.length > 0) {
-      const preferredCurrency =
-        await this.currencyConversionService.getPreferredCurrency(user.userId);
-
-      const foreignCurrencies = [
-        ...new Set(
-          data
-            .map((txn) => txn.amount.money.currency)
-            .filter((c) => c !== preferredCurrency),
-        ),
-      ];
-
-      const rateMap = await this.currencyConversionService.getRateMap(
-        foreignCurrencies,
-        preferredCurrency,
-        dayjs().format('YYYY-MM-DD'),
-      );
-
+    if (preferredCurrency !== null) {
       const convertedData = data.map((txn) => {
         const currency = txn.amount.money.currency;
         if (currency === preferredCurrency) {
           return txn;
         }
 
-        const rate = rateMap.get(currency);
-        if (!rate) {
-          return txn;
-        }
+        if (txn.amount.money.amount === '0')
+          return {
+            ...txn,
+            convertedAmount: {
+              money: { amount: '0', currency: preferredCurrency },
+              sign: txn.amount.sign,
+            },
+          };
+        const rate = rates.get(
+          fxRequestKey({
+            baseCurrency: currency,
+            targetCurrency: preferredCurrency,
+            requestedDate: txn.activityDate,
+          }),
+        );
+        if (!rate)
+          throw new Error(
+            'Required transaction-date exchange rate was not resolved',
+          );
 
         const convertedSmallestUnit =
           this.currencyConversionService.convertAmount(
             txn.amount.money.amount,
             currency,
             preferredCurrency,
-            rate,
+            rate.ratio,
           );
 
         return {
@@ -208,10 +275,10 @@ export class TransactionController {
         };
       });
 
-      return { data: convertedData, total, pageIndex, pageSize };
+      return { data: convertedData, ...pagination };
     }
 
-    return { data, total, pageIndex, pageSize };
+    return { data, ...pagination };
   }
 
   @Post('manual')
