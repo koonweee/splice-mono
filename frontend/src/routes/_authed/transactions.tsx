@@ -37,6 +37,7 @@ import { getFallbackCategoryColor } from '../../lib/category-colors'
 import { isManualTransaction } from '../../lib/manual-transactions'
 import { getApiErrorMessage } from '../../lib/api-errors'
 import { useCompactLayout } from '../../lib/responsive'
+import { awaitSsrData } from '../../lib/queries/loader'
 import {
   getViewportAwareOverlayComboboxProps,
   viewportAwareDropdownMaxHeight,
@@ -260,12 +261,12 @@ export const Route = createFileRoute('/_authed/transactions')({
     void context.queryClient.prefetchQuery(accountsQueryOptions())
     void context.queryClient.prefetchQuery(categoryFiltersQueryOptions())
     void context.queryClient.prefetchQuery(categoriesQueryOptions())
-    await context.queryClient
-      .ensureInfiniteQueryData({
+    await awaitSsrData(
+      context.queryClient.ensureInfiniteQueryData({
         ...transactionsQueryOptions(initialTransactionParams(deps)),
         revalidateIfStale: true,
-      })
-      .catch(() => undefined)
+      }),
+    )
   },
   component: TransactionsPage,
 })
