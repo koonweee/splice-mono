@@ -22,13 +22,21 @@ import {
 export class DashboardQueryService {
   constructor(private readonly balances: BalanceQueryService) {}
 
+  private getStartDate(userId: string, query: DashboardQuery): Promise<string> {
+    return query.period === 'all'
+      ? this.balances.getHistoryStartDate(userId, query.endDate)
+      : Promise.resolve(
+          dayjs(query.endDate)
+            .subtract(DASHBOARD_PERIOD_DAYS[query.period], 'day')
+            .format('YYYY-MM-DD'),
+        );
+  }
+
   async getSummary(
     userId: string,
     query: DashboardQuery,
   ): Promise<DashboardSummaryResponse> {
-    const startDate = dayjs(query.endDate)
-      .subtract(DASHBOARD_PERIOD_DAYS[query.period], 'day')
-      .format('YYYY-MM-DD');
+    const startDate = await this.getStartDate(userId, query);
     const projection = await this.balances.loadDashboardProjection(
       userId,
       startDate,
@@ -98,9 +106,7 @@ export class DashboardQueryService {
     userId: string,
     query: DashboardQuery,
   ): Promise<DashboardSeriesResponse> {
-    const startDate = dayjs(query.endDate)
-      .subtract(DASHBOARD_PERIOD_DAYS[query.period], 'day')
-      .format('YYYY-MM-DD');
+    const startDate = await this.getStartDate(userId, query);
     const projection = await this.balances.loadDashboardProjection(
       userId,
       startDate,
@@ -108,12 +114,28 @@ export class DashboardQueryService {
       false,
     );
     const points: DashboardSeriesResponse['points'] = [];
+    // Keep all-history responses bounded while retaining both endpoints.
+    const monthStride = Math.max(
+      1,
+      Math.ceil(
+        dayjs(query.endDate).diff(dayjs(startDate).startOf('month'), 'month') /
+          119,
+      ),
+    );
     for (const result of projection.balances) {
       // Iterating validates FX for every date, including dates omitted from charts.
       const netWorth = calculateNetWorthForDate(result.balances);
       if (
-        DASHBOARD_PERIOD_DAYS[query.period] <= 30 ||
-        result.date.endsWith('-01') ||
+        (query.period !== 'all' && DASHBOARD_PERIOD_DAYS[query.period] <= 30) ||
+        (query.period === 'all' && result.date === startDate) ||
+        (result.date.endsWith('-01') &&
+          (query.period !== 'all' ||
+            dayjs(result.date).diff(
+              dayjs(startDate).startOf('month'),
+              'month',
+            ) %
+              monthStride ===
+              0)) ||
         result.date === query.endDate
       ) {
         points.push({

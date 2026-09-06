@@ -30,6 +30,7 @@ import {
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
 import { useInvestmentActivity } from '../hooks/useInvestmentActivity'
 import { useInvestmentHoldings } from '../hooks/useInvestmentHoldings'
+import { TIME_PERIOD_LABELS } from '../lib/types'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
@@ -37,7 +38,9 @@ import {
   formatMoneyNumber,
   formatMoneyWithSign,
   formatRelativeTime,
+  getChangeColorMantine,
 } from '../lib/format'
+import { ChangePercentPopover } from './ChangePercentPopover'
 import {
   AccountDetailsSkeleton,
   TableSkeleton,
@@ -60,6 +63,7 @@ interface AccountModalProps {
   opened: boolean
   onClose: () => void
   period: TimePeriod
+  comparisonLoading?: boolean
   balancesHidden?: boolean
 }
 
@@ -69,6 +73,7 @@ export function AccountModal({
   onClose,
   period,
   balancesHidden = false,
+  comparisonLoading = false,
 }: AccountModalProps) {
   const queryClient = useQueryClient()
   const updateAccount = useAccountMetadataMutation(account?.id)
@@ -418,6 +423,28 @@ export function AccountModal({
                     </div>
                   )}
                 </Group>
+                {!comparisonLoading &&
+                  account &&
+                  account.changePercent !== undefined && (
+                    <Group justify="space-between">
+                      <Text c="dimmed" size="sm">
+                        {period === 'all'
+                          ? 'Change since first recorded balance'
+                          : `${TIME_PERIOD_LABELS[period]} balance change`}
+                      </Text>
+                      <ChangePercentPopover
+                        key={period}
+                        size="sm"
+                        changePercent={account.changePercent}
+                        changeAmount={account.changeAmount}
+                        color={getChangeColorMantine(
+                          account.type === 'credit' || account.type === 'loan',
+                          account.changePercent,
+                        )}
+                        hidden={balancesHidden}
+                      />
+                    </Group>
+                  )}
               </>
             )}
 

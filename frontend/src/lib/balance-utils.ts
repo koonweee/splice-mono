@@ -39,7 +39,7 @@ export function isLiabilityType(type: AccountTypeValue): boolean {
 /**
  * Period to number of days mapping
  */
-const PERIOD_DAYS: Record<TimePeriod, number> = {
+const PERIOD_DAYS: Record<Exclude<TimePeriod, TimePeriod.all>, number> = {
   [TimePeriod.day]: 1,
   [TimePeriod.week]: 7,
   [TimePeriod.month]: 30,
@@ -52,11 +52,17 @@ const PERIOD_DAYS: Record<TimePeriod, number> = {
 /**
  * Get start and end dates for a time period
  */
-export function getDateRange(period: TimePeriod): {
+export function getDateRange(
+  period: TimePeriod,
+  historyStartDate?: string,
+): {
   startDate: string
   endDate: string
 } {
   const endDate = dayjs().format('YYYY-MM-DD')
+  if (period === TimePeriod.all) {
+    return { startDate: historyStartDate ?? endDate, endDate }
+  }
   const startDate = dayjs()
     .subtract(PERIOD_DAYS[period], 'day')
     .format('YYYY-MM-DD')
@@ -199,6 +205,7 @@ function downsampleChartResults(
     TimePeriod.threeYears,
     TimePeriod.fiveYears,
     TimePeriod.tenYears,
+    TimePeriod.all,
   ].includes(period)
 
   if (!shouldDownsample) return results

@@ -36,7 +36,6 @@ function card(props: Partial<ComponentProps<typeof NetWorthCard>>) {
       <NetWorthCard
         balancesHidden={false}
         netWorth={money}
-        onToggleBalancesHidden={() => {}}
         comparisonPeriod={TimePeriod.month}
         {...props}
       />
@@ -59,7 +58,7 @@ it.each(['pending', 'ready', 'failed'])(
       ),
     )
     const summaryNode = container.querySelector('h2')
-    expect(summaryNode?.textContent).toBe('$123.45')
+    expect(summaryNode?.textContent).toBe('Net worth: $123.45')
     const onRecoverableError = vi.fn()
     let root: ReturnType<typeof hydrateRoot> | undefined
     try {

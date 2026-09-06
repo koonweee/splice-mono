@@ -1,6 +1,8 @@
 import { AreaChart } from '@mantine/charts'
+import { useReducedMotion } from '@mantine/hooks'
 import { Box, Paper, Text } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
+import placeholderStyles from './loading/ChartSkeleton.module.css'
 import type { MoneyWithSign } from '../api/models'
 
 function ChartTooltip({ label, value }: { label: string; value?: string }) {
@@ -25,10 +27,25 @@ export interface ChartDataPoint {
   money: MoneyWithSign
 }
 
+// Normalized decorative points, never exposed as balances or tooltip values.
+const PLACEHOLDER_POINTS: Array<ChartDataPoint> = [
+  20, 24, 23, 30, 27, 34, 33, 40, 38, 45, 44, 49,
+].map((value, index) => ({
+  date: String(index),
+  label: '',
+  value,
+  money: { money: { amount: '0', currency: 'USD' }, sign: 'positive' },
+}))
+
 interface ChartProps {
   data: Array<ChartDataPoint>
   valueFormatter: (value: number) => string
   pointFormatter?: (point: ChartDataPoint) => string
+  placeholder?: boolean
+  loading?: boolean
+  animate?: boolean
+  interactive?: boolean
+  minimal?: boolean
   height?: number
   color?: string
   mb?: string
@@ -40,24 +57,47 @@ export function Chart({
   valueFormatter,
   pointFormatter,
   height = 280,
+  minimal = false,
+  animate = false,
+  placeholder = false,
+  loading = false,
+  interactive = true,
   color = 'teal.6',
   mb,
   onDataPointHover,
 }: ChartProps) {
+  const [initialized, setInitialized] = useState(!placeholder)
+  useEffect(() => {
+    if (!placeholder) return
+    // Give the responsive chart time to measure and paint its initial points.
+    const timer = window.setTimeout(() => setInitialized(true), 120)
+    return () => window.clearTimeout(timer)
+  }, [placeholder])
+  const showingPlaceholder = placeholder && (!initialized || loading)
+  const plottedData = showingPlaceholder ? PLACEHOLDER_POINTS : data
+  const reducedMotion = useReducedMotion()
+  const canInteract = interactive && !showingPlaceholder
   const containerRef = useRef<HTMLDivElement>(null)
   const interacting = useRef(false)
+  const pointerWithin = useRef(false)
   const [interactionActive, setInteractionActive] = useState(false)
 
   useEffect(() => {
     const clearInteraction = () => {
+      pointerWithin.current = false
       if (!interacting.current) return
+      interacting.current = false
+      setInteractionActive(false)
+      onDataPointHover?.()
+    }
+    if (!canInteract && interacting.current) {
       interacting.current = false
       setInteractionActive(false)
       onDataPointHover?.()
     }
     const handlePointerMove = (event: PointerEvent) => {
       const container = containerRef.current
-      if (!container || !interacting.current) return
+      if (!container || !pointerWithin.current) return
       const bounds = container.getBoundingClientRect()
       if (
         event.clientX < bounds.left ||
@@ -88,14 +128,14 @@ export function Chart({
       window.removeEventListener('blur', clearInteraction)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [onDataPointHover])
+  }, [onDataPointHover, canInteract])
 
-  if (data.length === 0) {
+  if (plottedData.length === 0) {
     return null
   }
 
   // Calculate min and max for y-axis ticks with padding for label visibility
-  const values = data.map((d) => d.value)
+  const values = plottedData.map((d) => d.value)
   const minValue = Math.min(...values)
   const maxValue = Math.max(...values)
   const range = maxValue - minValue || 1 // Avoid division by zero
@@ -104,11 +144,14 @@ export function Chart({
   const domainMax = maxValue + padding
 
   const handleStart = () => {
+    pointerWithin.current = true
+    if (!canInteract) return
     interacting.current = true
     setInteractionActive(true)
   }
 
   const handleLeave = () => {
+    pointerWithin.current = false
     interacting.current = false
     setInteractionActive(false)
     onDataPointHover?.()
@@ -119,7 +162,11 @@ export function Chart({
     isTooltipActive?: boolean
   }) => {
     // Recharts queues movement callbacks; a callback can arrive after leave.
-    if (!interacting.current) return
+    if (!canInteract || !pointerWithin.current) return
+    if (!interacting.current) {
+      interacting.current = true
+      setInteractionActive(true)
+    }
     const index = Number(state.activeIndex)
     const point =
       state.isTooltipActive &&
@@ -133,6 +180,9 @@ export function Chart({
   return (
     <Box
       ref={containerRef}
+      aria-busy={!interactive || showingPlaceholder}
+      aria-label={showingPlaceholder ? 'Loading chart' : undefined}
+      className={showingPlaceholder ? placeholderStyles.graph : undefined}
       mb={mb}
       onMouseEnter={handleStart}
       onMouseLeave={handleLeave}
@@ -144,11 +194,12 @@ export function Chart({
     >
       <AreaChart
         h={height}
-        data={data}
+        data={plottedData}
         dataKey="date"
         series={[{ name: 'value', color }]}
         curveType="monotone"
-        withDots
+        withDots={!minimal || plottedData.length === 1}
+        strokeWidth={minimal ? 1.5 : 2}
         gridAxis="none"
         withXAxis={false}
         withYAxis={false}
@@ -157,12 +208,17 @@ export function Chart({
           domain: [domainMin, domainMax],
         }}
         valueFormatter={valueFormatter}
+        areaProps={{
+          isAnimationActive: animate && !reducedMotion && !showingPlaceholder,
+          animationDuration: 400,
+          animationEasing: 'ease-in-out',
+        }}
         areaChartProps={{
           onMouseMove: handleMove,
           onTouchMove: handleMove,
         }}
         tooltipProps={{
-          active: interactionActive ? undefined : false,
+          active: canInteract && interactionActive ? undefined : false,
           content: ({ label, payload }) => {
             if (!payload.length) return null
             const point = payload[0]

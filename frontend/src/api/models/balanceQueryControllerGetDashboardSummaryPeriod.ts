@@ -18,4 +18,5 @@ export const BalanceQueryControllerGetDashboardSummaryPeriod = {
   threeYears: 'threeYears',
   fiveYears: 'fiveYears',
   tenYears: 'tenYears',
+  all: 'all',
 } as const

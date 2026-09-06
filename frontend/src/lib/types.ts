@@ -6,6 +6,7 @@ export enum TimePeriod {
   'threeYears' = 'threeYears',
   'fiveYears' = 'fiveYears',
   'tenYears' = 'tenYears',
+  'all' = 'all',
 }
 
 export const TIME_PERIOD_LABELS: Record<TimePeriod, string> = {
@@ -16,4 +17,5 @@ export const TIME_PERIOD_LABELS: Record<TimePeriod, string> = {
   threeYears: '3Y',
   fiveYears: '5Y',
   tenYears: '10Y',
+  all: 'All',
 }

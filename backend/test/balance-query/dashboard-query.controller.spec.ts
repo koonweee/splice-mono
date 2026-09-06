@@ -63,7 +63,7 @@ describe('Dashboard endpoints', () => {
   it.each([
     'period=year&endDate=2026-02-30',
     'period=month&endDate=2025-02-29',
-    'period=all&endDate=2026-09-05',
+    'period=invalid&endDate=2026-09-05',
     'period=month',
     'period=month&endDate=2026-09-05&userId=other',
     'period=month&endDate=2026-09-05&reportingCurrency=EUR',
@@ -93,6 +93,22 @@ describe('Dashboard endpoints', () => {
       DashboardQuerySchema.safeParse({ period: 'month', endDate: '2024-02-29' })
         .success,
     ).toBe(true);
+  });
+  it('accepts All for both authenticated dashboard endpoints', async () => {
+    for (const path of ['dashboard-summary', 'dashboard-series']) {
+      await request(app.getHttpServer())
+        .get(`/balance-query/${path}?period=all&endDate=2026-09-05`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+    }
+    expect(service.getSummary).toHaveBeenCalledWith('authenticated-user', {
+      period: 'all',
+      endDate: '2026-09-05',
+    });
+    expect(service.getSeries).toHaveBeenCalledWith('authenticated-user', {
+      period: 'all',
+      endDate: '2026-09-05',
+    });
   });
   it('publishes registered money/account schemas and required query parameters in OpenAPI', () => {
     const document = SwaggerModule.createDocument(

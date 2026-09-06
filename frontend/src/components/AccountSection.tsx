@@ -5,6 +5,7 @@ import { AccountType } from '../api/models'
 import { compareIntegers, ratioPercent, signedMinorUnits } from '../lib/money'
 import { CompactAccountRow } from './CompactAccountRow'
 import { Pressable } from './Pressable'
+import styles from './AccountSection.module.css'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
 const ASSET_TYPE_LABELS: Record<string, string> = {
@@ -82,6 +83,7 @@ export function AccountSection({
   return (
     <>
       <Pressable
+        className={styles.toggle}
         aria-expanded={opened}
         aria-label={`${opened ? 'Collapse' : 'Expand'} ${title}`}
         onClick={toggle}
@@ -91,10 +93,14 @@ export function AccountSection({
         }}
       >
         <Group justify="space-between" px={4} py={2}>
-          <Text size="sm" fw={700} tt="uppercase">
+          <Text size="sm" fw={600}>
             {title}
           </Text>
-          {opened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+          {opened ? (
+            <IconChevronUp size={16} className={styles.chevron} />
+          ) : (
+            <IconChevronDown size={16} className={styles.chevron} />
+          )}
         </Group>
       </Pressable>
       <Collapse in={opened}>
@@ -108,24 +114,30 @@ export function AccountSection({
               {groups
                 ? groups.map((group, groupIndex) => (
                     <div key={group.label}>
-                      {groupIndex > 0 && <Divider />}
+                      {groupIndex > 0 && (
+                        <Divider className={styles.groupDivider} />
+                      )}
                       <Group
+                        className={styles.groupHeader}
                         justify="space-between"
                         px="sm"
                         py="xs"
-                        bg="var(--mantine-color-default-hover)"
                       >
-                        <Text size="xs" fw={600} c="dimmed" tt="uppercase">
+                        <Text size="sm" fw={500} c="dimmed">
                           {group.label}
                         </Text>
                         <Text size="xs" fw={600} c="dimmed">
                           {group.percent.toFixed(1)}%
                         </Text>
                       </Group>
+                      <Divider className={styles.groupHeaderDivider} />
                       {group.accounts.map((account, accountIndex) => (
                         <div key={account.id}>
-                          {accountIndex > 0 && <Divider />}
+                          {accountIndex > 0 && (
+                            <Divider className={styles.accountDivider} />
+                          )}
                           <CompactAccountRow
+                            overview
                             account={account}
                             balancesHidden={balancesHidden}
                             comparisonLoading={comparisonLoading}
@@ -138,8 +150,11 @@ export function AccountSection({
                   ))
                 : accounts.map((account, index) => (
                     <div key={account.id}>
-                      {index > 0 && <Divider />}
+                      {index > 0 && (
+                        <Divider className={styles.accountDivider} />
+                      )}
                       <CompactAccountRow
+                        overview
                         account={account}
                         balancesHidden={balancesHidden}
                         comparisonLoading={comparisonLoading}

@@ -13,10 +13,14 @@ export const DashboardPeriodSchema = registerSchema(
     'threeYears',
     'fiveYears',
     'tenYears',
+    'all',
   ]),
 );
 export type DashboardPeriod = z.infer<typeof DashboardPeriodSchema>;
-export const DASHBOARD_PERIOD_DAYS: Record<DashboardPeriod, number> = {
+export const DASHBOARD_PERIOD_DAYS: Record<
+  Exclude<DashboardPeriod, 'all'>,
+  number
+> = {
   day: 1,
   week: 7,
   month: 30,

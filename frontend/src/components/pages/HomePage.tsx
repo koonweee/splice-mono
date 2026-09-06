@@ -1,4 +1,5 @@
-import { Grid, Select } from '@mantine/core'
+import { ActionIcon, Grid, Tooltip } from '@mantine/core'
+import { Eye, EyeOff } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import { lazy, useMemo } from 'react'
 import { usePresentationPreferences } from '../../lib/presentation-preferences'
@@ -16,32 +17,13 @@ import { isZeroBalanceAccount } from '../../lib/balance-utils'
 import { isValidTimePeriod } from '../../lib/route-search'
 import type { AccountSummaryData } from '../../lib/balance-utils'
 import type { HomeSearch } from '../../lib/route-search'
-import { TIME_PERIOD_LABELS, TimePeriod } from '@/lib/types'
+import { TimePeriod } from '@/lib/types'
 
 const AccountModal = lazy(() =>
   import('../AccountModal').then((module) => ({
     default: module.AccountModal,
   })),
 )
-
-const PERIOD_OPTIONS = [
-  { value: TimePeriod.day, label: TIME_PERIOD_LABELS[TimePeriod.day] },
-  { value: TimePeriod.week, label: TIME_PERIOD_LABELS[TimePeriod.week] },
-  { value: TimePeriod.month, label: TIME_PERIOD_LABELS[TimePeriod.month] },
-  { value: TimePeriod.year, label: TIME_PERIOD_LABELS[TimePeriod.year] },
-  {
-    value: TimePeriod.threeYears,
-    label: TIME_PERIOD_LABELS[TimePeriod.threeYears],
-  },
-  {
-    value: TimePeriod.fiveYears,
-    label: TIME_PERIOD_LABELS[TimePeriod.fiveYears],
-  },
-  {
-    value: TimePeriod.tenYears,
-    label: TIME_PERIOD_LABELS[TimePeriod.tenYears],
-  },
-]
 
 export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
   const navigate = useNavigate()
@@ -53,6 +35,7 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
     refetch,
     isFetching,
     isChangingPeriod,
+    chartDisplayData,
     seriesError,
     seriesLoading,
     refetchSeries,
@@ -121,15 +104,20 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
     <>
       <PageHeader
         title="Home"
-        actions={
-          <Select
-            aria-label="Comparison period"
-            value={period}
-            onChange={handlePeriodChange}
-            data={PERIOD_OPTIONS}
-            w={120}
-            size="md"
-          />
+        mb="md"
+        titleAccessory={
+          <Tooltip label={balancesHidden ? 'Show balances' : 'Hide balances'}>
+            <ActionIcon
+              variant="subtle"
+              size="md"
+              c="dimmed"
+              aria-label={balancesHidden ? 'Show balances' : 'Hide balances'}
+              aria-pressed={balancesHidden}
+              onClick={handleToggleBalancesHidden}
+            >
+              {balancesHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+            </ActionIcon>
+          </Tooltip>
         }
       />
 
@@ -145,14 +133,15 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
         {dashboard && (
           <>
             <NetWorthCard
+              period={period}
+              onPeriodChange={handlePeriodChange}
               balancesHidden={balancesHidden}
               netWorth={dashboard.netWorth}
-              onToggleBalancesHidden={handleToggleBalancesHidden}
               changePercent={dashboard.changePercent}
               changeAmount={dashboard.changeAmount}
               comparisonPeriod={dashboard.comparisonPeriod}
               comparisonLoading={isChangingPeriod}
-              chartData={dashboard.chartData}
+              chartData={chartDisplayData ?? dashboard.chartData}
               chartLoading={seriesLoading}
               chartError={Boolean(seriesError)}
               onRetryChart={() => void refetchSeries()}
@@ -200,6 +189,7 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
             opened={!!selectedAccount}
             onClose={handleCloseModal}
             period={period}
+            comparisonLoading={isChangingPeriod}
             balancesHidden={balancesHidden}
           />
         </DeferredOverlay>

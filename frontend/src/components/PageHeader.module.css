@@ -1,10 +1,10 @@
 .title {
-  font-size: var(--mantine-h1-font-size);
-  line-height: var(--mantine-h1-line-height);
+  font-size: var(--mantine-h3-font-size);
+  line-height: var(--mantine-h3-line-height);
 }
 @media (--compact-layout) {
   .title {
-    font-size: var(--mantine-h3-font-size);
-    line-height: var(--mantine-h3-line-height);
+    font-size: var(--mantine-h4-font-size);
+    line-height: var(--mantine-h4-line-height);
   }
 }

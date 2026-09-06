@@ -27,7 +27,9 @@ export function CompactAccountRow({
   comparisonLoading,
   isLiability,
   onClick,
+  overview = false,
 }: {
+  overview?: boolean
   account: AccountSummaryData
   balancesHidden: boolean
   comparisonLoading?: boolean
@@ -76,7 +78,7 @@ export function CompactAccountRow({
             ? HIDDEN_BALANCE_PLACEHOLDER
             : formatMoneyWithSign({ value: primaryBalance })}
         </Text>
-        {originalBalance && (
+        {!overview && originalBalance && (
           <Text size="xs" c="dimmed" data-testid="account-original-balance">
             {balancesHidden
               ? HIDDEN_BALANCE_PLACEHOLDER
@@ -86,39 +88,44 @@ export function CompactAccountRow({
                 })}
           </Text>
         )}
-        <Text
-          component="div"
-          size="xs"
-          h="1lh"
-          aria-busy={comparisonLoading}
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          {comparisonLoading ? (
-            <div
-              aria-hidden="true"
-              style={{
-                height: 'var(--mantine-line-height-xs)',
-                minHeight:
-                  'calc(var(--mantine-font-size-xs) * var(--mantine-line-height))',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-              }}
-            >
-              <Skeleton h={10} w={48} />
-            </div>
-          ) : (
-            <ChangePercentPopover
-              size="xs"
-              color={getChangeColorMantine(isLiability, account.changePercent)}
-              changeAmount={account.changeAmount}
-              changePercent={account.changePercent}
-              hidden={balancesHidden}
-              testId="account-change-percent"
-            />
-          )}
-        </Text>
-        {!originalBalance && (
+        {!overview && (
+          <Text
+            component="div"
+            size="xs"
+            h="1lh"
+            aria-busy={comparisonLoading}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            {comparisonLoading ? (
+              <div
+                aria-hidden="true"
+                style={{
+                  height: 'var(--mantine-line-height-xs)',
+                  minHeight:
+                    'calc(var(--mantine-font-size-xs) * var(--mantine-line-height))',
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                }}
+              >
+                <Skeleton h={10} w={48} />
+              </div>
+            ) : (
+              <ChangePercentPopover
+                size="xs"
+                color={getChangeColorMantine(
+                  isLiability,
+                  account.changePercent,
+                )}
+                changeAmount={account.changeAmount}
+                changePercent={account.changePercent}
+                hidden={balancesHidden}
+                testId="account-change-percent"
+              />
+            )}
+          </Text>
+        )}
+        {!overview && !originalBalance && (
           <Text size="xs" style={{ visibility: 'hidden' }}>
             {'\u00A0'}
           </Text>

@@ -27,6 +27,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 const point = {
@@ -181,4 +182,70 @@ describe('Chart interaction cleanup', () => {
       expect(onDataPointHover).not.toHaveBeenCalled()
     },
   )
+})
+
+it('disables stale hover while the range is loading and restores it afterwards', () => {
+  const onDataPointHover = vi.fn()
+  const view = (interactive: boolean) => (
+    <MantineProvider env="test">
+      <Chart
+        data={[point]}
+        valueFormatter={String}
+        interactive={interactive}
+        onDataPointHover={onDataPointHover}
+      />
+    </MantineProvider>
+  )
+  const { rerender } = render(view(false))
+  fireEvent.mouseEnter(screen.getByTestId('chart').parentElement!)
+  move()
+  expect(onDataPointHover).not.toHaveBeenCalled()
+  expect(chartProps.tooltipProps?.active).toBe(false)
+  rerender(view(true))
+  move()
+  expect(onDataPointHover).toHaveBeenCalledWith(point)
+})
+
+it('keeps hover available when chart animation is enabled', () => {
+  const onDataPointHover = vi.fn()
+  render(
+    <MantineProvider env="test">
+      <Chart
+        data={[point]}
+        valueFormatter={String}
+        animate
+        onDataPointHover={onDataPointHover}
+      />
+    </MantineProvider>,
+  )
+  fireEvent.mouseEnter(screen.getByTestId('chart'))
+  move()
+  expect(onDataPointHover).toHaveBeenLastCalledWith(point)
+  expect(chartProps.tooltipProps?.active).toBeUndefined()
+})
+
+it('never exposes decorative points to hover while loading', () => {
+  vi.useFakeTimers()
+  const onDataPointHover = vi.fn()
+  const view = (loading: boolean) => (
+    <MantineProvider env="test">
+      <Chart
+        data={[point]}
+        valueFormatter={String}
+        placeholder
+        loading={loading}
+        onDataPointHover={onDataPointHover}
+      />
+    </MantineProvider>
+  )
+  const { rerender } = render(view(true))
+  act(() => vi.advanceTimersByTime(120))
+  expect(chartProps.data).not.toEqual([point])
+  fireEvent.mouseEnter(screen.getByTestId('chart'))
+  move()
+  expect(onDataPointHover).not.toHaveBeenCalled()
+  rerender(view(false))
+  expect(chartProps.data).toEqual([point])
+  move()
+  expect(onDataPointHover).toHaveBeenLastCalledWith(point)
 })

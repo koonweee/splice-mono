@@ -1,0 +1,25 @@
+.root {
+  height: 180px;
+  width: 100%;
+  color: var(--mantine-color-teal-6);
+}
+
+.graph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.45;
+  animation: breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph {
+    animation: none;
+  }
+}
