@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TransactionSource } from '../api/models'
 import { CategoryTransactionsModal } from './CategoryTransactionsModal'
 import type React from 'react'
-import type * as Mantine from '@mantine/core'
 import type * as SpliceAPI from '../api/clients/spliceAPI'
 import type { Transaction } from '../api/models'
 
@@ -22,15 +21,6 @@ const mockFns = vi.hoisted(() => ({
   transactionsMobileListMock: vi.fn(),
   isMobile: false,
 }))
-
-vi.mock('@mantine/core', async () => {
-  const actual: typeof Mantine = await vi.importActual('@mantine/core')
-
-  return {
-    ...actual,
-    Loader: () => <div data-testid="category-transactions-loader" />,
-  }
-})
 
 vi.mock('../api/clients/spliceAPI', async () => {
   const actual: typeof SpliceAPI = await vi.importActual(
@@ -204,7 +194,7 @@ describe('CategoryTransactionsModal', () => {
     expect(screen.getByText('No transactions found.')).toBeTruthy()
   })
 
-  it('shows the existing loading state while the transaction drilldown is pending', () => {
+  it('announces skeleton loading while the transaction drilldown is pending', () => {
     analysisHookState.isPending = true
 
     renderModal()
@@ -212,7 +202,9 @@ describe('CategoryTransactionsModal', () => {
     expect(
       mockFns.useTransactionAnalysisControllerGetTransactionsMock,
     ).toHaveBeenCalled()
-    expect(screen.getByTestId('category-transactions-loader')).toBeTruthy()
+    expect(
+      screen.getByRole('status', { name: 'Loading transactions' }),
+    ).toBeTruthy()
     expect(screen.queryByText('No transactions found.')).toBeNull()
   })
 

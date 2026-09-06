@@ -70,6 +70,10 @@
   gap: var(--mantine-spacing-lg);
 }
 
+.drilldownGrid > [data-direction='inflow'] {
+  order: -1;
+}
+
 .compactList {
   min-width: 0;
 }
@@ -83,5 +87,32 @@
 @media (--data-list-layout) {
   .chartCanvas {
     min-width: 640px;
+  }
+}
+
+.categoryButton {
+  border-radius: 6px;
+  padding: 6px var(--mantine-spacing-xs);
+}
+.compactProgress {
+  display: none;
+}
+@media (--data-list-layout) {
+  .chartViewport {
+    display: none;
+  }
+  .drilldownList {
+    border-top: 0;
+    padding-top: 0;
+    min-width: 0;
+  }
+  .categoryButton {
+    padding-block: 10px;
+  }
+  .compactProgress {
+    display: block;
+  }
+  .drilldownGrid > [data-direction='inflow'] {
+    order: 0;
   }
 }

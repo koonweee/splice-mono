@@ -1,0 +1,161 @@
+{
+  "scenario": {
+    "name": "phone-analysis-verified",
+    "width": 390,
+    "height": 844,
+    "mobile": true,
+    "path": "/analysis"
+  },
+  "ready": true,
+  "actionReady": null,
+  "interceptions": [],
+  "runtimeErrors": [],
+  "audit": {
+    "start": 631.6999999284744,
+    "shifts": [],
+    "anchors": [
+      {
+        "at": 680.7999999523163,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.921875,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root _triggerButton_12ajo_11 m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Choose date range"
+            },
+            "rect": {
+              "x": 16,
+              "y": 122.796875,
+              "width": 243.1875,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root __m__-_R_aqirr7r6_",
+              "label": "Audit"
+            },
+            "rect": {
+              "x": 269.1875,
+              "y": 122.796875,
+              "width": 104.8125,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Inflows$0Outflows$3,203Net-$3,203"
+            },
+            "rect": {
+              "x": 16,
+              "y": 202.796875,
+              "width": 358,
+              "height": 116.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "InflowsNo data for this period"
+            },
+            "rect": {
+              "x": 16,
+              "y": 339.390625,
+              "width": 358,
+              "height": 171.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Outflows$3,203.__m__-_R_lmqrb4rr7r6_{--grid-gutter:var(--mantine-spacing-lg);}.__m__-_R_3dlmqrb4rr7r"
+            },
+            "rect": {
+              "x": 16,
+              "y": 526.984375,
+              "width": 358,
+              "height": 295.09375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Food$3,203100%"
+            },
+            "rect": {
+              "x": 37,
+              "y": 768.78125,
+              "width": 316,
+              "height": 32.296875
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "inputs": [],
+    "scroll": [
+      {
+        "at": 680.7999999523163,
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "documentHeight": 844
+      }
+    ],
+    "resources": []
+  },
+  "dom": {
+    "title": "Analysis",
+    "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nAnalysis\nSep 1–6, 2026\nAudit\n\nInflows\n\n$0\n\nOutflows\n\n$3,203\n\nNet\n\n-$3,203\n\nInflows\n\nNo data for this period\n\nOutflows\n\n$3,203\n\n$3,203\n\nFood\n\n$3,203",
+    "dialogs": [],
+    "reducedMotion": false
+  }
+}

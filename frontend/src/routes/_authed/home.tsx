@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { prepareChartCode } from '../../lib/feature-loaders'
 import {
   dashboardSeriesOptions,
   dashboardSummaryOptions,
@@ -12,6 +13,7 @@ import type { HomeSearch } from '../../lib/route-search'
 export const Route = createFileRoute('/_authed/home')({
   loaderDeps: ({ search }) => ({ period: search.period ?? TimePeriod.month }),
   loader: async ({ context, deps }) => {
+    prepareChartCode('home')
     void context.queryClient.prefetchQuery(
       dashboardSeriesOptions(deps.period, context.presentation.today),
     )

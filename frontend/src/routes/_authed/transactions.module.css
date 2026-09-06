@@ -1,0 +1,10 @@
+.filters {
+  flex-wrap: nowrap;
+  margin-bottom: var(--mantine-spacing-md);
+}
+@media (--compact-layout) {
+  .filters {
+    flex-wrap: wrap;
+    margin-bottom: var(--mantine-spacing-xs);
+  }
+}

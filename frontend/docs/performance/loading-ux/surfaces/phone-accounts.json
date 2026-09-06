@@ -1,0 +1,251 @@
+{
+  "scenario": {
+    "name": "phone-accounts",
+    "width": 390,
+    "height": 844,
+    "mobile": true,
+    "path": "/accounts"
+  },
+  "ready": true,
+  "interceptions": [],
+  "runtimeErrors": [],
+  "audit": {
+    "start": 17.700000047683716,
+    "shifts": [],
+    "anchors": [
+      {
+        "at": 41.5,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Accounts"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 97.625,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Sync all"
+            },
+            "rect": {
+              "x": 16,
+              "y": 122.796875,
+              "width": 123.546875,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Backfill"
+            },
+            "rect": {
+              "x": 151.546875,
+              "y": 122.796875,
+              "width": 120.40625,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add account"
+            },
+            "rect": {
+              "x": 16,
+              "y": 176.796875,
+              "width": 160.296875,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Manual accountsFixture checkingCheckingLast synced 9 minutes agoManualExact ETH walletCrypto walletL"
+            },
+            "rect": {
+              "x": 16,
+              "y": 250.796875,
+              "width": 358,
+              "height": 353.46875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Manual accounts"
+            },
+            "rect": {
+              "x": 33,
+              "y": 267.796875,
+              "width": 324,
+              "height": 34.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 173.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Link with Plaid"
+            },
+            "rect": {
+              "x": 201.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 229.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 174.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Link with Plaid"
+            },
+            "rect": {
+              "x": 202.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 230.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 181.578125,
+              "y": 515.765625,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 209.578125,
+              "y": 515.765625,
+              "width": 22,
+              "height": 22
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "inputs": [],
+    "scroll": [
+      {
+        "at": 41.5,
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "documentHeight": 844
+      }
+    ],
+    "resources": []
+  },
+  "dom": {
+    "title": "Accounts",
+    "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nAccounts\nSync all\nBackfill\nAdd account\nManual accounts\n\nFixture checking\n\nChecking\n\nLast synced 9 minutes ago\n\nMANUAL\n\nExact ETH wallet\n\nCrypto Wallet\n\nLast synced 9 minutes ago\n\nMANUAL\n\nFixture brokerage\n\nBrokerage\n\nLast synced 9 minutes ago\n\nMANUAL",
+    "dialogs": [],
+    "reducedMotion": false
+  }
+}

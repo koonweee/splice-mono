@@ -31,6 +31,8 @@ import {
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
+import { ResponsiveSlot } from '../ResponsiveSlot'
+import { CategoriesTableSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { useCompactLayout, usePhoneLayout } from '../../lib/responsive'
 import { DataState } from '../DataState'
@@ -1129,7 +1131,7 @@ export function CustomCategoriesSection() {
           checked={archivedMode}
           onChange={setArchivedMode}
         />
-        {isMobile ? (
+        <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
           <Box pos="relative">
             <ActionIcon
               aria-label={filterButtonLabel}
@@ -1145,7 +1147,8 @@ export function CustomCategoriesSection() {
               </Badge>
             )}
           </Box>
-        ) : (
+        </ResponsiveSlot>
+        <ResponsiveSlot compact={Boolean(isMobile)} variant="wide">
           <>
             <CategorySelect
               aria-label="Primary category"
@@ -1157,7 +1160,7 @@ export function CustomCategoriesSection() {
               w={220}
             />
           </>
-        )}
+        </ResponsiveSlot>
       </Group>
 
       <Drawer
@@ -1247,6 +1250,7 @@ export function CustomCategoriesSection() {
       )}
 
       <DataState
+        loadingFallback={<CategoriesTableSkeleton />}
         hasData={categories.length > 0}
         isLoading={isLoading}
         isError={isError}
@@ -1267,7 +1271,7 @@ export function CustomCategoriesSection() {
             width: '100%',
           }}
         >
-          {isMobile ? (
+          <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
             <Stack
               gap="xs"
               style={{
@@ -1299,9 +1303,10 @@ export function CustomCategoriesSection() {
                 renderRow={renderMobileCategoryRow}
               />
             </Stack>
-          ) : (
+          </ResponsiveSlot>
+          <ResponsiveSlot compact={Boolean(isMobile)} variant="wide">
             <MantineReactTable table={categoryTable} />
-          )}
+          </ResponsiveSlot>
         </Group>
       </DataState>
       <EditorModal

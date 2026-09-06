@@ -3,7 +3,6 @@ import {
   Button,
   Code,
   Group,
-  Loader,
   Paper,
   Stack,
   Text,
@@ -12,6 +11,12 @@ import {
 } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import {
+  AccessTokensSkeleton,
+  LoadingSkeleton,
+  RowSkeleton,
+} from '../loading/LoadingSkeleton'
+import { DataState } from '../DataState'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
   assertAuthGeneration,
@@ -192,16 +197,13 @@ export function PersonalAccessTokenSection() {
 
   if (tokensQuery.isPending) {
     return (
-      <Paper withBorder p="lg" radius="md" data-testid="pat-section">
-        <Stack
-          align="center"
-          justify="center"
-          py="xl"
-          data-testid="pat-section-loader"
-        >
-          <Loader />
-        </Stack>
-      </Paper>
+      <div data-testid="pat-section">
+        <div data-testid="pat-section-loader">
+          <LoadingSkeleton label="Loading access tokens…">
+            <AccessTokensSkeleton />
+          </LoadingSkeleton>
+        </div>
+      </div>
     )
   }
 
@@ -302,31 +304,21 @@ export function PersonalAccessTokenSection() {
         <Stack gap="sm">
           <Title order={4}>Active tokens</Title>
 
-          {tokensQuery.isError ? (
-            <Alert
-              color="red"
-              title="Failed to load active tokens"
-              data-testid="pat-section-error"
-            >
-              <Stack gap="sm">
-                <Text size="sm">
-                  {getErrorMessage(
-                    tokensQuery.error,
-                    'Unable to load personal access tokens.',
-                  )}
-                </Text>
-                <Group justify="flex-start">
-                  <Button variant="light" onClick={() => tokensQuery.refetch()}>
-                    Retry
-                  </Button>
-                </Group>
-              </Stack>
-            </Alert>
-          ) : activeTokens.length === 0 ? (
-            <Text size="sm" c="dimmed">
-              No active personal access tokens.
-            </Text>
-          ) : (
+          <DataState
+            hasData={activeTokens.length > 0}
+            isError={tokensQuery.isError}
+            isFetching={tokensQuery.isFetching}
+            onRetry={() => {
+              void tokensQuery.refetch()
+            }}
+            errorTitle="Failed to load active tokens"
+            errorMessage={getErrorMessage(
+              tokensQuery.error,
+              'Unable to load personal access tokens.',
+            )}
+            emptyMessage="No active personal access tokens."
+            loadingFallback={<RowSkeleton rows={2} />}
+          >
             <Stack gap="sm">
               {activeTokens.map((token) => (
                 <Paper
@@ -375,7 +367,7 @@ export function PersonalAccessTokenSection() {
                 </Paper>
               ))}
             </Stack>
-          )}
+          </DataState>
         </Stack>
       </Stack>
     </Paper>

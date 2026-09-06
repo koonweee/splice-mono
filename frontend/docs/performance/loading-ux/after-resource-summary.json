@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "cpu": 2,
+    "latencyMs": 80,
+    "downloadBytesPerSecond": 1000000,
+    "uploadBytesPerSecond": 500000,
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "mobile": false
+    },
+    "samplesPerScenario": 3,
+    "warmPreparationMs": 5000,
+    "staleWaitMs": 31000
+  },
+  "buildLabel": "after-previrtualizer",
+  "summary": {
+    "document-preparation-analysis": {
+      "samples": 3,
+      "usefulMedianMs": 26.299999952316284,
+      "chartMedianMs": 328.5,
+      "browserRequestCountMedian": 87,
+      "apiRequestCountMedian": 4,
+      "transferredBytesMedian": 2132184,
+      "apiTransferredBytesMedian": 67686,
+      "preparationApiCountMedian": null,
+      "preparationTransferredBytesMedian": null,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.06226702800986207,
+        0.06587823854046103,
+        0.06335713826497397
+      ],
+      "shiftEntries": [
+        10,
+        11,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        13,
+        12
+      ],
+      "errorCount": 0
+    }
+  },
+  "comparison": {
+    "document-preparation-analysis": {
+      "usefulDeltaMs": -144.80000007152557,
+      "usefulDeltaPercent": -84.62887203468642,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 438013,
+      "apiRequestCountDelta": 2
+    }
+  }
+}

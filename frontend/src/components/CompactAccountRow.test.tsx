@@ -102,3 +102,32 @@ describe('CompactAccountRow', () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 })
+
+it('removes an open old comparison while preserving the account balance and action', async () => {
+  const onClick = vi.fn()
+  const row = (comparisonLoading: boolean) => (
+    <MantineProvider>
+      <CompactAccountRow
+        account={account}
+        balancesHidden={false}
+        isLiability={false}
+        comparisonLoading={comparisonLoading}
+        onClick={onClick}
+      />
+    </MantineProvider>
+  )
+  const { rerender } = render(row(false))
+  fireEvent.click(screen.getByTestId('account-change-percent'))
+  expect(await screen.findByText('+$25.00')).toBeTruthy()
+  const balance = screen.getByTestId('account-primary-balance')
+  rerender(row(true))
+  expect(screen.queryByTestId('account-change-percent')).toBeNull()
+  expect(screen.queryByText('+$25.00')).toBeNull()
+  expect(screen.getByTestId('account-primary-balance')).toBe(balance)
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Open account details for Everyday Checking',
+    }),
+  )
+  expect(onClick).toHaveBeenCalledOnce()
+})

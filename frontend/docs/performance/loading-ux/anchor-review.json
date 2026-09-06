@@ -1,0 +1,1281 @@
+{
+  "before": [
+    {
+      "kind": "cold-home",
+      "run": 1,
+      "changes": [],
+      "scroll": [
+        {
+          "at": 824.6999999284744,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "period-week",
+      "run": 1,
+      "changes": [
+        {
+          "at": 44139.699999928474,
+          "route": "/home",
+          "changes": [
+            {
+              "name": "netWorth",
+              "before": {
+                "x": 16,
+                "y": 216.296875,
+                "width": 1408,
+                "height": 44.1875
+              },
+              "after": {
+                "x": 16,
+                "y": 184,
+                "width": 1408,
+                "height": 44.1875
+              }
+            },
+            {
+              "name": "firstAccount",
+              "before": {
+                "x": 17,
+                "y": 601.875,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 569.578125,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "checking",
+              "before": {
+                "x": 17,
+                "y": 762.859375,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 730.5625,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "brokerage",
+              "before": {
+                "x": 17,
+                "y": 663.96875,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 631.671875,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "ether",
+              "before": {
+                "x": 17,
+                "y": 601.875,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 569.578125,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "card",
+              "before": {
+                "x": 16,
+                "y": 190.296875,
+                "width": 1408,
+                "height": 306.484375
+              },
+              "after": {
+                "x": 16,
+                "y": 158,
+                "width": 1408,
+                "height": 306.484375
+              }
+            },
+            {
+              "name": "assets",
+              "before": {
+                "x": 16,
+                "y": 529.78125,
+                "width": 696,
+                "height": 24.296875
+              },
+              "after": {
+                "x": 16,
+                "y": 497.484375,
+                "width": 696,
+                "height": 24.296875
+              }
+            }
+          ]
+        }
+      ],
+      "scroll": [
+        {
+          "at": 44052.89999997616,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 32.296875
+    },
+    {
+      "kind": "cold-home",
+      "run": 2,
+      "changes": [],
+      "scroll": [
+        {
+          "at": 788.6000000238419,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "period-week",
+      "run": 2,
+      "changes": [
+        {
+          "at": 44116.299999952316,
+          "route": "/home",
+          "changes": [
+            {
+              "name": "netWorth",
+              "before": {
+                "x": 16,
+                "y": 216.296875,
+                "width": 1408,
+                "height": 44.1875
+              },
+              "after": {
+                "x": 16,
+                "y": 184,
+                "width": 1408,
+                "height": 44.1875
+              }
+            },
+            {
+              "name": "firstAccount",
+              "before": {
+                "x": 17,
+                "y": 601.875,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 569.578125,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "checking",
+              "before": {
+                "x": 17,
+                "y": 762.859375,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 730.5625,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "brokerage",
+              "before": {
+                "x": 17,
+                "y": 663.96875,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 631.671875,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "ether",
+              "before": {
+                "x": 17,
+                "y": 601.875,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 569.578125,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "card",
+              "before": {
+                "x": 16,
+                "y": 190.296875,
+                "width": 1408,
+                "height": 306.484375
+              },
+              "after": {
+                "x": 16,
+                "y": 158,
+                "width": 1408,
+                "height": 306.484375
+              }
+            },
+            {
+              "name": "assets",
+              "before": {
+                "x": 16,
+                "y": 529.78125,
+                "width": 696,
+                "height": 24.296875
+              },
+              "after": {
+                "x": 16,
+                "y": 497.484375,
+                "width": 696,
+                "height": 24.296875
+              }
+            }
+          ]
+        }
+      ],
+      "scroll": [
+        {
+          "at": 44024.10000002384,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 32.296875
+    },
+    {
+      "kind": "cold-home",
+      "run": 3,
+      "changes": [],
+      "scroll": [
+        {
+          "at": 786.7999999523163,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "period-week",
+      "run": 3,
+      "changes": [
+        {
+          "at": 44168.10000002384,
+          "route": "/home",
+          "changes": [
+            {
+              "name": "netWorth",
+              "before": {
+                "x": 16,
+                "y": 216.296875,
+                "width": 1408,
+                "height": 44.1875
+              },
+              "after": {
+                "x": 16,
+                "y": 184,
+                "width": 1408,
+                "height": 44.1875
+              }
+            },
+            {
+              "name": "firstAccount",
+              "before": {
+                "x": 17,
+                "y": 601.875,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 569.578125,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "checking",
+              "before": {
+                "x": 17,
+                "y": 762.859375,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 730.5625,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "brokerage",
+              "before": {
+                "x": 17,
+                "y": 663.96875,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 631.671875,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "ether",
+              "before": {
+                "x": 17,
+                "y": 601.875,
+                "width": 694,
+                "height": 61.09375
+              },
+              "after": {
+                "x": 17,
+                "y": 569.578125,
+                "width": 694,
+                "height": 61.09375
+              }
+            },
+            {
+              "name": "card",
+              "before": {
+                "x": 16,
+                "y": 190.296875,
+                "width": 1408,
+                "height": 306.484375
+              },
+              "after": {
+                "x": 16,
+                "y": 158,
+                "width": 1408,
+                "height": 306.484375
+              }
+            },
+            {
+              "name": "assets",
+              "before": {
+                "x": 16,
+                "y": 529.78125,
+                "width": 696,
+                "height": 24.296875
+              },
+              "after": {
+                "x": 16,
+                "y": 497.484375,
+                "width": 696,
+                "height": 24.296875
+              }
+            }
+          ]
+        }
+      ],
+      "scroll": [
+        {
+          "at": 44072.60000002384,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 32.296875
+    },
+    {
+      "kind": "cold-transactions",
+      "run": 1,
+      "changes": [
+        {
+          "at": 1905.7999999523163,
+          "route": "/transactions",
+          "changes": [
+            {
+              "name": "table",
+              "before": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2178
+              },
+              "after": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2309.296875
+              }
+            },
+            {
+              "name": "row2",
+              "before": {
+                "x": 17,
+                "y": 281.18438720703125,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 287.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row3",
+              "before": {
+                "x": 17,
+                "y": 323.8843688964844,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 336.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row4",
+              "before": {
+                "x": 17,
+                "y": 366.5843811035156,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 385.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row5",
+              "before": {
+                "x": 17,
+                "y": 409.28436279296875,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 434.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row6",
+              "before": {
+                "x": 17,
+                "y": 451.984375,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 483.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row7",
+              "before": {
+                "x": 17,
+                "y": 494.68438720703125,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 532.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row8",
+              "before": {
+                "x": 17,
+                "y": 537.3843994140625,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 581.484375,
+                "width": 1406,
+                "height": 49
+              }
+            }
+          ]
+        }
+      ],
+      "scroll": [
+        {
+          "at": 1002.6999999284744,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2178,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        },
+        {
+          "at": 1905.7999999523163,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2309,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        }
+      ],
+      "maxRetainedOriginMovement": 44.0999755859375
+    },
+    {
+      "kind": "cold-transactions",
+      "run": 2,
+      "changes": [
+        {
+          "at": 1723,
+          "route": "/transactions",
+          "changes": [
+            {
+              "name": "table",
+              "before": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2178
+              },
+              "after": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2309.296875
+              }
+            },
+            {
+              "name": "row2",
+              "before": {
+                "x": 17,
+                "y": 281.18438720703125,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 287.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row3",
+              "before": {
+                "x": 17,
+                "y": 323.8843688964844,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 336.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row4",
+              "before": {
+                "x": 17,
+                "y": 366.5843811035156,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 385.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row5",
+              "before": {
+                "x": 17,
+                "y": 409.28436279296875,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 434.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row6",
+              "before": {
+                "x": 17,
+                "y": 451.984375,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 483.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row7",
+              "before": {
+                "x": 17,
+                "y": 494.68438720703125,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 532.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row8",
+              "before": {
+                "x": 17,
+                "y": 537.3843994140625,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 581.484375,
+                "width": 1406,
+                "height": 49
+              }
+            }
+          ]
+        }
+      ],
+      "scroll": [
+        {
+          "at": 842.6000000238419,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2178,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        },
+        {
+          "at": 1723,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2309,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        }
+      ],
+      "maxRetainedOriginMovement": 44.0999755859375
+    },
+    {
+      "kind": "cold-transactions",
+      "run": 3,
+      "changes": [
+        {
+          "at": 1717.7000000476837,
+          "route": "/transactions",
+          "changes": [
+            {
+              "name": "table",
+              "before": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2178
+              },
+              "after": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2309.296875
+              }
+            },
+            {
+              "name": "row2",
+              "before": {
+                "x": 17,
+                "y": 281.18438720703125,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 287.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row3",
+              "before": {
+                "x": 17,
+                "y": 323.8843688964844,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 336.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row4",
+              "before": {
+                "x": 17,
+                "y": 366.5843811035156,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 385.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row5",
+              "before": {
+                "x": 17,
+                "y": 409.28436279296875,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 434.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row6",
+              "before": {
+                "x": 17,
+                "y": 451.984375,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 483.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row7",
+              "before": {
+                "x": 17,
+                "y": 494.68438720703125,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 532.484375,
+                "width": 1406,
+                "height": 49
+              }
+            },
+            {
+              "name": "row8",
+              "before": {
+                "x": 17,
+                "y": 537.3843994140625,
+                "width": 1406,
+                "height": 49
+              },
+              "after": {
+                "x": 17,
+                "y": 581.484375,
+                "width": 1406,
+                "height": 49
+              }
+            }
+          ]
+        }
+      ],
+      "scroll": [
+        {
+          "at": 834.7000000476837,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2178,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        },
+        {
+          "at": 1717.7000000476837,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2309,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        }
+      ],
+      "maxRetainedOriginMovement": 44.0999755859375
+    }
+  ],
+  "after": [
+    {
+      "kind": "cold-home",
+      "run": 1,
+      "changes": [],
+      "scroll": [
+        {
+          "at": 827.9000000953674,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "period-week",
+      "run": 1,
+      "changes": [],
+      "scroll": [
+        {
+          "at": 43240.700000047684,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "cold-home",
+      "run": 2,
+      "changes": [],
+      "scroll": [
+        {
+          "at": 785.2999999523163,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "period-week",
+      "run": 2,
+      "changes": [],
+      "scroll": [
+        {
+          "at": 43267.89999997616,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "cold-home",
+      "run": 3,
+      "changes": [],
+      "scroll": [
+        {
+          "at": 789.9000000953674,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "period-week",
+      "run": 3,
+      "changes": [],
+      "scroll": [
+        {
+          "at": 43231.200000047684,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [],
+          "route": "/home"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "cold-transactions",
+      "run": 1,
+      "changes": [
+        {
+          "at": 2238.7999999523163,
+          "route": "/transactions",
+          "changes": [
+            {
+              "name": "table",
+              "before": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2493
+              },
+              "after": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2492
+              }
+            }
+          ]
+        }
+      ],
+      "scroll": [
+        {
+          "at": 1215,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2493,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        },
+        {
+          "at": 2238.7999999523163,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2492,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "cold-transactions",
+      "run": 2,
+      "changes": [
+        {
+          "at": 1759.7000000476837,
+          "route": "/transactions",
+          "changes": [
+            {
+              "name": "table",
+              "before": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2493
+              },
+              "after": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2492
+              }
+            }
+          ]
+        }
+      ],
+      "scroll": [
+        {
+          "at": 809.6000000238419,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2493,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        },
+        {
+          "at": 1759.7000000476837,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2492,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    },
+    {
+      "kind": "cold-transactions",
+      "run": 3,
+      "changes": [
+        {
+          "at": 1754.6000000238419,
+          "route": "/transactions",
+          "changes": [
+            {
+              "name": "table",
+              "before": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2493
+              },
+              "after": {
+                "x": 17,
+                "y": 195.484375,
+                "width": 1406,
+                "height": 2492
+              }
+            }
+          ]
+        }
+      ],
+      "scroll": [
+        {
+          "at": 825.5,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2493,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        },
+        {
+          "at": 1754.6000000238419,
+          "x": 0,
+          "y": 0,
+          "scrollHeight": 1000,
+          "clientHeight": 1000,
+          "parents": [
+            {
+              "node": {
+                "tag": "DIV",
+                "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+              },
+              "scrollHeight": 2492,
+              "clientHeight": 788,
+              "scrollTop": 0
+            }
+          ],
+          "route": "/transactions"
+        }
+      ],
+      "maxRetainedOriginMovement": 0
+    }
+  ]
+}

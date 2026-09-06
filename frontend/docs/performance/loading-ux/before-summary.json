@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "cpu": 2,
+    "latencyMs": 80,
+    "downloadBytesPerSecond": 1000000,
+    "uploadBytesPerSecond": 500000,
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "mobile": false
+    },
+    "samplesPerScenario": 3,
+    "warmPreparationMs": 5000,
+    "staleWaitMs": 31000
+  },
+  "buildLabel": "before",
+  "summary": {
+    "cold-home": {
+      "samples": 3,
+      "usefulMedianMs": 788.6000000238419,
+      "chartMedianMs": 1852.1000000238419,
+      "browserRequestCountMedian": 40,
+      "apiRequestCountMedian": 1,
+      "transferredBytesMedian": 1485062,
+      "apiTransferredBytesMedian": 457,
+      "preparationApiCountMedian": null,
+      "preparationTransferredBytesMedian": null,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0,
+        0,
+        0
+      ],
+      "shiftEntries": [
+        0,
+        0,
+        0
+      ],
+      "anchorChangeEntries": [
+        0,
+        0,
+        0
+      ],
+      "errorCount": 0
+    },
+    "immediate-transactions": {
+      "samples": 3,
+      "usefulMedianMs": 965.5,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 33,
+      "apiRequestCountMedian": 4,
+      "transferredBytesMedian": 415163,
+      "apiTransferredBytesMedian": 67729,
+      "preparationApiCountMedian": null,
+      "preparationTransferredBytesMedian": null,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.11873533950617285,
+        0.11873533950617285,
+        0.11873533950617285
+      ],
+      "shiftEntries": [
+        1,
+        1,
+        1
+      ],
+      "anchorChangeEntries": [
+        0,
+        0,
+        0
+      ],
+      "errorCount": 0
+    },
+    "warmed-transactions": {
+      "samples": 3,
+      "usefulMedianMs": 642.5,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 32,
+      "apiRequestCountMedian": 4,
+      "transferredBytesMedian": 409081,
+      "apiTransferredBytesMedian": 67729,
+      "preparationApiCountMedian": 1,
+      "preparationTransferredBytesMedian": 1485062,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.09988833419234665,
+        0.10375490052776572,
+        0.10372873578106917
+      ],
+      "shiftEntries": [
+        10,
+        10,
+        10
+      ],
+      "anchorChangeEntries": [
+        8,
+        9,
+        9
+      ],
+      "errorCount": 0
+    },
+    "warmed-accounts": {
+      "samples": 3,
+      "usefulMedianMs": 120.79999995231628,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 4,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 13832,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 1,
+      "preparationTransferredBytesMedian": 1485062,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.12108842808852963,
+        0.12422659870665752,
+        0.12109539394048997
+      ],
+      "shiftEntries": [
+        10,
+        12,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        12,
+        12
+      ],
+      "errorCount": 0
+    },
+    "warmed-analysis": {
+      "samples": 3,
+      "usefulMedianMs": 119,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 4,
+      "apiRequestCountMedian": 1,
+      "transferredBytesMedian": 163728,
+      "apiTransferredBytesMedian": 692,
+      "preparationApiCountMedian": 1,
+      "preparationTransferredBytesMedian": 1485062,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.06456285662615739,
+        0.06453513850459347,
+        0.06454654181586371
+      ],
+      "shiftEntries": [
+        11,
+        11,
+        11
+      ],
+      "anchorChangeEntries": [
+        12,
+        12,
+        12
+      ],
+      "errorCount": 0
+    },
+    "warmed-settings": {
+      "samples": 3,
+      "usefulMedianMs": 149.10000002384186,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 2,
+      "apiRequestCountMedian": 1,
+      "transferredBytesMedian": 18660,
+      "apiTransferredBytesMedian": 417,
+      "preparationApiCountMedian": 1,
+      "preparationTransferredBytesMedian": 1485062,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.08678204998251832,
+        0.08808213978708525,
+        0.08809400107301313
+      ],
+      "shiftEntries": [
+        9,
+        11,
+        10
+      ],
+      "anchorChangeEntries": [
+        11,
+        12,
+        11
+      ],
+      "errorCount": 0
+    },
+    "cached-home": {
+      "samples": 3,
+      "usefulMedianMs": 30.600000023841858,
+      "chartMedianMs": 30.600000023841858,
+      "browserRequestCountMedian": 0,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 0,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 1,
+      "preparationTransferredBytesMedian": 1485062,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.10434003245412568,
+        0.10434423730920862,
+        0.10430438669463735
+      ],
+      "shiftEntries": [
+        10,
+        10,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        12,
+        12
+      ],
+      "errorCount": 0
+    },
+    "cached-transactions": {
+      "samples": 3,
+      "usefulMedianMs": 103.70000004768372,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 0,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 0,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 1,
+      "preparationTransferredBytesMedian": 1485062,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.14506716198579767,
+        0.14505738219461323,
+        0.1501658423454379
+      ],
+      "shiftEntries": [
+        10,
+        10,
+        5
+      ],
+      "anchorChangeEntries": [
+        12,
+        12,
+        7
+      ],
+      "errorCount": 0
+    },
+    "stale-home": {
+      "samples": 3,
+      "usefulMedianMs": 46.39999997615814,
+      "chartMedianMs": 46.39999997615814,
+      "browserRequestCountMedian": 2,
+      "apiRequestCountMedian": 2,
+      "transferredBytesMedian": 5407,
+      "apiTransferredBytesMedian": 5407,
+      "preparationApiCountMedian": 0,
+      "preparationTransferredBytesMedian": 0,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.10925718553331161,
+        0.1102881839102286,
+        0.11027072322892555
+      ],
+      "shiftEntries": [
+        11,
+        12,
+        12
+      ],
+      "anchorChangeEntries": [
+        14,
+        14,
+        14
+      ],
+      "errorCount": 0
+    },
+    "period-week": {
+      "samples": 3,
+      "usefulMedianMs": 113.60000002384186,
+      "chartMedianMs": 113.60000002384186,
+      "browserRequestCountMedian": 2,
+      "apiRequestCountMedian": 2,
+      "transferredBytesMedian": 3265,
+      "apiTransferredBytesMedian": 3265,
+      "preparationApiCountMedian": 0,
+      "preparationTransferredBytesMedian": 0,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.02977741970486111,
+        0.02977741970486111,
+        0.02977741970486111
+      ],
+      "shiftEntries": [
+        2,
+        2,
+        2
+      ],
+      "anchorChangeEntries": [
+        1,
+        1,
+        1
+      ],
+      "errorCount": 0
+    }
+  }
+}

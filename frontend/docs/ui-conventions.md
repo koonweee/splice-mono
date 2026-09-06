@@ -196,3 +196,48 @@ for compatibility; it does not create a second session cache. Do not persist
 private Query data or copy it into global server state. Presentation preferences
 may use their dedicated small cookies, but masking must apply to chart tooltips,
 labels, and dialogs as well as primary numbers.
+
+## Loading, preparation and stable layouts
+
+Prefer the shapes in `components/loading/LoadingSkeleton.tsx` for read-only
+initial loads. Pass the actual shape to `DataState.loadingFallback`; pass a
+`LoadingSkeleton` boundary with the same shape to `DeferredFeature.fallback` for
+module loading. The two phases must share geometry. Dialog code uses an overlay
+shell, so opening an editor must never insert a loading form into the page below
+its trigger. Keep page headings and filters outside data boundaries.
+
+Skeleton shapes are decorative, noninteractive and hidden from assistive
+technology. Their boundary exposes one concise loading announcement and
+`aria-busy`. All Mantine skeleton shimmer is disabled with reduced motion. Never
+fabricate financial values for a placeholder, and keep masking active in every
+loaded value and tooltip.
+
+Matching cached content remains mounted while refetching. `DataState` retains its
+children (including drafts, focus and selection), places refresh failures in a
+bounded overlay, and keeps explicit Retry. Verify the overlay does not cover
+important controls. Empty/initial-error messages occupy the same content frame as
+the relevant shape. Do not insert transient banners, spinners or messages above
+retained results. In a fixed-height table, preserve flex/min-height and scroll
+ownership through every boundary.
+
+A new period/filter must not label old comparison data as current. Keep
+period-independent identities and balances where valid; replace affected
+comparisons in their existing slots. Matching cached filters can render
+immediately. A separate visible “currently showing” announcement is unnecessary.
+Saving and syncing can retain button-local progress without replacing drafts.
+
+Make responsive presentation agree from the first server paint: CSS controls
+heading size and visibility/layout of equivalent content. When different table
+implementations are necessary, use the shared responsive boundary and validate
+that hydration does not replace visible geometry. Reserve chart dimensions and
+avatar slots. Check ordinary CLS **and** interaction-time layout shifts and anchor
+bounds; clicks do not excuse asynchronous content jumps.
+
+Share code import promises through `lib/feature-loaders.ts` and query options
+through `lib/queries`. Prepare actual nested chart code alongside its data.
+Authenticated idle preparation is bounded, respects hidden tabs/Save-Data and
+identity changes, and warms only default primary data using the existing
+30-second in-tab Query cache. It must not fetch additional transaction pages,
+all filter combinations or security/access-token inventory. Explicit intent can
+prepare selected Settings sections using their own authoritative freshness rules.
+No private data belongs in the code registry or persistent browser storage.

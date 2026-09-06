@@ -1,0 +1,1222 @@
+{
+  "scenario": {
+    "name": "dialog-add-account-code-failure-final",
+    "path": "/accounts",
+    "width": 390,
+    "height": 844,
+    "mobile": true,
+    "failPattern": "AddAccountModal-",
+    "action": {
+      "text": "Add account",
+      "touch": true
+    },
+    "resultText": "Add account could not load"
+  },
+  "ready": true,
+  "actionReady": true,
+  "interceptions": [
+    {
+      "url": "http://localhost:4101/assets/main-C5zQMFvT.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/_authed-BdpmRgqe.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/auth-C1NDp_6T.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/use-disclosure-CS4kec-k.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/createLucideIcon-CBYeRdXc.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/house-B2LgfsaZ.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/browser-push-KTo1m-vW.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/accounts-BXp-MmYU.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/account-providers-BMuLpt9o.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/BackfillInstructions-qRxWbVrF.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/FormActions-CaygTdqu.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DeferredOverlay-CsI79Jv4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Pressable-BJt5IJnk.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/useAccountMetadataMutation-D-00Mdmq.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/api-errors-CGijFCoY.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/format-p0C5KB4M.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/mutation-feedback-CVBSlPco.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/ConfirmActionDialog-B1rx3akK.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/check-DTPzGdIg.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/x-DNXqEWzY.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/pencil-8nlLj8Hz.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/rotate-ccw-yoNyfmzp.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/archive-B3_OiMKW.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/IconChevronUp-Bu2hgLG1.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/IconChevronDown-D5bcqIVM.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DataState-Cf5yi8js.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/EditorModal-DkmIfdT3.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/responsive-Cem6TwcU.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DeferredFeature-Lu3_AGbH.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/CategoryTransactionsModal.module-DPUGtYf_.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/dayjs.min-CiZ-8CB4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/money-Cq-eqcN7.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-Bo-vtJFx.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-DrbgVAe_.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-DAqvOFgL.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-C2i_EZ8M.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-C36hm8jf.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-D-Jrl7B0.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/style-CSuciTeT.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/virtual_pwa-register-CX9vtC0h.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/workbox-window.prod.es5-BBnX5xw4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/home-nG7qG3Yk.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/balance-utils-_LaE01iM.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/InteractiveRow-D1uWs0Dc.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Divider-By3CSGyT.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/eye-CK0WceMZ.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/balance-query/dashboard-summary?period=month&endDate=2026-09-06",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/balance-query/dashboard-series?period=month&endDate=2026-09-06",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/transactions-BmvRwGA_.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/useInfiniteQuery-BvfMU0uX.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/ResponsiveSlot-BFk7GeWc.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/date-range-DE04wCDZ.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/category-options-Camm1XQ2.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/category-colors-DlV3xj2E.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/TransactionsMobileList-CKW1_0WX.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/index.esm-CbPpPegr.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/use-debounced-value-xkjyTh2W.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/MantineTableChrome.module-CfZx1G4f.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Table-CGd5xS5P.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/pick-calendar-levels-props-7eJoKdjE.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/CategorySelect-C_ULKgDN.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DatePicker-BTB4Tt6B.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/trash-2-B-WzZXV4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/info-BQ78OEv-.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/mobile-combobox-y2FY3FuM.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DateRangeControl-BT4KA71e.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/save-DD1ixQEd.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AccountSelect-BBnnOTkp.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/funnel-Cxnr2IZP.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/plus-BLZtalAL.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/transaction?pageSize=50&convert=true&sortBy=activityDate&sortOrder=DESC",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/analysis-BIITDa5v.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AnalysisAuditHeader-BUEEWhNB.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/transaction-analysis?startDate=2026-09-01&endDate=2026-09-06",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/settings-Cr0LMBHO.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/SimpleGrid-BC1KUf3n.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/ColorSwatch-CYQ4tf25.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Chart-BSGI96y4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AreaChart-BCq3ivnS.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/RechartsWrapper-BQmQc6vS.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/index-Dz0HfZSY.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/maxBy-Dle_1wVs.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AnalysisSankeyChart-YDB8THmQ.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AddAccountModal-fV1ZqKOJ.js",
+      "delay": 0,
+      "fail": true
+    },
+    {
+      "url": "http://localhost:4101/assets/DecimalInput-DBH8iT5y.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/ManualBrokeragePositionsEditor-DIOCjO7t.js",
+      "delay": 0,
+      "fail": false
+    }
+  ],
+  "runtimeErrors": [],
+  "audit": {
+    "start": 640.0999999046326,
+    "shifts": [],
+    "anchors": [
+      {
+        "at": 641.5,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Accounts"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 97.625,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Sync all"
+            },
+            "rect": {
+              "x": 16,
+              "y": 122.796875,
+              "width": 123.546875,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Backfill"
+            },
+            "rect": {
+              "x": 151.546875,
+              "y": 122.796875,
+              "width": 120.40625,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add account"
+            },
+            "rect": {
+              "x": 16,
+              "y": 176.796875,
+              "width": 160.296875,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Manual accountsFixture checkingCheckingLast synced an hour agoManualExact ETH walletCrypto walletLas"
+            },
+            "rect": {
+              "x": 16,
+              "y": 250.796875,
+              "width": 358,
+              "height": 353.46875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Manual accounts"
+            },
+            "rect": {
+              "x": 33,
+              "y": 267.796875,
+              "width": 324,
+              "height": 34.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 173.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Link with Plaid"
+            },
+            "rect": {
+              "x": 201.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 229.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 174.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Link with Plaid"
+            },
+            "rect": {
+              "x": 202.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 230.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 181.578125,
+              "y": 515.765625,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 209.578125,
+              "y": 515.765625,
+              "width": 22,
+              "height": 22
+            }
+          }
+        ]
+      },
+      {
+        "at": 692.1999999284744,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Accounts"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 97.625,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Sync all"
+            },
+            "rect": {
+              "x": 16,
+              "y": 122.796875,
+              "width": 123.546875,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Backfill"
+            },
+            "rect": {
+              "x": 151.546875,
+              "y": 122.796875,
+              "width": 120.40625,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add account"
+            },
+            "rect": {
+              "x": 16,
+              "y": 177.796875,
+              "width": 160.296875,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Manual accountsFixture checkingCheckingLast synced an hour agoManualExact ETH walletCrypto walletLas"
+            },
+            "rect": {
+              "x": 16,
+              "y": 250.796875,
+              "width": 358,
+              "height": 353.46875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Manual accounts"
+            },
+            "rect": {
+              "x": 33,
+              "y": 267.796875,
+              "width": 324,
+              "height": 34.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 173.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Link with Plaid"
+            },
+            "rect": {
+              "x": 201.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 229.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 174.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Link with Plaid"
+            },
+            "rect": {
+              "x": 202.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 230.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 181.578125,
+              "y": 515.765625,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 209.578125,
+              "y": 515.765625,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add accountLoading add account…PlaidCrypto walletManual account"
+            },
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add account"
+            },
+            "rect": {
+              "x": 21,
+              "y": 27,
+              "width": 97.609375,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": 21,
+              "width": 28,
+              "height": 28
+            }
+          }
+        ]
+      },
+      {
+        "at": 708.0999999046326,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Accounts"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 97.625,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Sync all"
+            },
+            "rect": {
+              "x": 16,
+              "y": 122.796875,
+              "width": 123.546875,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Backfill"
+            },
+            "rect": {
+              "x": 151.546875,
+              "y": 122.796875,
+              "width": 120.40625,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add account"
+            },
+            "rect": {
+              "x": 16,
+              "y": 176.796875,
+              "width": 160.296875,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Manual accountsFixture checkingCheckingLast synced an hour agoManualExact ETH walletCrypto walletLas"
+            },
+            "rect": {
+              "x": 16,
+              "y": 250.796875,
+              "width": 358,
+              "height": 353.46875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Manual accounts"
+            },
+            "rect": {
+              "x": 33,
+              "y": 267.796875,
+              "width": 324,
+              "height": 34.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 173.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Link with Plaid"
+            },
+            "rect": {
+              "x": 201.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 229.453125,
+              "y": 329.984375,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 174.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Link with Plaid"
+            },
+            "rect": {
+              "x": 202.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 230.96875,
+              "y": 422.875,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit account name"
+            },
+            "rect": {
+              "x": 181.578125,
+              "y": 515.765625,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive account"
+            },
+            "rect": {
+              "x": 209.578125,
+              "y": 515.765625,
+              "width": 22,
+              "height": 22
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add accountPlaidCrypto walletManual accountAdd account could not loadReload the page to try again.Re"
+            },
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add account"
+            },
+            "rect": {
+              "x": 21,
+              "y": 27,
+              "width": 97.609375,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": 21,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Reload"
+            },
+            "rect": {
+              "x": 38,
+              "y": 170.984375,
+              "width": 314,
+              "height": 42
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "inputs": [
+      {
+        "type": "pointerdown",
+        "at": 659.7999999523163,
+        "target": {
+          "tag": "SPAN",
+          "class": "m_811560b9 mantine-Button-label",
+          "label": "Add account"
+        }
+      },
+      {
+        "type": "touchstart",
+        "at": 660,
+        "target": {
+          "tag": "SPAN",
+          "class": "m_811560b9 mantine-Button-label",
+          "label": "Add account"
+        }
+      }
+    ],
+    "scroll": [],
+    "resources": []
+  },
+  "dom": {
+    "title": "Accounts",
+    "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nAccounts\nSync all\nBackfill\nAdd account\nManual accounts\n\nFixture checking\n\nChecking\n\nLast synced an hour ago\n\nMANUAL\n\nExact ETH wallet\n\nCrypto Wallet\n\nLast synced an hour ago\n\nMANUAL\n\nFixture brokerage\n\nBrokerage\n\nLast synced an hour ago\n\nMANUAL\nAdd account\nAdd account could not load\n\nReload the page to try again.\n\nReload",
+    "dialogs": [
+      "Add accountPlaidCrypto walletManual accountAdd account could not loadReload the page to try again.Reload"
+    ],
+    "reducedMotion": false
+  }
+}

@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import { Group, Text, Tooltip } from '@mantine/core'
+import { Group, Skeleton, Text, Tooltip } from '@mantine/core'
 import { AlertTriangle } from 'lucide-react'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
@@ -24,11 +24,13 @@ function isSyncStale(syncedAt?: string): boolean {
 export function CompactAccountRow({
   account,
   balancesHidden,
+  comparisonLoading,
   isLiability,
   onClick,
 }: {
   account: AccountSummaryData
   balancesHidden: boolean
+  comparisonLoading?: boolean
   isLiability: boolean
   onClick?: () => void
 }) {
@@ -84,16 +86,38 @@ export function CompactAccountRow({
                 })}
           </Text>
         )}
-        <div onPointerDown={(event) => event.stopPropagation()}>
-          <ChangePercentPopover
-            size="xs"
-            color={getChangeColorMantine(isLiability, account.changePercent)}
-            changeAmount={account.changeAmount}
-            changePercent={account.changePercent}
-            hidden={balancesHidden}
-            testId="account-change-percent"
-          />
-        </div>
+        <Text
+          component="div"
+          size="xs"
+          h="1lh"
+          aria-busy={comparisonLoading}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          {comparisonLoading ? (
+            <div
+              aria-hidden="true"
+              style={{
+                height: 'var(--mantine-line-height-xs)',
+                minHeight:
+                  'calc(var(--mantine-font-size-xs) * var(--mantine-line-height))',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+              }}
+            >
+              <Skeleton h={10} w={48} />
+            </div>
+          ) : (
+            <ChangePercentPopover
+              size="xs"
+              color={getChangeColorMantine(isLiability, account.changePercent)}
+              changeAmount={account.changeAmount}
+              changePercent={account.changePercent}
+              hidden={balancesHidden}
+              testId="account-change-percent"
+            />
+          )}
+        </Text>
         {!originalBalance && (
           <Text size="xs" style={{ visibility: 'hidden' }}>
             {'\u00A0'}

@@ -1,9 +1,19 @@
-import { Alert, Box, Button, Loader, Stack, Text } from '@mantine/core'
+import { Alert, Box, Button, Stack, Text } from '@mantine/core'
 import { Component, Suspense } from 'react'
+import {
+  ChartSkeleton,
+  FormSkeleton,
+  LoadingSkeleton,
+} from './loading/LoadingSkeleton'
 import type { ReactNode } from 'react'
 
 class FeatureErrorBoundary extends Component<
-  { children: ReactNode; label: string },
+  {
+    children: ReactNode
+    label: string
+    minHeight?: number
+    errorFallback?: (content: ReactNode) => ReactNode
+  },
   { failed: boolean }
 > {
   state = { failed: false }
@@ -14,8 +24,12 @@ class FeatureErrorBoundary extends Component<
 
   render() {
     if (this.state.failed) {
-      return (
-        <Alert color="red" title={`${this.props.label} could not load`}>
+      const content = (
+        <Alert
+          mih={this.props.minHeight}
+          color="red"
+          title={`${this.props.label} could not load`}
+        >
           <Stack gap="sm">
             <Text size="sm">Reload the page to try again.</Text>
             <Button variant="light" onClick={() => window.location.reload()}>
@@ -24,6 +38,7 @@ class FeatureErrorBoundary extends Component<
           </Stack>
         </Alert>
       )
+      return this.props.errorFallback?.(content) ?? content
     }
     return this.props.children
   }
@@ -34,26 +49,33 @@ export function DeferredFeature({
   children,
   label,
   minHeight,
+  fallback,
+  errorFallback,
 }: {
   children: ReactNode
   label: string
   minHeight?: number
+  fallback?: ReactNode
+  errorFallback?: (content: ReactNode) => ReactNode
 }) {
   return (
-    <FeatureErrorBoundary label={label}>
+    <FeatureErrorBoundary
+      label={label}
+      minHeight={minHeight}
+      errorFallback={errorFallback}
+    >
       <Suspense
         fallback={
-          <Box
-            mih={minHeight}
-            role="status"
-            aria-label={`Loading ${label.toLowerCase()}`}
-          >
-            <Stack align="center" justify="center" py="md" gap="xs">
-              <Loader size="sm" />
-              <Text size="sm" c="dimmed">
-                Loading {label.toLowerCase()}…
-              </Text>
-            </Stack>
+          <Box mih={minHeight}>
+            {fallback ?? (
+              <LoadingSkeleton label={`Loading ${label.toLowerCase()}…`}>
+                {minHeight ? (
+                  <ChartSkeleton height={minHeight} />
+                ) : (
+                  <FormSkeleton />
+                )}
+              </LoadingSkeleton>
+            )}
           </Box>
         }
       >

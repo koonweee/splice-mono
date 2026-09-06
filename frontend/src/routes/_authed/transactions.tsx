@@ -20,8 +20,14 @@ import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { Filter, Plus } from 'lucide-react'
 import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { TableSkeleton } from '../../components/loading/LoadingSkeleton'
+import {
+  featureIntent,
+  loadManualTransactionModal,
+} from '../../lib/feature-loaders'
+import { ResponsiveSlot } from '../../components/ResponsiveSlot'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
-import { DeferredFeature } from '../../components/DeferredFeature'
+import { DeferredOverlay } from '../../components/DeferredOverlay'
 import {
   useAccountControllerFindAll,
   useCategoryControllerFindAll,
@@ -50,6 +56,7 @@ import {
   initialTransactionParams,
   transactionsQueryOptions,
 } from '../../lib/queries/primary'
+import styles from './transactions.module.css'
 import type {
   Category,
   Transaction,
@@ -71,11 +78,7 @@ import { AccountSelect } from '@/components/accounts/AccountSelect'
 import { ConfirmActionDialog } from '@/components/ConfirmActionDialog'
 import { DataState } from '@/components/DataState'
 
-const ManualTransactionModal = lazy(() =>
-  import('@/components/transactions/ManualTransactionModal').then((module) => ({
-    default: module.ManualTransactionModal,
-  })),
-)
+const ManualTransactionModal = lazy(loadManualTransactionModal)
 
 const CLEAR_CATEGORY_VALUE = '__clear_category__'
 const UNCATEGORIZED_CATEGORY_VALUE = 'UNCATEGORIZED'
@@ -664,19 +667,22 @@ function TransactionsPage() {
     />
   )
 
-  const addTransactionAction = isMobile ? (
+  const compactAddTransactionAction = (
     <ActionIcon
       aria-label="Add transaction"
       onClick={openCreateManualTransaction}
+      {...featureIntent(loadManualTransactionModal)}
       size={40}
       variant="filled"
     >
       <Plus aria-hidden size={18} />
     </ActionIcon>
-  ) : (
+  )
+  const addTransactionAction = (
     <Button
       leftSection={<Plus size={16} />}
       onClick={openCreateManualTransaction}
+      {...featureIntent(loadManualTransactionModal)}
       size="md"
       type="button"
     >
@@ -685,8 +691,10 @@ function TransactionsPage() {
   )
 
   const headerActions = (
-    <Group gap="sm" wrap="nowrap" ml={isMobile ? undefined : 'auto'}>
-      {isMobile && addTransactionAction}
+    <Group gap="sm" wrap="nowrap" ml="auto">
+      <ResponsiveSlot compact={isMobile} variant="compact">
+        {compactAddTransactionAction}
+      </ResponsiveSlot>
       {bulkEditSwitch}
     </Group>
   )
@@ -705,7 +713,13 @@ function TransactionsPage() {
         actions={headerActions}
       />
       {manualModalOpened && (
-        <DeferredFeature label="Transaction editor">
+        <DeferredOverlay
+          label="Transaction editor"
+          title={
+            editingManualTransaction ? 'Edit transaction' : 'Add transaction'
+          }
+          onClose={closeManualTransactionModal}
+        >
           <ManualTransactionModal
             accounts={accounts ?? []}
             categories={assignableCategories}
@@ -715,7 +729,7 @@ function TransactionsPage() {
             onClose={closeManualTransactionModal}
             onSaved={invalidateTransactions}
           />
-        </DeferredFeature>
+        </DeferredOverlay>
       )}
       <ConfirmActionDialog
         opened={deletingManualTransaction !== null}
@@ -735,13 +749,8 @@ function TransactionsPage() {
         error={deleteError}
       />
 
-      <Group
-        mb={isMobile ? 'xs' : 'md'}
-        gap="xs"
-        wrap={isMobile ? 'wrap' : 'nowrap'}
-        align="center"
-      >
-        {isMobile ? (
+      <Group className={styles.filters} gap="xs" align="center">
+        <ResponsiveSlot compact={isMobile} variant="compact">
           <Button
             aria-label={filterButtonLabel}
             fullWidth
@@ -764,9 +773,10 @@ function TransactionsPage() {
               Filters · {formatDateRangeLabel(dateRange)}
             </Text>
           </Button>
-        ) : (
+        </ResponsiveSlot>
+        <ResponsiveSlot compact={isMobile} variant="wide">
           <DateRangeControl onChange={setDateRange} value={dateRange} />
-        )}
+        </ResponsiveSlot>
 
         {isMobile ? (
           <Drawer
@@ -780,44 +790,46 @@ function TransactionsPage() {
             {filterPanel}
           </Drawer>
         ) : (
-          <Box pos="relative" ref={desktopFilterRef}>
-            <ActionIcon
-              aria-label={filterButtonLabel}
-              variant={activeFilterCount > 0 ? 'light' : 'default'}
-              size={42}
-              onClick={toggleFilters}
-            >
-              <Filter size={18} />
-            </ActionIcon>
-            {activeFilterCount > 0 && (
-              <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
-                {activeFilterCount}
-              </Badge>
-            )}
-            {filtersOpened && (
-              <FocusTrap active>
-                <Box
-                  aria-label="Transaction filters"
-                  className="splice-floating-panel"
-                  role="dialog"
-                  p="md"
-                  pos="absolute"
-                  tabIndex={-1}
-                  top="calc(100% + 8px)"
-                  right={0}
-                  w={360}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Escape') {
-                      closeFilters()
-                    }
-                  }}
-                >
-                  <FocusTrap.InitialFocus />
-                  {filterPanel}
-                </Box>
-              </FocusTrap>
-            )}
-          </Box>
+          <ResponsiveSlot compact={isMobile} variant="wide">
+            <Box pos="relative" ref={desktopFilterRef}>
+              <ActionIcon
+                aria-label={filterButtonLabel}
+                variant={activeFilterCount > 0 ? 'light' : 'default'}
+                size={42}
+                onClick={toggleFilters}
+              >
+                <Filter size={18} />
+              </ActionIcon>
+              {activeFilterCount > 0 && (
+                <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
+                  {activeFilterCount}
+                </Badge>
+              )}
+              {filtersOpened && (
+                <FocusTrap active>
+                  <Box
+                    aria-label="Transaction filters"
+                    className="splice-floating-panel"
+                    role="dialog"
+                    p="md"
+                    pos="absolute"
+                    tabIndex={-1}
+                    top="calc(100% + 8px)"
+                    right={0}
+                    w={360}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        closeFilters()
+                      }
+                    }}
+                  >
+                    <FocusTrap.InitialFocus />
+                    {filterPanel}
+                  </Box>
+                </FocusTrap>
+              )}
+            </Box>
+          </ResponsiveSlot>
         )}
         {!isMobile && bulkModeEnabled && (
           <TransactionBulkEditToolbar
@@ -835,7 +847,9 @@ function TransactionsPage() {
             variant="summary"
           />
         )}
-        {!isMobile && <Box ml="auto">{addTransactionAction}</Box>}
+        <ResponsiveSlot compact={isMobile} variant="wide">
+          <Box ml="auto">{addTransactionAction}</Box>
+        </ResponsiveSlot>
       </Group>
 
       {isMobile && bulkModeEnabled && (
@@ -857,7 +871,7 @@ function TransactionsPage() {
         </Box>
       )}
 
-      {isMobile ? (
+      <ResponsiveSlot compact={isMobile} variant="compact" fill>
         <TransactionsMobileList
           data={flatData}
           totalRows={totalRows}
@@ -873,13 +887,15 @@ function TransactionsPage() {
           onEditManualTransaction={openEditManualTransaction}
           onDeleteManualTransaction={deleteManualTransaction}
         />
-      ) : (
+      </ResponsiveSlot>
+      <ResponsiveSlot compact={isMobile} variant="wide" fill>
         <DataState
           hasData={flatData.length > 0}
           isLoading={isLoading}
           isError={isError}
           isFetching={isFetching}
           loadingMessage="Loading transactions…"
+          loadingFallback={<TableSkeleton />}
           errorMessage="Error loading transactions"
           emptyMessage="No transactions found."
           onRetry={() => void refetch()}
@@ -910,7 +926,7 @@ function TransactionsPage() {
             }}
           />
         </DataState>
-      )}
+      </ResponsiveSlot>
     </Flex>
   )
 }

@@ -363,9 +363,9 @@ describe('Analysis route', () => {
       { query: { enabled: true } },
     )
     expect(
-      screen
-        .getAllByRole('link', { name: /manage rules/i })[0]
-        .getAttribute('href'),
+      (await screen.findByRole('link', { name: /manage rules/i })).getAttribute(
+        'href',
+      ),
     ).toBe('/settings?tab=analysis')
   })
 
@@ -437,10 +437,10 @@ it('offers retry and retains matching cached analysis after a refresh failure', 
   })
   renderAnalysisPage()
   expect(
-    screen.getByText('Previously loaded results are shown below.', {
+    screen.getByText('Previously loaded results remain visible.', {
       exact: false,
     }),
   ).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Retry analysis' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   expect(refetch).toHaveBeenCalledOnce()
 })

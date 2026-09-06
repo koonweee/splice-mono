@@ -1,0 +1,372 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "cpu": 2,
+    "latencyMs": 80,
+    "downloadBytesPerSecond": 1000000,
+    "uploadBytesPerSecond": 500000,
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "mobile": false
+    },
+    "samplesPerScenario": 3,
+    "warmPreparationMs": 5000,
+    "staleWaitMs": 31000
+  },
+  "buildLabel": "after",
+  "summary": {
+    "cold-home": {
+      "samples": 2,
+      "usefulMedianMs": 819.1000000238419,
+      "chartMedianMs": 2304.9000000953674,
+      "browserRequestCountMedian": 85,
+      "apiRequestCountMedian": 4,
+      "transferredBytesMedian": 2121016,
+      "apiTransferredBytesMedian": 67686,
+      "preparationApiCountMedian": null,
+      "preparationTransferredBytesMedian": null,
+      "ordinaryCls": [
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0,
+        0
+      ],
+      "shiftEntries": [
+        0,
+        0
+      ],
+      "anchorChangeEntries": [
+        0,
+        0
+      ],
+      "errorCount": 0
+    },
+    "immediate-transactions": {
+      "samples": 2,
+      "usefulMedianMs": 1000.1000000238419,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 33,
+      "apiRequestCountMedian": 4,
+      "transferredBytesMedian": 414212,
+      "apiTransferredBytesMedian": 67729,
+      "preparationApiCountMedian": null,
+      "preparationTransferredBytesMedian": null,
+      "ordinaryCls": [
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.13256188271604938,
+        0.13256188271604938
+      ],
+      "shiftEntries": [
+        1,
+        1
+      ],
+      "anchorChangeEntries": [
+        0,
+        0
+      ],
+      "errorCount": 0
+    },
+    "warmed-transactions": {
+      "samples": 2,
+      "usefulMedianMs": 136.20000004768372,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 2,
+      "apiRequestCountMedian": 2,
+      "transferredBytesMedian": 1192,
+      "apiTransferredBytesMedian": 1192,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2121016,
+      "ordinaryCls": [
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.14491908869237075,
+        0.14962069203317901
+      ],
+      "shiftEntries": [
+        10,
+        12
+      ],
+      "anchorChangeEntries": [
+        12,
+        13
+      ],
+      "errorCount": 0
+    },
+    "warmed-accounts": {
+      "samples": 2,
+      "usefulMedianMs": 24.100000023841858,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 0,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 0,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2121016,
+      "ordinaryCls": [
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.06315434241024064,
+        0.0631492177478178
+      ],
+      "shiftEntries": [
+        10,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        12
+      ],
+      "errorCount": 0
+    },
+    "warmed-analysis": {
+      "samples": 2,
+      "usefulMedianMs": 26,
+      "chartMedianMs": 334.60000002384186,
+      "browserRequestCountMedian": 0,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 0,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2121016,
+      "ordinaryCls": [
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.06468625396351754,
+        0.06227052770543982
+      ],
+      "shiftEntries": [
+        11,
+        10
+      ],
+      "anchorChangeEntries": [
+        13,
+        12
+      ],
+      "errorCount": 0
+    },
+    "warmed-settings": {
+      "samples": 2,
+      "usefulMedianMs": 54.39999997615814,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 1,
+      "apiRequestCountMedian": 1,
+      "transferredBytesMedian": 417,
+      "apiTransferredBytesMedian": 417,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2121016,
+      "ordinaryCls": [
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.14465328468605326,
+        0.1430213850308642
+      ],
+      "shiftEntries": [
+        10,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        12
+      ],
+      "errorCount": 0
+    },
+    "cached-home": {
+      "samples": 2,
+      "usefulMedianMs": 36.5,
+      "chartMedianMs": 36.5,
+      "browserRequestCountMedian": 0,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 0,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2121016,
+      "ordinaryCls": [
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.12139643384391878,
+        0.11632845327118296
+      ],
+      "shiftEntries": [
+        11,
+        10
+      ],
+      "anchorChangeEntries": [
+        14,
+        12
+      ],
+      "errorCount": 0
+    },
+    "cached-transactions": {
+      "samples": 2,
+      "usefulMedianMs": 112.29999995231628,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 0,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 0,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2121016,
+      "ordinaryCls": [
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.14494253093954956,
+        0.1449321450767988
+      ],
+      "shiftEntries": [
+        10,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        12
+      ],
+      "errorCount": 0
+    },
+    "stale-home": {
+      "samples": 2,
+      "usefulMedianMs": 48.799999952316284,
+      "chartMedianMs": 48.799999952316284,
+      "browserRequestCountMedian": 2,
+      "apiRequestCountMedian": 2,
+      "transferredBytesMedian": 5407,
+      "apiTransferredBytesMedian": 5407,
+      "preparationApiCountMedian": 0,
+      "preparationTransferredBytesMedian": 0,
+      "ordinaryCls": [
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.12278735415611738,
+        0.11835796936035156
+      ],
+      "shiftEntries": [
+        12,
+        10
+      ],
+      "anchorChangeEntries": [
+        14,
+        13
+      ],
+      "errorCount": 0
+    },
+    "period-week": {
+      "samples": 2,
+      "usefulMedianMs": 118.10000002384186,
+      "chartMedianMs": 118.10000002384186,
+      "browserRequestCountMedian": 2,
+      "apiRequestCountMedian": 2,
+      "transferredBytesMedian": 3265,
+      "apiTransferredBytesMedian": 3265,
+      "preparationApiCountMedian": 0,
+      "preparationTransferredBytesMedian": 0,
+      "ordinaryCls": [
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0,
+        0
+      ],
+      "shiftEntries": [
+        0,
+        0
+      ],
+      "anchorChangeEntries": [
+        0,
+        0
+      ],
+      "errorCount": 0
+    }
+  },
+  "comparison": {
+    "cold-home": {
+      "usefulDeltaMs": 30.5,
+      "usefulDeltaPercent": 3.867613492147843,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 635954,
+      "apiRequestCountDelta": 3
+    },
+    "immediate-transactions": {
+      "usefulDeltaMs": 34.60000002384186,
+      "usefulDeltaPercent": 3.5836354245304873,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": -951,
+      "apiRequestCountDelta": 0
+    },
+    "warmed-transactions": {
+      "usefulDeltaMs": -506.2999999523163,
+      "usefulDeltaPercent": -78.80155641281186,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": -407889,
+      "apiRequestCountDelta": -2
+    },
+    "warmed-accounts": {
+      "usefulDeltaMs": -96.69999992847443,
+      "usefulDeltaPercent": -80.0496688465605,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": -13832,
+      "apiRequestCountDelta": 0
+    },
+    "warmed-analysis": {
+      "usefulDeltaMs": -93,
+      "usefulDeltaPercent": -78.15126050420169,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": -163728,
+      "apiRequestCountDelta": -1
+    },
+    "warmed-settings": {
+      "usefulDeltaMs": -94.70000004768372,
+      "usefulDeltaPercent": -63.51441987427277,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": -18243,
+      "apiRequestCountDelta": 0
+    },
+    "cached-home": {
+      "usefulDeltaMs": 5.899999976158142,
+      "usefulDeltaPercent": 19.281045658696673,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 0,
+      "apiRequestCountDelta": 0
+    },
+    "cached-transactions": {
+      "usefulDeltaMs": 8.599999904632568,
+      "usefulDeltaPercent": 8.293153231126407,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 0,
+      "apiRequestCountDelta": 0
+    },
+    "stale-home": {
+      "usefulDeltaMs": 2.399999976158142,
+      "usefulDeltaPercent": 5.1724137443778915,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 0,
+      "apiRequestCountDelta": 0
+    },
+    "period-week": {
+      "usefulDeltaMs": 4.5,
+      "usefulDeltaPercent": 3.96126760480243,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 0,
+      "apiRequestCountDelta": 0
+    }
+  }
+}

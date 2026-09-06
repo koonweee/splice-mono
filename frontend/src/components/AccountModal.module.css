@@ -19,8 +19,21 @@
   min-height: 44px;
 }
 
+.balanceRow[data-converted='true'] {
+  min-height: calc(
+    44px + var(--mantine-font-size-md) * var(--mantine-line-height-md)
+  );
+}
+
 .balanceValue {
   min-width: 0;
+  min-height: 44px;
+}
+
+.balanceRow[data-converted='true'] > .balanceValue {
+  min-height: calc(
+    44px + var(--mantine-font-size-md) * var(--mantine-line-height-md)
+  );
 }
 
 .nativeBalanceRow {
@@ -37,4 +50,24 @@
   .balanceValue {
     width: 100%;
   }
+}
+
+.detailsBody {
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+}
+@media (--data-list-layout) {
+  .detailsBody {
+    padding-inline: var(--mantine-spacing-xs);
+  }
+  .compactAction {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Match DataState's bounded empty/error frame as well as a short first result.
+ * This is a small read-only region, not a fixed table height: additional positions
+ * grow naturally and are never clipped or replaced by artificial rows. */
+.holdingsRegion {
+  min-height: 180px;
 }

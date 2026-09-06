@@ -173,7 +173,7 @@ describe('AnalysisRulesSection', () => {
     renderSection()
     expect(screen.getAllByText(activeRule.name).length).toBeGreaterThan(0)
     expect(
-      screen.getByText('Previously loaded results are shown below.'),
+      screen.getByText('Previously loaded results remain visible.'),
     ).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(refetch).toHaveBeenCalledTimes(1)

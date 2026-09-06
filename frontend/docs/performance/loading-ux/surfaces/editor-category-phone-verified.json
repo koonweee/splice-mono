@@ -1,0 +1,4475 @@
+{
+  "scenario": {
+    "name": "editor-category-phone-verified",
+    "path": "/settings?tab=categories",
+    "width": 390,
+    "height": 844,
+    "mobile": true,
+    "action": {
+      "text": "Add category",
+      "touch": true
+    },
+    "resultText": "Category name"
+  },
+  "ready": true,
+  "actionReady": null,
+  "interceptions": [],
+  "runtimeErrors": [],
+  "audit": {
+    "start": 548.8999999761581,
+    "shifts": [],
+    "anchors": [
+      {
+        "at": 551.6999999284744,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 601.3999999761581,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 289.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 623.2999999523163,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 289.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": -30,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": -3,
+              "width": 104.390625,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": -9,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 84.796875,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 169.59375,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 356.78125,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 733,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 733,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 634.5,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": -30,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": -3,
+              "width": 104.390625,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": -9,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 84.796875,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 169.59375,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 356.78125,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 733,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 733,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 667.1000000238419,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": -27.888185501098633,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": -0.8881855010986328,
+              "width": 104.390625,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": -6.888185501098633,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 86.90869140625,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 171.70556640625,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 358.89306640625,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 735.11181640625,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 735.11181640625,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 684.5,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": -23.388996124267578,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": 3.611003875732422,
+              "width": 104.390625,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": -2.388996124267578,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 91.40788269042969,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 176.2047576904297,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 363.3922424316406,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 739.6110229492188,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 739.6110229492188,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 701,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": -17.743026733398438,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": 9.256973266601562,
+              "width": 104.390625,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": 3.2569732666015625,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 97.05384826660156,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 181.85072326660156,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 369.0382080078125,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 745.2569580078125,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 745.2569580078125,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 775.7999999523163,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": -3.7896602153778076,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": 23.21034049987793,
+              "width": 104.390625,
+              "height": 15.999998092651367
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": 17.21034049987793,
+              "width": 28,
+              "height": 27.999998092651367
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 111.00721740722656,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 195.80409240722656,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 382.9915771484375,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 759.2103271484375,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 759.2103271484375,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 784.6000000238419,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": -2.2574667930603027,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": 24.74253273010254,
+              "width": 104.390625,
+              "height": 16.000001907348633
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": 18.74253273010254,
+              "width": 28,
+              "height": 28.000001907348633
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 112.5394058227539,
+              "width": 348,
+              "height": 48.00000762939453
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 197.33628845214844,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 384.5237731933594,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 760.7425537109375,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 760.7425537109375,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 801.1999999284744,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": -1.1859705448150635,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": 25.814029693603516,
+              "width": 104.390625,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": 19.814029693603516,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 113.61090087890625,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 198.40777587890625,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 385.59527587890625,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 761.8140258789062,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 761.8140258789062,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 817.2999999523163,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": -0.49772021174430847,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": 26.50227928161621,
+              "width": 104.390625,
+              "height": 16.000001907348633
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": 20.50227928161621,
+              "width": 28,
+              "height": 28.000001907348633
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 114.29915618896484,
+              "width": 348,
+              "height": 47.99999237060547
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 199.0960235595703,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 386.2835388183594,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 762.5022583007812,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 762.5022583007812,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 834.5,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": -0.1160801500082016,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": 26.883920669555664,
+              "width": 104.390625,
+              "height": 15.999998092651367
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": 20.883920669555664,
+              "width": 28,
+              "height": 27.999998092651367
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 114.68079376220703,
+              "width": 348,
+              "height": 48.00000762939453
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 199.47767639160156,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 386.6651611328125,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 762.8839111328125,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 762.8839111328125,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      },
+      {
+        "at": 849.6999999284744,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Settings"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.28125,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-tabs-list m_576c9d4 m_89d33d6d mantine-Tabs-list _settingsTabList_pyxhh_35",
+              "label": "GeneralNotificationsAccessCategoriesAnalysisCategorizationRecurring"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 686.046875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "General"
+            },
+            "rect": {
+              "x": -6,
+              "y": 138.796875,
+              "width": 82.171875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Notifications"
+            },
+            "rect": {
+              "x": 76.171875,
+              "y": 138.796875,
+              "width": 113.65625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Access"
+            },
+            "rect": {
+              "x": 189.828125,
+              "y": 138.796875,
+              "width": 78.3125,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categories"
+            },
+            "rect": {
+              "x": 268.140625,
+              "y": 138.796875,
+              "width": 105.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 373.8125,
+              "y": 138.796875,
+              "width": 85.1875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Categorization"
+            },
+            "rect": {
+              "x": 459,
+              "y": 138.796875,
+              "width": 126.484375,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-tabs-tab m_539e827b m_4ec4dce6 mantine-Tabs-tab m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Recurring"
+            },
+            "rect": {
+              "x": 585.484375,
+              "y": 138.796875,
+              "width": 94.5625,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 16,
+              "y": 288.1875,
+              "width": 358,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-TextInput-input",
+              "label": "Search categories"
+            },
+            "rect": {
+              "x": 16,
+              "y": 346.1875,
+              "width": 358,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 416.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open category filters"
+            },
+            "rect": {
+              "x": 145.578125,
+              "y": 404.1875,
+              "width": 48,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 16,
+              "y": 468.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "mantine-focus-auto m_26063560 mantine-Checkbox-input",
+              "label": "Select Food > Restaurants"
+            },
+            "rect": {
+              "x": 28,
+              "y": 519.1875,
+              "width": 20,
+              "height": 20
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Edit category"
+            },
+            "rect": {
+              "x": 270,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Archive category"
+            },
+            "rect": {
+              "x": 318,
+              "y": 570.28125,
+              "width": 44,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _content_1dppv_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+            },
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Add category"
+            },
+            "rect": {
+              "x": 21,
+              "y": 27,
+              "width": 104.390625,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close editor"
+            },
+            "rect": {
+              "x": 346,
+              "y": 21,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 114.796875,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Autocomplete-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 199.59375,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "INPUT",
+              "class": "splice-input-input m_8fb7ebe7 mantine-Input-input mantine-ColorInput-input",
+              "label": ""
+            },
+            "rect": {
+              "x": 21,
+              "y": 386.78125,
+              "width": 348,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Cancel"
+            },
+            "rect": {
+              "x": 21,
+              "y": 763,
+              "width": 171.671875,
+              "height": 44
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Create"
+            },
+            "rect": {
+              "x": 204.671875,
+              "y": 763,
+              "width": 164.328125,
+              "height": 44
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "inputs": [
+      {
+        "type": "pointerdown",
+        "at": 570.6000000238419,
+        "target": {
+          "tag": "SPAN",
+          "class": "m_811560b9 mantine-Button-label",
+          "label": "Add category"
+        }
+      },
+      {
+        "type": "touchstart",
+        "at": 570.7999999523163,
+        "target": {
+          "tag": "SPAN",
+          "class": "m_811560b9 mantine-Button-label",
+          "label": "Add category"
+        }
+      }
+    ],
+    "scroll": [],
+    "resources": []
+  },
+  "dom": {
+    "title": "Settings",
+    "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nSettings\nGeneral\nNotifications\nAccess\nCategories\nAnalysis\nCategorization\nRecurring\n\nCategories\n\nOrganize your transactions with categories that make sense to you.\n\nAdd category\nArchived only\nSelect all visible categories\n\nFood\n\nRestaurants\n\nACTIVE\n\n126 used\n\nAdd category\nPrimary category *\nSecondary category *\nDescription\nColor\nCancel\nCreate",
+    "dialogs": [
+      "Add categoryPrimary category *FoodSecondary category *RestaurantsDescriptionColorCancelCreate"
+    ],
+    "reducedMotion": false
+  }
+}
