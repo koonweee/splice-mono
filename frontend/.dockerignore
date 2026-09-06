@@ -1,0 +1,20 @@
+# Dependencies and local build output are produced inside Docker.
+node_modules
+dist
+dist-ssr
+.output
+.nitro
+.tanstack
+.vinxi
+.wrangler
+coverage
+
+# Local credentials, tooling state and diagnostics are not build inputs.
+.env
+.env.*
+.git
+.gitignore
+.vscode
+.idea
+*.log
+.DS_Store
