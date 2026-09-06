@@ -15,6 +15,7 @@ import {
   createFileRoute,
   redirect,
   useLocation,
+  useRouter,
 } from '@tanstack/react-router'
 import {
   CreditCard,
@@ -24,13 +25,18 @@ import {
   Settings,
   TrendingUp,
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { createNavigationPreparation } from '../lib/navigation-preload'
+import { preparePageFeatureCode } from '../lib/feature-loaders'
+import { usePresentationPreferences } from '../lib/presentation-preferences'
 import { PrivateSessionBoundary } from '../components/PrivateSessionBoundary'
 import { useLogout } from '../lib/auth'
 import { isConfirmedLoggedOutError } from '../lib/session-refresh'
 import { sessionQueryOptions, useSession } from '../lib/session'
 import { applyThemePresetId, normalizeThemePresetId } from '../lib/theme'
 import styles from './_authed.module.css'
+import type { PrimaryDestination } from '../lib/navigation-preload'
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: async ({ location, context }) => {
@@ -91,6 +97,51 @@ function AuthenticatedLayoutContent() {
   const logoutMutation = useLogout()
   const { data: session } = useSession()
   const user = session?.user
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { today } = usePresentationPreferences()
+  const preparation = useRef<ReturnType<
+    typeof createNavigationPreparation
+  > | null>(null)
+  useEffect(() => {
+    if (!user) return
+    const coordinator = createNavigationPreparation({
+      client: queryClient,
+      identity: user.id,
+      currency: user.settings.currency,
+      today,
+      foregroundCode: preparePageFeatureCode(
+        router.state.location.pathname,
+        router.state.location.search,
+      ),
+      foregroundBusy: () =>
+        router.state.status === 'pending' ||
+        queryClient.isFetching({
+          predicate: (query) =>
+            query.getObserversCount() > 0 && query.state.data === undefined,
+        }) > 0,
+      loadRouteCode: (destination) =>
+        router.loadRouteChunk(router.routesById[`/_authed${destination}`]),
+    })
+    preparation.current = coordinator
+    const unsubscribe = router.subscribe('onResolved', coordinator.wake)
+    const unsubscribeNavigation = router.subscribe(
+      'onBeforeNavigate',
+      ({ toLocation }) => {
+        coordinator.prioritizeCode(
+          preparePageFeatureCode(toLocation.pathname, toLocation.search),
+        )
+      },
+    )
+    return () => {
+      unsubscribe()
+      unsubscribeNavigation()
+      coordinator.stop()
+      preparation.current = null
+    }
+  }, [router, queryClient, user?.id, user?.settings.currency, today])
+  const prepareDestination = (to: PrimaryDestination) =>
+    preparation.current?.prepare(to)
 
   useEffect(() => {
     if (user?.settings) {
@@ -104,7 +155,7 @@ function AuthenticatedLayoutContent() {
     { to: '/analysis', label: 'Analysis', icon: PieChart },
     { to: '/accounts', label: 'Accounts', icon: CreditCard },
     { to: '/settings', label: 'Settings', icon: Settings },
-  ]
+  ] as const
 
   const handleLogout = () => {
     logoutMutation.mutate({ data: {} })
@@ -159,7 +210,13 @@ function AuthenticatedLayoutContent() {
               label={item.label}
               leftSection={<item.icon size={18} />}
               active={location.pathname === item.to}
-              onClick={() => toggle()}
+              onPointerEnter={() => prepareDestination(item.to)}
+              onFocus={() => prepareDestination(item.to)}
+              onTouchStart={() => prepareDestination(item.to)}
+              onClick={() => {
+                prepareDestination(item.to)
+                toggle()
+              }}
             />
           ))}
         </Stack>

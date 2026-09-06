@@ -16,6 +16,7 @@ import { X } from 'lucide-react'
 import { useId } from 'react'
 import { useCompactLayout } from '../lib/responsive'
 import { formatDateRangeLabel } from '../lib/date-range'
+import styles from './DateRangeControl.module.css'
 import type { DatesRangeValue } from '@mantine/dates'
 
 type DateRangeControlProps = {
@@ -163,11 +164,9 @@ export function DateRangeControl({
 
   const trigger = (
     <Box
-      flex={isMobile ? 1 : undefined}
-      maw={isMobile ? 'calc(100vw - 88px)' : undefined}
-      miw={0}
+      className={styles.trigger}
       pos="relative"
-      w={isMobile ? undefined : width}
+      style={{ '--date-range-width': `${width}px` }}
     >
       <Button
         aria-label="Choose date range"
@@ -177,7 +176,7 @@ export function DateRangeControl({
         fullWidth
         h="auto"
         justify="space-between"
-        mih={isMobile ? 48 : undefined}
+        className={styles.triggerButton}
         miw={0}
         onClick={toggle}
         py="xs"

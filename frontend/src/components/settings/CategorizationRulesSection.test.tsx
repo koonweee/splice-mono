@@ -303,7 +303,7 @@ describe('CategorizationRulesSection', () => {
     renderSection()
     expect(screen.getAllByText(activeRule.name).length).toBeGreaterThan(0)
     expect(
-      screen.getByText('Previously loaded results are shown below.'),
+      screen.getByText('Previously loaded results remain visible.'),
     ).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(refetch).toHaveBeenCalledTimes(1)
@@ -466,7 +466,7 @@ describe('CategorizationRulesSection', () => {
     })
   })
 
-  it('does not start recommendation generation before recommendations load', () => {
+  it('does not start recommendation generation before recommendations load', async () => {
     mockFns.useCategorizationRuleRecommendationControllerListMock.mockReturnValue(
       {
         data: undefined,
@@ -480,6 +480,16 @@ describe('CategorizationRulesSection', () => {
     fireEvent.click(screen.getByLabelText('Rule recommendations'))
 
     expect(mockFns.generateRecommendationsMutateMock).not.toHaveBeenCalled()
+    expect(screen.queryByText('No recommendations yet')).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: /^generate recommendations$/i }),
+    ).toBeNull()
+    const regenerate = await screen.findByRole('button', {
+      name: 'Regenerate recommendations',
+    })
+    expect(regenerate.hasAttribute('disabled')).toBe(true)
+    fireEvent.click(regenerate)
+    expect(mockFns.regenerateRecommendationsMutateMock).not.toHaveBeenCalled()
   })
 
   it('opens recommendations without auto-generating when none exist', async () => {

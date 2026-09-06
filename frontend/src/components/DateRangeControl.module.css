@@ -1,0 +1,14 @@
+.trigger {
+  width: var(--date-range-width);
+  min-width: 0;
+}
+@media (--compact-layout) {
+  .trigger {
+    flex: 1;
+    width: auto;
+    max-width: calc(100vw - 88px);
+  }
+  .triggerButton {
+    min-height: 48px;
+  }
+}

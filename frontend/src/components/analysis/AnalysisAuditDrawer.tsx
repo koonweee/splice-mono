@@ -1,18 +1,16 @@
 import {
-  Alert,
   Badge,
   Box,
-  Button,
   Divider,
   Drawer,
   Group,
-  Loader,
   Paper,
   Stack,
   Text,
 } from '@mantine/core'
-import { ClipboardList } from 'lucide-react'
 import { useMemo } from 'react'
+import { DataState } from '../DataState'
+import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { useCompactLayout } from '../../lib/responsive'
 import {
   formatCategoryName,
@@ -20,7 +18,7 @@ import {
   formatMoneyWithSign,
   formatPrimaryCategory,
 } from '../../lib/format'
-import { formatDateRangeLabel } from '../../lib/date-range'
+import { AnalysisAuditHeader } from './AnalysisAuditHeader'
 import type {
   AnalysisAuditTransaction,
   TransactionAnalysisAuditResponse,
@@ -32,6 +30,8 @@ export type AnalysisAuditDrawerQuery = {
   isLoading?: boolean
   isPending?: boolean
   isError?: boolean
+  isFetching?: boolean
+  refetch?: () => unknown
 }
 
 type AuditGroup = {
@@ -188,58 +188,29 @@ export function AnalysisAuditDrawer({
       }}
     >
       <Stack gap="md" h="100%" style={{ minHeight: 0 }}>
-        <Group justify="space-between" align="flex-start" gap="sm">
-          <Box style={{ minWidth: 0 }}>
-            <Text size="sm" c="dimmed">
-              {formatDateRangeLabel([startDate, endDate])}
-            </Text>
-            {auditQuery?.data && (
-              <Text size="xs" c="dimmed">
-                Refund matching window:{' '}
-                {auditQuery.data.neutralizationLookaroundDays} days
-              </Text>
-            )}
-          </Box>
-          <Button
-            component="a"
-            href="/settings?tab=analysis"
-            variant="light"
-            leftSection={<ClipboardList size={16} />}
-            size={isMobile ? 'md' : 'sm'}
-          >
-            Manage rules
-          </Button>
-        </Group>
+        <AnalysisAuditHeader
+          startDate={startDate}
+          endDate={endDate}
+          lookaroundDays={auditQuery?.data?.neutralizationLookaroundDays}
+        />
 
-        {isLoading && (
-          <Group justify="center" py="xl">
-            <Loader />
-          </Group>
-        )}
-
-        {isError && (
-          <Alert color="red" title="Error">
-            Failed to load analysis audit.
-          </Alert>
-        )}
-
-        {!isLoading && !isError && groups.length === 0 && (
-          <Paper withBorder p="lg" radius="md">
-            <Stack gap="sm" align="flex-start">
-              <Text c="dimmed">No rule effects for this date range.</Text>
-              <Button
-                component="a"
-                href="/settings?tab=analysis"
-                variant="light"
-                size={isMobile ? 'md' : 'sm'}
-              >
-                Manage rules
-              </Button>
-            </Stack>
-          </Paper>
-        )}
-
-        {!isLoading && !isError && groups.length > 0 && (
+        <DataState
+          hasData={groups.length > 0}
+          isLoading={isLoading}
+          isError={isError}
+          isFetching={auditQuery?.isFetching}
+          onRetry={
+            auditQuery?.refetch
+              ? () => {
+                  void auditQuery.refetch?.()
+                }
+              : undefined
+          }
+          errorMessage="Failed to load analysis audit."
+          emptyMessage="No rule effects for this date range."
+          loadingMessage="Loading analysis audit…"
+          loadingFallback={<TableSkeleton rows={4} />}
+        >
           <Stack
             gap="lg"
             style={{
@@ -262,7 +233,7 @@ export function AnalysisAuditDrawer({
               </Stack>
             ))}
           </Stack>
-        )}
+        </DataState>
       </Stack>
     </Drawer>
   )

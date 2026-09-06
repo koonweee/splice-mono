@@ -1,4 +1,4 @@
-import { Alert, Button, FileInput, Stack, Text } from '@mantine/core'
+import { Alert, Button, FileInput, Stack } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
 import { IconUpload } from '@tabler/icons-react'
@@ -10,6 +10,7 @@ import { useBalanceSnapshotControllerImportCsv } from '../../api/clients/spliceA
 import { getApiErrorMessage } from '../../lib/api-errors'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
+import { BackfillInstructions } from './BackfillInstructions'
 
 interface BackfillModalProps {
   opened: boolean
@@ -114,18 +115,7 @@ export function BackfillModal({ opened, onClose }: BackfillModalProps) {
               {importError}
             </Alert>
           )}
-          <Text size="sm">
-            Download the template CSV, which contains your current accounts.
-            Fill in the balances for each date you want to record.
-          </Text>
-          <Text component="div" size="sm" c="dimmed">
-            Format rules:
-            <ul>
-              <li>Dates in header: YYYY-MM-DD</li>
-              <li>Positive values for assets, negative for liabilities</li>
-              <li>Leave cells empty to skip</li>
-            </ul>
-          </Text>
+          <BackfillInstructions />
 
           <Button variant="light" onClick={handleDownloadTemplate}>
             Download template

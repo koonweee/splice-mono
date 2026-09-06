@@ -1,0 +1,1544 @@
+{
+  "scenario": {
+    "name": "dialog-analysis-drilldown-data-delay",
+    "path": "/analysis",
+    "width": 390,
+    "height": 844,
+    "mobile": true,
+    "delayPattern": "/transaction-analysis/transactions",
+    "delayMs": 4000,
+    "action": {
+      "selector": "button",
+      "text": "Food$3,203100%",
+      "touch": true
+    },
+    "resultText": "Fixture merchant"
+  },
+  "ready": true,
+  "actionReady": true,
+  "interceptions": [
+    {
+      "url": "http://localhost:4101/assets/main-CI-rsIHW.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/_authed-Z5MR6VAo.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/auth-B6_q-C11.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/use-disclosure-rZmADeje.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/createLucideIcon-CQ4dW4bL.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/house-D44cKnAF.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/browser-push-JS2LdlsD.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/analysis-DPAwaxRk.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/dayjs.min-BNMtz_8I.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DeferredOverlay-DVMk2rKy.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/money-Cq-eqcN7.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DataState-C5kmWhH3.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DeferredFeature-DijpZwEt.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DateRangeControl-CmyqoJ_s.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Pressable-DPG8yZiX.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/format-LbgKyRTa.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/category-colors-DlV3xj2E.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/clipboard-list-kTpM6cHP.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/responsive-BQ6iiVdB.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/EditorModal-sgdZFhG9.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/CategoryTransactionsModal.module-DPUGtYf_.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/date-range-BXXTBxSB.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/x-I_JzhtRN.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/DatePicker-Cns8np5X.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/pick-calendar-levels-props-ERXem-du.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-Bo-vtJFx.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-DrbgVAe_.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-DAqvOFgL.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-C2i_EZ8M.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-C36hm8jf.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/styles-D-Jrl7B0.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/style-CRS8gQDN.css",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/virtual_pwa-register-CVujObS1.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/workbox-window.prod.es5-BBnX5xw4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/index-DZmGuEej.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AreaChart-D5HfTwYi.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/ColorSwatch-Bo_lsCgp.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/RechartsWrapper-BXNWGLLL.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/maxBy-B0OGrNav.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/home-B01yEuYg.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/balance-utils-yjvaOAX9.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/InteractiveRow-cdbWw8C-.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/IconChevronUp-DSIsSRLw.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/IconChevronDown-wsMIQE48.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Divider-DJxXsbvD.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/eye-DJcoM-Bd.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/balance-query/dashboard-summary?period=month&endDate=2026-09-06",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/balance-query/dashboard-series?period=month&endDate=2026-09-06",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/transactions-CObEgf59.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/useInfiniteQuery-BBx1fLP-.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/category-options-Camm1XQ2.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/TransactionsMobileList-COumjLLp.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/MantineTableChrome.module-A2wrxPdN.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/use-debounced-value-BdZx7IP4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/use-mantine-color-scheme-ClZJI4sr.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Table-Dea-WxyK.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/CategorySelect-2pbCw2Sd.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/check-_nLvGc1q.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/pencil-Bs-xT6gm.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/rotate-ccw-BZEBs08S.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/trash-2-B1q_9tMM.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/info-B21J9o7X.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/mobile-combobox-y2FY3FuM.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/api-errors-CGijFCoY.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/save-CEz6eXMg.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AccountSelect-COzbZHdH.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/ConfirmActionDialog-AfnSdHX9.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/FormActions-DC6Esc4d.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/funnel-D1rFh2it.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/plus-DOJzRll2.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/transaction?pageSize=50&convert=true&sortBy=activityDate&sortOrder=DESC",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/accounts-ZjZr7uBn.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/useAccountMetadataMutation-KoEY9thP.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/mutation-feedback-BTSLFvd3.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/archive-H8AWuIgN.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/IconUpload-QVYLehCP.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/settings-BtUQ-nH4.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/SimpleGrid-Bj5EgeVx.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/Chart-DbHZz_9K.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/account",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/AnalysisSankeyChart-KoQ9arxt.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:4101/assets/CategoryTransactionsModal-TDECf0Mh.js",
+      "delay": 0,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/transaction-analysis/transactions?startDate=2026-09-01&endDate=2026-09-06&categoryPrimary=Food&flowDirection=outflow",
+      "delay": 4000,
+      "fail": false
+    },
+    {
+      "url": "http://localhost:3101/category",
+      "delay": 0,
+      "fail": false
+    }
+  ],
+  "runtimeErrors": [],
+  "audit": {
+    "start": 336.59999990463257,
+    "shifts": [],
+    "anchors": [
+      {
+        "at": 342.89999997615814,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.921875,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Choose date range"
+            },
+            "rect": {
+              "x": 16,
+              "y": 122.796875,
+              "width": 243.1875,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root __m__-_R_aqirr7r6_",
+              "label": "Audit"
+            },
+            "rect": {
+              "x": 269.1875,
+              "y": 122.796875,
+              "width": 104.8125,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Inflows$0Outflows$3,203Net-$3,203"
+            },
+            "rect": {
+              "x": 16,
+              "y": 202.796875,
+              "width": 358,
+              "height": 116.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "InflowsNo data for this period"
+            },
+            "rect": {
+              "x": 16,
+              "y": 339.390625,
+              "width": 358,
+              "height": 171.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Outflows$3,203.__m__-_R_lmqrb4rr7r6_{--grid-gutter:var(--mantine-spacing-lg);}.__m__-_R_3dlmqrb4rr7r"
+            },
+            "rect": {
+              "x": 16,
+              "y": 526.984375,
+              "width": 358,
+              "height": 295.09375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Food$3,203100%"
+            },
+            "rect": {
+              "x": 37,
+              "y": 768.78125,
+              "width": 316,
+              "height": 32.296875
+            }
+          }
+        ]
+      },
+      {
+        "at": 377.59999990463257,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.921875,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Choose date range"
+            },
+            "rect": {
+              "x": 16,
+              "y": 122.796875,
+              "width": 243.1875,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root __m__-_R_aqirr7r6_",
+              "label": "Audit"
+            },
+            "rect": {
+              "x": 269.1875,
+              "y": 122.796875,
+              "width": 104.8125,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Inflows$0Outflows$3,203Net-$3,203"
+            },
+            "rect": {
+              "x": 16,
+              "y": 202.796875,
+              "width": 358,
+              "height": 116.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "InflowsNo data for this period"
+            },
+            "rect": {
+              "x": 16,
+              "y": 339.390625,
+              "width": 358,
+              "height": 171.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Outflows$3,203.__m__-_R_lmqrb4rr7r6_{--grid-gutter:var(--mantine-spacing-lg);}.__m__-_R_3dlmqrb4rr7r"
+            },
+            "rect": {
+              "x": 16,
+              "y": 526.984375,
+              "width": 358,
+              "height": 295.09375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Food$3,203100%"
+            },
+            "rect": {
+              "x": 37,
+              "y": 768.78125,
+              "width": 316,
+              "height": 32.296875
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _drilldownModalContent_v9pzt_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Food Transactions (Outflows)Loading category transactions…"
+            },
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Food Transactions (Outflows)"
+            },
+            "rect": {
+              "x": 17,
+              "y": 23,
+              "width": 229.671875,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close dialog"
+            },
+            "rect": {
+              "x": 350,
+              "y": 17,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": ""
+            },
+            "rect": {
+              "x": 1,
+              "y": 62,
+              "width": 388,
+              "height": 391
+            }
+          }
+        ]
+      },
+      {
+        "at": 678.6999999284744,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.921875,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Choose date range"
+            },
+            "rect": {
+              "x": 16,
+              "y": 122.796875,
+              "width": 243.1875,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root __m__-_R_aqirr7r6_",
+              "label": "Audit"
+            },
+            "rect": {
+              "x": 269.1875,
+              "y": 122.796875,
+              "width": 104.8125,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Inflows$0Outflows$3,203Net-$3,203"
+            },
+            "rect": {
+              "x": 16,
+              "y": 202.796875,
+              "width": 358,
+              "height": 116.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "InflowsNo data for this period"
+            },
+            "rect": {
+              "x": 16,
+              "y": 339.390625,
+              "width": 358,
+              "height": 171.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Outflows$3,203.__m__-_R_lmqrb4rr7r6_{--grid-gutter:var(--mantine-spacing-lg);}.__m__-_R_3dlmqrb4rr7r"
+            },
+            "rect": {
+              "x": 16,
+              "y": 526.984375,
+              "width": 358,
+              "height": 295.09375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Food$3,203100%"
+            },
+            "rect": {
+              "x": 37,
+              "y": 768.78125,
+              "width": 316,
+              "height": 32.296875
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _drilldownModalContent_v9pzt_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Food Transactions (Outflows)Loading transactions…"
+            },
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Food Transactions (Outflows)"
+            },
+            "rect": {
+              "x": 17,
+              "y": 23,
+              "width": 229.671875,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close dialog"
+            },
+            "rect": {
+              "x": 350,
+              "y": 17,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": ""
+            },
+            "rect": {
+              "x": 1,
+              "y": 62,
+              "width": 388,
+              "height": 391
+            }
+          }
+        ]
+      },
+      {
+        "at": 4740.799999952316,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 346,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 16,
+              "y": 76,
+              "width": 86.921875,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Choose date range"
+            },
+            "rect": {
+              "x": 16,
+              "y": 122.796875,
+              "width": 243.1875,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root __m__-_R_aqirr7r6_",
+              "label": "Audit"
+            },
+            "rect": {
+              "x": 269.1875,
+              "y": 122.796875,
+              "width": 104.8125,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Inflows$0Outflows$3,203Net-$3,203"
+            },
+            "rect": {
+              "x": 16,
+              "y": 202.796875,
+              "width": 358,
+              "height": 116.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "InflowsNo data for this period"
+            },
+            "rect": {
+              "x": 16,
+              "y": 339.390625,
+              "width": 358,
+              "height": 171.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Outflows$3,203.__m__-_R_lmqrb4rr7r6_{--grid-gutter:var(--mantine-spacing-lg);}.__m__-_R_3dlmqrb4rr7r"
+            },
+            "rect": {
+              "x": 16,
+              "y": 526.984375,
+              "width": 358,
+              "height": 295.09375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Food$3,203100%"
+            },
+            "rect": {
+              "x": 37,
+              "y": 768.78125,
+              "width": 316,
+              "height": 32.296875
+            }
+          },
+          {
+            "node": {
+              "tag": "SECTION",
+              "class": "splice-paper-root m_fd1ab0aa splice-overlay-content _drilldownModalContent_v9pzt_1 m_54c44539 mantine-Modal-content m_1b7284a3 mantine-Paper-root",
+              "label": "Food Transactions (Outflows)September 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurantsF"
+            },
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            }
+          },
+          {
+            "node": {
+              "tag": "H2",
+              "class": "m_615af6c9 splice-overlay-title mantine-Modal-title",
+              "label": "Food Transactions (Outflows)"
+            },
+            "rect": {
+              "x": 17,
+              "y": 22.5,
+              "width": 229.671875,
+              "height": 16
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active m_220c80f2 m_606cb269 mantine-Modal-close m_86a44da5 mantine-CloseButton-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Close dialog"
+            },
+            "rect": {
+              "x": 350,
+              "y": 16.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 001"
+            },
+            "rect": {
+              "x": 17,
+              "y": 97.59375,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 002"
+            },
+            "rect": {
+              "x": 17,
+              "y": 190.578125,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 014"
+            },
+            "rect": {
+              "x": 17,
+              "y": 283.5625,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 004"
+            },
+            "rect": {
+              "x": 17,
+              "y": 376.546875,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 005"
+            },
+            "rect": {
+              "x": 17,
+              "y": 469.53125,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 028"
+            },
+            "rect": {
+              "x": 17,
+              "y": 562.515625,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 022"
+            },
+            "rect": {
+              "x": 17,
+              "y": 655.5,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 016"
+            },
+            "rect": {
+              "x": 17,
+              "y": 748.484375,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 013"
+            },
+            "rect": {
+              "x": 17,
+              "y": 841.46875,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 026"
+            },
+            "rect": {
+              "x": 17,
+              "y": 934.453125,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Exact ETH transaction"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1027.4375,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 017"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1120.421875,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 006"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1213.40625,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 019"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1306.390625,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 027"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1399.375,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 023"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1492.359375,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 029"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1585.34375,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 012"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1678.328125,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 020"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1771.3125,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 009"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1864.296875,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 021"
+            },
+            "rect": {
+              "x": 17,
+              "y": 1957.28125,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 015"
+            },
+            "rect": {
+              "x": 17,
+              "y": 2050.265625,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 003"
+            },
+            "rect": {
+              "x": 17,
+              "y": 2143.25,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 007"
+            },
+            "rect": {
+              "x": 17,
+              "y": 2236.234375,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 018"
+            },
+            "rect": {
+              "x": 17,
+              "y": 2329.21875,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 011"
+            },
+            "rect": {
+              "x": 17,
+              "y": 2422.203125,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 025"
+            },
+            "rect": {
+              "x": 17,
+              "y": 2515.1875,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 008"
+            },
+            "rect": {
+              "x": 17,
+              "y": 2608.171875,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 010"
+            },
+            "rect": {
+              "x": 17,
+              "y": 2701.15625,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 000"
+            },
+            "rect": {
+              "x": 17,
+              "y": 2794.140625,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 024"
+            },
+            "rect": {
+              "x": 17,
+              "y": 2887.125,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 040"
+            },
+            "rect": {
+              "x": 17,
+              "y": 3015.703125,
+              "width": 356,
+              "height": 91.984375
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_action_3b9ob_17",
+              "label": "Open transaction details for Fixture merchant 041"
+            },
+            "rect": {
+              "x": 17,
+              "y": 3108.6875,
+              "width": 356,
+              "height": 91.984375
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "inputs": [
+      {
+        "type": "pointerdown",
+        "at": 344.2999999523163,
+        "target": {
+          "tag": "P",
+          "class": "mantine-focus-auto m_b6d8b162 mantine-Text-root",
+          "label": "Food"
+        }
+      },
+      {
+        "type": "touchstart",
+        "at": 344.7999999523163,
+        "target": {
+          "tag": "P",
+          "class": "mantine-focus-auto m_b6d8b162 mantine-Text-root",
+          "label": "Food"
+        }
+      }
+    ],
+    "scroll": [],
+    "resources": []
+  },
+  "dom": {
+    "title": "Analysis",
+    "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nAnalysis\nSep 1–6, 2026\nAudit\n\nInflows\n\n$0\n\nOutflows\n\n$3,203\n\nNet\n\n-$3,203\n\nInflows\n\nNo data for this period\n\nOutflows\n\n$3,203\n\n$3,203\n\nFood\n\n$3,203\n\nFood Transactions (Outflows)\nSEPTEMBER 5, 2026\nF\nFixture merchant 001\n-$1.01\nFixture checking\nRestaurants\nF\nFixture merchant 002\n-$1.02\nFixture checking\nRestaurants\nF\nFixture merchant 014\n-$1.14\nFixture checking\nRestaurants\nF\nFixture merchant 004\n-$1.04\nFixture checking\nRestaurants\nF\nFixture merchant 005\n-$1.05\nFixture checking\nRestaurants\nF\nFixture merchant 028\n-$1.28\nFixture checking\nRestaurants\nF\nFixture merchant 022\n-$1.22\nFixture checking\nRestaurants\nF\nFixture merchant 016\n-$1.16\nFixture checking\nRestaurants\nF\nFixture merchant 013\n-$1.13\nFixture checking\nRestaurants\nF\nFixture merchant 026\n-$1.26\nFixture checking\nRestaurants\nE\nExact ETH transaction\n-$3,000.00\nExact ETH wallet\nRestaurants\nF\nFixture merchant 017\n-$1.17\nFixture checking\nRestaurants\nF\nFixture merchant 006\n-$1.06\nFixture checking\nRestaurants\nF\nFixture merchant 019\n-$1.19\nFixture checking\nRestaurants\nF\nFixture merchant 027\n-$1.27\nFixture checking\nRestaurants\nF\nFixture merchant 023\n-$1.23\nFixture checking\nRestaurants\nF\nFixture merchant 029\n-$1.29\nFixture checking\nRestaurants\nF\nFixture merchant 012\n-$1.12\nFixture checking\nRestaurants\nF\nFixture merchant 020\n-$1.20\nFixture checking\nRestaurants\nF\nFixture merchant 009\n-$1.09\nFixture checking\nRestaurants\nF\nFixture merchant 021\n-$1.21\nFixture checking\nRestaurants\nF\nFixture merchant 015\n-$1.15\nFixture checking\nRestaurants\nF\nFixture merchant 003\n-$1.03\nFixture checking\nRestaurants\nF\nFixture merchant 007\n-$1.07\nFixture checking\nRestaurants\nF\nFixture merchant 018\n-$1.18\nFixture checking\nRestaurants\nF\nFixture merchant 011\n-$1.11\nFixture checking\nRestaurants\nF\nFixture merchant 025\n-$1.25\nFixture checking\nRestaurants\nF\nFixture merchant 008\n-$1.08\nFixture checking\nRestaurants\nF\nFixture merchant 010\n-$1.10\nFixture checking\nRestaurants\nF\nFixture merchant 000\n-$1.00\nFixture checking\nRestaurants\nF\nFixture merchant 024\n-$1.24\nFixture checking\nRestaurants\nSEPTEMBER 4, 2026\nF\nFixture merchant 040\n-$1.40\nFixture checking\nRestaurants\nF\nFixture merchant 041\n-$1.41\nFixture checking\nRestaurants\nF\nFixture merchant 045\n-$1.45\nFixture checking\nRestaurants\nF\nFixture merchant 042\n-$1.42\nFixture checking\nRestaurants\nF\nFixture merchant 033\n-$1.33\nFixture checking\nRestaurants\nF\nFixture merchant 036\n-$1.36\nFixture checking\nRestaurants\nF\nFixture merchant 059\n-$1.59\nFixture checking\nRestaurants\nF\nFixture merchant 050\n-$1.50\nFixture checking\nRestaurants\nF\nFixture merchant 053\n-$1.53\nFixture checking\nRestaurants\nF\nFixture merchant 038\n-$1.38\nFixture checking\nRestaurants\nF\nFixture merchant 048\n-$1.48\nFixture checking\nRestaurants\nF\nFixture merchant 051\n-$1.51\nFixture checking\nRestaurants\nF\nFixture merchant 049\n-$1.49\nFixture checking\nRestaurants\nF\nFixture merchant 043\n-$1.43\nFixture checking\nRestaurants\nF\nFixture merchant 046\n-$1.46\nFixture checking\nRestaurants\nF\nFixture merchant 039\n-$1.39\nFixture checking\nRestaurants\nF\nFixture merchant 034\n-$1.34\nFixture checking\nRestaurants\nF\nFixture merchant 030\n-$1.30\nFixture checking\nRestaurants\nF\nFixture merchant 037\n-$1.37\nFixture checking\nRestaurants\nF\nFixture merchant 031\n-$1.31\nFixture checking\nRestaurants\nF\nFixture merchant 044\n-$1.44\nFixture checking\nRestaurants\nF\nFixture merchant 047\n-$1.47\nFixture checking\nRestaurants\nF\nFixture merchant 054\n-$1.54\nFixture checking\nRestaurants\nF\nFixture merchant 056\n-$1.56\nFixture checking\nRestaurants\nF\nFixture merchant 035\n-$1.35\nFixture checking\nRestaurants\nF\nFixture merchant 057\n-$1.57\nFixture checking\nRestaurants\nF\nFixture merchant 052\n-$1.52\nFixture checking\nRestaurants\nF\nFixture merchant 058\n-$1.58\nFixture checking\nRestaurants\nF\nFixture merchant 032\n-$1.32\nFixture checking\nRestaurants\nF\nFixture merchant 055\n-$1.55\nFixture checking\nRestaurants\nSEPTEMBER 3, 2026\nF\nFixture merchant 072\n-$1.72\nFixture checking\nRestaurants\nF\nFixture merchant 086\n-$1.86\nFixture checking\nRestaurants\nF\nFixture merchant 068\n-$1.68\nFixture checking\nRestaurants\nF\nFixture merchant 065\n-$1.65\nFixture checking\nRestaurants\nF\nFixture merchant 074\n-$1.74\nFixture checking\nRestaurants\nF\nFixture merchant 069\n-$1.69\nFixture checking\nRestaurants\nF\nFixture merchant 076\n-$1.76\nFixture checking\nRestaurants\nF\nFixture merchant 085\n-$1.85\nFixture checking\nRestaurants\nF\nFixture merchant 084\n-$1.84\nFixture checking\nRestaurants\nF\nFixture merchant 064\n-$1.64\nFixture checking\nRestaurants\nF\nFixture merchant 067\n-$1.67\nFixture checking\nRestaurants\nF\nFixture merchant 061\n-$1.61\nFixture checking\nRestaurants\nF\nFixture merchant 081\n-$1.81\nFixture checking\nRestaurants\nF\nFixture merchant 066\n-$1.66\nFixture checking\nRestaurants\nF\nFixture merchant 071\n-$1.71\nFixture checking\nRestaurants\nF\nFixture merchant 070\n-$1.70\nFixture checking\nRestaurants\nF\nFixture merchant 079\n-$1.79\nFixture checking\nRestaurants\nF\nFixture merchant 060\n-$1.60\nFixture checking\nRestaurants\nF\nFixture merchant 077\n-$1.77\nFixture checking\nRestaurants\nF\nFixture merchant 088\n-$1.88\nFixture checking\nRestaurants\nF\nFixture merchant 089\n-$1.89\nFixture checking\nRestaurants\nF\nFixture merchant 080\n-$1.80\nFixture checking\nRestaurants\nF\nFixture merchant 063\n-$1.63\nFixture checking\nRestaurants\nF\nFixture merchant 083\n-$1.83\nFixture checking\nRestaurants\nF\nFixture merchant 062\n-$1.62\nFixture checking\nRestaurants\nF\nFixture merchant 075\n-$1.75\nFixture checking\nRestaurants\nF\nFixture merchant 082\n-$1.82\nFixture checking\nRestaurants\nF\nFixture merchant 087\n-$1.87\nFixture checking\nRestaurants\nF\nFixture merchant 073\n-$1.73\nFixture checking\nRestaurants\nF\nFixture merchant 078\n-$1.78\nFixture checking\nRestaurants\nSEPTEMBER 2, 2026\nF\nFixture merchant 117\n-$2.17\nFixture checking\nRestaurants\nF\nFixture merchant 109\n-$2.09\nFixture checking\nRestaurants\nF\nFixture merchant 103\n-$2.03\nFixture checking\nRestaurants\nF\nFixture merchant 094\n-$1.94\nFixture checking\nRestaurants\nF\nFixture merchant 102\n-$2.02\nFixture checking\nRestaurants\nF\nFixture merchant 116\n-$2.16\nFixture checking\nRestaurants\nF\nFixture merchant 119\n-$2.19\nFixture checking\nRestaurants\nF\nFixture merchant 107\n-$2.07\nFixture checking\nRestaurants\nF\nFixture merchant 112\n-$2.12\nFixture checking\nRestaurants\nF\nFixture merchant 104\n-$2.04\nFixture checking\nRestaurants\nF\nFixture merchant 106\n-$2.06\nFixture checking\nRestaurants\nF\nFixture merchant 113\n-$2.13\nFixture checking\nRestaurants\nF\nFixture merchant 118\n-$2.18\nFixture checking\nRestaurants\nF\nFixture merchant 110\n-$2.10\nFixture checking\nRestaurants\nF\nFixture merchant 101\n-$2.01\nFixture checking\nRestaurants\nF\nFixture merchant 095\n-$1.95\nFixture checking\nRestaurants\nF\nFixture merchant 105\n-$2.05\nFixture checking\nRestaurants\nF\nFixture merchant 090\n-$1.90\nFixture checking\nRestaurants\nF\nFixture merchant 100\n-$2.00\nFixture checking\nRestaurants\nF\nFixture merchant 115\n-$2.15\nFixture checking\nRestaurants\nF\nFixture merchant 099\n-$1.99\nFixture checking\nRestaurants\nF\nFixture merchant 098\n-$1.98\nFixture checking\nRestaurants\nF\nFixture merchant 097\n-$1.97\nFixture checking\nRestaurants\nF\nFixture merchant 093\n-$1.93\nFixture checking\nRestaurants\nF\nFixture merchant 096\n-$1.96\nFixture checking\nRestaurants\nF\nFixture merchant 091\n-$1.91\nFixture checking\nRestaurants\nF\nFixture merchant 092\n-$1.92\nFixture checking\nRestaurants\nF\nFixture merchant 111\n-$2.11\nFixture checking\nRestaurants\nF\nFixture merchant 108\n-$2.08\nFixture checking\nRestaurants\nF\nFixture merchant 114\n-$2.14\nFixture checking\nRestaurants\nSEPTEMBER 1, 2026\nF\nFixture merchant 120\n-$2.20\nFixture checking\nRestaurants\nF\nFixture merchant 123\n-$2.23\nFixture checking\nRestaurants\nF\nFixture merchant 124\n-$2.24\nFixture checking\nRestaurants\nF\nFixture merchant 122\n-$2.22\nFixture checking\nRestaurants\nF\nFixture merchant 121\n-$2.21\nFixture checking\nRestaurants",
+    "dialogs": [
+      "Food Transactions (Outflows)September 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurantsFFixture merchant 002-$1.02Fixture checkingRestaurantsFFixture merchant 014-$1.14Fixture checkingRestaurantsFFixture merchant 004-$1.04Fixture checkingRestaurantsFFixture merchant 005-$1.05Fixture checkingRestaurantsFFixture merchant 028-$1.28Fixture checkingRestaurantsFFixture merchant 022-$1.22Fixture checkingRestaurantsFFixture merchant 016-$1.16Fixture checkingRestaurantsFFixture merchant 013-$1.13Fixture checkingRestaurantsFFixture merchant 026-$1.26Fixture checkingRestaurantsEExact ETH transaction-$3,000.00Exact ETH walletRestaurantsFFixture merchant 017-$1.17Fixture checkingRestaurantsFFixture merchant 006-$1.06Fixture checkingRestaurantsFFixture merchant 019-$1.19Fixture checkingRestaurantsFFixture merchant 027-$1.27Fixture checkingRestaurantsFFixture merchant 023-$1.23Fixture checkingRestaurantsFFixture merchant 029-$1.29Fixture checkingRestaurantsFFixture merchant 012-$1.12Fixture checkingRestaurantsFFixture merchant 020-$1.20Fixture checkingRestaurantsFFixture merchant 009-$1.09Fixture checkingRestaurantsFFixture merchant 021-$1.21Fixture checkingRestaurantsFFixture merchant 015-$1.15Fixture checkingRestaurantsFFixture merchant 003-$1.03Fixture checkingRestaurantsFFixture merchant 007-$1.07Fixture checkingRestaurantsFFixture merchant 018-$1.18Fixture checkingRestaurantsFFixture merchant 011-$1.11Fixture checkingRestaurantsFFixture merchant 025-$1.25Fixture checkingRestaurantsFFixture merchant 008-$1.08Fixture checkingRestaurantsFFixture merchant 010-$1.10Fixture checkingRestaurantsFFixture merchant 000-$1.00Fixture checkingRestaurantsFFixture merchant 024-$1.24Fixture checkingRestaurantsSeptember 4, 2026FFixture merchant 040-$1.40Fixture checkingRestaurantsFFixture merchant 041-$1.41Fixture checkingRestaurantsFFixture merchant 045-$1.45Fixture checkingRestaurantsFFixture merchant 042-$1.42Fixture checkingRestaurantsFFixture merchant 033-$1.33Fixture checkingRestaurantsFFixture merchant 036-$1.36Fixture checkingRestaurantsFFixture merchant 059-$1.59Fixture checkingRestaurantsFFixture merchant 050-$1.50Fixture checkingRestaurantsFFixture merchant 053-$1.53Fixture checkingRestaurantsFFixture merchant 038-$1.38Fixture checkingRestaurantsFFixture merchant 048-$1.48Fixture checkingRestaurantsFFixture merchant 051-$1.51Fixture checkingRestaurantsFFixture merchant 049-$1.49Fixture checkingRestaurantsFFixture merchant 043-$1.43Fixture checkingRestaurantsFFixture merchant 046-$1.46Fixture checkingRestaurantsFFixture merchant 039-$1.39Fixture checkingRestaurantsFFixture merchant 034-$1.34Fixture checkingRestaurantsFFixture merchant 030-$1.30Fixture checkingRestaurantsFFixture merchant 037-$1.37Fixture checkingRestaurantsFFixture merchant 031-$1.31Fixture checkingRestaurantsFFixture merchant 044-$1.44Fixture checkingRestaurantsFFixture merchant 047-$1.47Fixture checkingRestaurantsFFixture merchant 054-$1.54Fixture checkingRestaurantsFFixture merchant 056-$1.56Fixture checkingRestaurantsFFixture merchant 035-$1.35Fixture checkingRestaurantsFFixture merchant 057-$1.57Fixture checkingRestaurantsFFixture merchant 052-$1.52Fixture checkingRestaurantsFFixture merchant 058-$1.58Fixture checkingRestaurantsFFixture merchant 032-$1.32Fixture checkingRestaurantsFFixture merchant 055-$1.55Fixture checkingRestaurantsSeptember 3, 2026FFixture merchant 072-$1.72Fixture checkingRestaurantsFFixture merchant 086-$1.86Fixture checkingRestaurantsFFixture merchant 068-$1.68Fixture checkingRestaurantsFFixture merchant 065-$1.65Fixture checkingRestaurantsFFixture merchant 074-$1.74Fixture checkingRestaurantsFFixture merchant 069-$1.69Fixture checkingRestaurantsFFixture merchant 076-$1.76Fixture checkingRestaurantsFFixture merchant 085-$1.85Fixture checkingRestaurantsFFixture merchant 084-$1.84Fixture checkingRestaurantsFFixture merchant 064-$1.64Fixture checkingRestaurantsFFixture merchant 067-$1.67Fixture checkingRestaurantsFFixture merchant 061-$1.61Fixture checkingRestaurantsFFixture merchant 081-$1.81Fixture checkingRestaurantsFFixture merchant 066-$1.66Fixture checkingRestaurantsFFixture merchant 071-$1.71Fixture checkingRestaurantsFFixture merchant 070-$1.70Fixture checkingRestaurantsFFixture merchant 079-$1.79Fixture checkingRestaurantsFFixture merchant 060-$1.60Fixture checkingRestaurantsFFixture merchant 077-$1.77Fixture checkingRestaurantsFFixture merchant 088-$1.88Fixture checkingRestaurantsFFixture merchant 089-$1.89Fixture checkingRestaurantsFFixture merchant 080-$1.80Fixture checkingRestaurantsFFixture merchant 063-$1.63Fixture checkingRestaurantsFFixture merchant 083-$1.83Fixture checkingRestaurantsFFixture merchant 062-$1.62Fixture checkingRestaurantsFFixture merchant 075-$1.75Fixture checkingRestaurantsFFixture merchant 082-$1.82Fixture checkingRestaurantsFFixture merchant 087-$1.87Fixture checkingRestaurantsFFixture merchant 073-$1.73Fixture checkingRestaurantsFFixture merchant 078-$1.78Fixture checkingRestaurantsSeptember 2, 2026FFixture merchant 117-$2.17Fixture checkingRestaurantsFFixture merchant 109-$2.09Fixture checkingRestaurantsFFixture merchant 103-$2.03Fixture checkingRestaurantsFFixture merchant 094-$1.94Fixture checkingRestaurantsFFixture merchant 102-$2.02Fixture checkingRestaurantsFFixture merchant 116-$2.16Fixture checkingRestaurantsFFixture merchant 119-$2.19Fixture checkingRestaurantsFFixture merchant 107-$2.07Fixture checkingRestaurantsFFixture merchant 112-$2.12Fixture checkingRestaurantsFFixture merchant 104-$2.04Fixture checkingRestaurantsFFixture merchant 106-$2.06Fixture checkingRestaurantsFFixture merchant 113-$2.13Fixture checkingRestaurantsFFixture merchant 118-$2.18Fixture checkingRestaurantsFFixture merchant 110-$2.10Fixture checkingRestaurantsFFixture merchant 101-$2.01Fixture checkingRestaurantsFFixture merchant 095-$1.95Fixture checkingRestaurantsFFixture merchant 105-$2.05Fixture checkingRestaurantsFFixture merchant 090-$1.90Fixture checkingRestaurantsFFixture merchant 100-$2.00Fixture checkingRestaurantsFFixture merchant 115-$2.15Fixture checkingRestaurantsFFixture merchant 099-$1.99Fixture checkingRestaurantsFFixture merchant 098-$1.98Fixture checkingRestaurantsFFixture merchant 097-$1.97Fixture checkingRestaurantsFFixture merchant 093-$1.93Fixture checkingRestaurantsFFixture merchant 096-$1.96Fixture checkingRestaurantsFFixture merchant 091-$1.91Fixture checkingRestaurantsFFixture merchant 092-$1.92Fixture checkingRestaurantsFFixture merchant 111-$2.11Fixture checkingRestaurantsFFixture merchant 108-$2.08Fixture checkingRestaurantsFFixture merchant 114-$2.14Fixture checkingRestaurantsSeptember 1, 2026FFixture merchant 120-$2.20Fixture checkingRestaurantsFFixture merchant 123-$2.23Fixture checkingRestaurantsFFixture merchant 124-$2.24Fixture checkingRestaurantsFFixture merchant 122-$2.22Fixture checkingRestaurantsFFixture merchant 121-$2.21Fixture checkingRestaurants"
+    ],
+    "reducedMotion": false
+  }
+}

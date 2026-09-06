@@ -98,3 +98,10 @@
     background-color: var(--mrt-selected-row-hover-background-color) !important;
   }
 }
+
+@media (--compact-layout) {
+  .actions :global(.mantine-ActionIcon-root) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

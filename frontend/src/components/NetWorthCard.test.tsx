@@ -139,3 +139,45 @@ describe('NetWorthCard', () => {
     expect(await screen.findByText('+$45.67')).toBeTruthy()
   })
 })
+
+it('discards an old hovered value and open comparison when the period changes', () => {
+  const netWorth = {
+    money: { amount: '12345', currency: 'USD' },
+    sign: 'positive' as const,
+  }
+  const chartData: Array<ChartDataPoint> = [
+    {
+      date: '2026-04-01',
+      label: 'Apr 1',
+      value: 999,
+      money: { ...netWorth, money: { ...netWorth.money, amount: '99900' } },
+    },
+  ]
+  const card = (comparisonLoading: boolean, data = chartData) => (
+    <MantineProvider>
+      <NetWorthCard
+        balancesHidden={false}
+        netWorth={netWorth}
+        onToggleBalancesHidden={() => {}}
+        comparisonPeriod={TimePeriod.month}
+        changePercent={10}
+        changeAmount={netWorth}
+        chartData={data}
+        comparisonLoading={comparisonLoading}
+      />
+    </MantineProvider>
+  )
+  const { rerender } = render(card(false))
+  fireEvent.click(screen.getByText('+10.00%'))
+  fireEvent.click(screen.getByRole('button', { name: 'hover point' }))
+  expect(screen.getByText('$999.00')).toBeTruthy()
+  rerender(card(true))
+  expect(screen.getByText('$123.45')).toBeTruthy()
+  expect(screen.queryByText('+10.00%')).toBeNull()
+  expect(screen.queryByText('from last month')).toBeNull()
+  expect(screen.queryByText('+$123.45')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'hover point' })).toBeNull()
+  rerender(card(false, [...chartData]))
+  expect(screen.getByText('$123.45')).toBeTruthy()
+  expect(screen.queryByText('$999.00')).toBeNull()
+})

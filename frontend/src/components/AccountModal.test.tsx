@@ -30,6 +30,8 @@ import type * as SpliceAPI from '../api/clients/spliceAPI'
 const mockFns = vi.hoisted(() => ({
   mutateMock: vi.fn(),
   refetchBalanceHistoryMock: vi.fn(),
+  refetchHoldingsMock: vi.fn(),
+  refetchActivityMock: vi.fn(),
   useAccountBalanceHistoryMock: vi.fn(),
   useInvestmentHoldingsMock: vi.fn(),
   useInvestmentActivityMock: vi.fn(),
@@ -343,6 +345,8 @@ function renderAccountModal(
     accountCurrency: options.valuationMode === 'holdings' ? 'USD' : null,
     isLoading: options.holdingsLoading ?? false,
     isError: options.holdingsError ?? false,
+    isFetching: false,
+    refetch: mockFns.refetchHoldingsMock,
   })
   mockFns.useInvestmentActivityMock.mockReturnValue({
     activity: options.investmentActivity ?? [],
@@ -352,6 +356,9 @@ function renderAccountModal(
     isLoadingMore: false,
     isLoading: options.investmentActivityLoading ?? false,
     isInitialError: options.investmentActivityInitialError ?? false,
+    isFetching: false,
+    isRefetchError: false,
+    refetch: mockFns.refetchActivityMock,
     isLoadMoreError: options.investmentActivityLoadMoreError ?? false,
   })
 
@@ -607,7 +614,9 @@ describe('AccountModal balance history', () => {
     })
 
     expect(screen.getByText('Unable to load account history')).toBeTruthy()
-    expect(screen.queryByText('Current balance')).toBeNull()
+    expect(
+      screen.getByText('Current balance').closest('[aria-hidden="true"]'),
+    ).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(mockFns.refetchBalanceHistoryMock).toHaveBeenCalledTimes(1)
@@ -824,6 +833,65 @@ describe('AccountModal holdings', () => {
 
     expect(screen.getByText('Holdings unavailable.')).toBeTruthy()
     expect(screen.getByText('Current balance')).toBeTruthy()
+  })
+
+  it('retries an initial holdings failure without resetting the selected account tab', () => {
+    const result = renderAccountModal(null, {
+      type: AccountType.investment,
+      holdingsError: true,
+    })
+    const dialog = screen.getByRole('dialog')
+    const holdingsTab = screen.getByRole('tab', { name: 'Holdings' })
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(mockFns.refetchHoldingsMock).toHaveBeenCalledOnce()
+    mockFns.useInvestmentHoldingsMock.mockReturnValue({
+      holdings: [investmentHolding],
+      snapshotDate: '2026-05-20',
+      accountCurrency: 'USD',
+      isLoading: false,
+      isError: false,
+      isFetching: false,
+      refetch: mockFns.refetchHoldingsMock,
+    })
+    result.rerenderModal()
+    expect(screen.getByRole('dialog')).toBe(dialog)
+    expect(screen.getByRole('tab', { name: 'Holdings' })).toBe(holdingsTab)
+    expect(holdingsTab.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByText('VWRA')).toBeTruthy()
+    expect(screen.queryByText('Holdings unavailable.')).toBeNull()
+  })
+
+  it('retries initial activity failure in place and retains the Activity selection', () => {
+    const result = renderAccountModal(null, {
+      type: AccountType.investment,
+      investmentActivityInitialError: true,
+    })
+    fireEvent.click(screen.getByRole('tab', { name: 'Activity' }))
+    const dialog = screen.getByRole('dialog')
+    const activityTab = screen.getByRole('tab', { name: 'Activity' })
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(mockFns.refetchActivityMock).toHaveBeenCalledOnce()
+    mockFns.useInvestmentActivityMock.mockReturnValue({
+      activity: [{ id: 'recovered-activity' }],
+      total: 1,
+      hasMore: false,
+      loadMore: vi.fn(),
+      isLoadingMore: false,
+      isLoading: false,
+      isInitialError: false,
+      isLoadMoreError: false,
+      isRefetchError: false,
+      isFetching: false,
+      refetch: mockFns.refetchActivityMock,
+    })
+    result.rerenderModal()
+    expect(screen.getByRole('dialog')).toBe(dialog)
+    expect(screen.getByRole('tab', { name: 'Activity' })).toBe(activityTab)
+    expect(activityTab.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByTestId('investment-activity-table')).toBeTruthy()
+    expect(
+      screen.queryByText('Provider activity is unavailable or incomplete.'),
+    ).toBeNull()
   })
 
   it('shows investment activity loading without an empty-state flash', () => {

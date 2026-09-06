@@ -4,7 +4,6 @@ import {
   Button,
   ColorSwatch,
   Group,
-  Loader,
   Paper,
   Select,
   SimpleGrid,
@@ -18,6 +17,16 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
 import { lazy, useEffect, useMemo, useRef, useState } from 'react'
+import { loadSettingsSection } from '../../lib/queries/settings'
+import {
+  prepareSettingsCode,
+  settingsFeatureLoaders,
+} from '../../lib/feature-loaders'
+import {
+  AccessTokensSkeleton,
+  LoadingSkeleton,
+  SettingsSkeleton,
+} from '../loading/LoadingSkeleton'
 import { useSettingsMutation } from '../../hooks/useSettingsMutation'
 import { useCurrentUser } from '../../lib/session'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
@@ -41,30 +50,12 @@ import type { ThemePreset, ThemePresetId } from '../../lib/theme'
 
 import type { SettingsTab } from '../../lib/route-search'
 
-const AnalysisRulesSection = lazy(() =>
-  import('../settings/AnalysisRulesSection').then((module) => ({
-    default: module.AnalysisRulesSection,
-  })),
-)
-const CategorizationRulesSection = lazy(() =>
-  import('../settings/CategorizationRulesSection').then((module) => ({
-    default: module.CategorizationRulesSection,
-  })),
-)
-const CustomCategoriesSection = lazy(() =>
-  import('../settings/CustomCategoriesSection').then((module) => ({
-    default: module.CustomCategoriesSection,
-  })),
-)
-const PersonalAccessTokenSection = lazy(() =>
-  import('../settings/PersonalAccessTokenSection').then((module) => ({
-    default: module.PersonalAccessTokenSection,
-  })),
-)
-const RecurringManualTransactionsSection = lazy(() =>
-  import('../settings/RecurringManualTransactionsSection').then((module) => ({
-    default: module.RecurringManualTransactionsSection,
-  })),
+const AnalysisRulesSection = lazy(settingsFeatureLoaders.analysis)
+const CategorizationRulesSection = lazy(settingsFeatureLoaders.categorization)
+const CustomCategoriesSection = lazy(settingsFeatureLoaders.categories)
+const PersonalAccessTokenSection = lazy(settingsFeatureLoaders.access)
+const RecurringManualTransactionsSection = lazy(
+  settingsFeatureLoaders.recurring,
 )
 
 type GeneralSettingsValues = {
@@ -559,8 +550,20 @@ export function SettingsPage({
     setSelectedTab(tab)
   }, [tab])
 
+  const prepareTab = (nextTab: SettingsTab) => {
+    prepareSettingsCode(nextTab)
+    // Token inventory is refreshed only by selecting Access, never by speculation.
+    if (nextTab !== 'access') void loadSettingsSection(queryClient, nextTab)
+  }
+  const tabIntent = (nextTab: SettingsTab) => ({
+    onPointerEnter: () => prepareTab(nextTab),
+    onFocus: () => prepareTab(nextTab),
+    onTouchStart: () => prepareTab(nextTab),
+  })
+
   const handleTabChange = (value: string | null) => {
     const nextTab = (value ?? 'general') as SettingsTab
+    prepareTab(nextTab)
     setSelectedTab(nextTab)
 
     onTabChange?.(nextTab)
@@ -568,13 +571,13 @@ export function SettingsPage({
 
   if (isLoading) {
     return (
-      <Group justify="center" py="xl">
-        <Loader />
-      </Group>
+      <LoadingSkeleton label="Loading settings…">
+        <SettingsSkeleton />
+      </LoadingSkeleton>
     )
   }
 
-  if (error) {
+  if (error && !user) {
     return (
       <Alert color="red" title="Error">
         Failed to load settings
@@ -595,13 +598,27 @@ export function SettingsPage({
       >
         <div className={styles.settingsTabScroller}>
           <Tabs.List ref={tabListRef} className={styles.settingsTabList}>
-            <Tabs.Tab value="general">General</Tabs.Tab>
-            <Tabs.Tab value="notifications">Notifications</Tabs.Tab>
-            <Tabs.Tab value="access">Access</Tabs.Tab>
-            <Tabs.Tab value="categories">Categories</Tabs.Tab>
-            <Tabs.Tab value="analysis">Analysis</Tabs.Tab>
-            <Tabs.Tab value="categorization">Categorization</Tabs.Tab>
-            <Tabs.Tab value="recurring">Recurring</Tabs.Tab>
+            <Tabs.Tab value="general" {...tabIntent('general')}>
+              General
+            </Tabs.Tab>
+            <Tabs.Tab value="notifications" {...tabIntent('notifications')}>
+              Notifications
+            </Tabs.Tab>
+            <Tabs.Tab value="access" {...tabIntent('access')}>
+              Access
+            </Tabs.Tab>
+            <Tabs.Tab value="categories" {...tabIntent('categories')}>
+              Categories
+            </Tabs.Tab>
+            <Tabs.Tab value="analysis" {...tabIntent('analysis')}>
+              Analysis
+            </Tabs.Tab>
+            <Tabs.Tab value="categorization" {...tabIntent('categorization')}>
+              Categorization
+            </Tabs.Tab>
+            <Tabs.Tab value="recurring" {...tabIntent('recurring')}>
+              Recurring
+            </Tabs.Tab>
           </Tabs.List>
         </div>
 
@@ -750,11 +767,10 @@ export function SettingsPage({
                     )
                   }}
                 />
-                {getNotificationSupportMessage(notificationSupportStatus) && (
-                  <Alert color="yellow" title="Unavailable">
-                    {getNotificationSupportMessage(notificationSupportStatus)}
-                  </Alert>
-                )}
+                <Text c="dimmed" size="sm" mih={42} aria-live="polite">
+                  {getNotificationSupportMessage(notificationSupportStatus) ??
+                    'Device notifications are configured separately in each browser.'}
+                </Text>
               </Stack>
             </Paper>
 
@@ -793,13 +809,27 @@ export function SettingsPage({
         </Tabs.Panel>
 
         <Tabs.Panel value="access">
-          <DeferredFeature label="Settings section">
+          <DeferredFeature
+            label="Settings section"
+            fallback={
+              <LoadingSkeleton label="Loading settings section…">
+                <AccessTokensSkeleton />
+              </LoadingSkeleton>
+            }
+          >
             <PersonalAccessTokenSection />
           </DeferredFeature>
         </Tabs.Panel>
 
         <Tabs.Panel className={styles.categoriesPanel} value="categories">
-          <DeferredFeature label="Settings section">
+          <DeferredFeature
+            label="Settings section"
+            fallback={
+              <LoadingSkeleton label="Loading settings section…">
+                <SettingsSkeleton section="categories" />
+              </LoadingSkeleton>
+            }
+          >
             <CustomCategoriesSection />
           </DeferredFeature>
         </Tabs.Panel>
@@ -825,7 +855,14 @@ export function SettingsPage({
                 )}
               </Stack>
             </Paper>
-            <DeferredFeature label="Analysis rules">
+            <DeferredFeature
+              label="Analysis rules"
+              fallback={
+                <LoadingSkeleton label="Loading analysis rules…">
+                  <SettingsSkeleton section="analysis" />
+                </LoadingSkeleton>
+              }
+            >
               <AnalysisRulesSection
                 lookaroundSetting={{
                   value: user?.settings.neutralizationLookaroundDays ?? 60,
@@ -838,13 +875,27 @@ export function SettingsPage({
         </Tabs.Panel>
 
         <Tabs.Panel className={styles.categoriesPanel} value="categorization">
-          <DeferredFeature label="Settings section">
+          <DeferredFeature
+            label="Settings section"
+            fallback={
+              <LoadingSkeleton label="Loading settings section…">
+                <SettingsSkeleton section="categorization" />
+              </LoadingSkeleton>
+            }
+          >
             <CategorizationRulesSection />
           </DeferredFeature>
         </Tabs.Panel>
 
         <Tabs.Panel className={styles.categoriesPanel} value="recurring">
-          <DeferredFeature label="Settings section">
+          <DeferredFeature
+            label="Settings section"
+            fallback={
+              <LoadingSkeleton label="Loading settings section…">
+                <SettingsSkeleton section="recurring" filters={false} />
+              </LoadingSkeleton>
+            }
+          >
             <RecurringManualTransactionsSection />
           </DeferredFeature>
         </Tabs.Panel>

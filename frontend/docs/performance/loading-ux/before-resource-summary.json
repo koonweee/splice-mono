@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "cpu": 2,
+    "latencyMs": 80,
+    "downloadBytesPerSecond": 1000000,
+    "uploadBytesPerSecond": 500000,
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "mobile": false
+    },
+    "samplesPerScenario": 3,
+    "warmPreparationMs": 5000,
+    "staleWaitMs": 31000
+  },
+  "buildLabel": "before",
+  "summary": {
+    "document-preparation-analysis": {
+      "samples": 3,
+      "usefulMedianMs": 171.10000002384186,
+      "chartMedianMs": 475.1999999284744,
+      "browserRequestCountMedian": 49,
+      "apiRequestCountMedian": 2,
+      "transferredBytesMedian": 1694171,
+      "apiTransferredBytesMedian": 1149,
+      "preparationApiCountMedian": null,
+      "preparationTransferredBytesMedian": null,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.10353843244387781,
+        0.10355244533209151,
+        0.10355037704656153
+      ],
+      "shiftEntries": [
+        10,
+        10,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        12,
+        12
+      ],
+      "errorCount": 0
+    }
+  }
+}

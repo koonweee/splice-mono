@@ -33,6 +33,8 @@ import {
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
+import { ResponsiveSlot } from '../ResponsiveSlot'
+import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
   useAccountControllerFindAll,
@@ -684,7 +686,12 @@ export function CategorizationRulesSection() {
 
   function renderRuleRowActions(rule: CategorizationRuleView) {
     return (
-      <Group gap={4} justify="flex-end" wrap="nowrap">
+      <Group
+        className={tableChrome.actions}
+        gap={4}
+        justify="flex-end"
+        wrap="nowrap"
+      >
         <Tooltip label="Edit rule">
           <ActionIcon
             aria-label="Edit rule"
@@ -876,9 +883,7 @@ export function CategorizationRulesSection() {
   )
   const hasRecommendationRun = Boolean(recommendationGeneration)
   const recommendationError =
-    recommendations.isError ||
-    generateRecommendations.isError ||
-    regenerateRecommendations.isError
+    generateRecommendations.isError || regenerateRecommendations.isError
   const suggestionPreviewCounts = previewSuggestion
     ? {
         matched: previewSuggestion.matched,
@@ -935,6 +940,7 @@ export function CategorizationRulesSection() {
       </Group>
 
       <DataState
+        loadingFallback={<TableSkeleton rows={4} />}
         hasData={rules.length > 0}
         isLoading={isLoading}
         isError={isError}
@@ -944,7 +950,7 @@ export function CategorizationRulesSection() {
         errorMessage="Failed to load categorization rules"
         emptyMessage="No categorization rules match the current filters."
       >
-        {isMobile ? (
+        <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
           <MobileTableList
             ariaLabel={`Categorization rules list, ${filteredRules.length.toLocaleString()} total`}
             data={filteredRules}
@@ -952,9 +958,10 @@ export function CategorizationRulesSection() {
             getRowKey={(rule) => rule.id}
             renderRow={renderMobileRuleRow}
           />
-        ) : (
+        </ResponsiveSlot>
+        <ResponsiveSlot compact={Boolean(isMobile)} variant="wide">
           <MantineReactTable table={table} />
-        )}
+        </ResponsiveSlot>
       </DataState>
 
       <EditorModal
@@ -1112,7 +1119,7 @@ export function CategorizationRulesSection() {
             <Alert color="blue">Manual categories are never overwritten.</Alert>
 
             <Stack gap="xs">
-              <Group justify="space-between">
+              <Group justify="space-between" mih={42}>
                 <Text fw={700} size="sm">
                   Transactions to update
                 </Text>
@@ -1124,52 +1131,51 @@ export function CategorizationRulesSection() {
                   </Text>
                 )}
               </Group>
-              {applicationPreview.isLoading && (
-                <Group justify="center" py="md">
-                  <Loader size="sm" />
-                </Group>
-              )}
-              {!applicationPreview.isLoading &&
-                applicationPreview.data &&
-                applicationPreview.data.transactions.length === 0 && (
-                  <Text c="dimmed" size="sm">
-                    No eligible transactions to update.
-                  </Text>
-                )}
-              {!applicationPreview.isLoading &&
-                applicationPreview.data &&
-                applicationPreview.data.transactions.length > 0 &&
-                (isMobile ? (
-                  <Box maw="100%" mah={360} style={{ overflowY: 'auto' }}>
-                    <TransactionsMobileList
-                      data={applicationPreview.data.transactions}
-                      isError={false}
-                      isLoading={false}
-                      readOnly
-                      totalRows={applicationPreview.data.transactions.length}
-                      variant="drilldown"
-                    />
-                  </Box>
-                ) : (
-                  <TransactionsTable
-                    data={applicationPreview.data.transactions}
-                    hiddenColumns={['category']}
-                    isError={false}
-                    isLoading={false}
-                    mantineTableContainerProps={{
-                      style: { maxHeight: 360, overflowY: 'auto' },
-                    }}
-                    readOnly
-                    totalRows={applicationPreview.data.transactions.length}
-                  />
-                ))}
+              <Box h={300} style={{ overflowY: 'auto' }}>
+                <DataState
+                  hasData={Boolean(
+                    applicationPreview.data?.transactions.length,
+                  )}
+                  isLoading={applicationPreview.isLoading}
+                  isFetching={applicationPreview.isFetching}
+                  isError={applicationPreview.isError && !applyResult}
+                  loadingMessage="Loading eligible transactions…"
+                  loadingFallback={<TableSkeleton rows={4} />}
+                  emptyMessage="No eligible transactions to update."
+                  errorMessage="Failed to load rule preview"
+                  onRetry={() => void applicationPreview.refetch()}
+                >
+                  {applicationPreview.data &&
+                    applicationPreview.data.transactions.length > 0 &&
+                    (isMobile ? (
+                      <Box maw="100%" mah={360} style={{ overflowY: 'auto' }}>
+                        <TransactionsMobileList
+                          data={applicationPreview.data.transactions}
+                          isError={false}
+                          isLoading={false}
+                          readOnly
+                          totalRows={
+                            applicationPreview.data.transactions.length
+                          }
+                          variant="drilldown"
+                        />
+                      </Box>
+                    ) : (
+                      <TransactionsTable
+                        data={applicationPreview.data.transactions}
+                        hiddenColumns={['category']}
+                        isError={false}
+                        isLoading={false}
+                        mantineTableContainerProps={{
+                          style: { maxHeight: 360, overflowY: 'auto' },
+                        }}
+                        readOnly
+                        totalRows={applicationPreview.data.transactions.length}
+                      />
+                    ))}
+                </DataState>
+              </Box>
             </Stack>
-
-            {applicationPreview.isError && !applyResult && (
-              <Alert color="red" title="Error">
-                Failed to load rule preview
-              </Alert>
-            )}
 
             {applyMutation.isError && (
               <Alert color="red" title="Error">
@@ -1187,9 +1193,8 @@ export function CategorizationRulesSection() {
                   !applyResult &&
                   (applicationPreview.isLoading || applicationPreview.isError)
                 }
-                loading={
-                  applyMutation.isPending || applicationPreview.isLoading
-                }
+                loading={applyMutation.isPending}
+                miw={240}
                 onClick={() => applyMutation.mutate({ id: applyRule.id })}
               >
                 {applyButtonLabel}
@@ -1218,11 +1223,11 @@ export function CategorizationRulesSection() {
               <Text size="sm" c="dimmed">
                 Based on your manually categorized transactions.
               </Text>
-              {recommendationLastRun && (
-                <Text size="sm" c="dimmed" mt={4}>
-                  Last run {recommendationLastRun}.
-                </Text>
-              )}
+              <Text size="sm" c="dimmed" mt={4} mih={20}>
+                {recommendationLastRun
+                  ? `Last run ${recommendationLastRun}.`
+                  : '\u00a0'}
+              </Text>
               {recommendationGenerationRunning && (
                 <Text size="sm" c="dimmed" mt={4}>
                   You can close this panel and come back later.
@@ -1232,7 +1237,9 @@ export function CategorizationRulesSection() {
             <Tooltip label="Regenerate recommendations">
               <ActionIcon
                 aria-label="Regenerate recommendations"
-                disabled={recommendationGenerationRunning}
+                disabled={
+                  recommendationGenerationRunning || !recommendations.data
+                }
                 loading={regenerateRecommendations.isPending}
                 onClick={regenerateRuleRecommendations}
                 variant="subtle"
@@ -1256,72 +1263,83 @@ export function CategorizationRulesSection() {
             value={ignoredRecommendationCategoryIds}
           />
 
-          {recommendationError && (
-            <Alert color="red" title="Unable to generate recommendations">
-              Recommendation generation is not available right now.
-            </Alert>
-          )}
+          <DataState
+            hasData={Boolean(recommendations.data)}
+            isLoading={recommendations.isLoading}
+            isFetching={recommendations.isFetching}
+            isError={recommendations.isError}
+            loadingMessage="Loading recommendations…"
+            loadingFallback={<TableSkeleton rows={3} />}
+            errorMessage="Unable to load recommendations."
+            onRetry={() => void recommendations.refetch()}
+          >
+            {recommendationError && (
+              <Alert color="red" title="Unable to generate recommendations">
+                Recommendation generation is not available right now.
+              </Alert>
+            )}
 
-          {recommendationGenerationFailed && !recommendationError && (
-            <Alert color="yellow" title="Generation failed">
-              {recommendationGeneration.errorMessage ??
-                'Try regenerating recommendations.'}
-            </Alert>
-          )}
+            {recommendationGenerationFailed && !recommendationError && (
+              <Alert color="yellow" title="Generation failed">
+                {recommendationGeneration.errorMessage ??
+                  'Try regenerating recommendations.'}
+              </Alert>
+            )}
 
-          {recommendationGenerationRunning && (
-            <Paper withBorder p="md" radius="md">
-              <Group align="flex-start" gap="sm" wrap="nowrap">
-                <Loader size="sm" />
-                <Box>
-                  <Text fw={700} size="sm">
-                    Finding patterns in manual categories
-                  </Text>
-                  <Text c="dimmed" size="sm">
-                    This may take a moment. You can leave and return later.
-                  </Text>
-                </Box>
-              </Group>
-            </Paper>
-          )}
-
-          {!recommendationGenerationRunning &&
-            !recommendationGenerationFailed &&
-            recommendationSuggestions.length === 0 && (
+            {recommendationGenerationRunning && (
               <Paper withBorder p="md" radius="md">
-                <Stack gap="sm">
-                  <Text fw={700} size="sm">
-                    {hasRecommendationRun
-                      ? 'No recommendations found'
-                      : 'No recommendations yet'}
-                  </Text>
-                  <Text c="dimmed" size="sm">
-                    {hasRecommendationRun
-                      ? 'The last run did not produce suggestions that passed validation.'
-                      : 'Generate suggestions from transactions you categorized manually.'}
-                  </Text>
-                  <Button
-                    leftSection={<Sparkles size={16} />}
-                    onClick={() =>
-                      hasRecommendationRun
-                        ? regenerateRuleRecommendations()
-                        : generateRuleRecommendations()
-                    }
-                    size="sm"
-                  >
-                    {hasRecommendationRun
-                      ? 'Regenerate recommendations'
-                      : 'Generate recommendations'}
-                  </Button>
-                </Stack>
+                <Group align="flex-start" gap="sm" wrap="nowrap">
+                  <Loader size="sm" />
+                  <Box>
+                    <Text fw={700} size="sm">
+                      Finding patterns in manual categories
+                    </Text>
+                    <Text c="dimmed" size="sm">
+                      This may take a moment. You can leave and return later.
+                    </Text>
+                  </Box>
+                </Group>
               </Paper>
             )}
 
-          {recommendationSuggestions.length > 0 && (
-            <Stack gap="xs">
-              {recommendationSuggestions.map(renderSuggestionCard)}
-            </Stack>
-          )}
+            {!recommendationGenerationRunning &&
+              !recommendationGenerationFailed &&
+              recommendationSuggestions.length === 0 && (
+                <Paper withBorder p="md" radius="md">
+                  <Stack gap="sm">
+                    <Text fw={700} size="sm">
+                      {hasRecommendationRun
+                        ? 'No recommendations found'
+                        : 'No recommendations yet'}
+                    </Text>
+                    <Text c="dimmed" size="sm">
+                      {hasRecommendationRun
+                        ? 'The last run did not produce suggestions that passed validation.'
+                        : 'Generate suggestions from transactions you categorized manually.'}
+                    </Text>
+                    <Button
+                      leftSection={<Sparkles size={16} />}
+                      onClick={() =>
+                        hasRecommendationRun
+                          ? regenerateRuleRecommendations()
+                          : generateRuleRecommendations()
+                      }
+                      size="sm"
+                    >
+                      {hasRecommendationRun
+                        ? 'Regenerate recommendations'
+                        : 'Generate recommendations'}
+                    </Button>
+                  </Stack>
+                </Paper>
+              )}
+
+            {recommendationSuggestions.length > 0 && (
+              <Stack gap="xs">
+                {recommendationSuggestions.map(renderSuggestionCard)}
+              </Stack>
+            )}
+          </DataState>
         </Stack>
       </Drawer>
 
@@ -1367,7 +1385,7 @@ export function CategorizationRulesSection() {
             <Alert color="blue">Manual categories are never overwritten.</Alert>
 
             <Stack gap="xs">
-              <Group justify="space-between">
+              <Group justify="space-between" mih={42}>
                 <Text fw={700} size="sm">
                   Transactions to update
                 </Text>

@@ -150,6 +150,38 @@ describe('compact dashboard queries', () => {
     client.clear()
   })
 
+  it('retains only valid cached balances after a period failure, including retry and cache clear', async () => {
+    transport.mockRejectedValue(new Error('Period offline'))
+    const { wrapper, client } = setup()
+    const { result, rerender, unmount } = renderHook(
+      ({ period }) => useBalanceData(period, 'USD'),
+      { wrapper, initialProps: { period: TimePeriod.month } },
+    )
+    rerender({ period: TimePeriod.week })
+    await waitFor(() => expect(result.current.error).toBeTruthy())
+    expect(result.current.data?.netWorth).toEqual(money)
+    expect(result.current.isChangingPeriod).toBe(true)
+    expect(result.current.data?.chartData).toEqual([])
+    const patched = { ...money, money: { ...money.money, amount: '54321' } }
+    act(() =>
+      client.setQueryData(
+        dashboardSummaryOptions(TimePeriod.month, date).queryKey,
+        { ...summary, netWorth: patched },
+      ),
+    )
+    await waitFor(() => expect(result.current.data?.netWorth).toEqual(patched))
+    transport.mockImplementation(() => new Promise(() => {}))
+    act(() => {
+      void result.current.refetch()
+    })
+    expect(result.current.data?.netWorth).toEqual(patched)
+    act(() => client.clear())
+    rerender({ period: TimePeriod.year })
+    expect(result.current.data).toBeUndefined()
+    unmount()
+    client.clear()
+  })
+
   it('reuses hydrated summary and series without fetching daily matrices', () => {
     transport.mockClear()
     const { wrapper, client } = setup()

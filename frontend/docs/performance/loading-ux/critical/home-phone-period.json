@@ -1,0 +1,666 @@
+{
+  "after": [
+    {
+      "height": 30.796875,
+      "label": "Home",
+      "x": 16,
+      "y": 83
+    },
+    {
+      "height": 48,
+      "label": "Comparison period",
+      "x": 254,
+      "y": 76
+    },
+    {
+      "height": 44.1875,
+      "label": "$7,517.04",
+      "x": 16,
+      "y": 182
+    },
+    {
+      "height": 24.296875,
+      "label": "Collapse Assets",
+      "x": 16,
+      "y": 495.484375
+    },
+    {
+      "height": 77.890625,
+      "label": "Open account details for Exact ETH wallet",
+      "x": 17,
+      "y": 567.578125
+    },
+    {
+      "height": 77.890625,
+      "label": "Open account details for Fixture brokerage",
+      "x": 17,
+      "y": 646.46875
+    },
+    {
+      "height": 77.890625,
+      "label": "Open account details for Fixture checking",
+      "x": 17,
+      "y": 762.15625
+    },
+    {
+      "height": 24.296875,
+      "label": "Collapse Liabilities",
+      "x": 16,
+      "y": 858.046875
+    },
+    {
+      "height": 0,
+      "label": "Comparison period",
+      "x": 0,
+      "y": 0
+    }
+  ],
+  "audit": {
+    "anchors": [
+      {
+        "at": 38175.10000002384,
+        "items": [
+          {
+            "node": {
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 28,
+              "width": 28,
+              "x": 16,
+              "y": 15.484375
+            }
+          },
+          {
+            "node": {
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 28,
+              "width": 28,
+              "x": 346,
+              "y": 15.5
+            }
+          },
+          {
+            "node": {
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Home",
+              "tag": "H1"
+            },
+            "rect": {
+              "height": 30.796875,
+              "width": 61.0625,
+              "x": 16,
+              "y": 83
+            }
+          },
+          {
+            "node": {
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Select-input",
+              "label": "Comparison period",
+              "tag": "INPUT"
+            },
+            "rect": {
+              "height": 48,
+              "width": 120,
+              "x": 254,
+              "y": 76
+            }
+          },
+          {
+            "node": {
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Net worth$7,517.04from last month",
+              "tag": "DIV"
+            },
+            "rect": {
+              "height": 306.484375,
+              "width": 358,
+              "x": 16,
+              "y": 156
+            }
+          },
+          {
+            "node": {
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Hide balances",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 22,
+              "width": 22,
+              "x": 83.703125,
+              "y": 156
+            }
+          },
+          {
+            "node": {
+              "class": "m_8a5d1357 mantine-Title-root",
+              "label": "$7,517.04",
+              "tag": "H2"
+            },
+            "rect": {
+              "height": 44.1875,
+              "width": 358,
+              "x": 16,
+              "y": 182
+            }
+          },
+          {
+            "node": {
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Assets",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 24.296875,
+              "width": 358,
+              "x": 16,
+              "y": 495.484375
+            }
+          },
+          {
+            "node": {
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Investment33.5%Exact ETH walletCrypto wallet$2,480.001.000000 (ETH)Fixture brokerageBrokerage$37.04 ",
+              "tag": "DIV"
+            },
+            "rect": {
+              "height": 311.265625,
+              "width": 358,
+              "x": 16,
+              "y": 529.78125
+            }
+          },
+          {
+            "node": {
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Exact ETH wallet",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 77.890625,
+              "width": 356,
+              "x": 17,
+              "y": 567.578125
+            }
+          },
+          {
+            "node": {
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Fixture brokerage",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 77.890625,
+              "width": 356,
+              "x": 17,
+              "y": 646.46875
+            }
+          },
+          {
+            "node": {
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Fixture checking",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 77.890625,
+              "width": 356,
+              "x": 17,
+              "y": 762.15625
+            }
+          },
+          {
+            "node": {
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Liabilities",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 24.296875,
+              "width": 358,
+              "x": 16,
+              "y": 858.046875
+            }
+          }
+        ]
+      },
+      {
+        "at": 53823.20000004768,
+        "items": [
+          {
+            "node": {
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 28,
+              "width": 28,
+              "x": 16,
+              "y": 15.484375
+            }
+          },
+          {
+            "node": {
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 28,
+              "width": 28,
+              "x": 346,
+              "y": 15.5
+            }
+          },
+          {
+            "node": {
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Home",
+              "tag": "H1"
+            },
+            "rect": {
+              "height": 30.796875,
+              "width": 61.0625,
+              "x": 16,
+              "y": 83
+            }
+          },
+          {
+            "node": {
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Select-input",
+              "label": "Comparison period",
+              "tag": "INPUT"
+            },
+            "rect": {
+              "height": 48,
+              "width": 120,
+              "x": 254,
+              "y": 76
+            }
+          },
+          {
+            "node": {
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Net worth$7,517.04 ",
+              "tag": "DIV"
+            },
+            "rect": {
+              "height": 306.484375,
+              "width": 358,
+              "x": 16,
+              "y": 156
+            }
+          },
+          {
+            "node": {
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Hide balances",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 22,
+              "width": 22,
+              "x": 83.703125,
+              "y": 156
+            }
+          },
+          {
+            "node": {
+              "class": "m_8a5d1357 mantine-Title-root",
+              "label": "$7,517.04",
+              "tag": "H2"
+            },
+            "rect": {
+              "height": 44.1875,
+              "width": 358,
+              "x": 16,
+              "y": 182
+            }
+          },
+          {
+            "node": {
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Assets",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 24.296875,
+              "width": 358,
+              "x": 16,
+              "y": 495.484375
+            }
+          },
+          {
+            "node": {
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Investment33.5%Exact ETH walletCrypto wallet$2,480.001.000000 (ETH)Fixture brokerageBrokerage$37.04 ",
+              "tag": "DIV"
+            },
+            "rect": {
+              "height": 311.265625,
+              "width": 358,
+              "x": 16,
+              "y": 529.78125
+            }
+          },
+          {
+            "node": {
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Exact ETH wallet",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 77.890625,
+              "width": 356,
+              "x": 17,
+              "y": 567.578125
+            }
+          },
+          {
+            "node": {
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Fixture brokerage",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 77.890625,
+              "width": 356,
+              "x": 17,
+              "y": 646.46875
+            }
+          },
+          {
+            "node": {
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Fixture checking",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 77.890625,
+              "width": 356,
+              "x": 17,
+              "y": 762.15625
+            }
+          },
+          {
+            "node": {
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Liabilities",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 24.296875,
+              "width": 358,
+              "x": 16,
+              "y": 858.046875
+            }
+          }
+        ]
+      },
+      {
+        "at": 57888.10000002384,
+        "items": [
+          {
+            "node": {
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 28,
+              "width": 28,
+              "x": 16,
+              "y": 15.484375
+            }
+          },
+          {
+            "node": {
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 28,
+              "width": 28,
+              "x": 346,
+              "y": 15.5
+            }
+          },
+          {
+            "node": {
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Home",
+              "tag": "H1"
+            },
+            "rect": {
+              "height": 30.796875,
+              "width": 61.0625,
+              "x": 16,
+              "y": 83
+            }
+          },
+          {
+            "node": {
+              "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Select-input",
+              "label": "Comparison period",
+              "tag": "INPUT"
+            },
+            "rect": {
+              "height": 48,
+              "width": 120,
+              "x": 254,
+              "y": 76
+            }
+          },
+          {
+            "node": {
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Net worth$7,517.04from last week",
+              "tag": "DIV"
+            },
+            "rect": {
+              "height": 306.484375,
+              "width": 358,
+              "x": 16,
+              "y": 156
+            }
+          },
+          {
+            "node": {
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Hide balances",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 22,
+              "width": 22,
+              "x": 83.703125,
+              "y": 156
+            }
+          },
+          {
+            "node": {
+              "class": "m_8a5d1357 mantine-Title-root",
+              "label": "$7,517.04",
+              "tag": "H2"
+            },
+            "rect": {
+              "height": 44.1875,
+              "width": 358,
+              "x": 16,
+              "y": 182
+            }
+          },
+          {
+            "node": {
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Assets",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 24.296875,
+              "width": 358,
+              "x": 16,
+              "y": 495.484375
+            }
+          },
+          {
+            "node": {
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Investment33.5%Exact ETH walletCrypto wallet$2,480.001.000000 (ETH)Fixture brokerageBrokerage$37.04 ",
+              "tag": "DIV"
+            },
+            "rect": {
+              "height": 311.265625,
+              "width": 358,
+              "x": 16,
+              "y": 529.78125
+            }
+          },
+          {
+            "node": {
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Exact ETH wallet",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 77.890625,
+              "width": 356,
+              "x": 17,
+              "y": 567.578125
+            }
+          },
+          {
+            "node": {
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Fixture brokerage",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 77.890625,
+              "width": 356,
+              "x": 17,
+              "y": 646.46875
+            }
+          },
+          {
+            "node": {
+              "class": "_action_3b9ob_17",
+              "label": "Open account details for Fixture checking",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 77.890625,
+              "width": 356,
+              "x": 17,
+              "y": 762.15625
+            }
+          },
+          {
+            "node": {
+              "class": "_root_1ktoz_1 ",
+              "label": "Collapse Liabilities",
+              "tag": "BUTTON"
+            },
+            "rect": {
+              "height": 24.296875,
+              "width": 358,
+              "x": 16,
+              "y": 858.046875
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "inputs": [
+      {
+        "at": 38191.70000004768,
+        "target": {
+          "class": "splice-input-input splice-input-input m_8fb7ebe7 mantine-Input-input mantine-Select-input",
+          "label": "Comparison period",
+          "tag": "INPUT"
+        },
+        "type": "pointerdown"
+      },
+      {
+        "at": 53807.5,
+        "target": {
+          "class": "m_92253aa5 mantine-Select-option m_390b5f4",
+          "label": "Week",
+          "tag": "DIV"
+        },
+        "type": "pointerdown"
+      }
+    ],
+    "resources": [],
+    "scroll": [],
+    "shifts": [],
+    "start": 38172.60000002384
+  },
+  "before": [
+    {
+      "height": 30.796875,
+      "label": "Home",
+      "x": 16,
+      "y": 83
+    },
+    {
+      "height": 48,
+      "label": "Comparison period",
+      "x": 254,
+      "y": 76
+    },
+    {
+      "height": 44.1875,
+      "label": "$7,517.04",
+      "x": 16,
+      "y": 182
+    },
+    {
+      "height": 24.296875,
+      "label": "Collapse Assets",
+      "x": 16,
+      "y": 495.484375
+    },
+    {
+      "height": 77.890625,
+      "label": "Open account details for Exact ETH wallet",
+      "x": 17,
+      "y": 567.578125
+    },
+    {
+      "height": 77.890625,
+      "label": "Open account details for Fixture brokerage",
+      "x": 17,
+      "y": 646.46875
+    },
+    {
+      "height": 77.890625,
+      "label": "Open account details for Fixture checking",
+      "x": 17,
+      "y": 762.15625
+    },
+    {
+      "height": 24.296875,
+      "label": "Collapse Liabilities",
+      "x": 16,
+      "y": 858.046875
+    },
+    {
+      "height": 0,
+      "label": "Comparison period",
+      "x": 0,
+      "y": 0
+    }
+  ],
+  "busy": 0
+}

@@ -1,0 +1,328 @@
+{
+  "scenario": {
+    "name": "tablet-portrait-analysis",
+    "width": 768,
+    "height": 1024,
+    "mobile": true,
+    "path": "/analysis"
+  },
+  "ready": true,
+  "interceptions": [],
+  "runtimeErrors": [],
+  "audit": {
+    "start": 35.5,
+    "shifts": [
+      {
+        "at": 72.70000004768372,
+        "value": 0.08482601889409125,
+        "hadRecentInput": true,
+        "sources": [
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "_frame_x144l_1",
+              "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_R_1b4rr7r6_{--grid-gutter:var(--mantine-spacing-md);}.__m__"
+            },
+            "before": {
+              "x": 8,
+              "y": 150.296875,
+              "width": 752,
+              "height": 534.1875
+            },
+            "after": {
+              "x": 8,
+              "y": 156,
+              "width": 752,
+              "height": 534.1875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "m_4081bf90 mantine-Group-root __m__-_R_airr7r6_",
+              "label": "Sep 1–6, 2026.__m__-_R_aqirr7r6_{height:calc(3rem * var(--mantine-scale));}@media(min-width: 48em){."
+            },
+            "before": {
+              "x": 337.1875,
+              "y": 76,
+              "width": 414.8125,
+              "height": 42.296875
+            },
+            "after": {
+              "x": 497.90625,
+              "y": 76,
+              "width": 254.09375,
+              "height": 48
+            }
+          }
+        ]
+      }
+    ],
+    "anchors": [
+      {
+        "at": 44.799999952316284,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 724,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 16,
+              "y": 79,
+              "width": 86.921875,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Choose date range"
+            },
+            "rect": {
+              "x": 337.1875,
+              "y": 76,
+              "width": 300,
+              "height": 42.296875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root __m__-_R_aqirr7r6_",
+              "label": "Audit"
+            },
+            "rect": {
+              "x": 647.1875,
+              "y": 76.140625,
+              "width": 104.8125,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Inflows$0Outflows$3,203Net-$3,203"
+            },
+            "rect": {
+              "x": 16,
+              "y": 150.296875,
+              "width": 736,
+              "height": 75.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "InflowsNo data for this period"
+            },
+            "rect": {
+              "x": 16,
+              "y": 246.09375,
+              "width": 736,
+              "height": 171.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Outflows$3,203.__m__-_R_lmqrb4rr7r6_{--grid-gutter:var(--mantine-spacing-lg);}.__m__-_R_3dlmqrb4rr7r"
+            },
+            "rect": {
+              "x": 16,
+              "y": 433.6875,
+              "width": 736,
+              "height": 242.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Food$3,203100%"
+            },
+            "rect": {
+              "x": 275,
+              "y": 559.328125,
+              "width": 456,
+              "height": 32.296875
+            }
+          }
+        ]
+      },
+      {
+        "at": 72.60000002384186,
+        "items": [
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto m_fea6bf1a mantine-Burger-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Open navigation"
+            },
+            "rect": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-action-icon-root m_8d3f4000 mantine-ActionIcon-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Log out"
+            },
+            "rect": {
+              "x": 724,
+              "y": 15.5,
+              "width": 28,
+              "height": 28
+            }
+          },
+          {
+            "node": {
+              "tag": "H1",
+              "class": "_title_v5ac5_1 m_8a5d1357 mantine-Title-root",
+              "label": "Analysis"
+            },
+            "rect": {
+              "x": 16,
+              "y": 81.84375,
+              "width": 86.921875,
+              "height": 30.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root",
+              "label": "Choose date range"
+            },
+            "rect": {
+              "x": 497.90625,
+              "y": 76,
+              "width": 139.28125,
+              "height": 48
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "mantine-focus-auto mantine-active splice-button-root m_77c9d27d mantine-Button-root m_87cf2631 mantine-UnstyledButton-root __m__-_R_aqirr7r6_",
+              "label": "Audit"
+            },
+            "rect": {
+              "x": 647.1875,
+              "y": 79,
+              "width": 104.8125,
+              "height": 42
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Inflows$0Outflows$3,203Net-$3,203"
+            },
+            "rect": {
+              "x": 16,
+              "y": 156,
+              "width": 736,
+              "height": 75.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "InflowsNo data for this period"
+            },
+            "rect": {
+              "x": 16,
+              "y": 251.796875,
+              "width": 736,
+              "height": 171.59375
+            }
+          },
+          {
+            "node": {
+              "tag": "DIV",
+              "class": "splice-paper-root m_1b7284a3 mantine-Paper-root",
+              "label": "Outflows$3,203.__m__-_R_lmqrb4rr7r6_{--grid-gutter:var(--mantine-spacing-lg);}.__m__-_R_3dlmqrb4rr7r"
+            },
+            "rect": {
+              "x": 16,
+              "y": 439.390625,
+              "width": 736,
+              "height": 242.796875
+            }
+          },
+          {
+            "node": {
+              "tag": "BUTTON",
+              "class": "_root_1ktoz_1 ",
+              "label": "Food$3,203100%"
+            },
+            "rect": {
+              "x": 275,
+              "y": 565.03125,
+              "width": 456,
+              "height": 32.296875
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "inputs": [],
+    "scroll": [
+      {
+        "at": 44.799999952316284,
+        "x": 0,
+        "y": 0,
+        "width": 768,
+        "height": 1024,
+        "documentWidth": 768,
+        "documentHeight": 1024
+      }
+    ],
+    "resources": []
+  },
+  "dom": {
+    "title": "Analysis",
+    "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nAnalysis\nSep 1–6, 2026\nAudit\n\nInflows\n\n$0\n\nOutflows\n\n$3,203\n\nNet\n\n-$3,203\n\nInflows\n\nNo data for this period\n\nOutflows\n\n$3,203\n\n$3,203\n\nFood\n\n$3,203\n\n100%",
+    "dialogs": [],
+    "reducedMotion": false
+  }
+}

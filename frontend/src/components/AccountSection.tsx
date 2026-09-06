@@ -65,12 +65,14 @@ export function AccountSection({
   title,
   accounts,
   balancesHidden,
+  comparisonLoading,
   isLiability,
   onAccountClick,
 }: {
   title: string
   accounts: Array<AccountSummaryData>
   balancesHidden: boolean
+  comparisonLoading?: boolean
   isLiability: boolean
   onAccountClick: (account: AccountSummaryData) => void
 }) {
@@ -126,6 +128,7 @@ export function AccountSection({
                           <CompactAccountRow
                             account={account}
                             balancesHidden={balancesHidden}
+                            comparisonLoading={comparisonLoading}
                             isLiability={isLiability}
                             onClick={() => onAccountClick(account)}
                           />
@@ -139,6 +142,7 @@ export function AccountSection({
                       <CompactAccountRow
                         account={account}
                         balancesHidden={balancesHidden}
+                        comparisonLoading={comparisonLoading}
                         isLiability={isLiability}
                         onClick={() => onAccountClick(account)}
                       />

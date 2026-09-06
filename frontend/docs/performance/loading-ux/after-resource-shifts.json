@@ -1,0 +1,1520 @@
+{
+  "schemaVersion": 1,
+  "input": "docs/performance/loading-ux/after-resources.json",
+  "counts": {
+    "intentional: navigation drawer closing": 31
+  },
+  "entries": [
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 0,
+      "elapsedMs": 39.89999997615814,
+      "value": 0.004303864580319251,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 257.703125,
+            "y": 159.296875,
+            "width": 1174.296875,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 238.875,
+            "y": 159.296875,
+            "width": 1193.125,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 265.703125,
+            "y": 76,
+            "width": 1158.296875,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 246.875,
+            "y": 76,
+            "width": 1177.125,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 1,
+      "elapsedMs": 57.299999952316284,
+      "value": 0.009472728497540508,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 238.875,
+            "y": 159.296875,
+            "width": 1193.125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 198.78125,
+            "y": 159.296875,
+            "width": 1233.21875,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 246.875,
+            "y": 76,
+            "width": 1177.125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 206.78125,
+            "y": 76,
+            "width": 1217.21875,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 2,
+      "elapsedMs": 74.10000002384186,
+      "value": 0.011937995816454475,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 198.78125,
+            "y": 159.296875,
+            "width": 1233.21875,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 150.1875,
+            "y": 159.296875,
+            "width": 1281.8125,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 206.78125,
+            "y": 76,
+            "width": 1217.21875,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 158.1875,
+            "y": 76,
+            "width": 1265.8125,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 3,
+      "elapsedMs": 89.10000002384186,
+      "value": 0.01072012249228395,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 150.1875,
+            "y": 159.296875,
+            "width": 1281.8125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 107.9375,
+            "y": 159.296875,
+            "width": 1324.0625,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 158.1875,
+            "y": 76,
+            "width": 1265.8125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 115.9375,
+            "y": 76,
+            "width": 1308.0625,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 4,
+      "elapsedMs": 105.5,
+      "value": 0.008291562861689814,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 107.9375,
+            "y": 159.296875,
+            "width": 1324.0625,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 76.03125,
+            "y": 159.296875,
+            "width": 1355.96875,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 115.9375,
+            "y": 76,
+            "width": 1308.0625,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 84.03125,
+            "y": 76,
+            "width": 1339.96875,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 5,
+      "elapsedMs": 123.89999997615814,
+      "value": 0.006264850260416667,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 76.03125,
+            "y": 159.296875,
+            "width": 1355.96875,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 52.34375,
+            "y": 159.296875,
+            "width": 1379.65625,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 84.03125,
+            "y": 76,
+            "width": 1339.96875,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 60.34375,
+            "y": 76,
+            "width": 1363.65625,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 6,
+      "elapsedMs": 140.5,
+      "value": 0.004530698196976273,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 52.34375,
+            "y": 159.296875,
+            "width": 1379.65625,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 35.421875,
+            "y": 159.296875,
+            "width": 1396.578125,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 60.34375,
+            "y": 76,
+            "width": 1363.65625,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 43.421875,
+            "y": 76,
+            "width": 1380.578125,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 7,
+      "elapsedMs": 156.89999997615814,
+      "value": 0.003223666148244599,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 35.421875,
+            "y": 159.296875,
+            "width": 1396.578125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 23.484375,
+            "y": 159.296875,
+            "width": 1408.515625,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 43.421875,
+            "y": 76,
+            "width": 1380.578125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 31.484375,
+            "y": 76,
+            "width": 1392.515625,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 8,
+      "elapsedMs": 173.79999995231628,
+      "value": 0.002202350757740162,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 23.484375,
+            "y": 159.296875,
+            "width": 1408.515625,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 15.375,
+            "y": 159.296875,
+            "width": 1416.625,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 31.484375,
+            "y": 76,
+            "width": 1392.515625,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 23.375,
+            "y": 76,
+            "width": 1400.625,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 1,
+      "index": 9,
+      "elapsedMs": 190.29999995231628,
+      "value": 0.0013191883981963734,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 15.375,
+            "y": 159.296875,
+            "width": 1416.625,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 10.53125,
+            "y": 159.296875,
+            "width": 1421.46875,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 23.375,
+            "y": 76,
+            "width": 1400.625,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 18.53125,
+            "y": 76,
+            "width": 1405.46875,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 0,
+      "elapsedMs": 5,
+      "value": 0.002522806712962963,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Chrome supplied no source nodes; the same short drawer transition has horizontal anchor changes and adjacent sourced entries.",
+      "sources": []
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 1,
+      "elapsedMs": 34.200000047683716,
+      "value": 0.0042217692057291666,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 263.703125,
+            "y": 159.296875,
+            "width": 1168.296875,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 245.140625,
+            "y": 159.296875,
+            "width": 1186.859375,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 271.703125,
+            "y": 76,
+            "width": 1152.296875,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 253.140625,
+            "y": 76,
+            "width": 1170.859375,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 2,
+      "elapsedMs": 51.300000071525574,
+      "value": 0.00927203468605324,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 245.140625,
+            "y": 159.296875,
+            "width": 1186.859375,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 205.671875,
+            "y": 159.296875,
+            "width": 1226.328125,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 253.140625,
+            "y": 76,
+            "width": 1170.859375,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 213.671875,
+            "y": 76,
+            "width": 1210.328125,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 3,
+      "elapsedMs": 69,
+      "value": 0.011952876745153359,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 205.671875,
+            "y": 159.296875,
+            "width": 1226.328125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 156.75,
+            "y": 159.296875,
+            "width": 1275.25,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 213.671875,
+            "y": 76,
+            "width": 1210.328125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 164.75,
+            "y": 76,
+            "width": 1259.25,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 4,
+      "elapsedMs": 86,
+      "value": 0.010805649172935956,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 156.75,
+            "y": 159.296875,
+            "width": 1275.25,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 113.96875,
+            "y": 159.296875,
+            "width": 1318.03125,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 164.75,
+            "y": 76,
+            "width": 1259.25,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 121.96875,
+            "y": 76,
+            "width": 1302.03125,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 5,
+      "elapsedMs": 100.80000007152557,
+      "value": 0.008568402144820603,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 113.96875,
+            "y": 159.296875,
+            "width": 1318.03125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 80.875,
+            "y": 159.296875,
+            "width": 1351.125,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 121.96875,
+            "y": 76,
+            "width": 1302.03125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 88.875,
+            "y": 76,
+            "width": 1335.125,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 6,
+      "elapsedMs": 117.5,
+      "value": 0.006465050274884259,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 80.875,
+            "y": 159.296875,
+            "width": 1351.125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 56.359375,
+            "y": 159.296875,
+            "width": 1375.640625,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 88.875,
+            "y": 76,
+            "width": 1335.125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 64.359375,
+            "y": 76,
+            "width": 1359.640625,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 7,
+      "elapsedMs": 134.60000002384186,
+      "value": 0.00475130903079186,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 56.359375,
+            "y": 159.296875,
+            "width": 1375.640625,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 38.5625,
+            "y": 159.296875,
+            "width": 1393.4375,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 64.359375,
+            "y": 76,
+            "width": 1359.640625,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 46.5625,
+            "y": 76,
+            "width": 1377.4375,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 8,
+      "elapsedMs": 151.70000004768372,
+      "value": 0.003431525939187886,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 38.5625,
+            "y": 159.296875,
+            "width": 1393.4375,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 25.828125,
+            "y": 159.296875,
+            "width": 1406.171875,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 46.5625,
+            "y": 76,
+            "width": 1377.4375,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 33.828125,
+            "y": 76,
+            "width": 1390.171875,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 9,
+      "elapsedMs": 168.89999997615814,
+      "value": 0.0023814482361593364,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 25.828125,
+            "y": 159.296875,
+            "width": 1406.171875,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 17.046875,
+            "y": 159.296875,
+            "width": 1414.953125,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 33.828125,
+            "y": 76,
+            "width": 1390.171875,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 25.046875,
+            "y": 76,
+            "width": 1398.953125,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 2,
+      "index": 10,
+      "elapsedMs": 185.5,
+      "value": 0.0015053663917824072,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 17.046875,
+            "y": 159.296875,
+            "width": 1414.953125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 11.515625,
+            "y": 159.296875,
+            "width": 1420.484375,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 25.046875,
+            "y": 76,
+            "width": 1398.953125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 19.515625,
+            "y": 76,
+            "width": 1404.484375,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 0,
+      "elapsedMs": 45.40000009536743,
+      "value": 0.0042253228835117665,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 263.6875,
+            "y": 159.296875,
+            "width": 1168.3125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 245.109375,
+            "y": 159.296875,
+            "width": 1186.890625,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 271.6875,
+            "y": 76,
+            "width": 1152.3125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 253.109375,
+            "y": 76,
+            "width": 1170.890625,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 1,
+      "elapsedMs": 62.60000002384186,
+      "value": 0.009275705325279708,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 245.109375,
+            "y": 159.296875,
+            "width": 1186.890625,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 205.625,
+            "y": 159.296875,
+            "width": 1226.375,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 253.109375,
+            "y": 76,
+            "width": 1170.890625,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 213.625,
+            "y": 76,
+            "width": 1210.375,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 2,
+      "elapsedMs": 77.80000007152557,
+      "value": 0.011884160111038773,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 205.625,
+            "y": 159.296875,
+            "width": 1226.375,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 156.984375,
+            "y": 159.296875,
+            "width": 1275.015625,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 213.625,
+            "y": 76,
+            "width": 1210.375,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 164.984375,
+            "y": 76,
+            "width": 1259.015625,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 3,
+      "elapsedMs": 96.10000002384186,
+      "value": 0.010876687041859569,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 156.984375,
+            "y": 159.296875,
+            "width": 1275.015625,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 113.921875,
+            "y": 159.296875,
+            "width": 1318.078125,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 164.984375,
+            "y": 76,
+            "width": 1259.015625,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 121.921875,
+            "y": 76,
+            "width": 1302.078125,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 4,
+      "elapsedMs": 111.80000007152557,
+      "value": 0.00856435662917149,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 113.921875,
+            "y": 159.296875,
+            "width": 1318.078125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 80.84375,
+            "y": 159.296875,
+            "width": 1351.15625,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 121.921875,
+            "y": 76,
+            "width": 1302.078125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 88.84375,
+            "y": 76,
+            "width": 1335.15625,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 5,
+      "elapsedMs": 128.5,
+      "value": 0.006427965856481481,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 80.84375,
+            "y": 159.296875,
+            "width": 1351.15625,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 56.46875,
+            "y": 159.296875,
+            "width": 1375.53125,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 88.84375,
+            "y": 76,
+            "width": 1335.15625,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 64.46875,
+            "y": 76,
+            "width": 1359.53125,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 6,
+      "elapsedMs": 145.40000009536743,
+      "value": 0.004784680823808835,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 56.46875,
+            "y": 159.296875,
+            "width": 1375.53125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 38.546875,
+            "y": 159.296875,
+            "width": 1393.453125,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 64.46875,
+            "y": 76,
+            "width": 1359.53125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 46.546875,
+            "y": 76,
+            "width": 1377.453125,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 7,
+      "elapsedMs": 161.40000009536743,
+      "value": 0.0034441573230131173,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 38.546875,
+            "y": 159.296875,
+            "width": 1393.453125,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 25.765625,
+            "y": 159.296875,
+            "width": 1406.234375,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 46.546875,
+            "y": 76,
+            "width": 1377.453125,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 33.765625,
+            "y": 76,
+            "width": 1390.234375,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 8,
+      "elapsedMs": 179.10000002384186,
+      "value": 0.0023687358790268134,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 25.765625,
+            "y": 159.296875,
+            "width": 1406.234375,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 17.03125,
+            "y": 159.296875,
+            "width": 1414.96875,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 33.765625,
+            "y": 76,
+            "width": 1390.234375,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 25.03125,
+            "y": 76,
+            "width": 1398.96875,
+            "height": 51.296875
+          }
+        }
+      ]
+    },
+    {
+      "kind": "document-preparation-analysis",
+      "run": 3,
+      "index": 9,
+      "elapsedMs": 195.20000004768372,
+      "value": 0.0015053663917824072,
+      "hadRecentInput": true,
+      "classification": "intentional: navigation drawer closing",
+      "evidence": "Only horizontal coordinates/widths change while the user-opened desktop navigation closes.",
+      "sources": [
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "_frame_x144l_1",
+            "label": "Inflows$0Outflows$3,203Net-$3,203.__m__-_r_2c_{--grid-gutter:var(--mantine-spacing-md);}.__m__-_r_2e"
+          },
+          "previous": {
+            "x": 17.03125,
+            "y": 159.296875,
+            "width": 1414.96875,
+            "height": 346.59375
+          },
+          "current": {
+            "x": 11.5,
+            "y": 159.296875,
+            "width": 1420.5,
+            "height": 346.59375
+          }
+        },
+        {
+          "node": {
+            "tag": "DIV",
+            "class": "m_4081bf90 mantine-Group-root",
+            "label": "Analysis.__m__-_r_1h_{width:100%;}@media(min-width: 48em){.__m__-_r_1h_{width:auto;}}Sep 1–6, 2026._"
+          },
+          "previous": {
+            "x": 25.03125,
+            "y": 76,
+            "width": 1398.96875,
+            "height": 51.296875
+          },
+          "current": {
+            "x": 19.5,
+            "y": 76,
+            "width": 1404.5,
+            "height": 51.296875
+          }
+        }
+      ]
+    }
+  ]
+}

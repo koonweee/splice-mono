@@ -182,3 +182,10 @@ code {
   outline: none !important;
   border: none !important;
 }
+
+/* Loading placeholders remain still when the device requests reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .mantine-Skeleton-root::after {
+    animation: none;
+  }
+}

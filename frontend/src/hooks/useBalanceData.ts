@@ -1,4 +1,10 @@
-import { useMemo } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import {
@@ -16,6 +22,7 @@ import {
 } from '../lib/balance-utils'
 import { moneyToChartNumber } from '../lib/money'
 import { isValidTimePeriod } from '../lib/route-search'
+import type { Query } from '@tanstack/react-query'
 import type { DashboardData } from '../lib/balance-utils'
 import type {
   AccountBalanceResult,
@@ -33,7 +40,7 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
   const queryClient = useQueryClient()
   const summary = useQuery({
     ...dashboardSummaryOptions(period, today),
-    // Keep the cards mounted during period changes, with their original label.
+    // Keep balances and rows mounted; callers skeleton the comparison slots.
     // Never revive a removed private cache or carry values across currencies/days.
     placeholderData: (previous, previousQuery) =>
       previous?.endDate === today &&
@@ -46,35 +53,72 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
         ? previous
         : undefined,
   })
+  const retained = useRef<Query<DashboardSummaryResponse> | undefined>(
+    undefined,
+  )
+  useEffect(() => {
+    if (!summary.data || summary.isPlaceholderData) return
+    retained.current = queryClient
+      .getQueryCache()
+      .find<DashboardSummaryResponse>({
+        queryKey: dashboardSummaryOptions(period, today).queryKey,
+        exact: true,
+      })
+  }, [summary.data, summary.isPlaceholderData, queryClient, period, today])
+  const cachedPrevious = useSyncExternalStore(
+    useCallback(
+      (notify) =>
+        queryClient.getQueryCache().subscribe((event) => {
+          if (event.query === retained.current) notify()
+        }),
+      [queryClient],
+    ),
+    () => {
+      const query = retained.current
+      return query && queryClient.getQueryCache().get(query.queryHash) === query
+        ? query.state.data
+        : undefined
+    },
+    () => undefined,
+  )
+  // A failed filter request keeps balances from their live source Query, so
+  // metadata/mutation patches apply immediately. Removed/reset caches never revive.
+  const summaryData =
+    summary.data ??
+    (summary.isError &&
+    cachedPrevious &&
+    cachedPrevious.endDate === today &&
+    cachedPrevious.reportingCurrency === reportingCurrency
+      ? cachedPrevious
+      : undefined)
   const series = useQuery(dashboardSeriesOptions(period, today))
   const seriesMatchesSummary =
     series.data !== undefined &&
-    summary.data !== undefined &&
-    series.data.reportingCurrency === summary.data.reportingCurrency &&
-    series.data.period === summary.data.period &&
-    series.data.startDate === summary.data.startDate &&
-    series.data.endDate === summary.data.endDate
+    summaryData !== undefined &&
+    series.data.reportingCurrency === summaryData.reportingCurrency &&
+    series.data.period === summaryData.period &&
+    series.data.startDate === summaryData.startDate &&
+    series.data.endDate === summaryData.endDate
   const data = useMemo<DashboardData | undefined>(() => {
     if (
-      !summary.data ||
-      !isValidTimePeriod(summary.data.period) ||
-      (reportingCurrency &&
-        summary.data.reportingCurrency !== reportingCurrency)
+      !summaryData ||
+      !isValidTimePeriod(summaryData.period) ||
+      (reportingCurrency && summaryData.reportingCurrency !== reportingCurrency)
     )
       return undefined
-    const account = (item: (typeof summary.data.assets)[number]) => ({
+    const account = (item: (typeof summaryData.assets)[number]) => ({
       ...item,
       subType: item.subType ?? undefined,
       institutionName: item.institutionName ?? undefined,
       syncedAt: item.syncedAt ?? undefined,
     })
     return {
-      netWorth: summary.data.netWorth,
-      changeAmount: summary.data.changeAmount,
-      changePercent: summary.data.changePercent,
-      comparisonPeriod: summary.data.period,
-      assets: summary.data.assets.map(account),
-      liabilities: summary.data.liabilities.map(account),
+      netWorth: summaryData.netWorth,
+      changeAmount: summaryData.changeAmount,
+      changePercent: summaryData.changePercent,
+      comparisonPeriod: summaryData.period,
+      assets: summaryData.assets.map(account),
+      liabilities: summaryData.liabilities.map(account),
       chartData: seriesMatchesSummary
         ? series.data.points.map((point) => ({
             date: point.date,
@@ -84,22 +128,23 @@ export function useBalanceData(period: TimePeriod, reportingCurrency?: string) {
           }))
         : [],
     }
-  }, [summary.data, series.data, seriesMatchesSummary, reportingCurrency])
+  }, [summaryData, series.data, seriesMatchesSummary, reportingCurrency])
   return {
     data,
     isLoading: summary.isPending,
     error:
       summary.error ??
-      (summary.data &&
+      (summaryData &&
       reportingCurrency &&
-      summary.data.reportingCurrency !== reportingCurrency
+      summaryData.reportingCurrency !== reportingCurrency
         ? new BalanceCurrencyMismatchError(
             reportingCurrency,
-            summary.data.reportingCurrency,
+            summaryData.reportingCurrency,
           )
         : undefined),
     isFetching: summary.isFetching,
-    isChangingPeriod: summary.isPlaceholderData,
+    isChangingPeriod:
+      summaryData !== undefined && summaryData.period !== period,
     refetch: summary.refetch,
     seriesError: series.error,
     seriesLoading:

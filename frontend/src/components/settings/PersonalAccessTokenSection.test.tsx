@@ -1,11 +1,5 @@
 import { MantineProvider } from '@mantine/core'
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PersonalAccessTokenSection } from './PersonalAccessTokenSection'
 import type * as SpliceAPI from '../../api/clients/spliceAPI'
@@ -71,7 +65,8 @@ vi.mock('@tanstack/react-query', async () => {
 })
 
 function makeToken(
-  overrides: Partial<PersonalAccessToken> & Pick<PersonalAccessToken, 'id' | 'name'>,
+  overrides: Partial<PersonalAccessToken> &
+    Pick<PersonalAccessToken, 'id' | 'name'>,
 ): PersonalAccessToken {
   return {
     id: overrides.id,
@@ -89,7 +84,11 @@ function makeCreateResponse(
     id: string
     name: string
     token: string
-  } & Partial<{ tokenPreview: string; expiresAt: string | null; createdAt: string }>,
+  } & Partial<{
+    tokenPreview: string
+    expiresAt: string | null
+    createdAt: string
+  }>,
 ) {
   return {
     id: overrides.id,
@@ -182,9 +181,7 @@ describe('PersonalAccessTokenSection', () => {
 
     renderSection()
 
-    expect(
-      screen.getByText(/failed to load active tokens/i),
-    ).toBeTruthy()
+    expect(screen.getByText(/failed to load active tokens/i)).toBeTruthy()
     expect(screen.getByLabelText(/token name/i)).toBeTruthy()
     expect(screen.getByRole('button', { name: /create token/i })).toBeTruthy()
 
@@ -193,14 +190,33 @@ describe('PersonalAccessTokenSection', () => {
     expect(listTokensState.refetch).toHaveBeenCalledTimes(1)
   })
 
+  it('retains matching cached tokens and the create draft after a failed refresh', () => {
+    listTokensState.data = [
+      makeToken({ id: 'cached-token', name: 'Build token' }),
+    ]
+    listTokensState.isError = true
+    listTokensState.error = new Error('Refresh failed')
+    renderSection()
+    expect(screen.getByTestId('pat-token-row-cached-token')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Revoke Build token' }),
+    ).toBeTruthy()
+    fireEvent.change(screen.getByLabelText(/token name/i), {
+      target: { value: 'New draft' },
+    })
+    expect(screen.getByLabelText<HTMLInputElement>(/token name/i).value).toBe(
+      'New draft',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(listTokensState.refetch).toHaveBeenCalledOnce()
+  })
+
   it('shows an empty state when the active token list is empty', () => {
     listTokensState.data = []
 
     renderSection()
 
-    expect(
-      screen.getByText(/no active personal access tokens/i),
-    ).toBeTruthy()
+    expect(screen.getByText(/no active personal access tokens/i)).toBeTruthy()
   })
 
   it('shows a one-time reveal panel after a successful create', () => {
@@ -253,7 +269,7 @@ describe('PersonalAccessTokenSection', () => {
       )
     })
 
-    expect(screen.getByTestId('pat-section-error')).toBeTruthy()
+    expect(screen.getByText('Failed to load active tokens')).toBeTruthy()
     expect(screen.getByTestId('pat-reveal-panel')).toBeTruthy()
     expect(screen.getByText(/raw-token-value/)).toBeTruthy()
   })
@@ -284,11 +300,13 @@ describe('PersonalAccessTokenSection', () => {
 
     renderSection()
 
-    expect(screen.getByTestId('pat-name-input')).toHaveProperty('disabled', true)
-    expect(screen.getByRole('button', { name: /create token/i })).toHaveProperty(
+    expect(screen.getByTestId('pat-name-input')).toHaveProperty(
       'disabled',
       true,
     )
+    expect(
+      screen.getByRole('button', { name: /create token/i }),
+    ).toHaveProperty('disabled', true)
   })
 
   it('disables create for blank or whitespace-only token names', () => {
@@ -303,10 +321,9 @@ describe('PersonalAccessTokenSection', () => {
       target: { value: '   ' },
     })
 
-    expect(screen.getByRole('button', { name: /create token/i })).toHaveProperty(
-      'disabled',
-      true,
-    )
+    expect(
+      screen.getByRole('button', { name: /create token/i }),
+    ).toHaveProperty('disabled', true)
   })
 
   it('renders each token usage line with the shared last-used helper', () => {
@@ -377,20 +394,21 @@ describe('PersonalAccessTokenSection', () => {
         makeCreateResponse({
           id: 'pat-new',
           name: 'Integration token',
-          token: 'raw-token-value-with-a-long-preview-that-should-wrap-on-small-screens',
+          token:
+            'raw-token-value-with-a-long-preview-that-should-wrap-on-small-screens',
         }),
       )
     })
 
-    expect(screen.getByTestId('pat-revealed-token').getAttribute('style')).toContain(
-      'overflow-wrap: anywhere',
-    )
-    expect(screen.getByTestId('pat-revealed-token').getAttribute('style')).toContain(
-      'white-space: pre-wrap',
-    )
-    expect(screen.getByTestId('pat-revealed-token').getAttribute('style')).toContain(
-      'word-break: break-word',
-    )
+    expect(
+      screen.getByTestId('pat-revealed-token').getAttribute('style'),
+    ).toContain('overflow-wrap: anywhere')
+    expect(
+      screen.getByTestId('pat-revealed-token').getAttribute('style'),
+    ).toContain('white-space: pre-wrap')
+    expect(
+      screen.getByTestId('pat-revealed-token').getAttribute('style'),
+    ).toContain('word-break: break-word')
   })
 
   it('removes a token from the visible list after a successful revoke', () => {

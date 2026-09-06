@@ -1,0 +1,581 @@
+[
+  {
+    "id": "L001",
+    "section": "UX decisions",
+    "requirement": "Skeletons are the default for initial page, section, chart, and read-only data loading. Their layout follows the real responsive content, including margins, row density, chart height, and toolbar footprint.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md and frontend/docs/performance/loading-ux/surfaces/*-final.json: controlled delayed/failed code/data, stable dialog/control bounds; component integration suite 471 tests passes. Cached token-name draft preserves same node, value and focus through failed refresh and Retry (interaction-extras-final.json)."
+    ]
+  },
+  {
+    "id": "L002",
+    "section": "UX decisions",
+    "requirement": "Matching cached content remains visible during background refresh, with no new status row, spinner replacement, or loading-induced resizing.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md and frontend/docs/performance/loading-ux/surfaces/*-final.json: controlled delayed/failed code/data, stable dialog/control bounds; component integration suite 471 tests passes. Cached token-name draft preserves same node, value and focus through failed refresh and Retry (interaction-extras-final.json)."
+    ]
+  },
+  {
+    "id": "L003",
+    "section": "UX decisions",
+    "requirement": "On a Home period change, keep period-independent balances, account identities, rows, and expanded/collapsed state. Skeleton only period-dependent deltas, percentages, comparison text, and the chart in their existing slots until the requested results are available. Propagate this state through `AccountSection` and `CompactAccountRow`, including popovers. Do not expose old comparisons as the newly selected period.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/critical/home-phone-period.json; home-rapid-periods.json; home-period-error-retry.json: stable anchors, zero interaction shifts, correct final comparison; Home/NetWorthCard/CompactAccountRow focused tests."
+    ]
+  },
+  {
+    "id": "L004",
+    "section": "UX decisions",
+    "requirement": "Remove the visible \u201cUpdating period\u2026 Showing \u2026 results\u201d line completely. Do not replace it with another banner or permanent blank status row. Use `aria-busy` and one visually hidden announcement per relevant loading boundary.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/critical/home-phone-period.json; home-rapid-periods.json; home-period-error-retry.json: stable anchors, zero interaction shifts, correct final comparison; Home/NetWorthCard/CompactAccountRow focused tests."
+    ]
+  },
+  {
+    "id": "L005",
+    "section": "UX decisions",
+    "requirement": "For other filter changes, retain stable page structure and skeleton the affected results if there is no matching cache. Never relabel previous filtered rows or totals as new results. Switching to a cached filter should be immediate.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final inventory and focused browser verification; source-independent review accepted latest fixes. Final 471 frontend tests include hydration, auth/cache/currency/money/draft/filter regressions. Production screenshot/anchor evidence in frontend/docs/performance/loading-ux/. Remaining final timing and supplemental disclosure criteria tracked separately."
+    ]
+  },
+  {
+    "id": "L006",
+    "section": "UX decisions",
+    "requirement": "Saving, syncing, deleting, or submitting may keep an existing button's progress indicator; preserve its dimensions and label footprint. This is distinct from skeletons for loading content. Keep actionable failures and Retry controls.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md and frontend/docs/performance/loading-ux/surfaces/*-final.json: controlled delayed/failed code/data, stable dialog/control bounds; component integration suite 471 tests passes. Cached token-name draft preserves same node, value and focus through failed refresh and Retry (interaction-extras-final.json)."
+    ]
+  },
+  {
+    "id": "L007",
+    "section": "UX decisions",
+    "requirement": "Do not add artificial delays or hold useful content until every optional section finishes merely to make them appear simultaneously.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final inventory and focused browser verification; source-independent review accepted latest fixes. Final 471 frontend tests include hydration, auth/cache/currency/money/draft/filter regressions. Production screenshot/anchor evidence in frontend/docs/performance/loading-ux/. Remaining final timing and supplemental disclosure criteria tracked separately."
+    ]
+  },
+  {
+    "id": "L008",
+    "section": "1. Audit the complete loading surface and establish a short baseline",
+    "requirement": "Inventory mounted data states, dynamic imports, route fallbacks, and responsive post-hydration changes across all five primary pages, all seven Settings tabs, and the reachable dialogs/drawers/editors listed above. Record location, cold/warm/refresh/filter behavior, placeholder geometry, evidence, resolution, and verification status in `frontend/docs/loading-layout-audit.md`.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final inventory and focused browser verification; source-independent review accepted latest fixes. Final 471 frontend tests include hydration, auth/cache/currency/money/draft/filter regressions. Production screenshot/anchor evidence in frontend/docs/performance/loading-ux/. Remaining final timing and supplemental disclosure criteria tracked separately."
+    ]
+  },
+  {
+    "id": "L009",
+    "section": "1. Audit the complete loading surface and establish a short baseline",
+    "requirement": "Use a production build with the isolated synthetic browser fixture. Reuse `backend/test/helpers/serve-browser-fixture.cjs` and normal dev-login cookies; do not benchmark real financial accounts or call external sync/providers.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/before.json (30 samples), before-resources.json (3 samples), before-summary.json; explicit task-owned CDP target, synthetic production fixture."
+    ]
+  },
+  {
+    "id": "L010",
+    "section": "1. Audit the complete loading surface and establish a short baseline",
+    "requirement": "Extend the existing `frontend/scripts/performance-browser.mjs` and `performance-interactions.mjs`, or factor a focused sibling harness. Replace their hardcoded `localhost:430` target selection with the supplied origin and explicit task-owned tab. Existing fixture endpoints/selectors must be updated for the current compact queries. Keep existing benchmark artifact readers compatible rather than silently changing their seven-sample assumptions.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/before.json (30 samples), before-resources.json (3 samples), before-summary.json; explicit task-owned CDP target, synthetic production fixture."
+    ]
+  },
+  {
+    "id": "L011",
+    "section": "1. Audit the complete loading surface and establish a short baseline",
+    "requirement": "Capture route/data/code request timing, click-to-useful-content, click-to-chart-ready, transferred bytes, and hydration/runtime errors.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/before.json (30 samples), before-resources.json (3 samples), before-summary.json; explicit task-owned CDP target, synthetic production fixture."
+    ]
+  },
+  {
+    "id": "L012",
+    "section": "1. Audit the complete loading surface and establish a short baseline",
+    "requirement": "Install a `PerformanceObserver` before page scripts for layout-shift entries. Record ordinary CLS and a separate interaction-shift trace **including entries with `hadRecentInput`**. Track bounding rectangles of visible headings, controls, card edges, list origins, and scroll positions; CLS alone misses many click-time jumps. Separate deliberate user scrolling/expansion from asynchronous loading.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/before.json (30 samples), before-resources.json (3 samples), before-summary.json; explicit task-owned CDP target, synthetic production fixture."
+    ]
+  },
+  {
+    "id": "L013",
+    "section": "1. Audit the complete loading surface and establish a short baseline",
+    "requirement": "Save a new baseline from this released code. Do not reuse the older SSR migration's historical bundle sizes or timings as the current baseline.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/before.json (30 samples), before-resources.json (3 samples), before-summary.json; explicit task-owned CDP target, synthetic production fixture."
+    ]
+  },
+  {
+    "id": "L014",
+    "section": "1. Audit the complete loading surface and establish a short baseline",
+    "requirement": "Every in-scope surface has an audit row and a reproducible check. Each observed loading shift has a source component and a planned correction.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final inventory and focused browser verification; source-independent review accepted latest fixes. Final 471 frontend tests include hydration, auth/cache/currency/money/draft/filter regressions. Production screenshot/anchor evidence in frontend/docs/performance/loading-ux/. Remaining final timing and supplemental disclosure criteria tracked separately."
+    ]
+  },
+  {
+    "id": "L015",
+    "section": "1. Audit the complete loading surface and establish a short baseline",
+    "requirement": "Three runs per key benchmark scenario are recorded with raw samples and medians; one visual pass per additional surface is enough unless a failure needs retesting.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/before.json (30 samples), before-resources.json (3 samples), before-summary.json; explicit task-owned CDP target, synthetic production fixture."
+    ]
+  },
+  {
+    "id": "L016",
+    "section": "2. Prepare primary code and data before navigation",
+    "requirement": "Add a browser-only coordinator, for example `lib/navigation-preload.ts`, activated by the authenticated layout after the current route's essential content is usable. Use idle scheduling with a bounded fallback, not an arbitrary mandatory delay. Prioritize foreground navigation over queued speculation.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L017",
+    "section": "2. Prepare primary code and data before navigation",
+    "requirement": "Prepare the code for Home, Transactions, Analysis, Accounts, Settings, and shared chart modules. Use the installed router's typed route-chunk loading API for code-only preparation; do not use a full route preload and assume it cannot run loaders. Keep route-module splitting intact and avoid static imports that pull every destination into the initial entry bundle.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L018",
+    "section": "2. Prepare primary code and data before navigation",
+    "requirement": "Warm default Home summary/series, the first Transactions page, default Analysis range, and Accounts after the current page settles. Reuse shared query options and the presentation context's day/date range. Do not copy query keys or maintain a second speculative cache. Factor Analysis's default range if needed so the loader, page, and coordinator use identical parameters.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L019",
+    "section": "2. Prepare primary code and data before navigation",
+    "requirement": "Limit the idle queue to two tasks in flight and one background data task at a time. Run once per authenticated document; opening navigation or explicit intent can prepare the likely target again under normal Query freshness rules. Do not periodically poll, preload all time periods, or fetch extra transaction pages speculatively.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L020",
+    "section": "2. Prepare primary code and data before navigation",
+    "requirement": "Skip discretionary idle work when the tab is hidden or Save-Data is enabled; keep explicit navigation functional. Cancel queued work on logout, account identity replacement, and auth-generation changes. Do not cancel a shared in-flight query now needed by foreground navigation. Preserve existing currency invalidation and the authoritative session boundary.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L021",
+    "section": "2. Prepare primary code and data before navigation",
+    "requirement": "Keep access-token/security inventory out of speculative data warming. Selected Settings lists may prefetch on section intent through `loadSettingsSection`; preserve their existing freshness and authorization rules.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L022",
+    "section": "2. Prepare primary code and data before navigation",
+    "requirement": "Traces show primary code and likely data can be ready before a quick click/tap; warm navigation does not require an avoidable new module or duplicate API fetch.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/comparison.md: 36 baseline samples; 36 selected comparison samples from 42 candidate samples (the final six retest cold/warm Transactions after the row-estimate fix). Warm primary navigation improves 67\u201383%; cold Home useful +1ms/chart +24ms, cold Transactions -17ms. Whole-document cost +2 API reads/+427.7KiB; chart code completes before speculative Transactions work. Raw, summaries and shift classifications retained; no measured runtime/failed-request errors or cached cold scripts."
+    ]
+  },
+  {
+    "id": "L023",
+    "section": "2. Prepare primary code and data before navigation",
+    "requirement": "Background work respects its bounds and cannot delay a foreground route behind the speculative queue. Failures stay local and a normal navigation can retry.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L024",
+    "section": "2. Prepare primary code and data before navigation",
+    "requirement": "No private data persists to disk or survives an identity/cache boundary.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L025",
+    "section": "3. Remove data-then-code waits within pages and sections",
+    "requirement": "Introduce shared promise-deduplicated import functions, e.g. `lib/feature-loaders.ts`, consumed both by `React.lazy` and preparation paths. Code-only module promises may be shared; never put user data in this registry.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L026",
+    "section": "3. Remove data-then-code waits within pages and sections",
+    "requirement": "Start Home and Analysis chart imports alongside their data requests, rather than only after `hasChartData` becomes true. Preload the actual nested chart modules, not just their tiny lazy wrappers.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/comparison.md: 36 baseline samples; 36 selected comparison samples from 42 candidate samples (the final six retest cold/warm Transactions after the row-estimate fix). Warm primary navigation improves 67\u201383%; cold Home useful +1ms/chart +24ms, cold Transactions -17ms. Whole-document cost +2 API reads/+427.7KiB; chart code completes before speculative Transactions work. Raw, summaries and shift classifications retained; no measured runtime/failed-request errors or cached cold scripts."
+    ]
+  },
+  {
+    "id": "L027",
+    "section": "3. Remove data-then-code waits within pages and sections",
+    "requirement": "Start selected Settings section code and its essential data together on keyboard, pointer, and touch intent or selection. Prepare dialog code on trigger intent where useful; data requests remain tied to the selected entity/context. Rare editors keep separate chunks.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L028",
+    "section": "3. Remove data-then-code waits within pages and sections",
+    "requirement": "Retain Home's hydration-safe boundary and SSR of summary/accounts. Any independently streamed query branch must have matching server/first-client markup. Do not suppress hydration warnings or await all optional data in SSR.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L029",
+    "section": "3. Remove data-then-code waits within pages and sections",
+    "requirement": "Network traces show chart/section code begins before its data response completes on a cold interaction. Warm imports add no second loading phase.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/comparison.md: 36 baseline samples; 36 selected comparison samples from 42 candidate samples (the final six retest cold/warm Transactions after the row-estimate fix). Warm primary navigation improves 67\u201383%; cold Home useful +1ms/chart +24ms, cold Transactions -17ms. Whole-document cost +2 API reads/+427.7KiB; chart code completes before speculative Transactions work. Raw, summaries and shift classifications retained; no measured runtime/failed-request errors or cached cold scripts."
+    ]
+  },
+  {
+    "id": "L030",
+    "section": "3. Remove data-then-code waits within pages and sections",
+    "requirement": "Initial SSR still contains useful financial content. Existing real hydration regression tests pass without recoverable errors or summary-node replacement.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final inventory and focused browser verification; source-independent review accepted latest fixes. Final 471 frontend tests include hydration, auth/cache/currency/money/draft/filter regressions. Production screenshot/anchor evidence in frontend/docs/performance/loading-ux/. Remaining final timing and supplemental disclosure criteria tracked separately."
+    ]
+  },
+  {
+    "id": "L031",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "Extend `DataState`, `DeferredFeature`, and `MobileTableList` with typed, caller-supplied skeleton fallbacks. Add a small set of reusable shapes under `components/loading/` for summaries, chart regions, rows/tables, and forms. Module-loading and data-loading fallbacks for the same surface must share shape so users do not see spinner \u2192 different skeleton \u2192 content.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md and frontend/docs/performance/loading-ux/surfaces/*-final.json: controlled delayed/failed code/data, stable dialog/control bounds; component integration suite 471 tests passes. Cached token-name draft preserves same node, value and focus through failed refresh and Retry (interaction-extras-final.json)."
+    ]
+  },
+  {
+    "id": "L032",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "Give cold route fallbacks a stable shell and route-appropriate skeleton structure. Keep persistent navigation and page controls usable. Avoid a tiny text fallback that becomes a full-height page a moment later.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final inventory and focused browser verification; source-independent review accepted latest fixes. Final 471 frontend tests include hydration, auth/cache/currency/money/draft/filter regressions. Production screenshot/anchor evidence in frontend/docs/performance/loading-ux/. Remaining final timing and supplemental disclosure criteria tracked separately."
+    ]
+  },
+  {
+    "id": "L033",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "Replace the read-only content spinners identified in the audit across Home, Analysis, Accounts, Transactions, Settings, account details, holdings/activity, and relevant previews/dialogs. Work through every audit row, not just defaults.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final inventory and focused browser verification; source-independent review accepted latest fixes. Final 471 frontend tests include hydration, auth/cache/currency/money/draft/filter regressions. Production screenshot/anchor evidence in frontend/docs/performance/loading-ux/. Remaining final timing and supplemental disclosure criteria tracked separately."
+    ]
+  },
+  {
+    "id": "L034",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "Remove Home's status line and implement the period-specific skeleton policy through `HomePage`, `useBalanceData`, `NetWorthCard`, `AccountSection`, and `CompactAccountRow`. Keep period/date/currency matching and cache-clear guards.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L035",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "Make `PageHeader` visual sizing CSS-responsive from first paint while retaining its `h1` semantics. Audit desktop/mobile table switching and other media-query hooks for hydration-time changes; use responsive CSS or stable shells instead of mismatched browser-only first renders.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md and frontend/docs/performance/loading-ux/surfaces/*-final.json: controlled delayed/failed code/data, stable dialog/control bounds; component integration suite 471 tests passes. Cached token-name draft preserves same node, value and focus through failed refresh and Retry (interaction-extras-final.json)."
+    ]
+  },
+  {
+    "id": "L036",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "Reserve chart dimensions, image/avatar slots, form controls, summary lines, table viewport/row geometry, and scrollbar space where evidence shows movement. Correct chart fallback versus final margins and virtualizer initial sizing. Avoid enormous fixed blank areas, clipped data, or hiding content to pass checks.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md and frontend/docs/performance/loading-ux/surfaces/*-final.json: controlled delayed/failed code/data, stable dialog/control bounds; component integration suite 471 tests passes. Cached token-name draft preserves same node, value and focus through failed refresh and Retry (interaction-extras-final.json).",
+      "Final independent anchor review and rebuilt Transactions retest: all3 cold samples first8 row origins move0px, table scrollHeight changes1px within criterion, scrollTop stays0; warm Transactions109ms vs643ms, cold826ms vs843ms. comparison.md + anchor-review.json distinguish retained matrix and targeted rebuilt samples. Final inventory, Home disclosure/scroll proof, failed/empty/delayed states and quality gates complete; no unclassified loading shift remains in controlled coverage."
+    ]
+  },
+  {
+    "id": "L037",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "Render initial empty/error states in the stable content frame. Render refresh failures and retries in a reserved control slot or bounded overlay that does not push existing results down, steal focus, or cover important actions. Preserve drafts, selected rows, disclosure state, and scroll position across refreshes.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md and frontend/docs/performance/loading-ux/surfaces/*-final.json: controlled delayed/failed code/data, stable dialog/control bounds; component integration suite 471 tests passes. Cached token-name draft preserves same node, value and focus through failed refresh and Retry (interaction-extras-final.json)."
+    ]
+  },
+  {
+    "id": "L038",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "Keep skeletons noninteractive and hidden from assistive technology; expose a concise loading state on their container. Respect reduced motion and masking. Do not skeleton or overwrite an active editable draft during a background fetch.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L039",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "The redundant timeframe status row is gone; the selected control changes immediately and stale comparisons are neither visible nor interactable as new.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/critical/home-phone-period.json; home-rapid-periods.json; home-period-error-retry.json: stable anchors, zero interaction shifts, correct final comparison; Home/NetWorthCard/CompactAccountRow focused tests."
+    ]
+  },
+  {
+    "id": "L040",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "All audited read-only loading surfaces use appropriately shaped skeletons.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md and frontend/docs/performance/loading-ux/surfaces/*-final.json: controlled delayed/failed code/data, stable dialog/control bounds; component integration suite 471 tests passes. Cached token-name draft preserves same node, value and focus through failed refresh and Retry (interaction-extras-final.json)."
+    ]
+  },
+  {
+    "id": "L041",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "Every audit finding is corrected and verified. Loading/unloading indicators do not move visible headings, controls, card/list origins, or retained rows by more than 1 CSS pixel at a fixed viewport/scroll position. Explicitly changed result content and deliberate expansion are classified separately, not used to excuse transient loading shifts.",
+    "status": "verified",
+    "evidence": [
+      "Final independent anchor review and rebuilt Transactions retest: all3 cold samples first8 row origins move0px, table scrollHeight changes1px within criterion, scrollTop stays0; warm Transactions109ms vs643ms, cold826ms vs843ms. comparison.md + anchor-review.json distinguish retained matrix and targeted rebuilt samples. Final inventory, Home disclosure/scroll proof, failed/empty/delayed states and quality gates complete; no unclassified loading shift remains in controlled coverage."
+    ]
+  },
+  {
+    "id": "L042",
+    "section": "4. Standardize skeletons and correct layout geometry",
+    "requirement": "Empty, error, retry, masked, reduced-motion, and narrow-screen states remain usable.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md and frontend/docs/performance/loading-ux/surfaces/*-final.json: controlled delayed/failed code/data, stable dialog/control bounds; component integration suite 471 tests passes. Cached token-name draft preserves same node, value and focus through failed refresh and Retry (interaction-extras-final.json)."
+    ]
+  },
+  {
+    "id": "L043",
+    "section": "5. Verify improvements, publish evidence, and prepare release",
+    "requirement": "Re-run the same short baseline matrix with identical data, throttling, browser, and build mode. Cover cold direct loads, immediate clicks before warmup, warmed navigation, cached returns, stale refresh, and period/filter changes.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/comparison.md: 36 baseline samples; 36 selected comparison samples from 42 candidate samples (the final six retest cold/warm Transactions after the row-estimate fix). Warm primary navigation improves 67\u201383%; cold Home useful +1ms/chart +24ms, cold Transactions -17ms. Whole-document cost +2 API reads/+427.7KiB; chart code completes before speculative Transactions work. Raw, summaries and shift classifications retained; no measured runtime/failed-request errors or cached cold scripts."
+    ]
+  },
+  {
+    "id": "L044",
+    "section": "5. Verify improvements, publish evidence, and prepare release",
+    "requirement": "Compare module/data ordering and first-useful/full-section timings; count extra background requests and bytes. Warming must not move the delay onto the initial page. Investigate a cold useful-content median regression greater than both 10% and 50ms; do not claim a win based solely on an earlier heading or spinner.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/comparison.md: 36 baseline samples; 36 selected comparison samples from 42 candidate samples (the final six retest cold/warm Transactions after the row-estimate fix). Warm primary navigation improves 67\u201383%; cold Home useful +1ms/chart +24ms, cold Transactions -17ms. Whole-document cost +2 API reads/+427.7KiB; chart code completes before speculative Transactions work. Raw, summaries and shift classifications retained; no measured runtime/failed-request errors or cached cold scripts.",
+      "Final independent anchor review and rebuilt Transactions retest: all3 cold samples first8 row origins move0px, table scrollHeight changes1px within criterion, scrollTop stays0; warm Transactions109ms vs643ms, cold826ms vs843ms. comparison.md + anchor-review.json distinguish retained matrix and targeted rebuilt samples. Final inventory, Home disclosure/scroll proof, failed/empty/delayed states and quality gates complete; no unclassified loading shift remains in controlled coverage."
+    ]
+  },
+  {
+    "id": "L045",
+    "section": "5. Verify improvements, publish evidence, and prepare release",
+    "requirement": "Use agent-browser on desktop, phone, and tablet portrait/landscape. Include pointer, keyboard, and touch flows; four-second delayed requests; rapid period changes and out-of-order responses; slow/failed code imports; empty/error/retry; and before/after hydration. Record screenshots or a short filmstrip during loads.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final evidence table and surfaces-index.json. home-disclosure-scroll-final.json: scrollY20 and collapsed Liabilities preserved before/during/after actual Month\u2192Week with both dashboard GETs delayed4s. Desktop/phone/tablet, keyboard Enter/touch, out-of-order, failed chunks/reads, cached-draft focus and Retry verified."
+    ]
+  },
+  {
+    "id": "L046",
+    "section": "5. Verify improvements, publish evidence, and prepare release",
+    "requirement": "Assert zero attributable loading-induced layout-shift entries in the controlled cases, including the interaction trace, and verify the anchor/scroll checks. Investigate every nonzero result instead of accepting an aggregate \u201cgood CLS\u201d. Natural new result sizes, user scrolling, and viewport resizing must be identified separately in the report; no unclassified shift can be signed off.",
+    "status": "verified",
+    "evidence": [
+      "Final independent anchor review and rebuilt Transactions retest: all3 cold samples first8 row origins move0px, table scrollHeight changes1px within criterion, scrollTop stays0; warm Transactions109ms vs643ms, cold826ms vs843ms. comparison.md + anchor-review.json distinguish retained matrix and targeted rebuilt samples. Final inventory, Home disclosure/scroll proof, failed/empty/delayed states and quality gates complete; no unclassified loading shift remains in controlled coverage."
+    ]
+  },
+  {
+    "id": "L047",
+    "section": "5. Verify improvements, publish evidence, and prepare release",
+    "requirement": "Update `frontend/docs/ui-conventions.md` with skeleton, preparation, stable error, responsive SSR, and truthful filtered-data rules. Finalize `frontend/docs/loading-layout-audit.md` and a concise before/after report under `frontend/docs/performance/loading-ux/` with sample counts and limitations.",
+    "status": "verified",
+    "evidence": [
+      "Final independent anchor review and rebuilt Transactions retest: all3 cold samples first8 row origins move0px, table scrollHeight changes1px within criterion, scrollTop stays0; warm Transactions109ms vs643ms, cold826ms vs843ms. comparison.md + anchor-review.json distinguish retained matrix and targeted rebuilt samples. Final inventory, Home disclosure/scroll proof, failed/empty/delayed states and quality gates complete; no unclassified loading shift remains in controlled coverage."
+    ]
+  },
+  {
+    "id": "L048",
+    "section": "5. Verify improvements, publish evidence, and prepare release",
+    "requirement": "Run relevant quality gates once the final implementation is stable. Prepare one normal frontend release with rollback to the preceding image; no staged rollout or migrations are needed. Deployment is a separate explicit action.",
+    "status": "verified",
+    "evidence": [
+      "Final frontend suite: 74 files, 471 tests pass; yarn lint (0 errors, 3 preexisting warnings), yarn typecheck, production yarn build pass. Backend fixture syntax/lint/typecheck pass. Release sequence and rollback in plans/loading-ux-release.md."
+    ]
+  },
+  {
+    "id": "L049",
+    "section": "5. Verify improvements, publish evidence, and prepare release",
+    "requirement": "All inventory items and overall criteria are verified, with no unresolved loading-induced shift or hydration regression in the controlled coverage.",
+    "status": "verified",
+    "evidence": [
+      "Final independent anchor review and rebuilt Transactions retest: all3 cold samples first8 row origins move0px, table scrollHeight changes1px within criterion, scrollTop stays0; warm Transactions109ms vs643ms, cold826ms vs843ms. comparison.md + anchor-review.json distinguish retained matrix and targeted rebuilt samples. Final inventory, Home disclosure/scroll proof, failed/empty/delayed states and quality gates complete; no unclassified loading shift remains in controlled coverage."
+    ]
+  },
+  {
+    "id": "L050",
+    "section": "5. Verify improvements, publish evidence, and prepare release",
+    "requirement": "Warmed primary navigation and section loading improve against the new baseline; observed timing gains and extra prefetch cost are reported honestly.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/comparison.md: 36 baseline samples; 36 selected comparison samples from 42 candidate samples (the final six retest cold/warm Transactions after the row-estimate fix). Warm primary navigation improves 67\u201383%; cold Home useful +1ms/chart +24ms, cold Transactions -17ms. Whole-document cost +2 API reads/+427.7KiB; chart code completes before speculative Transactions work. Raw, summaries and shift classifications retained; no measured runtime/failed-request errors or cached cold scripts."
+    ]
+  },
+  {
+    "id": "L051",
+    "section": "5. Verify improvements, publish evidence, and prepare release",
+    "requirement": "No production deployment is implied merely by completing this plan.",
+    "status": "verified",
+    "evidence": [
+      "User explicitly authorized active goal: implement and deploy. Deployment will follow normal protected deploy workflow after verification."
+    ]
+  },
+  {
+    "id": "L052",
+    "section": "Frontend",
+    "requirement": "Coordinator: deduplication, bounded concurrency, foreground priority, default parameter parity, hidden tab/Save-Data behavior, failed preload retry, and auth generation/currency changes. Assert no speculative pagination or token fetching.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L053",
+    "section": "Frontend",
+    "requirement": "Query/loader integration: same query keys/cache shape; 30-second reuse; stale background refresh and mutation invalidation; rapid navigation and cancellation.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L054",
+    "section": "Frontend",
+    "requirement": "UI: skeleton versus cached-content behavior; no visible status row; truthful period deltas/popovers; empty/error/retry; preserved drafts, selection, focus, and scroll. Update existing Home, Analysis, Accounts, Transactions, Settings, DataState, MobileTableList, AccountModal, and CompactAccountRow tests as relevant.",
+    "status": "verified",
+    "evidence": [
+      "Final frontend suite: 74 files, 471 tests pass; yarn lint (0 errors, 3 preexisting warnings), yarn typecheck, production yarn build pass. Backend fixture syntax/lint/typecheck pass. Release sequence and rollback in plans/loading-ux-release.md."
+    ]
+  },
+  {
+    "id": "L055",
+    "section": "Frontend",
+    "requirement": "Preserve and extend `NetWorthCard.hydration.test.tsx`, loader tests, and existing auth-boundary tests. Shared primitives require integration coverage for callers.",
+    "status": "verified",
+    "evidence": [
+      "Frontend focused suite: 23 files / 145 tests passed; additional review regression suite: 3 files / 20 tests passed. See frontend/docs/loading-layout-audit.md for component inventory and tests."
+    ]
+  },
+  {
+    "id": "L056",
+    "section": "Frontend",
+    "requirement": "Use browser measurements for layout and CSS behavior. Do not add tests that only assert CSS declarations, constant dimensions, or implementation strings.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final inventory and focused browser verification; source-independent review accepted latest fixes. Final 471 frontend tests include hydration, auth/cache/currency/money/draft/filter regressions. Production screenshot/anchor evidence in frontend/docs/performance/loading-ux/. Remaining final timing and supplemental disclosure criteria tracked separately."
+    ]
+  },
+  {
+    "id": "L057",
+    "section": "Overall Exit Criteria",
+    "requirement": "Primary page/code/data preparation removes avoidable post-click waits, without increasing the critical initial-load dependency chain or creating a request burst.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/comparison.md: 36 baseline samples; 36 selected comparison samples from 42 candidate samples (the final six retest cold/warm Transactions after the row-estimate fix). Warm primary navigation improves 67\u201383%; cold Home useful +1ms/chart +24ms, cold Transactions -17ms. Whole-document cost +2 API reads/+427.7KiB; chart code completes before speculative Transactions work. Raw, summaries and shift classifications retained; no measured runtime/failed-request errors or cached cold scripts."
+    ]
+  },
+  {
+    "id": "L058",
+    "section": "Overall Exit Criteria",
+    "requirement": "Charts and selected Settings sections load code and data in parallel.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/comparison.md: 36 baseline samples; 36 selected comparison samples from 42 candidate samples (the final six retest cold/warm Transactions after the row-estimate fix). Warm primary navigation improves 67\u201383%; cold Home useful +1ms/chart +24ms, cold Transactions -17ms. Whole-document cost +2 API reads/+427.7KiB; chart code completes before speculative Transactions work. Raw, summaries and shift classifications retained; no measured runtime/failed-request errors or cached cold scripts."
+    ]
+  },
+  {
+    "id": "L059",
+    "section": "Overall Exit Criteria",
+    "requirement": "Skeletons are the standard for audited read-only loading states, with stable responsive geometry through success, empty, and failure transitions.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final inventory and focused browser verification; source-independent review accepted latest fixes. Final 471 frontend tests include hydration, auth/cache/currency/money/draft/filter regressions. Production screenshot/anchor evidence in frontend/docs/performance/loading-ux/. Remaining final timing and supplemental disclosure criteria tracked separately."
+    ]
+  },
+  {
+    "id": "L060",
+    "section": "Overall Exit Criteria",
+    "requirement": "Home period changes have no \u201ccurrently showing\u201d banner, no transient page displacement, no stale comparisons masquerading as the selected period, and no scroll/disclosure reset.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final evidence table and surfaces-index.json. home-disclosure-scroll-final.json: scrollY20 and collapsed Liabilities preserved before/during/after actual Month\u2192Week with both dashboard GETs delayed4s. Desktop/phone/tablet, keyboard Enter/touch, out-of-order, failed chunks/reads, cached-draft focus and Retry verified."
+    ]
+  },
+  {
+    "id": "L061",
+    "section": "Overall Exit Criteria",
+    "requirement": "All loading-induced layout shifts identified across the inventory are fixed; the defined browser measurements pass, including interaction-time shifts.",
+    "status": "verified",
+    "evidence": [
+      "Final independent anchor review and rebuilt Transactions retest: all3 cold samples first8 row origins move0px, table scrollHeight changes1px within criterion, scrollTop stays0; warm Transactions109ms vs643ms, cold826ms vs843ms. comparison.md + anchor-review.json distinguish retained matrix and targeted rebuilt samples. Final inventory, Home disclosure/scroll proof, failed/empty/delayed states and quality gates complete; no unclassified loading shift remains in controlled coverage."
+    ]
+  },
+  {
+    "id": "L062",
+    "section": "Overall Exit Criteria",
+    "requirement": "SSR usefulness, hydration correctness, persistent styles, masking, cache ownership, authorization, exact money, and mutation behavior are preserved.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/loading-layout-audit.md final inventory and focused browser verification; source-independent review accepted latest fixes. Final 471 frontend tests include hydration, auth/cache/currency/money/draft/filter regressions. Production screenshot/anchor evidence in frontend/docs/performance/loading-ux/. Remaining final timing and supplemental disclosure criteria tracked separately."
+    ]
+  },
+  {
+    "id": "L063",
+    "section": "Overall Exit Criteria",
+    "requirement": "Short before/after evidence and quality gates pass, with API/byte costs shown.",
+    "status": "verified",
+    "evidence": [
+      "frontend/docs/performance/loading-ux/comparison.md: 36 baseline samples; 36 selected comparison samples from 42 candidate samples (the final six retest cold/warm Transactions after the row-estimate fix). Warm primary navigation improves 67\u201383%; cold Home useful +1ms/chart +24ms, cold Transactions -17ms. Whole-document cost +2 API reads/+427.7KiB; chart code completes before speculative Transactions work. Raw, summaries and shift classifications retained; no measured runtime/failed-request errors or cached cold scripts.",
+      "Final independent anchor review and rebuilt Transactions retest: all3 cold samples first8 row origins move0px, table scrollHeight changes1px within criterion, scrollTop stays0; warm Transactions109ms vs643ms, cold826ms vs843ms. comparison.md + anchor-review.json distinguish retained matrix and targeted rebuilt samples. Final inventory, Home disclosure/scroll proof, failed/empty/delayed states and quality gates complete; no unclassified loading shift remains in controlled coverage."
+    ]
+  },
+  {
+    "id": "L064",
+    "section": "Overall Exit Criteria",
+    "requirement": "Changes remain frontend-only. No direct MCP/backend speed improvement is claimed.",
+    "status": "verified",
+    "evidence": [
+      "All product changes are frontend-only. backend/test/helpers/serve-browser-fixture.cjs adds test-only environment/lifecycle flags; no API/schema/MCP runtime change. Backend lint/typecheck and fixture syntax checks pass."
+    ]
+  }
+]

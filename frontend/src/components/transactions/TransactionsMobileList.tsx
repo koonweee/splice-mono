@@ -7,7 +7,6 @@ import {
   Divider,
   Drawer,
   Group,
-  Loader,
   Stack,
   Text,
   TextInput,
@@ -17,6 +16,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Check, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { LoadingSkeleton, RowSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
   useCategoryControllerFindAll,
@@ -406,7 +406,9 @@ export function TransactionsMobileList({
         ))}
         {isFetchingNextPage && (
           <div className={styles.footer}>
-            <Loader size="sm" />
+            <LoadingSkeleton label="Loading more transactions…">
+              <RowSkeleton rows={1} />
+            </LoadingSkeleton>
           </div>
         )}
       </div>

@@ -64,3 +64,13 @@ export function initialTransactionParams(search: {
       : {}),
   }
 }
+
+export function analysisDateRange(
+  today: string,
+  search: { startDate?: string; endDate?: string } = {},
+) {
+  return {
+    startDate: search.startDate ?? `${today.slice(0, 7)}-01`,
+    endDate: search.endDate ?? today,
+  }
+}

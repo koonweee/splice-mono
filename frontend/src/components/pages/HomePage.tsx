@@ -1,12 +1,15 @@
-import { Alert, Button, Grid, Group, Loader, Select, Text } from '@mantine/core'
+import { Grid, Select } from '@mantine/core'
 import { useNavigate } from '@tanstack/react-router'
 import { lazy, useMemo } from 'react'
 import { usePresentationPreferences } from '../../lib/presentation-preferences'
 import { useCurrentUser } from '../../lib/session'
-import { DeferredFeature } from '../DeferredFeature'
+import { DeferredOverlay } from '../DeferredOverlay'
 import { AccountSection } from '../AccountSection'
 import { NetWorthCard } from '../NetWorthCard'
 import { PageHeader } from '../PageHeader'
+import { DataState } from '../DataState'
+import { AccountDetailsSkeleton } from '../loading/LoadingSkeleton'
+import { HomeSkeleton } from '../loading/HomeSkeleton'
 import { useBalanceData } from '../../hooks/useBalanceData'
 import { isZeroBalanceAccount } from '../../lib/balance-utils'
 
@@ -89,7 +92,6 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
       : undefined
 
   const handleAccountClick = (account: AccountSummaryData) => {
-    void import('../AccountModal')
     navigate({
       to: '/home',
       search: { accountId: account.id, period },
@@ -131,75 +133,68 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
         }
       />
 
-      {isChangingPeriod && dashboard && (
-        <Text role="status" size="sm" c="dimmed" mb="sm">
-          Updating period… Showing{' '}
-          {TIME_PERIOD_LABELS[dashboard.comparisonPeriod]} results.
-        </Text>
-      )}
+      <DataState
+        hasData={Boolean(dashboard)}
+        isLoading={isLoading}
+        isError={Boolean(error)}
+        isFetching={isFetching}
+        errorMessage="Unable to load the selected dashboard period."
+        onRetry={() => void refetch()}
+        loadingFallback={<HomeSkeleton />}
+      >
+        {dashboard && (
+          <>
+            <NetWorthCard
+              balancesHidden={balancesHidden}
+              netWorth={dashboard.netWorth}
+              onToggleBalancesHidden={handleToggleBalancesHidden}
+              changePercent={dashboard.changePercent}
+              changeAmount={dashboard.changeAmount}
+              comparisonPeriod={dashboard.comparisonPeriod}
+              comparisonLoading={isChangingPeriod}
+              chartData={dashboard.chartData}
+              chartLoading={seriesLoading}
+              chartError={Boolean(seriesError)}
+              onRetryChart={() => void refetchSeries()}
+            />
 
-      {isLoading && (
-        <Group justify="center" py="xl">
-          <Loader />
-        </Group>
-      )}
+            <Grid>
+              <Grid.Col span={{ base: 12, md: 6 }}>
+                <AccountSection
+                  title="Assets"
+                  accounts={visibleAssets}
+                  balancesHidden={balancesHidden}
+                  comparisonLoading={isChangingPeriod}
+                  isLiability={false}
+                  onAccountClick={handleAccountClick}
+                />
+              </Grid.Col>
 
-      {error && (
-        <Alert color="red" title="Error" mb="lg">
-          Error loading dashboard.{' '}
-          {dashboard && 'Previously loaded results are shown below.'}
-          <Button
-            variant="light"
-            color="red"
-            loading={isFetching}
-            onClick={() => void refetch()}
-          >
-            Retry dashboard
-          </Button>
-        </Alert>
-      )}
-
-      {dashboard && (
-        <>
-          <NetWorthCard
-            balancesHidden={balancesHidden}
-            netWorth={dashboard.netWorth}
-            onToggleBalancesHidden={handleToggleBalancesHidden}
-            changePercent={dashboard.changePercent}
-            changeAmount={dashboard.changeAmount}
-            comparisonPeriod={dashboard.comparisonPeriod}
-            chartData={dashboard.chartData}
-            chartLoading={seriesLoading}
-            chartError={Boolean(seriesError)}
-            onRetryChart={() => void refetchSeries()}
-          />
-
-          <Grid>
-            <Grid.Col span={{ base: 12, md: 6 }}>
-              <AccountSection
-                title="Assets"
-                accounts={visibleAssets}
-                balancesHidden={balancesHidden}
-                isLiability={false}
-                onAccountClick={handleAccountClick}
-              />
-            </Grid.Col>
-
-            <Grid.Col span={{ base: 12, md: 6 }}>
-              <AccountSection
-                title="Liabilities"
-                accounts={visibleLiabilities}
-                balancesHidden={balancesHidden}
-                isLiability={true}
-                onAccountClick={handleAccountClick}
-              />
-            </Grid.Col>
-          </Grid>
-        </>
-      )}
+              <Grid.Col span={{ base: 12, md: 6 }}>
+                <AccountSection
+                  title="Liabilities"
+                  accounts={visibleLiabilities}
+                  balancesHidden={balancesHidden}
+                  comparisonLoading={isChangingPeriod}
+                  isLiability={true}
+                  onAccountClick={handleAccountClick}
+                />
+              </Grid.Col>
+            </Grid>
+          </>
+        )}
+      </DataState>
 
       {selectedAccount && (
-        <DeferredFeature label="Account details">
+        <DeferredOverlay
+          label="Account details"
+          title={selectedAccount.customName ?? selectedAccount.name}
+          size="xl"
+          onClose={handleCloseModal}
+          centered={false}
+          minHeight={0}
+          skeleton={<AccountDetailsSkeleton account={selectedAccount} />}
+        >
           <AccountModal
             account={selectedAccount}
             opened={!!selectedAccount}
@@ -207,7 +202,7 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
             period={period}
             balancesHidden={balancesHidden}
           />
-        </DeferredFeature>
+        </DeferredOverlay>
       )}
     </>
   )

@@ -1,0 +1,412 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "cpu": 2,
+    "latencyMs": 80,
+    "downloadBytesPerSecond": 1000000,
+    "uploadBytesPerSecond": 500000,
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "mobile": false
+    },
+    "samplesPerScenario": 3,
+    "warmPreparationMs": 5000,
+    "staleWaitMs": 31000
+  },
+  "buildLabel": "after-previrtualizer",
+  "summary": {
+    "cold-home": {
+      "samples": 3,
+      "usefulMedianMs": 789.9000000953674,
+      "chartMedianMs": 1875.7000000476837,
+      "browserRequestCountMedian": 87,
+      "apiRequestCountMedian": 4,
+      "transferredBytesMedian": 2132184,
+      "apiTransferredBytesMedian": 67686,
+      "preparationApiCountMedian": null,
+      "preparationTransferredBytesMedian": null,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0,
+        0,
+        0
+      ],
+      "shiftEntries": [
+        0,
+        0,
+        0
+      ],
+      "anchorChangeEntries": [
+        0,
+        0,
+        0
+      ],
+      "errorCount": 0
+    },
+    "immediate-transactions": {
+      "samples": 3,
+      "usefulMedianMs": 962.2000000476837,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 34,
+      "apiRequestCountMedian": 4,
+      "transferredBytesMedian": 414841,
+      "apiTransferredBytesMedian": 67729,
+      "preparationApiCountMedian": null,
+      "preparationTransferredBytesMedian": null,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.13256188271604938,
+        0.13256188271604938,
+        0.13256188271604938
+      ],
+      "shiftEntries": [
+        1,
+        1,
+        1
+      ],
+      "anchorChangeEntries": [
+        0,
+        0,
+        1
+      ],
+      "errorCount": 0
+    },
+    "warmed-transactions": {
+      "samples": 3,
+      "usefulMedianMs": 120.70000004768372,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 2,
+      "apiRequestCountMedian": 2,
+      "transferredBytesMedian": 1192,
+      "apiTransferredBytesMedian": 1192,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2132184,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.14490997866030095,
+        0.14960895798671392,
+        0.14492481882354358
+      ],
+      "shiftEntries": [
+        10,
+        12,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        13,
+        12
+      ],
+      "errorCount": 0
+    },
+    "warmed-accounts": {
+      "samples": 3,
+      "usefulMedianMs": 25.300000071525574,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 0,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 0,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2132184,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.0631469273621359,
+        0.06315930390534577,
+        0.06315393751356338
+      ],
+      "shiftEntries": [
+        10,
+        10,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        12,
+        12
+      ],
+      "errorCount": 0
+    },
+    "warmed-analysis": {
+      "samples": 3,
+      "usefulMedianMs": 21.699999928474426,
+      "chartMedianMs": 326.7000000476837,
+      "browserRequestCountMedian": 0,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 0,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2132184,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.06226701601381655,
+        0.06470164859724634,
+        0.06225885900426793
+      ],
+      "shiftEntries": [
+        10,
+        11,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        13,
+        12
+      ],
+      "errorCount": 0
+    },
+    "warmed-settings": {
+      "samples": 3,
+      "usefulMedianMs": 48.700000047683716,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 1,
+      "apiRequestCountMedian": 1,
+      "transferredBytesMedian": 417,
+      "apiTransferredBytesMedian": 417,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2132184,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.14300212489752123,
+        0.14436180534456983,
+        0.14300324697989003
+      ],
+      "shiftEntries": [
+        10,
+        11,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        13,
+        12
+      ],
+      "errorCount": 0
+    },
+    "cached-home": {
+      "samples": 3,
+      "usefulMedianMs": 31.700000047683716,
+      "chartMedianMs": 31.700000047683716,
+      "browserRequestCountMedian": 0,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 0,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2132184,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.1183709741813754,
+        0.11631162499698593,
+        0.11836373554747782
+      ],
+      "shiftEntries": [
+        10,
+        10,
+        10
+      ],
+      "anchorChangeEntries": [
+        13,
+        12,
+        13
+      ],
+      "errorCount": 0
+    },
+    "cached-transactions": {
+      "samples": 3,
+      "usefulMedianMs": 115.19999992847443,
+      "chartMedianMs": null,
+      "browserRequestCountMedian": 0,
+      "apiRequestCountMedian": 0,
+      "transferredBytesMedian": 0,
+      "apiTransferredBytesMedian": 0,
+      "preparationApiCountMedian": 4,
+      "preparationTransferredBytesMedian": 2132184,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.14243699402608992,
+        0.14491789032359184,
+        0.14490353226273148
+      ],
+      "shiftEntries": [
+        10,
+        10,
+        10
+      ],
+      "anchorChangeEntries": [
+        12,
+        12,
+        12
+      ],
+      "errorCount": 0
+    },
+    "stale-home": {
+      "samples": 3,
+      "usefulMedianMs": 44.699999928474426,
+      "chartMedianMs": 44.699999928474426,
+      "browserRequestCountMedian": 2,
+      "apiRequestCountMedian": 2,
+      "transferredBytesMedian": 5407,
+      "apiTransferredBytesMedian": 5407,
+      "preparationApiCountMedian": 0,
+      "preparationTransferredBytesMedian": 0,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0.12276124933690201,
+        0.11836663565176506,
+        0.122743944317853
+      ],
+      "shiftEntries": [
+        12,
+        10,
+        12
+      ],
+      "anchorChangeEntries": [
+        14,
+        13,
+        14
+      ],
+      "errorCount": 0
+    },
+    "period-week": {
+      "samples": 3,
+      "usefulMedianMs": 117.80000007152557,
+      "chartMedianMs": 117.80000007152557,
+      "browserRequestCountMedian": 2,
+      "apiRequestCountMedian": 2,
+      "transferredBytesMedian": 3265,
+      "apiTransferredBytesMedian": 3265,
+      "preparationApiCountMedian": 0,
+      "preparationTransferredBytesMedian": 0,
+      "ordinaryCls": [
+        0,
+        0,
+        0
+      ],
+      "interactionShiftSum": [
+        0,
+        0,
+        0
+      ],
+      "shiftEntries": [
+        0,
+        0,
+        0
+      ],
+      "anchorChangeEntries": [
+        0,
+        0,
+        0
+      ],
+      "errorCount": 0
+    }
+  },
+  "comparison": {
+    "cold-home": {
+      "usefulDeltaMs": 1.3000000715255737,
+      "usefulDeltaPercent": 0.1648491087352613,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 647122,
+      "apiRequestCountDelta": 3
+    },
+    "immediate-transactions": {
+      "usefulDeltaMs": -3.299999952316284,
+      "usefulDeltaPercent": -0.34179181277227183,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": -322,
+      "apiRequestCountDelta": 0
+    },
+    "warmed-transactions": {
+      "usefulDeltaMs": -521.7999999523163,
+      "usefulDeltaPercent": -81.21400777467957,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": -407889,
+      "apiRequestCountDelta": -2
+    },
+    "warmed-accounts": {
+      "usefulDeltaMs": -95.49999988079071,
+      "usefulDeltaPercent": -79.05629132325139,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": -13832,
+      "apiRequestCountDelta": 0
+    },
+    "warmed-analysis": {
+      "usefulDeltaMs": -97.30000007152557,
+      "usefulDeltaPercent": -81.76470594245846,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": -163728,
+      "apiRequestCountDelta": -1
+    },
+    "warmed-settings": {
+      "usefulDeltaMs": -100.39999997615814,
+      "usefulDeltaPercent": -67.33735745144445,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": -18243,
+      "apiRequestCountDelta": 0
+    },
+    "cached-home": {
+      "usefulDeltaMs": 1.100000023841858,
+      "usefulDeltaPercent": 3.594771316943783,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 0,
+      "apiRequestCountDelta": 0
+    },
+    "cached-transactions": {
+      "usefulDeltaMs": 11.49999988079071,
+      "usefulDeltaPercent": 11.089681654293864,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 0,
+      "apiRequestCountDelta": 0
+    },
+    "stale-home": {
+      "usefulDeltaMs": -1.7000000476837158,
+      "usefulDeltaPercent": -3.663793208097483,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 0,
+      "apiRequestCountDelta": 0
+    },
+    "period-week": {
+      "usefulDeltaMs": 4.200000047683716,
+      "usefulDeltaPercent": 3.697183139790703,
+      "coldRegressionNeedsInvestigation": false,
+      "transferredBytesDelta": 0,
+      "apiRequestCountDelta": 0
+    }
+  }
+}

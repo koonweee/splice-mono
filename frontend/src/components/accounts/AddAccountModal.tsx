@@ -10,12 +10,7 @@ import {
   TextInput,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import {
-  IconArrowLeft,
-  IconBuildingBank,
-  IconPencil,
-  IconWallet,
-} from '@tabler/icons-react'
+import { IconArrowLeft } from '@tabler/icons-react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
@@ -37,15 +32,9 @@ import {
   ManualBrokeragePositionsEditor,
   isPositiveDecimal,
 } from '../investments/ManualBrokeragePositionsEditor'
+import { ACCOUNT_PROVIDERS } from './account-providers'
 import type { InitiateLinkRequestNetwork } from '../../api/models'
-import type { ComponentType } from 'react'
 import type { ManualBrokeragePositionDraft } from '../investments/ManualBrokeragePositionsEditor'
-
-interface Provider {
-  id: string
-  name: string
-  icon: ComponentType<{ size: number }>
-}
 
 const MANUAL_ACCOUNT_TYPES = [
   {
@@ -109,24 +98,6 @@ const MANUAL_ACCOUNT_TYPES = [
     subType: AccountSubType.other,
   },
 ] as const
-
-const PROVIDERS: Array<Provider> = [
-  {
-    id: 'plaid',
-    name: 'Plaid',
-    icon: IconBuildingBank,
-  },
-  {
-    id: 'crypto',
-    name: 'Crypto wallet',
-    icon: IconWallet,
-  },
-  {
-    id: 'manual',
-    name: 'Manual account',
-    icon: IconPencil,
-  },
-]
 
 interface AddAccountModalProps {
   opened: boolean
@@ -507,7 +478,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         </Alert>
       ) : null}
 
-      {PROVIDERS.map((provider) => {
+      {ACCOUNT_PROVIDERS.map((provider) => {
         const Icon = provider.icon
         const isLoading =
           initiateLinking.isPending && selectedProvider === provider.id

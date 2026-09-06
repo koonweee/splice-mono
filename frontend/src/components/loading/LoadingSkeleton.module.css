@@ -1,0 +1,44 @@
+.root {
+  width: 100%;
+}
+.row {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+.row:last-child {
+  border-bottom: 0;
+}
+@media (--compact-layout) {
+  .tableHeader {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .root :global(.mantine-Skeleton-root)::after {
+    animation: none;
+  }
+}
+
+.settingsInput {
+  height: 42px;
+}
+.compactCategoryFilter,
+.compactCategorySelection {
+  display: none;
+}
+@media (--compact-layout) {
+  .settingsInput {
+    height: 48px;
+  }
+  .desktopCategoryFilter {
+    display: none;
+  }
+  .compactCategoryFilter,
+  .compactCategorySelection {
+    display: block;
+  }
+}
+@media (--phone-layout) {
+  .settingsActions > :global(.mantine-Skeleton-root) {
+    flex: 1 1 auto;
+  }
+}

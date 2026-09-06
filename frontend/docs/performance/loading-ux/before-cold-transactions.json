@@ -1,0 +1,3729 @@
+{
+  "schemaVersion": 1,
+  "origin": "http://localhost:4101",
+  "profile": {
+    "cpu": 2,
+    "latencyMs": 80,
+    "downloadBytesPerSecond": 1000000,
+    "uploadBytesPerSecond": 500000,
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "mobile": false
+    },
+    "samplesPerScenario": 3,
+    "warmPreparationMs": 5000,
+    "staleWaitMs": 31000
+  },
+  "buildLabel": "before",
+  "matrix": "cold-transactions",
+  "observerScriptId": "1",
+  "recordedAt": "2026-09-06T07:49:54.054Z",
+  "criteria": {
+    "coldUsefulRegression": "Investigate median increase exceeding both 10% and 50ms",
+    "layout": "All nonzero shifts require source classification; ordinary CLS excludes recent input but trace retains it",
+    "timings": "Rendered financial/account/transaction content, not heading or spinner; chart is a separate boundary",
+    "scope": "Browser requests only; SSR backend requests are folded into document response and not individually visible"
+  },
+  "samples": [
+    {
+      "kind": "cold-transactions",
+      "run": 1,
+      "preparation": null,
+      "firstUsefulMs": 1002.6999999284744,
+      "chartReadyMs": null,
+      "observationMs": 3308.600000023842,
+      "ordinaryCls": 0,
+      "interactionShiftSum": 0,
+      "timing": {
+        "timeOrigin": 1788680984398.2,
+        "start": 0,
+        "route": "/transactions",
+        "target": "/transactions",
+        "firstUseful": 1002.6999999284744,
+        "chartReady": null,
+        "shifts": [],
+        "anchorChanges": [
+          {
+            "at": 1905.7999999523163,
+            "route": "/transactions",
+            "changes": [
+              {
+                "name": "table",
+                "before": {
+                  "x": 17,
+                  "y": 195.484375,
+                  "width": 1406,
+                  "height": 2178
+                },
+                "after": {
+                  "x": 17,
+                  "y": 195.484375,
+                  "width": 1406,
+                  "height": 2309.296875
+                }
+              },
+              {
+                "name": "row2",
+                "before": {
+                  "x": 17,
+                  "y": 281.18438720703125,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 287.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row3",
+                "before": {
+                  "x": 17,
+                  "y": 323.8843688964844,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 336.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row4",
+                "before": {
+                  "x": 17,
+                  "y": 366.5843811035156,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 385.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row5",
+                "before": {
+                  "x": 17,
+                  "y": 409.28436279296875,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 434.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row6",
+                "before": {
+                  "x": 17,
+                  "y": 451.984375,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 483.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row7",
+                "before": {
+                  "x": 17,
+                  "y": 494.68438720703125,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 532.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row8",
+                "before": {
+                  "x": 17,
+                  "y": 537.3843994140625,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 581.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              }
+            ]
+          }
+        ],
+        "scroll": [
+          {
+            "at": 1002.6999999284744,
+            "x": 0,
+            "y": 0,
+            "scrollHeight": 1000,
+            "clientHeight": 1000,
+            "parents": [
+              {
+                "node": {
+                  "tag": "DIV",
+                  "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                  "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+                },
+                "scrollHeight": 2178,
+                "clientHeight": 788,
+                "scrollTop": 0
+              }
+            ],
+            "route": "/transactions"
+          },
+          {
+            "at": 1905.7999999523163,
+            "x": 0,
+            "y": 0,
+            "scrollHeight": 1000,
+            "clientHeight": 1000,
+            "parents": [
+              {
+                "node": {
+                  "tag": "DIV",
+                  "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                  "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+                },
+                "scrollHeight": 2309,
+                "clientHeight": 788,
+                "scrollTop": 0
+              }
+            ],
+            "route": "/transactions"
+          }
+        ],
+        "errors": [],
+        "lcp": 1048,
+        "firstAnchors": {
+          "at": 1002.6999999284744,
+          "route": "/transactions",
+          "anchors": {
+            "heading": {
+              "x": 16,
+              "y": 76,
+              "width": 204.515625,
+              "height": 44.1875
+            },
+            "card": {
+              "x": 16,
+              "y": 194.484375,
+              "width": 1408,
+              "height": 789.515625
+            },
+            "table": {
+              "x": 17,
+              "y": 195.484375,
+              "width": 1406,
+              "height": 2178
+            },
+            "navigation": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            },
+            "row1": {
+              "x": 17,
+              "y": 238.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row2": {
+              "x": 17,
+              "y": 281.18438720703125,
+              "width": 1406,
+              "height": 49
+            },
+            "row3": {
+              "x": 17,
+              "y": 323.8843688964844,
+              "width": 1406,
+              "height": 49
+            },
+            "row4": {
+              "x": 17,
+              "y": 366.5843811035156,
+              "width": 1406,
+              "height": 49
+            },
+            "row5": {
+              "x": 17,
+              "y": 409.28436279296875,
+              "width": 1406,
+              "height": 49
+            },
+            "row6": {
+              "x": 17,
+              "y": 451.984375,
+              "width": 1406,
+              "height": 49
+            },
+            "row7": {
+              "x": 17,
+              "y": 494.68438720703125,
+              "width": 1406,
+              "height": 49
+            },
+            "row8": {
+              "x": 17,
+              "y": 537.3843994140625,
+              "width": 1406,
+              "height": 49
+            }
+          }
+        },
+        "lastAnchors": {
+          "at": 3308.600000023842,
+          "route": "/transactions",
+          "anchors": {
+            "heading": {
+              "x": 16,
+              "y": 76,
+              "width": 204.515625,
+              "height": 44.1875
+            },
+            "card": {
+              "x": 16,
+              "y": 194.484375,
+              "width": 1408,
+              "height": 789.515625
+            },
+            "table": {
+              "x": 17,
+              "y": 195.484375,
+              "width": 1406,
+              "height": 2309.296875
+            },
+            "navigation": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            },
+            "row1": {
+              "x": 17,
+              "y": 238.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row2": {
+              "x": 17,
+              "y": 287.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row3": {
+              "x": 17,
+              "y": 336.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row4": {
+              "x": 17,
+              "y": 385.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row5": {
+              "x": 17,
+              "y": 434.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row6": {
+              "x": 17,
+              "y": 483.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row7": {
+              "x": 17,
+              "y": 532.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row8": {
+              "x": 17,
+              "y": 581.484375,
+              "width": 1406,
+              "height": 49
+            }
+          }
+        },
+        "inputs": [],
+        "busy": [
+          {
+            "at": 1002.6999999284744,
+            "items": []
+          }
+        ]
+      },
+      "current": {
+        "route": "/transactions",
+        "search": "",
+        "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nTransactions\nBulk edit\nAll dates\nAdd transaction\nDate\nDescription\nAmount\nAccount\nCategory\n\nSep 5, 2026\n\nF\nFixture merchant 001\n-$1.01\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 002\n-$1.02\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 014\n-$1.14\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 004\n-$1.04\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 005\n-$1.05\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 028\n-$1.28\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 022\n-$1.22\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 016\n-$1.16\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 013\n-$1.13\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 026\n-$1.26\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nE\nExact ETH transaction\n-$3,000.00\nExact ETH wallet\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 017\n-$1.17\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 006\n-$1.06\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 019\n-$1.19\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 027\n-$1.27\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 023\n-$1.23\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 029\n-$1.29\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 012\n-$1.12\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 020\n-$1.20\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 009\n-$1.09\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 021\n-$1.21\nFixture checking\nRestaurants"
+      },
+      "requests": [
+        {
+          "url": "http://localhost:4101/transactions",
+          "method": "GET",
+          "type": "Document",
+          "start": 0.47607421875,
+          "wallTime": 1788680984398.676,
+          "initiator": "other",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 200.3660740852356,
+          "cache": true,
+          "mime": "text/html",
+          "end": 201.12007415294647,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:4101/assets/main-Dp8c1l4G.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 204.240234375,
+          "wallTime": 1788680984602.4402,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1774.193234205246,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1771.625234246254,
+          "transferBytes": 727829
+        },
+        {
+          "url": "http://localhost:4101/assets/_authed-C5Ul1gTs.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 204.59716796875,
+          "wallTime": 1788680984602.797,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 332.0781680345535,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 331.90716803073883,
+          "transferBytes": 13616
+        },
+        {
+          "url": "http://localhost:4101/assets/auth-DbGH0Eqw.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 204.65087890625,
+          "wallTime": 1788680984602.8508,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 300.5868788957596,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 300.40387892723083,
+          "transferBytes": 1212
+        },
+        {
+          "url": "http://localhost:4101/assets/use-disclosure-b6I3VCEO.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 204.676025390625,
+          "wallTime": 1788680984602.876,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 301.7200253009796,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 301.6100252866745,
+          "transferBytes": 635
+        },
+        {
+          "url": "http://localhost:4101/assets/get-sorted-breakpoints-D0W43i9S.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 204.700927734375,
+          "wallTime": 1788680984602.901,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 303.47192776203156,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 303.38592767715454,
+          "transferBytes": 527
+        },
+        {
+          "url": "http://localhost:4101/assets/createLucideIcon-DmoRy66l.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 204.72021484375,
+          "wallTime": 1788680984602.9202,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 309.7942147254944,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 309.3932147026062,
+          "transferBytes": 2122
+        },
+        {
+          "url": "http://localhost:4101/assets/house-I_oXrxKH.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 204.738037109375,
+          "wallTime": 1788680984602.938,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 554.180037021637,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 554.0490370988846,
+          "transferBytes": 625
+        },
+        {
+          "url": "http://localhost:4101/assets/browser-push-DyKZVAId.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 204.81494140625,
+          "wallTime": 1788680984603.015,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 585.5789413452148,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 585.2929414510727,
+          "transferBytes": 2545
+        },
+        {
+          "url": "http://localhost:4101/assets/transactions-DpO1VXMV.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 204.859130859375,
+          "wallTime": 1788680984603.059,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 679.0561308860779,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 678.5711308717728,
+          "transferBytes": 14284
+        },
+        {
+          "url": "http://localhost:4101/assets/useInfiniteQuery-CcDKL8Bz.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 204.89208984375,
+          "wallTime": 1788680984603.092,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 639.4570899009705,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 639.2080898284912,
+          "transferBytes": 1455
+        },
+        {
+          "url": "http://localhost:4101/assets/dayjs.min-BOOUKwBz.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.201904296875,
+          "wallTime": 1788680984603.4019,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 691.7519043684006,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 691.4419043064117,
+          "transferBytes": 7487
+        },
+        {
+          "url": "http://localhost:4101/assets/PageHeader-CVqQq-KC.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.260986328125,
+          "wallTime": 1788680984603.461,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 679.8679863214493,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 679.750986456871,
+          "transferBytes": 2035
+        },
+        {
+          "url": "http://localhost:4101/assets/format-DKBG2lgA.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.279052734375,
+          "wallTime": 1788680984603.479,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 849.5100526809692,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 849.2310526371002,
+          "transferBytes": 40025
+        },
+        {
+          "url": "http://localhost:4101/assets/DateRangeControl-BwlCdBYU.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.300048828125,
+          "wallTime": 1788680984603.5,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 777.5530488491058,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 777.4270488023758,
+          "transferBytes": 3916
+        },
+        {
+          "url": "http://localhost:4101/assets/category-options-Camm1XQ2.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.322998046875,
+          "wallTime": 1788680984603.523,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 766.7919980287552,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 766.5709979534149,
+          "transferBytes": 380
+        },
+        {
+          "url": "http://localhost:4101/assets/category-colors-DlV3xj2E.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.35009765625,
+          "wallTime": 1788680984603.55,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 785.1870976686478,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 785.0680975914001,
+          "transferBytes": 1818
+        },
+        {
+          "url": "http://localhost:4101/assets/TransactionsMobileList-DAB3BbKD.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.375,
+          "wallTime": 1788680984603.575,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 951.9349999427795,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 951.5740000009537,
+          "transferBytes": 31264
+        },
+        {
+          "url": "http://localhost:4101/assets/api-errors-CGijFCoY.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.39306640625,
+          "wallTime": 1788680984603.593,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 862.9160662889481,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 862.8380664587021,
+          "transferBytes": 599
+        },
+        {
+          "url": "http://localhost:4101/assets/mobile-combobox-YYu65ANT.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.412109375,
+          "wallTime": 1788680984603.612,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 876.8211094141006,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 876.5671094655991,
+          "transferBytes": 2195
+        },
+        {
+          "url": "http://localhost:4101/assets/CategorySelect-GJI8zDjk.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.43603515625,
+          "wallTime": 1788680984603.636,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 941.1400351524353,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 941.0370351076126,
+          "transferBytes": 1848
+        },
+        {
+          "url": "http://localhost:4101/assets/save-CelPUq_w.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.45703125,
+          "wallTime": 1788680984603.657,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 948.7480311393738,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 948.5120311975479,
+          "transferBytes": 671
+        },
+        {
+          "url": "http://localhost:4101/assets/AccountSelect-CYNV7i1Y.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.47900390625,
+          "wallTime": 1788680984603.679,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 960.1790039539337,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 960.0000039339066,
+          "transferBytes": 963
+        },
+        {
+          "url": "http://localhost:4101/assets/ConfirmActionDialog-DJRKEW7s.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.498046875,
+          "wallTime": 1788680984603.698,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1023.8240469694138,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1023.1840469837189,
+          "transferBytes": 1192
+        },
+        {
+          "url": "http://localhost:4101/assets/DataState-C6gRY0JP.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.51904296875,
+          "wallTime": 1788680984603.719,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1030.9050430059433,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1030.684042930603,
+          "transferBytes": 1269
+        },
+        {
+          "url": "http://localhost:4101/assets/MantineTableChrome.module-CdCA6oOm.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.8271484375,
+          "wallTime": 1788680984604.027,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1564.4621485471725,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1563.401148557663,
+          "transferBytes": 229422
+        },
+        {
+          "url": "http://localhost:4101/assets/funnel-ChpUJ5VT.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.878173828125,
+          "wallTime": 1788680984604.0781,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1045.2021737098694,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1044.7431738376617,
+          "transferBytes": 595
+        },
+        {
+          "url": "http://localhost:4101/assets/plus-DoQo_N3Q.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.89697265625,
+          "wallTime": 1788680984604.097,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1085.0139725208282,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1084.8819725513458,
+          "transferBytes": 496
+        },
+        {
+          "url": "http://localhost:4101/assets/Divider-O8pzBKnD.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.916015625,
+          "wallTime": 1788680984604.116,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1107.3900156021118,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1107.097015619278,
+          "transferBytes": 1195
+        },
+        {
+          "url": "http://localhost:4101/assets/Title-um4LNVo6.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.940185546875,
+          "wallTime": 1788680984604.1401,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1119.5691854953766,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1119.4651855230331,
+          "transferBytes": 1751
+        },
+        {
+          "url": "http://localhost:4101/assets/x-2PBd5ceW.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.9619140625,
+          "wallTime": 1788680984604.1619,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1128.5819140672684,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1128.3739140033722,
+          "transferBytes": 497
+        },
+        {
+          "url": "http://localhost:4101/assets/DatePicker-DIAcua2r.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 205.989013671875,
+          "wallTime": 1788680984604.189,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1178.0410137176514,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1177.8710136413574,
+          "transferBytes": 4481
+        },
+        {
+          "url": "http://localhost:4101/assets/pick-calendar-levels-props-CnqOfHw5.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.01904296875,
+          "wallTime": 1788680984604.219,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1302.991042971611,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1302.6150430440903,
+          "transferBytes": 34669
+        },
+        {
+          "url": "http://localhost:4101/assets/check-CRoj11ku.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.047119140625,
+          "wallTime": 1788680984604.247,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1205.1151192188263,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1204.9981191158295,
+          "transferBytes": 462
+        },
+        {
+          "url": "http://localhost:4101/assets/pencil-040MDsRt.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.0791015625,
+          "wallTime": 1788680984604.279,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1214.0431015491486,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1213.7231014966965,
+          "transferBytes": 620
+        },
+        {
+          "url": "http://localhost:4101/assets/rotate-ccw-C7Buefry.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.10302734375,
+          "wallTime": 1788680984604.303,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1263.9070273637772,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1263.576027393341,
+          "transferBytes": 543
+        },
+        {
+          "url": "http://localhost:4101/assets/trash-2-DKk5gZWw.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.123046875,
+          "wallTime": 1788680984604.323,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1290.7350469827652,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1290.5580469369888,
+          "transferBytes": 672
+        },
+        {
+          "url": "http://localhost:4101/assets/info-B4SpS__0.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.150146484375,
+          "wallTime": 1788680984604.35,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1299.6521464586258,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1299.5301463603973,
+          "transferBytes": 542
+        },
+        {
+          "url": "http://localhost:4101/assets/InteractiveRow-8QXao3pW.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.4619140625,
+          "wallTime": 1788680984604.6619,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1347.6309139728546,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1347.416913986206,
+          "transferBytes": 1358
+        },
+        {
+          "url": "http://localhost:4101/assets/Pressable-wSIrznbL.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.511962890625,
+          "wallTime": 1788680984604.712,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1379.056962966919,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1378.8989629745483,
+          "transferBytes": 1662
+        },
+        {
+          "url": "http://localhost:4101/assets/FormActions-CmXJc2VQ.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.547119140625,
+          "wallTime": 1788680984604.747,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1383.3501192331314,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1383.1271193027496,
+          "transferBytes": 734
+        },
+        {
+          "url": "http://localhost:4101/assets/EditorModal.module-B3IlTrPW.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.570068359375,
+          "wallTime": 1788680984604.77,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1388.1630684137344,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1388.0930683612823,
+          "transferBytes": 440
+        },
+        {
+          "url": "http://localhost:4101/assets/IconChevronDown-B7FDRwyv.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.589111328125,
+          "wallTime": 1788680984604.789,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1431.526111483574,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1431.3521114587784,
+          "transferBytes": 484
+        },
+        {
+          "url": "http://localhost:4101/assets/use-debounced-value-DNdZ3k4l.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.612060546875,
+          "wallTime": 1788680984604.812,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1463.099060535431,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1462.8820605278015,
+          "transferBytes": 746
+        },
+        {
+          "url": "http://localhost:4101/assets/Table-C_f66d7I.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 206.637939453125,
+          "wallTime": 1788680984604.838,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1481.1189395189285,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1480.943939447403,
+          "transferBytes": 4579
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-Bo-vtJFx.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 206.666015625,
+          "wallTime": 1788680984604.866,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 382.8240154981613,
+          "cache": false,
+          "mime": "text/css",
+          "end": 1000.9200155735016,
+          "transferBytes": 201043
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-DrbgVAe_.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 206.708984375,
+          "wallTime": 1788680984604.909,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 386.3889843225479,
+          "cache": false,
+          "mime": "text/css",
+          "end": 411.6319842338562,
+          "transferBytes": 6759
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-DAqvOFgL.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 206.72607421875,
+          "wallTime": 1788680984604.926,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 389.01907432079315,
+          "cache": false,
+          "mime": "text/css",
+          "end": 468.4500743150711,
+          "transferBytes": 19761
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-C2i_EZ8M.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 206.7470703125,
+          "wallTime": 1788680984604.947,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 396.23307025432587,
+          "cache": false,
+          "mime": "text/css",
+          "end": 396.201070189476,
+          "transferBytes": 1211
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-C36hm8jf.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 207.06298828125,
+          "wallTime": 1788680984605.263,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 417.5039883852005,
+          "cache": false,
+          "mime": "text/css",
+          "end": 547.8459882736206,
+          "transferBytes": 34087
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-Bl8iAtNn.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 207.083984375,
+          "wallTime": 1788680984605.284,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 482.390984416008,
+          "cache": false,
+          "mime": "text/css",
+          "end": 494.07198441028595,
+          "transferBytes": 3123
+        },
+        {
+          "url": "http://localhost:4101/assets/style-BzeqSHS3.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 207.135009765625,
+          "wallTime": 1788680984605.335,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 498.4590097665787,
+          "cache": false,
+          "mime": "text/css",
+          "end": 582.3480097055435,
+          "transferBytes": 23455
+        },
+        {
+          "url": "http://localhost:4101/manifest.json",
+          "method": "GET",
+          "type": "Manifest",
+          "start": 213.75,
+          "wallTime": 1788680984611.95,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 214.5329999923706,
+          "cache": true,
+          "mime": "application/json",
+          "end": 214.46099996566772,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:4101/favicon.ico",
+          "method": "GET",
+          "type": "Other",
+          "start": 1025.5400390625,
+          "wallTime": 1788680985423.74,
+          "initiator": "other",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1026.2860389947891,
+          "cache": true,
+          "mime": "image/vnd.microsoft.icon",
+          "end": 1026.4230389595032,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:4101/favicon192.png",
+          "method": "GET",
+          "type": "Other",
+          "start": 1025.595947265625,
+          "wallTime": 1788680985423.796,
+          "initiator": "other",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1026.343947172165,
+          "cache": true,
+          "mime": "image/png",
+          "end": 1026.7739472389221,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:3101/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "type": "XHR",
+          "start": 1795.373046875,
+          "wallTime": 1788680986193.573,
+          "initiator": "script",
+          "initiatorUrl": "http://localhost:4101/assets/main-Dp8c1l4G.js",
+          "status": 200,
+          "response": 1909.7100468873978,
+          "cache": false,
+          "mime": "application/json",
+          "end": 1880.0100469589233,
+          "transferBytes": 457
+        },
+        {
+          "url": "http://localhost:4101/assets/virtual_pwa-register-13ZkAds4.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 1795.884033203125,
+          "wallTime": 1788680986194.084,
+          "initiator": "script",
+          "initiatorUrl": "http://localhost:4101/assets/main-Dp8c1l4G.js",
+          "status": 200,
+          "response": 1909.4710332155228,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1878.1940332651138,
+          "transferBytes": 1252
+        },
+        {
+          "url": "http://localhost:4101/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 1916.492919921875,
+          "wallTime": 1788680986314.6929,
+          "initiator": "script",
+          "initiatorUrl": "http://localhost:4101/assets/virtual_pwa-register-13ZkAds4.js",
+          "status": 200,
+          "response": 2020.6919199228287,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 2013.1479198932648,
+          "transferBytes": 6082
+        }
+      ],
+      "runtimeErrors": [],
+      "consoleWarnings": []
+    },
+    {
+      "kind": "cold-transactions",
+      "run": 2,
+      "preparation": null,
+      "firstUsefulMs": 842.6000000238419,
+      "chartReadyMs": null,
+      "observationMs": 3142.2999999523163,
+      "ordinaryCls": 0,
+      "interactionShiftSum": 0,
+      "timing": {
+        "timeOrigin": 1788680987736.2,
+        "start": 0,
+        "route": "/transactions",
+        "target": "/transactions",
+        "firstUseful": 842.6000000238419,
+        "chartReady": null,
+        "shifts": [],
+        "anchorChanges": [
+          {
+            "at": 1723,
+            "route": "/transactions",
+            "changes": [
+              {
+                "name": "table",
+                "before": {
+                  "x": 17,
+                  "y": 195.484375,
+                  "width": 1406,
+                  "height": 2178
+                },
+                "after": {
+                  "x": 17,
+                  "y": 195.484375,
+                  "width": 1406,
+                  "height": 2309.296875
+                }
+              },
+              {
+                "name": "row2",
+                "before": {
+                  "x": 17,
+                  "y": 281.18438720703125,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 287.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row3",
+                "before": {
+                  "x": 17,
+                  "y": 323.8843688964844,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 336.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row4",
+                "before": {
+                  "x": 17,
+                  "y": 366.5843811035156,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 385.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row5",
+                "before": {
+                  "x": 17,
+                  "y": 409.28436279296875,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 434.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row6",
+                "before": {
+                  "x": 17,
+                  "y": 451.984375,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 483.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row7",
+                "before": {
+                  "x": 17,
+                  "y": 494.68438720703125,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 532.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row8",
+                "before": {
+                  "x": 17,
+                  "y": 537.3843994140625,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 581.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              }
+            ]
+          }
+        ],
+        "scroll": [
+          {
+            "at": 842.6000000238419,
+            "x": 0,
+            "y": 0,
+            "scrollHeight": 1000,
+            "clientHeight": 1000,
+            "parents": [
+              {
+                "node": {
+                  "tag": "DIV",
+                  "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                  "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+                },
+                "scrollHeight": 2178,
+                "clientHeight": 788,
+                "scrollTop": 0
+              }
+            ],
+            "route": "/transactions"
+          },
+          {
+            "at": 1723,
+            "x": 0,
+            "y": 0,
+            "scrollHeight": 1000,
+            "clientHeight": 1000,
+            "parents": [
+              {
+                "node": {
+                  "tag": "DIV",
+                  "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                  "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+                },
+                "scrollHeight": 2309,
+                "clientHeight": 788,
+                "scrollTop": 0
+              }
+            ],
+            "route": "/transactions"
+          }
+        ],
+        "errors": [],
+        "lcp": 864,
+        "firstAnchors": {
+          "at": 842.6000000238419,
+          "route": "/transactions",
+          "anchors": {
+            "heading": {
+              "x": 16,
+              "y": 76,
+              "width": 204.515625,
+              "height": 44.1875
+            },
+            "card": {
+              "x": 16,
+              "y": 194.484375,
+              "width": 1408,
+              "height": 789.515625
+            },
+            "table": {
+              "x": 17,
+              "y": 195.484375,
+              "width": 1406,
+              "height": 2178
+            },
+            "navigation": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            },
+            "row1": {
+              "x": 17,
+              "y": 238.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row2": {
+              "x": 17,
+              "y": 281.18438720703125,
+              "width": 1406,
+              "height": 49
+            },
+            "row3": {
+              "x": 17,
+              "y": 323.8843688964844,
+              "width": 1406,
+              "height": 49
+            },
+            "row4": {
+              "x": 17,
+              "y": 366.5843811035156,
+              "width": 1406,
+              "height": 49
+            },
+            "row5": {
+              "x": 17,
+              "y": 409.28436279296875,
+              "width": 1406,
+              "height": 49
+            },
+            "row6": {
+              "x": 17,
+              "y": 451.984375,
+              "width": 1406,
+              "height": 49
+            },
+            "row7": {
+              "x": 17,
+              "y": 494.68438720703125,
+              "width": 1406,
+              "height": 49
+            },
+            "row8": {
+              "x": 17,
+              "y": 537.3843994140625,
+              "width": 1406,
+              "height": 49
+            }
+          }
+        },
+        "lastAnchors": {
+          "at": 3142.2999999523163,
+          "route": "/transactions",
+          "anchors": {
+            "heading": {
+              "x": 16,
+              "y": 76,
+              "width": 204.515625,
+              "height": 44.1875
+            },
+            "card": {
+              "x": 16,
+              "y": 194.484375,
+              "width": 1408,
+              "height": 789.515625
+            },
+            "table": {
+              "x": 17,
+              "y": 195.484375,
+              "width": 1406,
+              "height": 2309.296875
+            },
+            "navigation": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            },
+            "row1": {
+              "x": 17,
+              "y": 238.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row2": {
+              "x": 17,
+              "y": 287.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row3": {
+              "x": 17,
+              "y": 336.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row4": {
+              "x": 17,
+              "y": 385.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row5": {
+              "x": 17,
+              "y": 434.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row6": {
+              "x": 17,
+              "y": 483.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row7": {
+              "x": 17,
+              "y": 532.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row8": {
+              "x": 17,
+              "y": 581.484375,
+              "width": 1406,
+              "height": 49
+            }
+          }
+        },
+        "inputs": [],
+        "busy": [
+          {
+            "at": 842.6000000238419,
+            "items": []
+          }
+        ]
+      },
+      "current": {
+        "route": "/transactions",
+        "search": "",
+        "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nTransactions\nBulk edit\nAll dates\nAdd transaction\nDate\nDescription\nAmount\nAccount\nCategory\n\nSep 5, 2026\n\nF\nFixture merchant 001\n-$1.01\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 002\n-$1.02\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 014\n-$1.14\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 004\n-$1.04\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 005\n-$1.05\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 028\n-$1.28\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 022\n-$1.22\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 016\n-$1.16\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 013\n-$1.13\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 026\n-$1.26\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nE\nExact ETH transaction\n-$3,000.00\nExact ETH wallet\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 017\n-$1.17\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 006\n-$1.06\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 019\n-$1.19\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 027\n-$1.27\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 023\n-$1.23\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 029\n-$1.29\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 012\n-$1.12\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 020\n-$1.20\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 009\n-$1.09\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 021\n-$1.21\nFixture checking\nRestaurants"
+      },
+      "requests": [
+        {
+          "url": "http://localhost:4101/transactions",
+          "method": "GET",
+          "type": "Document",
+          "start": 0.18310546875,
+          "wallTime": 1788680987736.383,
+          "initiator": "other",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 39.54210543632507,
+          "cache": true,
+          "mime": "text/html",
+          "end": 40.14510536193848,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:4101/assets/main-Dp8c1l4G.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.2470703125,
+          "wallTime": 1788680987779.447,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1616.4010702371597,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1613.4180703163147,
+          "transferBytes": 727829
+        },
+        {
+          "url": "http://localhost:4101/assets/_authed-C5Ul1gTs.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.322998046875,
+          "wallTime": 1788680987779.523,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 173.10699808597565,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 172.9019980430603,
+          "transferBytes": 13616
+        },
+        {
+          "url": "http://localhost:4101/assets/auth-DbGH0Eqw.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.348876953125,
+          "wallTime": 1788680987779.5488,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 140.68487691879272,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 140.52287697792053,
+          "transferBytes": 1212
+        },
+        {
+          "url": "http://localhost:4101/assets/use-disclosure-b6I3VCEO.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.3720703125,
+          "wallTime": 1788680987779.572,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 141.72407031059265,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 141.50507032871246,
+          "transferBytes": 635
+        },
+        {
+          "url": "http://localhost:4101/assets/get-sorted-breakpoints-D0W43i9S.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.39501953125,
+          "wallTime": 1788680987779.595,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 143.6210194826126,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 143.43801951408386,
+          "transferBytes": 527
+        },
+        {
+          "url": "http://localhost:4101/assets/createLucideIcon-DmoRy66l.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.4140625,
+          "wallTime": 1788680987779.614,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 149.59306252002716,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 149.43406236171722,
+          "transferBytes": 2122
+        },
+        {
+          "url": "http://localhost:4101/assets/house-I_oXrxKH.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.43408203125,
+          "wallTime": 1788680987779.634,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 395.531082034111,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 395.0770820379257,
+          "transferBytes": 625
+        },
+        {
+          "url": "http://localhost:4101/assets/browser-push-DyKZVAId.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.453125,
+          "wallTime": 1788680987779.653,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 425.578125,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 425.44112503528595,
+          "transferBytes": 2545
+        },
+        {
+          "url": "http://localhost:4101/assets/transactions-DpO1VXMV.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.804931640625,
+          "wallTime": 1788680987780.005,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 521.7629314661026,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 521.4489315748215,
+          "transferBytes": 14284
+        },
+        {
+          "url": "http://localhost:4101/assets/useInfiniteQuery-CcDKL8Bz.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.826904296875,
+          "wallTime": 1788680987780.0269,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 481.29290425777435,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 481.01690423488617,
+          "transferBytes": 1455
+        },
+        {
+          "url": "http://localhost:4101/assets/dayjs.min-BOOUKwBz.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.847900390625,
+          "wallTime": 1788680987780.0479,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 532.1209003925323,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 532.001900434494,
+          "transferBytes": 7487
+        },
+        {
+          "url": "http://localhost:4101/assets/PageHeader-CVqQq-KC.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.865966796875,
+          "wallTime": 1788680987780.066,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 520.0249668359756,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 519.911966919899,
+          "transferBytes": 2035
+        },
+        {
+          "url": "http://localhost:4101/assets/format-DKBG2lgA.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.885986328125,
+          "wallTime": 1788680987780.086,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 690.9339863061905,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 690.6699862480164,
+          "transferBytes": 40025
+        },
+        {
+          "url": "http://localhost:4101/assets/DateRangeControl-BwlCdBYU.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.9052734375,
+          "wallTime": 1788680987780.1052,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 620.7572733163834,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 620.6552733182907,
+          "transferBytes": 3916
+        },
+        {
+          "url": "http://localhost:4101/assets/category-options-Camm1XQ2.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.926025390625,
+          "wallTime": 1788680987780.126,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 608.9230254888535,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 608.6040254831314,
+          "transferBytes": 380
+        },
+        {
+          "url": "http://localhost:4101/assets/category-colors-DlV3xj2E.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.950927734375,
+          "wallTime": 1788680987780.151,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 626.7439277172089,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 626.4259277582169,
+          "transferBytes": 1818
+        },
+        {
+          "url": "http://localhost:4101/assets/TransactionsMobileList-DAB3BbKD.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.97705078125,
+          "wallTime": 1788680987780.177,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 793.1030507087708,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 792.880050778389,
+          "transferBytes": 31264
+        },
+        {
+          "url": "http://localhost:4101/assets/api-errors-CGijFCoY.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 43.9990234375,
+          "wallTime": 1788680987780.199,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 705.9910233020782,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 705.7910233736038,
+          "transferBytes": 599
+        },
+        {
+          "url": "http://localhost:4101/assets/mobile-combobox-YYu65ANT.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.01708984375,
+          "wallTime": 1788680987780.217,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 718.0640898942947,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 717.8470898866653,
+          "transferBytes": 2195
+        },
+        {
+          "url": "http://localhost:4101/assets/CategorySelect-GJI8zDjk.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.037109375,
+          "wallTime": 1788680987780.237,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 782.4081094264984,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 782.332109451294,
+          "transferBytes": 1848
+        },
+        {
+          "url": "http://localhost:4101/assets/save-CelPUq_w.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.318115234375,
+          "wallTime": 1788680987780.518,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 791.540115237236,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 791.2091152667999,
+          "transferBytes": 671
+        },
+        {
+          "url": "http://localhost:4101/assets/AccountSelect-CYNV7i1Y.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.339111328125,
+          "wallTime": 1788680987780.539,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 802.1301113367081,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 802.0481113195419,
+          "transferBytes": 963
+        },
+        {
+          "url": "http://localhost:4101/assets/ConfirmActionDialog-DJRKEW7s.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.360107421875,
+          "wallTime": 1788680987780.56,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 865.4391075372696,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 865.2211074829102,
+          "transferBytes": 1192
+        },
+        {
+          "url": "http://localhost:4101/assets/DataState-C6gRY0JP.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.43505859375,
+          "wallTime": 1788680987780.635,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 873.8830586671829,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 873.6260584592819,
+          "transferBytes": 1269
+        },
+        {
+          "url": "http://localhost:4101/assets/MantineTableChrome.module-CdCA6oOm.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.454833984375,
+          "wallTime": 1788680987780.6548,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1407.399834036827,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1405.9888340234756,
+          "transferBytes": 229422
+        },
+        {
+          "url": "http://localhost:4101/assets/funnel-ChpUJ5VT.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.47412109375,
+          "wallTime": 1788680987780.674,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 885.7261211872101,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 885.6181211471558,
+          "transferBytes": 595
+        },
+        {
+          "url": "http://localhost:4101/assets/plus-DoQo_N3Q.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.490966796875,
+          "wallTime": 1788680987780.691,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 924.8169668912888,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 924.7039668560028,
+          "transferBytes": 496
+        },
+        {
+          "url": "http://localhost:4101/assets/Divider-O8pzBKnD.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.510986328125,
+          "wallTime": 1788680987780.711,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 949.0969862937927,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 948.9749863147736,
+          "transferBytes": 1195
+        },
+        {
+          "url": "http://localhost:4101/assets/Title-um4LNVo6.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.531982421875,
+          "wallTime": 1788680987780.732,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 962.4529824256897,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 962.3529824018478,
+          "transferBytes": 1751
+        },
+        {
+          "url": "http://localhost:4101/assets/x-2PBd5ceW.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.55517578125,
+          "wallTime": 1788680987780.7551,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 969.7821758985519,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 969.6921758651733,
+          "transferBytes": 497
+        },
+        {
+          "url": "http://localhost:4101/assets/DatePicker-DIAcua2r.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.577880859375,
+          "wallTime": 1788680987780.7778,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1018.0518808364868,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1017.9028807878494,
+          "transferBytes": 4481
+        },
+        {
+          "url": "http://localhost:4101/assets/pick-calendar-levels-props-CnqOfHw5.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.597900390625,
+          "wallTime": 1788680987780.7979,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1143.9569005966187,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1143.656900525093,
+          "transferBytes": 34669
+        },
+        {
+          "url": "http://localhost:4101/assets/check-CRoj11ku.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.626220703125,
+          "wallTime": 1788680987780.8262,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1048.3912206888199,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1048.1112207174301,
+          "transferBytes": 462
+        },
+        {
+          "url": "http://localhost:4101/assets/pencil-040MDsRt.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.64892578125,
+          "wallTime": 1788680987780.8489,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1055.4299257993698,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1055.3569258451462,
+          "transferBytes": 620
+        },
+        {
+          "url": "http://localhost:4101/assets/rotate-ccw-C7Buefry.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.667236328125,
+          "wallTime": 1788680987780.8672,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1103.6732362508774,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1103.529236316681,
+          "transferBytes": 543
+        },
+        {
+          "url": "http://localhost:4101/assets/trash-2-DKk5gZWw.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.948974609375,
+          "wallTime": 1788680987781.149,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1133.6449745893478,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1133.5119745731354,
+          "transferBytes": 672
+        },
+        {
+          "url": "http://localhost:4101/assets/info-B4SpS__0.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 44.969970703125,
+          "wallTime": 1788680987781.17,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1141.6019706726074,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1141.1009706258774,
+          "transferBytes": 542
+        },
+        {
+          "url": "http://localhost:4101/assets/InteractiveRow-8QXao3pW.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 45.044921875,
+          "wallTime": 1788680987781.2449,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1187.7579219341278,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1187.3739219903946,
+          "transferBytes": 1358
+        },
+        {
+          "url": "http://localhost:4101/assets/Pressable-wSIrznbL.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 45.06787109375,
+          "wallTime": 1788680987781.2678,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1221.968870997429,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1221.7018711566925,
+          "transferBytes": 1662
+        },
+        {
+          "url": "http://localhost:4101/assets/FormActions-CmXJc2VQ.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 45.089111328125,
+          "wallTime": 1788680987781.289,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1226.8291113376617,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1226.5991113185883,
+          "transferBytes": 734
+        },
+        {
+          "url": "http://localhost:4101/assets/EditorModal.module-B3IlTrPW.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 45.10791015625,
+          "wallTime": 1788680987781.3079,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1229.749910235405,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1229.595910191536,
+          "transferBytes": 440
+        },
+        {
+          "url": "http://localhost:4101/assets/IconChevronDown-B7FDRwyv.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 45.126220703125,
+          "wallTime": 1788680987781.3262,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1271.4042205810547,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1271.3172206878662,
+          "transferBytes": 484
+        },
+        {
+          "url": "http://localhost:4101/assets/use-debounced-value-DNdZ3k4l.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 45.14501953125,
+          "wallTime": 1788680987781.345,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1305.9600194692612,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1305.8030195236206,
+          "transferBytes": 746
+        },
+        {
+          "url": "http://localhost:4101/assets/Table-C_f66d7I.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 45.172119140625,
+          "wallTime": 1788680987781.372,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1324.1051191091537,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1323.8121191263199,
+          "transferBytes": 4579
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-Bo-vtJFx.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 45.195068359375,
+          "wallTime": 1788680987781.395,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 222.68506836891174,
+          "cache": false,
+          "mime": "text/css",
+          "end": 841.0400683879852,
+          "transferBytes": 201043
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-DrbgVAe_.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 45.221923828125,
+          "wallTime": 1788680987781.4219,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 225.63992381095886,
+          "cache": false,
+          "mime": "text/css",
+          "end": 251.6429237127304,
+          "transferBytes": 6759
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-DAqvOFgL.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 45.2509765625,
+          "wallTime": 1788680987781.451,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 229.3209764957428,
+          "cache": false,
+          "mime": "text/css",
+          "end": 308.4749765396118,
+          "transferBytes": 19761
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-C2i_EZ8M.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 45.26806640625,
+          "wallTime": 1788680987781.468,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 236.68606626987457,
+          "cache": false,
+          "mime": "text/css",
+          "end": 236.6320663690567,
+          "transferBytes": 1211
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-C36hm8jf.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 45.2861328125,
+          "wallTime": 1788680987781.486,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 258.93613290786743,
+          "cache": false,
+          "mime": "text/css",
+          "end": 389.1001328229904,
+          "transferBytes": 34087
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-Bl8iAtNn.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 45.5732421875,
+          "wallTime": 1788680987781.7732,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 321.5782421827316,
+          "cache": false,
+          "mime": "text/css",
+          "end": 333.88824224472046,
+          "transferBytes": 3123
+        },
+        {
+          "url": "http://localhost:4101/assets/style-BzeqSHS3.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 45.595947265625,
+          "wallTime": 1788680987781.796,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 338.5329473018646,
+          "cache": false,
+          "mime": "text/css",
+          "end": 422.3809473514557,
+          "transferBytes": 23455
+        },
+        {
+          "url": "http://localhost:4101/manifest.json",
+          "method": "GET",
+          "type": "Manifest",
+          "start": 51.740966796875,
+          "wallTime": 1788680987787.941,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 52.36696684360504,
+          "cache": true,
+          "mime": "application/json",
+          "end": 52.51896679401398,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:4101/favicon.ico",
+          "method": "GET",
+          "type": "Other",
+          "start": 861.905029296875,
+          "wallTime": 1788680988598.105,
+          "initiator": "other",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 863.1190292835236,
+          "cache": true,
+          "mime": "image/vnd.microsoft.icon",
+          "end": 863.2150292396545,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:4101/favicon192.png",
+          "method": "GET",
+          "type": "Other",
+          "start": 861.972900390625,
+          "wallTime": 1788680988598.1729,
+          "initiator": "other",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 863.1689004898071,
+          "cache": true,
+          "mime": "image/png",
+          "end": 863.2499004602432,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:3101/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "type": "XHR",
+          "start": 1638.66796875,
+          "wallTime": 1788680989374.868,
+          "initiator": "script",
+          "initiatorUrl": "http://localhost:4101/assets/main-Dp8c1l4G.js",
+          "status": 200,
+          "response": 1735.2559688091278,
+          "cache": false,
+          "mime": "application/json",
+          "end": 1729.711968779564,
+          "transferBytes": 457
+        },
+        {
+          "url": "http://localhost:4101/assets/virtual_pwa-register-13ZkAds4.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 1639.130126953125,
+          "wallTime": 1788680989375.33,
+          "initiator": "script",
+          "initiatorUrl": "http://localhost:4101/assets/main-Dp8c1l4G.js",
+          "status": 200,
+          "response": 1729.3341269493103,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1727.9401268959045,
+          "transferBytes": 1252
+        },
+        {
+          "url": "http://localhost:4101/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 1740.9169921875,
+          "wallTime": 1788680989477.117,
+          "initiator": "script",
+          "initiatorUrl": "http://localhost:4101/assets/virtual_pwa-register-13ZkAds4.js",
+          "status": 200,
+          "response": 1836.5759922266006,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1836.3639922142029,
+          "transferBytes": 6082
+        }
+      ],
+      "runtimeErrors": [],
+      "consoleWarnings": []
+    },
+    {
+      "kind": "cold-transactions",
+      "run": 3,
+      "preparation": null,
+      "firstUsefulMs": 834.7000000476837,
+      "chartReadyMs": null,
+      "observationMs": 3128.100000023842,
+      "ordinaryCls": 0,
+      "interactionShiftSum": 0,
+      "timing": {
+        "timeOrigin": 1788680990906.5,
+        "start": 0,
+        "route": "/transactions",
+        "target": "/transactions",
+        "firstUseful": 834.7000000476837,
+        "chartReady": null,
+        "shifts": [],
+        "anchorChanges": [
+          {
+            "at": 1717.7000000476837,
+            "route": "/transactions",
+            "changes": [
+              {
+                "name": "table",
+                "before": {
+                  "x": 17,
+                  "y": 195.484375,
+                  "width": 1406,
+                  "height": 2178
+                },
+                "after": {
+                  "x": 17,
+                  "y": 195.484375,
+                  "width": 1406,
+                  "height": 2309.296875
+                }
+              },
+              {
+                "name": "row2",
+                "before": {
+                  "x": 17,
+                  "y": 281.18438720703125,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 287.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row3",
+                "before": {
+                  "x": 17,
+                  "y": 323.8843688964844,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 336.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row4",
+                "before": {
+                  "x": 17,
+                  "y": 366.5843811035156,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 385.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row5",
+                "before": {
+                  "x": 17,
+                  "y": 409.28436279296875,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 434.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row6",
+                "before": {
+                  "x": 17,
+                  "y": 451.984375,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 483.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row7",
+                "before": {
+                  "x": 17,
+                  "y": 494.68438720703125,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 532.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              },
+              {
+                "name": "row8",
+                "before": {
+                  "x": 17,
+                  "y": 537.3843994140625,
+                  "width": 1406,
+                  "height": 49
+                },
+                "after": {
+                  "x": 17,
+                  "y": 581.484375,
+                  "width": 1406,
+                  "height": 49
+                }
+              }
+            ]
+          }
+        ],
+        "scroll": [
+          {
+            "at": 834.7000000476837,
+            "x": 0,
+            "y": 0,
+            "scrollHeight": 1000,
+            "clientHeight": 1000,
+            "parents": [
+              {
+                "node": {
+                  "tag": "DIV",
+                  "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                  "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+                },
+                "scrollHeight": 2178,
+                "clientHeight": 788,
+                "scrollTop": 0
+              }
+            ],
+            "route": "/transactions"
+          },
+          {
+            "at": 1717.7000000476837,
+            "x": 0,
+            "y": 0,
+            "scrollHeight": 1000,
+            "clientHeight": 1000,
+            "parents": [
+              {
+                "node": {
+                  "tag": "DIV",
+                  "class": "mrt-table-container MRT_TableContainer-module_root__JIsGB MRT_TableContainer-module_root-sticky__uC4qx",
+                  "label": "DateDescriptionAmountAccountCategorySep 5, 2026FFixture merchant 001-$1.01Fixture checkingRestaurant"
+                },
+                "scrollHeight": 2309,
+                "clientHeight": 788,
+                "scrollTop": 0
+              }
+            ],
+            "route": "/transactions"
+          }
+        ],
+        "errors": [],
+        "lcp": 868,
+        "firstAnchors": {
+          "at": 834.7000000476837,
+          "route": "/transactions",
+          "anchors": {
+            "heading": {
+              "x": 16,
+              "y": 76,
+              "width": 204.515625,
+              "height": 44.1875
+            },
+            "card": {
+              "x": 16,
+              "y": 194.484375,
+              "width": 1408,
+              "height": 789.515625
+            },
+            "table": {
+              "x": 17,
+              "y": 195.484375,
+              "width": 1406,
+              "height": 2178
+            },
+            "navigation": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            },
+            "row1": {
+              "x": 17,
+              "y": 238.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row2": {
+              "x": 17,
+              "y": 281.18438720703125,
+              "width": 1406,
+              "height": 49
+            },
+            "row3": {
+              "x": 17,
+              "y": 323.8843688964844,
+              "width": 1406,
+              "height": 49
+            },
+            "row4": {
+              "x": 17,
+              "y": 366.5843811035156,
+              "width": 1406,
+              "height": 49
+            },
+            "row5": {
+              "x": 17,
+              "y": 409.28436279296875,
+              "width": 1406,
+              "height": 49
+            },
+            "row6": {
+              "x": 17,
+              "y": 451.984375,
+              "width": 1406,
+              "height": 49
+            },
+            "row7": {
+              "x": 17,
+              "y": 494.68438720703125,
+              "width": 1406,
+              "height": 49
+            },
+            "row8": {
+              "x": 17,
+              "y": 537.3843994140625,
+              "width": 1406,
+              "height": 49
+            }
+          }
+        },
+        "lastAnchors": {
+          "at": 3128.100000023842,
+          "route": "/transactions",
+          "anchors": {
+            "heading": {
+              "x": 16,
+              "y": 76,
+              "width": 204.515625,
+              "height": 44.1875
+            },
+            "card": {
+              "x": 16,
+              "y": 194.484375,
+              "width": 1408,
+              "height": 789.515625
+            },
+            "table": {
+              "x": 17,
+              "y": 195.484375,
+              "width": 1406,
+              "height": 2309.296875
+            },
+            "navigation": {
+              "x": 16,
+              "y": 15.484375,
+              "width": 28,
+              "height": 28
+            },
+            "row1": {
+              "x": 17,
+              "y": 238.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row2": {
+              "x": 17,
+              "y": 287.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row3": {
+              "x": 17,
+              "y": 336.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row4": {
+              "x": 17,
+              "y": 385.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row5": {
+              "x": 17,
+              "y": 434.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row6": {
+              "x": 17,
+              "y": 483.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row7": {
+              "x": 17,
+              "y": 532.484375,
+              "width": 1406,
+              "height": 49
+            },
+            "row8": {
+              "x": 17,
+              "y": 581.484375,
+              "width": 1406,
+              "height": 49
+            }
+          }
+        },
+        "inputs": [],
+        "busy": [
+          {
+            "at": 834.7000000476837,
+            "items": []
+          }
+        ]
+      },
+      "current": {
+        "route": "/transactions",
+        "search": "",
+        "text": "Splice\n\nHome\nTransactions\nAnalysis\nAccounts\nSettings\nTransactions\nBulk edit\nAll dates\nAdd transaction\nDate\nDescription\nAmount\nAccount\nCategory\n\nSep 5, 2026\n\nF\nFixture merchant 001\n-$1.01\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 002\n-$1.02\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 014\n-$1.14\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 004\n-$1.04\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 005\n-$1.05\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 028\n-$1.28\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 022\n-$1.22\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 016\n-$1.16\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 013\n-$1.13\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 026\n-$1.26\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nE\nExact ETH transaction\n-$3,000.00\nExact ETH wallet\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 017\n-$1.17\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 006\n-$1.06\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 019\n-$1.19\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 027\n-$1.27\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 023\n-$1.23\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 029\n-$1.29\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 012\n-$1.12\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 020\n-$1.20\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 009\n-$1.09\nFixture checking\nRestaurants\n\nSep 5, 2026\n\nF\nFixture merchant 021\n-$1.21\nFixture checking\nRestaurants"
+      },
+      "requests": [
+        {
+          "url": "http://localhost:4101/transactions",
+          "method": "GET",
+          "type": "Document",
+          "start": 0.19482421875,
+          "wallTime": 1788680990906.6948,
+          "initiator": "other",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 34.186824321746826,
+          "cache": true,
+          "mime": "text/html",
+          "end": 34.89582431316376,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:4101/assets/main-Dp8c1l4G.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.009033203125,
+          "wallTime": 1788680990944.509,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1610.0010331869125,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1607.689033150673,
+          "transferBytes": 727829
+        },
+        {
+          "url": "http://localhost:4101/assets/_authed-C5Ul1gTs.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.239990234375,
+          "wallTime": 1788680990944.74,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 168.05199027061462,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 167.7069902420044,
+          "transferBytes": 13616
+        },
+        {
+          "url": "http://localhost:4101/assets/auth-DbGH0Eqw.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.26806640625,
+          "wallTime": 1788680990944.768,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 133.13106632232666,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 132.78906631469727,
+          "transferBytes": 1212
+        },
+        {
+          "url": "http://localhost:4101/assets/use-disclosure-b6I3VCEO.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.289794921875,
+          "wallTime": 1788680990944.7898,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 136.5047948360443,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 136.3617948293686,
+          "transferBytes": 635
+        },
+        {
+          "url": "http://localhost:4101/assets/get-sorted-breakpoints-D0W43i9S.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.316162109375,
+          "wallTime": 1788680990944.8162,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 137.36916208267212,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 137.2281620502472,
+          "transferBytes": 527
+        },
+        {
+          "url": "http://localhost:4101/assets/createLucideIcon-DmoRy66l.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.536865234375,
+          "wallTime": 1788680990945.0369,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 143.78786528110504,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 143.66686534881592,
+          "transferBytes": 2122
+        },
+        {
+          "url": "http://localhost:4101/assets/house-I_oXrxKH.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.570068359375,
+          "wallTime": 1788680990945.07,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 390.0500683784485,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 389.74206829071045,
+          "transferBytes": 625
+        },
+        {
+          "url": "http://localhost:4101/assets/browser-push-DyKZVAId.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.596923828125,
+          "wallTime": 1788680990945.097,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 419.8869239091873,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 419.789923787117,
+          "transferBytes": 2545
+        },
+        {
+          "url": "http://localhost:4101/assets/transactions-DpO1VXMV.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.6220703125,
+          "wallTime": 1788680990945.122,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 515.6770703792572,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 515.5230703353882,
+          "transferBytes": 14284
+        },
+        {
+          "url": "http://localhost:4101/assets/useInfiniteQuery-CcDKL8Bz.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.787109375,
+          "wallTime": 1788680990945.287,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 475.57310938835144,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 475.42610931396484,
+          "transferBytes": 1455
+        },
+        {
+          "url": "http://localhost:4101/assets/dayjs.min-BOOUKwBz.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.81103515625,
+          "wallTime": 1788680990945.311,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 526.0260350704193,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 525.879035115242,
+          "transferBytes": 7487
+        },
+        {
+          "url": "http://localhost:4101/assets/PageHeader-CVqQq-KC.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.83203125,
+          "wallTime": 1788680990945.332,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 514.1120311021805,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 513.940031170845,
+          "transferBytes": 2035
+        },
+        {
+          "url": "http://localhost:4101/assets/format-DKBG2lgA.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.85986328125,
+          "wallTime": 1788680990945.3599,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 685.5508632659912,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 685.3378632068634,
+          "transferBytes": 40025
+        },
+        {
+          "url": "http://localhost:4101/assets/DateRangeControl-BwlCdBYU.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.8798828125,
+          "wallTime": 1788680990945.38,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 614.800882935524,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 614.714882850647,
+          "transferBytes": 3916
+        },
+        {
+          "url": "http://localhost:4101/assets/category-options-Camm1XQ2.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.90087890625,
+          "wallTime": 1788680990945.401,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 602.7948788404465,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 602.6568788290024,
+          "transferBytes": 380
+        },
+        {
+          "url": "http://localhost:4101/assets/category-colors-DlV3xj2E.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.94189453125,
+          "wallTime": 1788680990945.442,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 620.8318945169449,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 620.7068945169449,
+          "transferBytes": 1818
+        },
+        {
+          "url": "http://localhost:4101/assets/TransactionsMobileList-DAB3BbKD.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.973876953125,
+          "wallTime": 1788680990945.4739,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 787.3738770484924,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 786.9588769674301,
+          "transferBytes": 31264
+        },
+        {
+          "url": "http://localhost:4101/assets/api-errors-CGijFCoY.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 38.99609375,
+          "wallTime": 1788680990945.496,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 700.5370937585831,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 700.3240938186646,
+          "transferBytes": 599
+        },
+        {
+          "url": "http://localhost:4101/assets/mobile-combobox-YYu65ANT.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.25,
+          "wallTime": 1788680990945.75,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 712.5299999713898,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 712.386999964714,
+          "transferBytes": 2195
+        },
+        {
+          "url": "http://localhost:4101/assets/CategorySelect-GJI8zDjk.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.275146484375,
+          "wallTime": 1788680990945.7751,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 777.0961465835571,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 776.7911465167999,
+          "transferBytes": 1848
+        },
+        {
+          "url": "http://localhost:4101/assets/save-CelPUq_w.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.301025390625,
+          "wallTime": 1788680990945.801,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 785.8350254297256,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 785.7470254898071,
+          "transferBytes": 671
+        },
+        {
+          "url": "http://localhost:4101/assets/AccountSelect-CYNV7i1Y.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.31884765625,
+          "wallTime": 1788680990945.8188,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 796.2608476877213,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 796.1048476696014,
+          "transferBytes": 963
+        },
+        {
+          "url": "http://localhost:4101/assets/ConfirmActionDialog-DJRKEW7s.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.426025390625,
+          "wallTime": 1788680990945.926,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 859.5960253477097,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 859.2950253486633,
+          "transferBytes": 1192
+        },
+        {
+          "url": "http://localhost:4101/assets/DataState-C6gRY0JP.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.447021484375,
+          "wallTime": 1788680990945.947,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 868.0730216503143,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 867.8250216245651,
+          "transferBytes": 1269
+        },
+        {
+          "url": "http://localhost:4101/assets/MantineTableChrome.module-CdCA6oOm.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.467041015625,
+          "wallTime": 1788680990945.967,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1401.802041053772,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1400.7190409898758,
+          "transferBytes": 229422
+        },
+        {
+          "url": "http://localhost:4101/assets/funnel-ChpUJ5VT.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.48291015625,
+          "wallTime": 1788680990945.983,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 880.0139101743698,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 879.9189101457596,
+          "transferBytes": 595
+        },
+        {
+          "url": "http://localhost:4101/assets/plus-DoQo_N3Q.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.507080078125,
+          "wallTime": 1788680990946.007,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 917.8460799455643,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 917.6920800209045,
+          "transferBytes": 496
+        },
+        {
+          "url": "http://localhost:4101/assets/Divider-O8pzBKnD.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.550048828125,
+          "wallTime": 1788680990946.05,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 943.4850487709045,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 943.226048707962,
+          "transferBytes": 1195
+        },
+        {
+          "url": "http://localhost:4101/assets/Title-um4LNVo6.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.593017578125,
+          "wallTime": 1788680990946.093,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 956.8950175046921,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 956.5890175104141,
+          "transferBytes": 1751
+        },
+        {
+          "url": "http://localhost:4101/assets/x-2PBd5ceW.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.6201171875,
+          "wallTime": 1788680990946.12,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 964.8091173171997,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 964.4691172838211,
+          "transferBytes": 497
+        },
+        {
+          "url": "http://localhost:4101/assets/DatePicker-DIAcua2r.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.875,
+          "wallTime": 1788680990946.375,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1011.3130000829697,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1010.6870000362396,
+          "transferBytes": 4481
+        },
+        {
+          "url": "http://localhost:4101/assets/pick-calendar-levels-props-CnqOfHw5.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.905029296875,
+          "wallTime": 1788680990946.405,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1138.3960292339325,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1138.1550291776657,
+          "transferBytes": 34669
+        },
+        {
+          "url": "http://localhost:4101/assets/check-CRoj11ku.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 39.93603515625,
+          "wallTime": 1788680990946.436,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1042.4420351982117,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1042.3000351190567,
+          "transferBytes": 462
+        },
+        {
+          "url": "http://localhost:4101/assets/pencil-040MDsRt.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.0439453125,
+          "wallTime": 1788680990946.544,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1049.8889453411102,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1049.7289452552795,
+          "transferBytes": 620
+        },
+        {
+          "url": "http://localhost:4101/assets/rotate-ccw-C7Buefry.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.066162109375,
+          "wallTime": 1788680990946.5662,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1096.2231620550156,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1096.1081620454788,
+          "transferBytes": 543
+        },
+        {
+          "url": "http://localhost:4101/assets/trash-2-DKk5gZWw.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.087158203125,
+          "wallTime": 1788680990946.5872,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1128.097158074379,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1127.9021581411362,
+          "transferBytes": 672
+        },
+        {
+          "url": "http://localhost:4101/assets/info-B4SpS__0.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.114013671875,
+          "wallTime": 1788680990946.614,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1134.8310137987137,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1134.7340136766434,
+          "transferBytes": 542
+        },
+        {
+          "url": "http://localhost:4101/assets/InteractiveRow-8QXao3pW.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.13818359375,
+          "wallTime": 1788680990946.6382,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1180.0071835517883,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1179.899183511734,
+          "transferBytes": 1358
+        },
+        {
+          "url": "http://localhost:4101/assets/Pressable-wSIrznbL.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.1591796875,
+          "wallTime": 1788680990946.6592,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1216.0601797103882,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1215.9691797494888,
+          "transferBytes": 1662
+        },
+        {
+          "url": "http://localhost:4101/assets/FormActions-CmXJc2VQ.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.197998046875,
+          "wallTime": 1788680990946.698,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1221.043998003006,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1220.9609979391098,
+          "transferBytes": 734
+        },
+        {
+          "url": "http://localhost:4101/assets/EditorModal.module-B3IlTrPW.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.221923828125,
+          "wallTime": 1788680990946.722,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1223.333923816681,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1223.261923789978,
+          "transferBytes": 440
+        },
+        {
+          "url": "http://localhost:4101/assets/IconChevronDown-B7FDRwyv.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.25,
+          "wallTime": 1788680990946.75,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1264.0889999866486,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1263.84199988842,
+          "transferBytes": 484
+        },
+        {
+          "url": "http://localhost:4101/assets/use-debounced-value-DNdZ3k4l.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.505126953125,
+          "wallTime": 1788680990947.0051,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1300.2021269798279,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1300.1131271123886,
+          "transferBytes": 746
+        },
+        {
+          "url": "http://localhost:4101/assets/Table-C_f66d7I.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 40.52783203125,
+          "wallTime": 1788680990947.0278,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 1318.6588320732117,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1318.361832022667,
+          "transferBytes": 4579
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-Bo-vtJFx.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 40.5478515625,
+          "wallTime": 1788680990947.0479,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 215.9928514957428,
+          "cache": false,
+          "mime": "text/css",
+          "end": 833.3078515529633,
+          "transferBytes": 201043
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-DrbgVAe_.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 40.572021484375,
+          "wallTime": 1788680990947.072,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 219.8420214653015,
+          "cache": false,
+          "mime": "text/css",
+          "end": 245.52702140808105,
+          "transferBytes": 6759
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-DAqvOFgL.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 40.677001953125,
+          "wallTime": 1788680990947.177,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 223.2140018939972,
+          "cache": false,
+          "mime": "text/css",
+          "end": 302.6720019578934,
+          "transferBytes": 19761
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-C2i_EZ8M.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 40.696044921875,
+          "wallTime": 1788680990947.196,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 230.92804491519928,
+          "cache": false,
+          "mime": "text/css",
+          "end": 230.89304506778717,
+          "transferBytes": 1211
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-C36hm8jf.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 40.718017578125,
+          "wallTime": 1788680990947.218,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 253.34901762008667,
+          "cache": false,
+          "mime": "text/css",
+          "end": 383.28501760959625,
+          "transferBytes": 34087
+        },
+        {
+          "url": "http://localhost:4101/assets/styles-Bl8iAtNn.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 40.738037109375,
+          "wallTime": 1788680990947.238,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 316.50203716754913,
+          "cache": false,
+          "mime": "text/css",
+          "end": 328.3430371284485,
+          "transferBytes": 3123
+        },
+        {
+          "url": "http://localhost:4101/assets/style-BzeqSHS3.css",
+          "method": "GET",
+          "type": "Stylesheet",
+          "start": 40.759033203125,
+          "wallTime": 1788680990947.259,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 332.69403326511383,
+          "cache": false,
+          "mime": "text/css",
+          "end": 416.6610332727432,
+          "transferBytes": 23455
+        },
+        {
+          "url": "http://localhost:4101/manifest.json",
+          "method": "GET",
+          "type": "Manifest",
+          "start": 47.27587890625,
+          "wallTime": 1788680990953.776,
+          "initiator": "parser",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 48.06587886810303,
+          "cache": true,
+          "mime": "application/json",
+          "end": 48.081878781318665,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:4101/favicon.ico",
+          "method": "GET",
+          "type": "Other",
+          "start": 853.35009765625,
+          "wallTime": 1788680991759.85,
+          "initiator": "other",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 854.6860976219177,
+          "cache": true,
+          "mime": "image/vnd.microsoft.icon",
+          "end": 854.5850976705551,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:4101/favicon192.png",
+          "method": "GET",
+          "type": "Other",
+          "start": 853.433837890625,
+          "wallTime": 1788680991759.9338,
+          "initiator": "other",
+          "initiatorUrl": null,
+          "status": 200,
+          "response": 854.6398378610611,
+          "cache": true,
+          "mime": "image/png",
+          "end": 854.7668379545212,
+          "transferBytes": 0
+        },
+        {
+          "url": "http://localhost:3101/transaction?categoryId=UNCATEGORIZED&pageIndex=0&pageSize=1&sortBy=activityDate&sortOrder=DESC",
+          "method": "GET",
+          "type": "XHR",
+          "start": 1631.047119140625,
+          "wallTime": 1788680992537.547,
+          "initiator": "script",
+          "initiatorUrl": "http://localhost:4101/assets/main-Dp8c1l4G.js",
+          "status": 200,
+          "response": 1723.2591191530228,
+          "cache": false,
+          "mime": "application/json",
+          "end": 1718.7791191339493,
+          "transferBytes": 457
+        },
+        {
+          "url": "http://localhost:4101/assets/virtual_pwa-register-13ZkAds4.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 1631.514892578125,
+          "wallTime": 1788680992538.015,
+          "initiator": "script",
+          "initiatorUrl": "http://localhost:4101/assets/main-Dp8c1l4G.js",
+          "status": 200,
+          "response": 1722.8008925914764,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1717.720892548561,
+          "transferBytes": 1252
+        },
+        {
+          "url": "http://localhost:4101/assets/workbox-window.prod.es5-BBnX5xw4.js",
+          "method": "GET",
+          "type": "Script",
+          "start": 1729.569091796875,
+          "wallTime": 1788680992636.069,
+          "initiator": "script",
+          "initiatorUrl": "http://localhost:4101/assets/virtual_pwa-register-13ZkAds4.js",
+          "status": 200,
+          "response": 1822.642091870308,
+          "cache": false,
+          "mime": "text/javascript",
+          "end": 1822.4920917749405,
+          "transferBytes": 6082
+        }
+      ],
+      "runtimeErrors": [],
+      "consoleWarnings": []
+    }
+  ]
+}

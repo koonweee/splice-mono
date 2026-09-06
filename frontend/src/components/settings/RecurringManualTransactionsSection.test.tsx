@@ -130,7 +130,7 @@ describe('RecurringManualTransactionsSection', () => {
       screen.getAllByText(schedules[0].merchantName).length,
     ).toBeGreaterThan(0)
     expect(
-      screen.getByText('Previously loaded results are shown below.'),
+      screen.getByText('Previously loaded results remain visible.'),
     ).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(mockFns.refetchMock).toHaveBeenCalledTimes(1)

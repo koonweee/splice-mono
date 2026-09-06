@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
+import { RoutePendingSkeleton } from './components/loading/RoutePendingSkeleton'
 
 import { configureQueryPolicy } from './lib/query-policy'
 import { createMutationCache } from './lib/query-invalidation'
@@ -36,7 +37,7 @@ export function getRouter() {
     defaultPreloadStaleTime: 0,
     defaultPendingMs: 150,
     defaultPendingMinMs: 0,
-    defaultPendingComponent: () => <div role="status">Loading page…</div>,
+    defaultPendingComponent: RoutePendingSkeleton,
   })
 
   setupRouterSsrQueryIntegration({

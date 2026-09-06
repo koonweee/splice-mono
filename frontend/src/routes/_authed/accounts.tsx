@@ -5,7 +5,17 @@ import { IconPlus, IconRefresh, IconUpload } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { lazy, useMemo } from 'react'
-import { DeferredFeature } from '../../components/DeferredFeature'
+import {
+  AddAccountSkeleton,
+  BackfillSkeleton,
+} from '../../components/loading/AccountDialogSkeletons'
+import {
+  featureIntent,
+  loadAddAccountModal,
+  loadBackfillModal,
+} from '../../lib/feature-loaders'
+import { AccountsSkeleton } from '../../components/loading/LoadingSkeleton'
+import { DeferredOverlay } from '../../components/DeferredOverlay'
 import {
   useAccountControllerFindAll,
   useBankLinkControllerSyncAllAccounts,
@@ -18,16 +28,8 @@ import { InstitutionSection } from '@/components/accounts/InstitutionSection'
 import { PageHeader } from '@/components/PageHeader'
 import { DataState } from '@/components/DataState'
 
-const AddAccountModal = lazy(() =>
-  import('@/components/accounts/AddAccountModal').then((module) => ({
-    default: module.AddAccountModal,
-  })),
-)
-const BackfillModal = lazy(() =>
-  import('@/components/accounts/BackfillModal').then((module) => ({
-    default: module.BackfillModal,
-  })),
-)
+const AddAccountModal = lazy(loadAddAccountModal)
+const BackfillModal = lazy(loadBackfillModal)
 
 export const Route = createFileRoute('/_authed/accounts')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -123,6 +125,7 @@ function AccountsPage() {
             <Button
               leftSection={<IconUpload size={16} />}
               onClick={openBackfill}
+              {...featureIntent(loadBackfillModal)}
               variant="outline"
             >
               Backfill
@@ -130,6 +133,7 @@ function AccountsPage() {
             <Button
               leftSection={<IconPlus size={16} />}
               onClick={openModal}
+              {...featureIntent(loadAddAccountModal)}
               variant="outline"
             >
               Add account
@@ -143,6 +147,7 @@ function AccountsPage() {
         isError={Boolean(error)}
         isFetching={isFetching}
         loadingMessage="Loading accounts…"
+        loadingFallback={<AccountsSkeleton />}
         errorMessage="Failed to load accounts"
         emptyMessage="No accounts found"
         onRetry={() => void refetch()}
@@ -160,14 +165,26 @@ function AccountsPage() {
         </Stack>
       </DataState>
       {modalOpened && (
-        <DeferredFeature label="Add account">
+        <DeferredOverlay
+          label="Add account"
+          onClose={closeModal}
+          minHeight={0}
+          skeleton={<AddAccountSkeleton />}
+        >
           <AddAccountModal opened={modalOpened} onClose={closeModal} />
-        </DeferredFeature>
+        </DeferredOverlay>
       )}
       {backfillOpened && (
-        <DeferredFeature label="Backfill balances">
+        <DeferredOverlay
+          label="Backfill balances"
+          title="Manual backfill via CSV"
+          minHeight={0}
+          skeleton={<BackfillSkeleton />}
+          size="lg"
+          onClose={closeBackfill}
+        >
           <BackfillModal opened={backfillOpened} onClose={closeBackfill} />
-        </DeferredFeature>
+        </DeferredOverlay>
       )}
     </>
   )
