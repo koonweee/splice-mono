@@ -13,6 +13,8 @@ React frontend for the Splice financial management application. Built with TanSt
 yarn dev                  # Start dev server (port 4000)
 yarn build                # Production build
 yarn serve                # Preview production build
+yarn workbench            # Component gallery on port 4001; no backend required
+yarn workbench:build      # Build the standalone gallery
 
 # Testing
 yarn test                 # Run Vitest tests
@@ -79,6 +81,17 @@ Read [Shared UI conventions](docs/ui-conventions.md) before changing UI. Reuse t
 ### Components
 
 Shared components in `src/components/`. Icons from `lucide-react`.
+
+### Component workbench
+
+Use the maintained workbench for future UI updates. Read [its README](workbench/README.md) and locate the affected component in [the catalog](workbench/catalog.md) before changing shared UI.
+
+- Update the existing real-component example when behavior or states change. New rendered components need a direct example or a documented composition; update `catalog.json` and `catalog.md` together. Nonvisual helpers need a reason and a behavioral test reference instead of a tile.
+- Reuse production components, CSS and `src/lib/design-system/` tokens. Keep synthetic fixtures and API adapters under `workbench/`; never import them into production or allow examples to write real preferences/data.
+- When browser validation is called for by repository guidance (including plan implementation or an explicit request), use agent-browser to inspect affected examples. Cover Light/Dark/OLED, a representative accent, relevant phone/desktop layouts, and changed loading/error/pending, focus or portal behavior. Broaden accent and viewport coverage for shared token or responsive changes; do not repeat the entire historical matrix for a small local edit.
+- Use the README's stable example/state URLs. Check the real app as well when routing, authentication, persistence, SSR or integration behavior changes: isolated fixtures cannot establish those behaviors.
+- Run relevant behavior tests and the usual lint/typecheck checks. For registry, fixture or shared styling changes, also run `yarn test workbench --maxWorkers=2`, `yarn tokens:check` and `yarn workbench:build`. Prefer visual inspection over tests that merely assert CSS strings.
+- Record what was actually inspected, including example/state, theme and viewport. A catalog entry or successful screenshot capture alone does not prove visual or interaction correctness. Close agent-browser sessions you start; preserve existing app/workbench servers.
 
 ## Testing
 

@@ -53,6 +53,8 @@ The workflow creates or reuses a `main` → `deploy` PR, runs the required CI ch
 
 ## Testing Guidelines
 
+- For frontend UI changes, follow the component workbench workflow in [frontend/CLAUDE.md](frontend/CLAUDE.md#component-workbench). Maintain examples alongside changed components; use [frontend/workbench/README.md](frontend/workbench/README.md) for fixture conventions and capture URLs.
+
 - Backend tests: `backend/test/**/*.spec.ts`; keep service/controller tests scoped by feature.
 - Frontend tests: `*.test.ts` / `*.test.tsx` under `src/`.
 - Use targeted runs when possible (`yarn test path/to/file` in backend, Vitest file patterns in frontend).
