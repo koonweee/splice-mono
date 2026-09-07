@@ -60,6 +60,7 @@ const servers = []
 const sockets = new Set()
 const heldResponses = new Map()
 const releasedFaults = []
+const updateDiagnostics = []
 const checks = []
 const requests = []
 const failures = []
@@ -490,9 +491,107 @@ async function workerControl(page, message = { type: 'PWA_CONTROL_GET' }) {
     message,
   )
 }
+function recordUpdateDiagnostic(details) {
+  updateDiagnostics.push({ at: Date.now(), check: currentCheck, ...details })
+  if (updateDiagnostics.length > 2000) updateDiagnostics.shift()
+}
+async function observeWorkerLifecycle(page) {
+  const protocol = await page.context().newCDPSession(page)
+  const { targetInfo } = await protocol.send('Target.getTargetInfo')
+  protocol.on('ServiceWorker.workerVersionUpdated', ({ versions }) => {
+    recordUpdateDiagnostic({
+      kind: 'worker-versions',
+      pageTarget: targetInfo.targetId,
+      versions: versions.filter(
+        (version) => version.scriptURL === `${origin}/sw.js`,
+      ),
+    })
+  })
+  protocol.on('ServiceWorker.workerErrorReported', ({ errorMessage }) => {
+    recordUpdateDiagnostic({
+      kind: 'worker-error',
+      pageTarget: targetInfo.targetId,
+      errorMessage,
+    })
+  })
+  await protocol.send('ServiceWorker.enable')
+}
+async function captureWorkerAcknowledgments(page) {
+  return bounded(
+    page.evaluate(async () => {
+      if (!navigator.serviceWorker) return null
+      const registration = await navigator.serviceWorker.getRegistration()
+      if (!registration) return null
+      const workers = Object.entries({
+        active: registration.active,
+        waiting: registration.waiting,
+      })
+      return Promise.all(
+        workers.map(([role, worker]) => {
+          if (!worker) return { role, state: null }
+          const before = worker.state
+          return new Promise((resolve) => {
+            const channel = new MessageChannel()
+            const done = (buildId) => {
+              clearTimeout(timer)
+              channel.port1.close()
+              channel.port2.close()
+              resolve({ role, before, after: worker.state, buildId })
+            }
+            const timer = setTimeout(() => done(null), 1000)
+            channel.port1.onmessage = (event) =>
+              done(
+                typeof event.data?.buildId === 'string'
+                  ? event.data.buildId
+                  : null,
+              )
+            try {
+              worker.postMessage({ type: 'PWA_BUILD_ID' }, [channel.port2])
+            } catch {
+              done(null)
+            }
+          })
+        }),
+      )
+    }),
+    'capture worker build acknowledgments',
+    2000,
+  ).catch(() => null)
+}
 async function makeBrowserContext(options) {
   const context = await browser.newContext(options)
+  await context.exposeBinding('__spliceRecordUpdate', ({ page }, details) => {
+    recordUpdateDiagnostic({ ...details, pageUrl: page.url() })
+  })
+  await context.addInitScript(() => {
+    if (typeof ServiceWorker === 'undefined') return
+    const original = ServiceWorker.prototype.postMessage
+    ServiceWorker.prototype.postMessage = function (...args) {
+      const result = original.apply(this, args)
+      if (args[0]?.type === 'SKIP_WAITING') {
+        void window
+          .__spliceRecordUpdate({
+            kind: 'skip-waiting-sent',
+            workerState: this.state,
+            scriptURL: this.scriptURL,
+          })
+          .catch(() => undefined)
+      }
+      return result
+    }
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      void window
+        .__spliceRecordUpdate({ kind: 'controllerchange' })
+        .catch(() => undefined)
+    })
+  })
   context.on('page', (page) => {
+    void bounded(
+      observeWorkerLifecycle(page),
+      'initialize worker diagnostics',
+    ).catch((error) => {
+      recordUpdateDiagnostic({ kind: 'observer-error', message: error.message })
+    })
     page.on('pageerror', (error) => failures.push(error.message))
     page.on('crash', () => {
       const details = {
@@ -531,6 +630,7 @@ async function closeWithEvidence(context, name) {
       JSON.stringify(
         {
           url: page.url(),
+          workerAcknowledgments: await captureWorkerAcknowledgments(page),
           state: await bounded(
             page.evaluate(() => ({
               ready: document.readyState,
@@ -1829,6 +1929,7 @@ try {
           (browser?.contexts().flatMap((context) => context.pages()) ?? []).map(
             async (page) => ({
               url: page.url(),
+              workerAcknowledgments: await captureWorkerAcknowledgments(page),
               recovery: await bounded(
                 page.evaluate(() => ({
                   online: navigator.onLine,
@@ -1869,6 +1970,10 @@ try {
   )
   throw error
 } finally {
+  await writeFile(
+    join(artifacts, 'update-diagnostics.json'),
+    JSON.stringify(updateDiagnostics, null, 2),
+  ).catch(() => undefined)
   releaseHeldResponses()
   await browser?.close()
   for (const child of children.reverse()) {
