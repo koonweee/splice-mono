@@ -1,0 +1,133 @@
+{
+  "browser": "153.0.8010.12",
+  "backend": "real Nest AppModule in a fresh benchmark schema",
+  "sourceChange": "src/routes/__root.tsx: Splice → Splice PWA B",
+  "builds": {
+    "a": "mtrrpsex-a69ef736-a269-4b2c-980a-7128d70551c9",
+    "b": "mtrrquh8-b2704e3b-9755-4ec9-8bcf-23b27d560cb5",
+    "c": "mtrrrw6i-2ef910d6-54f3-4118-a54d-1fead1fd9c5b"
+  },
+  "checks": [
+    {
+      "name": "real local-dev authentication, production worker activation and private-cache migration",
+      "passed": true,
+      "milliseconds": 1755
+    },
+    {
+      "name": "cached core JS works offline without a network body request",
+      "passed": true,
+      "milliseconds": 33
+    },
+    {
+      "name": "UI-only B release prompts A and protects another tab’s real Settings draft",
+      "passed": true,
+      "milliseconds": 8453
+    },
+    {
+      "name": "cold offline launch preserves destination, rejects outage/captive probes and recovers once",
+      "passed": true,
+      "milliseconds": 583
+    },
+    {
+      "name": "stalled navigation headers settle after eight seconds without a duplicate navigation",
+      "passed": true,
+      "milliseconds": 8158
+    },
+    {
+      "name": "rollback to A is another prompted real worker update",
+      "passed": true,
+      "milliseconds": 31734
+    },
+    {
+      "name": "offline logout hides both tabs immediately and revokes the real session on reconnect",
+      "passed": true,
+      "milliseconds": 984
+    },
+    {
+      "name": "failed worker registration is recoverable through the real Retry control",
+      "passed": true,
+      "milliseconds": 1056
+    },
+    {
+      "name": "A to B waiting to C waiting removes abandoned staging and activates C",
+      "passed": true,
+      "milliseconds": 4277
+    },
+    {
+      "name": "missing held recovery script cannot block Retry and a throttled reconnect recovers",
+      "passed": true,
+      "milliseconds": 19722
+    },
+    {
+      "name": "real zero-quota storage leaves the online app and logout usable",
+      "passed": true,
+      "milliseconds": 1248
+    },
+    {
+      "name": "real worker notification click preserves a dirty Settings draft until explicit Open",
+      "passed": true,
+      "milliseconds": 413
+    },
+    {
+      "name": "legacy enrollment automatically rebinds and real worker push isolates logout and user B",
+      "passed": true,
+      "milliseconds": 3486
+    },
+    {
+      "name": "both installed shortcuts preserve authenticated destinations through login",
+      "passed": true,
+      "milliseconds": 1844
+    },
+    {
+      "name": "offline Update attempts preserve the document and rapid repeated clicks reload exactly once",
+      "passed": true,
+      "milliseconds": 3725
+    },
+    {
+      "name": "a fetch during native worker shutdown still activates and reloads within the update budget",
+      "passed": true,
+      "milliseconds": 32751
+    },
+    {
+      "name": "a stalled uncached static response cannot block real Update activation",
+      "passed": true,
+      "milliseconds": 7706
+    },
+    {
+      "name": "missing old lazy chunk returns404, preserves dirty Settings, and recovers only through explicit Update",
+      "passed": true,
+      "milliseconds": 4187
+    }
+  ],
+  "releasedFaults": [
+    {
+      "check": "stalled navigation headers settle after eight seconds without a duplicate navigation",
+      "kind": "navigation",
+      "released": 0
+    },
+    {
+      "check": "missing held recovery script cannot block Retry and a throttled reconnect recovers",
+      "kind": "navigation",
+      "released": 1
+    },
+    {
+      "check": "missing held recovery script cannot block Retry and a throttled reconnect recovers",
+      "kind": "navigation",
+      "released": 0
+    },
+    {
+      "check": "missing held recovery script cannot block Retry and a throttled reconnect recovers",
+      "kind": "recovery-script",
+      "released": 0
+    },
+    {
+      "check": "a stalled uncached static response cannot block real Update activation",
+      "kind": "static-probe",
+      "released": 0
+    }
+  ],
+  "limitations": [
+    "Chromium browser emulation; no physical iOS/Android certification.",
+    "PushManager transport and badge observation are browser API fixtures; CDP dispatches genuine built-worker push events with real HTTP ownership. Constructed notification clicks emulate OS focus/lifetime privileges, not an OS gesture. Cold openWindow/OS clicks and provider delivery remain outside this harness; auth destinations are verified with real navigations."
+  ]
+}
