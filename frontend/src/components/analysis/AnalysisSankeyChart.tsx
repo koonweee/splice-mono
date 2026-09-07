@@ -22,6 +22,7 @@ import type {
 } from '../../api/models'
 
 type AnalysisSankeyChartProps = {
+  showTotals?: boolean
   analysis: TransactionAnalysisResponse
   onCategoryClick: (categoryPrimary: string, direction: FlowDirection) => void
 }
@@ -94,12 +95,12 @@ function SankeyNodeShape({
         fill={getNodeFill(node)}
       />
       <text
+        data-typography="chartLabel"
         x={labelX}
         y={props.y + props.height / 2}
         textAnchor={labelAnchor}
         dominantBaseline="middle"
         fill="var(--mantine-color-text)"
-        fontSize={12}
       >
         {node.name}
       </text>
@@ -199,18 +200,26 @@ function CategoryDrilldownList({
               }}
             />
             <Text
-              size="sm"
+              data-typography="bodySmall"
               style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}
             >
               {formatPrimaryCategory(category.primaryCategory)}
             </Text>
-            <Text size="sm" fw={500} style={{ flexShrink: 0 }}>
+            <Text
+              data-typography="amountSmall"
+              style={{
+                flexShrink: 1,
+                minWidth: 0,
+                overflowWrap: 'anywhere',
+                textAlign: 'right',
+              }}
+            >
               {formatSankeyAmount(category.totalAmount, currency)}
             </Text>
           </Group>
           <div className={styles.compactProgress}>
             <Progress
-              mt={8}
+              mt={4}
               size={4}
               value={ratioPercent(
                 parseSignedMinorUnits(category.totalAmount),
@@ -233,6 +242,7 @@ function CategoryDrilldownList({
 export function AnalysisSankeyChart({
   analysis,
   onCategoryClick,
+  showTotals = true,
 }: AnalysisSankeyChartProps) {
   const data = buildAnalysisSankeyData(analysis)
   const height = Math.max(
@@ -244,19 +254,21 @@ export function AnalysisSankeyChart({
 
   return (
     <Paper
-      p="lg"
+      p="sm"
       radius="md"
       withBorder
       className={styles.sankeyCard}
       data-testid="analysis-sankey-chart"
     >
-      <Stack gap="md">
+      <Stack gap="sm">
         <Group justify="space-between" gap="sm">
-          <Text fw={600}>Cashflow</Text>
-          <Text size="sm" c="dimmed">
-            {formatSankeyAmount(analysis.totalInflow, analysis.currency)} in /{' '}
-            {formatSankeyAmount(analysis.totalOutflow, analysis.currency)} out
-          </Text>
+          <Text data-typography="sectionHeading">Cashflow</Text>
+          {showTotals && (
+            <Text data-typography="amountSmall" c="dimmed">
+              {formatSankeyAmount(analysis.totalInflow, analysis.currency)} in /{' '}
+              {formatSankeyAmount(analysis.totalOutflow, analysis.currency)} out
+            </Text>
+          )}
         </Group>
         {
           <Box className={styles.chartViewport}>
@@ -305,7 +317,7 @@ export function AnalysisSankeyChart({
                 direction === 'inflow' ? analysis.inflows : analysis.outflows
               return (
                 <Box key={direction} data-direction={direction}>
-                  <Text size="sm" fw={600} mb={4}>
+                  <Text data-typography="subsectionHeading" mb={4}>
                     {direction === 'inflow' ? 'Inflows' : 'Outflows'}
                   </Text>
                   <CategoryDrilldownList
@@ -315,7 +327,7 @@ export function AnalysisSankeyChart({
                     onCategoryClick={onCategoryClick}
                   />
                   {categories.length === 0 && (
-                    <Text size="sm" c="dimmed">
+                    <Text data-typography="metadata" c="dimmed">
                       No {direction}s
                     </Text>
                   )}

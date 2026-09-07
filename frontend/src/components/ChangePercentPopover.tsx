@@ -1,12 +1,10 @@
-import { Popover, Text } from '@mantine/core'
-import { useState } from 'react'
-import { useSupportsHover } from '../lib/responsive'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
   formatMoneyWithSign,
   formatPercent,
 } from '../lib/format'
 import { MoneyWithSignSign } from '../api/models'
+import { PercentAmountPopover } from './PercentAmountPopover'
 import type { MoneyWithSign } from '../api/models'
 
 function formatChangeAmount(changeAmount: MoneyWithSign): string {
@@ -21,18 +19,16 @@ export function ChangePercentPopover({
   changePercent,
   color,
   hidden = false,
-  size = 'xs',
+  textRole = 'caption',
   testId,
 }: {
   changeAmount?: MoneyWithSign
   changePercent?: number
   color: string
   hidden?: boolean
-  size?: 'xs' | 'sm'
+  textRole?: 'caption' | 'metadata'
   testId?: string
 }) {
-  const [opened, setOpened] = useState(false)
-  const supportsHover = useSupportsHover()
   const percent = formatPercent(changePercent)
 
   if (!percent) return null
@@ -43,64 +39,14 @@ export function ChangePercentPopover({
       ? formatChangeAmount(changeAmount)
       : undefined
 
-  if (!amount) {
-    return (
-      <Text size={size} c={color} data-testid={testId}>
-        {percent}
-      </Text>
-    )
-  }
-
   return (
-    <Popover
-      opened={opened}
-      onChange={setOpened}
-      position="top"
-      withArrow
-      shadow="md"
-      offset={6}
-      withinPortal
-    >
-      <Popover.Target>
-        <Text
-          component="span"
-          role="button"
-          tabIndex={0}
-          size={size}
-          c={color}
-          data-testid={testId}
-          aria-label={`Show absolute change ${amount}`}
-          onBlur={() => setOpened(false)}
-          onClick={(event) => {
-            event.stopPropagation()
-            setOpened(true)
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter' && event.key !== ' ') return
-            event.preventDefault()
-            event.stopPropagation()
-            setOpened((current) => !current)
-          }}
-          onMouseDown={(event) => event.stopPropagation()}
-          onMouseEnter={supportsHover ? () => setOpened(true) : undefined}
-          onMouseLeave={supportsHover ? () => setOpened(false) : undefined}
-          onTouchStart={(event) => event.stopPropagation()}
-          style={{
-            borderRadius: 4,
-            cursor: 'pointer',
-            display: 'block',
-            textDecoration: opened ? 'underline dotted' : undefined,
-            textUnderlineOffset: 3,
-          }}
-        >
-          {percent}
-        </Text>
-      </Popover.Target>
-      <Popover.Dropdown px="xs" py={4}>
-        <Text size="xs" fw={600}>
-          {amount}
-        </Text>
-      </Popover.Dropdown>
-    </Popover>
+    <PercentAmountPopover
+      percent={percent}
+      amount={amount}
+      label={`Show absolute change ${amount}`}
+      color={color}
+      textRole={textRole}
+      testId={testId}
+    />
   )
 }

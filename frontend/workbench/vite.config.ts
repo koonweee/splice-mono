@@ -6,6 +6,10 @@ import { spliceCss } from '../vite-css'
 
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
+  // The app and workbench optimize different entry points and run together.
+  cacheDir: fileURLToPath(
+    new URL('../node_modules/.vite-workbench', import.meta.url),
+  ),
   css: spliceCss,
   resolve: {
     alias: { '@': fileURLToPath(new URL('../src', import.meta.url)) },

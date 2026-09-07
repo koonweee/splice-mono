@@ -42,3 +42,12 @@
     flex: 1 1 auto;
   }
 }
+
+.sankeyDesktop {
+  margin-bottom: var(--mantine-spacing-sm);
+}
+@media (--data-list-layout) {
+  .sankeyDesktop {
+    display: none;
+  }
+}

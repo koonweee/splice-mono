@@ -16,6 +16,26 @@ const defaultNotificationSettings = {
 };
 
 describe('UserSettings types', () => {
+  it.each([true, false])(
+    'accepts and preserves monospaceAmounts=%s',
+    (monospaceAmounts) => {
+      const appearance = { mode: 'dark', accent: null, monospaceAmounts };
+      expect(UpdateUserSettingsDtoSchema.parse({ appearance })).toEqual({
+        appearance,
+      });
+      expect(
+        normalizeUserSettings({ appearance: { ...appearance, mode: 'dark' } })
+          .appearance,
+      ).toEqual(appearance);
+    },
+  );
+  it('rejects non-boolean amount-font preferences', () => {
+    expect(() =>
+      UpdateUserSettingsDtoSchema.parse({
+        appearance: { mode: 'dark', accent: null, monospaceAmounts: 'true' },
+      }),
+    ).toThrow();
+  });
   it.each(['light', 'dark', 'oled'])(
     'accepts atomic %s appearance and normalizes hex',
     (mode) => {

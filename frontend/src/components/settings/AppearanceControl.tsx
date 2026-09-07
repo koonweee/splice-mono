@@ -5,6 +5,7 @@ import {
   SegmentedControl,
   Stack,
   Text,
+  Title,
   Tooltip,
 } from '@mantine/core'
 import { useEffect, useId, useState } from 'react'
@@ -21,11 +22,13 @@ export function AppearanceControl({
   disabled,
   onValidityChange,
   resetVersion,
+  withHeading = false,
 }: {
   value: AppearancePreference
   onChange: (value: AppearancePreference) => void
   disabled?: boolean
   resetVersion?: number
+  withHeading?: boolean
   onValidityChange?: (valid: boolean) => void
 }) {
   const radioName = useId()
@@ -37,8 +40,29 @@ export function AppearanceControl({
     onValidityChange?.(true)
   }, [value.accent, onValidityChange, resetVersion])
   const valid = /^#[0-9a-f]{6}$/i.test(custom)
+  const resetButton = (
+    <Button
+      variant="subtle"
+      disabled={disabled}
+      onClick={() => {
+        setCustom(DEFAULT_APPEARANCE.accent ?? '')
+        onValidityChange?.(true)
+        onChange({ ...DEFAULT_APPEARANCE })
+      }}
+    >
+      Reset appearance
+    </Button>
+  )
   return (
-    <Stack gap="sm">
+    <Stack gap="xs">
+      {withHeading && (
+        <Group justify="space-between" gap="xs">
+          <Title order={4} data-typography="sectionHeading">
+            Appearance
+          </Title>
+          {resetButton}
+        </Group>
+      )}
       <SegmentedControl
         aria-label="Appearance mode"
         fullWidth
@@ -54,11 +78,9 @@ export function AppearanceControl({
             onChange({ ...value, mode })
         }}
       />
-      <div role="radiogroup" aria-label="Accent">
-        <Text size="sm" fw={500}>
-          Accent
-        </Text>
-        <Group gap={6} mt={4}>
+      <div role="radiogroup" aria-label="Accent" className={styles.accentRow}>
+        <Text data-typography="label">Accent</Text>
+        <Group gap={6}>
           {ACCENT_SWATCHES.map((swatch) => (
             <Tooltip key={swatch.label} label={swatch.label}>
               <label className={styles.swatch}>
@@ -86,6 +108,7 @@ export function AppearanceControl({
       <Group align="end" wrap="wrap">
         <ColorInput
           label="Custom accent"
+          classNames={{ root: styles.customField, error: styles.customError }}
           format="hex"
           withPicker
           eyeDropperButtonProps={{ 'aria-label': 'Pick color from screen' }}
@@ -103,17 +126,7 @@ export function AppearanceControl({
             if (isValid) onChange({ ...value, accent: next.toLowerCase() })
           }}
         />
-        <Button
-          variant="subtle"
-          disabled={disabled}
-          onClick={() => {
-            setCustom(DEFAULT_APPEARANCE.accent ?? '')
-            onValidityChange?.(true)
-            onChange({ ...DEFAULT_APPEARANCE })
-          }}
-        >
-          Reset appearance
-        </Button>
+        {!withHeading && resetButton}
       </Group>
     </Stack>
   )

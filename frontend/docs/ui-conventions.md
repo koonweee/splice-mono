@@ -291,3 +291,116 @@ QueryClients. API examples opt into explicit in-memory handlers. Unknown request
 fail visibly instead of falling through to real HTTP. Never use real user data,
 bank-link URLs, notification permission prompts or persisted preferences in an
 example. See `workbench/README.md` for the current provider and coverage status.
+
+Secondary interface feedback uses `--splice-hover`; input surfaces use
+`--splice-control`. Gray Buttons/ActionIcons are secondary interface actions and
+follow the tint. Gray lifecycle/status badges remain accent-independent. Avoid
+status background tokens for navigation or ordinary hover feedback. Review
+unselected/selected hover, keyboard focus, portals and disabled controls; catalog
+registration alone is not a visual review. See [tint audit](tint-surface-audit.md).
+
+Use `subtle` for borderless actions instead of `outline`. The outline-button audit
+found three usages (Accounts: Sync all, Backfill, Add account), now replaced.
+Transaction category badges retain their separate outline treatment; keyboard
+focus outlines are unaffected.
+
+## Non-Home page layout
+
+Use `PageLayout` for Accounts, Transactions, Analysis and Settings. It owns the
+16px gap between title/actions, optional navigation, optional toolbar and content.
+Omitted slots do not reserve space. `scroll="content"` bounds the content region
+using the app-shell height; `contentVariant="edge-to-edge"` removes the compact
+content inset while rows retain their own content padding. Home keeps its existing
+composition. Forms keep Save with the form rather than in the page header.
+
+Pass action definitions (`id`, `label`, `icon`, `onClick`, optional disabled/loading
+and onPrepare), never JSX buttons, to the layout's `actions` prop. `PageActions`
+shows one icon-only 44px action plus overflow on phones and two labeled
+actions plus overflow on desktop. When only one action would remain in overflow,
+show it directly instead: two icons on phones or three labeled actions on desktop.
+Only use More for two or more remaining actions. Without primary, first secondary is promoted.
+All actions use subtle styling. Labels remain in aria-labels, tooltips and menus.
+
+Use `PageNavigation` for section selection and `PageToolbar` for content filters.
+Settings uses the existing tabs on desktop and a section selector on mobile.
+Nested SettingsToolbar actions and `PageToolbar section` filters mount into the
+layout's header/toolbar targets using React portals, retaining the panel's state,
+context and handlers; unmounting a panel removes its contributions. Category/rule
+forms remain owned by their sections. Transactions replaces filters with bulk
+controls while selecting. Feature preparation remains attached to actions.
+
+## Compact touch controls
+
+Use the `foundation.dimensions` touchTarget (44), touchInput (48) and controlIcon
+(20) tokens. `--touch-controls` covers compact widths and any coarse pointer,
+including wide hybrid devices. Shared Mantine defaults/CSS own target geometry;
+keep icon artwork compact, preserve larger dimensions and avoid enlarging all
+spacing. Form fields reserve room for clear/reveal buttons. Checkbox/radio
+padding forwards to native input activation; do not replace wrapperProps without
+preserving this behavior. Account-row secondary actions use a touch menu so
+labels remain readable. Home range pills retain compact artwork within larger
+buttons. Focus indicators and existing drag/scroll behavior stay intact.
+
+Use the touch-controls workbench with boundary outlines, then check the affected
+real page composition: bigger targets can cause truncation even when every
+rectangle meets the minimum. See [touch interaction audit](touch-interaction-audit.md)
+for scope, exceptions and actual validation.
+
+## Typography roles
+
+Choose `data-typography="sectionHeading"` (or another named role) on Text, Title,
+Anchor and SVG text. Keep Title `order` semantic. CSS consumers use
+`@splice-type rowTitleSmall;`; Vite expands both mechanisms from
+`src/lib/design-system/typography.ts`. Never specify font size, weight, leading
+or family in a surface, including through fw/fz/lh, text size props, style objects
+or utility classes. Add a reusable role centrally when an audited use case needs
+one. Color, alignment, truncation and text transformation remain contextual.
+Button/input `size` controls geometry; shared defaults own their typography.
+
+Use the Typography workbench for the scale and the all-pages view for hierarchy.
+Run `yarn tokens:check` (includes typography ownership), relevant tests and both
+builds after changing canonical roles. The [typography audit](typography-audit.md)
+records role choices, exceptions and validation. Native controls may use
+`font: inherit`; offline rendering imports the canonical role directly.
+
+
+## Page density
+
+Use Home and Transactions as density references without reducing global spacing,
+type roles or target sizes. PageLayout still owns the page-level gaps.
+
+- Accounts: put the section toggle above the bordered list, with an 8px gap.
+  Use one 12px row inset, subtle separators and no inter-row gaps. Keep name and
+  account type together; the Manual badge has its own final row. Linked accounts
+  keep connection status, sync metadata and repair actions. Put actions beside
+  the text column rather than reserving a separate badge column.
+- General Settings: use a transparent, unpadded form, capped at 720px. Separate
+  groups with subtle lines and 12px spacing. Put Reset beside Appearance and Use
+  browser beside Timezone. Keep fields full width, helpers below, and Save/Cancel
+  with the form. AppearanceControl owns custom-color draft/reset validity.
+- Compact Settings lists: combine the row name, status and action in the heading;
+  keep conditions, category/priority, schedule amount/account and next occurrence
+  readable below it. Allow long text and metadata to wrap. Do not impose a fixed
+  row height or remove essential details to match a short fixture.
+- Use SettingsRowActions with action definitions for both desktop buttons and
+  touch menus. One action stays direct; multiple actions use an accessible menu.
+  Preserve disabled/loading/destructive states and preparation callbacks. Opening
+  an editor must hand focus to its dialog, while Escape returns to the row trigger.
+- Analysis: align Inflows, Outflows and Net with 12px summary padding; allow whole
+  columns to wrap for very large values. Keep 16px before Cashflow. Pass
+  showTotals={false} to the page's Sankey composition to avoid duplicate totals;
+  standalone charts retain totals. Compact category rows have one inset and
+  retain 44px hit areas. Loading compositions mirror the same hierarchy.
+
+Review actual page examples, including state=long-content, before changing these
+patterns. The [density plan](../../plans/non-home-page-density.md) records the
+approved scope and validation; the workbench README lists capture URLs.
+
+
+Amount font preference: `display`, `amount*` and numeric caption/metadata/input
+roles use `--splice-font-amount`, resolved from the saved appearance preference.
+General's “Use monospace font for amounts” switch previews immediately and follows
+Save/Cancel. Omitted/false uses the body font; true uses the canonical mono stack.
+Keep dates, names and prose in their existing roles. Numeric input roles are
+selected centrally by inputmode. Account amounts and percentage disclosures share
+the same preference, including in portals and server-rendered first paint.

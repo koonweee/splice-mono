@@ -67,7 +67,7 @@
 .drilldownGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--mantine-spacing-lg);
+  gap: var(--mantine-spacing-sm);
 }
 
 .drilldownGrid > [data-direction='inflow'] {
@@ -107,7 +107,8 @@
     min-width: 0;
   }
   .categoryButton {
-    padding-block: 10px;
+    padding: 6px 0;
+    min-height: var(--splice-size-touch-target);
   }
   .compactProgress {
     display: block;

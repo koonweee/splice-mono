@@ -678,7 +678,7 @@ describe('TransactionsPage category assignment workflow', () => {
 
     renderTransactionsPage()
 
-    fireEvent.click(screen.getByLabelText('Bulk edit'))
+    fireEvent.click(screen.getByRole('button', { name: 'Bulk edit' }))
 
     const tableProps = mockFns.transactionsTableMock.mock.calls.at(-1)?.[0] as {
       onToggleTransactionSelection: (transactionId: string) => void
@@ -744,6 +744,10 @@ describe('TransactionsPage category assignment workflow', () => {
       | undefined
     undoOptions?.onSuccess?.()
 
+    fireEvent.click(screen.getByRole('button', { name: 'Done selecting' }))
+    expect(screen.queryByTestId('transaction-bulk-edit-toolbar')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Bulk edit' })).toBeTruthy()
+
     expect(mockFns.invalidateQueriesMock).toHaveBeenCalledWith({
       predicate: expect.any(Function),
     })
@@ -764,16 +768,17 @@ describe('TransactionsPage category assignment workflow', () => {
     )
   })
 
-  it('combines mobile dates and other filters in one sheet with shortcuts and clear actions', async () => {
+  it('keeps dates and filters in the shared toolbar with shortcuts and clear actions', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-12T12:00:00-07:00'))
     setMobileViewport()
     renderTransactionsPage()
 
-    expect(screen.getByText('Filters · Feb 1–28, 2026')).toBeTruthy()
+    expect(screen.getByText('Feb 1–28, 2026')).toBeTruthy()
     expect(
-      screen.queryByRole('button', { name: 'Choose date range' }),
-    ).toBeNull()
+      screen.getByRole('button', { name: 'Choose date range' }),
+    ).toBeTruthy()
+    expect(screen.queryByText(/^Filters/)).toBeNull()
     fireEvent.click(
       screen.getByRole('button', {
         name: 'Open transaction filters, 2 active',
@@ -840,7 +845,7 @@ describe('TransactionsPage category assignment workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     act(() => vi.runAllTimers())
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(screen.getByText('Filters · All dates')).toBeTruthy()
+    expect(screen.getByText('All dates')).toBeTruthy()
   })
 })
 

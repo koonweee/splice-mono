@@ -59,8 +59,8 @@
   display: inline-block;
   width: 100%;
   font-variant-numeric: tabular-nums;
-  font-weight: 650;
   text-align: right;
+  @splice-type amountSmall;
 }
 
 .positive {
@@ -81,8 +81,7 @@
   border: 1px solid var(--mantine-color-default-border);
   background: var(--splice-surface-avatar);
   color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
-  font-weight: 700;
+  @splice-type captionStrong;
 }
 
 .merchantText {
@@ -121,10 +120,16 @@
   }
 }
 
-@media (--coarse-pointer) {
+@media (--touch-controls) {
   .merchantInfoButton {
-    min-width: 40px;
-    min-height: 40px;
+    min-width: var(--splice-size-touch-target);
+    min-height: var(--splice-size-touch-target);
+  }
+  .dateTrigger,
+  .categoryTrigger {
+    min-height: var(--splice-size-touch-target);
+    display: flex;
+    align-items: center;
   }
 }
 
@@ -154,9 +159,9 @@
 .categoryBadge {
   max-width: 100%;
   flex: 0 0 auto;
-  font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
+  @splice-type badge;
 }
 
 .categoryLabel {
@@ -190,6 +195,14 @@
 @media (--supports-hover) {
   .categoryCell:hover .categoryActions,
   .dateCell:hover .dateActions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (--touch-controls) {
+  .categoryActions,
+  .dateActions {
     opacity: 1;
     pointer-events: auto;
   }

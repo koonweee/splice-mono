@@ -27,7 +27,7 @@
     "component": "CategoryTransactionsModal",
     "source": "components/CategoryTransactionsModal.tsx",
     "example": "page-analysis",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "ChangePercentPopover",
@@ -227,19 +227,19 @@
     "component": "AnalysisAuditDrawer",
     "source": "components/analysis/AnalysisAuditDrawer.tsx",
     "example": "page-analysis",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "AnalysisAuditHeader",
     "source": "components/analysis/AnalysisAuditHeader.tsx",
     "example": "page-analysis",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "AnalysisSankeyChart",
     "source": "components/analysis/AnalysisSankeyChart.tsx",
     "example": "page-analysis",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "CategoryScopeInput",
@@ -416,38 +416,39 @@
       "notification-install-required",
       "notification-rebind",
       "notification-registering",
-      "notification-enabling"
+      "notification-enabling",
+      "long-content"
     ]
   },
   {
     "component": "AnalysisRulesSection",
     "source": "components/settings/AnalysisRulesSection.tsx",
     "example": "page-settings",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "CategorizationRulesSection",
     "source": "components/settings/CategorizationRulesSection.tsx",
     "example": "page-settings",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "CustomCategoriesSection",
     "source": "components/settings/CustomCategoriesSection.tsx",
     "example": "page-settings",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "PersonalAccessTokenSection",
     "source": "components/settings/PersonalAccessTokenSection.tsx",
     "example": "page-settings",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "RecurringManualTransactionsSection",
     "source": "components/settings/RecurringManualTransactionsSection.tsx",
     "example": "page-settings",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "SettingsArchiveFilter",
@@ -501,7 +502,7 @@
     "component": "AccountsPage",
     "source": "routes/_authed/accounts.tsx",
     "example": "page-accounts",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "TransactionsPage",
@@ -513,7 +514,7 @@
     "component": "AnalysisPage",
     "source": "routes/_authed/analysis.tsx",
     "example": "page-analysis",
-    "states": ["ready", "empty"]
+    "states": ["ready", "empty", "long-content"]
   },
   {
     "component": "AppShellLayout",
@@ -556,5 +557,59 @@
     "source": "components/notifications/NotificationMenu.tsx",
     "example": "page-home",
     "states": ["ready", "empty"]
+  },
+  {
+    "component": "HomePeriodControl",
+    "source": "components/HomePeriodControl.tsx",
+    "example": "interaction-surfaces",
+    "states": ["ready", "extended", "disabled"]
+  },
+  {
+    "component": "PageHeader",
+    "source": "components/PageHeader.tsx",
+    "example": "typography",
+    "states": ["ready"]
+  },
+  {
+    "component": "ManualTransactionModal",
+    "source": "components/transactions/ManualTransactionModal.tsx",
+    "example": "page-transactions",
+    "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "component": "PageLayout",
+    "source": "components/PageLayout.tsx",
+    "example": "page-accounts",
+    "states": ["ready", "long-content"]
+  },
+  {
+    "component": "PageActions",
+    "source": "components/PageActions.tsx",
+    "example": "touch-controls",
+    "states": ["ready", "disabled"]
+  },
+  {
+    "component": "PageNavigation",
+    "source": "components/PageNavigation.tsx",
+    "example": "page-settings",
+    "states": ["ready", "long-content"]
+  },
+  {
+    "component": "PageToolbar",
+    "source": "components/PageLayout.tsx",
+    "example": "page-transactions",
+    "states": ["ready"]
+  },
+  {
+    "component": "SettingsRowActions",
+    "source": "components/settings/SettingsRowActions.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty", "long-content"]
+  },
+  {
+    "component": "PercentAmountPopover",
+    "source": "components/PercentAmountPopover.tsx",
+    "example": "account-overview",
+    "states": ["ready", "loading", "empty"]
   }
 ]

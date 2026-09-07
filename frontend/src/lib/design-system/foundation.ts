@@ -19,7 +19,11 @@ export const foundation = {
     combobox: getDefaultZIndex('popover'),
     floatingPanel: getDefaultZIndex('popover'),
   },
-  dimensions: { touchTarget: 44, touchInput: 48, mobileInputFont: 16 },
+  dimensions: {
+    touchTarget: 44,
+    touchInput: 48,
+    controlIcon: 20,
+  },
   chart: {
     minimalFill: 0.12,
     fill: 0.2,

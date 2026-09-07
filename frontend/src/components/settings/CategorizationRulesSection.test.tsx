@@ -478,7 +478,9 @@ describe('CategorizationRulesSection', () => {
     )
 
     renderSection()
-    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Rule recommendations' }),
+    )
 
     expect(mockFns.generateRecommendationsMutateMock).not.toHaveBeenCalled()
     expect(screen.queryByText('No recommendations yet')).toBeNull()
@@ -496,7 +498,9 @@ describe('CategorizationRulesSection', () => {
   it('opens recommendations without auto-generating when none exist', async () => {
     renderSection()
 
-    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Rule recommendations' }),
+    )
 
     expect(mockFns.generateRecommendationsMutateMock).not.toHaveBeenCalled()
     expect(await screen.findByText('No recommendations yet')).toBeTruthy()
@@ -536,7 +540,9 @@ describe('CategorizationRulesSection', () => {
     )
 
     renderSection()
-    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Rule recommendations' }),
+    )
 
     expect(
       await screen.findByText(
@@ -560,7 +566,9 @@ describe('CategorizationRulesSection', () => {
 
   it('polls recommendations only while generation is running', () => {
     renderSection()
-    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Rule recommendations' }),
+    )
 
     const latestCall =
       mockFns.useCategorizationRuleRecommendationControllerListMock.mock.calls.at(
@@ -614,7 +622,9 @@ describe('CategorizationRulesSection', () => {
     )
 
     renderSection()
-    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Rule recommendations' }),
+    )
 
     expect(mockFns.generateRecommendationsMutateMock).not.toHaveBeenCalled()
     expect(await screen.findByText('Suggested Uber rideshare')).toBeTruthy()
@@ -665,7 +675,9 @@ describe('CategorizationRulesSection', () => {
     )
 
     renderSection()
-    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Rule recommendations' }),
+    )
 
     expect(
       await screen.findByText('You can close this panel and come back later.'),
@@ -688,7 +700,9 @@ describe('CategorizationRulesSection', () => {
     )
 
     renderSection()
-    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Rule recommendations' }),
+    )
     fireEvent.click(
       await screen.findByLabelText(
         'Preview recommendation Suggested Uber rideshare',
@@ -739,7 +753,9 @@ describe('CategorizationRulesSection', () => {
     )
 
     renderSection()
-    fireEvent.click(screen.getByLabelText('Rule recommendations'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Rule recommendations' }),
+    )
     await screen.findByText('Suggested Uber rideshare')
 
     fireEvent.click(

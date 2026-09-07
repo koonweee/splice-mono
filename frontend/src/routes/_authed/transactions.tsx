@@ -1,3 +1,4 @@
+import { Filter, ListChecks, Plus } from 'lucide-react'
 import {
   ActionIcon,
   Badge,
@@ -5,12 +6,10 @@ import {
   Button,
   Divider,
   Drawer,
-  Flex,
   FocusTrap,
   Group,
   SegmentedControl,
   Stack,
-  Switch,
   Text,
 } from '@mantine/core'
 import { useClickOutside, useDisclosure } from '@mantine/hooks'
@@ -18,13 +17,9 @@ import { notifications } from '@mantine/notifications'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { Filter, Plus } from 'lucide-react'
 import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TableSkeleton } from '../../components/loading/LoadingSkeleton'
-import {
-  featureIntent,
-  loadManualTransactionModal,
-} from '../../lib/feature-loaders'
+import { loadManualTransactionModal } from '../../lib/feature-loaders'
 import { ResponsiveSlot } from '../../components/ResponsiveSlot'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { DeferredOverlay } from '../../components/DeferredOverlay'
@@ -37,7 +32,6 @@ import {
   useTransactionControllerUndoBulkUpdateCategories,
 } from '../../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../../lib/format'
-import { formatDateRangeLabel } from '../../lib/date-range'
 import { isAssignableCategoryOption } from '../../lib/category-options'
 import { getFallbackCategoryColor } from '../../lib/category-colors'
 import { isManualTransaction } from '../../lib/manual-transactions'
@@ -73,7 +67,7 @@ import { TransactionsTable } from '@/components/TransactionsTable'
 import { CategorySelect } from '@/components/categories/CategorySelect'
 import { TransactionBulkEditToolbar } from '@/components/transactions/TransactionBulkEditToolbar'
 import { TransactionsMobileList } from '@/components/transactions/TransactionsMobileList'
-import { PageHeader } from '@/components/PageHeader'
+import { PageLayout } from '@/components/PageLayout'
 import { AccountSelect } from '@/components/accounts/AccountSelect'
 import { ConfirmActionDialog } from '@/components/ConfirmActionDialog'
 import { DataState } from '@/components/DataState'
@@ -172,9 +166,7 @@ function TransactionsFilterPanel({
         <>
           <Stack gap="xs">
             <Group justify="space-between">
-              <Text fw={600} size="sm">
-                Date range
-              </Text>
+              <Text data-typography="subsectionHeading">Date range</Text>
               {dateRange.some(Boolean) && (
                 <Button
                   onClick={() => onDateRangeChange([null, null])}
@@ -219,9 +211,7 @@ function TransactionsFilterPanel({
       <Divider />
 
       <Stack gap="xs">
-        <Text fw={600} size="sm">
-          Flow
-        </Text>
+        <Text data-typography="subsectionHeading">Flow</Text>
         <SegmentedControl
           value={amountSign}
           onChange={onAmountSignChange}
@@ -587,7 +577,7 @@ function TransactionsPage() {
             title: 'Categories updated',
             message: (
               <Group gap="xs" wrap="nowrap">
-                <Text size="sm">
+                <Text data-typography="bodySmall">
                   Updated {result.count} transaction
                   {result.count === 1 ? '' : 's'}.
                 </Text>
@@ -659,59 +649,132 @@ function TransactionsPage() {
     />
   )
 
-  const bulkEditSwitch = (
-    <Switch
-      checked={bulkModeEnabled}
-      label="Bulk edit"
-      onChange={(event) => setBulkModeEnabled(event.currentTarget.checked)}
+  const transactionToolbar = bulkModeEnabled ? (
+    <TransactionBulkEditToolbar
+      categoryOptions={assignableCategoryOptions}
+      isSaving={bulkUpdateCategories.isPending}
+      loadedCount={loadedTransactionIds.length}
+      selectedCount={selectedCount}
+      selectLoadedChecked={allLoadedSelected}
+      selectLoadedIndeterminate={someLoadedSelected && !allLoadedSelected}
+      value={bulkCategoryValue}
+      onChange={setBulkCategoryValue}
+      onSave={saveBulkCategoryUpdate}
+      onToggleLoaded={toggleLoadedSelection}
+      showSelectLoaded
+      variant="inline"
     />
-  )
+  ) : (
+    <Group className={styles.filters} gap="xs" align="center">
+      <DateRangeControl
+        growOnMobile
+        onChange={setDateRange}
+        value={dateRange}
+      />
 
-  const compactAddTransactionAction = (
-    <ActionIcon
-      aria-label="Add transaction"
-      onClick={openCreateManualTransaction}
-      {...featureIntent(loadManualTransactionModal)}
-      size={40}
-      variant="filled"
-    >
-      <Plus aria-hidden size={18} />
-    </ActionIcon>
-  )
-  const addTransactionAction = (
-    <Button
-      leftSection={<Plus size={16} />}
-      onClick={openCreateManualTransaction}
-      {...featureIntent(loadManualTransactionModal)}
-      size="md"
-      type="button"
-    >
-      Add transaction
-    </Button>
-  )
-
-  const headerActions = (
-    <Group gap="sm" wrap="nowrap" ml="auto">
-      <ResponsiveSlot compact={isMobile} variant="compact">
-        {compactAddTransactionAction}
-      </ResponsiveSlot>
-      {bulkEditSwitch}
+      {isMobile && (
+        <Box pos="relative">
+          <ActionIcon
+            aria-label={filterButtonLabel}
+            aria-expanded={filtersOpened}
+            aria-haspopup="dialog"
+            variant={activeFilterCount > 0 ? 'light' : 'subtle'}
+            size={44}
+            onClick={toggleFilters}
+          >
+            <Filter size={20} />
+          </ActionIcon>
+          {activeFilterCount > 0 && (
+            <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
+              {activeFilterCount}
+            </Badge>
+          )}
+        </Box>
+      )}
+      {isMobile ? (
+        <Drawer
+          opened={filtersOpened}
+          onClose={closeFilters}
+          title="Filters"
+          position="bottom"
+          size="min(680px, 90dvh)"
+          padding="md"
+        >
+          {filterPanel}
+        </Drawer>
+      ) : (
+        <ResponsiveSlot compact={isMobile} variant="wide">
+          <Box pos="relative" ref={desktopFilterRef}>
+            <ActionIcon
+              aria-label={filterButtonLabel}
+              variant={activeFilterCount > 0 ? 'light' : 'default'}
+              size={42}
+              onClick={toggleFilters}
+            >
+              <Filter size={18} />
+            </ActionIcon>
+            {activeFilterCount > 0 && (
+              <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
+                {activeFilterCount}
+              </Badge>
+            )}
+            {filtersOpened && (
+              <FocusTrap active>
+                <Box
+                  aria-label="Transaction filters"
+                  className="splice-floating-panel"
+                  role="dialog"
+                  p="md"
+                  pos="absolute"
+                  tabIndex={-1}
+                  top="calc(100% + 8px)"
+                  right={0}
+                  w={360}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      closeFilters()
+                    }
+                  }}
+                >
+                  <FocusTrap.InitialFocus />
+                  {filterPanel}
+                </Box>
+              </FocusTrap>
+            )}
+          </Box>
+        </ResponsiveSlot>
+      )}
     </Group>
   )
 
+  const pageActions = {
+    primary: {
+      id: 'add',
+      label: 'Add transaction',
+      icon: Plus,
+      onClick: openCreateManualTransaction,
+      onPrepare: () => {
+        void loadManualTransactionModal().catch(() => undefined)
+      },
+    },
+    secondary: [
+      {
+        id: 'bulk',
+        label: bulkModeEnabled ? 'Done selecting' : 'Bulk edit',
+        icon: ListChecks,
+        onClick: () => setBulkModeEnabled(!bulkModeEnabled),
+      },
+    ],
+  }
+
   return (
-    <Flex
-      direction="column"
-      style={{
-        height: 'calc(100vh - 60px - 2 * var(--mantine-spacing-md))',
-      }}
+    <PageLayout
+      title="Transactions"
+      actions={pageActions}
+      scroll="content"
+      contentVariant="edge-to-edge"
+      toolbar={transactionToolbar}
     >
-      <PageHeader
-        title="Transactions"
-        mb="md"
-        wrap="nowrap"
-        actions={headerActions}
-      />
       {manualModalOpened && (
         <DeferredOverlay
           label="Transaction editor"
@@ -749,130 +812,9 @@ function TransactionsPage() {
         error={deleteError}
       />
 
-      <Group className={styles.filters} gap="xs" align="center">
-        <ResponsiveSlot compact={isMobile} variant="compact">
-          <Button
-            aria-label={filterButtonLabel}
-            fullWidth
-            h="auto"
-            justify="space-between"
-            leftSection={<Filter size={20} />}
-            mih={48}
-            onClick={toggleFilters}
-            py="xs"
-            rightSection={
-              activeFilterCount > 0 ? (
-                <Badge circle size="sm">
-                  {activeFilterCount}
-                </Badge>
-              ) : null
-            }
-            variant="default"
-          >
-            <Text component="span" size="sm" style={{ whiteSpace: 'normal' }}>
-              Filters · {formatDateRangeLabel(dateRange)}
-            </Text>
-          </Button>
-        </ResponsiveSlot>
-        <ResponsiveSlot compact={isMobile} variant="wide">
-          <DateRangeControl onChange={setDateRange} value={dateRange} />
-        </ResponsiveSlot>
-
-        {isMobile ? (
-          <Drawer
-            opened={filtersOpened}
-            onClose={closeFilters}
-            title="Filters"
-            position="bottom"
-            size="min(680px, 90dvh)"
-            padding="md"
-          >
-            {filterPanel}
-          </Drawer>
-        ) : (
-          <ResponsiveSlot compact={isMobile} variant="wide">
-            <Box pos="relative" ref={desktopFilterRef}>
-              <ActionIcon
-                aria-label={filterButtonLabel}
-                variant={activeFilterCount > 0 ? 'light' : 'default'}
-                size={42}
-                onClick={toggleFilters}
-              >
-                <Filter size={18} />
-              </ActionIcon>
-              {activeFilterCount > 0 && (
-                <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
-                  {activeFilterCount}
-                </Badge>
-              )}
-              {filtersOpened && (
-                <FocusTrap active>
-                  <Box
-                    aria-label="Transaction filters"
-                    className="splice-floating-panel"
-                    role="dialog"
-                    p="md"
-                    pos="absolute"
-                    tabIndex={-1}
-                    top="calc(100% + 8px)"
-                    right={0}
-                    w={360}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Escape') {
-                        closeFilters()
-                      }
-                    }}
-                  >
-                    <FocusTrap.InitialFocus />
-                    {filterPanel}
-                  </Box>
-                </FocusTrap>
-              )}
-            </Box>
-          </ResponsiveSlot>
-        )}
-        {!isMobile && bulkModeEnabled && (
-          <TransactionBulkEditToolbar
-            categoryOptions={assignableCategoryOptions}
-            isSaving={bulkUpdateCategories.isPending}
-            loadedCount={loadedTransactionIds.length}
-            selectedCount={selectedCount}
-            selectLoadedChecked={allLoadedSelected}
-            selectLoadedIndeterminate={someLoadedSelected && !allLoadedSelected}
-            value={bulkCategoryValue}
-            onChange={setBulkCategoryValue}
-            onSave={saveBulkCategoryUpdate}
-            onToggleLoaded={toggleLoadedSelection}
-            showSelectLoaded={false}
-            variant="summary"
-          />
-        )}
-        <ResponsiveSlot compact={isMobile} variant="wide">
-          <Box ml="auto">{addTransactionAction}</Box>
-        </ResponsiveSlot>
-      </Group>
-
-      {isMobile && bulkModeEnabled && (
-        <Box mb="md">
-          <TransactionBulkEditToolbar
-            categoryOptions={assignableCategoryOptions}
-            isSaving={bulkUpdateCategories.isPending}
-            loadedCount={loadedTransactionIds.length}
-            selectedCount={selectedCount}
-            selectLoadedChecked={allLoadedSelected}
-            selectLoadedIndeterminate={someLoadedSelected && !allLoadedSelected}
-            value={bulkCategoryValue}
-            onChange={setBulkCategoryValue}
-            onSave={saveBulkCategoryUpdate}
-            onToggleLoaded={toggleLoadedSelection}
-            showSelectLoaded
-            variant="inline"
-          />
-        </Box>
-      )}
-
       <ResponsiveSlot compact={isMobile} variant="compact" fill>
         <TransactionsMobileList
+          variant="page"
           data={flatData}
           totalRows={totalRows}
           isLoading={isLoading}
@@ -927,6 +869,6 @@ function TransactionsPage() {
           />
         </DataState>
       </ResponsiveSlot>
-    </Flex>
+    </PageLayout>
   )
 }

@@ -1,6 +1,8 @@
-import { act, cleanup, render } from '@testing-library/react'
+import { useMantineTheme } from '@mantine/core'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { typographyFonts } from '../lib/design-system/typography'
 import {
   APPEARANCE_STORAGE_KEY,
   encodeAppearance,
@@ -28,6 +30,46 @@ afterEach(() => {
 })
 
 describe('server-first appearance provider', () => {
+  it('renders the saved amount font on the server and updates it on preview and cross-tab saves', () => {
+    const preference = {
+      mode: 'dark' as const,
+      accent: null,
+      monospaceAmounts: true,
+    }
+    function FontProbe() {
+      const theme = useMantineTheme()
+      return (
+        <output data-testid="amount-font">
+          {theme.other.splice['--splice-font-amount']}
+        </output>
+      )
+    }
+    const content = (
+      <AppThemeProvider authenticated initialAppearance={preference}>
+        <FontProbe />
+      </AppThemeProvider>
+    )
+    expect(renderToString(content)).toContain(typographyFonts.mono)
+    render(content)
+    expect(screen.getByTestId('amount-font').textContent).toBe(
+      typographyFonts.mono,
+    )
+    act(() => previewAppearance({ ...preference, monospaceAmounts: false }))
+    expect(screen.getByTestId('amount-font').textContent).toBe(
+      typographyFonts.body,
+    )
+    act(() =>
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: APPEARANCE_STORAGE_KEY,
+          newValue: encodeAppearance(preference),
+        }),
+      ),
+    )
+    expect(screen.getByTestId('amount-font').textContent).toBe(
+      typographyFonts.mono,
+    )
+  })
   it('includes the resolved OLED canvas in server markup', () => {
     const html = renderToString(
       <AppThemeProvider

@@ -5,6 +5,7 @@ export const mediaQueries = {
   '--data-list-layout': '(max-width: 50em)',
   '--supports-hover': '(hover: hover) and (pointer: fine)',
   '--coarse-pointer': '(pointer: coarse)',
+  '--touch-controls': '(max-width: 48em), (any-pointer: coarse)',
 } as const
 
 /** Expand our named media conditions to browser-native queries at build time. */

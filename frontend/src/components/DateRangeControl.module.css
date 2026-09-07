@@ -11,4 +11,9 @@
   .triggerButton {
     min-height: var(--splice-size-touch-input);
   }
+  .growOnMobile {
+    flex: 1 1 0;
+    width: 100%;
+    max-width: 100%;
+  }
 }

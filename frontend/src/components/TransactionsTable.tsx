@@ -90,10 +90,10 @@ function MetadataRow({
 }) {
   return (
     <Stack gap={2}>
-      <Text c="dimmed" size="xs" tt="uppercase">
+      <Text data-typography="caption" c="dimmed" tt="uppercase">
         {label}
       </Text>
-      <Text component="div" size="sm">
+      <Text data-typography="bodySmall" component="div">
         {children}
       </Text>
     </Stack>
@@ -231,9 +231,7 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
         onMouseLeave={supportsHover ? closePopover : undefined}
       >
         <Stack gap="xs">
-          <Text fw={600} size="sm">
-            Transaction details
-          </Text>
+          <Text data-typography="subsectionHeading">Transaction details</Text>
           <MetadataRow label="Display">
             {details.merchantDisplay.primary}
           </MetadataRow>
@@ -253,8 +251,8 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
               <Stack gap={2}>
                 {details.counterparties.map((counterparty) => (
                   <Text
+                    data-typography="bodySmall"
                     key={`${counterparty.name}-${counterparty.type}`}
-                    size="sm"
                   >
                     {formatCounterpartyLabel(counterparty)}
                   </Text>
@@ -295,10 +293,10 @@ function TransactionInfoPopover({ transaction }: { transaction: Transaction }) {
             <>
               <Divider />
               <Anchor
+                data-typography="bodySmall"
                 href={
                   website.startsWith('http') ? website : `https://${website}`
                 }
-                size="sm"
                 target="_blank"
               >
                 {website}
@@ -342,7 +340,11 @@ function MerchantCell({
       </Avatar>
       <Stack className={styles.merchantText} gap={1}>
         <Group gap={4} wrap="nowrap">
-          <Text className={styles.merchantPrimary} size="sm" span>
+          <Text
+            data-typography="bodySmall"
+            className={styles.merchantPrimary}
+            span
+          >
             {merchantDisplay.primary}
           </Text>
           {!readOnly && !bulkModeEnabled && (
@@ -393,7 +395,11 @@ function MerchantCell({
           )}
         </Group>
         {merchantDisplay.secondary && (
-          <Text c="dimmed" className={styles.merchantSecondary} size="xs">
+          <Text
+            data-typography="caption"
+            c="dimmed"
+            className={styles.merchantSecondary}
+          >
             {merchantDisplay.secondary}
           </Text>
         )}
@@ -411,6 +417,7 @@ function AmountCell({ row }: { row: { original: Transaction } }) {
   const formatted = formatMoneyWithSign({ value: displayAmount })
   const amountNode = (
     <Text
+      data-typography="amount"
       className={`${styles.amountText} ${
         displayAmount.sign === 'positive' ? styles.positive : styles.negative
       }`}
@@ -547,17 +554,15 @@ function ProviderCategoryHintPopover({
                 src={providerCategoryHint.iconUrl}
               />
             )}
-            <Text fw={600} size="sm">
-              {displayLabel}
-            </Text>
+            <Text data-typography="subsectionHeading">{displayLabel}</Text>
           </Group>
           {confidence && (
-            <Text c="dimmed" size="xs">
+            <Text data-typography="caption" c="dimmed">
               Provider hint · {confidence.toLowerCase()} confidence
             </Text>
           )}
           {!confidence && (
-            <Text c="dimmed" size="xs">
+            <Text data-typography="caption" c="dimmed">
               Provider hint
             </Text>
           )}
@@ -808,7 +813,11 @@ export function TransactionsTable({
                         }
                       }}
                     >
-                      <Text className={styles.dateLabel} size="sm" span>
+                      <Text
+                        data-typography="bodySmall"
+                        className={styles.dateLabel}
+                        span
+                      >
                         {reportingDateDraft
                           ? dayjs(reportingDateDraft).format('MMM D, YYYY')
                           : dateLabel}
@@ -861,9 +870,9 @@ export function TransactionsTable({
           return (
             <Group className={styles.dateCell} gap={4} wrap="nowrap">
               <Text
+                data-typography="bodySmall"
                 aria-label={`Activity date ${dateLabel}`}
                 className={styles.dateText}
-                size="sm"
               >
                 {dateLabel}
               </Text>

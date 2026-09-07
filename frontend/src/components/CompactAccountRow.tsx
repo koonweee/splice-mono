@@ -50,7 +50,7 @@ export function CompactAccountRow({
     >
       <div style={{ flex: 1, minWidth: 0 }}>
         <Group gap={6} wrap="nowrap">
-          <Text size="sm" fw={500} truncate>
+          <Text data-typography="rowTitleSmall" truncate>
             {account.customName ?? account.name}
           </Text>
           {stale && (
@@ -66,20 +66,27 @@ export function CompactAccountRow({
             </Tooltip>
           )}
         </Group>
-        <Text size="xs" c="dimmed" tt="capitalize" truncate>
+        <Text data-typography="caption" c="dimmed" tt="capitalize" truncate>
           {account.institutionName
             ? `${account.institutionName} · ${formatAccountType(account.subType || account.type)}`
             : formatAccountType(account.subType || account.type)}
         </Text>
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <Text size="sm" fw={600} data-testid="account-primary-balance">
+        <Text
+          data-typography="amountSmall"
+          data-testid="account-primary-balance"
+        >
           {balancesHidden
             ? HIDDEN_BALANCE_PLACEHOLDER
             : formatMoneyWithSign({ value: primaryBalance })}
         </Text>
         {!overview && originalBalance && (
-          <Text size="xs" c="dimmed" data-testid="account-original-balance">
+          <Text
+            data-typography="numericCaption"
+            c="dimmed"
+            data-testid="account-original-balance"
+          >
             {balancesHidden
               ? HIDDEN_BALANCE_PLACEHOLDER
               : formatMoneyWithSign({
@@ -90,9 +97,8 @@ export function CompactAccountRow({
         )}
         {!overview && (
           <Text
+            data-typography="caption"
             component="div"
-            size="xs"
-            h="1lh"
             aria-busy={comparisonLoading}
             onPointerDown={(event) => event.stopPropagation()}
           >
@@ -112,7 +118,7 @@ export function CompactAccountRow({
               </div>
             ) : (
               <ChangePercentPopover
-                size="xs"
+                textRole="caption"
                 color={getChangeColorMantine(
                   isLiability,
                   account.changePercent,
@@ -126,7 +132,7 @@ export function CompactAccountRow({
           </Text>
         )}
         {!overview && !originalBalance && (
-          <Text size="xs" style={{ visibility: 'hidden' }}>
+          <Text data-typography="caption" style={{ visibility: 'hidden' }}>
             {'\u00A0'}
           </Text>
         )}

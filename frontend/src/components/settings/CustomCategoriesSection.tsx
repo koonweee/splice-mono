@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
+import { PageToolbar } from '../PageLayout'
 import { ResponsiveSlot } from '../ResponsiveSlot'
 import { CategoriesTableSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
@@ -56,6 +57,8 @@ import {
 } from '../../lib/mobile-combobox'
 import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
+import compactStyles from './SettingsCompactRow.module.css'
+import { SettingsRowActions } from './SettingsRowActions'
 import { SettingsToolbar } from './SettingsToolbar'
 import { SettingsStatusBadge } from './SettingsStatusBadge'
 import { SettingsArchiveFilter } from './SettingsArchiveFilter'
@@ -88,7 +91,6 @@ const SELECT_COLUMN_WIDTH = 56
 const STATUS_COLUMN_WIDTH = 130
 const USED_COLUMN_WIDTH = 88
 const ACTIONS_COLUMN_WIDTH = 92
-const ACTION_ICON_SIZE = 36
 
 const tableHeaderCellStyle = {
   height: TABLE_HEADER_HEIGHT,
@@ -679,11 +681,11 @@ export function CustomCategoriesSection() {
                   ...getCategoryColorStyles(panel.category.color),
                 }}
               />
-              <Text size="sm" fw={600}>
+              <Text data-typography="subsectionHeading">
                 {getCategoryPairLabel(panel.category)}
               </Text>
             </Group>
-            <Text size="sm" c="dimmed">
+            <Text data-typography="metadata" c="dimmed">
               {panel.category.description || 'No description.'}
             </Text>
             <SettingsStatusBadge status={getStatus(panel.category)} />
@@ -752,13 +754,13 @@ export function CustomCategoriesSection() {
             withEyeDropper={false}
           />
           {panel.mode === 'edit-custom' && (
-            <Text size="xs" c="dimmed">
+            <Text data-typography="caption" c="dimmed">
               Renaming a category updates existing transactions that use it.
             </Text>
           )}
           {formDuplicateConflict && (
             <Alert color="yellow" title="Duplicate detected">
-              <Text size="sm">
+              <Text data-typography="bodySmall">
                 Category already exists:{' '}
                 {
                   getCategoryConflictFromManagementItem(formDuplicateConflict)
@@ -770,7 +772,7 @@ export function CustomCategoriesSection() {
           )}
           {(createCategory.isError || updateCategory.isError) && (
             <Alert color="yellow" title="Duplicate detected">
-              <Text size="sm">
+              <Text data-typography="bodySmall">
                 {getCategoryErrorMessage(
                   createCategory.error ?? updateCategory.error,
                 )}
@@ -806,56 +808,29 @@ export function CustomCategoriesSection() {
   ) : null
 
   function renderCategoryRowActions(category: CategoryManagementItem) {
-    const isArchived = Boolean(category.archivedAt)
-
+    const archived = Boolean(category.archivedAt)
     return (
-      <Group
-        className={tableChrome.actions}
-        gap={4}
-        justify="flex-end"
-        wrap="nowrap"
-      >
-        <Tooltip label={isArchived ? 'Category details' : 'Edit category'}>
-          <ActionIcon
-            aria-label={isArchived ? 'View category details' : 'Edit category'}
-            variant="subtle"
-            size={isMobile ? 44 : ACTION_ICON_SIZE}
-            onClick={() =>
-              !isArchived
-                ? openEditPanel(category)
-                : setPanel({
-                    mode: 'view-archived',
-                    category,
-                  })
-            }
-          >
-            {!isArchived ? <Pencil size={16} /> : <Info size={16} />}
-          </ActionIcon>
-        </Tooltip>
-        {isArchived ? (
-          <Tooltip label="Restore category">
-            <ActionIcon
-              aria-label="Restore category"
-              variant="subtle"
-              size={isMobile ? 44 : ACTION_ICON_SIZE}
-              onClick={() => archiveOrRestore([category.id], 'restore')}
-            >
-              <RotateCcw size={16} />
-            </ActionIcon>
-          </Tooltip>
-        ) : (
-          <Tooltip label="Archive category">
-            <ActionIcon
-              aria-label="Archive category"
-              variant="subtle"
-              size={isMobile ? 44 : ACTION_ICON_SIZE}
-              onClick={() => archiveOrRestore([category.id], 'archive')}
-            >
-              <Archive size={16} />
-            </ActionIcon>
-          </Tooltip>
-        )}
-      </Group>
+      <SettingsRowActions
+        label={`Actions for ${getCategoryPairLabel(category)}`}
+        actions={[
+          {
+            id: 'edit',
+            label: archived ? 'View category details' : 'Edit category',
+            icon: archived ? Info : Pencil,
+            onClick: () =>
+              archived
+                ? setPanel({ mode: 'view-archived', category })
+                : openEditPanel(category),
+          },
+          {
+            id: 'archive',
+            label: archived ? 'Restore category' : 'Archive category',
+            icon: archived ? RotateCcw : Archive,
+            onClick: () =>
+              archiveOrRestore([category.id], archived ? 'restore' : 'archive'),
+          },
+        ]}
+      />
     )
   }
 
@@ -896,42 +871,48 @@ export function CustomCategoriesSection() {
 
   function renderMobileCategoryRow(category: CategoryManagementItem) {
     return (
-      <Stack px="sm" py="sm" gap="xs">
-        <Group align="flex-start" gap="sm" wrap="nowrap">
+      <div className={compactStyles.row}>
+        <div className={compactStyles.heading}>
           <Checkbox
             aria-label={`Select ${getCategoryPairLabel(category)}`}
             checked={selectedIds.has(category.id)}
             onChange={(event) =>
               setCategorySelected(category.id, event.currentTarget.checked)
             }
-            mt={4}
           />
+          <Text
+            data-typography="sectionHeading"
+            className={compactStyles.title}
+          >
+            {getPrimaryDisplay(category)}
+          </Text>
+          {renderCategoryRowActions(category)}
+        </div>
+        <Group gap="xs" wrap="nowrap" align="flex-start">
           <Box
             aria-hidden="true"
-            mt={6}
+            mt={4}
             style={{
               ...categoryColorSwatchStyle,
               ...getCategoryColorStyles(category.color),
               flex: '0 0 auto',
             }}
           />
-          <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
-            <Text fw={700}>{getPrimaryDisplay(category)}</Text>
-            <Text c="dimmed" size="sm">
-              {getDetailedDisplay(category)}
-            </Text>
-          </Box>
+          <Text
+            data-typography="metadata"
+            c="dimmed"
+            className={compactStyles.title}
+          >
+            {getDetailedDisplay(category)}
+          </Text>
         </Group>
-        <Group justify="space-between" gap="xs" wrap="nowrap">
-          <Group gap={6}>
-            <SettingsStatusBadge status={getStatus(category)} />
-            <Text c="dimmed" size="xs">
-              {(category.transactionCount ?? 0).toLocaleString()} used
-            </Text>
-          </Group>
-          {renderCategoryRowActions(category)}
-        </Group>
-      </Stack>
+        <div className={compactStyles.metadata}>
+          <SettingsStatusBadge status={getStatus(category)} />
+          <Text data-typography="caption" c="dimmed">
+            {(category.transactionCount ?? 0).toLocaleString()} used
+          </Text>
+        </div>
+      </div>
     )
   }
 
@@ -954,10 +935,10 @@ export function CustomCategoriesSection() {
             }}
           />
           <Box style={{ minWidth: 0 }}>
-            <Text lh={1.25} size="sm" fw={600} truncate>
+            <Text data-typography="rowTitleSmall" truncate>
               {getPrimaryDisplay(row.original)}
             </Text>
-            <Text lh={1.25} size="xs" c="dimmed" truncate>
+            <Text data-typography="caption" c="dimmed" truncate>
               {getDetailedDisplay(row.original)}
             </Text>
           </Box>
@@ -1098,7 +1079,7 @@ export function CustomCategoriesSection() {
       },
     },
     renderEmptyRowsFallback: () => (
-      <Text c="dimmed" size="sm" ta="center" py="lg">
+      <Text data-typography="metadata" c="dimmed" ta="center" py="lg">
         No categories match the current filters.
       </Text>
     ),
@@ -1118,50 +1099,52 @@ export function CustomCategoriesSection() {
         hideAdd={selectedRows.length > 0}
       />
 
-      <Group align="center" gap="xs" wrap="wrap">
-        <TextInput
-          aria-label="Search categories"
-          placeholder="Search categories..."
-          value={search}
-          onChange={(event) => setSearch(event.currentTarget.value)}
-          size="md"
-          style={{ flex: '1 1 240px', minWidth: 0 }}
-        />
-        <SettingsArchiveFilter
-          checked={archivedMode}
-          onChange={setArchivedMode}
-        />
-        <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
-          <Box pos="relative">
-            <ActionIcon
-              aria-label={filterButtonLabel}
-              variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
-              size={48}
-              onClick={toggleFilters}
-            >
-              <Filter size={20} />
-            </ActionIcon>
-            {hiddenActiveFilterCount > 0 && (
-              <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
-                {hiddenActiveFilterCount}
-              </Badge>
-            )}
-          </Box>
-        </ResponsiveSlot>
-        <ResponsiveSlot compact={Boolean(isMobile)} variant="wide">
-          <>
-            <CategorySelect
-              aria-label="Primary category"
-              value={primaryFilter}
-              onChange={setPrimaryFilter}
-              data={primaryFilterData}
-              placeholder="Primary category"
-              size="md"
-              w={220}
-            />
-          </>
-        </ResponsiveSlot>
-      </Group>
+      <PageToolbar section>
+        <Group w="100%" align="center" gap="xs" wrap="wrap">
+          <TextInput
+            aria-label="Search categories"
+            placeholder="Search categories..."
+            value={search}
+            onChange={(event) => setSearch(event.currentTarget.value)}
+            size="md"
+            style={{ flex: '1 1 240px', minWidth: 0 }}
+          />
+          <SettingsArchiveFilter
+            checked={archivedMode}
+            onChange={setArchivedMode}
+          />
+          <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
+            <Box pos="relative">
+              <ActionIcon
+                aria-label={filterButtonLabel}
+                variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
+                size={48}
+                onClick={toggleFilters}
+              >
+                <Filter size={20} />
+              </ActionIcon>
+              {hiddenActiveFilterCount > 0 && (
+                <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
+                  {hiddenActiveFilterCount}
+                </Badge>
+              )}
+            </Box>
+          </ResponsiveSlot>
+          <ResponsiveSlot compact={Boolean(isMobile)} variant="wide">
+            <>
+              <CategorySelect
+                aria-label="Primary category"
+                value={primaryFilter}
+                onChange={setPrimaryFilter}
+                data={primaryFilterData}
+                placeholder="Primary category"
+                size="md"
+                w={220}
+              />
+            </>
+          </ResponsiveSlot>
+        </Group>
+      </PageToolbar>
 
       <Drawer
         opened={Boolean(isMobile) && filtersOpened}
@@ -1181,7 +1164,7 @@ export function CustomCategoriesSection() {
             justify="space-between"
             wrap={isMobile ? 'wrap' : 'nowrap'}
           >
-            <Text size="sm" fw={600}>
+            <Text data-typography="subsectionHeading">
               {selectedRows.length} selected
             </Text>
             <Group
@@ -1232,12 +1215,12 @@ export function CustomCategoriesSection() {
           {lastBulkResult && (
             <Alert color="yellow" title="Some categories were skipped" mt="xs">
               <Stack gap={4}>
-                <Text size="sm">
+                <Text data-typography="bodySmall">
                   {lastBulkResult.updated} updated,{' '}
                   {lastBulkResult.skipped.length} skipped.
                 </Text>
                 {lastBulkResult.skipped.map((item) => (
-                  <Text key={item.categoryId} size="xs">
+                  <Text data-typography="caption" key={item.categoryId}>
                     {categoryLabelById.get(item.categoryId) ??
                       `Category ${item.categoryId}`}
                     : {getSkippedReasonLabel(item.reason)}

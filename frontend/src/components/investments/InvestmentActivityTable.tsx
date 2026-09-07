@@ -65,7 +65,7 @@ export function InvestmentActivityTable({
 
   if (activity.length === 0) {
     return (
-      <Text c="dimmed" size="sm">
+      <Text data-typography="metadata" c="dimmed">
         No investment activity found.
       </Text>
     )
@@ -81,13 +81,13 @@ export function InvestmentActivityTable({
           <Box key={row.id} className={styles.mobileRow} px="xs" py="sm">
             <Group justify="space-between" align="flex-start" wrap="nowrap">
               <Box style={{ minWidth: 0 }}>
-                <Text fw={600} size="sm" truncate>
+                <Text data-typography="rowTitleSmall" truncate>
                   {getSecurityLabel(row)}
                 </Text>
-                <Text c="dimmed" size="xs">
+                <Text data-typography="caption" c="dimmed">
                   {formatCalendarDate(row.activityDate)} · {formatSubtype(row)}
                 </Text>
-                <Text c="dimmed" size="xs">
+                <Text data-typography="caption" c="dimmed">
                   {formatInvestmentQuantity(row.quantity)} @{' '}
                   {formatInvestmentQuote({
                     value: row.price,
@@ -95,7 +95,11 @@ export function InvestmentActivityTable({
                   })}
                 </Text>
               </Box>
-              <Text fw={600} size="sm" ta="right" style={{ flexShrink: 0 }}>
+              <Text
+                data-typography="amountSmall"
+                ta="right"
+                style={{ flexShrink: 0 }}
+              >
                 {formatCashImpact(row, balancesHidden)}
               </Text>
             </Group>
@@ -129,7 +133,7 @@ export function InvestmentActivityTable({
             <Table.Tr key={row.id}>
               <Table.Td>{formatCalendarDate(row.activityDate)}</Table.Td>
               <Table.Td className={styles.securityCell}>
-                <Text size="sm" truncate>
+                <Text data-typography="bodySmall" truncate>
                   {getSecurityLabel(row)}
                 </Text>
               </Table.Td>

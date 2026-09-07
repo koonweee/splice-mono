@@ -15,13 +15,13 @@ export function ResponsiveSlot({
   variant: 'compact' | 'wide'
   children: ReactNode
   fill?: boolean
-  breakpoint?: 'compact' | 'data-list'
+  breakpoint?: 'compact' | 'data-list' | 'touch'
 }) {
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => setHydrated(true), [])
   return (
     <div
-      className={`${styles[variant]} ${fill ? styles.fill : ''} ${breakpoint === 'data-list' ? styles.dataList : ''}`}
+      className={`${styles[variant]} ${fill ? styles.fill : ''} ${breakpoint === 'data-list' ? styles.dataList : breakpoint === 'touch' ? styles.touch : ''}`}
     >
       {!hydrated || compact === (variant === 'compact') ? children : null}
     </div>

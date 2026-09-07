@@ -72,7 +72,7 @@ export function InvestmentHoldingsTable({
 
   if (holdings.length === 0) {
     return (
-      <Text c="dimmed" size="sm">
+      <Text data-typography="metadata" c="dimmed">
         No holdings found.
       </Text>
     )
@@ -96,14 +96,14 @@ export function InvestmentHoldingsTable({
           <Box key={holding.id} className={styles.mobileRow} px="xs" py="sm">
             <Group justify="space-between" align="flex-start" wrap="nowrap">
               <Box style={{ minWidth: 0 }}>
-                <Text fw={600} size="sm" truncate>
+                <Text data-typography="rowTitleSmall" truncate>
                   {getSecurityLabel(holding)}
                 </Text>
-                <Text c="dimmed" size="xs">
+                <Text data-typography="caption" c="dimmed">
                   {getTickerLabel(holding)} ·{' '}
                   {formatInvestmentQuantity(holding.quantity)}
                 </Text>
-                <Text c="dimmed" size="xs">
+                <Text data-typography="caption" c="dimmed">
                   {balancesHidden
                     ? HIDDEN_BALANCE_PLACEHOLDER
                     : formatInvestmentQuote({
@@ -113,13 +113,13 @@ export function InvestmentHoldingsTable({
                       })}
                 </Text>
                 {quoteAsOf && (
-                  <Text c="dimmed" size="xs">
+                  <Text data-typography="caption" c="dimmed">
                     Price as of {formatDateTime(quoteAsOf)}
                   </Text>
                 )}
               </Box>
               <Box ta="right" style={{ flexShrink: 0 }}>
-                <Text fw={600} size="sm">
+                <Text data-typography="amountSmall">
                   {balancesHidden
                     ? HIDDEN_BALANCE_PLACEHOLDER
                     : formatInvestmentValue({
@@ -129,7 +129,7 @@ export function InvestmentHoldingsTable({
                       })}
                 </Text>
                 {showNormalized && normalizedCurrency && (
-                  <Text c="dimmed" size="xs">
+                  <Text data-typography="caption" c="dimmed">
                     {balancesHidden
                       ? HIDDEN_BALANCE_PLACEHOLDER
                       : formatInvestmentValue({
@@ -184,11 +184,11 @@ export function InvestmentHoldingsTable({
                 return (
                   <Table.Tr key={holding.id}>
                     <Table.Td className={styles.securityCell}>
-                      <Text size="sm" truncate>
+                      <Text data-typography="bodySmall" truncate>
                         {getSecurityLabel(holding)}
                       </Text>
                       {(holding.security.marketIdentifierCode || quoteAsOf) && (
-                        <Text c="dimmed" size="xs">
+                        <Text data-typography="caption" c="dimmed">
                           {holding.security.marketIdentifierCode
                             ? `${holding.security.marketIdentifierCode}${quoteAsOf ? ' · ' : ''}`
                             : ''}

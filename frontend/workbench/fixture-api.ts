@@ -38,6 +38,7 @@ import type {
 } from '../src/api/models'
 
 export type FixtureOptions = {
+  longContent?: boolean
   empty?: boolean
   manualHoldings?: boolean
   appearance?: unknown
@@ -51,6 +52,37 @@ export type FixtureOptions = {
 export function createFixtureApi(options: FixtureOptions = {}) {
   let manualResponseLost = false
   const accounts = structuredClone(options.empty ? [] : fixtureAccounts)
+  if (options.longContent && accounts.length) {
+    for (const [index, status] of (
+      ['OK', 'PENDING_REAUTH'] as const
+    ).entries()) {
+      const id = `density-linked-${index}`
+      accounts.push({
+        ...structuredClone(accounts[1]),
+        id,
+        name: 'International everyday account with a long provider name',
+        customName: index
+          ? 'Emergency savings at the overseas institution'
+          : null,
+        bankLinkId: id,
+        syncedAt: FIXTURE_NOW,
+        bankLink: {
+          id,
+          providerName: 'plaid',
+          institutionName: 'Example connected institution',
+          accountIds: [id],
+          status,
+          statusDate: FIXTURE_NOW,
+          statusBody: index
+            ? { reason: 'The connection needs renewed consent.' }
+            : undefined,
+          createdAt: FIXTURE_NOW,
+          updatedAt: FIXTURE_NOW,
+          userId: fixtureUser.id,
+        },
+      })
+    }
+  }
   const investmentStore = createInvestmentStore(
     accounts,
     options.manualHoldings,
@@ -60,22 +92,44 @@ export function createFixtureApi(options: FixtureOptions = {}) {
     options.appearance ?? user.settings.appearance,
   ).preference
   const categories = structuredClone(options.empty ? [] : fixtureCategories)
+  if (options.longContent && categories.length)
+    categories[0].detailed =
+      'Groceries and household essentials from neighborhood markets'
   const transactions = structuredClone(options.empty ? [] : fixtureTransactions)
   const notificationStore = createNotificationStore(
     options.empty,
     () => transactions.filter((item) => !item.categoryId).length,
   )
   const categoryStore = createCategoryStore(categories, transactions)
-  const ruleStore = createRuleStore(categories, transactions, options.empty)
+  const ruleStore = createRuleStore(
+    categories,
+    transactions,
+    options.empty,
+    options.longContent,
+  )
   const transactionBulkStore = createTransactionBulkStore(
     transactions,
     categories,
   )
   const settingsStore = createSettingsStore({
+    longContent: options.longContent,
     empty: options.empty,
     accounts,
     categories,
   })
+  const analysis = structuredClone(fixtureAnalysis)
+  if (options.longContent) {
+    const scale = (value: string) => (BigInt(value) * 100000n).toString()
+    analysis.inflows.forEach((item) => {
+      item.totalAmount = scale(item.totalAmount)
+    })
+    analysis.outflows.forEach((item) => {
+      item.totalAmount = scale(item.totalAmount)
+    })
+    analysis.totalInflow = scale(analysis.totalInflow)
+    analysis.totalOutflow = scale(analysis.totalOutflow)
+    analysis.netFlow = scale(analysis.netFlow)
+  }
   const reads: Record<string, (config: AxiosRequestConfig) => unknown> = {
     '/user/me': () => user,
     '/account': () => accounts,
@@ -158,7 +212,7 @@ export function createFixtureApi(options: FixtureOptions = {}) {
             totalOutflow: '0',
             netFlow: '0',
           }
-        : fixtureAnalysis,
+        : analysis,
     '/transaction-analysis/audit': () => ({
       startDate: fixtureAnalysis.startDate,
       endDate: fixtureAnalysis.endDate,
@@ -433,6 +487,7 @@ export function setTransactionRefreshFailure(failing: boolean) {
 }
 export const axios = createFixtureApi({
   empty: params.get('state') === 'empty',
+  longContent: params.get('state') === 'long-content',
   manualHoldings:
     params.get('example') === 'account-dialogs' &&
     params.get('state') === 'holdings',

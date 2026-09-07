@@ -11,10 +11,10 @@ function NotFoundPage() {
     <Container size="sm" py="xl">
       <Stack align="center" gap="lg">
         <AlertCircle size={64} color="var(--mantine-color-gray-5)" />
-        <Title order={1} ta="center">
+        <Title data-typography="pageTitle" order={1} ta="center">
           Page not found
         </Title>
-        <Text c="dimmed" ta="center" size="lg">
+        <Text data-typography="lead" c="dimmed" ta="center">
           The page you're looking for doesn't exist or has been moved.
         </Text>
         <Button

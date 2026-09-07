@@ -23,9 +23,8 @@
   border-bottom: 1px solid var(--splice-border);
   background: var(--splice-surface-muted);
   color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
-  font-weight: 700;
   text-transform: uppercase;
+  @splice-type captionStrong;
 }
 
 .row {
@@ -66,8 +65,7 @@
   border: 1px solid var(--mantine-color-default-border);
   background: var(--splice-surface-avatar);
   color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
-  font-weight: 700;
+  @splice-type captionStrong;
 }
 
 .rowDetails {
@@ -86,14 +84,14 @@
 
 .merchant {
   overflow-wrap: anywhere;
-  font-weight: 650;
+  @splice-type rowTitleSmall;
 }
 
 .meta {
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
+  @splice-type caption;
 }
 
 .categoryLine {
@@ -118,9 +116,9 @@
 
 .amount {
   align-self: start;
-  font-weight: 700;
   text-align: right;
   white-space: nowrap;
+  @splice-type amountSmall;
 }
 
 .rowAside {
@@ -130,17 +128,17 @@
 }
 
 .drawerAmount {
-  font-weight: 750;
+  @splice-type amountLarge;
 }
 
 .reportingDateInput {
-  line-height: calc(var(--input-size) - 2px);
+  @splice-type nativeDateInput;
   text-align: left;
 }
 
 .reportingDateInput::-webkit-date-and-time-value {
+  @splice-type nativeDateInput;
   min-height: calc(var(--input-size) - 2px);
-  line-height: calc(var(--input-size) - 2px);
   text-align: left;
 }
 
@@ -208,5 +206,26 @@
   .drilldownList .row {
     padding-right: 0;
     padding-left: 0;
+  }
+}
+
+/* The page list reaches the shell edges while content keeps its existing inset.
+   Dialog/drilldown lists remain contained by their own layout. */
+@media (--compact-layout) {
+  .pageList .dateHeader {
+    padding-inline: calc(var(--app-shell-padding) + 12px);
+  }
+
+  .pageList .row {
+    padding-inline: var(--app-shell-padding)
+      calc(var(--app-shell-padding) + 4px);
+  }
+
+  .pageList .row.selectedRow {
+    background: var(--splice-selected);
+  }
+
+  .pageList .footer {
+    padding-inline: calc(var(--app-shell-padding) + 12px);
   }
 }

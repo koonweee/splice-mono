@@ -418,12 +418,12 @@ export function ManualTransactionModal({
               role="alert"
             >
               <Stack gap="xs">
-                <Text size="sm">
+                <Text data-typography="bodySmall">
                   The server may have saved this entry. Your draft is still
                   here. Check saved entries before trying again.
                 </Text>
                 {uncertain.matches !== undefined && (
-                  <Text size="sm">
+                  <Text data-typography="bodySmall">
                     {uncertain.matches > 0
                       ? `${uncertain.matches} saved ${uncertain.matches === 1 ? 'entry matches' : 'entries match'} these details.`
                       : 'No match in the latest results. A delayed save may still finish.'}

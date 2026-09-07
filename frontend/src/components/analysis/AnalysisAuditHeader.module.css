@@ -2,6 +2,6 @@
   .manageButton {
     height: var(--button-height-md);
     padding-inline: var(--button-padding-x-md);
-    font-size: var(--mantine-font-size-md);
+    @splice-type control;
   }
 }

@@ -32,7 +32,9 @@ class FeatureErrorBoundary extends Component<
           title={`${this.props.label} could not load`}
         >
           <Stack gap="sm">
-            <Text size="sm">Reload the page to try again.</Text>
+            <Text data-typography="bodySmall">
+              Reload the page to try again.
+            </Text>
             <Button
               variant="light"
               onClick={() =>

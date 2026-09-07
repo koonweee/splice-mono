@@ -12,6 +12,13 @@
   transition: background-color var(--splice-motion-quick) ease;
 }
 
+@media (--touch-controls) {
+  .root {
+    min-height: var(--splice-size-touch-target);
+    touch-action: manipulation;
+  }
+}
+
 .root[data-pressed='true'] {
   background: var(
     --pressable-feedback-background,

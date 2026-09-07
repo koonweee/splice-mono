@@ -1,4 +1,6 @@
 import { DEFAULT_THEME, createTheme } from '@mantine/core'
+import { typographyFonts, typographyScale } from './typography'
+import { BASES, NEUTRAL_GRAY } from './bases'
 import { components } from './components'
 import type { MantineColorsTuple } from '@mantine/core'
 
@@ -6,6 +8,7 @@ export type AppearanceMode = 'light' | 'dark' | 'oled'
 export type AppearancePreference = {
   mode: AppearanceMode
   accent: string | null
+  monospaceAmounts?: boolean
 }
 export const DEFAULT_APPEARANCE: AppearancePreference = {
   mode: 'dark',
@@ -21,7 +24,9 @@ export const ACCENT_SWATCHES = [
 
 export function parseAppearance(value: unknown): AppearancePreference | null {
   if (!value || typeof value !== 'object') return null
-  const { mode, accent } = value as Record<string, unknown>
+  const { mode, accent, monospaceAmounts } = value as Record<string, unknown>
+  if (monospaceAmounts !== undefined && typeof monospaceAmounts !== 'boolean')
+    return null
   if (mode !== 'light' && mode !== 'dark' && mode !== 'oled') return null
   if (
     accent !== null &&
@@ -30,6 +35,7 @@ export function parseAppearance(value: unknown): AppearancePreference | null {
     return null
   return {
     mode,
+    ...(monospaceAmounts ? { monospaceAmounts: true } : {}),
     accent: typeof accent === 'string' ? accent.toLowerCase() : null,
   }
 }
@@ -102,28 +108,25 @@ export function resolveAppearance(input: unknown) {
   const preference = parseAppearance(input) ?? { ...DEFAULT_APPEARANCE }
   const light = preference.mode === 'light'
   const oled = preference.mode === 'oled'
-  const seed = preference.accent ?? (light ? '#626b77' : '#a6adb7')
+  const base = BASES[preference.mode]
+  const seed = preference.accent ?? base.action
+  // One strength adjustment for personal accent mixtures, including feedback.
+  const accentMix = (color: string, amount: number) =>
+    mixColor(color, seed, amount * (preference.accent === null ? 1 : 1.25))
   const tint = (color: string, amount: number) =>
-    preference.accent === null ? color : mixColor(color, seed, amount)
-  const canvas = oled
-    ? '#000000'
-    : tint(light ? '#f5f6f7' : '#191c21', light ? 0.035 : 0.06)
+    preference.accent === null ? color : accentMix(color, amount * 0.75)
+  const canvas = oled ? base.canvas : tint(base.canvas, light ? 0.035 : 0.06)
   const raised = tint(
-    light ? '#ffffff' : oled ? '#111315' : '#24282e',
-    light ? 0.025 : 0.06,
+    base.raised,
+    0.08, // 7.5% after accent strength and surface attenuation.
   )
-  const muted = tint(
-    light ? '#edf0f2' : oled ? '#191c20' : '#20242a',
-    light ? 0.035 : 0.065,
-  )
-  const control = tint(
-    light ? '#ffffff' : oled ? '#202328' : '#2b3037',
-    light ? 0.03 : 0.08,
-  )
-  const text = light ? '#20252b' : '#e6e9ed'
+  const muted = tint(base.muted, light ? 0.035 : 0.065)
+  const control = tint(base.control, light ? 0.03 : 0.08)
+  const interfaceHover = accentMix(raised, light ? 0.08 : 0.1)
+  const text = base.text
   const dimmed = readableColor(
-    light ? '#606975' : '#a8b0bc',
-    [canvas, raised, muted, control],
+    base.dimmed,
+    [canvas, raised, muted, control, interfaceHover],
     4.5,
   )
   const action = readableColor(seed, [canvas, raised, control], 4.5)
@@ -131,9 +134,13 @@ export function resolveAppearance(input: unknown) {
     contrastRatio(action, '#000000') >= contrastRatio(action, '#ffffff')
       ? '#000000'
       : '#ffffff'
-  const selected = mixColor(raised, seed, light ? 0.15 : 0.19)
-  const selectedHover = mixColor(raised, seed, light ? 0.22 : 0.26)
-  const selectedText = readableColor(action, [selected, selectedHover], 4.5)
+  const selected = accentMix(raised, light ? 0.15 : 0.19)
+  const selectedText = readableColor(action, [selected], 4.5)
+  const selectedHover = readableColor(
+    accentMix(raised, light ? 0.22 : 0.26),
+    [selectedText],
+    4.5,
+  )
   const chart = readableColor(seed, [canvas], 3)
   const border = mixColor(raised, text, light ? 0.16 : 0.14)
   const separator = mixColor(raised, text, light ? 0.09 : 0.075)
@@ -162,7 +169,7 @@ export function resolveAppearance(input: unknown) {
   const dark = tuple([
     text,
     dimmed,
-    '#858e9b',
+    '#8d8d8d',
     controlBorder,
     control,
     control,
@@ -195,7 +202,7 @@ export function resolveAppearance(input: unknown) {
         'status-success': '#2b8a3e',
         'status-warning': '#e67700',
         'status-danger': '#c92a2a',
-        'status-neutral': '#868e96',
+        'status-neutral': '#8e8e8e',
         'status-info': '#1971c2',
         'status-rule': '#7950f2',
         'provider-plaid': '#e64980',
@@ -204,7 +211,7 @@ export function resolveAppearance(input: unknown) {
       }).flatMap(([role, color]) => {
         // Status identity and its contrast are independent of the user's accent.
         const background = mixColor(
-          light ? '#ffffff' : '#191c21',
+          light ? BASES.light.raised : BASES.dark.canvas,
           color,
           light ? 0.12 : 0.2,
         )
@@ -272,10 +279,15 @@ export function resolveAppearance(input: unknown) {
     ),
     '--splice-row-hover': mixColor(raised, text, 0.035),
     '--splice-table-hover': mixColor(raised, text, 0.025),
+    '--splice-control': control,
+    '--splice-hover': interfaceHover,
     '--splice-selected': selected,
     '--splice-selected-hover': selectedHover,
     '--splice-group-header': muted,
     '--splice-chart-color': chart,
+    '--splice-font-amount': preference.monospaceAmounts
+      ? typographyFonts.mono
+      : typographyFonts.body,
     '--splice-focus': focus,
     '--splice-control-border': controlBorder,
     // Semantic meanings are independent of the user's accent.
@@ -288,6 +300,9 @@ export function resolveAppearance(input: unknown) {
     colors,
     variables,
     theme: createTheme({
+      fontSizes: typographyScale,
+      fontFamily: typographyFonts.body,
+      fontFamilyMonospace: typographyFonts.mono,
       primaryColor: 'brand',
       primaryShade: light ? 6 : 4,
       autoContrast: true,
@@ -296,7 +311,7 @@ export function resolveAppearance(input: unknown) {
       colors: {
         brand,
         dark: light ? DEFAULT_THEME.colors.dark : dark,
-        gray: DEFAULT_THEME.colors.gray,
+        gray: tuple([...NEUTRAL_GRAY]),
       },
       components,
       other: { splice: variables },

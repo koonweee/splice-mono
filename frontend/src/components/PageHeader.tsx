@@ -1,5 +1,4 @@
 import { Group, Title } from '@mantine/core'
-import styles from './PageHeader.module.css'
 import type { GroupProps } from '@mantine/core'
 import type { ReactNode } from 'react'
 
@@ -23,7 +22,7 @@ export function PageHeader({
   return (
     <Group align={align} justify="space-between" mb={mb} wrap={wrap}>
       <Group gap={6} wrap="nowrap">
-        <Title order={1} className={styles.title}>
+        <Title data-typography="pageTitle" order={1}>
           {title}
         </Title>
         {titleAccessory}

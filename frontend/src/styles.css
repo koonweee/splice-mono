@@ -1,3 +1,5 @@
+@splice-typography;
+
 html {
   --splice-safe-area-top: env(safe-area-inset-top, 0px);
   --splice-safe-area-right: env(safe-area-inset-right, 0px);
@@ -17,11 +19,6 @@ body[data-scroll-locked][data-scroll-locked] {
   margin-right: 0 !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-  font-family:
-    source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 .splice-button-root,
@@ -63,7 +60,7 @@ code {
 
 .splice-badge-root[data-size='xs'] {
   min-height: 18px;
-  font-size: 9px;
+  @splice-type badge;
 }
 
 .splice-paper-root {
@@ -110,15 +107,19 @@ code {
 }
 
 .splice-overlay-title {
-  font-weight: 700;
+  @splice-type dialogTitle;
 }
 
-.splice-input-input,
-.splice-button-root[data-variant='default'] {
-  border-color: var(
-    --splice-control-border,
-    var(--mantine-color-default-border)
-  );
+.splice-button-root[data-variant='default'],
+.splice-button-root[data-variant='outline'],
+.splice-action-icon-root[data-variant='default'],
+.splice-action-icon-root[data-variant='outline'] {
+  border-color: transparent;
+}
+
+/* Keep the border width for stable sizing; reveal it for focus and errors. */
+.splice-input-input:not([data-error]):not(:focus):not(:focus-within) {
+  border-color: transparent;
 }
 
 .splice-input-input:focus,
@@ -158,7 +159,7 @@ code {
 }
 
 .splice-navlink-root[data-active] .splice-navlink-label {
-  font-weight: 600;
+  @splice-type control;
 }
 
 .splice-tabs-list {
@@ -170,7 +171,7 @@ code {
 }
 
 .splice-tabs-tab[data-active] {
-  font-weight: 600;
+  @splice-type control;
 }
 
 .splice-tooltip {
@@ -183,12 +184,12 @@ code {
   select,
   textarea,
   .mantine-Input-input {
-    font-size: var(--splice-size-mobile-input-font) !important;
+    @splice-type input;
   }
 
   .splice-input-input {
     min-height: var(--splice-size-touch-input);
-    font-size: var(--splice-size-mobile-input-font);
+    @splice-type input;
   }
 
   .splice-segmented-control-root {
@@ -200,7 +201,7 @@ code {
     min-height: var(--splice-size-touch-target);
     align-items: center;
     justify-content: center;
-    font-size: var(--splice-size-mobile-input-font);
+    @splice-type control;
   }
 }
 
@@ -229,5 +230,208 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .mantine-Skeleton-root::after {
     animation: none;
+  }
+}
+
+/* Interface surfaces use appearance roles in every base mode. Status colors stay
+   separate; disabled controls retain Mantine's disabled treatment. */
+.splice-paper-root:not([data-with-border]),
+.splice-overlay-header {
+  background: var(--splice-surface-overlay);
+}
+
+.splice-input-input:not(:disabled):not([data-disabled]):not(
+    [data-variant='unstyled']
+  ) {
+  background-color: var(--splice-control);
+}
+
+.splice-menu-item {
+  --menu-item-hover: var(--splice-hover);
+}
+
+.splice-segmented-control-root {
+  background: var(--splice-surface-muted);
+}
+.splice-segmented-control-indicator {
+  background: var(--splice-selected);
+}
+.splice-segmented-control-label[data-active]:not([data-disabled]) {
+  color: var(--mantine-primary-color-light-color);
+}
+
+@media (--supports-hover) {
+  .splice-combobox-option:not([data-combobox-selected]):not(
+      [data-combobox-disabled]
+    ):hover,
+  .splice-navlink-root:not([data-active]):not([aria-current='page']):not(
+      [data-disabled]
+    ):hover,
+  .splice-close-button:not(:disabled):not([data-disabled]):hover {
+    background-color: var(--splice-hover);
+  }
+}
+.splice-combobox-option:not([data-combobox-selected]):not(
+    [data-combobox-disabled]
+  ):active,
+.splice-navlink-root:not([data-active]):not([aria-current='page']):not(
+    [data-disabled]
+  ):active,
+.splice-close-button:not(:disabled):not([data-disabled]):active {
+  background-color: var(--splice-hover);
+}
+
+@media (--supports-hover) {
+  .splice-calendar-control:not(:disabled):not([data-disabled]):not(
+      [data-static]
+    ):not([data-selected]):not([data-in-range]):hover {
+    background-color: var(--splice-hover);
+  }
+}
+.splice-calendar-control:not(:disabled):not([data-disabled]):not(
+    [data-static]
+  ):not([data-selected]):not([data-in-range]):active {
+  background-color: var(--splice-hover);
+}
+
+/* Touch geometry is independent of visual density. Include hybrid devices. */
+@media (--touch-controls) {
+  .splice-button-root,
+  .splice-action-icon-root,
+  .splice-close-button,
+  .splice-burger-root,
+  .splice-menu-item,
+  .splice-combobox-option,
+  .splice-navlink-root,
+  .splice-tabs-tab,
+  .splice-calendar-control,
+  .splice-segmented-control-label,
+  .splice-touch-target {
+    min-height: var(--splice-size-touch-target) !important;
+    min-width: var(--splice-size-touch-target);
+    touch-action: manipulation;
+  }
+
+  .splice-action-icon-root,
+  .splice-close-button,
+  .splice-burger-root {
+    flex-shrink: 0;
+  }
+
+  .splice-button-root svg.lucide,
+  .splice-action-icon-root svg.lucide,
+  .splice-menu-item svg.lucide,
+  .splice-navlink-root svg.lucide {
+    width: var(--splice-size-control-icon);
+    height: var(--splice-size-control-icon);
+    flex-shrink: 0;
+  }
+
+  .splice-input-input {
+    min-height: var(--splice-size-touch-input) !important;
+    @splice-type input;
+  }
+
+  /* Reserve space for clear/reveal buttons rather than covering input text. */
+  .mantine-Input-wrapper:has(
+    .mantine-Input-section[data-position='right'] button
+  ) {
+    --input-right-section-width: var(--splice-size-touch-input);
+  }
+  .mantine-Input-section[data-position='right']:has(button) {
+    width: var(--splice-size-touch-input);
+  }
+
+  .splice-choice-body {
+    min-height: var(--splice-size-touch-target);
+    min-width: var(--splice-size-touch-target);
+    align-items: center;
+  }
+  .splice-choice-label {
+    min-height: var(--splice-size-touch-target);
+    display: flex;
+    align-items: center;
+  }
+  .splice-inline-control-root {
+    min-height: var(--splice-size-touch-target);
+    min-width: var(--splice-size-touch-target);
+  }
+
+  /* Tiny stacked spinners are redundant with typing; keep the field compact. */
+  .mantine-NumberInput-controls {
+    display: none;
+  }
+  .mantine-NumberInput-root .mantine-Input-wrapper {
+    --input-right-section-width: 0px;
+  }
+}
+
+@media (--touch-controls) {
+  /* 34px pill artwork within a 44px target; no change to the range row height. */
+  .splice-period-button {
+    position: relative;
+    background: transparent !important;
+  }
+  .splice-period-button::before {
+    filter: none;
+    transform: none;
+    opacity: 1;
+    content: '';
+    position: absolute;
+    inset: 4px 0;
+    border-radius: inherit;
+    background: var(--button-bg);
+    pointer-events: none;
+  }
+  .splice-period-button .mantine-Button-inner {
+    position: relative;
+  }
+  .splice-period-button:active::before {
+    background: var(--button-hover);
+  }
+}
+@media (--supports-hover) {
+  .splice-period-button:hover::before {
+    background: var(--button-hover);
+  }
+}
+
+@media (--touch-controls) {
+  .splice-action-icon-root.splice-action-icon-root,
+  .splice-close-button.splice-close-button {
+    min-width: var(--splice-size-touch-target);
+  }
+  .mantine-Pill-root:has(button) {
+    min-height: var(--splice-size-touch-target);
+  }
+}
+
+.splice-change-trigger {
+  display: block;
+}
+@media (--touch-controls) {
+  .splice-change-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .mantine-Input-wrapper:has(
+    .mantine-Input-section[data-position='left'] button
+  ) {
+    --input-left-section-width: var(--splice-size-touch-input);
+  }
+  .mantine-Input-section[data-position='left']:has(button) {
+    width: var(--splice-size-touch-input);
+  }
+}
+
+@media (--touch-controls) {
+  .splice-action-icon-root .mantine-ActionIcon-icon > svg,
+  .splice-close-button > svg,
+  .splice-button-root .mantine-Button-section > svg,
+  .splice-menu-item .mantine-Menu-itemSection > svg {
+    width: var(--splice-size-control-icon);
+    height: var(--splice-size-control-icon);
+    flex-shrink: 0;
   }
 }

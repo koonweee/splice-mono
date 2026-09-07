@@ -12,7 +12,11 @@ export function appearanceEqual(
   a: AppearancePreference,
   b: AppearancePreference,
 ) {
-  return a.mode === b.mode && a.accent === b.accent
+  return (
+    a.mode === b.mode &&
+    a.accent === b.accent &&
+    Boolean(a.monospaceAmounts) === Boolean(b.monospaceAmounts)
+  )
 }
 export function decodeAppearance(
   value: string | null | undefined,

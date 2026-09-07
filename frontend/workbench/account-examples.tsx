@@ -20,6 +20,10 @@ function AccountOverview({ state, masked }: ExampleProps) {
   return (
     <Stack>
       <Text role="status">{selected}</Text>
+      <Text data-typography="metadata" c="dimmed">
+        Hover or tap a group percentage to reveal its total; change percentages
+        reveal the change amount. Mask balances to check both disclosures.
+      </Text>
       <AccountSection
         title="Assets"
         accounts={
@@ -178,6 +182,7 @@ export const accountExamples = [
       'CompactAccountRow',
       'AccountCard',
       'ChangePercentPopover',
+      'PercentAmountPopover',
       'Pressable',
     ],
   },

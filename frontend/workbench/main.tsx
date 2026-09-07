@@ -33,6 +33,13 @@ window.addEventListener('workbench:request-blocked', reportBlockedRequest)
 const params = new URLSearchParams(location.search)
 const initialAppearance = appearanceFromSearch(location.search)
 const modes = ['light', 'dark', 'oled']
+const pageIds = [
+  'page-home',
+  'page-accounts',
+  'page-transactions',
+  'page-analysis',
+  'page-settings',
+]
 const reduced = params.get('motion') === 'reduce'
 if (reduced) {
   const match = window.matchMedia.bind(window)
@@ -77,6 +84,7 @@ function Preview() {
 }
 
 function Workbench() {
+  const [allPages, setAllPages] = useState(params.get('view') === 'pages')
   const [search, setSearch] = useState('')
   const [exampleId, setExample] = useState(params.get('example') ?? 'controls')
   const [tab, setTab] = useState<string>(
@@ -92,6 +100,7 @@ function Workbench() {
   const [state, setState] = useState(params.get('state') ?? 'ready')
   const [width, setWidth] = useState(params.get('width') ?? '390')
   const [masked, setMasked] = useState(params.get('masked') === 'true')
+  const [monospace, setMonospace] = useState(params.get('monospace') === 'true')
   const [motion, setMotion] = useState(reduced)
   const [latency, setLatency] = useState(params.get('latency') ?? '0')
   const [failure, setFailure] = useState(params.get('failure') ?? 'none')
@@ -99,6 +108,7 @@ function Workbench() {
   const example =
     examples.find((entry) => entry.id === exampleId) ?? examples[0]
   const next = new URLSearchParams({
+    view: allPages ? 'pages' : 'component',
     example: example.id,
     tab,
     mode,
@@ -106,21 +116,24 @@ function Workbench() {
     state,
     width,
     masked: String(masked),
+    monospace: String(monospace),
     motion: motion ? 'reduce' : 'normal',
     compare: String(compare),
     latency,
     failure,
   })
   history.replaceState(null, '', `?${next}`)
-  const frame = (id: string) => {
+  const frame = (id: string, entry = example) => {
     const query = new URLSearchParams(next)
     query.set('frame', 'true')
     query.set('mode', id)
+    query.set('example', entry.id)
+    query.set('state', entry.states.includes(state) ? state : entry.states[0])
     return (
-      <section key={id}>
-        <h2>{id}</h2>
+      <section key={`${entry.id}-${id}`}>
+        <h2>{allPages ? entry.title : id}</h2>
         <iframe
-          title={`${example.title} — ${id}`}
+          title={`${entry.title} — ${id}`}
           src={`?${query}`}
           style={{ width: Number(width) }}
         />
@@ -136,6 +149,16 @@ function Workbench() {
         </p>
       </header>
       <div className="wb-controls">
+        <label>
+          View
+          <select
+            value={allPages ? 'pages' : 'component'}
+            onChange={(event) => setAllPages(event.target.value === 'pages')}
+          >
+            <option value="component">Component example</option>
+            <option value="pages">All pages side by side</option>
+          </select>
+        </label>
         <label>
           Search components
           <input
@@ -168,7 +191,7 @@ function Workbench() {
               ))}
           </select>
         </label>
-        {example.id === 'page-settings' && (
+        {(allPages || example.id === 'page-settings') && (
           <label>
             Settings section
             <select
@@ -288,6 +311,14 @@ function Workbench() {
         <label>
           <input
             type="checkbox"
+            checked={monospace}
+            onChange={(event) => setMonospace(event.target.checked)}
+          />
+          Monospace amounts
+        </label>
+        <label>
+          <input
+            type="checkbox"
             checked={motion}
             onChange={(event) => setMotion(event.target.checked)}
           />
@@ -297,13 +328,21 @@ function Workbench() {
           <input
             type="checkbox"
             checked={compare}
+            disabled={allPages}
             onChange={(event) => setCompare(event.target.checked)}
           />
           Compare themes
         </label>
       </div>
       <div className="wb-frames">
-        {compare ? modes.map(frame) : frame(mode)}
+        {allPages
+          ? pageIds
+              .map((id) => examples.find((entry) => entry.id === id))
+              .filter((entry) => entry !== undefined)
+              .map((entry) => frame(mode, entry))
+          : compare
+            ? modes.map((id) => frame(id))
+            : frame(mode)}
       </div>
       <details>
         <summary>Resolved tokens</summary>

@@ -335,3 +335,25 @@ describe('AccountRow Plaid conversion', () => {
     expect(screen.queryByRole('button', { name: 'Link with Plaid' })).toBeNull()
   })
 })
+
+describe('AccountRow touch menu', () => {
+  it('opens the existing rename flow from the compact action menu', async () => {
+    renderAccountRow()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Actions for Checking' }),
+    )
+    fireEvent.click(
+      await screen.findByRole('menuitem', { name: 'Edit account name' }),
+    )
+    expect(
+      screen
+        .getByRole('textbox', { name: 'Account name' })
+        .getAttribute('value'),
+    ).toBe('Checking')
+    expect(mockFns.updateMutateMock).not.toHaveBeenCalled()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Cancel account name edit' }),
+    )
+    expect(screen.queryByRole('textbox', { name: 'Account name' })).toBeNull()
+  })
+})

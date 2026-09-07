@@ -69,16 +69,16 @@ export function NetWorthCard({
       : undefined
 
   const displayValue = hoveredPoint
-    ? formatMoneyWithSign({ value: hoveredPoint.money })
-    : formatMoneyWithSign({ value: netWorth })
+    ? formatMoneyWithSign({ value: hoveredPoint.money, decimals: 0 })
+    : formatMoneyWithSign({ value: netWorth, decimals: 0 })
   const visibleDisplayValue = balancesHidden
     ? HIDDEN_BALANCE_PLACEHOLDER
     : displayValue
 
   return (
-    <Paper mb={8}>
+    <Paper mb={8} bg="transparent">
       <Box>
-        <Title order={2} className={styles.amount}>
+        <Title data-typography="display" order={2} className={styles.amount}>
           <VisuallyHidden>Net worth: </VisuallyHidden>
           {visibleDisplayValue}
         </Title>
@@ -96,12 +96,12 @@ export function NetWorthCard({
             />
           )}
           {hoveredPoint && (
-            <Text size="sm" c="dimmed" pos="absolute" top={0}>
+            <Text data-typography="metadata" c="dimmed" pos="absolute" top={0}>
               {hoveredPoint.label}
             </Text>
           )}
           <Group
-            gap={3}
+            gap={6}
             wrap="nowrap"
             style={{
               visibility:
@@ -115,14 +115,18 @@ export function NetWorthCard({
           >
             {!comparisonLoading && (
               <ChangePercentPopover
-                size="sm"
+                textRole="metadata"
                 color={getChangeColorMantine(false, changePercent)}
                 changeAmount={changeAmount}
                 changePercent={changePercent}
                 hidden={balancesHidden}
               />
             )}
-            <Text aria-hidden={comparisonLoading} size="sm" c="dimmed">
+            <Text
+              data-typography="metadata"
+              aria-hidden={comparisonLoading}
+              c="dimmed"
+            >
               {comparisonLoading
                 ? '\u00A0'
                 : comparisonPeriod === 'all'
@@ -158,7 +162,7 @@ export function NetWorthCard({
               onDataPointHover={(point) => setHover({ point, data: chartData })}
             />
           ) : !chartError ? (
-            <Text size="sm" c="dimmed">
+            <Text data-typography="metadata" c="dimmed">
               No history for this period.
             </Text>
           ) : null}

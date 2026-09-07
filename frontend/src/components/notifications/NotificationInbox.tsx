@@ -96,10 +96,10 @@ export function NotificationInbox({
       size={424}
       title={
         <Stack gap={0}>
-          <Text fw={600} size="lg">
+          <Text data-typography="dialogTitle">
             Notifications
           </Text>
-          <Text size="xs" c="dimmed" aria-live="polite">
+          <Text data-typography="caption" c="dimmed" aria-live="polite">
             {unreadCount === undefined
               ? 'Unread status unavailable'
               : `${unreadCount} unread`}
@@ -159,7 +159,7 @@ export function NotificationInbox({
                   </ThemeIcon>
                   <div className={styles.detail}>
                     <Group gap="xs" wrap="nowrap">
-                      <Text fw={500} size="sm">
+                      <Text data-typography="rowTitleSmall">
                         {item.title}
                       </Text>
                       {!item.readAt && (
@@ -170,12 +170,12 @@ export function NotificationInbox({
                         />
                       )}
                     </Group>
-                    <Text size="sm" c="dimmed">
+                    <Text data-typography="bodySmall" c="dimmed">
                       {item.body}
                     </Text>
                     <div className={styles.meta}>
                       <Text
-                        size="xs"
+                        data-typography="caption"
                         c="dimmed"
                         component="time"
                         dateTime={item.createdAt}

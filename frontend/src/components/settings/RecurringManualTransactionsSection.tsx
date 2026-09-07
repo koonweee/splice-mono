@@ -1,5 +1,4 @@
 import {
-  ActionIcon,
   Alert,
   Box,
   Button,
@@ -10,13 +9,11 @@ import {
   Table,
   Text,
   TextInput,
-  Tooltip,
 } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Pause, Pencil, Play, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import tableChrome from '../MantineTableChrome.module.css'
 import { ResponsiveSlot } from '../ResponsiveSlot'
 import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { moneyToMajorString, tryParseMoneyDraft } from '../../lib/money'
@@ -55,6 +52,8 @@ import { ConfirmActionDialog } from '../ConfirmActionDialog'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
 import { MobileTableList } from '../MobileTableList'
+import compactStyles from './SettingsCompactRow.module.css'
+import { SettingsRowActions } from './SettingsRowActions'
 import { SettingsStatusBadge } from './SettingsStatusBadge'
 import { SettingsToolbar } from './SettingsToolbar'
 import type { CategorySelectOption } from '../categories/CategorySelect'
@@ -541,112 +540,85 @@ export function RecurringManualTransactionsSection() {
 
   function renderScheduleActions(schedule: RecurringManualTransactionSchedule) {
     return (
-      <Group
-        className={tableChrome.actions}
-        gap={4}
-        justify="flex-end"
-        wrap="nowrap"
-      >
-        <Tooltip label="Edit recurring transaction">
-          <ActionIcon
-            disabled={isActionPending}
-            aria-label="Edit recurring transaction"
-            onClick={() => {
+      <SettingsRowActions
+        label={`Actions for ${schedule.merchantName}`}
+        actions={[
+          {
+            id: 'edit',
+            label: 'Edit recurring transaction',
+            icon: Pencil,
+            disabled: isActionPending,
+            onClick: () => {
               setEditingSchedule(schedule)
               setModalOpened(true)
-            }}
-            size={isMobile ? 44 : 36}
-            variant="subtle"
-          >
-            <Pencil size={16} />
-          </ActionIcon>
-        </Tooltip>
-        {schedule.pausedAt ? (
-          <Tooltip label="Resume recurring transaction">
-            <ActionIcon
-              aria-label="Resume recurring transaction"
-              onClick={() => setSchedulePaused(schedule, false)}
-              disabled={isActionPending}
-              loading={
-                resumeSchedule.isPending &&
+            },
+          },
+          {
+            id: 'pause',
+            label: schedule.pausedAt
+              ? 'Resume recurring transaction'
+              : 'Pause recurring transaction',
+            icon: schedule.pausedAt ? Play : Pause,
+            disabled: isActionPending,
+            loading: schedule.pausedAt
+              ? resumeSchedule.isPending &&
                 resumeSchedule.variables.id === schedule.id
-              }
-              size={isMobile ? 44 : 36}
-              variant="subtle"
-            >
-              <Play size={16} />
-            </ActionIcon>
-          </Tooltip>
-        ) : (
-          <Tooltip label="Pause recurring transaction">
-            <ActionIcon
-              aria-label="Pause recurring transaction"
-              onClick={() => setSchedulePaused(schedule, true)}
-              disabled={isActionPending}
-              loading={
-                pauseSchedule.isPending &&
-                pauseSchedule.variables.id === schedule.id
-              }
-              size={isMobile ? 44 : 36}
-              variant="subtle"
-            >
-              <Pause size={16} />
-            </ActionIcon>
-          </Tooltip>
-        )}
-        <Tooltip label="Delete recurring transaction">
-          <ActionIcon
-            aria-label="Delete recurring transaction"
-            color="red"
-            disabled={isActionPending}
-            onClick={() => {
+              : pauseSchedule.isPending &&
+                pauseSchedule.variables.id === schedule.id,
+            onClick: () => setSchedulePaused(schedule, !schedule.pausedAt),
+          },
+          {
+            id: 'delete',
+            label: 'Delete recurring transaction',
+            icon: Trash2,
+            color: 'red',
+            disabled: isActionPending,
+            onClick: () => {
               setDeleteError(null)
               setDeletingSchedule(schedule)
-            }}
-            size={isMobile ? 44 : 36}
-            variant="subtle"
-          >
-            <Trash2 size={16} />
-          </ActionIcon>
-        </Tooltip>
-      </Group>
+            },
+          },
+        ]}
+      />
     )
   }
 
   function renderMobileSchedule(schedule: RecurringManualTransactionSchedule) {
     return (
-      <Stack px="sm" py="sm" gap="xs">
-        <Group align="flex-start" justify="space-between" wrap="nowrap">
-          <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
-            <Text fw={700}>{schedule.merchantName}</Text>
-            <Text c="dimmed" size="sm">
-              {schedule.accountName ?? 'Account'}
+      <div className={compactStyles.row}>
+        <div className={compactStyles.heading}>
+          <Box className={compactStyles.title}>
+            <Text data-typography="sectionHeading">
+              {schedule.merchantName}
             </Text>
+            <Group justify="space-between" gap={6}>
+              <Text data-typography="metadata" c="dimmed">
+                {schedule.accountName ?? 'Account'}
+              </Text>
+              <Text
+                data-typography="amountSmall"
+                className={compactStyles.amount}
+              >
+                {formatMoneyWithSign({ value: schedule.amount })}
+              </Text>
+            </Group>
           </Box>
-          <Text fw={600} size="sm" style={{ flexShrink: 0 }}>
-            {formatMoneyWithSign({ value: schedule.amount })}
-          </Text>
-        </Group>
-        <Group gap="xs" justify="space-between">
-          <Text c="dimmed" size="sm">
+          {renderScheduleActions(schedule)}
+        </div>
+        <div className={compactStyles.metadata}>
+          <SettingsStatusBadge status={getScheduleStatus(schedule)} />
+          <Text data-typography="metadata" c="dimmed">
             Monthly on {formatScheduleDay(schedule.dayOfMonth)}
           </Text>
-          <Text size="sm">
-            {schedule.nextOccurrenceDate ? (
-              <>
-                Next:{' '}
-                <span>{formatCalendarDate(schedule.nextOccurrenceDate)}</span>
-              </>
-            ) : (
-              'No upcoming transaction'
-            )}
-          </Text>
-        </Group>
-        <Group justify="space-between" wrap="nowrap">
-          <SettingsStatusBadge status={getScheduleStatus(schedule)} />
-          {renderScheduleActions(schedule)}
-        </Group>
-      </Stack>
+        </div>
+        <Text data-typography="bodySmall">
+          {schedule.nextOccurrenceDate ? (
+            <>Next: {formatCalendarDate(schedule.nextOccurrenceDate)}</>
+          ) : (
+            'No upcoming transaction'
+          )}
+        </Text>
+      </div>
     )
   }
 
@@ -718,10 +690,10 @@ export function RecurringManualTransactionsSection() {
                     <Table.Tr key={schedule.id}>
                       <Table.Td>
                         <Stack gap={0}>
-                          <Text fw={600} size="sm">
+                          <Text data-typography="subsectionHeading">
                             {schedule.merchantName}
                           </Text>
-                          <Text c="dimmed" size="xs">
+                          <Text data-typography="caption" c="dimmed">
                             {schedule.accountName ?? 'Account'}
                           </Text>
                         </Stack>

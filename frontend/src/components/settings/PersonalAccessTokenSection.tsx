@@ -211,8 +211,10 @@ export function PersonalAccessTokenSection() {
     <Paper withBorder p="lg" radius="md" data-testid="pat-section">
       <Stack gap="lg">
         <Stack gap={4}>
-          <Title order={3}>Personal access tokens</Title>
-          <Text size="sm" c="dimmed">
+          <Title data-typography="sectionHeading" order={3}>
+            Personal access tokens
+          </Title>
+          <Text data-typography="metadata" c="dimmed">
             Create tokens for REST API automation. The token is shown only once.
           </Text>
         </Stack>
@@ -247,7 +249,7 @@ export function PersonalAccessTokenSection() {
             >
               Create token
             </Button>
-            <Text size="xs" c="dimmed">
+            <Text data-typography="caption" c="dimmed">
               Token names are limited to {PAT_NAME_LIMIT} characters.
             </Text>
           </Group>
@@ -266,7 +268,7 @@ export function PersonalAccessTokenSection() {
             data-testid="pat-reveal-panel"
           >
             <Stack gap="xs">
-              <Text size="sm">
+              <Text data-typography="bodySmall">
                 Copy this token now. You will not be able to see it again.
               </Text>
               <Code
@@ -286,7 +288,6 @@ export function PersonalAccessTokenSection() {
                 </Button>
                 {clipboardFeedback != null && (
                   <Text
-                    size="sm"
                     c={
                       clipboardFeedback === 'Copied to clipboard.'
                         ? 'dimmed'
@@ -302,7 +303,9 @@ export function PersonalAccessTokenSection() {
         )}
 
         <Stack gap="sm">
-          <Title order={4}>Active tokens</Title>
+          <Title data-typography="sectionHeading" order={4}>
+            Active tokens
+          </Title>
 
           <DataState
             hasData={activeTokens.length > 0}
@@ -336,11 +339,11 @@ export function PersonalAccessTokenSection() {
                       gap="sm"
                     >
                       <Stack gap={2}>
-                        <Text fw={500}>{token.name}</Text>
-                        <Text size="sm" c="dimmed">
+                        <Text data-typography="rowTitle">{token.name}</Text>
+                        <Text data-typography="metadata" c="dimmed">
                           {token.tokenPreview}
                         </Text>
-                        <Text size="sm" c="dimmed">
+                        <Text data-typography="metadata" c="dimmed">
                           {getPersonalAccessTokenUsageText(token.lastUsedAt)}
                         </Text>
                       </Stack>
@@ -356,7 +359,6 @@ export function PersonalAccessTokenSection() {
 
                     {revokeErrors[token.id] != null && (
                       <Text
-                        size="xs"
                         c="red"
                         data-testid={`pat-revoke-error-${token.id}`}
                       >

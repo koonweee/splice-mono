@@ -36,14 +36,28 @@ function nextOccurrence(schedule: RecurringManualTransactionSchedule) {
 
 export function createSettingsStore({
   empty,
+  longContent,
   accounts,
   categories,
 }: {
   empty?: boolean
+  longContent?: boolean
   accounts: Array<Account>
   categories: Array<Category>
 }) {
   const schedules = structuredClone(empty ? [] : fixtureSchedules)
+  if (longContent && !empty)
+    schedules.push({
+      ...structuredClone(schedules[0]),
+      id: 'density-recurring-long',
+      merchantName:
+        'Annual professional membership paid in monthly installments',
+      amount: {
+        money: { amount: '12345678900', currency: 'USD' },
+        sign: 'negative',
+      },
+      pausedAt: FIXTURE_NOW,
+    })
   const tokens = structuredClone(empty ? [] : fixtureTokens)
   let sequence = 1
   const reads: Record<string, Handler> = {

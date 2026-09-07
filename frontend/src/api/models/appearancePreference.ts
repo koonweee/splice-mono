@@ -9,6 +9,7 @@ import type { AppearancePreferenceMode } from './appearancePreferenceMode'
 
 export interface AppearancePreference {
   mode: AppearancePreferenceMode
+  monospaceAmounts?: boolean
   /**
    * @nullable
    * @pattern ^#[0-9a-fA-F]{6}$

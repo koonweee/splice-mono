@@ -30,4 +30,23 @@
   outline: 3px solid var(--splice-focus);
   outline-offset: 4px;
 }
-.swatch input:disabled + span { opacity: 0.4; }
+.swatch input:disabled + span {
+  opacity: 0.4;
+}
+
+.accentRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-sm);
+}
+.customField {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--mantine-spacing-xs);
+  width: 100%;
+}
+.customError {
+  grid-column: 2;
+}

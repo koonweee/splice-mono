@@ -38,7 +38,7 @@ export function AccountCard({
     <Paper
       p="md"
       withBorder
-      h={94}
+      mih={94}
       className={onClick ? styles.clickable : undefined}
       style={{
         display: 'flex',
@@ -55,7 +55,7 @@ export function AccountCard({
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <Group gap={6} wrap="nowrap">
-            <Text fw={500} truncate>
+            <Text data-typography="rowTitle" truncate>
               {account.customName ?? account.name}
             </Text>
             {stale && (
@@ -70,16 +70,18 @@ export function AccountCard({
               </Tooltip>
             )}
           </Group>
-          <Text size="sm" c="dimmed" tt="capitalize" truncate>
+          <Text data-typography="metadata" c="dimmed" tt="capitalize" truncate>
             {account.institutionName
               ? `${account.institutionName} · ${formatAccountType(account.subType || account.type)}`
               : formatAccountType(account.subType || account.type)}
           </Text>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <Text fw={600}>{formatMoneyWithSign({ value: primaryBalance })}</Text>
+          <Text data-typography="amount">
+            {formatMoneyWithSign({ value: primaryBalance })}
+          </Text>
           {originalBalance && (
-            <Text size="xs" c="dimmed">
+            <Text data-typography="numericCaption" c="dimmed">
               {formatMoneyWithSign({
                 value: originalBalance,
                 appendCurrency: true,
@@ -87,7 +89,7 @@ export function AccountCard({
             </Text>
           )}
           <ChangePercentPopover
-            size="sm"
+            textRole="metadata"
             color={getChangeColorMantine(isLiability, account.changePercent)}
             changeAmount={account.changeAmount}
             changePercent={account.changePercent}

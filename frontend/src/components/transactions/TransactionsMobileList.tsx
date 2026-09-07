@@ -59,7 +59,7 @@ type TransactionsMobileListProps = {
   onRetry?: () => void
   onScrollNearBottom?: () => void
   totalRows: number
-  variant?: 'default' | 'drilldown'
+  variant?: 'default' | 'drilldown' | 'page'
   bulkModeEnabled?: boolean
   selectedTransactionIds?: Set<string>
   onToggleTransactionSelection?: (transactionId: string) => void
@@ -287,7 +287,11 @@ export function TransactionsMobileList({
       <div
         aria-label={`Transactions list, ${totalRows.toLocaleString()} total`}
         className={`${styles.list} ${
-          variant === 'drilldown' ? styles.drilldownList : ''
+          variant === 'drilldown'
+            ? styles.drilldownList
+            : variant === 'page'
+              ? styles.pageList
+              : ''
         }`}
         onScroll={handleScroll}
         role="region"
@@ -428,11 +432,12 @@ export function TransactionsMobileList({
           <Stack gap="md">
             <div>
               <Group justify="space-between" wrap="nowrap">
-                <Text c="dimmed" size="sm">
+                <Text data-typography="metadata" c="dimmed">
                   {dayjs(activeTransaction.activityDate).format('MMM D, YYYY')}
                 </Text>
                 <Stack align="flex-end" gap={0}>
                   <Text
+                    data-typography="amount"
                     className={`${styles.drawerAmount} ${getAmountClass(
                       activeTransaction,
                     )}`}
@@ -444,13 +449,13 @@ export function TransactionsMobileList({
                     })}
                   </Text>
                   {hasDifferentOriginalCurrency(activeTransaction) && (
-                    <Text c="dimmed" size="xs">
+                    <Text data-typography="caption" c="dimmed">
                       Original {formatOriginalCurrencyAmount(activeTransaction)}
                     </Text>
                   )}
                 </Stack>
               </Group>
-              <Text c="dimmed" size="sm">
+              <Text data-typography="metadata" c="dimmed">
                 {[
                   activeTransaction.accountName,
                   activeTransaction.paymentChannel,
@@ -547,7 +552,7 @@ export function TransactionsMobileList({
                     )}
                   </Group>
                   {activeTransaction.reportingDateOverride != null && (
-                    <Text c="dimmed" size="xs">
+                    <Text data-typography="caption" c="dimmed">
                       Bank date{' '}
                       {activeBankActivityDate
                         ? dayjs(activeBankActivityDate).format('MMM D, YYYY')
@@ -594,13 +599,13 @@ export function TransactionsMobileList({
               />
               {activeDetails.counterparties.length > 0 && (
                 <Stack gap={2}>
-                  <Text c="dimmed" size="xs" tt="uppercase">
+                  <Text data-typography="caption" c="dimmed" tt="uppercase">
                     Counterparties
                   </Text>
                   {activeDetails.counterparties.map((counterparty) => (
                     <Text
+                      data-typography="bodySmall"
                       key={`${counterparty.name}-${counterparty.type}`}
-                      size="sm"
                     >
                       {formatCounterpartyLabel(counterparty)}
                     </Text>
@@ -642,10 +647,10 @@ function MetadataItem({
 
   return (
     <Stack gap={2}>
-      <Text c="dimmed" size="xs" tt="uppercase">
+      <Text data-typography="caption" c="dimmed" tt="uppercase">
         {label}
       </Text>
-      <Text size="sm">{value}</Text>
+      <Text data-typography="bodySmall">{value}</Text>
     </Stack>
   )
 }

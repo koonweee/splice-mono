@@ -34,10 +34,10 @@ export function LandingPage() {
       }}
     >
       <Stack align="center" gap="lg">
-        <Title order={1} size="3rem">
+        <Title data-typography="brandDisplay" order={1}>
           Splice
         </Title>
-        <Text c="dimmed" size="lg">
+        <Text data-typography="lead" c="dimmed">
           Your personal finance dashboard
         </Text>
         {isAuthenticated ? (

@@ -1,4 +1,4 @@
-import { Badge, Button, Group, Tooltip } from '@mantine/core'
+import { Badge, Button, Group, Popover, Text } from '@mantine/core'
 import type { SanitizedBankLinkStatusBody } from '@/api/models/sanitizedBankLinkStatusBody'
 import { SanitizedBankLinkStatus } from '@/api/models/sanitizedBankLinkStatus'
 
@@ -82,9 +82,21 @@ export function StatusBadge({ status, statusBody, onFix }: StatusBadgeProps) {
   )
 
   const renderedBadge = tooltipLabel ? (
-    <Tooltip label={tooltipLabel} multiline maw={300} withArrow>
-      {badge}
-    </Tooltip>
+    <Popover withinPortal withArrow position="bottom" shadow="md">
+      <Popover.Target>
+        <Button
+          variant="transparent"
+          px={0}
+          h="auto"
+          aria-label={`Show ${config.label.toLowerCase()} details`}
+        >
+          {badge}
+        </Button>
+      </Popover.Target>
+      <Popover.Dropdown maw={300}>
+        <Text data-typography="bodySmall">{tooltipLabel}</Text>
+      </Popover.Dropdown>
+    </Popover>
   ) : (
     badge
   )

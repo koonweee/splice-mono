@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   APPEARANCE_STORAGE_KEY,
+  appearanceEqual,
   applyAppearance,
   decodeAppearance,
   encodeAppearance,
@@ -11,6 +12,30 @@ import { DEFAULT_APPEARANCE } from './design-system/appearance'
 
 afterEach(() => vi.unstubAllGlobals())
 describe('appearance persistence', () => {
+  it('round-trips the amount-font choice and treats omitted/false as the same default', () => {
+    const value = {
+      mode: 'dark' as const,
+      accent: null,
+      monospaceAmounts: true,
+    }
+    expect(decodeAppearance(encodeAppearance(value))).toEqual(value)
+    expect(appearanceEqual(value, { ...value, monospaceAmounts: false })).toBe(
+      false,
+    )
+    expect(
+      appearanceEqual(
+        { mode: 'dark', accent: null },
+        { ...value, monospaceAmounts: false },
+      ),
+    ).toBe(true)
+    expect(
+      decodeAppearance(
+        encodeURIComponent(
+          JSON.stringify({ ...value, monospaceAmounts: 'yes' }),
+        ),
+      ),
+    ).toBeNull()
+  })
   it('validates bounded encoded input and never interprets legacy names', () => {
     for (const value of [
       'dracula',

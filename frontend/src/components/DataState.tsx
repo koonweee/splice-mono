@@ -52,9 +52,11 @@ export function DataState({
       className={hasData ? styles.refreshError : undefined}
     >
       <Stack align="flex-start" gap="xs">
-        <Text size="sm">{errorMessage}</Text>
+        <Text data-typography="bodySmall">{errorMessage}</Text>
         {hasData && (
-          <Text size="sm">Previously loaded results remain visible.</Text>
+          <Text data-typography="bodySmall">
+            Previously loaded results remain visible.
+          </Text>
         )}
         {onRetry && (
           <Button
@@ -86,7 +88,7 @@ export function DataState({
       </div>
       <div className={styles.message}>
         {error || (
-          <Text c="dimmed" size="sm" ta="center" role="status">
+          <Text data-typography="metadata" c="dimmed" ta="center" role="status">
             {emptyMessage}
           </Text>
         )}

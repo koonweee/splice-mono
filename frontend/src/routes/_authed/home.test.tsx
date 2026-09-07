@@ -270,7 +270,7 @@ describe('HomePage balance visibility', () => {
       'false',
     )
     expect(screen.getByRole('button', { name: /hide balances/i })).toBeTruthy()
-    expect(screen.getByText('$1,000.00')).toBeTruthy()
+    expect(screen.getByText('$1,000')).toBeTruthy()
     expect(screen.getByText('$600.00')).toBeTruthy()
     expect(screen.getByText('$500.00')).toBeTruthy()
   })

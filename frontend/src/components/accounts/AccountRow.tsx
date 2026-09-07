@@ -1,6 +1,21 @@
-import { ActionIcon, Group, Text, TextInput, Tooltip } from '@mantine/core'
+import {
+  ActionIcon,
+  Group,
+  Menu,
+  Text,
+  TextInput,
+  Tooltip,
+} from '@mantine/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Archive, Check, Link2, Pencil, RotateCcw, X } from 'lucide-react'
+import {
+  Archive,
+  Check,
+  Link2,
+  MoreHorizontal,
+  Pencil,
+  RotateCcw,
+  X,
+} from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { useAppTransitionGuard } from '../../lib/pwa/app-transition'
 import { useAccountMetadataMutation } from '../../hooks/useAccountMetadataMutation'
@@ -16,6 +31,7 @@ import {
 } from '../../lib/mutation-feedback'
 import { ConfirmActionDialog } from '../ConfirmActionDialog'
 import { StatusBadge } from './StatusBadge'
+import styles from './AccountRow.module.css'
 import type { Account } from '../../api/models'
 
 function archiveAccountById(id: string): Promise<Account> {
@@ -23,6 +39,8 @@ function archiveAccountById(id: string): Promise<Account> {
 }
 
 export function AccountRow({ account }: { account: Account }) {
+  const menuTrigger = useRef<HTMLButtonElement>(null)
+  const [returnMenuFocus, setReturnMenuFocus] = useState(true)
   const initiateLinking = useBankLinkControllerInitiateLinking()
   const updateAccount = useAccountMetadataMutation(account.id)
   const archiveAccount = useMutation({
@@ -226,11 +244,10 @@ export function AccountRow({ account }: { account: Account }) {
     <>
       <Group
         justify="space-between"
-        py="xs"
-        px="sm"
-        style={{
-          borderBottom: '1px solid var(--splice-separator)',
-        }}
+        className={styles.row}
+        p="sm"
+        gap="xs"
+        wrap="nowrap"
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           {isEditing ? (
@@ -282,13 +299,34 @@ export function AccountRow({ account }: { account: Account }) {
           ) : (
             <Group gap={6} wrap="nowrap">
               <Text
-                fw={500}
+                data-typography="rowTitle"
                 truncate
                 style={{ flex: 1, minWidth: 0 }}
                 title={displayName}
               >
                 {displayName}
               </Text>
+            </Group>
+          )}
+          <Text data-typography="metadata" c="dimmed" tt="capitalize">
+            {formatAccountType(account.subType || account.type)}
+          </Text>
+          {account.syncedAt && (
+            <Text data-typography="caption" c="dimmed">
+              Last synced {formatRelativeTime(new Date(account.syncedAt))}
+            </Text>
+          )}
+          <div className={styles.status}>
+            <StatusBadge
+              status={account.bankLink?.status}
+              statusBody={account.bankLink?.statusBody}
+              onFix={handleFixConnection}
+            />
+          </div>
+        </div>
+        {!isEditing && (
+          <div className={styles.actions}>
+            <div className={styles.inlineActions}>
               <ActionIcon
                 variant="subtle"
                 color="gray"
@@ -347,22 +385,80 @@ export function AccountRow({ account }: { account: Account }) {
                   <Archive size={14} />
                 </ActionIcon>
               </Tooltip>
-            </Group>
-          )}
-          <Text size="sm" c="dimmed" tt="capitalize">
-            {formatAccountType(account.subType || account.type)}
-          </Text>
-          {account.syncedAt && (
-            <Text size="xs" c="dimmed">
-              Last synced {formatRelativeTime(new Date(account.syncedAt))}
-            </Text>
-          )}
-        </div>
-        <StatusBadge
-          status={account.bankLink?.status}
-          statusBody={account.bankLink?.statusBody}
-          onFix={handleFixConnection}
-        />
+            </div>
+            <div className={styles.touchActions}>
+              <Menu
+                withinPortal
+                returnFocus={returnMenuFocus}
+                onOpen={() => setReturnMenuFocus(true)}
+                withInitialFocusPlaceholder={false}
+                position="bottom-end"
+              >
+                <Menu.Target>
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    aria-label={`Actions for ${displayName}`}
+                    ref={menuTrigger}
+                  >
+                    <MoreHorizontal size={20} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown
+                  onClickCapture={(event) => {
+                    if (
+                      event.target instanceof Element &&
+                      event.target.closest('[role="menuitem"]:not(:disabled)')
+                    ) {
+                      setReturnMenuFocus(false)
+                      menuTrigger.current?.focus()
+                    }
+                  }}
+                >
+                  <Menu.Item
+                    data-autofocus={!updateAccount.isPending || undefined}
+                    leftSection={<Pencil size={20} />}
+                    onClick={startEditing}
+                    disabled={updateAccount.isPending}
+                  >
+                    Edit account name
+                  </Menu.Item>
+                  {isManual && handleConvertToLinked && (
+                    <Menu.Item
+                      leftSection={<Link2 size={20} />}
+                      onClick={handleConvertToLinked}
+                      disabled={initiateLinking.isPending}
+                    >
+                      Link with Plaid
+                    </Menu.Item>
+                  )}
+                  {isLinked && account.customName && (
+                    <Menu.Item
+                      leftSection={<RotateCcw size={20} />}
+                      onClick={resetToSyncedName}
+                      disabled={updateAccount.isPending}
+                    >
+                      Reset to synced account name
+                    </Menu.Item>
+                  )}
+                  <Menu.Item
+                    color="red"
+                    leftSection={<Archive size={20} />}
+                    onClick={() => {
+                      setArchiveError(null)
+                      setArchiveModalOpened(true)
+                    }}
+                    disabled={
+                      updateAccount.isPending || initiateLinking.isPending
+                    }
+                  >
+                    Archive account
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </div>
+          </div>
+        )}
       </Group>
       <ConfirmActionDialog
         opened={archiveModalOpened}

@@ -77,9 +77,7 @@ export function AppShellLayout({
               size="sm"
               className={styles.navigationToggle}
             />
-            <Text fw={700} size="lg">
-              Splice
-            </Text>
+            <Text data-typography="brand">Splice</Text>
           </Group>
           <Group gap={8} wrap="nowrap" className={styles.headerActions}>
             {headerActions}
