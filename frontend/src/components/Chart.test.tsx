@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { cloneElement, createElement, isValidElement, useState } from 'react'
 import { MantineProvider } from '@mantine/core'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -11,15 +11,19 @@ vi.mock('@mantine/charts', () => ({
   AreaChart: (props: ComponentProps<typeof AreaChart>) => {
     chartProps = props
     const content = props.tooltipProps?.content
+    const tooltipState = {
+      active: props.tooltipProps?.active !== false,
+      label: point.date,
+      payload: [{ payload: point, value: point.value }],
+    }
+    // Recharts mounts function content as a component, rather than calling it.
     return (
       <div data-testid="chart" tabIndex={0}>
-        {typeof content === 'function'
-          ? content({
-              active: props.tooltipProps?.active !== false,
-              label: point.date,
-              payload: [{ payload: point, value: point.value }],
-            } as never)
-          : null}
+        {isValidElement(content)
+          ? cloneElement(content, tooltipState)
+          : typeof content === 'function'
+            ? createElement(content, tooltipState as never)
+            : null}
       </div>
     )
   },
