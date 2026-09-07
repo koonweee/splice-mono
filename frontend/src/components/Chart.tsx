@@ -18,10 +18,17 @@ function ChartTooltip({
   inspectedPoint?: ChartDataPoint
   onInspect?: (point?: ChartDataPoint) => void
 }) {
-  // Recharts keyboard selection does not emit its pointer movement callback.
+  const inspectCallback = useRef(onInspect)
   useEffect(() => {
-    onInspect?.(inspectedPoint)
-  }, [inspectedPoint, onInspect])
+    inspectCallback.current = onInspect
+  }, [onInspect])
+  const inspectionEnabled = Boolean(onInspect)
+  // Recharts keyboard selection does not emit its pointer movement callback.
+  // Notify for selection changes, not callback identity: a headline update can
+  // recreate the parent's callback and otherwise cause an effect feedback loop.
+  useEffect(() => {
+    if (inspectionEnabled) inspectCallback.current?.(inspectedPoint)
+  }, [inspectedPoint, inspectionEnabled])
   return (
     <Paper px="md" py="xs" withBorder shadow="md" radius="md">
       <Text size="xs" c={value ? 'dimmed' : undefined} mb={value ? 4 : 0}>

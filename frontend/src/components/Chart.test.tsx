@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { MantineProvider } from '@mantine/core'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -294,4 +295,41 @@ it('does not report a keyboard-selected value while showing decorative loading p
   fireEvent.keyDown(chart, { key: 'ArrowRight' })
   expect(onDataPointHover).not.toHaveBeenCalled()
   expect(chartProps.tooltipProps?.active).toBe(false)
+})
+
+it('does not repeat inspection when the parent recreates its hover callback', () => {
+  let notifications = 0
+  function Headline() {
+    const [selection, setSelection] = useState<{ label?: string }>({})
+    return (
+      <>
+        <output aria-label="Inspected date">{selection.label}</output>
+        <Chart
+          data={[point]}
+          valueFormatter={String}
+          onDataPointHover={(selected) => {
+            // Bound the regression so a feedback loop fails without hanging.
+            if (++notifications > 10)
+              throw new Error('Repeated inspection loop')
+            setSelection({ label: selected?.label })
+          }}
+        />
+      </>
+    )
+  }
+  render(
+    <MantineProvider env="test">
+      <Headline />
+    </MantineProvider>,
+  )
+  const chart = screen.getByTestId('chart')
+  fireEvent.touchStart(chart)
+  fireEvent.focus(chart)
+  expect(screen.getByLabelText('Inspected date').textContent).toBe('Sep 1')
+  expect(notifications).toBe(1)
+  fireEvent.keyDown(chart, { key: 'Escape' })
+  expect(screen.getByLabelText('Inspected date').textContent).toBe('')
+  fireEvent.focus(chart)
+  expect(screen.getByLabelText('Inspected date').textContent).toBe('Sep 1')
+  expect(notifications).toBe(3)
 })
