@@ -1,0 +1,213 @@
+{
+  "verifiedAt": "2026-09-07T22:07:33Z",
+  "deployCommit": "55ca895ee0cff8352de8cdfbedee54e0cb5ef193",
+  "implementationPr": 280,
+  "harnessCorrectionPr": 282,
+  "deployPr": 281,
+  "deployWorkflow": 34164495422,
+  "passingCi": [34162866084, 34164019900, 34164498630, 34164505106],
+  "images": {
+    "backend": {
+      "version": "0.0.122",
+      "digest": "sha256:5fa9b8636a37e907525e90c60921b310ea2f6036066742e0e0d2fadacf1980ec"
+    },
+    "frontend": {
+      "version": "0.0.119",
+      "digest": "sha256:4df69ba8ee46519cb63f142491e5dffb5039792ed077d247e4478710bbd1a9e9",
+      "buildId": "mtrs87cd-0efe4796-cf93-4e25-ab69-f5a53202f11a"
+    }
+  },
+  "operations": {
+    "PullStack-vps": "6a9f3485d28c58b2ef419e98",
+    "PullStack-sg": "6a9f3485d28c58b2ef419e99",
+    "PullStack-sf": "6a9f3486d28c58b2ef419e9a",
+    "pull-migrator": "6a9f3486d28c58b2ef419e9b",
+    "StopStack-vps": "6a9f34cad28c58b2ef419eaf",
+    "StopStack-sg": "6a9f34cad28c58b2ef419eb0",
+    "StopStack-sf": "6a9f34cbd28c58b2ef419eb1",
+    "migrate": "6a9f34d9d28c58b2ef419eb5",
+    "backfill": "6a9f34f7d28c58b2ef419ebc",
+    "verify-migration": "6a9f351dd28c58b2ef419ec6",
+    "DeployStack-vps": "6a9f3530d28c58b2ef419eca",
+    "DeployStack-sg": "6a9f3530d28c58b2ef419ecb",
+    "DeployStack-sf": "6a9f3530d28c58b2ef419ecc",
+    "verify-region-vps": "6a9f357dd28c58b2ef419edc",
+    "verify-region-sg": "6a9f357dd28c58b2ef419edd",
+    "verify-region-sf": "6a9f357dd28c58b2ef419ede",
+    "postdeploy-metrics": "6a9f3589d28c58b2ef419ee2"
+  },
+  "limitations": [
+    "No connected physical installed iOS/Android devices; native permission, keyboard, OS notification clicks and provider delivery not certified.",
+    "Authenticated production user mutation/push was not exercised; ownership/logout continuity were validated using synthetic isolated data.",
+    "Backup was restored locally; unrelated scheduled R2 backup verification remains failed.",
+    "Separate unrestricted push destination P1 remains outside this plan."
+  ],
+  "migration": {
+    "historyEntries": 2,
+    "unboundActiveTokens": 0,
+    "eligibleUnboundPush": 0,
+    "pausedLegacySubscriptions": 3,
+    "backfill": {
+      "reconciled": 0,
+      "remaining": 0
+    }
+  },
+  "health": {
+    "healthyAppContainers": 6,
+    "regions": ["vps", "sg", "sf"],
+    "readyPending": 0,
+    "staleProcessing": 0,
+    "activeAttemptsBeyondLimit": 0,
+    "recentNonMigrationFailures": 0,
+    "databaseLockWaiters": 0
+  },
+  "publicProbe": {
+    "buildId": "mtrs87cd-0efe4796-cf93-4e25-ab69-f5a53202f11a",
+    "passed": true,
+    "results": [
+      {
+        "url": "https://splice.kw0.dev/version.json",
+        "status": 200,
+        "cacheControl": "no-store"
+      },
+      {
+        "url": "https://splice.kw0.dev/sw.js",
+        "status": 200,
+        "cacheControl": "no-cache, no-store, must-revalidate"
+      },
+      {
+        "url": "https://splice.kw0.dev/_pwa/recovery",
+        "status": 200,
+        "cacheControl": "private, no-store"
+      },
+      {
+        "url": "https://splice-api.kw0.dev/health",
+        "status": 200,
+        "cacheControl": null
+      },
+      {
+        "url": "https://splice-api.kw0.dev/notification/summary",
+        "status": 401,
+        "cacheControl": "private, no-store"
+      },
+      {
+        "url": "https://splice-api.kw0.dev/notification/inbox",
+        "status": 401,
+        "cacheControl": "private, no-store"
+      },
+      {
+        "url": "https://splice.kw0.dev/assets/missing-pwa-abcdefgh.js",
+        "status": 404,
+        "cacheControl": "no-store"
+      }
+    ]
+  },
+  "backupVerification": {
+    "id": "6a9f2bded28c58b2ef419cc3",
+    "status": "Complete",
+    "success": true,
+    "lines": [
+      "PWA_RESTORE_TABLES 27",
+      "PWA_CUTOVER_BACKUP_RESTORE_VERIFIED",
+      "PWA_BACKUP_BYTES 873364",
+      "PWA_BACKUP_SHA256 98088521b971743895d8f954015b388e4b572129d4e5d0be926da43097957998  /var/lib/postgresql/data/pwa-backups/pre-pwa-cutover-20260907T212545Z.dump"
+    ],
+    "stages": [
+      {
+        "stage": "Interpolate Secrets",
+        "success": true
+      },
+      {
+        "stage": "Compose Run",
+        "success": true
+      }
+    ]
+  },
+  "runningImages": [
+    {
+      "stack": "splice-app-vps",
+      "service": "splice-backend",
+      "health": "healthy",
+      "repoDigests": [
+        "ghcr.io/koonweee/splice-backend@sha256:5fa9b8636a37e907525e90c60921b310ea2f6036066742e0e0d2fadacf1980ec"
+      ]
+    },
+    {
+      "stack": "splice-app-vps",
+      "service": "splice-frontend",
+      "health": "healthy",
+      "repoDigests": [
+        "ghcr.io/koonweee/splice-frontend@sha256:4df69ba8ee46519cb63f142491e5dffb5039792ed077d247e4478710bbd1a9e9"
+      ]
+    },
+    {
+      "stack": "splice-app-sg",
+      "service": "splice-backend",
+      "health": "healthy",
+      "repoDigests": [
+        "ghcr.io/koonweee/splice-backend@sha256:5fa9b8636a37e907525e90c60921b310ea2f6036066742e0e0d2fadacf1980ec"
+      ]
+    },
+    {
+      "stack": "splice-app-sg",
+      "service": "splice-frontend",
+      "health": "healthy",
+      "repoDigests": [
+        "ghcr.io/koonweee/splice-frontend@sha256:4df69ba8ee46519cb63f142491e5dffb5039792ed077d247e4478710bbd1a9e9"
+      ]
+    },
+    {
+      "stack": "splice-app-sf",
+      "service": "splice-backend",
+      "health": "healthy",
+      "repoDigests": [
+        "ghcr.io/koonweee/splice-backend@sha256:5fa9b8636a37e907525e90c60921b310ea2f6036066742e0e0d2fadacf1980ec"
+      ]
+    },
+    {
+      "stack": "splice-app-sf",
+      "service": "splice-frontend",
+      "health": "healthy",
+      "repoDigests": [
+        "ghcr.io/koonweee/splice-frontend@sha256:4df69ba8ee46519cb63f142491e5dffb5039792ed077d247e4478710bbd1a9e9"
+      ]
+    }
+  ],
+  "migrationVerification": {
+    "id": "6a9f351dd28c58b2ef419ec6",
+    "status": "Complete",
+    "success": true,
+    "lines": [
+      "PWA_MIGRATION_COUNT 2",
+      "PWA_UNBOUND_ACTIVE_TOKENS 0",
+      "PWA_ELIGIBLE_UNBOUND_PUSH 0",
+      "PWA_PAUSED_LEGACY_PUSH 3"
+    ],
+    "stages": [
+      {
+        "stage": "Interpolate Secrets",
+        "success": true
+      },
+      {
+        "stage": "Compose Run",
+        "success": true
+      }
+    ]
+  },
+  "backfillVerification": {
+    "id": "6a9f34f7d28c58b2ef419ebc",
+    "status": "Complete",
+    "success": true,
+    "lines": ["{\"reconciled\":0,\"remaining\":0}"],
+    "stages": [
+      {
+        "stage": "Interpolate Secrets",
+        "success": true
+      },
+      {
+        "stage": "Compose Run",
+        "success": true
+      }
+    ]
+  }
+}

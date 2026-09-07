@@ -136,8 +136,8 @@ Fresh final-source checks on September 7, 2026:
   and isolated schemas. Generated OpenAPI/client contracts were regenerated.
 - Production HTTP artifact checks passed: build agreement, static budget, no-store
   version/worker responses, and plain non-cacheable missing-asset 404s.
-- Seventeen production Chromium 153 lifecycle cases passed at22053cf, before the
-  bounded late-activation fix, against three real
+- Eighteen production Chromium 153 lifecycle cases passed on Linux at0592b82,
+  against three real
   A/B/C releases and a real isolated Nest backend. They cover actual worker/cache
   activation, authenticated private-cache cleanup, cached offline JS, UI-only
   updates with dirty second-tab Settings, cold offline/captive/API-down recovery,
@@ -147,7 +147,9 @@ Fresh final-source checks on September 7, 2026:
   rebind, push/account isolation, guarded notification navigation, shortcuts, offline/repeated Update actions, and
   real old lazy-chunk404 recovery without losing dirty Settings, and Update while
   an uncached static file's response headers remain stalled. The latter completes
-  in6.11s within the existing10s activation budget, with exactly one asset request.
+  in6.174s within its10s regression budget, with exactly one asset request. A forced
+  request during worker shutdown restarts the outgoing worker and completes the
+  real update in31.293s within the45s activation budget.
 - Independent two-window worker/channel replay verifies ten alternating same-owner
   handshakes converge without epoch rotation or outstanding reads. Account change
   and logout during an in-flight ownership probe reject stale badge work.
@@ -178,16 +180,52 @@ Worker debugging is temporarily excluded from browser and frame sessions during
 Update actions because debugger attachment can defer activation until Chromium's
 five-minute fallback. Inspection is restored before offline and push checks. This test
 helper uses the pinned Playwright 1.63 in-process bridge and fails explicitly if
-that bridge changes; it never stops a worker or forces activation. The fresh Linux
-release gate is still pending.
+that bridge changes; it never stops a worker or forces activation. Fresh Linux18
+validation passed with all8 debugger scopes restored and zero unexpected worker
+attachments during Update. GitHub release CI34162866084 passed. The subsequent
+deploy comparison exposed a fixture setup miss: the app updated in1.127s, but
+the injected request arrived too late to restart the outgoing worker. Harness
+commit9903776 allows at most three fresh contexts only after a successful update
+misses that setup condition. Actual failures still stop immediately, and all
+three setup misses fail. A targeted Linux rerun witnessed the restart and updated
+in31.66s; the complete corrected CI suite subsequently passed all 18 cases, followed by both protected deployment comparison runs.
 
 ## Deployment prerequisite evidence
 
 The live database backup was created on September 7 and restored successfully
-into a temporary verification database, which was then dropped. Dump: 873,356
-bytes, SHA-256 `912400849ac69acc4750ae98097ebd715ce6f3ef8f9984f34575f9e66f9ed696`.
-It remains at `/var/lib/postgresql/data/pwa-backups/pre-pwa-cutover-20260907.dump` in the
+into a temporary verification database, which was then dropped. Dump: 873,364
+bytes, SHA-256 `98088521b971743895d8f954015b388e4b572129d4e5d0be926da43097957998`.
+It remains at `/var/lib/postgresql/data/pwa-backups/pre-pwa-cutover-20260907T212545Z.dump` in the
 PostgreSQL volume. This is a verified local backup; the unrelated scheduled R2
 backup action still reports a verification failure and was not represented as
-successful. Live schema migration and deployment evidence are recorded after
-those operations complete.
+successful. The verified backup preceded the successful live migration and rollout below.
+
+## Production release
+
+Deployed September 7, 2026 and verified at 22:07 UTC in VPS, Singapore, and San
+Francisco. [Deploy workflow 34164495422](https://github.com/koonweee/splice-mono/actions/runs/34164495422)
+passed and [deploy PR 281](https://github.com/koonweee/splice-mono/pull/281) merged
+commit `55ca895ee0cff8352de8cdfbedee54e0cb5ef193`. Backend image `0.0.122` and
+frontend image `0.0.119` were pulled and checked before the API cutover.
+
+All six running containers are healthy and match their approved registry digests.
+All regions and the public endpoint serve frontend build
+`mtrs87cd-0efe4796-cf93-4e25-ab69-f5a53202f11a`; the worker agrees with that build.
+Regional and public probes passed API health, unauthenticated private-endpoint
+rejection with `no-store`, recovery login state, and missing-asset 404 checks.
+Both additive migrations are present. Backfill reports `remaining: 0`; no active
+unbound refresh tokens or eligible unbound push subscriptions remain. Three
+legacy subscriptions are paused until the upgraded app rebinds them.
+
+Count-only postdeploy checks found no ready delivery backlog, stale processing
+claims, attempts beyond the retry limit, recent non-migration delivery failures,
+or database lock waiters. No device had rebound at this observation, so these
+checks do not establish live push-provider delivery. Authenticated session,
+logout, inbox, and account-isolation checks used synthetic local data; production
+probes did not mutate a real user's account or send a real push.
+
+The [release record](./pwa-evidence/production-release.json) contains image
+digests, operation IDs, privacy counts, and public probe results. The
+[final corrected CI results](./pwa-evidence/lifecycle-ci-9903776.json) retain all
+18 cases and their explicit browser/OS limitations. Physical-device checks remain
+blocked by unavailable devices as described above.
