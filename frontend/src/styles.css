@@ -21,17 +21,34 @@ code {
 
 .splice-button-root,
 .splice-action-icon-root,
+.splice-switch-input:checked:not(:disabled):not([data-disabled])
+  + .splice-switch-track {
+  --switch-text-color: var(--splice-switch-contrast);
+}
+
+.splice-switch-input:checked:not(:disabled):not([data-disabled])
+  + .splice-switch-track
+  .splice-switch-thumb {
+  --switch-thumb-bg: var(--splice-switch-contrast);
+}
+
+.splice-switch-input:not(:checked):not(:disabled):not([data-disabled])
+  + .splice-switch-track
+  .splice-switch-thumb {
+  --switch-thumb-bg: var(--mantine-color-text);
+}
+
 .splice-navlink-root {
   transition:
-    background-color 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease;
+    background-color var(--splice-motion-quick) ease,
+    border-color var(--splice-motion-quick) ease,
+    color var(--splice-motion-quick) ease;
 }
 
 .splice-action-icon-root:focus-visible,
 .splice-button-root:focus-visible,
 .splice-navlink-root:focus-visible {
-  outline: 2px solid var(--mantine-primary-color-filled);
+  outline: 2px solid var(--splice-focus, var(--mantine-primary-color-filled));
   outline-offset: 2px;
 }
 
@@ -45,38 +62,34 @@ code {
 }
 
 .splice-paper-root {
-  border-color: light-dark(
-    var(--mantine-color-gray-2),
-    rgba(255, 255, 255, 0.075)
-  );
+  border-color: var(--splice-border);
 }
 
 .splice-paper-root[data-with-border] {
-  background: light-dark(
-    var(--mantine-color-white),
-    var(--mantine-color-dark-6)
-  );
+  background: var(--splice-surface-raised);
 }
 
 .splice-popover-dropdown,
 .splice-floating-panel {
   border: 1px solid var(--mantine-color-default-border);
-  background: var(--mantine-color-body);
+  background: var(--splice-surface-overlay);
   box-shadow: var(--mantine-shadow-md);
+}
+
+/* Option colors must remain readable for custom seeds; Mantine's default uses white. */
+.splice-combobox-option[data-combobox-selected] {
+  background: var(--splice-selected);
+  color: var(--mantine-primary-color-light-color);
 }
 
 .splice-floating-panel {
   border-radius: var(--mantine-radius-md);
-  z-index: 20;
+  z-index: var(--splice-layer-floating-panel);
 }
 
 .splice-overlay-content {
-  border: 1px solid
-    light-dark(var(--mantine-color-gray-2), rgba(255, 255, 255, 0.075));
-  background: light-dark(
-    var(--mantine-color-white),
-    var(--mantine-color-dark-7)
-  );
+  border: 1px solid var(--splice-border);
+  background: var(--splice-surface-overlay);
 }
 
 .splice-overlay-body {
@@ -88,21 +101,24 @@ code {
 }
 
 .splice-overlay-header {
-  border-bottom: 1px solid
-    light-dark(var(--mantine-color-gray-2), rgba(255, 255, 255, 0.075));
+  border-bottom: 1px solid var(--splice-border);
 }
 
 .splice-overlay-title {
   font-weight: 700;
 }
 
-.splice-input-input {
-  border-color: var(--mantine-color-default-border);
+.splice-input-input,
+.splice-button-root[data-variant='default'] {
+  border-color: var(
+    --splice-control-border,
+    var(--mantine-color-default-border)
+  );
 }
 
 .splice-input-input:focus,
 .splice-input-input:focus-within {
-  border-color: var(--mantine-primary-color-filled);
+  border-color: var(--splice-focus, var(--mantine-primary-color-filled));
 }
 
 .splice-input-description {
@@ -110,10 +126,7 @@ code {
 }
 
 .splice-field-root {
-  --mantine-color-error: light-dark(
-    var(--mantine-color-red-9),
-    var(--mantine-color-red-2)
-  );
+  --mantine-color-error: var(--splice-error);
 }
 
 .splice-input-error {
@@ -122,6 +135,17 @@ code {
 
 .splice-inline-control-root {
   min-height: 24px;
+}
+
+.splice-choice-input:not(:checked):not([data-indeterminate]):not(:disabled):not(
+    [data-error]
+  ) {
+  border-color: var(--splice-control-border);
+}
+
+.splice-switch-input:not(:checked):not(:disabled):not([data-disabled])
+  + .splice-switch-track {
+  box-shadow: inset 0 0 0 1px var(--splice-control-border);
 }
 
 .splice-navlink-root {
@@ -154,33 +178,46 @@ code {
   select,
   textarea,
   .mantine-Input-input {
-    font-size: 16px !important;
+    font-size: var(--splice-size-mobile-input-font) !important;
   }
 
   .splice-input-input {
-    min-height: 48px;
-    font-size: 16px;
+    min-height: var(--splice-size-touch-input);
+    font-size: var(--splice-size-mobile-input-font);
   }
 
   .splice-segmented-control-root {
-    min-height: 48px;
+    min-height: var(--splice-size-touch-input);
   }
 
   .splice-segmented-control-label {
     display: flex;
-    min-height: 44px;
+    min-height: var(--splice-size-touch-target);
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: var(--splice-size-mobile-input-font);
   }
 }
 
-/* Kill all focus rings on Recharts/Mantine chart elements */
-.recharts-wrapper,
-.recharts-surface,
-[id*='recharts-zindex'] {
-  outline: none !important;
-  border: none !important;
+/* Suppress pointer focus only; keyboard chart navigation keeps a visible boundary. */
+.recharts-wrapper:focus:not(:focus-visible),
+.recharts-surface:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.recharts-wrapper:focus-visible,
+.recharts-surface:focus-visible {
+  outline: 2px solid var(--splice-focus);
+  outline-offset: 2px;
+}
+
+.splice-skeleton-root[data-visible]::before {
+  background-color: var(--splice-skeleton-base);
+}
+
+.splice-skeleton-root[data-visible]::after {
+  background-color: var(--splice-skeleton-highlight);
+  animation-duration: var(--splice-motion-breathe);
 }
 
 /* Loading placeholders remain still when the device requests reduced motion. */

@@ -1,41 +1,16 @@
 .statusBadge {
+  flex-shrink: 0;
   border: 1px solid transparent;
 }
 
 .ruleBadge {
-  color: light-dark(
-    var(--mantine-color-violet-9),
-    var(--mantine-color-violet-2)
-  );
+  color: var(--splice-status-rule-fg);
+  background: var(--splice-status-rule-bg);
   flex-shrink: 0;
 }
 
 .pendingBadge {
-  border-color: light-dark(
-    var(--mantine-color-yellow-4),
-    var(--mantine-color-yellow-7)
-  );
-  background: light-dark(
-    var(--mantine-color-yellow-0),
-    rgba(245, 159, 0, 0.18)
-  );
-  color: light-dark(
-    var(--mantine-color-yellow-9),
-    var(--mantine-color-yellow-3)
-  );
-}
-
-.reviewBadge {
-  border-color: light-dark(
-    var(--mantine-color-orange-4),
-    var(--mantine-color-orange-7)
-  );
-  background: light-dark(
-    var(--mantine-color-orange-0),
-    rgba(253, 126, 20, 0.18)
-  );
-  color: light-dark(
-    var(--mantine-color-orange-9),
-    var(--mantine-color-orange-3)
-  );
+  border-color: var(--splice-status-warning-fg);
+  background: var(--splice-status-warning-bg);
+  color: var(--splice-status-warning-fg);
 }

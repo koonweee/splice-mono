@@ -13,7 +13,7 @@ const enabledSettings: UserSettings = {
   currency: 'USD',
   timezone: 'UTC',
   hideZeroBalanceAccounts: false,
-  theme: 'splice-dark',
+  appearance: { mode: 'dark', accent: '#83b59b' },
   neutralizationLookaroundDays: 60,
   analysisSankeyEnabled: false,
   notifications: {

@@ -159,7 +159,7 @@ export function buildAnalysisSankeyData(
       target: netSavedIndex,
       value: toMajorUnits(exactAmount, analysis.currency),
       exactAmount,
-      color: 'var(--mantine-color-teal-6)',
+      color: 'var(--splice-positive)',
     })
   }
 

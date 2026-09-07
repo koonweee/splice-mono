@@ -1,30 +1,10 @@
 import {
-  ActionIcon,
-  AppShell,
-  Burger,
-  Group,
-  NavLink,
-  Stack,
-  Text,
-  Tooltip,
-} from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
-import {
-  Link,
   Outlet,
   createFileRoute,
   redirect,
   useLocation,
   useRouter,
 } from '@tanstack/react-router'
-import {
-  CreditCard,
-  Home,
-  LogOut,
-  PieChart,
-  Settings,
-  TrendingUp,
-} from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createNavigationPreparation } from '../lib/navigation-preload'
@@ -34,8 +14,8 @@ import { PrivateSessionBoundary } from '../components/PrivateSessionBoundary'
 import { useLogout } from '../lib/auth'
 import { isConfirmedLoggedOutError } from '../lib/session-refresh'
 import { sessionQueryOptions, useSession } from '../lib/session'
-import { applyThemePresetId, normalizeThemePresetId } from '../lib/theme'
-import styles from './_authed.module.css'
+import { APPEARANCE_STORAGE_KEY } from '../lib/appearance-preferences'
+import { AppShellLayout } from '../components/AppShellLayout'
 import type { PrimaryDestination } from '../lib/navigation-preload'
 
 export const Route = createFileRoute('/_authed')({
@@ -92,7 +72,6 @@ function AuthedLayout() {
 }
 
 function AuthenticatedLayoutContent() {
-  const [opened, { toggle }] = useDisclosure()
   const location = useLocation()
   const logoutMutation = useLogout()
   const { data: session } = useSession()
@@ -144,87 +123,22 @@ function AuthenticatedLayoutContent() {
     preparation.current?.prepare(to)
 
   useEffect(() => {
-    if (user?.settings) {
-      applyThemePresetId(normalizeThemePresetId(user.settings.theme))
+    const syncSavedAppearance = (event: StorageEvent) => {
+      if (event.key === APPEARANCE_STORAGE_KEY)
+        void queryClient.invalidateQueries({ queryKey: ['/user/me'] })
     }
-  }, [user?.settings])
-
-  const navItems = [
-    { to: '/home', label: 'Home', icon: Home },
-    { to: '/transactions', label: 'Transactions', icon: TrendingUp },
-    { to: '/analysis', label: 'Analysis', icon: PieChart },
-    { to: '/accounts', label: 'Accounts', icon: CreditCard },
-    { to: '/settings', label: 'Settings', icon: Settings },
-  ] as const
-
-  const handleLogout = () => {
-    logoutMutation.mutate({ data: {} })
-  }
+    window.addEventListener('storage', syncSavedAppearance)
+    return () => window.removeEventListener('storage', syncSavedAppearance)
+  }, [queryClient])
 
   return (
-    <AppShell
-      header={{ height: 60 }}
-      navbar={{
-        width: 260,
-        breakpoint: 'sm',
-        collapsed: { mobile: !opened, desktop: !opened },
-      }}
-      padding="md"
+    <AppShellLayout
+      pathname={location.pathname}
+      onLogout={() => logoutMutation.mutate({ data: {} })}
+      logoutPending={logoutMutation.isPending}
+      onPrepareDestination={prepareDestination}
     >
-      <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group>
-            <Burger
-              aria-label={opened ? 'Close navigation' : 'Open navigation'}
-              aria-expanded={opened}
-              aria-controls="main-navigation"
-              opened={opened}
-              onClick={toggle}
-              size="sm"
-            />
-            <Text fw={700} size="lg">
-              Splice
-            </Text>
-          </Group>
-          <Tooltip label="Logout">
-            <ActionIcon
-              aria-label="Log out"
-              variant="subtle"
-              color="gray"
-              onClick={handleLogout}
-              loading={logoutMutation.isPending}
-            >
-              <LogOut size={18} />
-            </ActionIcon>
-          </Tooltip>
-        </Group>
-      </AppShell.Header>
-
-      <AppShell.Navbar p="md" id="main-navigation">
-        <Stack gap="xs">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              component={Link}
-              to={item.to}
-              label={item.label}
-              leftSection={<item.icon size={18} />}
-              active={location.pathname === item.to}
-              onPointerEnter={() => prepareDestination(item.to)}
-              onFocus={() => prepareDestination(item.to)}
-              onTouchStart={() => prepareDestination(item.to)}
-              onClick={() => {
-                prepareDestination(item.to)
-                toggle()
-              }}
-            />
-          ))}
-        </Stack>
-      </AppShell.Navbar>
-
-      <AppShell.Main className={styles.main}>
-        <Outlet />
-      </AppShell.Main>
-    </AppShell>
+      <Outlet />
+    </AppShellLayout>
   )
 }

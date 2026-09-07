@@ -155,7 +155,7 @@ function renderHomePage() {
     <MantineProvider>
       <PresentationProvider
         initial={{
-          theme: 'splice-dark',
+          appearance: { mode: 'dark', accent: '#83b59b' },
           maskBalances: null,
           today: '2026-09-05',
         }}

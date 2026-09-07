@@ -3,7 +3,7 @@
   right: var(--mantine-spacing-md);
   bottom: var(--mantine-spacing-md);
   left: var(--mantine-spacing-md);
-  z-index: 300;
+  z-index: var(--splice-layer-lifecycle);
   display: grid;
   justify-items: center;
   gap: var(--mantine-spacing-xs);

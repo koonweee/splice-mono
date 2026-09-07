@@ -4,11 +4,11 @@
 }
 @media (--compact-layout) {
   .trigger {
-    flex: 1;
+    flex: 0 1 auto;
     width: auto;
     max-width: calc(100vw - 88px);
   }
   .triggerButton {
-    min-height: 48px;
+    min-height: var(--splice-size-touch-input);
   }
 }

@@ -1,0 +1,33 @@
+.swatch {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--splice-size-touch-target);
+  height: var(--splice-size-touch-target);
+  cursor: pointer;
+}
+.swatch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.swatch span {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--splice-control-border);
+  pointer-events: none;
+}
+.swatch input:checked + span {
+  outline: 2px solid var(--mantine-color-text);
+  outline-offset: 3px;
+}
+.swatch input:focus-visible + span {
+  outline: 3px solid var(--splice-focus);
+  outline-offset: 4px;
+}
+.swatch input:disabled + span { opacity: 0.4; }

@@ -8,7 +8,7 @@
 }
 
 .bulkSelectedRow {
-  background: light-dark(var(--mantine-color-blue-0), rgba(77, 171, 247, 0.12));
+  background: var(--splice-selected);
 }
 
 .dateCell {
@@ -22,7 +22,7 @@
   flex: 0 0 auto;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 120ms ease;
+  transition: opacity var(--splice-motion-quick) ease;
 }
 
 .dateText,
@@ -64,14 +64,11 @@
 }
 
 .positive {
-  color: light-dark(
-    var(--mantine-color-teal-9),
-    var(--mantine-color-teal-text)
-  );
+  color: var(--splice-positive);
 }
 
 .negative {
-  color: light-dark(var(--mantine-color-red-7), var(--mantine-color-red-2));
+  color: var(--splice-negative);
 }
 
 .merchantCell {
@@ -82,10 +79,7 @@
 .merchantAvatar {
   flex: 0 0 auto;
   border: 1px solid var(--mantine-color-default-border);
-  background: light-dark(
-    var(--mantine-color-gray-0),
-    var(--mantine-color-dark-5)
-  );
+  background: var(--splice-surface-avatar);
   color: var(--mantine-color-dimmed);
   font-size: var(--mantine-font-size-xs);
   font-weight: 700;
@@ -114,7 +108,7 @@
   min-height: 22px;
   color: var(--mantine-color-dimmed);
   opacity: 0.72;
-  transition: opacity 120ms ease;
+  transition: opacity var(--splice-motion-quick) ease;
 }
 
 .merchantInfoButton:focus-visible {
@@ -135,7 +129,7 @@
 }
 
 .metadataPopover {
-  border-color: var(--mantine-color-dark-4);
+  border-color: var(--splice-border);
 }
 
 .categoryCell {
@@ -154,102 +148,15 @@
   flex: 0 0 auto;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 120ms ease;
+  transition: opacity var(--splice-motion-quick) ease;
 }
 
 .categoryBadge {
   max-width: 100%;
   flex: 0 0 auto;
-  border-color: light-dark(
-    var(--mantine-color-teal-5),
-    rgba(56, 217, 169, 0.55)
-  );
-  background: light-dark(var(--mantine-color-teal-0), rgba(18, 184, 134, 0.08));
-  color: light-dark(var(--mantine-color-teal-9), var(--mantine-color-teal-2));
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
-}
-
-.categoryFoodBadge {
-  border-color: light-dark(
-    var(--mantine-color-green-5),
-    rgba(81, 207, 102, 0.56)
-  );
-  background: light-dark(var(--mantine-color-green-0), rgba(64, 192, 87, 0.08));
-  color: light-dark(var(--mantine-color-green-9), var(--mantine-color-green-2));
-}
-
-.categoryDepositBadge {
-  border-color: light-dark(
-    var(--mantine-color-blue-5),
-    rgba(77, 171, 247, 0.58)
-  );
-  background: light-dark(var(--mantine-color-blue-0), rgba(34, 139, 230, 0.08));
-  color: light-dark(var(--mantine-color-blue-9), var(--mantine-color-blue-2));
-}
-
-.categoryTransferBadge {
-  border-color: light-dark(
-    var(--mantine-color-violet-5),
-    rgba(151, 117, 250, 0.58)
-  );
-  background: light-dark(
-    var(--mantine-color-violet-0),
-    rgba(121, 80, 242, 0.08)
-  );
-  color: light-dark(
-    var(--mantine-color-violet-9),
-    var(--mantine-color-violet-2)
-  );
-}
-
-.categoryElectronicsBadge {
-  border-color: light-dark(
-    var(--mantine-color-cyan-5),
-    rgba(59, 201, 219, 0.58)
-  );
-  background: light-dark(var(--mantine-color-cyan-0), rgba(21, 170, 191, 0.08));
-  color: light-dark(var(--mantine-color-cyan-9), var(--mantine-color-cyan-2));
-}
-
-.categoryEntertainmentBadge {
-  border-color: light-dark(
-    var(--mantine-color-grape-5),
-    rgba(218, 119, 242, 0.54)
-  );
-  background: light-dark(
-    var(--mantine-color-grape-0),
-    rgba(174, 62, 201, 0.08)
-  );
-  color: light-dark(var(--mantine-color-grape-9), var(--mantine-color-grape-2));
-}
-
-.categoryServiceBadge {
-  border-color: light-dark(
-    var(--mantine-color-gray-5),
-    rgba(173, 181, 189, 0.5)
-  );
-  background: light-dark(
-    var(--mantine-color-gray-0),
-    rgba(173, 181, 189, 0.06)
-  );
-  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-gray-3));
-}
-
-.categoryOverrideBadge {
-  border-color: light-dark(
-    var(--mantine-color-indigo-5),
-    rgba(116, 143, 252, 0.62)
-  );
-  background: light-dark(
-    var(--mantine-color-indigo-0),
-    rgba(92, 124, 250, 0.08)
-  );
-  color: light-dark(
-    var(--mantine-color-indigo-9),
-    var(--mantine-color-indigo-2)
-  );
 }
 
 .categoryLabel {
@@ -274,28 +181,6 @@
   text-underline-offset: 3px;
 }
 
-.categoryOption {
-  display: block;
-  width: 100%;
-  border-radius: 4px;
-  padding: 5px var(--mantine-spacing-xs);
-  text-align: left;
-}
-
-.categoryOptionsList {
-  max-height: 220px;
-  overflow-y: auto;
-}
-
-.categoryOptionMeta {
-  opacity: 0.75;
-}
-
-.categoryOption[aria-selected='true'] {
-  background: var(--mantine-primary-color-light);
-  color: var(--mantine-primary-color-light-color);
-}
-
 .categoryCell:focus-within .categoryActions,
 .dateCell:focus-within .dateActions {
   opacity: 1;
@@ -303,16 +188,6 @@
 }
 
 @media (--supports-hover) {
-  .categoryOption:hover {
-    background: var(--mantine-color-gray-1);
-    color: var(--mantine-color-gray-9);
-  }
-
-  .categoryOption[aria-selected='true']:hover {
-    background: var(--mantine-primary-color-light-hover);
-    color: var(--mantine-primary-color-light-color);
-  }
-
   .categoryCell:hover .categoryActions,
   .dateCell:hover .dateActions {
     opacity: 1;

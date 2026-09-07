@@ -312,7 +312,7 @@ describe('mutation reconciliation', () => {
       email: 'owner@example.test',
       settings: {
         currency: 'USD',
-        theme: 'splice-dark',
+        appearance: { mode: 'dark', accent: '#83b59b' },
         neutralizationLookaroundDays: 60,
       },
     }

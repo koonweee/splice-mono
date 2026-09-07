@@ -350,6 +350,7 @@ export function TransactionsMobileList({
                     </span>
                   </div>
                   <div
+                    role="group"
                     aria-label={`${transaction.accountName ?? 'Account'} · ${getCategoryLabel(transaction)}`}
                     className={styles.rowDetails}
                   >

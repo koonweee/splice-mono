@@ -46,7 +46,7 @@ function setup(withSeries = true) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <PresentationProvider
-        initial={{ today: date, theme: 'splice-dark', maskBalances: true }}
+        initial={{ today: date, appearance: { mode: 'dark', accent: '#83b59b' }, maskBalances: true }}
       >
         {children}
       </PresentationProvider>

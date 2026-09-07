@@ -39,7 +39,17 @@ export function ConfirmActionDialog({
       size="sm"
       padding="lg"
       closeOnClickOutside={!isPending}
-      closeOnEscape={!isPending}
+      closeOnEscape={false}
+      onFocusCapture={(event) => {
+        event.target.setAttribute('data-mantine-stop-propagation', 'true')
+      }}
+      onKeyDownCapture={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          event.stopPropagation()
+          close()
+        }
+      }}
       closeButtonProps={{
         'aria-label': 'Close confirmation',
         disabled: isPending,

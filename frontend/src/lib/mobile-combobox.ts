@@ -1,3 +1,4 @@
+import { foundation } from './design-system/foundation'
 import type { ComboboxProps } from '@mantine/core'
 
 const DROPDOWN_MAX_HEIGHT_VAR = '--splice-combobox-dropdown-max-height'
@@ -29,7 +30,7 @@ export function getViewportAwareComboboxProps(
     position: 'bottom-start',
     preventPositionChangeWhenVisible: false,
     withinPortal: true,
-    zIndex: 1100,
+    zIndex: foundation.layers.combobox,
     ...rest,
   }
 }

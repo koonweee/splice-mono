@@ -1,6 +1,7 @@
 import { MantineProvider } from '@mantine/core'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EditorModal } from './forms/EditorModal'
 import { DateRangeControl } from './DateRangeControl'
 
 function setMobileViewport(matches: boolean) {
@@ -31,6 +32,34 @@ afterEach(() => {
 })
 
 describe('DateRangeControl', () => {
+  it.each([false, true])(
+    'dismisses a nested calendar without closing its editor (mobile=%s)',
+    (mobile) => {
+      setMobileViewport(mobile)
+      const closeEditor = vi.fn()
+      render(
+        <MantineProvider>
+          <EditorModal opened onClose={closeEditor} title="Edit account">
+            <DateRangeControl onChange={() => {}} value={[null, null]} />
+          </EditorModal>
+        </MantineProvider>,
+      )
+      act(() => vi.runAllTimers())
+      const trigger = screen.getByRole('button', { name: 'Choose date range' })
+      fireEvent.click(trigger)
+      act(() => vi.runAllTimers())
+      const picker = screen.getByRole('dialog', { name: 'Date range' })
+      fireEvent.focus(picker)
+      fireEvent.keyDown(picker, {
+        key: 'Escape',
+      })
+      act(() => vi.runAllTimers())
+      expect(closeEditor).not.toHaveBeenCalled()
+      expect(trigger.getAttribute('aria-expanded')).toBe('false')
+      expect(screen.queryByRole('dialog', { name: 'Date range' })).toBeNull()
+    },
+  )
+
   it('exposes desktop calendar dialog state on its trigger button', () => {
     setMobileViewport(false)
     const onChange = vi.fn()

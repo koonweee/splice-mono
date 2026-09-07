@@ -79,7 +79,10 @@ export function InvestmentHoldingsTable({
   }
 
   const compactRows = (
-    <Box aria-label={`Investment holdings list, ${holdings.length} total`}>
+    <Box
+      role="region"
+      aria-label={`Investment holdings list, ${holdings.length} total`}
+    >
       {holdings.map((holding) => {
         const currency = getHoldingCurrency(holding)
         const normalizedCurrency = holding.accountCurrency ?? accountCurrency

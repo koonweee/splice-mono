@@ -227,7 +227,7 @@ export function AccountRow({ account }: { account: Account }) {
         py="xs"
         px="sm"
         style={{
-          borderBottom: '1px solid var(--mantine-color-gray-2)',
+          borderBottom: '1px solid var(--splice-separator)',
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -279,7 +279,14 @@ export function AccountRow({ account }: { account: Account }) {
             </form>
           ) : (
             <Group gap={6} wrap="nowrap">
-              <Text fw={500}>{displayName}</Text>
+              <Text
+                fw={500}
+                truncate
+                style={{ flex: 1, minWidth: 0 }}
+                title={displayName}
+              >
+                {displayName}
+              </Text>
               <ActionIcon
                 variant="subtle"
                 color="gray"

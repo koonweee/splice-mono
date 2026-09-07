@@ -5,7 +5,8 @@ import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
-import { expandMediaQuery } from './src/lib/media-queries'
+import { OFFLINE_COLORS } from './src/lib/design-system/offline'
+import { spliceCss } from './vite-css'
 
 const isTest = process.env.VITEST === 'true'
 const disableDevtools = process.env.VITE_DISABLE_DEVTOOLS === 'true'
@@ -14,20 +15,7 @@ const config = defineConfig({
   // SSR route links are removed on navigation, but Vite remembers their CSS as
   // loaded. Keep shared component styles in the persistent root stylesheet.
   build: { cssCodeSplit: false },
-  css: {
-    postcss: {
-      plugins: [
-        {
-          postcssPlugin: 'splice-responsive-media',
-          AtRule: {
-            media(rule) {
-              rule.params = expandMediaQuery(rule.params)
-            },
-          },
-        },
-      ],
-    },
-  },
+  css: spliceCss,
   plugins: [
     {
       name: 'splice-persistent-css',
@@ -106,8 +94,8 @@ const config = defineConfig({
         scope: '/',
         display: 'standalone',
         description: 'Personal finance dashboard for synced transactions.',
-        theme_color: '#282a36',
-        background_color: '#282a36',
+        theme_color: OFFLINE_COLORS.canvas,
+        background_color: OFFLINE_COLORS.canvas,
       },
       injectManifest: {
         globPatterns: [

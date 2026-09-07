@@ -1,15 +1,25 @@
 import { z } from 'zod';
 import { registerSchema } from '../common/zod-api-response';
 
-export const USER_THEME_VALUES = [
-  'splice-light',
-  'splice-dark',
-  'dracula',
-  'oled-black',
-] as const;
+export const AppearancePreferenceSchema = registerSchema(
+  'AppearancePreference',
+  z
+    .object({
+      mode: z.enum(['light', 'dark', 'oled']),
+      accent: z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/)
+        .transform((value) => value.toLowerCase())
+        .nullable(),
+    })
+    .strict(),
+);
+export type AppearancePreference = z.infer<typeof AppearancePreferenceSchema>;
+export const DEFAULT_APPEARANCE: AppearancePreference = {
+  mode: 'dark',
+  accent: '#83b59b',
+};
 
-export const UserThemePreferenceSchema = z.enum(USER_THEME_VALUES);
-export const UserThemeSchema = UserThemePreferenceSchema.default('splice-dark');
 export const NeutralizationLookaroundDaysSchema = z
   .number()
   .int()
@@ -51,8 +61,8 @@ export const UserSettingsSchema = registerSchema(
     timezone: z.string().default('UTC'),
     /** Hide zero-balance accounts from the home dashboard account lists */
     hideZeroBalanceAccounts: z.boolean().default(false),
-    /** User's preferred design theme preset */
-    theme: UserThemeSchema,
+    /** Complete appearance preference; neutral accent is explicitly null */
+    appearance: AppearancePreferenceSchema.default(DEFAULT_APPEARANCE),
     /** Days before/after the selected analysis range to consider for neutralization candidates */
     neutralizationLookaroundDays:
       NeutralizationLookaroundDaysSchema.default(60),
@@ -75,28 +85,31 @@ export type UserSettings = z.infer<typeof UserSettingsSchema>;
  */
 export const UpdateUserSettingsDtoSchema = registerSchema(
   'UpdateUserSettingsDto',
-  z.object({
-    currency: z.string().optional(),
-    timezone: z.string().optional(),
-    hideZeroBalanceAccounts: z.boolean().optional(),
-    theme: UserThemePreferenceSchema.optional(),
-    neutralizationLookaroundDays: NeutralizationLookaroundDaysSchema.optional(),
-    analysisSankeyEnabled: z.boolean().optional(),
-    notifications: z
-      .object({
-        transactions: z
-          .object({
-            newSyncedTransactions: z.boolean().optional(),
-          })
-          .optional(),
-        bankLinks: z
-          .object({
-            needsAttention: z.boolean().optional(),
-          })
-          .optional(),
-      })
-      .optional(),
-  }),
+  z
+    .object({
+      currency: z.string().optional(),
+      timezone: z.string().optional(),
+      hideZeroBalanceAccounts: z.boolean().optional(),
+      appearance: AppearancePreferenceSchema.optional(),
+      neutralizationLookaroundDays:
+        NeutralizationLookaroundDaysSchema.optional(),
+      analysisSankeyEnabled: z.boolean().optional(),
+      notifications: z
+        .object({
+          transactions: z
+            .object({
+              newSyncedTransactions: z.boolean().optional(),
+            })
+            .optional(),
+          bankLinks: z
+            .object({
+              needsAttention: z.boolean().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+    })
+    .strict(),
 );
 
 export type UpdateUserSettingsDto = z.infer<typeof UpdateUserSettingsDtoSchema>;
@@ -108,7 +121,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   currency: 'USD',
   timezone: 'UTC',
   hideZeroBalanceAccounts: false,
-  theme: 'splice-dark',
+  appearance: DEFAULT_APPEARANCE,
   neutralizationLookaroundDays: 60,
   analysisSankeyEnabled: false,
   notifications: {
@@ -124,21 +137,21 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
 export function normalizeUserSettings(
   settings?: Partial<UserSettings> | null,
 ): UserSettings {
-  const theme = UserThemePreferenceSchema.safeParse(settings?.theme);
+  const appearance = AppearancePreferenceSchema.safeParse(settings?.appearance);
   const neutralizationLookaroundDays =
     NeutralizationLookaroundDaysSchema.safeParse(
       settings?.neutralizationLookaroundDays,
     );
 
-  return {
+  return UserSettingsSchema.parse({
     ...DEFAULT_USER_SETTINGS,
     ...settings,
-    theme: theme.success ? theme.data : DEFAULT_USER_SETTINGS.theme,
+    appearance: appearance.success ? appearance.data : DEFAULT_APPEARANCE,
     neutralizationLookaroundDays: neutralizationLookaroundDays.success
       ? neutralizationLookaroundDays.data
       : DEFAULT_USER_SETTINGS.neutralizationLookaroundDays,
     notifications: UserNotificationSettingsSchema.parse(
       settings?.notifications,
     ),
-  };
+  });
 }

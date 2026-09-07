@@ -3,7 +3,7 @@
   right: var(--mantine-spacing-md);
   bottom: var(--mantine-spacing-md);
   left: var(--mantine-spacing-md);
-  z-index: 250;
+  z-index: var(--splice-layer-bulk-toolbar);
   display: flex;
   justify-content: center;
   pointer-events: none;
@@ -30,7 +30,7 @@
 }
 
 .categorySelect input {
-  font-size: 16px;
+  font-size: var(--splice-size-mobile-input-font);
 }
 
 .saveButton {
@@ -55,7 +55,7 @@
 }
 
 .inlineToolbar .categorySelect input {
-  min-height: 48px;
+  min-height: var(--splice-size-touch-input);
 }
 
 .inlineSaveButton {

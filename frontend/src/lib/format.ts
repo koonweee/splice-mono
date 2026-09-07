@@ -193,7 +193,7 @@ export function getChangeColorMantine(
   if (changePercent === undefined) return 'dimmed'
   const isPositive = changePercent > 0
   const isGood = isLiability ? !isPositive : isPositive
-  return isGood ? 'teal' : 'red'
+  return isGood ? 'var(--splice-positive)' : 'var(--splice-negative)'
 }
 
 /**

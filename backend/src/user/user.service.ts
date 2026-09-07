@@ -172,7 +172,7 @@ export class UserService {
           hideZeroBalanceAccounts:
             settingsUpdate.hideZeroBalanceAccounts ??
             oldSettings.hideZeroBalanceAccounts,
-          theme: settingsUpdate.theme ?? oldSettings.theme,
+          appearance: settingsUpdate.appearance ?? oldSettings.appearance,
           neutralizationLookaroundDays:
             settingsUpdate.neutralizationLookaroundDays ??
             oldSettings.neutralizationLookaroundDays,

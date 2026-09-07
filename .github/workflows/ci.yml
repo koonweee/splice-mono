@@ -55,7 +55,7 @@ jobs:
           fi
 
           # Check if frontend runtime, tests, generated-client config, or quality gates changed
-          if echo "$CHANGED_FILES" | grep -Eq "^frontend/(src|package.json|yarn.lock|eslint.config.js|tsconfig.json|vite.config.ts|orval.config.ts)"; then
+          if echo "$CHANGED_FILES" | grep -Eq "^frontend/(src|workbench|scripts|package.json|yarn.lock|eslint.config.js|tsconfig.json|vite.config.ts|vite-css.ts|orval.config.ts)"; then
             echo "frontend=true" >> $GITHUB_OUTPUT
           else
             echo "frontend=false" >> $GITHUB_OUTPUT
@@ -132,3 +132,23 @@ jobs:
           cache-dependency-path: frontend/yarn.lock
       - run: yarn install --frozen-lockfile
       - run: yarn lint
+
+  frontend-workbench:
+    name: Frontend Workbench
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn tokens:check
+      - run: yarn test workbench --maxWorkers=2
+      - run: yarn workbench:build

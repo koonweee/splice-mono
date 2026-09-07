@@ -1,8 +1,5 @@
 .table {
-  --splice-table-border: light-dark(
-    var(--mantine-color-gray-2),
-    rgba(255, 255, 255, 0.075)
-  );
+  --splice-table-border: var(--splice-border);
 }
 
 .table :global(.mrt-table-paper) {
@@ -76,10 +73,7 @@
 
 @media (--supports-hover) {
   .table :global(.mrt-table-body-row:hover td) {
-    background: light-dark(
-      var(--mantine-color-gray-0),
-      rgba(255, 255, 255, 0.025)
-    );
+    background: var(--splice-table-hover);
   }
 
   .table :global(.mrt-table-head-cell-resize-handle:hover),
@@ -101,7 +95,7 @@
 
 @media (--compact-layout) {
   .actions :global(.mantine-ActionIcon-root) {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--splice-size-touch-target);
+    min-height: var(--splice-size-touch-target);
   }
 }

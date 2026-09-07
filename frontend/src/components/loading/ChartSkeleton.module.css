@@ -1,20 +1,20 @@
 .root {
   height: 180px;
   width: 100%;
-  color: var(--mantine-color-teal-6);
+  color: var(--splice-chart-color);
 }
 
 .graph {
   display: block;
   width: 100%;
   height: 100%;
-  opacity: 0.45;
-  animation: breathe 1.8s ease-in-out infinite;
+  opacity: var(--splice-chart-placeholder-opacity);
+  animation: breathe var(--splice-motion-breathe) ease-in-out infinite;
 }
 
 @keyframes breathe {
   50% {
-    opacity: 0.2;
+    opacity: var(--splice-chart-placeholder-dim-opacity);
   }
 }
 

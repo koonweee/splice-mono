@@ -16,12 +16,49 @@ const defaultNotificationSettings = {
 };
 
 describe('UserSettings types', () => {
+  it.each(['light', 'dark', 'oled'])(
+    'accepts atomic %s appearance and normalizes hex',
+    (mode) => {
+      expect(
+        UpdateUserSettingsDtoSchema.parse({
+          appearance: { mode, accent: '#AAbbCC' },
+        }),
+      ).toEqual({ appearance: { mode, accent: '#aabbcc' } });
+      expect(
+        UpdateUserSettingsDtoSchema.parse({
+          appearance: { mode, accent: null },
+        }),
+      ).toEqual({ appearance: { mode, accent: null } });
+    },
+  );
+  it.each([
+    null,
+    {},
+    { mode: 'dark' },
+    { accent: null },
+    { mode: 'auto', accent: null },
+    { mode: 'light', accent: '#fff' },
+    { mode: 'dark', accent: '#1234567' },
+    { mode: 'dark', accent: 'x'.repeat(1000) },
+  ])('rejects malformed or incomplete appearance %j', (appearance) => {
+    expect(() => UpdateUserSettingsDtoSchema.parse({ appearance })).toThrow();
+  });
+  it('rejects the removed theme field even alongside a valid appearance', () => {
+    expect(() =>
+      UpdateUserSettingsDtoSchema.parse({
+        theme: 'splice-dark',
+        appearance: { mode: 'dark', accent: null },
+      }),
+    ).toThrow();
+    expect(UpdateUserSettingsDtoSchema.parse({})).toEqual({});
+  });
+
   it('defaults full user settings', () => {
     expect(UserSettingsSchema.parse({})).toEqual({
       currency: 'USD',
       timezone: 'UTC',
       hideZeroBalanceAccounts: false,
-      theme: 'splice-dark',
+      appearance: { mode: 'dark', accent: '#83b59b' },
       neutralizationLookaroundDays: 60,
       analysisSankeyEnabled: false,
       ...defaultNotificationSettings,
@@ -29,8 +66,12 @@ describe('UserSettings types', () => {
   });
 
   it('does not apply defaults to partial settings updates', () => {
-    expect(UpdateUserSettingsDtoSchema.parse({ theme: 'dracula' })).toEqual({
-      theme: 'dracula',
+    expect(
+      UpdateUserSettingsDtoSchema.parse({
+        appearance: { mode: 'dark', accent: '#b399cf' },
+      }),
+    ).toEqual({
+      appearance: { mode: 'dark', accent: '#b399cf' },
     });
   });
 
@@ -73,19 +114,19 @@ describe('UserSettings types', () => {
     ).toThrow();
   });
 
-  it('normalizes removed stored theme presets to the default', () => {
+  it('normalizes invalid stored appearance to the default', () => {
     expect(
       normalizeUserSettings({
         currency: 'USD',
         timezone: 'UTC',
         hideZeroBalanceAccounts: false,
-        theme: 'solarized-light',
+        appearance: { mode: 'invalid', accent: null },
       } as unknown as Parameters<typeof normalizeUserSettings>[0]),
     ).toEqual({
       currency: 'USD',
       timezone: 'UTC',
       hideZeroBalanceAccounts: false,
-      theme: 'splice-dark',
+      appearance: { mode: 'dark', accent: '#83b59b' },
       neutralizationLookaroundDays: 60,
       analysisSankeyEnabled: false,
       ...defaultNotificationSettings,
@@ -98,13 +139,13 @@ describe('UserSettings types', () => {
         currency: 'USD',
         timezone: 'UTC',
         hideZeroBalanceAccounts: false,
-        theme: 'splice-dark',
+        appearance: { mode: 'dark', accent: '#83b59b' },
       }),
     ).toEqual({
       currency: 'USD',
       timezone: 'UTC',
       hideZeroBalanceAccounts: false,
-      theme: 'splice-dark',
+      appearance: { mode: 'dark', accent: '#83b59b' },
       neutralizationLookaroundDays: 60,
       analysisSankeyEnabled: false,
       ...defaultNotificationSettings,
@@ -117,14 +158,14 @@ describe('UserSettings types', () => {
         currency: 'USD',
         timezone: 'UTC',
         hideZeroBalanceAccounts: false,
-        theme: 'splice-dark',
+        appearance: { mode: 'dark', accent: '#83b59b' },
         neutralizationLookaroundDays: 60,
       }),
     ).toEqual({
       currency: 'USD',
       timezone: 'UTC',
       hideZeroBalanceAccounts: false,
-      theme: 'splice-dark',
+      appearance: { mode: 'dark', accent: '#83b59b' },
       neutralizationLookaroundDays: 60,
       analysisSankeyEnabled: false,
       ...defaultNotificationSettings,

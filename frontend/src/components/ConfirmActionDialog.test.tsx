@@ -9,6 +9,7 @@ import {
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConfirmActionDialog } from './ConfirmActionDialog'
+import { EditorModal } from './forms/EditorModal'
 import type { ConfirmActionDialogProps } from './ConfirmActionDialog'
 
 beforeEach(() => {
@@ -51,6 +52,34 @@ function renderConfirmation(overrides: Partial<ConfirmActionDialogProps> = {}) {
 }
 
 describe('ConfirmActionDialog', () => {
+  it('isolates Escape from an editor underneath the confirmation', async () => {
+    const closeEditor = vi.fn()
+    const closeConfirmation = vi.fn()
+    render(
+      <MantineProvider>
+        <EditorModal opened title="Edit account" onClose={closeEditor}>
+          <button>Editor action</button>
+        </EditorModal>
+        <ConfirmActionDialog
+          opened
+          title="Archive account"
+          targetLabel="Everyday account"
+          consequence="This account will be archived."
+          confirmLabel="Archive"
+          onConfirm={vi.fn()}
+          onClose={closeConfirmation}
+        />
+      </MantineProvider>,
+    )
+    const cancel = within(
+      screen.getByRole('dialog', { name: 'Archive account' }),
+    ).getByRole('button', { name: 'Cancel' })
+    await waitFor(() => expect(document.activeElement).toBe(cancel))
+    fireEvent.keyDown(cancel, { key: 'Escape' })
+    expect(closeConfirmation).toHaveBeenCalledOnce()
+    expect(closeEditor).not.toHaveBeenCalled()
+  })
+
   it('names the target and consequence, focuses Cancel, and waits for explicit confirmation', async () => {
     const { props } = renderConfirmation()
     const dialog = screen.getByRole('dialog', { name: 'Delete transaction' })

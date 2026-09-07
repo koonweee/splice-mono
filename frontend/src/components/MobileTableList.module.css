@@ -1,17 +1,14 @@
 .list {
   overflow: hidden;
   border: 1px solid
-    light-dark(var(--mantine-color-gray-2), rgba(255, 255, 255, 0.075));
+    var(--splice-border);
   border-radius: var(--mantine-radius-sm);
-  background: light-dark(
-    var(--mantine-color-white),
-    var(--mantine-color-dark-6)
-  );
+  background: var(--splice-surface-raised);
 }
 
 .row {
   border-bottom: 1px solid
-    light-dark(var(--mantine-color-gray-2), rgba(255, 255, 255, 0.065));
+    var(--splice-separator);
 }
 
 .row:last-child {
@@ -19,7 +16,7 @@
 }
 
 .row[data-selected='true'] {
-  background: light-dark(var(--mantine-color-blue-0), rgba(77, 171, 247, 0.12));
+  background: var(--splice-selected);
 }
 
 @media (--compact-layout) {

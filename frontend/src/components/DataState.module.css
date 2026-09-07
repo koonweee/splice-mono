@@ -26,7 +26,7 @@
   position: fixed;
   bottom: calc(var(--mantine-spacing-md) + env(safe-area-inset-bottom));
   right: var(--mantine-spacing-md);
-  z-index: 190;
+  z-index: var(--splice-layer-retained-error);
   max-width: min(360px, calc(100vw - 32px));
   box-shadow: var(--mantine-shadow-md);
 }

@@ -80,6 +80,39 @@ afterEach(() => {
 })
 
 describe('ManualBrokeragePositionsEditor', () => {
+  it('keeps keyboard focus inside results and returns to search on Escape or selection', async () => {
+    render(
+      <TestEditor searchSecurities={vi.fn().mockResolvedValue([result])} />,
+    )
+    const input = screen.getByRole('combobox', {
+      name: 'Search stocks and ETFs',
+    })
+    input.focus()
+    fireEvent.change(input, { target: { value: 'C6L' } })
+    const add = await screen.findByRole('button', {
+      name: 'Add C6L.SI',
+      hidden: true,
+    })
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(add)
+    expect(input.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.keyDown(add, { key: 'Escape' })
+    expect(document.activeElement).toBe(input)
+    expect(input.getAttribute('aria-expanded')).toBe('false')
+    expect(
+      document.getElementById(input.getAttribute('aria-controls')!),
+    ).not.toBeNull()
+    fireEvent.change(input, { target: { value: 'C6L.SI' } })
+    const nextAdd = await screen.findByRole('button', {
+      name: 'Add C6L.SI',
+      hidden: true,
+    })
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.click(nextAdd)
+    expect(await screen.findByLabelText('C6L.SI quantity')).toBeTruthy()
+    expect(document.activeElement).toBe(input)
+  })
+
   it('opens delayed search results when they arrive without requiring refocus', async () => {
     let resolveSearch: (
       value: Array<ManualBrokerageSecurityResult>,
@@ -96,7 +129,9 @@ describe('ManualBrokeragePositionsEditor', () => {
     searchInput.focus()
     for (const value of ['I', 'IN', 'INT', 'INTC']) {
       fireEvent.change(searchInput, { target: { value } })
-      expect(screen.queryByLabelText('Security search results')).toBeNull()
+      expect(
+        screen.queryByRole('dialog', { name: 'Security search results' }),
+      ).toBeNull()
     }
     await waitFor(() => expect(searchSecurities).toHaveBeenCalledOnce())
     expect(document.activeElement).toBe(searchInput)

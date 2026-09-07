@@ -8,6 +8,7 @@ import {
   waitFor,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { encodeAppearance } from '../../lib/appearance-preferences'
 import { SettingsPage } from '../../components/pages/SettingsPage'
 import { validateSettingsSearch } from '../../lib/route-search'
 import type * as SessionModule from '../../lib/session'
@@ -132,7 +133,7 @@ let queryClientState: {
 let meState: {
   data: {
     settings: {
-      theme?: string | null
+      appearance?: { mode: string; accent: string | null } | null
       currency: string | null
       timezone: string | null
       hideZeroBalanceAccounts?: boolean | null
@@ -224,7 +225,7 @@ beforeEach(() => {
   meState = {
     data: {
       settings: {
-        theme: 'splice-dark',
+        appearance: { mode: 'dark', accent: '#83b59b' },
         currency: 'USD',
         timezone: 'UTC',
         hideZeroBalanceAccounts: false,
@@ -317,6 +318,22 @@ afterEach(() => {
 })
 
 describe('SettingsPage', () => {
+  it('cancels an invalid custom accent without saving or leaving the invalid draft behind', () => {
+    renderSettingsPage()
+    const input = screen.getByLabelText<HTMLInputElement>('Custom accent')
+    fireEvent.change(input, { target: { value: '#12' } })
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', {
+        name: /save changes/i,
+      }).disabled,
+    ).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/i }))
+    expect(screen.getByLabelText<HTMLInputElement>('Custom accent').value).toBe(
+      '#83b59b',
+    )
+    expect(updateSettingsState.mutate).not.toHaveBeenCalled()
+  })
+
   it('prepares list data on pointer, keyboard, and touch intent without mounting the section or fetching security inventory', () => {
     renderSettingsPage()
     fireEvent.pointerEnter(screen.getByRole('tab', { name: 'Categories' }))
@@ -469,7 +486,7 @@ describe('SettingsPage', () => {
     expect(updateSettingsState.mutate).toHaveBeenCalledTimes(1)
     expect(updateSettingsState.mutate.mock.calls[0][0]).toEqual({
       data: {
-        theme: 'splice-dark',
+        appearance: { mode: 'dark', accent: '#83b59b' },
         currency: 'USD',
         timezone: 'UTC',
         hideZeroBalanceAccounts: true,
@@ -599,7 +616,7 @@ describe('SettingsPage', () => {
     expect(updateSettingsState.mutate).toHaveBeenCalledWith(
       {
         data: {
-          theme: 'splice-dark',
+          appearance: { mode: 'dark', accent: '#83b59b' },
           currency: 'EUR',
           timezone: 'UTC',
           hideZeroBalanceAccounts: false,
@@ -627,15 +644,13 @@ describe('SettingsPage', () => {
   it('adopts newer server General settings while the form is clean', async () => {
     const { rerender } = renderSettingsPage()
     expect(
-      screen
-        .getByRole('radio', { name: /splice dark/i })
-        .getAttribute('aria-checked'),
-    ).toBe('true')
+      screen.getByRole<HTMLInputElement>('radio', { name: /^Dark$/i }).checked,
+    ).toBe(true)
 
     meState.data = {
       settings: {
         ...meState.data!.settings,
-        theme: 'dracula',
+        appearance: { mode: 'dark', accent: '#b399cf' },
         currency: 'EUR',
         hideZeroBalanceAccounts: true,
       },
@@ -653,10 +668,9 @@ describe('SettingsPage', () => {
 
     await waitFor(() => {
       expect(
-        screen
-          .getByRole('radio', { name: /dracula/i })
-          .getAttribute('aria-checked'),
-      ).toBe('true')
+        screen.getByRole<HTMLInputElement>('radio', { name: /Dusty plum/i })
+          .checked,
+      ).toBe(true)
     })
     const hideZeroSwitch = screen.getByRole('switch', {
       name: /hide 0 balance accounts/i,
@@ -684,7 +698,7 @@ describe('SettingsPage', () => {
     meState.data = {
       settings: {
         ...meState.data!.settings,
-        theme: 'dracula',
+        appearance: { mode: 'dark', accent: '#b399cf' },
         currency: 'GBP',
         hideZeroBalanceAccounts: true,
       },
@@ -701,10 +715,8 @@ describe('SettingsPage', () => {
     )
 
     expect(
-      screen
-        .getByRole('radio', { name: /splice dark/i })
-        .getAttribute('aria-checked'),
-    ).toBe('true')
+      screen.getByRole<HTMLInputElement>('radio', { name: /^Dark$/i }).checked,
+    ).toBe(true)
     const dirtyCurrencyInput = screen.getByPlaceholderText('Select currency')
     if (!(dirtyCurrencyInput instanceof HTMLInputElement)) {
       throw new Error('Expected a native currency input')
@@ -716,10 +728,9 @@ describe('SettingsPage', () => {
 
     await waitFor(() => {
       expect(
-        screen
-          .getByRole('radio', { name: /dracula/i })
-          .getAttribute('aria-checked'),
-      ).toBe('true')
+        screen.getByRole<HTMLInputElement>('radio', { name: /Dusty plum/i })
+          .checked,
+      ).toBe(true)
     })
     const currencyInput = screen.getByPlaceholderText('Select currency')
     const hideZeroSwitch = screen.getByRole('switch', {
@@ -744,7 +755,9 @@ describe('SettingsPage', () => {
     renderSettingsPage()
 
     localStorageState.setItem.mockClear()
-    fireEvent.click(screen.getByRole('radio', { name: /dracula/i }))
+    fireEvent.click(
+      screen.getByRole<HTMLInputElement>('radio', { name: /Dusty plum/i }),
+    )
 
     expect(localStorageState.setItem).not.toHaveBeenCalled()
 
@@ -753,7 +766,7 @@ describe('SettingsPage', () => {
     expect(updateSettingsState.mutate).toHaveBeenCalledTimes(1)
     expect(updateSettingsState.mutate.mock.calls[0][0]).toEqual({
       data: {
-        theme: 'dracula',
+        appearance: { mode: 'dark', accent: '#b399cf' },
         currency: 'USD',
         timezone: 'UTC',
         hideZeroBalanceAccounts: false,
@@ -956,12 +969,14 @@ describe('SettingsPage', () => {
     renderSettingsPage()
 
     localStorageState.setItem.mockClear()
-    fireEvent.click(screen.getByRole('radio', { name: /oled black/i }))
+    fireEvent.click(
+      screen.getByRole<HTMLInputElement>('radio', { name: /^OLED$/i }),
+    )
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
 
     expect(localStorageState.setItem).toHaveBeenCalledWith(
-      'splice_theme_preset',
-      'oled-black',
+      'splice:appearance',
+      encodeAppearance({ mode: 'oled', accent: '#83b59b' }),
     )
   })
 
@@ -974,7 +989,9 @@ describe('SettingsPage', () => {
 
     dispatchEventSpy.mockClear()
     localStorageState.setItem.mockClear()
-    fireEvent.click(screen.getByRole('radio', { name: /dracula/i }))
+    fireEvent.click(
+      screen.getByRole<HTMLInputElement>('radio', { name: /Dusty plum/i }),
+    )
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
 
     expect(localStorageState.setItem).not.toHaveBeenCalled()
@@ -982,11 +999,16 @@ describe('SettingsPage', () => {
       dispatchEventSpy.mock.calls
         .map(([event]) => event)
         .filter(
-          (event): event is CustomEvent<{ theme: string }> =>
+          (
+            event,
+          ): event is CustomEvent<{ mode: string; accent: string | null }> =>
             event instanceof CustomEvent,
         )
-        .map((event) => event.detail.theme),
-    ).toEqual(['dracula', 'splice-dark'])
+        .map((event) => event.detail),
+    ).toEqual([
+      { mode: 'dark', accent: '#b399cf' },
+      { mode: 'dark', accent: '#83b59b' },
+    ])
   })
 })
 
@@ -995,7 +1017,7 @@ it('renders saved General preferences before effects run', () => {
     data: {
       id: 'user',
       settings: {
-        theme: 'splice-light',
+        appearance: { mode: 'light', accent: '#83b59b' },
         currency: 'CAD',
         timezone: 'America/Toronto',
         hideZeroBalanceAccounts: true,
@@ -1014,6 +1036,6 @@ it('renders saved General preferences before effects run', () => {
       html,
   ).toContain('CAD')
   expect(html).toContain('America/Toronto')
-  const selected = document.querySelector('[role="radio"][aria-checked="true"]')
-  expect(selected?.getAttribute('aria-label')).toBe('Splice light')
+  const selected = document.querySelector('input[type="radio"][value="light"]')
+  expect(selected?.hasAttribute('checked')).toBe(true)
 })

@@ -31,6 +31,7 @@ export function HomePeriodControl({
           key={value}
           variant={period === value ? 'light' : 'subtle'}
           color={period === value ? undefined : 'gray'}
+          c={period === value ? undefined : 'dimmed'}
           radius="xl"
           size="sm"
           miw={52}
@@ -48,6 +49,7 @@ export function HomePeriodControl({
           <Button
             variant={extended ? 'light' : 'subtle'}
             color={extended ? undefined : 'gray'}
+            c={extended ? undefined : 'dimmed'}
             radius="xl"
             size="sm"
             miw={52}

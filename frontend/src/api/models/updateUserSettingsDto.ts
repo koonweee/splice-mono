@@ -5,14 +5,14 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { UpdateUserSettingsDtoTheme } from './updateUserSettingsDtoTheme'
+import type { AppearancePreference } from './appearancePreference'
 import type { UpdateUserSettingsDtoNotifications } from './updateUserSettingsDtoNotifications'
 
 export interface UpdateUserSettingsDto {
   currency?: string
   timezone?: string
   hideZeroBalanceAccounts?: boolean
-  theme?: UpdateUserSettingsDtoTheme
+  appearance?: AppearancePreference
   /**
    * @minimum 0
    * @maximum 180
