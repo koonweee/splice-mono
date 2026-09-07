@@ -58,6 +58,9 @@ export const OFFLINE_RECOVERY_SCRIPT = `(() => {
   button.addEventListener('click', () => void retry(true));
   addEventListener('online', () => void retry(false));
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void retry(false); });
+  // A reconnect can precede listener installation on a cold fallback document.
+  // Reconcile current state once, using the same probe and reload limits.
+  if (navigator.onLine && document.visibilityState === 'visible') void retry(false);
 })();`
 
 export function offlineAssetPath(buildId: string): string {

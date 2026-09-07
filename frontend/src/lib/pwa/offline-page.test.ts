@@ -20,13 +20,18 @@ afterEach(() => {
 })
 
 describe('offline recovery interactions', () => {
-  function harness(fetcher: ReturnType<typeof vi.fn>, recentReload = false) {
+  function harness(
+    fetcher: ReturnType<typeof vi.fn>,
+    recentReload = false,
+    initial = { online: true, visible: true },
+  ) {
     const button = Object.assign(new EventTarget(), { disabled: false })
     const status = { textContent: '' }
     const document = Object.assign(new EventTarget(), {
-      visibilityState: 'visible',
+      visibilityState: initial.visible ? 'visible' : 'hidden',
       getElementById: (id: string) => (id === 'splice-retry' ? button : status),
     })
+    const navigator = { onLine: initial.online }
     const events = new EventTarget()
     const location = {
       href: 'https://splice.test/transactions?categoryId=UNCATEGORIZED#review',
@@ -50,18 +55,69 @@ describe('offline recovery interactions', () => {
       {},
       document,
       location,
-      { onLine: true },
+      navigator,
       fetcher,
       sessionStorage,
       events.addEventListener.bind(events),
     )
-    return { button, status, events, location, document, sessionStorage }
+    return {
+      button,
+      status,
+      events,
+      location,
+      document,
+      navigator,
+      sessionStorage,
+    }
   }
   const settle = async () => {
     for (let turn = 0; turn < 10; turn++)
       await new Promise((done) => setImmediate(done))
   }
 
+  it('recovers when connectivity returned before the cold document installed its listeners', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(Response.json({ app: 'splice', status: 'ready' }))
+    const ui = harness(fetcher)
+    await settle()
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(ui.location.reload).toHaveBeenCalledTimes(1)
+  })
+  it.each([
+    { online: false, visible: true },
+    { online: true, visible: false },
+  ])(
+    'waits for an eligible reconnect or resume when startup is %j',
+    async (initial) => {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValue(Response.json({ app: 'splice', status: 'ready' }))
+      const ui = harness(fetcher, false, initial)
+      expect(fetcher).not.toHaveBeenCalled()
+      ui.navigator.onLine = true
+      ui.document.visibilityState = 'visible'
+      if (initial.online)
+        ui.document.dispatchEvent(new Event('visibilitychange'))
+      else ui.events.dispatchEvent(new Event('online'))
+      await settle()
+      expect(fetcher).toHaveBeenCalledTimes(1)
+      expect(ui.location.reload).toHaveBeenCalledTimes(1)
+    },
+  )
+  it('runs only one startup probe after an outage and keeps manual retry available', async () => {
+    vi.useFakeTimers()
+    const fetcher = vi.fn().mockRejectedValue(new Error('unavailable'))
+    const ui = harness(fetcher)
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(vi.getTimerCount()).toBe(0)
+    expect(ui.button.disabled).toBe(false)
+    ui.button.dispatchEvent(new Event('click'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(ui.location.reload).not.toHaveBeenCalled()
+  })
   it('retries with visible pending state, deduplicates events and returns to the exact location', async () => {
     let release: (response: Response) => void = () => undefined
     const fetcher = vi.fn(

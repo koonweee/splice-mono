@@ -90,7 +90,7 @@ Status: verified
 
 ## 6. Make Releases Discoverable Without Losing Work
 
-Status: in_progress
+Status: verified
 
 - **6.task.1 — verified:** Generate one opaque `buildId` per production build and use it consistently in the application bundle, worker, and `/version.json`. Include it in worker bytes so a UI-only release changes the worker. Do not expose environment values or credentials through version metadata.
 - **6.task.2 — verified:** Check version on initial readiness and visible/online resume, throttled to at most once per minute. Explicitly call `registration.update()` as needed. Surface detection/check/apply failures separately and keep retry available; a failed version request must not log the user out.
@@ -102,11 +102,11 @@ Status: in_progress
 - **6.acceptance.1 — verified:** An A/B production-build test changes UI only, observes different worker/version metadata, and shows an actionable update in the A client within one foreground check after B is served.
 - **6.acceptance.2 — verified:** In two tabs, Update in a clean tab does not reload a tab with a manual transaction editor or dirty Settings. The blocked tab can later update without losing a submitted save or restoring private drafts from storage.
 - **6.acceptance.3 — verified:** A notification click during editing preserves the draft and exposes the pending destination; a cold click opens the correct page through authentication.
-- **6.acceptance.4 — pending:** Offline update attempts, failed worker installs, missing old lazy chunks, server rollback, and repeated clicks recover without reload loops or mixed-version asset substitution.
+- **6.acceptance.4 — verified:** Offline update attempts, failed worker installs, missing old lazy chunks, server rollback, and repeated clicks recover without reload loops or mixed-version asset substitution.
 
 ## 7. Cache Useful Static Assets And Reduce Startup Overhead
 
-Status: in_progress
+Status: verified
 
 - **7.task.1 — verified:** Rework `frontend/vite.config.ts` precache selection around the generated client entry graph: core JS/CSS, minimal icons, and the small offline recovery asset. Exclude SSR HTML, API URLs, `/version.json`, all-device splash downloads, charts/deferred feature bundles not needed for startup, and source maps.
 - **7.task.2 — verified:** Keep splash links working so the browser can request the matching image when needed. Optimize existing icon/splash encodings without changing branding; verify any maskable icon's safe zone rather than treating a manifest label as sufficient.
@@ -118,21 +118,21 @@ Status: in_progress
 - **7.acceptance.1 — verified:** Generated artifacts contain useful core static assets and zero authenticated HTML/API payloads. A newly registered desktop client does not fetch every Apple splash image.
 - **7.acceptance.2 — verified:** Set the essential precache budget before implementation: at most 2.5 MiB raw / 1 MiB compressed. Keep first-visit transfer and median content-ready time within 5% of baseline and show the measured warm/reopen result; do not claim a speedup from cache membership alone.
 - **7.acceptance.3 — verified:** Navigation preload causes exactly one navigation request, with authentication/cookies/redirects intact. Already cached unchanged static assets require no body transfer on warm reopen.
-- **7.acceptance.4 — pending:** Test quota failure, cache cleanup with another tab on the previous release, missing old assets, offline asset use, and rollback. PWA artifact validation and both production/workbench builds pass.
+- **7.acceptance.4 — verified:** Test quota failure, cache cleanup with another tab on the previous release, missing old assets, offline asset use, and rollback. PWA artifact validation and both production/workbench builds pass.
 
 ## 8. Add Offline Recovery And Explicit Save Failure States
 
-Status: verified
+Status: in_progress
 
 - **8.task.1 — verified:** Extract the safe fallback from `frontend/src/sw.ts` into a small offline-page module with a precached recovery script. It must render without the React authenticated root or `/user/me` succeeding.
-- **8.task.2 — verified:** Add a keyboard-accessible Retry button, visible retry/pending/error status, and recovery on `online` and visible resume. Keep the original path/search/hash; reload only after a bounded successful same-origin GET probe. Deduplicate probes and prevent reconnect/reload loops. The page contains no financial data.
+- **8.task.2 — in_progress:** Add a keyboard-accessible Retry button, visible retry/pending/error status, and recovery on `online` and visible resume. Keep the original path/search/hash; reload only after a bounded successful same-origin GET probe. Deduplicate probes and prevent reconnect/reload loops. The page contains no financial data.
 - **8.task.3 — verified:** Validate that recovery probes reached Splice and establish a valid application/authentication outcome. Static `/version.json` availability alone cannot prove a protected route's backend has recovered; captive-portal HTML or an API outage must not trigger repeated reloads. A confirmed expired session can lead to login while preserving the destination.
 - **8.task.4 — verified:** Bound navigation waiting for response headers to eight seconds, then show the recoverable unavailable page. Preserve valid authentication redirects and distinguish a network failure from a server response where possible; do not buffer SSR streams just to impose the timeout.
 - **8.task.5 — verified:** Update `PwaLifecycle` and reuse `DataState` to distinguish browser-offline from temporarily unavailable reads. Retain identity-matched loaded results and refresh active reads after recovery; treat `navigator.onLine` as a hint rather than proof the backend is reachable.
 - **8.task.6 — verified:** Make known-offline financial saves fail promptly with a retained draft and actionable message. Test the actual TanStack mutation path so a click does not silently become a paused mutation that automatically executes after reconnect. Preserve the special local/server logout behavior from milestone 2.
 - **8.task.7 — verified:** Do not automatically replay a write whose response was lost, since it may already have committed. Preserve the draft, explain the uncertainty, and offer read reconciliation before another submission. This plan does not introduce a general offline mutation queue.
 - **8.acceptance.1 — verified:** Browser-worker launch evidence; physical installed behavior remains covered by blocked 9.acceptance.2. An installed app launched offline shows the safe recovery page and returns to its original destination after reconnect without requiring force-close/relaunch.
-- **8.acceptance.2 — verified:** Browser-online/API-down, captive/non-app responses, failed retry, and repeated online events produce stable states rather than login redirects or loops.
+- **8.acceptance.2 — in_progress:** Browser-online/API-down, captive/non-app responses, failed retry, and repeated online events produce stable states rather than login redirects or loops.
 - **8.acceptance.3 — verified:** A manual transaction save attempted offline sends no delayed mutation after reconnect. A failed online save retains input; reconnect refresh does not reset that input or submit it twice.
 - **8.acceptance.4 — verified:** Validate warm-open and cold-launch paths in a production build with `$agent-browser`; workbench-only offline events do not establish worker correctness.
 
@@ -200,9 +200,13 @@ Worktree created clean before carrying in the plan. No original checkout files w
 ### Final recovery validation (supersedes interim gates above)
 
 - Fresh complete frontend: 106 files / 753 tests, typecheck, lint (0 errors /21 warnings), token guard, production/workbench builds, and HTTP artifact check passed. Fresh backend26 suites /208 tests with zero skips plus lint/typecheck/build passed.
-- Current14-case production A/B/C lifecycle run passed. Two additional real-browser cases for missing old lazy imports and offline/repeated Update actions are being completed before release.
+- Current14-case production A/B/C lifecycle run passed. The expanded16-case production run subsequently passed, including missing old lazy imports and offline/repeated Update actions.
 - Final independent two-window replay verified authoritative account-scope handshakes converge and stale badge work is fenced across account change/logout. BroadcastChannel logout fallback remains effective when localStorage fails.
 - Fresh15 baseline +15 final startup observations are committed under frontend/docs/pwa-evidence. First-visit body transfer falls43.8%; readiness rises4.2%, within5%budget. Warm and suspended timing regressions are reported honestly in the validation doc.
 
 - Final independent source review found no new P0/P1. Documentation review recomputed all30 startup rows and clarified browser-versus-installed evidence, staging cache retention, and recovery-scope rollback compatibility. Final expanded harness/CI and live release gates remain pending.
 - Refreshed production backup restored into a temporary database with27 public tables and was dropped successfully. Operation6a9f19e4d28c58b2ef419909; dump873,356bytes; SHA256912400849ac69acc4750ae98097ebd715ce6f3ef8f9984f34575f9e66f9ed696; path/var/lib/postgresql/data/pwa-backups/pre-pwa-cutover-20260907.dump.
+
+- Expanded production16-case run passed against identical retained A/B/C binaries (494production/config source files match final source). Native push injection now identifies the worker controlling the exact page target across contexts. Final full Chromium CI remains a release gate.
+
+- Linux CI652001c passed full Chromium worker activation (native headless-shell crash avoided) but failed automatic cold-offline reconnect. Explicit Retry works; automatic recovery is reopened for investigation/fix before release. No merge, live migration, or app cutover occurred.

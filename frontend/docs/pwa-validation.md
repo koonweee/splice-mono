@@ -134,14 +134,15 @@ Fresh final-source checks on September 7, 2026:
   and isolated schemas. Generated OpenAPI/client contracts were regenerated.
 - Production HTTP artifact checks passed: build agreement, static budget, no-store
   version/worker responses, and plain non-cacheable missing-asset 404s.
-- Fourteen production Chromium 152 lifecycle cases passed against three real
+- Sixteen production Chromium 152 lifecycle cases passed against three real
   A/B/C releases and a real isolated Nest backend. They cover actual worker/cache
   activation, authenticated private-cache cleanup, cached offline JS, UI-only
   updates with dirty second-tab Settings, cold offline/captive/API-down recovery,
   navigation deadline and single request, rollback, cross-tab offline logout,
   revoked-token replay, failed registration retry, waiting-cache replacement,
   delayed recovery scripts and throttled online events, quota failure, migration
-  rebind, push/account isolation, guarded notification navigation, and shortcuts.
+  rebind, push/account isolation, guarded notification navigation, shortcuts, offline/repeated Update actions, and
+  real old lazy-chunk404 recovery without losing dirty Settings.
 - Independent two-window worker/channel replay verifies ten alternating same-owner
   handshakes converge without epoch rotation or outstanding reads. Account change
   and logout during an in-flight ownership probe reject stale badge work.
