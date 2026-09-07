@@ -277,10 +277,12 @@ async function applyUpdate(): Promise<void> {
           navigator.serviceWorker.removeEventListener('controllerchange', done)
           resolve()
         }
+        // An outgoing worker restarted by an in-flight request can need the
+        // browser's 30-second idle window before the waiting worker activates.
         const timer = setTimeout(() => {
           navigator.serviceWorker.removeEventListener('controllerchange', done)
           reject(new Error('Update activation timed out. Try again.'))
-        }, 10_000)
+        }, 45_000)
         navigator.serviceWorker.addEventListener('controllerchange', done)
         current.waiting?.postMessage({ type: 'SKIP_WAITING' })
       })

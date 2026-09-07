@@ -199,26 +199,88 @@ describe('native PWA service worker lifecycle', () => {
     expect(reload).toHaveBeenCalledOnce()
   })
 
-  it('preserves an editor opened while activation is in flight', async () => {
+  it('waits through a native 31-second activation delay and deduplicates repeated Update clicks', async () => {
+    const waiting = new Worker('installed')
+    registration.waiting = waiting
+    await getServiceWorkerRegistration()
+    const updating = getPwaUpdateState().updateServiceWorker?.()
+    await vi.advanceTimersByTimeAsync(31_000)
+    expect(reload).not.toHaveBeenCalled()
+    expect(getPwaUpdateState().error).toBeNull()
+    const repeated = getPwaUpdateState().updateServiceWorker?.()
+    await flush()
+    expect(waiting.postMessage).toHaveBeenCalledOnce()
+    container.controller = waiting
+    registration.waiting = null
+    container.dispatchEvent(new Event('controllerchange'))
+    await Promise.all([updating, repeated])
+    expect(reload).toHaveBeenCalledOnce()
+    container.dispatchEvent(new Event('controllerchange'))
+    await vi.advanceTimersByTimeAsync(45_000)
+    expect(reload).toHaveBeenCalledOnce()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('preserves an editor opened during a delayed activation until another explicit Update', async () => {
     registration.waiting = new Worker('installed')
     await getServiceWorkerRegistration()
     const updating = getPwaUpdateState().updateServiceWorker?.()
-    await flush()
+    await vi.advanceTimersByTimeAsync(20_000)
     releaseGuard = registerAppTransitionGuard()
+    await vi.advanceTimersByTimeAsync(11_000)
+    container.controller = registration.waiting
+    registration.waiting = null
     container.dispatchEvent(new Event('controllerchange'))
     await updating
     expect(reload).not.toHaveBeenCalled()
+    releaseGuard()
+    releaseGuard = undefined
+    await vi.advanceTimersByTimeAsync(45_000)
+    expect(reload).not.toHaveBeenCalled()
+    await getPwaUpdateState().updateServiceWorker?.()
+    expect(reload).toHaveBeenCalledOnce()
   })
 
-  it('exposes a recoverable activation timeout without reloading', async () => {
-    registration.waiting = new Worker('installed')
-    await getServiceWorkerRegistration()
-    const updating = getPwaUpdateState().updateServiceWorker?.()
-    await vi.advanceTimersByTimeAsync(10_000)
-    await updating
-    expect(reload).not.toHaveBeenCalled()
-    expect(getPwaUpdateState().error).toContain('timed out')
-  })
+  it.each(['before retry', 'after retry'])(
+    'times out at 45 seconds without a late forced reload and recovers when activation arrives %s',
+    async (activation) => {
+      const waiting = new Worker('installed')
+      registration.waiting = waiting
+      await getServiceWorkerRegistration()
+      const updating = getPwaUpdateState().updateServiceWorker?.()
+      await vi.advanceTimersByTimeAsync(44_999)
+      expect(getPwaUpdateState().error).toBeNull()
+      expect(reload).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1)
+      await updating
+      expect(reload).not.toHaveBeenCalled()
+      expect(getPwaUpdateState().error).toContain('activation timed out')
+      expect(vi.getTimerCount()).toBe(0)
+      const activate = () => {
+        container.controller = waiting
+        registration.waiting = null
+        container.dispatchEvent(new Event('controllerchange'))
+      }
+      if (activation === 'before retry') {
+        activate()
+        await flush()
+        expect(reload).not.toHaveBeenCalled()
+      }
+      const retry = getPwaUpdateState().updateServiceWorker?.()
+      await flush()
+      if (activation === 'after retry') {
+        expect(waiting.postMessage).toHaveBeenCalledTimes(2)
+        expect(reload).not.toHaveBeenCalled()
+        activate()
+      }
+      await retry
+      expect(reload).toHaveBeenCalledOnce()
+      container.dispatchEvent(new Event('controllerchange'))
+      await vi.advanceTimersByTimeAsync(45_000)
+      expect(reload).toHaveBeenCalledOnce()
+      expect(vi.getTimerCount()).toBe(0)
+    },
+  )
 
   it('checks the release version without cache, deduplicates foreground checks, and requests the changed worker', async () => {
     const fetch = vi
