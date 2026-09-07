@@ -1918,128 +1918,148 @@ try {
     }
   })
   await test('a fetch during native worker shutdown still activates and reloads within the update budget', async () => {
-    const race = await makeBrowserContext({ serviceWorkers: 'allow' })
-    const events = []
-    let protocol
-    let outgoingVersion
-    let armed = false
-    let injectedRequest
-    let milliseconds
-    try {
-      state.release = 'a'
-      const page = await race.newPage()
-      protocol = await race.newCDPSession(page)
-      const { targetInfo } = await protocol.send('Target.getTargetInfo')
-      protocol.on('Network.requestWillBeSent', (event) => {
-        if (
-          event.request.url === `${origin}/notification/summary?native-race=1`
-        )
-          events.push({
-            kind: 'request-started',
-            at: Date.now(),
-            requestId: event.requestId,
-          })
-      })
-      protocol.on('ServiceWorker.workerVersionUpdated', ({ versions }) => {
-        for (const version of versions) {
-          // Previous fixtures can leave another same-origin registration alive.
-          // Identify this page's actual controller before arming the race.
+    const attempts = []
+    let observedRace = false
+    for (let attempt = 1; attempt <= 3 && !observedRace; attempt++) {
+      const race = await makeBrowserContext({ serviceWorkers: 'allow' })
+      const events = []
+      let protocol
+      let outgoingVersion
+      let armed = false
+      let injectedRequest
+      let milliseconds
+      try {
+        state.release = 'a'
+        const page = await race.newPage()
+        protocol = await race.newCDPSession(page)
+        const { targetInfo } = await protocol.send('Target.getTargetInfo')
+        protocol.on('Network.requestWillBeSent', (event) => {
           if (
-            !armed &&
-            version.status === 'activated' &&
-            version.controlledClients?.includes(targetInfo.targetId)
+            event.request.url === `${origin}/notification/summary?native-race=1`
           )
-            outgoingVersion = version.versionId
-          if (!armed || version.versionId !== outgoingVersion) continue
-          events.push({
-            kind: 'worker-version',
-            at: Date.now(),
-            versionId: version.versionId,
-            runningStatus: version.runningStatus,
-            status: version.status,
-          })
-          if (version.runningStatus === 'stopping' && !injectedRequest) {
-            // This benign request deliberately arrives while the browser stops
-            // the outgoing worker. It does not force or retry worker activation.
-            injectedRequest = page.evaluate(async () => {
-              const response = await fetch(
-                '/notification/summary?native-race=1',
-              )
-              await response.text()
-              return response.status
+            events.push({
+              kind: 'request-started',
+              at: Date.now(),
+              requestId: event.requestId,
             })
-            void injectedRequest.catch(() => undefined)
+        })
+        protocol.on('ServiceWorker.workerVersionUpdated', ({ versions }) => {
+          for (const version of versions) {
+            // Previous fixtures can leave another same-origin registration alive.
+            // Identify this page's actual controller before arming the race.
+            if (
+              !armed &&
+              version.status === 'activated' &&
+              version.controlledClients?.includes(targetInfo.targetId)
+            )
+              outgoingVersion = version.versionId
+            if (!armed || version.versionId !== outgoingVersion) continue
+            events.push({
+              kind: 'worker-version',
+              at: Date.now(),
+              versionId: version.versionId,
+              runningStatus: version.runningStatus,
+              status: version.status,
+            })
+            if (version.runningStatus === 'stopping' && !injectedRequest) {
+              // This benign request deliberately arrives while the browser stops
+              // the outgoing worker. It does not force or retry worker activation.
+              injectedRequest = page.evaluate(async () => {
+                const response = await fetch(
+                  '/notification/summary?native-race=1',
+                )
+                await response.text()
+                return response.status
+              })
+              void injectedRequest.catch(() => undefined)
+            }
           }
-        }
-      })
-      await protocol.send('Network.enable')
-      await protocol.send('ServiceWorker.enable')
-      await login(page)
-      await controlled(page)
-      await until(
-        'this page has an identified outgoing native worker',
-        async () => Boolean(outgoingVersion),
-      )
-      state.release = 'b'
-      await wake(page, 2)
-      await page.getByRole('button', { name: 'Update', exact: true }).waitFor()
-      await until('B waits before the native shutdown race', () =>
-        page.evaluate(async () =>
-          Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
-        ),
-      )
-      await withoutWorkerDebuggers(async () => {
-        armed = true
-        const started = Date.now()
-        await page.getByRole('button', { name: 'Update', exact: true }).click()
-        await page.waitForFunction(
-          () => document.title === 'Splice PWA B',
-          undefined,
-          { timeout: 50000 },
+        })
+        await protocol.send('Network.enable')
+        await protocol.send('ServiceWorker.enable')
+        await login(page)
+        await controlled(page)
+        await until(
+          'this page has an identified outgoing native worker',
+          async () => Boolean(outgoingVersion),
         )
-        milliseconds = Date.now() - started
-        assert(
-          milliseconds < 45000,
-          'The real updated document must appear within the 45-second activation budget',
+        state.release = 'b'
+        await wake(page, 2)
+        await page
+          .getByRole('button', { name: 'Update', exact: true })
+          .waitFor()
+        await until('B waits before the native shutdown race', () =>
+          page.evaluate(async () =>
+            Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
+          ),
         )
-        assert(
-          injectedRequest,
-          'The native outgoing worker never entered stopping',
+        await withoutWorkerDebuggers(async () => {
+          armed = true
+          const started = Date.now()
+          await page
+            .getByRole('button', { name: 'Update', exact: true })
+            .click()
+          await page.waitForFunction(
+            () => document.title === 'Splice PWA B',
+            undefined,
+            { timeout: 50000 },
+          )
+          milliseconds = Date.now() - started
+          assert(
+            milliseconds < 45000,
+            'The real updated document must appear within the 45-second activation budget',
+          )
+          assert(
+            injectedRequest,
+            'The native outgoing worker never entered stopping',
+          )
+          assert.equal(
+            await bounded(injectedRequest, 'native race request completes'),
+            200,
+          )
+          const stopped = events.findIndex(
+            (event) =>
+              event.kind === 'worker-version' &&
+              event.runningStatus === 'stopping',
+          )
+          const request = events.findIndex(
+            (event) => event.kind === 'request-started',
+          )
+          const restarted = events.findIndex(
+            (event, index) =>
+              index > stopped &&
+              event.kind === 'worker-version' &&
+              event.runningStatus === 'starting',
+          )
+          observedRace =
+            stopped >= 0 && request > stopped && restarted > request
+          // CDP delivery and page evaluation can miss the native shutdown window.
+          // Only a successful update that misses this setup condition may retry;
+          // update/request/debugger failures above always escape immediately.
+        })
+        await controlled(page)
+      } finally {
+        armed = false
+        attempts.push({
+          attempt,
+          outgoingVersion,
+          milliseconds,
+          observedRace,
+          events,
+        })
+        await writeFile(
+          join(artifacts, 'activation-restart.json'),
+          JSON.stringify({ observedRace, attempts }, null, 2),
         )
-        assert.equal(
-          await bounded(injectedRequest, 'native race request completes'),
-          200,
-        )
-        const stopped = events.findIndex(
-          (event) =>
-            event.kind === 'worker-version' &&
-            event.runningStatus === 'stopping',
-        )
-        const request = events.findIndex(
-          (event) => event.kind === 'request-started',
-        )
-        const restarted = events.findIndex(
-          (event, index) =>
-            index > stopped &&
-            event.kind === 'worker-version' &&
-            event.runningStatus === 'starting',
-        )
-        assert(
-          stopped >= 0 && request > stopped && restarted > request,
-          'The benign GET must enter the native stop-to-restart window; an update that misses the race is not coverage',
-        )
-      })
-      await controlled(page)
-    } finally {
-      armed = false
-      await writeFile(
-        join(artifacts, 'activation-restart.json'),
-        JSON.stringify({ outgoingVersion, milliseconds, events }, null, 2),
-      )
-      await protocol?.detach().catch(() => undefined)
-      state.release = 'a'
-      await closeWithEvidence(race, 'activation-restart')
+        await protocol?.detach().catch(() => undefined)
+        state.release = 'a'
+        await closeWithEvidence(race, `activation-restart-attempt-${attempt}`)
+      }
     }
+    assert(
+      observedRace,
+      'All three successful updates missed the native stop-to-restart window; a witnessed race is required',
+    )
   })
   await test('a stalled uncached static response cannot block real Update activation', async () => {
     const stalled = await makeBrowserContext({ serviceWorkers: 'allow' })
