@@ -565,7 +565,10 @@ async function login(page) {
   await hydrated(page)
 }
 async function wake(page, minutes) {
-  await page.clock.setFixedTime(new Date(Date.now() + minutes * 60_000))
+  // Date must keep advancing so fallback probe/reload throttles can expire.
+  await page.clock.setSystemTime(new Date(Date.now() + minutes * 60_000))
+  const wakeTime = await page.evaluate(() => Date.now())
+  await page.waitForFunction((start) => Date.now() > start, wakeTime)
   await page.bringToFront()
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
 }
@@ -772,6 +775,26 @@ try {
     await dirty.close()
     await context.setOffline(true)
     const offline = await context.newPage()
+    await offline.addInitScript(() => {
+      window.__spliceOfflineEvents = []
+      for (const event of [
+        'online',
+        'offline',
+        'DOMContentLoaded',
+        'visibilitychange',
+      ]) {
+        addEventListener(event, () =>
+          window.__spliceOfflineEvents.push({
+            event,
+            online: navigator.onLine,
+            visibility: document.visibilityState,
+            status: document.getElementById('splice-recovery-status')
+              ?.textContent,
+            started: window.__spliceOfflineRecoveryStarted === true,
+          }),
+        )
+      }
+    })
     const destination = `${origin}/settings?tab=general#offline-preserved`
     const response = await offline.goto(destination, {
       waitUntil: 'domcontentloaded',
@@ -1778,6 +1801,17 @@ try {
           (browser?.contexts().flatMap((context) => context.pages()) ?? []).map(
             async (page) => ({
               url: page.url(),
+              recovery: await bounded(
+                page.evaluate(() => ({
+                  online: navigator.onLine,
+                  visibility: document.visibilityState,
+                  started: window.__spliceOfflineRecoveryStarted === true,
+                  status: document.getElementById('splice-recovery-status')
+                    ?.textContent,
+                  events: window.__spliceOfflineEvents,
+                })),
+                'capture recovery state',
+              ).catch(() => null),
               caches: await bounded(
                 cacheInventory(page),
                 'capture caches',
