@@ -45,6 +45,7 @@ import { WebhookEventService } from '../webhook-event/webhook-event.service';
 import { BankLinkEntity } from './bank-link.entity';
 import {
   BANK_LINK_LIFECYCLE_LOCK_SQL,
+  BANK_LINK_LIFECYCLE_TRANSACTION_LOCK_SQL,
   BANK_LINK_LIFECYCLE_UNLOCK_SQL,
 } from './bank-link-lifecycle-lock';
 import type { IBankLinkProvider } from './providers/bank-link-provider.interface';
@@ -326,34 +327,27 @@ export class BankLinkService extends OwnedCrudService<
 
     const savedBankLinks: BankLinkEntity[] = [];
 
-    // For each response, check if a bank link already exists (by itemId) or create a new one
+    // Link reactivation and account creation must commit together under the
+    // lifecycle lock, so final-account archiving cannot race link completion.
     for (const response of linkCompletionResponses) {
-      savedBankLinks.push(
-        await this.saveBankLinkFromLinkCompletionResponse(
-          providerName,
-          userId,
-          response,
-        ),
+      const bankLink = await this.repository.manager.transaction(
+        async (manager) => {
+          const link = await this.saveBankLinkFromLinkCompletionResponse(
+            providerName,
+            userId,
+            response,
+            manager.getRepository(BankLinkEntity),
+          );
+          await this.upsertAccountsFromAPI(
+            response.accounts,
+            new Map(response.accounts.map((a) => [a.accountId, link.id])),
+            userId,
+            manager.getRepository(AccountEntity),
+          );
+          return link;
+        },
       );
-    }
-
-    this.logger.log({ count: savedBankLinks.length }, 'Saved bank links');
-
-    // Upsert accounts for each bank link using the shared method
-    for (let i = 0; i < linkCompletionResponses.length; i++) {
-      const response = linkCompletionResponses[i];
-      const bankLink = savedBankLinks[i];
-
-      const accountIdToBankLinkId = new Map<string, string>();
-      response.accounts.forEach((a) => {
-        accountIdToBankLinkId.set(a.accountId, bankLink.id);
-      });
-
-      await this.upsertAccountsFromAPI(
-        response.accounts,
-        accountIdToBankLinkId,
-        userId,
-      );
+      savedBankLinks.push(bankLink);
     }
 
     // Trigger initial transaction sync for each new bank link
@@ -2232,6 +2226,9 @@ export class BankLinkService extends OwnedCrudService<
     }
 
     if (bankLink) {
+      await repository.manager.query(BANK_LINK_LIFECYCLE_TRANSACTION_LOCK_SQL, [
+        bankLink.id,
+      ]);
       const lockedBankLink = await repository.findOne({
         where: { id: bankLink.id, userId },
         lock: { mode: 'pessimistic_write' },
@@ -2240,6 +2237,11 @@ export class BankLinkService extends OwnedCrudService<
         throw new NotFoundException(`Bank link not found: ${bankLink.id}`);
       }
       bankLink = lockedBankLink;
+      if (bankLink.disconnectRequestedAt || bankLink.disconnectedAt) {
+        throw new ConflictException(
+          'This bank connection is disconnected or disconnecting; link the bank again',
+        );
+      }
       this.logger.log(
         { bankLinkId: bankLink.id, itemId },
         'Found existing bank link, updating',

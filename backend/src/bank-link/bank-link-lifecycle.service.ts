@@ -67,6 +67,10 @@ export class BankLinkLifecycleService {
       }
 
       bankLink.archivedAt = new Date();
+      if (bankLink.providerName === 'plaid' && !bankLink.disconnectedAt) {
+        bankLink.disconnectRequestedAt ??= bankLink.archivedAt;
+        bankLink.disconnectNextAttemptAt ??= bankLink.archivedAt;
+      }
       await bankLinkRepository.save(bankLink);
       return true;
     });

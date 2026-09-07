@@ -157,6 +157,7 @@ const mockBankLinkRepository: any = {
     getOne: jest.fn().mockResolvedValue(mockBankLinkEntity),
   }),
   manager: {
+    query: jest.fn().mockResolvedValue([]),
     connection: {
       createQueryRunner: jest.fn(() => mockReconciliationQueryRunner),
     },

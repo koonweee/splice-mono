@@ -28,6 +28,7 @@ import { BalanceSnapshotType } from '../types/BalanceSnapshot';
 import { AccountEntity } from './account.entity';
 import { BalanceSnapshotEntity } from '../balance-snapshot/balance-snapshot.entity';
 import { BankLinkEntity } from '../bank-link/bank-link.entity';
+import { BANK_LINK_LIFECYCLE_TRANSACTION_LOCK_SQL } from '../bank-link/bank-link-lifecycle-lock';
 import { UserService } from '../user/user.service';
 
 dayjs.extend(utc);
@@ -224,75 +225,68 @@ export class AccountService extends OwnedCrudService<
   }
 
   async archive(id: string, userId: string): Promise<Account | null> {
-    const accountEntity = await this.repository.findOne({
-      where: { id, userId },
-      relations: this.relations,
-    });
-
-    if (!accountEntity) {
-      this.logger.warn({ id, userId }, 'Account not found for archive');
-      return null;
-    }
-
-    if (accountEntity.archivedAt) {
-      await this.pruneAccountFromBankLink(accountEntity, userId);
-      return accountEntity.toObject();
-    }
-
-    const archivedAt = new Date();
-    accountEntity.archivedAt = archivedAt;
-    accountEntity.currentBalance = this.createZeroBalance(
-      accountEntity.currentBalance.currency,
-    );
-    accountEntity.availableBalance = this.createZeroBalance(
-      accountEntity.availableBalance.currency,
-    );
-
-    const savedEntity = await this.repository.save(accountEntity);
-    await this.pruneAccountFromBankLink(savedEntity, userId);
-    await this.upsertArchiveSnapshot(savedEntity, userId);
-
-    this.logger.log({ id, userId }, 'Account archived');
-    return savedEntity.toObject();
-  }
-
-  private async pruneAccountFromBankLink(
-    accountEntity: AccountEntity,
-    userId: string,
-  ): Promise<void> {
-    if (!accountEntity.bankLinkId || !accountEntity.externalAccountId) {
-      return;
-    }
-
-    const bankLink =
-      accountEntity.bankLink ??
-      (await this.bankLinkRepository.findOne({
-        where: { id: accountEntity.bankLinkId, userId },
-      }));
-
-    if (!bankLink || bankLink.userId !== userId) {
-      this.logger.warn(
-        {
-          id: accountEntity.id,
+    // Read identity first so all lifecycle paths acquire link -> account locks.
+    const identity = await this.repository.findOne({ where: { id, userId } });
+    if (!identity) return null;
+    return this.repository.manager.transaction(async (manager) => {
+      if (identity.bankLinkId) {
+        await manager.query(BANK_LINK_LIFECYCLE_TRANSACTION_LOCK_SQL, [
+          identity.bankLinkId,
+        ]);
+      }
+      const accounts = manager.getRepository(AccountEntity);
+      const links = manager.getRepository(BankLinkEntity);
+      const account = await accounts.findOne({
+        where: { id, userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!account) return null;
+      if (account.bankLinkId !== identity.bankLinkId) {
+        throw new BadRequestException(
+          'Account connection changed; retry archiving',
+        );
+      }
+      if (!account.archivedAt) {
+        account.archivedAt = new Date();
+        account.currentBalance = this.createZeroBalance(
+          account.currentBalance.currency,
+        );
+        account.availableBalance = this.createZeroBalance(
+          account.availableBalance.currency,
+        );
+        await accounts.save(account);
+        await this.upsertArchiveSnapshot(
+          account,
           userId,
-          bankLinkId: accountEntity.bankLinkId,
-        },
-        'Bank link not found for archived account prune',
-      );
-      return;
-    }
-
-    if (!bankLink.accountIds.includes(accountEntity.externalAccountId)) {
-      return;
-    }
-
-    const accountIds = bankLink.accountIds.filter(
-      (accountId) => accountId !== accountEntity.externalAccountId,
-    );
-    await this.bankLinkRepository.update(
-      { id: bankLink.id, userId },
-      { accountIds },
-    );
+          manager.getRepository(BalanceSnapshotEntity),
+        );
+      }
+      if (account.bankLinkId) {
+        const link = await links.findOne({
+          where: { id: account.bankLinkId, userId },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (link) {
+          // Derive membership from rows, never the potentially stale accountIds list.
+          const remaining = await accounts.find({
+            where: { bankLinkId: link.id, archivedAt: IsNull() },
+          });
+          link.accountIds = remaining.flatMap((a) =>
+            a.externalAccountId ? [a.externalAccountId] : [],
+          );
+          if (remaining.length === 0 && link.providerName === 'plaid') {
+            link.archivedAt ??= new Date();
+            if (!link.disconnectedAt) {
+              link.disconnectRequestedAt ??= new Date();
+              link.disconnectNextAttemptAt ??= link.disconnectRequestedAt;
+            }
+          }
+          await links.save(link);
+          account.bankLink = link;
+        }
+      }
+      return account.toObject();
+    });
   }
 
   private createZeroBalance(currency: string): BalanceColumns {
@@ -305,10 +299,11 @@ export class AccountService extends OwnedCrudService<
   private async upsertArchiveSnapshot(
     accountEntity: AccountEntity,
     userId: string,
+    snapshots = this.balanceSnapshotRepository,
   ): Promise<void> {
     const timezone = await this.userService.getTimezone(userId);
     const snapshotDate = dayjs().tz(timezone).format('YYYY-MM-DD');
-    const existingSnapshot = await this.balanceSnapshotRepository.findOne({
+    const existingSnapshot = await snapshots.findOne({
       where: {
         accountId: accountEntity.id,
         snapshotDate,
@@ -320,7 +315,7 @@ export class AccountService extends OwnedCrudService<
       existingSnapshot.currentBalance = accountEntity.currentBalance;
       existingSnapshot.availableBalance = accountEntity.availableBalance;
       existingSnapshot.snapshotType = BalanceSnapshotType.USER_UPDATE;
-      await this.balanceSnapshotRepository.save(existingSnapshot);
+      await snapshots.save(existingSnapshot);
       return;
     }
 
@@ -334,7 +329,7 @@ export class AccountService extends OwnedCrudService<
       },
       userId,
     );
-    await this.balanceSnapshotRepository.save(snapshot);
+    await snapshots.save(snapshot);
   }
 
   private async getLastSyncTimes(
