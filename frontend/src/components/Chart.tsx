@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { foundation } from '../lib/design-system/foundation'
 import placeholderStyles from './loading/ChartSkeleton.module.css'
 import styles from './Chart.module.css'
+import type { TooltipContentProps } from 'recharts'
 import type { MoneyWithSign } from '../api/models'
 
 function ChartTooltip({
@@ -40,6 +41,40 @@ function ChartTooltip({
         </Text>
       )}
     </Paper>
+  )
+}
+
+// Recharts clones element content while preserving its component identity.
+// An inline function here is mounted as a new component on every Chart render.
+function ChartTooltipContent({
+  label,
+  payload,
+  active,
+  onInspect,
+  showValue,
+  pointFormatter,
+  valueFormatter,
+}: Partial<TooltipContentProps<number, string>> & {
+  onInspect?: (point?: ChartDataPoint) => void
+  showValue: boolean
+  pointFormatter?: (point: ChartDataPoint) => string
+  valueFormatter: (value: number) => string
+}) {
+  const point = payload?.[0]
+  if (!point?.payload) return null
+  return (
+    <ChartTooltip
+      label={point.payload.label || String(label)}
+      inspectedPoint={active ? point.payload : undefined}
+      onInspect={onInspect}
+      value={
+        !showValue
+          ? undefined
+          : pointFormatter
+            ? pointFormatter(point.payload)
+            : valueFormatter(point.value ?? point.payload.value)
+      }
+    />
   )
 }
 
@@ -268,26 +303,16 @@ export function Chart({
         }}
         tooltipProps={{
           active: canInteract && interactionActive ? undefined : false,
-          content: ({ label, payload, active }) => {
-            if (!payload.length) return null
-            const point = payload[0]
-            return (
-              <ChartTooltip
-                label={point.payload.label || String(label)}
-                inspectedPoint={active ? point.payload : undefined}
-                onInspect={
-                  canInteract && keyboardActive ? onDataPointHover : undefined
-                }
-                value={
-                  onDataPointHover
-                    ? undefined
-                    : pointFormatter
-                      ? pointFormatter(point.payload)
-                      : valueFormatter(point.value)
-                }
-              />
-            )
-          },
+          content: (
+            <ChartTooltipContent
+              onInspect={
+                canInteract && keyboardActive ? onDataPointHover : undefined
+              }
+              showValue={!onDataPointHover}
+              pointFormatter={pointFormatter}
+              valueFormatter={valueFormatter}
+            />
+          ),
         }}
       />
     </Box>
