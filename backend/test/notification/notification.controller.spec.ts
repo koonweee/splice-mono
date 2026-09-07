@@ -9,6 +9,7 @@ const user = {
 
 describe('NotificationController', () => {
   const notificationService = {
+    archiveAll: jest.fn(),
     getPushConfig: jest.fn(),
     getCurrentSubscriptionStatus: jest.fn(),
     registerPushSubscription: jest.fn(),
@@ -45,6 +46,14 @@ describe('NotificationController', () => {
       configured: true,
       vapidPublicKey: 'public-key',
     });
+  });
+
+  it('dismisses every notification owned by the current user', async () => {
+    notificationService.archiveAll.mockResolvedValueOnce(undefined);
+
+    await expect(controller.archiveAll(user)).resolves.toBeUndefined();
+
+    expect(notificationService.archiveAll).toHaveBeenCalledWith(user.userId);
   });
 
   it('returns current subscription status by endpoint', async () => {

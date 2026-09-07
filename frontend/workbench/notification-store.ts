@@ -61,7 +61,11 @@ export function createNotificationStore(
       }
     },
   }
-  const writes: Record<string, () => unknown> = {}
+  const writes: Record<string, () => unknown> = {
+    'PATCH /notification/archive-all': () => {
+      for (const item of items) archived.add(item.id)
+    },
+  }
   for (const item of items) {
     writes[`PATCH /notification/${item.id}/read`] = () => {
       item.readAt ??= FIXTURE_NOW

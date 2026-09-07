@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query'
 import {
   notificationControllerArchive,
+  notificationControllerArchiveAll,
   notificationControllerGetInbox,
   notificationControllerGetSummary,
   notificationControllerMarkRead,
@@ -83,6 +84,57 @@ export function useNotificationAction() {
                     ),
             })),
           },
+      )
+      return generation
+    },
+    onSuccess: (generation) => {
+      assertAuthGeneration(generation)
+      return invalidateMutationFamilies(client, [
+        'notifications',
+        'notificationSummary',
+      ])
+    },
+  })
+}
+
+/** Clears the complete server-side inbox, including pages not loaded in this tab. */
+export function useClearNotifications() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationKey: ['notificationInboxClear'],
+    networkMode: 'always',
+    retry: false,
+    mutationFn: async () => {
+      const generation = getAuthGeneration()
+      if (typeof navigator !== 'undefined' && !navigator.onLine)
+        throw new Error('Reconnect before clearing notifications.')
+      await notificationControllerArchiveAll()
+      assertAuthGeneration(generation)
+
+      const inboxOptions = notificationInboxQueryOptions()
+      const summaryOptions = notificationSummaryQueryOptions()
+      await Promise.all([
+        client.cancelQueries({ queryKey: inboxOptions.queryKey }),
+        client.cancelQueries({ queryKey: summaryOptions.queryKey }),
+      ])
+      assertAuthGeneration(generation)
+      client.setQueryData(
+        inboxOptions.queryKey,
+        (previous) =>
+          previous && {
+            ...previous,
+            pages: previous.pages.slice(0, 1).map((page) => ({
+              ...page,
+              items: [],
+              nextCursor: null,
+              hasMore: false,
+            })),
+            pageParams: previous.pageParams.slice(0, 1),
+          },
+      )
+      client.setQueryData(
+        summaryOptions.queryKey,
+        (previous) => previous && { ...previous, unreadNotificationCount: 0 },
       )
       return generation
     },

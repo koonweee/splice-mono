@@ -113,6 +113,14 @@ export class NotificationController {
     return this.notificationService.markRead(user.userId, id);
   }
 
+  @Patch('archive-all')
+  @HttpCode(204)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiResponse({ status: 204, description: 'All notifications dismissed' })
+  archiveAll(@CurrentUser() user: JwtUser): Promise<void> {
+    return this.notificationService.archiveAll(user.userId);
+  }
+
   @Patch(':id/archive')
   @HttpCode(204)
   @Header('Cache-Control', 'private, no-store')

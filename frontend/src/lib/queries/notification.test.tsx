@@ -6,6 +6,7 @@ import { createMutationCache } from '../query-invalidation'
 import {
   notificationInboxQueryOptions,
   notificationSummaryQueryOptions,
+  useClearNotifications,
   useNotificationAction,
 } from './notification'
 import type { ReactNode } from 'react'
@@ -15,12 +16,14 @@ const api = vi.hoisted(() => ({
   inbox: vi.fn(),
   read: vi.fn(),
   archive: vi.fn(),
+  archiveAll: vi.fn(),
 }))
 vi.mock('../../api/clients/spliceAPI', () => ({
   notificationControllerGetSummary: api.summary,
   notificationControllerGetInbox: api.inbox,
   notificationControllerMarkRead: api.read,
   notificationControllerArchive: api.archive,
+  notificationControllerArchiveAll: api.archiveAll,
 }))
 const clients: Array<QueryClient> = []
 const item = {
@@ -53,6 +56,13 @@ function deferred() {
 }
 function action(queryClient: QueryClient) {
   return renderHook(() => useNotificationAction(), {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    ),
+  })
+}
+function clear(queryClient: QueryClient) {
+  return renderHook(() => useClearNotifications(), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     ),
@@ -161,6 +171,43 @@ describe('notification queries', () => {
     expect(api.read).not.toHaveBeenCalled()
     expect(result.current.isPaused).toBe(false)
   })
+  it.each([false, true])(
+    'clears every cached page with managed cache=%s and preserves transaction count',
+    async (managed) => {
+      const queryClient = client(managed)
+      const inboxKey = notificationInboxQueryOptions().queryKey
+      const summaryKey = notificationSummaryQueryOptions().queryKey
+      queryClient.setQueryData(inboxKey, {
+        pages: [
+          { ...page, nextCursor: 'next', hasMore: true },
+          { ...page, items: [{ ...item, id: 'two' }] },
+        ],
+        pageParams: [undefined, 'next'],
+      })
+      queryClient.setQueryData(summaryKey, {
+        unreadNotificationCount: 2,
+        uncategorizedTransactionCount: 12,
+        computedAt: '2026-09-06T12:00:00Z',
+      })
+      api.archiveAll.mockResolvedValue(undefined)
+      const { result } = clear(queryClient)
+
+      await act(async () => {
+        await result.current.mutateAsync()
+      })
+
+      expect(api.archiveAll).toHaveBeenCalledOnce()
+      expect(queryClient.getQueryData(inboxKey)).toMatchObject({
+        pages: [{ items: [], nextCursor: null, hasMore: false }],
+        pageParams: [undefined],
+      })
+      expect(queryClient.getQueryData(summaryKey)).toMatchObject({
+        unreadNotificationCount: 0,
+        uncategorizedTransactionCount: 12,
+      })
+      expect(queryClient.getQueryState(summaryKey)?.isInvalidated).toBe(true)
+    },
+  )
   it('rejects an old identity response before patching a replacement inbox', async () => {
     const queryClient = client()
     const delayed = deferred()

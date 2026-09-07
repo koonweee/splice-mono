@@ -195,6 +195,34 @@ postgresSuite(
       ).not.toContain(item.id);
     });
 
+    it('dismisses every owned inbox item without touching test or foreign notifications', async () => {
+      const first = await notification();
+      const second = await notification(userId, 'bank_link.needs_attention');
+      const testItem = await notification(userId, 'system.test');
+      const foreignItem = await notification(foreignUser);
+
+      await service.archiveAll(userId);
+
+      expect((await service.getInbox(userId, { pageSize: 100 })).items).toEqual(
+        [],
+      );
+      expect(
+        (await service.getInbox(foreignUser, { pageSize: 100 })).items.map(
+          (item) => item.id,
+        ),
+      ).toContain(foreignItem.id);
+      const repository = harness.database.getRepository(NotificationEntity);
+      await expect(
+        repository.findOneByOrFail({ id: first.id }),
+      ).resolves.toMatchObject({ status: 'archived' });
+      await expect(
+        repository.findOneByOrFail({ id: second.id }),
+      ).resolves.toMatchObject({ status: 'archived' });
+      await expect(
+        repository.findOneByOrFail({ id: testItem.id }),
+      ).resolves.toMatchObject({ status: 'active' });
+    });
+
     it('keeps both summary counts in one snapshot across a concurrent commit', async () => {
       const before = await service.getSummary(userId);
       const queries = (service as any)

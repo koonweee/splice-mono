@@ -10085,6 +10085,76 @@ export const useNotificationControllerMarkRead = <
   return useMutation(mutationOptions, queryClient)
 }
 
+export const notificationControllerArchiveAll = () => {
+  return axios<void>({ url: `/notification/archive-all`, method: 'PATCH' })
+}
+
+export const getNotificationControllerArchiveAllMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof notificationControllerArchiveAll>>,
+    TError,
+    void,
+    TContext
+  >
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof notificationControllerArchiveAll>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ['notificationControllerArchiveAll']
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } }
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof notificationControllerArchiveAll>>,
+    void
+  > = () => {
+    return notificationControllerArchiveAll()
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type NotificationControllerArchiveAllMutationResult = NonNullable<
+  Awaited<ReturnType<typeof notificationControllerArchiveAll>>
+>
+
+export type NotificationControllerArchiveAllMutationError = unknown
+
+export const useNotificationControllerArchiveAll = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof notificationControllerArchiveAll>>,
+      TError,
+      void,
+      TContext
+    >
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof notificationControllerArchiveAll>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions =
+    getNotificationControllerArchiveAllMutationOptions(options)
+
+  return useMutation(mutationOptions, queryClient)
+}
+
 export const notificationControllerArchive = (id: string) => {
   return axios<void>({ url: `/notification/${id}/archive`, method: 'PATCH' })
 }

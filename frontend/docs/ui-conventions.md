@@ -116,6 +116,27 @@ a primary action and independent secondary controls: supply `actionLabel`,
 `onActivate`, and content. It owns the native primary button, focus, and press
 feedback; secondary buttons and selection controls remain siblings.
 
+## Notification inbox
+
+Use [NotificationInbox](../src/components/notifications/NotificationInbox.tsx)
+as a bottom sheet. It occupies most of a phone viewport, caps its height on wide
+screens, stays full width on phones, and uses a restrained centered width on wide
+screens. Keep row actions and the sheet-level Clear all action subtle and icon-only
+with accessible names and tooltips. Place row actions in a trailing column so their
+touch targets do not add a separate 44px information line.
+
+Clearing is a single authenticated server mutation. It must archive the current
+user's complete inbox, including pages the client has not loaded; do not iterate
+over rendered rows. During any inbox mutation, block competing row and bulk
+actions. Apply only server-confirmed cache changes, retain alerts after failure,
+and invalidate both the inbox and independent notification summary families.
+The transaction review count in that summary must remain unchanged.
+
+Maintain the `notification-inbox` workbench states for ready, loading, empty,
+initial and retained read errors, individual pending/failure, and bulk
+clearing/failure. Validate the sheet in Light, Dark, and OLED at phone and desktop
+sizes, including focus restoration, touch targets, overflow, and safe areas.
+
 ## Data states and financial display
 
 Use [DataState](../src/components/DataState.tsx) around fetched content. Set
@@ -363,7 +384,6 @@ builds after changing canonical roles. The [typography audit](typography-audit.m
 records role choices, exceptions and validation. Native controls may use
 `font: inherit`; offline rendering imports the canonical role directly.
 
-
 ## Page density
 
 Use Home and Transactions as density references without reducing global spacing,
@@ -395,7 +415,6 @@ type roles or target sizes. PageLayout still owns the page-level gaps.
 Review actual page examples, including state=long-content, before changing these
 patterns. The [density plan](../../plans/non-home-page-density.md) records the
 approved scope and validation; the workbench README lists capture URLs.
-
 
 Amount font preference: `display`, `amount*` and numeric caption/metadata/input
 roles use `--splice-font-amount`, resolved from the saved appearance preference.

@@ -13,8 +13,9 @@ All states use generated TanStack mutations and a per-document in-memory store.
 ## Notification inbox
 
 `/?frame=true&example=notification-inbox&state=ready&mode=light&width=390`
-opens the compact production drawer directly. Its states include `loading`,
-`empty`, `error`, `refresh-error`, `refreshing`, `pending`, and `mutation-error`.
+opens the production bottom sheet directly. Its states include `loading`,
+`empty`, `error`, `refresh-error`, `refreshing`, `pending`, `mutation-error`,
+`clearing`, and `clear-error`.
 Read and dismiss use separate icon buttons; opening a row follows its local
 fixture destination. The example keeps its transaction count independent from
 the unread indicator and has no retention footer.

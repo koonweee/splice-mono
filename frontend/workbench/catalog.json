@@ -534,7 +534,9 @@
       "refresh-error",
       "refreshing",
       "pending",
-      "mutation-error"
+      "mutation-error",
+      "clearing",
+      "clear-error"
     ]
   },
   {
@@ -549,7 +551,9 @@
       "refresh-error",
       "refreshing",
       "pending",
-      "mutation-error"
+      "mutation-error",
+      "clearing",
+      "clear-error"
     ]
   },
   {
