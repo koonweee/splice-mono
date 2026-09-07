@@ -58,6 +58,8 @@ const temporary = await mkdtemp(join(artifacts, 'builds-'))
 const children = []
 const servers = []
 const sockets = new Set()
+const heldResponses = new Map()
+const releasedFaults = []
 const checks = []
 const requests = []
 const failures = []
@@ -104,6 +106,20 @@ async function listen(server) {
   })
   servers.push(server)
   return `http://localhost:${server.address().port}`
+}
+function holdResponse(response, kind) {
+  heldResponses.set(response, kind)
+  response.once('close', () => heldResponses.delete(response))
+}
+function releaseHeldResponses(kind) {
+  let released = 0
+  for (const [response, heldKind] of heldResponses) {
+    if (kind && heldKind !== kind) continue
+    response.destroy()
+    heldResponses.delete(response)
+    released++
+  }
+  releasedFaults.push({ check: currentCheck, kind: kind ?? 'all', released })
 }
 function childProcess(
   command,
@@ -205,8 +221,10 @@ const frontendGateway = createServer((req, res) => {
       req.headers['sec-fetch-mode'] === 'navigate' ||
       Boolean(req.headers['service-worker-navigation-preload']),
   })
-  if (state.holdRecoveryScript && url.pathname.startsWith('/pwa-offline-'))
+  if (state.holdRecoveryScript && url.pathname.startsWith('/pwa-offline-')) {
+    holdResponse(res, 'recovery-script')
     return
+  }
   if (state.brokenWorker && url.pathname === '/sw.js') {
     res.writeHead(503, { 'Cache-Control': 'no-store' })
     res.end('Worker unavailable')
@@ -224,8 +242,10 @@ const frontendGateway = createServer((req, res) => {
     state.hangNavigation &&
     (req.headers['sec-fetch-mode'] === 'navigate' ||
       req.headers['service-worker-navigation-preload'])
-  )
+  ) {
+    holdResponse(res, 'navigation')
     return
+  }
   if (apiPaths.has(url.pathname.split('/')[1]))
     forward(req, res, apiOrigin, url.pathname === '/user/dev/login')
   else forward(req, res, frontendServers[state.release])
@@ -860,6 +880,8 @@ try {
       1,
     )
     state.hangNavigation = false
+    // End the injected fault before testing a separate worker update.
+    releaseHeldResponses('navigation')
     await dirty.goto(`${origin}/settings`)
     await dirty
       .getByRole('heading', { name: 'Settings', exact: true })
@@ -1045,6 +1067,7 @@ try {
       })
       assert.equal(response.headers()['x-splice-offline'], 'timeout')
       state.hangNavigation = false
+      releaseHeldResponses('navigation')
       await page
         .getByRole('button', { name: 'Retry', exact: true })
         .click({ timeout: 2000 })
@@ -1062,6 +1085,8 @@ try {
       state.apiDown = false
       state.holdRecoveryScript = false
       state.hangNavigation = false
+      releaseHeldResponses('navigation')
+      releaseHeldResponses('recovery-script')
       await closeWithEvidence(recovery, 'recovery')
     }
   })
@@ -1760,6 +1785,7 @@ try {
           c: cVersion.buildId,
         },
         checks,
+        releasedFaults,
         limitations: [
           'Chromium browser emulation; no physical iOS/Android certification.',
           'PushManager transport and badge observation are browser API fixtures; CDP dispatches genuine built-worker push events with real HTTP ownership. Constructed notification clicks emulate OS focus/lifetime privileges, not an OS gesture. Cold openWindow/OS clicks and provider delivery remain outside this harness; auth destinations are verified with real navigations.',
@@ -1797,6 +1823,8 @@ try {
       {
         state,
         requests,
+        releasedFaults,
+        remainingHeldResponses: [...heldResponses.values()],
         pages: await Promise.all(
           (browser?.contexts().flatMap((context) => context.pages()) ?? []).map(
             async (page) => ({
@@ -1841,6 +1869,7 @@ try {
   )
   throw error
 } finally {
+  releaseHeldResponses()
   await browser?.close()
   for (const child of children.reverse()) {
     if (child.exitCode !== null) continue
