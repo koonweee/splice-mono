@@ -1,0 +1,262 @@
+{
+  "sourceCommit": "22053cf",
+  "browser": "Chromium 153.0.8010.12",
+  "platform": "Linux arm64",
+  "scope": "Failed regression before the activation deadline fix. One benign API request is injected during the outgoing worker shutdown. Browser and frame worker-debugger attachments are excluded during the action; restored only after the late observation.",
+  "initialActivationDeadlineMilliseconds": 10000,
+  "documentAssertionDeadlineMilliseconds": 30000,
+  "attachmentSampleCount": 437,
+  "allSampledWorkersDetached": true,
+  "events": [
+    {
+      "at": 1788815660529,
+      "kind": "inject-request"
+    },
+    {
+      "at": 1788815660553,
+      "kind": "injected-request-completed",
+      "status": 200
+    },
+    {
+      "at": 1788815705553,
+      "kind": "late-worker-state",
+      "targets": [
+        {
+          "targetId": "87B8457E7F2EED27AB81463522F3D162",
+          "type": "service_worker",
+          "title": "Service Worker http://localhost:39217/sw.js",
+          "url": "http://localhost:39217/sw.js",
+          "attached": false,
+          "canAccessOpener": false,
+          "browserContextId": "AEF581A77DECBB3C34F6C670578F2846"
+        }
+      ],
+      "state": {
+        "title": "Splice PWA B",
+        "active": "activated"
+      }
+    },
+    {
+      "at": 1788815705565,
+      "kind": "debugger-attachment",
+      "session": "root",
+      "target": {
+        "targetId": "87B8457E7F2EED27AB81463522F3D162",
+        "type": "service_worker",
+        "title": "Service Worker http://localhost:39217/sw.js",
+        "url": "http://localhost:39217/sw.js",
+        "attached": true,
+        "canAccessOpener": false,
+        "browserContextId": "AEF581A77DECBB3C34F6C670578F2846"
+      }
+    },
+    {
+      "at": 1788815705566,
+      "kind": "debugger-attachment",
+      "session": "frame",
+      "target": {
+        "targetId": "87B8457E7F2EED27AB81463522F3D162",
+        "type": "service_worker",
+        "title": "Service Worker http://localhost:39217/sw.js",
+        "url": "http://localhost:39217/sw.js",
+        "attached": true,
+        "canAccessOpener": false,
+        "browserContextId": "AEF581A77DECBB3C34F6C670578F2846"
+      }
+    }
+  ],
+  "nativeWorkerTransitions": [
+    {
+      "millisecondsAfterUpdate": 0,
+      "versions": [
+        {
+          "versionId": "1",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "stopping",
+          "status": "activated",
+          "scriptLastModified": 1788815233,
+          "scriptResponseTime": 1788815646.119604,
+          "controlledClients": [],
+          "targetId": "6E146B9DC9EE4D4251990D9B1331E8EE"
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 15,
+      "versions": [
+        {
+          "versionId": "1",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "stopped",
+          "status": "activated",
+          "scriptLastModified": 1788815233,
+          "scriptResponseTime": 1788815646.119604,
+          "controlledClients": []
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 15,
+      "versions": [
+        {
+          "versionId": "1",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "starting",
+          "status": "activated",
+          "scriptLastModified": 1788815233,
+          "scriptResponseTime": 1788815646.119604,
+          "controlledClients": []
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 15,
+      "versions": [
+        {
+          "versionId": "1",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "starting",
+          "status": "activated",
+          "scriptLastModified": 1788815233,
+          "scriptResponseTime": 1788815646.119604,
+          "controlledClients": [],
+          "targetId": "22F08B3BC1DFD60076A12399EA46F8A8"
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 16,
+      "versions": [
+        {
+          "versionId": "1",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "starting",
+          "status": "activated",
+          "scriptLastModified": 1788815233,
+          "scriptResponseTime": 1788815646.119604,
+          "controlledClients": [],
+          "targetId": "22F08B3BC1DFD60076A12399EA46F8A8"
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 17,
+      "versions": [
+        {
+          "versionId": "1",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "running",
+          "status": "activated",
+          "scriptLastModified": 1788815233,
+          "scriptResponseTime": 1788815646.119604,
+          "controlledClients": [],
+          "targetId": "22F08B3BC1DFD60076A12399EA46F8A8"
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 30067,
+      "versions": [
+        {
+          "versionId": "1",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "stopping",
+          "status": "activated",
+          "scriptLastModified": 1788815233,
+          "scriptResponseTime": 1788815646.119604,
+          "controlledClients": [],
+          "targetId": "22F08B3BC1DFD60076A12399EA46F8A8"
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 30076,
+      "versions": [
+        {
+          "versionId": "1",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "stopped",
+          "status": "activated",
+          "scriptLastModified": 1788815233,
+          "scriptResponseTime": 1788815646.119604,
+          "controlledClients": []
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 30076,
+      "versions": [
+        {
+          "versionId": "1",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "stopped",
+          "status": "redundant",
+          "scriptLastModified": 1788815233,
+          "scriptResponseTime": 1788815646.119604,
+          "controlledClients": []
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 30076,
+      "versions": [
+        {
+          "versionId": "2",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "running",
+          "status": "activating",
+          "scriptLastModified": 1788815211,
+          "scriptResponseTime": 1788815660.345814,
+          "controlledClients": [],
+          "targetId": "87B8457E7F2EED27AB81463522F3D162"
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 30079,
+      "versions": [
+        {
+          "versionId": "2",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "running",
+          "status": "activating",
+          "scriptLastModified": 1788815211,
+          "scriptResponseTime": 1788815660.345814,
+          "controlledClients": [
+            "E60DCC15F0BCA66C369DE36AB721C285"
+          ],
+          "targetId": "87B8457E7F2EED27AB81463522F3D162"
+        }
+      ]
+    },
+    {
+      "millisecondsAfterUpdate": 31096,
+      "versions": [
+        {
+          "versionId": "2",
+          "registrationId": "0",
+          "scriptURL": "http://localhost:39217/sw.js",
+          "runningStatus": "running",
+          "status": "activated",
+          "scriptLastModified": 1788815211,
+          "scriptResponseTime": 1788815660.345814,
+          "controlledClients": [
+            "E60DCC15F0BCA66C369DE36AB721C285"
+          ],
+          "targetId": "87B8457E7F2EED27AB81463522F3D162"
+        }
+      ]
+    }
+  ]
+}

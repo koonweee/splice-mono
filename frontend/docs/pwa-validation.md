@@ -128,7 +128,7 @@ plan and is not resolved by delivery deadlines or session-bound enrollment.
 
 Fresh final-source checks on September 7, 2026:
 
-- Whole frontend: 106 files, 758 tests passed. Typecheck passed; lint has zero
+- Whole frontend: 106 files, 765 tests passed. Typecheck passed; lint has zero
   errors and 21 warnings. Token guard, production build, and workbench build passed.
   This includes the final cooldown regression and all17 offline recovery tests.
 - Backend acceptance: 26 suites, 208 tests passed with zero skips, plus lint,
@@ -136,7 +136,8 @@ Fresh final-source checks on September 7, 2026:
   and isolated schemas. Generated OpenAPI/client contracts were regenerated.
 - Production HTTP artifact checks passed: build agreement, static budget, no-store
   version/worker responses, and plain non-cacheable missing-asset 404s.
-- Sixteen production Chromium 153 lifecycle cases passed against three real
+- Seventeen production Chromium 153 lifecycle cases passed at22053cf, before the
+  bounded late-activation fix, against three real
   A/B/C releases and a real isolated Nest backend. They cover actual worker/cache
   activation, authenticated private-cache cleanup, cached offline JS, UI-only
   updates with dirty second-tab Settings, cold offline/captive/API-down recovery,
@@ -144,7 +145,9 @@ Fresh final-source checks on September 7, 2026:
   revoked-token replay, failed registration retry, waiting-cache replacement,
   delayed recovery scripts and throttled online events, quota failure, migration
   rebind, push/account isolation, guarded notification navigation, shortcuts, offline/repeated Update actions, and
-  real old lazy-chunk404 recovery without losing dirty Settings.
+  real old lazy-chunk404 recovery without losing dirty Settings, and Update while
+  an uncached static file's response headers remain stalled. The latter completes
+  in6.11s within the existing10s activation budget, with exactly one asset request.
 - Independent two-window worker/channel replay verifies ten alternating same-owner
   handshakes converge without epoch rotation or outstanding reads. Account change
   and logout during an in-flight ownership probe reject stale badge work.
@@ -158,6 +161,25 @@ covered by passing final cases. Startup reconciliation does not schedule another
 automatic recovery during a prior reload cooldown; a shared-journal regression and
 independent replay verify persistent route failures remain stable while manual
 and real reconnect retries still work.
+
+Linux Chromium 153 exposed a delayed-activation bug: a background API request
+arriving during worker shutdown restarts the outgoing worker and can require its
+normal 30-second idle window before the new worker activates. The app's original
+10-second activation listener had already expired. The [native trace](./pwa-evidence/chromium153-worker-restart.json)
+and [forced-race evidence](./pwa-evidence/chromium153-delayed-activation.json)
+record activation at 31.096 seconds with worker debugging excluded throughout.
+
+Activation now waits up to 45 seconds. Registration and download limits remain
+10 seconds; the initiating tab still rechecks its draft/save guard before reload.
+Unit tests cover delayed activation, repeated clicks, an editor opened during the
+wait, exact timeout cleanup, and late activation before or after explicit Retry.
+The browser regression forces the native restart instead of relying on timing.
+Worker debugging is temporarily excluded from browser and frame sessions during
+Update actions because debugger attachment can defer activation until Chromium's
+five-minute fallback. Inspection is restored before offline and push checks. This test
+helper uses the pinned Playwright 1.63 in-process bridge and fails explicitly if
+that bridge changes; it never stops a worker or forces activation. The fresh Linux
+release gate is still pending.
 
 ## Deployment prerequisite evidence
 

@@ -90,7 +90,7 @@ Status: verified
 
 ## 6. Make Releases Discoverable Without Losing Work
 
-Status: verified
+Status: in_progress
 
 - **6.task.1 — verified:** Generate one opaque `buildId` per production build and use it consistently in the application bundle, worker, and `/version.json`. Include it in worker bytes so a UI-only release changes the worker. Do not expose environment values or credentials through version metadata.
 - **6.task.2 — verified:** Check version on initial readiness and visible/online resume, throttled to at most once per minute. Explicitly call `registration.update()` as needed. Surface detection/check/apply failures separately and keep retry available; a failed version request must not log the user out.
@@ -102,7 +102,7 @@ Status: verified
 - **6.acceptance.1 — verified:** An A/B production-build test changes UI only, observes different worker/version metadata, and shows an actionable update in the A client within one foreground check after B is served.
 - **6.acceptance.2 — verified:** In two tabs, Update in a clean tab does not reload a tab with a manual transaction editor or dirty Settings. The blocked tab can later update without losing a submitted save or restoring private drafts from storage.
 - **6.acceptance.3 — verified:** A notification click during editing preserves the draft and exposes the pending destination; a cold click opens the correct page through authentication.
-- **6.acceptance.4 — verified:** Offline update attempts, failed worker installs, missing old lazy chunks, server rollback, and repeated clicks recover without reload loops or mixed-version asset substitution.
+- **6.acceptance.4 — in_progress:** Offline update attempts, failed worker installs, missing old lazy chunks, server rollback, and repeated clicks recover without reload loops or mixed-version asset substitution. A forced Chromium worker-restart race activates after31s, beyond the initial10s listener deadline; bounded late-activation support and its production regression are being implemented.
 
 ## 7. Cache Useful Static Assets And Reduce Startup Overhead
 
@@ -217,3 +217,6 @@ Worktree created clean before carrying in the plan. No original checkout files w
 - Independent cooldown replay verified: one initial recovery; the next failing fallback schedules no timers and stays stable after120s; explicit Retry and a later native online event still work. Focused offline suite17/17 passes. All implementation source gates are verified; final CI, merge and live rollout remain pending.
 - Whole frontend recheck at85c4444:106 files/758 tests passed, including the final cooldown regression. Linux rollback activation remains a failed release gate under investigation; production is unchanged.
 - Additional reliability regression reproduced: a cache-miss static request with stalled headers kept the outgoing worker alive and caused Update to time out. Static headers now abort after5s without a duplicate fetch or substituted content; caller cancellation remains connected after headers, and healthy streamed bodies are preserved.65 focused tests/typecheck and independent native HTTP cancellation checks passed. The added production scenario passed before the final cancellation correction; fresh17-case evidence is running. The separate Linux rollback failure remains unresolved.
+- Final22053cf source: whole frontend106 files/763 tests passed; fresh A/B/C Chromium153 production17/17 passed. Source provenance matches512 selected files. Static-stall Update completes in6.11s with one request and the fault still enabled. Linux native tracing identifies a new background API request restarting the outgoing worker during shutdown; a debugger-detached contrast is underway before the release gate can pass.
+- Forced native restart with all worker debugging excluded confirms activation at31.096s: the original10s app listener expired too early. The initial debugger-only hypothesis was insufficient. Activation now waits up to45s while registration remains10s;15 focused lifecycle tests, typecheck/lint, and independent review pass. The all-frame debugger isolation and deterministic18th production gate are being completed before the next Linux release run.
+- Whole frontend afterfc55bed passes106 files/765 tests. The candidate18-case harness preserves registration, offline/navigation, static-header, privacy, and draft assertions; update document waits now match the evidence-based45s activation budget. Linux and final CI remain required before merge.

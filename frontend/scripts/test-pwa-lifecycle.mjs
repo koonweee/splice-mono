@@ -700,6 +700,136 @@ async function wake(page, minutes) {
   await page.bringToFront()
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
 }
+// Chromium 153 restarts an outgoing worker if a fetch arrives while it stops.
+// The restart clears its immediate-termination flag, leaving a normal 30-second
+// idle period; attached DevTools can prolong that period further. Native Linux
+// traces reproduced the restart and 31-second activation without debugging.
+// Exclude worker debugging during real online updates so the browser exercises
+// that native lifecycle, then restore it for offline emulation and push tests.
+// https://chromium.googlesource.com/chromium/src/+/refs/tags/153.0.8010.12/content/browser/service_worker/service_worker_version.cc
+async function withoutWorkerDebuggers(action) {
+  const bridgeError =
+    'This lifecycle check requires the pinned Playwright 1.63 in-process Chromium bridge to detach and restore worker debugging safely'
+  assert.equal(typeof browser?._connection?.toImpl, 'function', bridgeError)
+  const implementation = browser._connection.toImpl(browser)
+  assert.equal(typeof implementation?._session?.send, 'function', bridgeError)
+  assert.equal(
+    typeof implementation?._serviceWorkers?.values,
+    'function',
+    bridgeError,
+  )
+  assert.equal(typeof implementation?._crPages?.values, 'function', bridgeError)
+  const root = implementation._session
+  const frames = [...implementation._crPages.values()].flatMap((page) => {
+    assert.equal(typeof page?._sessions?.values, 'function', bridgeError)
+    return [...page._sessions.values()].map((frame) => frame._client)
+  })
+  const sessions = [root, ...frames]
+  const attachment = {
+    autoAttach: true,
+    waitForDebuggerOnStart: true,
+    flatten: true,
+  }
+  const exclusion = {
+    ...attachment,
+    filter: [
+      { type: 'service_worker', exclude: true },
+      { type: 'browser', exclude: true },
+      { type: 'tab', exclude: true },
+      {},
+    ],
+  }
+  const attachments = []
+  let observingAction = false
+  const observers = sessions.map((session) => {
+    assert.equal(typeof session?.send, 'function', bridgeError)
+    assert.equal(typeof session?.on, 'function', bridgeError)
+    const listener = ({ targetInfo }) => {
+      if (observingAction && targetInfo.type === 'service_worker')
+        attachments.push({ at: Date.now(), target: targetInfo })
+    }
+    session.on('Target.attachedToTarget', listener)
+    return { session, listener }
+  })
+  const workerTargets = async () => {
+    const { targetInfos } = await root.send('Target.getTargets')
+    return targetInfos.filter(
+      (target) =>
+        target.type === 'service_worker' && target.url === `${origin}/sw.js`,
+    )
+  }
+  try {
+    // Page-frame autoattachment also briefly attaches restarted workers, even
+    // though Playwright immediately detaches them. Exclude both attachment paths.
+    for (const session of sessions)
+      await bounded(
+        session.send('Target.setAutoAttach', exclusion),
+        'detach worker debugging',
+      )
+    for (const worker of [...implementation._serviceWorkers.values()]) {
+      assert.equal(typeof worker?._session?.detach, 'function', bridgeError)
+      if (!worker._session._closed)
+        await bounded(
+          worker._session.detach(),
+          'detach residual worker debugging',
+        )
+    }
+    await until(
+      'native worker debugging detached',
+      async () => {
+        const targets = await workerTargets()
+        return targets.length > 0 && targets.every((target) => !target.attached)
+      },
+      3000,
+    )
+    recordUpdateDiagnostic({
+      kind: 'worker-debuggers-detached',
+      targets: await workerTargets(),
+    })
+    observingAction = true
+    const result = await action()
+    assert.equal(
+      attachments.length,
+      0,
+      'Worker debugging reattached during the real update',
+    )
+    return result
+  } finally {
+    observingAction = false
+    recordUpdateDiagnostic({
+      kind: 'worker-debugger-attachments-during-update',
+      attachments,
+    })
+    try {
+      // Offline emulation and private-push tests require normal worker sessions.
+      // A reload can replace a frame session; its replacement already has the
+      // default policy, while every surviving session must be restored here.
+      for (const session of sessions)
+        if (!session._closed)
+          await bounded(
+            session.send('Target.setAutoAttach', attachment),
+            'restore worker debugging',
+          )
+      await until(
+        'native worker debugging restored',
+        async () => {
+          const targets = await workerTargets()
+          return (
+            targets.length > 0 && targets.every((target) => target.attached)
+          )
+        },
+        3000,
+      )
+      recordUpdateDiagnostic({
+        kind: 'worker-debuggers-restored',
+        targets: await workerTargets(),
+      })
+    } finally {
+      for (const { session, listener } of observers)
+        session.off('Target.attachedToTarget', listener)
+    }
+  }
+}
 async function cacheInventory(page) {
   return page.evaluate(async () => {
     const result = []
@@ -880,8 +1010,14 @@ try {
         .getByRole('button', { name: 'Update', exact: true })
         .isDisabled(),
     )
-    await clean.getByRole('button', { name: 'Update', exact: true }).click()
-    await clean.waitForFunction(() => document.title === 'Splice PWA B')
+    await withoutWorkerDebuggers(async () => {
+      await clean.getByRole('button', { name: 'Update', exact: true }).click()
+      await clean.waitForFunction(
+        () => document.title === 'Splice PWA B',
+        undefined,
+        { timeout: 50000 },
+      )
+    })
     assert.equal(await dirty.title(), 'Splice')
     assert.equal(
       await dirty.evaluate(() => window.__pwaDocumentMarker),
@@ -895,8 +1031,14 @@ try {
     )
     assert(inventory.some((cache) => cache.name.includes(bVersion.buildId)))
     await dirty.getByRole('button', { name: 'Cancel', exact: true }).click()
-    await dirty.getByRole('button', { name: 'Update', exact: true }).click()
-    await dirty.waitForFunction(() => document.title === 'Splice PWA B')
+    await withoutWorkerDebuggers(async () => {
+      await dirty.getByRole('button', { name: 'Update', exact: true }).click()
+      await dirty.waitForFunction(
+        () => document.title === 'Splice PWA B',
+        undefined,
+        { timeout: 50000 },
+      )
+    })
   })
   await test('cold offline launch preserves destination, rejects outage/captive probes and recovers once', async () => {
     await clean.close()
@@ -1004,8 +1146,14 @@ try {
         Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
       ),
     )
-    await dirty.getByRole('button', { name: 'Update', exact: true }).click()
-    await dirty.waitForFunction(() => document.title === 'Splice')
+    await withoutWorkerDebuggers(async () => {
+      await dirty.getByRole('button', { name: 'Update', exact: true }).click()
+      await dirty.waitForFunction(
+        () => document.title === 'Splice',
+        undefined,
+        { timeout: 50000 },
+      )
+    })
     assert.equal(
       await dirty
         .getByRole('switch', { name: 'Hide 0 balance accounts' })
@@ -1135,8 +1283,14 @@ try {
           cache.name.includes(cVersion.buildId),
         ),
       )
-      await page.getByRole('button', { name: 'Update', exact: true }).click()
-      await page.waitForFunction(() => document.title === 'Splice PWA C')
+      await withoutWorkerDebuggers(async () => {
+        await page.getByRole('button', { name: 'Update', exact: true }).click()
+        await page.waitForFunction(
+          () => document.title === 'Splice PWA C',
+          undefined,
+          { timeout: 50000 },
+        )
+      })
       assert.equal(
         (await cacheInventory(page)).filter((cache) =>
           cache.name.startsWith('splice-static-v2-'),
@@ -1733,12 +1887,18 @@ try {
       const destination = page.url()
       // A burst invokes the actual DOM/React action before a rerender disables
       // the button. The production update promise must serialize those clicks.
-      await update.evaluate((button) => {
-        button.click()
-        button.click()
-        button.click()
+      await withoutWorkerDebuggers(async () => {
+        await update.evaluate((button) => {
+          button.click()
+          button.click()
+          button.click()
+        })
+        await page.waitForFunction(
+          () => document.title === 'Splice PWA B',
+          undefined,
+          { timeout: 50000 },
+        )
       })
-      await page.waitForFunction(() => document.title === 'Splice PWA B')
       await controlled(page)
       await delay(700)
       assert.equal(page.url(), destination)
@@ -1755,6 +1915,130 @@ try {
     } finally {
       state.release = 'a'
       await closeWithEvidence(updates, 'update-repeated')
+    }
+  })
+  await test('a fetch during native worker shutdown still activates and reloads within the update budget', async () => {
+    const race = await makeBrowserContext({ serviceWorkers: 'allow' })
+    const events = []
+    let protocol
+    let outgoingVersion
+    let armed = false
+    let injectedRequest
+    let milliseconds
+    try {
+      state.release = 'a'
+      const page = await race.newPage()
+      protocol = await race.newCDPSession(page)
+      const { targetInfo } = await protocol.send('Target.getTargetInfo')
+      protocol.on('Network.requestWillBeSent', (event) => {
+        if (
+          event.request.url === `${origin}/notification/summary?native-race=1`
+        )
+          events.push({
+            kind: 'request-started',
+            at: Date.now(),
+            requestId: event.requestId,
+          })
+      })
+      protocol.on('ServiceWorker.workerVersionUpdated', ({ versions }) => {
+        for (const version of versions) {
+          // Previous fixtures can leave another same-origin registration alive.
+          // Identify this page's actual controller before arming the race.
+          if (
+            !armed &&
+            version.status === 'activated' &&
+            version.controlledClients?.includes(targetInfo.targetId)
+          )
+            outgoingVersion = version.versionId
+          if (!armed || version.versionId !== outgoingVersion) continue
+          events.push({
+            kind: 'worker-version',
+            at: Date.now(),
+            versionId: version.versionId,
+            runningStatus: version.runningStatus,
+            status: version.status,
+          })
+          if (version.runningStatus === 'stopping' && !injectedRequest) {
+            // This benign request deliberately arrives while the browser stops
+            // the outgoing worker. It does not force or retry worker activation.
+            injectedRequest = page.evaluate(async () => {
+              const response = await fetch(
+                '/notification/summary?native-race=1',
+              )
+              await response.text()
+              return response.status
+            })
+            void injectedRequest.catch(() => undefined)
+          }
+        }
+      })
+      await protocol.send('Network.enable')
+      await protocol.send('ServiceWorker.enable')
+      await login(page)
+      await controlled(page)
+      await until(
+        'this page has an identified outgoing native worker',
+        async () => Boolean(outgoingVersion),
+      )
+      state.release = 'b'
+      await wake(page, 2)
+      await page.getByRole('button', { name: 'Update', exact: true }).waitFor()
+      await until('B waits before the native shutdown race', () =>
+        page.evaluate(async () =>
+          Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
+        ),
+      )
+      await withoutWorkerDebuggers(async () => {
+        armed = true
+        const started = Date.now()
+        await page.getByRole('button', { name: 'Update', exact: true }).click()
+        await page.waitForFunction(
+          () => document.title === 'Splice PWA B',
+          undefined,
+          { timeout: 50000 },
+        )
+        milliseconds = Date.now() - started
+        assert(
+          milliseconds < 45000,
+          'The real updated document must appear within the 45-second activation budget',
+        )
+        assert(
+          injectedRequest,
+          'The native outgoing worker never entered stopping',
+        )
+        assert.equal(
+          await bounded(injectedRequest, 'native race request completes'),
+          200,
+        )
+        const stopped = events.findIndex(
+          (event) =>
+            event.kind === 'worker-version' &&
+            event.runningStatus === 'stopping',
+        )
+        const request = events.findIndex(
+          (event) => event.kind === 'request-started',
+        )
+        const restarted = events.findIndex(
+          (event, index) =>
+            index > stopped &&
+            event.kind === 'worker-version' &&
+            event.runningStatus === 'starting',
+        )
+        assert(
+          stopped >= 0 && request > stopped && restarted > request,
+          'The benign GET must enter the native stop-to-restart window; an update that misses the race is not coverage',
+        )
+      })
+      await controlled(page)
+    } finally {
+      armed = false
+      await writeFile(
+        join(artifacts, 'activation-restart.json'),
+        JSON.stringify({ outgoingVersion, milliseconds, events }, null, 2),
+      )
+      await protocol?.detach().catch(() => undefined)
+      state.release = 'a'
+      await closeWithEvidence(race, 'activation-restart')
     }
   })
   await test('a stalled uncached static response cannot block real Update activation', async () => {
@@ -1786,12 +2070,14 @@ try {
         requests.some((request) => request.path === asset),
       )
       const started = Date.now()
-      await page.getByRole('button', { name: 'Update', exact: true }).click()
-      await page.waitForFunction(
-        () => document.title === 'Splice PWA B',
-        undefined,
-        { timeout: 10000 },
-      )
+      await withoutWorkerDebuggers(async () => {
+        await page.getByRole('button', { name: 'Update', exact: true }).click()
+        await page.waitForFunction(
+          () => document.title === 'Splice PWA B',
+          undefined,
+          { timeout: 10000 },
+        )
+      })
       await controlled(page)
       assert.equal(
         requests.filter((request) => request.path === asset).length,
@@ -1911,8 +2197,14 @@ try {
       )
       assert.equal(await page.evaluate(() => window.__pwaDocumentCount), count)
       await page.getByRole('button', { name: 'Cancel', exact: true }).click()
-      await page.getByRole('button', { name: 'Update', exact: true }).click()
-      await page.waitForFunction(() => document.title === 'Splice PWA B')
+      await withoutWorkerDebuggers(async () => {
+        await page.getByRole('button', { name: 'Update', exact: true }).click()
+        await page.waitForFunction(
+          () => document.title === 'Splice PWA B',
+          undefined,
+          { timeout: 50000 },
+        )
+      })
       await controlled(page)
       assert.equal(
         await page.evaluate(() => window.__pwaDocumentCount),
