@@ -13,8 +13,8 @@ The workbench contains 35 examples, including real Home, Accounts, Transactions,
 Analysis, Settings and landing routes; account dialogs; controls/status;
 interactive rows/retained errors; editors/nested pickers/confirmation; and chart
 compositions. `catalog.json` maps 84 rendered components to examples. Registration
-is checked against exported JSX components in `src/components`; the complete
-visual/state review remains in progress. Catalog membership alone is not proof
+is checked against exported JSX components in `src/components`; the completed
+initial visual/state review is recorded in the validation document above. Catalog membership alone is not proof
 that every interaction has been verified.
 
 Examples import production components and styles. The shared `vite-css.ts`
