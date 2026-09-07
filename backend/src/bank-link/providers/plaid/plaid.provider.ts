@@ -231,6 +231,22 @@ export class PlaidProvider implements IBankLinkProvider {
   /** Cache TTL in milliseconds (24 hours) - forces periodic refresh even if key hasn't expired */
   private static readonly JWK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
+  async disconnect(authentication: Record<string, unknown>): Promise<void> {
+    if (!isPlaidAuthentication(authentication)) {
+      throw new Error('Missing Plaid credentials for disconnect');
+    }
+    try {
+      await this.client.itemRemove(
+        { access_token: authentication.accessToken },
+        { timeout: 10_000 },
+      );
+    } catch (error) {
+      if (getPlaidErrorCode(error) === 'ITEM_NOT_FOUND') return;
+      // Never propagate Axios errors: they can contain the request credentials.
+      throw new Error('Plaid disconnect failed');
+    }
+  }
+
   constructor() {
     this.logger.log({}, 'Initializing PlaidProvider');
     this.logger.log({}, 'Plaid credentials configured');

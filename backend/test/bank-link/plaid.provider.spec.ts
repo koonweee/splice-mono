@@ -11,6 +11,41 @@ describe('PlaidProvider', () => {
     provider = new PlaidProvider();
   });
 
+  describe('disconnect', () => {
+    it('removes the Item with a bounded request', async () => {
+      const remove = jest
+        .fn()
+        .mockResolvedValue({ data: { request_id: 'request' } });
+      provider['client'] = { itemRemove: remove } as any;
+      await provider.disconnect({ accessToken: 'test-token' });
+      expect(remove).toHaveBeenCalledWith(
+        { access_token: 'test-token' },
+        { timeout: 10_000 },
+      );
+    });
+    it('accepts an already removed Item after a crash or duplicate attempt', async () => {
+      provider['client'] = {
+        itemRemove: jest.fn().mockRejectedValue({
+          response: { data: { error_code: 'ITEM_NOT_FOUND' } },
+        }),
+      } as any;
+      await expect(
+        provider.disconnect({ accessToken: 'test-token' }),
+      ).resolves.toBeUndefined();
+    });
+    it('does not leak credentials or treat authentication failures as success', async () => {
+      provider['client'] = {
+        itemRemove: jest.fn().mockRejectedValue({
+          response: { data: { error_code: 'INVALID_ACCESS_TOKEN' } },
+          config: { data: 'secret-token' },
+        }),
+      } as any;
+      await expect(
+        provider.disconnect({ accessToken: 'test-token' }),
+      ).rejects.toThrow('Plaid disconnect failed');
+    });
+  });
+
   describe('initiateLinking', () => {
     it('should request single-account Link customization for conversion flows', async () => {
       provider['client'] = {

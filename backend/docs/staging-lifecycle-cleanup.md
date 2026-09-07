@@ -45,3 +45,47 @@ and a nonzero exit code. After success, independently recount every target class
 and confirm active accounts, usable refresh tokens, non-expired webhook flows,
 active suggestions, pending push deliveries, and recent notifications were not
 changed.
+
+## Plaid disconnection after archiving
+
+Archiving the last active account on a Plaid link now atomically archives the
+link and records a durable disconnect request, including healthy links. Archiving
+one account while others remain active preserves the connection. Account history
+and archive snapshots are retained.
+
+The `bankLinkDisconnect` worker runs every minute on each backend node. It claims
+up to 25 due requests using the shared lifecycle advisory lock and a row lock,
+checks all account owners and other links sharing the Plaid Item/token, and calls
+`/item/remove` with a ten-second timeout. Failed attempts retain credentials and
+retry with exponential backoff from one minute to one hour. It treats
+`ITEM_NOT_FOUND` as success, so a crash after Plaid removal but before database
+commit is recoverable. Completion clears authentication except `itemId`, sets
+`disconnectedAt`, and disables further attempts. Logs omit provider error payloads
+and credentials.
+
+Link completion cannot reactivate an Item once disconnect has been requested;
+users must establish a new connection. Sync application and link completion share
+lifecycle locking with account archival and disconnection.
+
+Deploy the `AddBankLinkDisconnect1788645000000` migration before the updated
+backend. It queues existing archived Plaid links with retained tokens and no
+active accounts. This includes Items removed manually: the worker confirms they
+are absent and clears the obsolete tokens. Legacy empty links still use the
+existing stale-link policy until archived; the migration does not archive healthy
+unarchived links. No frontend changes are required.
+
+After rollout, inspect only metadata (never `authentication`) to verify requests
+finish or are retrying:
+
+```sql
+SELECT id, "institutionName", "archivedAt", "disconnectRequestedAt",
+       "disconnectedAt", "disconnectAttempts", "disconnectNextAttemptAt"
+FROM bank_link_entity
+WHERE "disconnectRequestedAt" IS NOT NULL
+ORDER BY "disconnectRequestedAt";
+```
+
+Rollback requires stopping the updated worker before reverting code/schema.
+Reverting the migration does not restore Items already removed at Plaid; those
+require a new link. The feature has not been deployed merely by changing this
+repository.

@@ -8,6 +8,9 @@ import type {
 
 @Entity()
 @Index('IDX_bank_link_user_active', ['userId', 'archivedAt'])
+@Index('IDX_bank_link_disconnect_pending', ['disconnectNextAttemptAt', 'id'], {
+  where: '"disconnectRequestedAt" IS NOT NULL AND "disconnectedAt" IS NULL',
+})
 export class BankLinkEntity extends OwnedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -38,6 +41,19 @@ export class BankLinkEntity extends OwnedEntity {
 
   @Column({ type: 'timestamptz', nullable: true })
   archivedAt: Date | null;
+
+  /** Durable disconnect intent; authentication is retained until completion. */
+  @Column({ type: 'timestamptz', nullable: true })
+  disconnectRequestedAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  disconnectedAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  disconnectNextAttemptAt: Date | null;
+
+  @Column({ default: 0 })
+  disconnectAttempts: number;
 
   /**
    * Create entity from DTO

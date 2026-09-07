@@ -6,6 +6,7 @@ import { InvestmentModule } from '../investment/investment.module';
 import { TransactionModule } from '../transaction/transaction.module';
 import { UserModule } from '../user/user.module';
 import { WebhookEventModule } from '../webhook-event/webhook-event.module';
+import { BankLinkDisconnectService } from './bank-link-disconnect.service';
 import { BankLinkController } from './bank-link.controller';
 import { BankLinkLifecycleService } from './bank-link-lifecycle.service';
 import { BankLinkLifecycleScheduledService } from './bank-link-lifecycle.scheduled';
@@ -37,6 +38,7 @@ import { StalePendingTransactionScheduledService } from './stale-pending-transac
     BankLinkService,
     BankLinkLifecycleService,
     BankLinkLifecycleScheduledService,
+    BankLinkDisconnectService,
     BankLinkScheduledService, // Scheduled tasks for bank link operations
     StalePendingTransactionScheduledService,
     ProviderRegistry,
