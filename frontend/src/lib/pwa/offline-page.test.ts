@@ -22,7 +22,7 @@ afterEach(() => {
 describe('offline recovery interactions', () => {
   function harness(
     fetcher: ReturnType<typeof vi.fn>,
-    recentReload = false,
+    recentReload: boolean | { value: string | null } = false,
     initial = { online: true, visible: true },
   ) {
     const button = Object.assign(new EventTarget(), { disabled: false })
@@ -38,8 +38,15 @@ describe('offline recovery interactions', () => {
       reload: vi.fn(),
     }
     const sessionStorage = {
-      getItem: () => (recentReload ? String(Date.now()) : null),
-      setItem: vi.fn(),
+      getItem: () =>
+        typeof recentReload === 'object'
+          ? recentReload.value
+          : recentReload
+            ? String(Date.now())
+            : null,
+      setItem: vi.fn((_key: string, value: string) => {
+        if (typeof recentReload === 'object') recentReload.value = value
+      }),
     }
     const run = new Function(
       'window',
@@ -83,6 +90,34 @@ describe('offline recovery interactions', () => {
     await settle()
     expect(fetcher).toHaveBeenCalledTimes(1)
     expect(ui.location.reload).toHaveBeenCalledTimes(1)
+  })
+  it('does not schedule a reload cycle across fallback documents when recovery is ready but the target still fails', async () => {
+    vi.useFakeTimers()
+    const journal: { value: string | null } = { value: null }
+    const fetcher = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(Response.json({ app: 'splice', status: 'ready' })),
+      )
+    const first = harness(fetcher, journal)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(first.location.reload).toHaveBeenCalledTimes(1)
+    // The reload returns another fallback document sharing the same tab journal.
+    const second = harness(fetcher, journal)
+    await vi.advanceTimersByTimeAsync(120000)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(second.location.reload).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+    // An explicit retry remains available after the automatic attempt stops.
+    second.button.dispatchEvent(new Event('click'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(second.location.reload).toHaveBeenCalledTimes(1)
+    const third = harness(fetcher, journal)
+    await vi.advanceTimersByTimeAsync(120000)
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(third.location.reload).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
   })
   it.each([
     { online: false, visible: true },

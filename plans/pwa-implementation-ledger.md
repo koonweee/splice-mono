@@ -122,17 +122,17 @@ Status: verified
 
 ## 8. Add Offline Recovery And Explicit Save Failure States
 
-Status: in_progress
+Status: verified
 
 - **8.task.1 — verified:** Extract the safe fallback from `frontend/src/sw.ts` into a small offline-page module with a precached recovery script. It must render without the React authenticated root or `/user/me` succeeding.
-- **8.task.2 — in_progress:** Add a keyboard-accessible Retry button, visible retry/pending/error status, and recovery on `online` and visible resume. Keep the original path/search/hash; reload only after a bounded successful same-origin GET probe. Deduplicate probes and prevent reconnect/reload loops. The page contains no financial data.
+- **8.task.2 — verified:** Add a keyboard-accessible Retry button, visible retry/pending/error status, and recovery on `online` and visible resume. Keep the original path/search/hash; reload only after a bounded successful same-origin GET probe. Deduplicate probes and prevent reconnect/reload loops. The page contains no financial data.
 - **8.task.3 — verified:** Validate that recovery probes reached Splice and establish a valid application/authentication outcome. Static `/version.json` availability alone cannot prove a protected route's backend has recovered; captive-portal HTML or an API outage must not trigger repeated reloads. A confirmed expired session can lead to login while preserving the destination.
 - **8.task.4 — verified:** Bound navigation waiting for response headers to eight seconds, then show the recoverable unavailable page. Preserve valid authentication redirects and distinguish a network failure from a server response where possible; do not buffer SSR streams just to impose the timeout.
 - **8.task.5 — verified:** Update `PwaLifecycle` and reuse `DataState` to distinguish browser-offline from temporarily unavailable reads. Retain identity-matched loaded results and refresh active reads after recovery; treat `navigator.onLine` as a hint rather than proof the backend is reachable.
 - **8.task.6 — verified:** Make known-offline financial saves fail promptly with a retained draft and actionable message. Test the actual TanStack mutation path so a click does not silently become a paused mutation that automatically executes after reconnect. Preserve the special local/server logout behavior from milestone 2.
 - **8.task.7 — verified:** Do not automatically replay a write whose response was lost, since it may already have committed. Preserve the draft, explain the uncertainty, and offer read reconciliation before another submission. This plan does not introduce a general offline mutation queue.
 - **8.acceptance.1 — verified:** Browser-worker launch evidence; physical installed behavior remains covered by blocked 9.acceptance.2. An installed app launched offline shows the safe recovery page and returns to its original destination after reconnect without requiring force-close/relaunch.
-- **8.acceptance.2 — in_progress:** Browser-online/API-down, captive/non-app responses, failed retry, and repeated online events produce stable states rather than login redirects or loops.
+- **8.acceptance.2 — verified:** Browser-online/API-down, captive/non-app responses, failed retry, and repeated online events produce stable states rather than login redirects or loops.
 - **8.acceptance.3 — verified:** A manual transaction save attempted offline sends no delayed mutation after reconnect. A failed online save retains input; reconnect refresh does not reset that input or submit it twice.
 - **8.acceptance.4 — verified:** Validate warm-open and cold-launch paths in a production build with `$agent-browser`; workbench-only offline events do not establish worker correctness.
 
@@ -210,3 +210,8 @@ Worktree created clean before carrying in the plan. No original checkout files w
 - Expanded production16-case run passed against identical retained A/B/C binaries (494production/config source files match final source). Native push injection now identifies the worker controlling the exact page target across contexts. Final full Chromium CI remains a release gate.
 
 - Linux CI652001c passed full Chromium worker activation (native headless-shell crash avoided) but failed automatic cold-offline reconnect. Explicit Retry works; automatic recovery is reopened for investigation/fix before release. No merge, live migration, or app cutover occurred.
+
+- Final startup remeasurement on5a3a95a: first2381ms versus2349ms (+1.4%); body2,309,813B versus4,108,738B (−43.8%). Warm319ms versus171ms; suspended288ms versus279ms. All30 baseline/latest observations retained.
+- Final fresh whole frontend757 tests passed with typecheck/lint (0errors/21warnings), production build and artifact check. Fresh A/B/C Chromium153 suite16 passed; unchanged deadlines/assertions. The harness clock now advances so recovery throttles can expire. Independent review requires a startup-only cooldown guard against repeated failing-route reloads; focused fix underway.
+
+- Independent cooldown replay verified: one initial recovery; the next failing fallback schedules no timers and stays stable after120s; explicit Retry and a later native online event still work. Focused offline suite17/17 passes. All implementation source gates are verified; final CI, merge and live rollout remain pending.

@@ -59,8 +59,9 @@ export const OFFLINE_RECOVERY_SCRIPT = `(() => {
   addEventListener('online', () => void retry(false));
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void retry(false); });
   // A reconnect can precede listener installation on a cold fallback document.
-  // Reconcile current state once, using the same probe and reload limits.
-  if (navigator.onLine && document.visibilityState === 'visible') void retry(false);
+  // A failed target document must not schedule its own next automatic reload.
+  // Native reconnect/resume events can still use the deferred retry path.
+  if (navigator.onLine && document.visibilityState === 'visible' && Date.now() - lastReload >= 30000) void retry(false);
 })();`
 
 export function offlineAssetPath(buildId: string): string {

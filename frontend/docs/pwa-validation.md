@@ -92,22 +92,23 @@ heading and balance control are present after DOMContentLoaded. These local
 measurements are not field Core Web Vitals or physical-device startup results.
 
 The baseline first visit transfers all eight splash images. Five-run medians from
-the final source build are below; all 30 raw observations are retained in
+commit `5a3a95a` (authenticated startup code is unchanged by the final fallback
+cooldown guard) are below; all 30 raw observations are retained in
 [`startup-baseline.json`](./pwa-evidence/startup-baseline.json) and
 [`startup-after.json`](./pwa-evidence/startup-after.json).
 
 | Scenario         | Clean main content-ready | New build content-ready | Clean main body transfer | New build body transfer |
 | ---------------- | -----------------------: | ----------------------: | -----------------------: | ----------------------: |
-| First visit      |                 2,349 ms |                2,447 ms |              4,108,738 B |             2,309,119 B |
-| Warm navigation  |                   171 ms |                  395 ms |                 74,598 B |                75,914 B |
-| Suspended worker |                   279 ms |                  335 ms |                 74,812 B |                75,914 B |
+| First visit      |                 2,349 ms |                2,381 ms |              4,108,738 B |             2,309,813 B |
+| Warm navigation  |                   171 ms |                  319 ms |                 74,598 B |                76,154 B |
+| Suspended worker |                   279 ms |                  288 ms |                 74,812 B |                76,154 B |
 
-First-visit transfer falls 43.8%; content-ready is 4.2% slower, within the fixed
-5% regression limit. Warm navigation is 224ms slower and suspended-worker
-navigation is 56ms slower in this sample. There is no claim of a startup timing
+First-visit transfer falls 43.8%; content-ready is 1.4% slower, within the fixed
+5% regression limit. Warm navigation is 148ms slower and suspended-worker
+navigation is 9ms slower in this sample. There is no claim of a startup timing
 speedup. All measured navigations issue one document request; warm/suspended runs
 transfer no cached static response bodies. The new client requests zero splash
-images during installation. Essential cache: 1,123,303 raw / 339,017 gzip bytes
+images during installation. Essential cache: 1,123,543 raw / 339,103 gzip bytes
 across 11 eligible assets, below 2.5 MiB raw / 1 MiB compressed.
 
 ## Platform limitations
@@ -127,14 +128,15 @@ plan and is not resolved by delivery deadlines or session-bound enrollment.
 
 Fresh final-source checks on September 7, 2026:
 
-- Whole frontend: 106 files, 753 tests passed. Typecheck passed; lint has zero
+- Whole frontend: 106 files, 757 tests passed. Typecheck passed; lint has zero
   errors and 21 warnings. Token guard, production build, and workbench build passed.
+  The final cooldown regression raises the focused offline suite to17 passing tests.
 - Backend acceptance: 26 suites, 208 tests passed with zero skips, plus lint,
   typecheck, and build. Real PostgreSQL used a dedicated loopback benchmark database
   and isolated schemas. Generated OpenAPI/client contracts were regenerated.
 - Production HTTP artifact checks passed: build agreement, static budget, no-store
   version/worker responses, and plain non-cacheable missing-asset 404s.
-- Sixteen production Chromium 152 lifecycle cases passed against three real
+- Sixteen production Chromium 153 lifecycle cases passed against three real
   A/B/C releases and a real isolated Nest backend. They cover actual worker/cache
   activation, authenticated private-cache cleanup, cached offline JS, UI-only
   updates with dirty second-tab Settings, cold offline/captive/API-down recovery,
@@ -151,8 +153,11 @@ The push test uses an enrollment transport fixture and CDP delivery into the rea
 worker with the actual notification API. The constructed notification-click event
 emulates native focus/event-lifetime privileges. These tests do not certify a real
 push provider, OS notification click, or native permission sheet. The pending-probe
-recovery and superseded waiting-cache defects found in earlier runs are fixed and
-covered by passing final cases.
+recovery, missed startup reconciliation, and superseded waiting-cache defects are fixed and
+covered by passing final cases. Startup reconciliation does not schedule another
+automatic recovery during a prior reload cooldown; a shared-journal regression and
+independent replay verify persistent route failures remain stable while manual
+and real reconnect retries still work.
 
 ## Deployment prerequisite evidence
 
