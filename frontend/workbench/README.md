@@ -248,3 +248,10 @@ remain available. Example:
 `/?frame=true&example=page-settings&tab=categories&state=empty&mode=light`.
 The production Settings route validates the tab, and comparison frames receive the
 same section. Unknown tabs fall back to General.
+
+
+## Chart gesture checks
+
+Use the Home or history example for chart interaction changes. On touch devices, tap selects immediately; horizontal scrubbing tracks the nearest point and keeps the selection after release. The touch tooltip stays above the chart while a vertical guide marks the point. Outside presses, vertical scrolling, cancellation and data/range changes dismiss inspection. Verify that masking remains intact and yearly labels include the year.
+
+Check mouse hover/click/drag and keyboard arrows/Escape separately. Tooltip position should update without a transition lag. Use native touch input in a mobile browser or emulated device rather than treating a mouse click as proof of touch behavior. Workbench fixtures cover interactions; also test real Home data when changing chart selection or range handling.

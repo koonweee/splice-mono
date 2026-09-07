@@ -183,21 +183,65 @@ describe('Chart interaction cleanup', () => {
     expect(onDataPointHover).toHaveBeenLastCalledWith(undefined)
   })
 
-  it.each(['touchEnd', 'touchCancel'] as const)(
-    'clears selection after %s and ignores queued movement',
-    (event) => {
-      const { chart, onDataPointHover } = setup()
-      fireEvent.touchStart(chart)
-      move()
-      expect(onDataPointHover).toHaveBeenLastCalledWith(point)
-      fireEvent[event](chart)
-      expect(onDataPointHover).toHaveBeenLastCalledWith()
-      expect(chartProps.tooltipProps?.active).toBe(false)
-      onDataPointHover.mockClear()
-      move()
-      expect(onDataPointHover).not.toHaveBeenCalled()
-    },
-  )
+  it('selects on touch-down, retains on release, and clears on cancel or outside press', () => {
+    const { chart, onDataPointHover } = setup()
+    vi.spyOn(chart.parentElement!, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      width: 300,
+    } as DOMRect)
+    fireEvent.touchStart(chart, { touches: [{ clientX: 100 }] })
+    expect(onDataPointHover).toHaveBeenLastCalledWith(point)
+    expect(screen.getByRole('status').textContent).toBe('Sep 1')
+    fireEvent.touchEnd(chart)
+    expect(screen.getByRole('status').textContent).toBe('Sep 1')
+    onDataPointHover.mockClear()
+    fireEvent.focus(chart)
+    move()
+    expect(onDataPointHover).not.toHaveBeenCalled()
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(onDataPointHover).toHaveBeenLastCalledWith()
+    fireEvent.touchStart(chart, { touches: [{ clientX: 100 }] })
+    fireEvent.touchCancel(chart)
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(onDataPointHover).toHaveBeenLastCalledWith()
+    fireEvent.touchStart(chart, { touches: [{ clientX: 100 }] })
+    fireEvent.scroll(document)
+    fireEvent.touchMove(chart, { touches: [{ clientX: 120 }] })
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(onDataPointHover).toHaveBeenLastCalledWith()
+  })
+
+  it('scrubs to the nearest point and drops selection when data changes', () => {
+    const points = [
+      point,
+      { ...point, date: '2026-09-02', label: 'Sep 2', value: 200 },
+    ]
+    const onDataPointHover = vi.fn()
+    const view = (data: typeof points) => (
+      <MantineProvider env="test">
+        <Chart
+          data={data}
+          valueFormatter={String}
+          onDataPointHover={onDataPointHover}
+        />
+      </MantineProvider>
+    )
+    const { rerender } = render(view(points))
+    const chart = screen.getByTestId('chart')
+    vi.spyOn(chart.parentElement!, 'getBoundingClientRect').mockReturnValue({
+      left: 10,
+      width: 300,
+    } as DOMRect)
+    fireEvent.touchStart(chart, { touches: [{ clientX: 20 }] })
+    expect(onDataPointHover).toHaveBeenLastCalledWith(points[0])
+    fireEvent.touchMove(chart, { touches: [{ clientX: 290 }] })
+    expect(onDataPointHover).toHaveBeenLastCalledWith(points[1])
+    expect(screen.getByRole('status').textContent).toBe('Sep 2')
+    rerender(view([point]))
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(onDataPointHover).toHaveBeenLastCalledWith()
+  })
 })
 
 it('disables stale hover while the range is loading and restores it afterwards', () => {
@@ -327,7 +371,6 @@ it('does not repeat inspection when the parent recreates its hover callback', ()
     </MantineProvider>,
   )
   const chart = screen.getByTestId('chart')
-  fireEvent.touchStart(chart)
   fireEvent.focus(chart)
   expect(screen.getByLabelText('Inspected date').textContent).toBe('Sep 1')
   expect(notifications).toBe(1)

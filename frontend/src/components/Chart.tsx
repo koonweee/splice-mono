@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { foundation } from '../lib/design-system/foundation'
 import placeholderStyles from './loading/ChartSkeleton.module.css'
 import styles from './Chart.module.css'
+import type { TouchEvent } from 'react'
 import type { TooltipContentProps } from 'recharts'
 import type { MoneyWithSign } from '../api/models'
 
@@ -140,10 +141,34 @@ export function Chart({
   const pointerWithin = useRef(false)
   const [interactionActive, setInteractionActive] = useState(false)
   const [keyboardActive, setKeyboardActive] = useState(false)
+  const lastTouch = useRef(0)
+  const touchCancelled = useRef(false)
+  const [touchSelection, setTouchSelection] = useState<{
+    data: Array<ChartDataPoint>
+    index: number
+  }>()
+  const touchPoint =
+    canInteract && touchSelection?.data === data
+      ? data[touchSelection.index]
+      : undefined
+  const touchPercent =
+    touchSelection && data.length > 1
+      ? (touchSelection.index / (data.length - 1)) * 100
+      : 50
+
+  useEffect(() => {
+    if (touchSelection && touchSelection.data !== data) {
+      setTouchSelection(undefined)
+      interacting.current = false
+      onDataPointHover?.()
+    }
+  }, [data, touchSelection, onDataPointHover])
 
   useEffect(() => {
     const clearInteraction = () => {
+      touchCancelled.current = true
       pointerWithin.current = false
+      setTouchSelection(undefined)
       if (!interacting.current) return
       interacting.current = false
       setInteractionActive(false)
@@ -154,9 +179,11 @@ export function Chart({
       interacting.current = false
       setInteractionActive(false)
       setKeyboardActive(false)
+      setTouchSelection(undefined)
       onDataPointHover?.()
     }
     const handlePointerMove = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') return
       const container = containerRef.current
       if (!container || !pointerWithin.current) return
       const bounds = container.getBoundingClientRect()
@@ -171,7 +198,15 @@ export function Chart({
       }
     }
     const handlePointerOut = (event: PointerEvent) => {
-      if (event.relatedTarget === null) clearInteraction()
+      if (event.pointerType !== 'touch' && event.relatedTarget === null)
+        clearInteraction()
+    }
+    const handleOutsidePress = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !containerRef.current?.contains(event.target)
+      )
+        clearInteraction()
     }
     const handleVisibilityChange = () => {
       if (document.hidden) clearInteraction()
@@ -179,11 +214,15 @@ export function Chart({
 
     // A rapidly changing SVG can miss React's synthesized mouse-leave event.
     // Capture pointer movement outside the chart independently of that event.
+    document.addEventListener('scroll', clearInteraction, true)
+    document.addEventListener('pointerdown', handleOutsidePress, true)
     document.addEventListener('pointermove', handlePointerMove, true)
     document.addEventListener('pointerout', handlePointerOut, true)
     window.addEventListener('blur', clearInteraction)
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
+      document.removeEventListener('scroll', clearInteraction, true)
+      document.removeEventListener('pointerdown', handleOutsidePress, true)
       document.removeEventListener('pointermove', handlePointerMove, true)
       document.removeEventListener('pointerout', handlePointerOut, true)
       window.removeEventListener('blur', clearInteraction)
@@ -205,6 +244,8 @@ export function Chart({
   const domainMax = maxValue + padding
 
   const handleStart = () => {
+    if (Date.now() - lastTouch.current < 800) return
+    setTouchSelection(undefined)
     setKeyboardActive(false)
     pointerWithin.current = true
     if (!canInteract) return
@@ -213,11 +254,37 @@ export function Chart({
   }
 
   const handleLeave = () => {
+    touchCancelled.current = true
+    setTouchSelection(undefined)
     pointerWithin.current = false
     interacting.current = false
     setInteractionActive(false)
     setKeyboardActive(false)
     onDataPointHover?.()
+  }
+
+  const handleTouch = (event: TouchEvent<HTMLDivElement>) => {
+    lastTouch.current = Date.now()
+    const touch = event.touches[0]
+    if (!canInteract || touchCancelled.current || event.touches.length !== 1)
+      return
+    const bounds = event.currentTarget.getBoundingClientRect()
+    if (!bounds.width) return
+    const fraction = Math.max(
+      0,
+      Math.min(1, (touch.clientX - bounds.left) / bounds.width),
+    )
+    const index = Math.round(fraction * (data.length - 1))
+    pointerWithin.current = false
+    interacting.current = true
+    setKeyboardActive(false)
+    setInteractionActive(false)
+    setTouchSelection((previous) =>
+      previous?.data === data && previous.index === index
+        ? previous
+        : { data, index },
+    )
+    onDataPointHover?.(data[index])
   }
 
   const handleMove = (state: {
@@ -248,13 +315,28 @@ export function Chart({
       aria-label={showingPlaceholder ? 'Loading chart' : undefined}
       className={showingPlaceholder ? placeholderStyles.graph : undefined}
       mb={mb}
+      pos="relative"
+      style={{ touchAction: 'pan-y' }}
       onMouseEnter={handleStart}
-      onMouseLeave={handleLeave}
-      onTouchStart={handleStart}
-      onTouchEnd={handleLeave}
+      onMouseLeave={() => {
+        if (Date.now() - lastTouch.current >= 800) handleLeave()
+      }}
+      onTouchStart={(event) => {
+        touchCancelled.current = false
+        handleTouch(event)
+      }}
+      onTouchMove={handleTouch}
+      onTouchEnd={() => {
+        lastTouch.current = Date.now()
+      }}
       onTouchCancel={handleLeave}
       onFocus={() => {
-        if (!canInteract) return
+        if (
+          !canInteract ||
+          pointerWithin.current ||
+          Date.now() - lastTouch.current < 800
+        )
+          return
         interacting.current = true
         setKeyboardActive(true)
         setInteractionActive(true)
@@ -265,12 +347,15 @@ export function Chart({
           canInteract &&
           ['ArrowLeft', 'ArrowRight', 'Enter'].includes(event.key)
         ) {
+          setTouchSelection(undefined)
           interacting.current = true
           setKeyboardActive(true)
           setInteractionActive(true)
         }
       }}
-      onBlur={handleLeave}
+      onBlur={() => {
+        if (!touchPoint) handleLeave()
+      }}
     >
       <AreaChart
         className={minimal ? styles.softArea : undefined}
@@ -299,10 +384,11 @@ export function Chart({
         }}
         areaChartProps={{
           onMouseMove: handleMove,
-          onTouchMove: handleMove,
         }}
         tooltipProps={{
-          active: canInteract && interactionActive ? undefined : false,
+          isAnimationActive: false,
+          active:
+            canInteract && interactionActive && !touchPoint ? undefined : false,
           content: (
             <ChartTooltipContent
               onInspect={
@@ -315,6 +401,45 @@ export function Chart({
           ),
         }}
       />
+      {touchPoint && (
+        <>
+          <Box
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: `${touchPercent}%`,
+              borderLeft: '1px solid var(--splice-border)',
+              pointerEvents: 'none',
+            }}
+          />
+          <Box
+            role="status"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              display: 'flex',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <ChartTooltip
+              label={touchPoint.label}
+              value={
+                onDataPointHover
+                  ? undefined
+                  : pointFormatter
+                    ? pointFormatter(touchPoint)
+                    : valueFormatter(touchPoint.value)
+              }
+            />
+          </Box>
+        </>
+      )}
     </Box>
   )
 }
