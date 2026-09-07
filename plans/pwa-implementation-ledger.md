@@ -131,7 +131,7 @@ Status: verified
 - **8.task.5 — verified:** Update `PwaLifecycle` and reuse `DataState` to distinguish browser-offline from temporarily unavailable reads. Retain identity-matched loaded results and refresh active reads after recovery; treat `navigator.onLine` as a hint rather than proof the backend is reachable.
 - **8.task.6 — verified:** Make known-offline financial saves fail promptly with a retained draft and actionable message. Test the actual TanStack mutation path so a click does not silently become a paused mutation that automatically executes after reconnect. Preserve the special local/server logout behavior from milestone 2.
 - **8.task.7 — verified:** Do not automatically replay a write whose response was lost, since it may already have committed. Preserve the draft, explain the uncertainty, and offer read reconciliation before another submission. This plan does not introduce a general offline mutation queue.
-- **8.acceptance.1 — verified:** An installed app launched offline shows the safe recovery page and returns to its original destination after reconnect without requiring force-close/relaunch.
+- **8.acceptance.1 — verified:** Browser-worker launch evidence; physical installed behavior remains covered by blocked 9.acceptance.2. An installed app launched offline shows the safe recovery page and returns to its original destination after reconnect without requiring force-close/relaunch.
 - **8.acceptance.2 — verified:** Browser-online/API-down, captive/non-app responses, failed retry, and repeated online events produce stable states rather than login redirects or loops.
 - **8.acceptance.3 — verified:** A manual transaction save attempted offline sends no delayed mutation after reconnect. A failed online save retains input; reconnect refresh does not reset that input or submit it twice.
 - **8.acceptance.4 — verified:** Validate warm-open and cold-launch paths in a production build with `$agent-browser`; workbench-only offline events do not establish worker correctness.
@@ -147,7 +147,7 @@ Status: in_progress
 - **9.task.5 — verified:** Update the maintained `page-home`, `page-settings`, `page-transactions`, `editors`, and `pwa-lifecycle` workbench examples for affected states, plus the inbox example from milestone 5.
 - **9.acceptance.1 — verified:** No important controls are obscured by the status area, home indicator, keyboard, drawer, or lifecycle banner on representative phone portrait/landscape and desktop layouts.
 - **9.acceptance.2 — blocked:** Real installed iOS and Android checks cover launch, keyboard, notification setup/click, and safe areas. Browser emulation is useful additional evidence but cannot certify these OS behaviors; record any unavailable device validation explicitly.
-- **9.acceptance.3 — verified:** Shortcuts open the correct filtered/authenticated destination in supported installed browsers and degrade harmlessly where unsupported. Manifest identity is unchanged.
+- **9.acceptance.3 — verified:** Manifest and authenticated URL destinations verified in production Chromium; native installed-menu behavior remains covered by blocked 9.acceptance.2. Shortcuts open the correct filtered/authenticated destination in supported installed browsers and degrade harmlessly where unsupported. Manifest identity is unchanged.
 - **9.acceptance.4 — verified:** `$agent-browser` theme/viewport/focus checks, token guard, workbench catalog tests, lint/typecheck, and app/workbench builds pass.
 
 ## 10. Validate Upgrade, Privacy Cutover, And Rollback
@@ -203,3 +203,6 @@ Worktree created clean before carrying in the plan. No original checkout files w
 - Current14-case production A/B/C lifecycle run passed. Two additional real-browser cases for missing old lazy imports and offline/repeated Update actions are being completed before release.
 - Final independent two-window replay verified authoritative account-scope handshakes converge and stale badge work is fenced across account change/logout. BroadcastChannel logout fallback remains effective when localStorage fails.
 - Fresh15 baseline +15 final startup observations are committed under frontend/docs/pwa-evidence. First-visit body transfer falls43.8%; readiness rises4.2%, within5%budget. Warm and suspended timing regressions are reported honestly in the validation doc.
+
+- Final independent source review found no new P0/P1. Documentation review recomputed all30 startup rows and clarified browser-versus-installed evidence, staging cache retention, and recovery-scope rollback compatibility. Final expanded harness/CI and live release gates remain pending.
+- Refreshed production backup restored into a temporary database with27 public tables and was dropped successfully. Operation6a9f19e4d28c58b2ef419909; dump873,356bytes; SHA256912400849ac69acc4750ae98097ebd715ce6f3ef8f9984f34575f9e66f9ed696; path/var/lib/postgresql/data/pwa-backups/pre-pwa-cutover-20260907.dump.

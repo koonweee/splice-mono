@@ -1123,6 +1123,36 @@ try {
       assert(pushWorker)
       await pushWorker.evaluate(() => {
         self.__fixtureBadgeWrites = []
+        self.__fixtureNotificationTrace = []
+        const show = self.registration.showNotification.bind(self.registration)
+        Object.defineProperty(self.registration, 'showNotification', {
+          configurable: true,
+          value: async (title, options) => {
+            self.__fixtureNotificationTrace.push({
+              action: 'show-start',
+              title,
+              tag: options?.tag,
+            })
+            await show(title, options)
+            self.__fixtureNotificationTrace.push({
+              action: 'show-finished',
+              title,
+              tag: options?.tag,
+            })
+          },
+        })
+        const close = Notification.prototype.close
+        Object.defineProperty(Notification.prototype, 'close', {
+          configurable: true,
+          value: function () {
+            self.__fixtureNotificationTrace.push({
+              action: 'close',
+              title: this.title,
+              tag: this.tag,
+            })
+            return close.call(this)
+          },
+        })
         const set = navigator.setAppBadge?.bind(navigator)
         const clear = navigator.clearAppBadge?.bind(navigator)
         Object.defineProperty(navigator, 'setAppBadge', {
@@ -1142,18 +1172,38 @@ try {
       })
       const protocol = await privacy.newCDPSession(page)
       let registrationId
+      const { targetInfo } = await protocol.send('Target.getTargetInfo')
+      const versions = new Map()
       protocol.on(
-        'ServiceWorker.workerRegistrationUpdated',
-        ({ registrations }) => {
-          const current = registrations.find(
-            (item) => item.scopeURL === `${origin}/` && !item.isDeleted,
+        'ServiceWorker.workerVersionUpdated',
+        ({ versions: updates }) => {
+          for (const version of updates)
+            versions.set(version.versionId, version)
+          const current = [...versions.values()].find(
+            (version) =>
+              version.scriptURL === `${origin}/sw.js` &&
+              version.status === 'activated' &&
+              version.controlledClients?.includes(targetInfo.targetId),
           )
           if (current) registrationId = current.registrationId
         },
       )
       await protocol.send('ServiceWorker.enable')
-      await until('CDP identifies real worker registration', async () =>
-        Boolean(registrationId),
+      await until(
+        'CDP identifies this page’s real worker registration',
+        async () => Boolean(registrationId),
+      )
+      await writeFile(
+        join(artifacts, 'push-registration.json'),
+        JSON.stringify(
+          {
+            pageTarget: targetInfo.targetId,
+            registrationId,
+            versions: [...versions.values()],
+          },
+          null,
+          2,
+        ),
       )
       const notifications = () =>
         page.evaluate(async () =>
@@ -1176,6 +1226,12 @@ try {
             ).getNotifications()
           ).forEach((item) => item.close()),
         )
+        // Notification.close is asynchronous at the browser/OS boundary. Do
+        // not race an earlier same-tag close with the next synthetic delivery.
+        await until(
+          'previous native notifications finish closing',
+          async () => (await notifications()).length === 0,
+        )
         await protocol.send('ServiceWorker.deliverPushMessage', {
           origin,
           registrationId,
@@ -1190,6 +1246,17 @@ try {
             badgeAsOf: timestamp,
           }),
         })
+        await writeFile(
+          join(artifacts, 'notification-trace.json'),
+          JSON.stringify(
+            await pushWorker.evaluate(() => ({
+              notifications: self.__fixtureNotificationTrace,
+              badges: self.__fixtureBadgeWrites,
+            })),
+            null,
+            2,
+          ),
+        )
       }
       const firstBadge = new Date(Date.now() + 1000).toISOString()
       await push(enrollmentA, 'Fixture owner A', firstBadge)
@@ -1405,6 +1472,24 @@ try {
         ),
       )
     } finally {
+      const worker = privacy
+        .serviceWorkers()
+        .find((item) => item.url().endsWith('/sw.js'))
+      if (worker)
+        await writeFile(
+          join(artifacts, 'notification-trace.json'),
+          JSON.stringify(
+            await bounded(
+              worker.evaluate(() => ({
+                notifications: self.__fixtureNotificationTrace,
+                badges: self.__fixtureBadgeWrites,
+              })),
+              'capture native notification trace',
+            ).catch(() => null),
+            null,
+            2,
+          ),
+        ).catch(() => undefined)
       await closeWithEvidence(privacy, 'privacy')
     }
   })
@@ -1451,12 +1536,13 @@ try {
     const updates = await makeBrowserContext({ serviceWorkers: 'allow' })
     try {
       state.release = 'a'
-      await updates.addInitScript(() => {
+      await updates.addInitScript((expectedOrigin) => {
+        if (location.origin !== expectedOrigin) return
         const count =
           Number(sessionStorage.getItem('pwa-fixture-documents') ?? 0) + 1
         sessionStorage.setItem('pwa-fixture-documents', String(count))
         window.__pwaDocumentCount = count
-      })
+      }, origin)
       const page = await updates.newPage()
       await login(page)
       await controlled(page)
@@ -1535,12 +1621,13 @@ try {
     const missing = await makeBrowserContext({ serviceWorkers: 'allow' })
     try {
       state.release = 'a'
-      await missing.addInitScript(() => {
+      await missing.addInitScript((expectedOrigin) => {
+        if (location.origin !== expectedOrigin) return
         const count =
           Number(sessionStorage.getItem('pwa-fixture-documents') ?? 0) + 1
         sessionStorage.setItem('pwa-fixture-documents', String(count))
         window.__pwaDocumentCount = count
-      })
+      }, origin)
       const page = await missing.newPage()
       await login(page)
       await controlled(page)
@@ -1564,7 +1651,13 @@ try {
       const failure = await failedImport
       assert.equal(failure.status(), 404)
       assert.match(failure.headers()['content-type'], /^text\/plain/)
-      assert.equal(await failure.text(), 'Not Found')
+      // Chromium may discard the body of a failed module request. Verify the
+      // actual missing-asset response independently while retaining the real
+      // dynamic-import404 assertion above.
+      const missingResponse = await page.request.get(failure.url())
+      assert.equal(missingResponse.status(), 404)
+      assert.match(missingResponse.headers()['content-type'], /^text\/plain/)
+      assert.equal(await missingResponse.text(), 'Not Found')
       await page
         .getByText(
           'Part of Splice could not load. Update when your work is saved.',

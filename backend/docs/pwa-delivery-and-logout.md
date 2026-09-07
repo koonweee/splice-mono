@@ -68,7 +68,9 @@ application logs.
 - A pre-upgrade binary does not recognize this switch. Keep old processors
   stopped. Use a rollback build that preserves the session/enrollment protocol
   and processing gate; rolling back only the frontend must preserve its privacy
-  worker and the live eligibility route.
+  worker, the live `/_pwa/enrollment` eligibility route, and the authenticated
+  `/_pwa/recovery` response including its verified `controlScope`. The worker
+  requires that scope to establish a ready account boundary.
 - Preserve revoked sessions, migration flags, enrollment IDs, and claim records.
   Never undo privacy revocations to restore notification volume. Migration `down`
   deliberately does not reactivate old subscriptions and is not the ordinary

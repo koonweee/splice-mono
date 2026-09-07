@@ -67,7 +67,8 @@ Native badge operations have bounded waits but cannot be canceled by JavaScript;
 a late completion triggers cleanup while the worker remains alive. A terminated
 worker relies on the next verified foreground reconciliation.
 
-Static caches retain at most two releases within a 20 MiB combined limit, with
+Static caches retain two activated releases plus an actual installing/waiting
+release within a 20 MiB combined limit, with
 seven-day cleanup of an unused previous release. Eviction is allowed; a missing
 old lazy chunk requires explicit guarded recovery. No cache policy guarantees
 that every old chunk remains available.
@@ -155,9 +156,9 @@ covered by passing final cases.
 ## Deployment prerequisite evidence
 
 The live database backup was created on September 7 and restored successfully
-into a temporary verification database, which was then dropped. Dump: 873,361
-bytes, SHA-256 `14f30e387dfbf903f3064dec4d3ee2d94d086eafc923d8bdf24bb162677be334`.
-It remains at `/var/lib/postgresql/data/pwa-backups/pre-pwa-20260907.dump` in the
+into a temporary verification database, which was then dropped. Dump: 873,356
+bytes, SHA-256 `912400849ac69acc4750ae98097ebd715ce6f3ef8f9984f34575f9e66f9ed696`.
+It remains at `/var/lib/postgresql/data/pwa-backups/pre-pwa-cutover-20260907.dump` in the
 PostgreSQL volume. This is a verified local backup; the unrelated scheduled R2
 backup action still reports a verification failure and was not represented as
 successful. Live schema migration and deployment evidence are recorded after
