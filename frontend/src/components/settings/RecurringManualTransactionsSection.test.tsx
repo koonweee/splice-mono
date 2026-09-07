@@ -5,6 +5,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -171,7 +172,7 @@ describe('RecurringManualTransactionsSection', () => {
   it('keeps the next date and resume action accessible in the tablet list', async () => {
     Object.defineProperty(window, 'matchMedia', {
       value: vi.fn().mockImplementation((query: string) => ({
-        matches: query === '(max-width: 48em)',
+        matches: query.includes('(max-width: 48em)'),
         media: query,
         onchange: null,
         addListener: vi.fn(),
@@ -187,10 +188,13 @@ describe('RecurringManualTransactionsSection', () => {
 
     const list = screen.getByLabelText('Recurring transactions list, 1 total')
     expect(screen.queryByRole('table')).toBeNull()
-    expect(within(list).getByText('Jun 30, 2026')).toBeTruthy()
+    expect(within(list).getByText('Next: Jun 30, 2026')).toBeTruthy()
     expect(within(list).getByText('Paused')).toBeTruthy()
     fireEvent.click(
-      within(list).getByRole('button', {
+      within(list).getByRole('button', { name: 'Actions for Rent' }),
+    )
+    fireEvent.click(
+      await screen.findByRole('menuitem', {
         name: 'Resume recurring transaction',
       }),
     )
@@ -199,8 +203,20 @@ describe('RecurringManualTransactionsSection', () => {
       expect.any(Object),
     )
 
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('menuitem', {
+          name: 'Resume recurring transaction',
+        }),
+      ).toBeNull(),
+    )
     fireEvent.click(
-      within(list).getByRole('button', { name: 'Edit recurring transaction' }),
+      within(list).getByRole('button', { name: 'Actions for Rent' }),
+    )
+    fireEvent.click(
+      await screen.findByRole('menuitem', {
+        name: 'Edit recurring transaction',
+      }),
     )
     const editor = await screen.findByRole('dialog', {
       name: 'Edit recurring transaction',
@@ -347,7 +363,7 @@ function renderSection() {
   const queryClient = new QueryClient()
 
   return render(
-    <MantineProvider>
+    <MantineProvider env="test">
       <QueryClientProvider client={queryClient}>
         <RecurringManualTransactionsSection />
       </QueryClientProvider>

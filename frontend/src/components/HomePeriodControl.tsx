@@ -28,6 +28,7 @@ export function HomePeriodControl({
     >
       {shortcuts.map(({ value, label }) => (
         <Button
+          className="splice-period-button"
           key={value}
           variant={period === value ? 'light' : 'subtle'}
           color={period === value ? undefined : 'gray'}
@@ -47,6 +48,7 @@ export function HomePeriodControl({
       <Menu position="bottom-end" withinPortal>
         <Menu.Target>
           <Button
+            className="splice-period-button"
             variant={extended ? 'light' : 'subtle'}
             color={extended ? undefined : 'gray'}
             c={extended ? undefined : 'dimmed'}

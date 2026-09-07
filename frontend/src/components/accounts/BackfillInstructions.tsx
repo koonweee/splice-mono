@@ -4,11 +4,11 @@ import { Text } from '@mantine/core'
 export function BackfillInstructions() {
   return (
     <>
-      <Text size="sm">
+      <Text data-typography="bodySmall">
         Download the template CSV, which contains your current accounts. Fill in
         the balances for each date you want to record.
       </Text>
-      <Text component="div" size="sm" c="dimmed">
+      <Text data-typography="metadata" component="div" c="dimmed">
         Format rules:
         <ul>
           <li>Dates in header: YYYY-MM-DD</li>

@@ -29,11 +29,39 @@ export function createRuleStore(
   categories: Array<Category>,
   transactions: Array<Transaction>,
   empty = false,
+  longContent = false,
 ) {
   const analysis = structuredClone(empty ? [] : fixtureAnalysisRules)
   const categorization = structuredClone(
     empty ? [] : fixtureCategorizationRules,
   )
+  if (longContent && !empty) {
+    analysis.push({
+      ...structuredClone(analysis[0]),
+      id: 'density-analysis-long',
+      name: 'Exclude international travel reimbursements from ordinary household spending',
+      archivedAt: null,
+    })
+    categorization.push({
+      ...structuredClone(categorization[0]),
+      id: 'density-category-long',
+      name: 'Weekly groceries and household supplies from neighborhood markets',
+      conditions: [
+        {
+          field: 'merchantName',
+          operator: 'contains',
+          value: 'neighborhood grocery and household supply market',
+        },
+      ],
+      priority: 100,
+    })
+    categorization.push({
+      ...structuredClone(categorization[0]),
+      id: 'density-category-archived',
+      name: 'Previous grocery categorization rule',
+      archivedAt: FIXTURE_NOW,
+    })
+  }
   let sequence = 1
   const scope = (value: AnalysisCategoryScope): AnalysisCategoryScopeView =>
     value.mode === 'all'

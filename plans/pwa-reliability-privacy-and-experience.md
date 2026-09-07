@@ -2,7 +2,10 @@
 
 ## Status
 
-In Progress
+Done — implemented and deployed September 7, 2026. All automatable acceptance
+checks passed; physical installed iOS/Android checks remain blocked by unavailable
+devices. See the [task ledger](./pwa-implementation-ledger.md) and
+[release validation](../frontend/docs/pwa-validation.md) for evidence and limits.
 
 ## Goal
 

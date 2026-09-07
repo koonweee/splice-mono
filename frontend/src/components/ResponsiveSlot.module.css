@@ -41,3 +41,12 @@
     min-height: 0;
   }
 }
+
+@media (--touch-controls) {
+  .touch.wide {
+    display: none;
+  }
+  .touch.compact {
+    display: contents;
+  }
+}

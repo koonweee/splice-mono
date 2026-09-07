@@ -4,14 +4,18 @@ import {
   Autocomplete,
   Avatar,
   Badge,
+  Burger,
   Button,
   Checkbox,
+  CloseButton,
+  ColorInput,
   Combobox,
   Drawer,
   FileInput,
   Input,
   InputWrapper,
   Loader,
+  Menu,
   Modal,
   MultiSelect,
   NavLink,
@@ -30,8 +34,24 @@ import {
   Tooltip,
   getContrastColor,
 } from '@mantine/core'
+import { DatePicker } from '@mantine/dates'
 import { foundation } from './foundation'
 import type { MantineThemeOverride } from '@mantine/core'
+import type { MouseEvent } from 'react'
+
+/** Keep native input semantics while making the reserved padding tappable. */
+function activateChoicePadding(event: MouseEvent<HTMLDivElement>) {
+  const target = event.target
+  if (
+    !(target instanceof Element) ||
+    target.closest('input, label, button, a, [role="button"]')
+  )
+    return
+  const input = event.currentTarget.querySelector<HTMLInputElement>('input')
+  if (!input) return
+  event.stopPropagation()
+  if (!input.disabled) input.click()
+}
 
 const optionScrollArea = {
   styles: { content: { minWidth: '100%', width: '100%' } },
@@ -54,6 +74,14 @@ function semanticAction(color?: string, variant?: string) {
     !['light', 'subtle', 'outline', 'transparent'].includes(variant ?? '')
   )
     return null
+  // Gray actions are interface chrome; neutral status badges remain semantic.
+  if (role === 'neutral')
+    return {
+      color: 'var(--mantine-color-dimmed)',
+      background:
+        variant === 'light' ? 'var(--splice-surface-muted)' : 'transparent',
+      hover: 'var(--splice-hover)',
+    }
   return {
     color: `var(--splice-status-${role}-control-fg)`,
     background:
@@ -64,6 +92,10 @@ function semanticAction(color?: string, variant?: string) {
 
 /** Shared component behavior and geometry; independent of appearance/storage. */
 export const components: MantineThemeOverride['components'] = {
+  Burger: Burger.extend({ classNames: { root: 'splice-burger-root' } }),
+  ColorInput: ColorInput.extend({
+    classNames: { input: 'splice-input-input' },
+  }),
   Alert: Alert.extend({
     vars: (_theme, props) => {
       if (props.variant && props.variant !== 'light') return { root: {} }
@@ -155,16 +187,40 @@ export const components: MantineThemeOverride['components'] = {
     classNames: { root: 'splice-button-root' },
   }),
   Checkbox: Checkbox.extend({
-    defaultProps: { color: 'brand', radius: 'sm' },
+    defaultProps: {
+      color: 'brand',
+      radius: 'sm',
+      wrapperProps: { onClick: activateChoicePadding },
+    },
     classNames: {
       root: 'splice-inline-control-root',
       input: 'splice-choice-input',
+      body: 'splice-choice-body',
+      label: 'splice-choice-label',
+    },
+  }),
+  CloseButton: CloseButton.extend({
+    classNames: { root: 'splice-close-button' },
+  }),
+  Menu: Menu.extend({
+    classNames: {
+      dropdown: 'splice-popover-dropdown',
+      item: 'splice-menu-item',
     },
   }),
   Combobox: Combobox.extend({
     classNames: {
       dropdown: 'splice-popover-dropdown',
       option: 'splice-combobox-option',
+    },
+  }),
+  DatePicker: DatePicker.extend({
+    classNames: {
+      day: 'splice-calendar-control',
+      calendarHeaderControl: 'splice-calendar-control',
+      calendarHeaderLevel: 'splice-calendar-control',
+      monthsListControl: 'splice-calendar-control',
+      yearsListControl: 'splice-calendar-control',
     },
   }),
   Drawer: Drawer.extend({
@@ -247,10 +303,15 @@ export const components: MantineThemeOverride['components'] = {
     defaultProps: { radius: 'xl' },
   }),
   Radio: Radio.extend({
-    defaultProps: { color: 'brand' },
+    defaultProps: {
+      color: 'brand',
+      wrapperProps: { onClick: activateChoicePadding },
+    },
     classNames: {
       root: 'splice-inline-control-root',
       radio: 'splice-choice-input',
+      body: 'splice-choice-body',
+      label: 'splice-choice-label',
     },
   }),
   SegmentedControl: SegmentedControl.extend({
@@ -292,9 +353,11 @@ export const components: MantineThemeOverride['components'] = {
       input: 'splice-switch-input',
       track: 'splice-switch-track',
       thumb: 'splice-switch-thumb',
+      body: 'splice-choice-body',
     },
   }),
   Tabs: Tabs.extend({
+    styles: { tab: { '--tab-hover-color': 'var(--splice-hover)' } },
     defaultProps: { radius: 'md' },
     classNames: {
       list: 'splice-tabs-list',

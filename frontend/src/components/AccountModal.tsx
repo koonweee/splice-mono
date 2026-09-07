@@ -116,7 +116,7 @@ export function AccountModal({
       ? selectedSection.value
       : isInvestmentAccount
         ? 'holdings'
-        : 'overview'
+        : 'details'
   const summaryIsHoldingsValued = account?.valuationMode === 'holdings'
   const {
     holdings,
@@ -313,7 +313,7 @@ export function AccountModal({
         >
           <Stack gap="md" className={styles.detailsBody}>
             {!fullAccount && (
-              <Text c="dimmed" size="sm">
+              <Text data-typography="metadata" c="dimmed">
                 No balance history is available for this account.
               </Text>
             )}
@@ -331,7 +331,9 @@ export function AccountModal({
                   justify="space-between"
                   wrap="nowrap"
                 >
-                  <Text c="dimmed">Current balance</Text>
+                  <Text data-typography="body" c="dimmed">
+                    Current balance
+                  </Text>
                   {isManual && !isHoldingsValued ? (
                     <Stack
                       align="flex-end"
@@ -339,7 +341,7 @@ export function AccountModal({
                       gap={0}
                     >
                       {displaysConvertedManualBalance && (
-                        <Text fw={600}>
+                        <Text data-typography="amount">
                           {balancesHidden
                             ? HIDDEN_BALANCE_PLACEHOLDER
                             : balanceInfo &&
@@ -365,14 +367,15 @@ export function AccountModal({
                           wrap="nowrap"
                         >
                           <Text
+                            data-typography={
+                              displaysConvertedManualBalance
+                                ? 'numericMetadata'
+                                : 'amount'
+                            }
                             c={
                               displaysConvertedManualBalance
                                 ? 'dimmed'
                                 : undefined
-                            }
-                            fw={displaysConvertedManualBalance ? 400 : 600}
-                            size={
-                              displaysConvertedManualBalance ? 'sm' : undefined
                             }
                           >
                             {balancesHidden
@@ -406,7 +409,7 @@ export function AccountModal({
                       className={styles.balanceValue}
                       style={{ textAlign: 'right' }}
                     >
-                      <Text fw={600}>
+                      <Text data-typography="amount">
                         {balancesHidden
                           ? HIDDEN_BALANCE_PLACEHOLDER
                           : balanceInfo &&
@@ -415,7 +418,7 @@ export function AccountModal({
                             })}
                       </Text>
                       {balanceInfo?.originalBalance && (
-                        <Text size="sm" c="dimmed">
+                        <Text data-typography="numericMetadata" c="dimmed">
                           {balancesHidden
                             ? HIDDEN_BALANCE_PLACEHOLDER
                             : formatMoneyWithSign({
@@ -431,14 +434,14 @@ export function AccountModal({
                   account &&
                   account.changePercent !== undefined && (
                     <Group justify="space-between">
-                      <Text c="dimmed" size="sm">
+                      <Text data-typography="metadata" c="dimmed">
                         {period === 'all'
                           ? 'Change since first recorded balance'
                           : `${TIME_PERIOD_LABELS[period]} balance change`}
                       </Text>
                       <ChangePercentPopover
                         key={period}
-                        size="sm"
+                        textRole="metadata"
                         changePercent={account.changePercent}
                         changeAmount={account.changeAmount}
                         color={getChangeColorMantine(
@@ -461,35 +464,35 @@ export function AccountModal({
               value={activeSection}
             >
               <Tabs.List aria-label="Account sections">
-                <Tabs.Tab value="overview">Overview</Tabs.Tab>
+                <Tabs.Tab value="history">History</Tabs.Tab>
+                <Tabs.Tab value="details">Details</Tabs.Tab>
                 {isInvestmentAccount && (
                   <Tabs.Tab value="holdings">Holdings</Tabs.Tab>
                 )}
                 {isInvestmentAccount && !isHoldingsValued && (
                   <Tabs.Tab value="activity">Activity</Tabs.Tab>
                 )}
-                <Tabs.Tab value="history">History</Tabs.Tab>
               </Tabs.List>
 
-              <Tabs.Panel value="overview" pt="md">
+              <Tabs.Panel value="details" pt="md">
                 {fullAccount && (
                   <Stack gap="md">
                     {fullAccount.bankLink?.institutionName && (
                       <Group justify="space-between">
-                        <Text c="dimmed" size="sm">
+                        <Text data-typography="metadata" c="dimmed">
                           Institution
                         </Text>
-                        <Text size="sm">
+                        <Text data-typography="bodySmall">
                           {fullAccount.bankLink.institutionName}
                         </Text>
                       </Group>
                     )}
                     {balanceHistory.latestSyncedAt && (
                       <Group justify="space-between">
-                        <Text c="dimmed" size="sm">
+                        <Text data-typography="metadata" c="dimmed">
                           Last synced
                         </Text>
-                        <Text size="sm">
+                        <Text data-typography="bodySmall">
                           {formatRelativeTime(balanceHistory.latestSyncedAt)}
                         </Text>
                       </Group>
@@ -499,9 +502,7 @@ export function AccountModal({
                         justify="space-between"
                         mb={notesEditorOpened || savedNotes ? 'xs' : 0}
                       >
-                        <Text fw={500} size="sm">
-                          Notes
-                        </Text>
+                        <Text data-typography="label">Notes</Text>
                         {!notesEditorOpened && (
                           <Button
                             leftSection={
@@ -555,7 +556,10 @@ export function AccountModal({
                           </Group>
                         </Stack>
                       ) : savedNotes ? (
-                        <Text className={styles.notesPreview} size="sm">
+                        <Text
+                          data-typography="bodySmall"
+                          className={styles.notesPreview}
+                        >
                           {savedNotes}
                         </Text>
                       ) : null}
@@ -573,7 +577,7 @@ export function AccountModal({
                     gap="xs"
                     mih={foundation.dimensions.touchTarget}
                   >
-                    <Text size="sm" c="dimmed">
+                    <Text data-typography="metadata" c="dimmed">
                       {snapshotDate
                         ? `As of ${formatDateTime(snapshotDate)}`
                         : 'Current positions'}
@@ -638,7 +642,7 @@ export function AccountModal({
 
               {isInvestmentAccount && !isHoldingsValued && (
                 <Tabs.Panel value="activity" pt="md">
-                  <Text c="dimmed" size="sm" mb="sm" mih={20}>
+                  <Text data-typography="metadata" c="dimmed" mb="sm" mih={20}>
                     {!activityLoading && !activityInitialError
                       ? `${investmentActivity.length} of ${investmentActivityTotal}`
                       : '\u00a0'}
@@ -661,7 +665,12 @@ export function AccountModal({
                     />
                   </DataState>
                   {investmentActivityLoadMoreError && (
-                    <Text c="red" mt="sm" role="alert" size="sm">
+                    <Text
+                      data-typography="bodySmall"
+                      c="red"
+                      mt="sm"
+                      role="alert"
+                    >
                       Unable to load more provider activity.
                     </Text>
                   )}
@@ -687,7 +696,7 @@ export function AccountModal({
               <Tabs.Panel value="history" pt="md">
                 {balanceHistory.chartData.length > 0 ? (
                   <Box>
-                    <Text fw={500} mb="sm">
+                    <Text data-typography="rowTitle" mb="sm">
                       Balance history
                     </Text>
                     <Chart
@@ -706,7 +715,7 @@ export function AccountModal({
                     />
                   </Box>
                 ) : (
-                  <Text c="dimmed" size="sm">
+                  <Text data-typography="metadata" c="dimmed">
                     No balance changes to chart for this period.
                   </Text>
                 )}

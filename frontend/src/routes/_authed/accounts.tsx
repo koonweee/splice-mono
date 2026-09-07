@@ -1,4 +1,4 @@
-import { Button, Group, Loader, Stack } from '@mantine/core'
+import { Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { showNotification } from '@mantine/notifications'
 import { IconPlus, IconRefresh, IconUpload } from '@tabler/icons-react'
@@ -10,7 +10,6 @@ import {
   BackfillSkeleton,
 } from '../../components/loading/AccountDialogSkeletons'
 import {
-  featureIntent,
   loadAddAccountModal,
   loadBackfillModal,
 } from '../../lib/feature-loaders'
@@ -25,7 +24,7 @@ import { loadQuery } from '../../lib/queries/loader'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import type { Account } from '../../api/models'
 import { InstitutionSection } from '@/components/accounts/InstitutionSection'
-import { PageHeader } from '@/components/PageHeader'
+import { PageLayout } from '@/components/PageLayout'
 import { DataState } from '@/components/DataState'
 
 const AddAccountModal = lazy(loadAddAccountModal)
@@ -104,66 +103,62 @@ function AccountsPage() {
 
   return (
     <>
-      <PageHeader
+      <PageLayout
         title="Accounts"
-        actions={
-          <Group gap="sm">
-            <Button
-              leftSection={
-                syncAll.isPending ? (
-                  <Loader size={16} />
-                ) : (
-                  <IconRefresh size={16} />
-                )
-              }
-              onClick={() => syncAll.mutate()}
-              variant="outline"
-              disabled={syncAll.isPending}
-            >
-              {syncAll.isPending ? 'Syncing...' : 'Sync all'}
-            </Button>
-            <Button
-              leftSection={<IconUpload size={16} />}
-              onClick={openBackfill}
-              {...featureIntent(loadBackfillModal)}
-              variant="outline"
-            >
-              Backfill
-            </Button>
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={openModal}
-              {...featureIntent(loadAddAccountModal)}
-              variant="outline"
-            >
-              Add account
-            </Button>
-          </Group>
-        }
-      />
-      <DataState
-        hasData={groupedAccounts.size > 0}
-        isLoading={isLoading}
-        isError={Boolean(error)}
-        isFetching={isFetching}
-        loadingMessage="Loading accounts…"
-        loadingFallback={<AccountsSkeleton />}
-        errorMessage="Failed to load accounts"
-        emptyMessage="No accounts found"
-        onRetry={() => void refetch()}
+        actions={{
+          primary: {
+            id: 'add',
+            label: 'Add account',
+            icon: IconPlus,
+            onClick: openModal,
+            onPrepare: () => {
+              void loadAddAccountModal().catch(() => undefined)
+            },
+          },
+          secondary: [
+            {
+              id: 'sync',
+              label: syncAll.isPending ? 'Syncing' : 'Sync all',
+              icon: IconRefresh,
+              onClick: () => syncAll.mutate(),
+              loading: syncAll.isPending,
+            },
+            {
+              id: 'backfill',
+              label: 'Backfill',
+              icon: IconUpload,
+              onClick: openBackfill,
+              onPrepare: () => {
+                void loadBackfillModal().catch(() => undefined)
+              },
+            },
+          ],
+        }}
       >
-        <Stack gap="lg">
-          {Array.from(groupedAccounts.entries()).map(
-            ([institution, groupAccount]) => (
-              <InstitutionSection
-                key={institution}
-                institution={institution}
-                accounts={groupAccount}
-              />
-            ),
-          )}
-        </Stack>
-      </DataState>
+        <DataState
+          hasData={groupedAccounts.size > 0}
+          isLoading={isLoading}
+          isError={Boolean(error)}
+          isFetching={isFetching}
+          loadingMessage="Loading accounts…"
+          loadingFallback={<AccountsSkeleton />}
+          errorMessage="Failed to load accounts"
+          emptyMessage="No accounts found"
+          onRetry={() => void refetch()}
+        >
+          <Stack gap="lg">
+            {Array.from(groupedAccounts.entries()).map(
+              ([institution, groupAccount]) => (
+                <InstitutionSection
+                  key={institution}
+                  institution={institution}
+                  accounts={groupAccount}
+                />
+              ),
+            )}
+          </Stack>
+        </DataState>
+      </PageLayout>
       {modalOpened && (
         <DeferredOverlay
           label="Add account"

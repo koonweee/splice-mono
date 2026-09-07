@@ -1,0 +1,30 @@
+.inlineActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.touchActions {
+  display: none;
+}
+@media (--touch-controls) {
+  .inlineActions {
+    display: none;
+  }
+  .touchActions {
+    display: flex;
+    flex-shrink: 0;
+  }
+}
+
+.row {
+  border-bottom: 1px solid var(--splice-separator);
+}
+.row:last-child {
+  border-bottom: 0;
+}
+.actions {
+  flex-shrink: 0;
+}
+.status {
+  margin-top: 4px;
+}

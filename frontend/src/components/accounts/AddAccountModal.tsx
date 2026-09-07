@@ -311,7 +311,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         >
           <IconArrowLeft size={16} />
         </ActionIcon>
-        <Text fw={500}>Add manual account</Text>
+        <Text data-typography="rowTitle">Add manual account</Text>
       </Group>
 
       <TextInput
@@ -420,7 +420,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         >
           <IconArrowLeft size={16} />
         </ActionIcon>
-        <Text fw={500}>Add crypto wallet</Text>
+        <Text data-typography="rowTitle">Add crypto wallet</Text>
       </Group>
 
       {initiateLinking.isError && (
@@ -496,7 +496,7 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
           >
             <Group>
               <Icon size={24} />
-              <Text fw={500}>{provider.name}</Text>
+              <Text data-typography="rowTitle">{provider.name}</Text>
               {isLoading && <Loader size="sm" />}
             </Group>
           </Pressable>

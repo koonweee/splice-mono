@@ -1,21 +1,38 @@
 import {
+  ActionIcon,
   Alert,
+  Autocomplete,
   Box,
+  Burger,
   Button,
   Checkbox,
+  CloseButton,
+  ColorInput,
+  FileInput,
   Group,
   MantineProvider,
+  Menu,
+  MultiSelect,
+  NavLink,
+  NumberInput,
   Paper,
   Radio,
+  SegmentedControl,
   Select,
   Stack,
   Switch,
+  Tabs,
   Text,
   TextInput,
+  Textarea,
 } from '@mantine/core'
 import { useState } from 'react'
+import { Download, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import dayjs from 'dayjs'
 import { notifications } from '@mantine/notifications'
+import { PageActions } from '../src/components/PageActions'
+import { AccountSelect } from '../src/components/accounts/AccountSelect'
+import { CategorySelect } from '../src/components/categories/CategorySelect'
 import { DataState } from '../src/components/DataState'
 import { moneyToChartNumber } from '../src/lib/money'
 import { formatMoneyNumber, formatMoneyWithSign } from '../src/lib/format'
@@ -37,6 +54,7 @@ import { TimePeriod } from '../src/lib/types'
 import { fixtureDashboard } from './page-fixtures'
 import { investmentExamples } from './investment-examples'
 import { categoryExamples } from './category-examples'
+import { typographyExamples } from './typography-examples'
 import { appearanceFromSearch } from './preferences'
 import { notificationExamples } from './notification-examples'
 import { dialogExamples } from './dialog-examples'
@@ -48,24 +66,303 @@ import type { ChartDataPoint } from '../src/components/Chart'
 
 export type ExampleProps = { state: string; masked: boolean }
 
+function TouchControls({ state }: ExampleProps) {
+  const [outlines, setOutlines] = useState(false)
+  const [count, setCount] = useState(0)
+  const [account, setAccount] = useState<string | null>('cash')
+  const [category, setCategory] = useState<string | null>('food')
+  const [period, setPeriod] = useState(TimePeriod.month)
+  const disabled = state === 'disabled'
+  return (
+    <Stack className="touch-audit" data-outlines={outlines} gap="sm">
+      <Text fw={600}>Compact touch controls</Text>
+      <Text size="sm" c="dimmed">
+        44px targets with compact artwork. Try the padding around a checkbox,
+        clear an input, or open a menu. Wide touch devices use the same target
+        sizes.
+      </Text>
+      <Switch
+        label="Show target boundaries"
+        checked={outlines}
+        onChange={(event) => setOutlines(event.currentTarget.checked)}
+      />
+      <Group justify="space-between">
+        <Text size="sm" aria-live="polite">
+          Actions: {count}
+        </Text>
+        <PageActions
+          primary={{
+            id: 'add',
+            label: 'Add item',
+            icon: Plus,
+            onClick: () => setCount(count + 1),
+            disabled,
+          }}
+          secondary={[
+            {
+              id: 'edit',
+              label: 'Edit item',
+              icon: Pencil,
+              onClick: () => setCount(count + 1),
+              disabled,
+            },
+            {
+              id: 'export',
+              label: 'Export items',
+              icon: Download,
+              onClick: () => setCount(count + 1),
+              disabled,
+            },
+            {
+              id: 'remove',
+              label: 'Delete item',
+              icon: Trash2,
+              onClick: () => setCount(count + 1),
+              disabled,
+            },
+          ]}
+        />
+      </Group>
+      <Group gap={4}>
+        <Button
+          size="xs"
+          disabled={disabled}
+          onClick={() => setCount(count + 1)}
+        >
+          Small button
+        </Button>
+        <ActionIcon
+          size="xs"
+          aria-label="Small edit button"
+          disabled={disabled}
+          onClick={() => setCount(count + 1)}
+        >
+          <Pencil size={14} />
+        </ActionIcon>
+        <Menu withinPortal>
+          <Menu.Target>
+            <ActionIcon aria-label="Sample menu" disabled={disabled}>
+              <MoreHorizontal size={18} />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item
+              leftSection={<Pencil size={16} />}
+              onClick={() => setCount(count + 1)}
+            >
+              Edit
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<Download size={16} />}
+              onClick={() => setCount(count + 1)}
+            >
+              Export
+            </Menu.Item>
+            <Menu.Item disabled>Unavailable action</Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      </Group>
+      <HomePeriodControl period={period} onChange={setPeriod} />
+      <Stack gap={4}>
+        <Text size="sm" id="touch-direction-label">
+          Segmented selector
+        </Text>
+        <SegmentedControl
+          aria-labelledby="touch-direction-label"
+          data={['All', 'Inflows', 'Outflows']}
+          disabled={disabled}
+        />
+      </Stack>
+      <Group gap={4}>
+        <Checkbox aria-label="Select row" disabled={disabled} />
+        <Checkbox label="Include archived" disabled={disabled} />
+        <Radio
+          name="touch-choice"
+          value="sample"
+          label="Sample choice"
+          disabled={disabled}
+        />
+      </Group>
+      <Switch label="Enable notifications" disabled={disabled} />
+      <AccountSelect
+        label="Account"
+        data={[{ value: 'cash', label: 'Everyday account' }]}
+        value={account}
+        onChange={setAccount}
+        disabled={disabled}
+      />
+      <CategorySelect
+        label="Category"
+        data={[{ value: 'food', primary: 'Food', secondary: 'Groceries' }]}
+        value={category}
+        onChange={setCategory}
+        disabled={disabled}
+      />
+      <NumberInput
+        label="Day of month"
+        min={1}
+        max={31}
+        defaultValue={15}
+        disabled={disabled}
+      />
+    </Stack>
+  )
+}
+
+function InteractionSurfaces({ state }: ExampleProps) {
+  const [period, setPeriod] = useState(
+    state === 'extended' ? TimePeriod.threeYears : TimePeriod.year,
+  )
+  const [dates, setDates] = useState<DatesRangeValue>([null, null])
+  const disabled = state === 'disabled'
+  return (
+    <Stack>
+      <Text fw={600}>Range selection and interface surfaces</Text>
+      <Text size="sm" c="dimmed">
+        Hover M beside selected Y, then hover the selection. Open More periods
+        and use the arrow keys. Tab through the remaining controls to check
+        focus. Disabled applies to the sample controls; the production range has
+        no disabled state.
+      </Text>
+      <HomePeriodControl period={period} onChange={setPeriod} />
+      <DateRangeControl value={dates} onChange={setDates} />
+      <Paper withBorder p="md">
+        <Stack>
+          <Text>Raised card with secondary actions</Text>
+          <Group>
+            <Button variant="subtle" color="gray" disabled={disabled}>
+              Secondary action
+            </Button>
+            <Button variant="default" disabled={disabled}>
+              Default action
+            </Button>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              aria-label="More actions"
+              disabled={disabled}
+            >
+              …
+            </ActionIcon>
+            <CloseButton aria-label="Close sample" disabled={disabled} />
+          </Group>
+          <TextInput
+            label="Input surface"
+            placeholder="Account name"
+            disabled={disabled}
+          />
+          <Select
+            label="Picker surface"
+            data={['Everyday', 'Savings', 'Investment']}
+            defaultValue="Everyday"
+            disabled={disabled}
+          />
+          <SegmentedControl data={['List', 'Cards']} disabled={disabled} />
+          <NavLink label="Unselected navigation" disabled={disabled} />
+          <NavLink label="Selected navigation" active disabled={disabled} />
+          <Tabs defaultValue="overview">
+            <Tabs.List>
+              <Tabs.Tab value="overview" disabled={disabled}>
+                Overview
+              </Tabs.Tab>
+              <Tabs.Tab value="history" disabled={disabled}>
+                History
+              </Tabs.Tab>
+            </Tabs.List>
+          </Tabs>
+          <Group>
+            <LifecycleBadge status="Archived" />
+            <Button variant="light" color="red" disabled={disabled}>
+              Destructive action
+            </Button>
+          </Group>
+        </Stack>
+      </Paper>
+    </Stack>
+  )
+}
+
 function Controls({ state }: ExampleProps) {
   const [value, setValue] = useState('125.00')
+  const [navigationOpened, setNavigationOpened] = useState(false)
+  const [action, setAction] = useState('No action yet')
+  const [dates, setDates] = useState<DatesRangeValue>([null, null])
+  const disabled = state === 'pending'
   return (
     <Stack>
       <PageHeader title="Controls" />
+      <Stack gap={4}>
+        <Text fw={600} id="control-direction-label">
+          Segmented selector
+        </Text>
+        <SegmentedControl
+          aria-labelledby="control-direction-label"
+          data={['All', 'Inflows', 'Outflows']}
+          defaultValue="All"
+          disabled={disabled}
+        />
+      </Stack>
+      <Text fw={600}>Inputs</Text>
       <TextInput
         label="Account name"
         defaultValue="Everyday account"
         disabled={state === 'pending'}
         error={state === 'error' ? 'Enter a unique name' : undefined}
       />
-      <DecimalInput label="Balance" value={value} onChange={setValue} />
+      <DecimalInput
+        label="Balance"
+        value={value}
+        onChange={setValue}
+        disabled={disabled}
+      />
       <Select
         label="Currency"
         data={['USD', 'SGD', 'EUR']}
         defaultValue="USD"
         searchable
+        disabled={disabled}
       />
+      <MultiSelect
+        label="Accounts"
+        data={['Everyday', 'Savings', 'Investment']}
+        defaultValue={['Everyday']}
+        searchable
+        clearable
+        disabled={disabled}
+      />
+      <Autocomplete
+        label="Institution"
+        data={['Example Bank', 'Example Brokerage']}
+        placeholder="Start typing"
+        disabled={disabled}
+      />
+      <NumberInput
+        label="Day of month"
+        min={1}
+        max={31}
+        defaultValue={15}
+        disabled={disabled}
+      />
+      <Textarea
+        label="Notes"
+        placeholder="Optional notes"
+        autosize
+        minRows={2}
+        disabled={disabled}
+      />
+      <ColorInput
+        label="Category color"
+        defaultValue="#83b59b"
+        disabled={disabled}
+      />
+      <FileInput
+        label="Local file selection"
+        placeholder="Choose a file"
+        clearable
+        disabled={disabled}
+        description="Preview only; files are not uploaded."
+      />
+      <Text fw={600}>Choices</Text>
       <Group>
         <Checkbox label="Include archived" disabled={state === 'pending'} />
         <Checkbox
@@ -97,10 +394,119 @@ function Controls({ state }: ExampleProps) {
         />
         <Switch label="Show archived" disabled={state === 'pending'} />
       </Group>
+      <Text fw={600}>Buttons and menus</Text>
       <Group>
-        <Button loading={state === 'pending'}>Save changes</Button>
-        <Button variant="default">Cancel</Button>
+        <Button loading={disabled} onClick={() => setAction('Save selected')}>
+          Save changes
+        </Button>
+        <Button
+          variant="default"
+          disabled={disabled}
+          onClick={() => setAction('Cancel selected')}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="light"
+          disabled={disabled}
+          onClick={() => setAction('Light action selected')}
+        >
+          Light
+        </Button>
+        <Button
+          variant="subtle"
+          disabled={disabled}
+          onClick={() => setAction('Subtle action selected')}
+        >
+          Subtle
+        </Button>
       </Group>
+      <Group gap="xs">
+        <ActionIcon
+          aria-label="Edit sample"
+          variant="subtle"
+          disabled={disabled}
+          onClick={() => setAction('Edit selected')}
+        >
+          <Pencil size={20} />
+        </ActionIcon>
+        <CloseButton
+          aria-label="Close sample"
+          disabled={disabled}
+          onClick={() => setAction('Close selected')}
+        />
+        <Burger
+          aria-label="Toggle sample navigation"
+          opened={navigationOpened}
+          onClick={() => setNavigationOpened(!navigationOpened)}
+          disabled={disabled}
+          size="sm"
+        />
+        <Menu withinPortal>
+          <Menu.Target>
+            <ActionIcon
+              aria-label="Sample actions"
+              variant="subtle"
+              disabled={disabled}
+            >
+              <MoreHorizontal size={20} />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item
+              leftSection={<Pencil size={20} />}
+              onClick={() => setAction('Menu edit selected')}
+            >
+              Edit
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<Download size={20} />}
+              onClick={() => setAction('Menu export selected')}
+            >
+              Export
+            </Menu.Item>
+            <Menu.Item disabled>Unavailable action</Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      </Group>
+      <Text size="sm" c="dimmed" aria-live="polite">
+        {action}
+      </Text>
+      <Text fw={600}>Navigation</Text>
+      <Tabs defaultValue="overview">
+        <Tabs.List>
+          <Tabs.Tab value="overview" disabled={disabled}>
+            Overview
+          </Tabs.Tab>
+          <Tabs.Tab value="history" disabled={disabled}>
+            History
+          </Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel value="overview" pt="xs">
+          <Text size="sm">Overview content</Text>
+        </Tabs.Panel>
+        <Tabs.Panel value="history" pt="xs">
+          <Text size="sm">History content</Text>
+        </Tabs.Panel>
+      </Tabs>
+      <NavLink
+        label="Selected navigation"
+        active
+        disabled={disabled}
+        onClick={() => setAction('Navigation selected')}
+      />
+      <NavLink
+        label="Other navigation"
+        disabled={disabled}
+        onClick={() => setAction('Other navigation selected')}
+      />
+      <Text fw={600}>Dates</Text>
+      <Text size="sm" c="dimmed">
+        Date controls retain their normal interactive behavior in all preview
+        states.
+      </Text>
+      <DateRangeControl value={dates} onChange={setDates} clearable />
+      <Text fw={600}>Status</Text>
       <Group>
         {(['Active', 'Paused', 'Archived', 'Ended'] as const).map((status) => (
           <LifecycleBadge key={status} status={status} />
@@ -362,6 +768,26 @@ function AppearanceExample() {
 }
 
 export const examples = [
+  ...typographyExamples,
+  {
+    id: 'touch-controls',
+    title: 'Compact touch targets',
+    component: TouchControls,
+    states: ['ready', 'disabled'],
+    components: [
+      'PageActions',
+      'HomePeriodControl',
+      'AccountSelect',
+      'CategorySelect',
+    ],
+  },
+  {
+    id: 'interaction-surfaces',
+    title: 'Tinted interaction surfaces',
+    component: InteractionSurfaces,
+    states: ['ready', 'extended', 'disabled'],
+    components: ['HomePeriodControl'],
+  },
   {
     id: 'appearance',
     title: 'Appearance settings',
@@ -381,7 +807,12 @@ export const examples = [
     title: 'Controls and status',
     component: Controls,
     states: ['ready', 'pending', 'error'],
-    components: ['PageHeader', 'DecimalInput', 'LifecycleBadge'],
+    components: [
+      'PageHeader',
+      'DecimalInput',
+      'LifecycleBadge',
+      'DateRangeControl',
+    ],
   },
   {
     id: 'rows',

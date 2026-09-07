@@ -15,10 +15,10 @@ export function AnalysisAuditHeader({
   return (
     <Group justify="space-between" align="flex-start" gap="sm">
       <Box style={{ minWidth: 0 }}>
-        <Text size="sm" c="dimmed">
+        <Text data-typography="metadata" c="dimmed">
           {formatDateRangeLabel([startDate, endDate])}
         </Text>
-        <Text size="xs" c="dimmed" mih={18}>
+        <Text data-typography="caption" c="dimmed" mih={18}>
           {lookaroundDays === undefined
             ? '\u00a0'
             : `Refund matching window: ${lookaroundDays} days`}

@@ -27,7 +27,7 @@ export function AddAccountSkeleton() {
           <Group>
             <Skeleton h={24} w={24} />
             <Box pos="relative">
-              <Text fw={500} style={{ visibility: 'hidden' }}>
+              <Text data-typography="rowTitle" style={{ visibility: 'hidden' }}>
                 {provider.name}
               </Text>
               <Skeleton h={14} w="100%" pos="absolute" top="20%" />

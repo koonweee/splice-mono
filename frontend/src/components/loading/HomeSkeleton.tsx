@@ -9,13 +9,13 @@ export function HomeSkeleton() {
     <>
       <Paper mb={8}>
         <Box pos="relative">
-          <Title order={2} className={styles.amount}>
+          <Title data-typography="display" order={2} className={styles.amount}>
             {'\u00A0'}
           </Title>
           <Skeleton h="75%" w={210} pos="absolute" top="12.5%" />
         </Box>
         <Box pos="relative">
-          <Text size="sm">{'\u00A0'}</Text>
+          <Text data-typography="bodySmall">{'\u00A0'}</Text>
           <Skeleton h={14} w={180} pos="absolute" top="15%" />
         </Box>
         <Box mt="xs">

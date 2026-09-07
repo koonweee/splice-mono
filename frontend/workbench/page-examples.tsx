@@ -184,8 +184,8 @@ export const pageExamples = [
     id: 'page-accounts',
     title: 'Accounts page',
     component: (_props: ExampleProps) => <Page path="/accounts" />,
-    states: ['ready', 'empty'],
-    components: ['AccountsPage'],
+    states: ['ready', 'empty', 'long-content'],
+    components: ['AccountsPage', 'PageLayout', 'PageActions'],
   },
   {
     id: 'page-transactions',
@@ -194,6 +194,7 @@ export const pageExamples = [
     states: ['ready', 'empty', 'refresh-error'],
     components: [
       'TransactionsPage',
+      'PageToolbar',
       'TransactionsTable',
       'TransactionsMobileList',
       'TransactionBulkEditToolbar',
@@ -204,7 +205,7 @@ export const pageExamples = [
     id: 'page-analysis',
     title: 'Analysis page',
     component: (_props: ExampleProps) => <Page path="/analysis" />,
-    states: ['ready', 'empty'],
+    states: ['ready', 'empty', 'long-content'],
     components: [
       'AnalysisPage',
       'AnalysisSankeyChart',
@@ -225,6 +226,7 @@ export const pageExamples = [
     states: [
       'ready',
       'empty',
+      'long-content',
       'notification-error',
       'notification-denied',
       'notification-unconfigured',
@@ -235,6 +237,8 @@ export const pageExamples = [
     ],
     components: [
       'SettingsPage',
+      'SettingsRowActions',
+      'PageNavigation',
       'AnalysisRulesSection',
       'CategorizationRulesSection',
       'CustomCategoriesSection',

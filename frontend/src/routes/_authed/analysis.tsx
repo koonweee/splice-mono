@@ -45,7 +45,7 @@ import {
   useTransactionAnalysisControllerGetAudit,
 } from '../../api/clients/spliceAPI'
 import { DateRangeControl } from '../../components/DateRangeControl'
-import { PageHeader } from '../../components/PageHeader'
+import { PageLayout } from '../../components/PageLayout'
 import { Pressable } from '../../components/Pressable'
 import {
   formatMinorMoneyString,
@@ -53,6 +53,7 @@ import {
   formatPrimaryCategory,
 } from '../../lib/format'
 import { getDisplayCategoryColor } from '../../lib/category-colors'
+import densityStyles from '../../components/analysis/AnalysisSummary.module.css'
 import type { CategoryAggregate } from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
 
@@ -131,35 +132,33 @@ function SummaryStrip({
   const inflowPct = ratioPercent(inflow, total)
 
   return (
-    <Paper p="md" radius="md" withBorder>
-      <Group
-        justify="space-between"
-        wrap="wrap"
-        gap="md"
-        mb={total > 0n ? 'sm' : 0}
+    <Paper p="sm" radius="md" withBorder>
+      <div
+        className={densityStyles.summary}
+        style={{ marginBottom: total > 0n ? 'var(--mantine-spacing-sm)' : 0 }}
       >
-        <Group gap="lg">
-          <Group gap={6}>
-            <ArrowDownLeft size={16} color="var(--splice-positive)" />
-            <Text size="sm" c="dimmed" fw={500}>
-              Inflows
-            </Text>
-            <Text fw={700}>{formatAmount(totalInflow, currency)}</Text>
-          </Group>
-          <Group gap={6}>
-            <ArrowUpRight size={16} color="var(--splice-negative)" />
-            <Text size="sm" c="dimmed" fw={500}>
-              Outflows
-            </Text>
-            <Text fw={700}>{formatAmount(totalOutflow, currency)}</Text>
-          </Group>
-        </Group>
-        <Group gap={6}>
-          <Text size="sm" c="dimmed" fw={500}>
+        <div>
+          <Text data-typography="label" c="dimmed">
+            Inflows
+          </Text>
+          <Text data-typography="amount">
+            {formatAmount(totalInflow, currency)}
+          </Text>
+        </div>
+        <div>
+          <Text data-typography="label" c="dimmed">
+            Outflows
+          </Text>
+          <Text data-typography="amount">
+            {formatAmount(totalOutflow, currency)}
+          </Text>
+        </div>
+        <div>
+          <Text data-typography="label" c="dimmed">
             Net
           </Text>
           <Text
-            fw={700}
+            data-typography="amount"
             c={
               net === 0n
                 ? undefined
@@ -171,8 +170,8 @@ function SummaryStrip({
             {net > 0n ? '+' : ''}
             {formatAmount(netFlow, currency)}
           </Text>
-        </Group>
-      </Group>
+        </div>
+      </div>
       {total > 0n && (
         <Progress.Root size="sm" radius="xl">
           <Progress.Section
@@ -213,9 +212,9 @@ function FlowSection({
       <Paper p="lg" radius="md" withBorder>
         <Group gap="xs" mb="md">
           <Icon size={18} />
-          <Text fw={600}>{title}</Text>
+          <Text data-typography="sectionHeading">{title}</Text>
         </Group>
-        <Text c="dimmed" ta="center" py="xl">
+        <Text data-typography="body" c="dimmed" ta="center" py="xl">
           No data for this period
         </Text>
       </Paper>
@@ -236,9 +235,9 @@ function FlowSection({
           <Box c={iconColor}>
             <Icon size={18} />
           </Box>
-          <Text fw={600}>{title}</Text>
+          <Text data-typography="sectionHeading">{title}</Text>
         </Group>
-        <Text fw={600} c="dimmed">
+        <Text data-typography="amount" c="dimmed">
           {formatAmount(total, currency)}
         </Text>
       </Group>
@@ -303,10 +302,17 @@ function FlowSection({
                         flexShrink: 0,
                       }}
                     />
-                    <Text size="sm" style={{ flex: 1 }} truncate>
+                    <Text
+                      data-typography="bodySmall"
+                      style={{ flex: 1 }}
+                      truncate
+                    >
                       {formatPrimaryCategory(cat.primaryCategory)}
                     </Text>
-                    <Text size="sm" fw={500} style={{ flexShrink: 0 }}>
+                    <Text
+                      data-typography="amountSmall"
+                      style={{ flexShrink: 0 }}
+                    >
                       {formatAmount(cat.totalAmount, currency)}
                     </Text>
                     <Group
@@ -327,7 +333,12 @@ function FlowSection({
                         style={{ flex: 1 }}
                         radius="xl"
                       />
-                      <Text size="xs" c="dimmed" w={32} ta="right">
+                      <Text
+                        data-typography="caption"
+                        c="dimmed"
+                        w={32}
+                        ta="right"
+                      >
                         {pct.toFixed(0)}%
                       </Text>
                     </Group>
@@ -406,157 +417,165 @@ function AnalysisPage() {
 
   return (
     <>
-      <PageHeader
+      <PageLayout
         title="Analysis"
-        actions={
-          <Group gap="xs" wrap="nowrap" w={{ base: '100%', sm: 'auto' }}>
-            <DateRangeControl
-              value={dateRangeValue}
-              onChange={handleDateRangeChange}
-              clearable={false}
-            />
-            <Button
-              onClick={openAudit}
-              {...featureIntent(loadAnalysisAuditDrawer)}
-              leftSection={<ClipboardList size={16} />}
-              h={{ base: 48, sm: 42 }}
-              size="md"
-              variant="light"
-            >
-              Audit
-            </Button>
-          </Group>
-        }
-      />
-
-      <DataState
-        hasData={Boolean(analysis)}
-        isLoading={isPending}
-        isError={isError}
-        isFetching={isFetching}
-        errorMessage="Failed to load analysis data."
-        onRetry={() => void refetch()}
-        loadingFallback={<AnalysisSkeleton />}
-      >
-        {analysis && (
-          <Stack gap="lg">
-            <SummaryStrip
-              totalInflow={analysis.totalInflow}
-              totalOutflow={analysis.totalOutflow}
-              netFlow={analysis.netFlow}
-              currency={analysis.currency}
-            />
-
-            {analysis.inflows.length === 0 && analysis.outflows.length === 0 ? (
-              <Paper p="xl" radius="md" withBorder>
-                <Stack align="center" gap="sm">
-                  <Text fw={600}>No transactions in this period</Text>
-                  <Text c="dimmed" ta="center" size="sm">
-                    Choose another date range to see your cashflow.
-                  </Text>
-                  <Button
-                    variant="default"
-                    onClick={() => {
-                      const previousMonth = dayjs(startDate).subtract(
-                        1,
-                        'month',
-                      )
-                      handleDateRangeChange([
-                        previousMonth.startOf('month').format('YYYY-MM-DD'),
-                        previousMonth.endOf('month').format('YYYY-MM-DD'),
-                      ])
-                    }}
-                  >
-                    View previous month
-                  </Button>
-                </Stack>
-              </Paper>
-            ) : (
-              <>
-                {analysisSankeyEnabled ? (
-                  <DeferredFeature label="Cashflow chart" minHeight={320}>
-                    <AnalysisSankeyChart
-                      analysis={analysis}
-                      onCategoryClick={handleCategoryClick}
-                    />
-                  </DeferredFeature>
-                ) : (
-                  <Grid>
-                    <Grid.Col span={{ base: 12, md: 6 }}>
-                      <FlowSection
-                        title="Inflows"
-                        icon={ArrowDownLeft}
-                        iconColor="var(--splice-positive)"
-                        categories={analysis.inflows}
-                        total={analysis.totalInflow}
-                        currency={analysis.currency}
-                        onCategoryClick={(cat) =>
-                          handleCategoryClick(cat, 'inflow')
-                        }
-                      />
-                    </Grid.Col>
-                    <Grid.Col span={{ base: 12, md: 6 }}>
-                      <FlowSection
-                        title="Outflows"
-                        icon={ArrowUpRight}
-                        iconColor="var(--splice-negative)"
-                        categories={analysis.outflows}
-                        total={analysis.totalOutflow}
-                        currency={analysis.currency}
-                        onCategoryClick={(cat) =>
-                          handleCategoryClick(cat, 'outflow')
-                        }
-                      />
-                    </Grid.Col>
-                  </Grid>
-                )}
-              </>
-            )}
-          </Stack>
-        )}
-      </DataState>
-
-      {modalOpened && (
-        <DeferredOverlay
-          label="Category transactions"
-          title={`${selectedCategory ? formatPrimaryCategory(selectedCategory) : 'Transactions'} Transactions (${selectedFlowDirection === 'inflow' ? 'Inflows' : 'Outflows'})`}
-          kind="drilldown"
-          skeleton={<TableSkeleton />}
-          onClose={closeModal}
-        >
-          <CategoryTransactionsModal
-            opened={modalOpened}
-            onClose={closeModal}
-            categoryPrimary={selectedCategory}
-            startDate={startDate}
-            endDate={endDate}
-            flowDirection={selectedFlowDirection}
+        actions={{
+          primary: {
+            id: 'audit',
+            label: 'Audit',
+            icon: ClipboardList,
+            onClick: openAudit,
+            onPrepare: () => {
+              void loadAnalysisAuditDrawer().catch(() => undefined)
+            },
+          },
+        }}
+        toolbar={
+          <DateRangeControl
+            growOnMobile
+            value={dateRangeValue}
+            onChange={handleDateRangeChange}
+            clearable={false}
           />
-        </DeferredOverlay>
-      )}
-      {auditOpened && (
-        <DeferredOverlay
-          label="Analysis audit"
-          kind="audit"
-          header={
-            <AnalysisAuditHeader
-              startDate={startDate}
-              endDate={endDate}
-              lookaroundDays={auditQuery.data?.neutralizationLookaroundDays}
+        }
+      >
+        <DataState
+          hasData={Boolean(analysis)}
+          isLoading={isPending}
+          isError={isError}
+          isFetching={isFetching}
+          errorMessage="Failed to load analysis data."
+          onRetry={() => void refetch()}
+          loadingFallback={
+            <AnalysisSkeleton
+              sankey={user ? analysisSankeyEnabled : undefined}
             />
           }
-          skeleton={<TableSkeleton rows={4} />}
-          onClose={closeAudit}
         >
-          <AnalysisAuditDrawer
-            opened={auditOpened}
+          {analysis && (
+            <Stack gap="md">
+              <SummaryStrip
+                totalInflow={analysis.totalInflow}
+                totalOutflow={analysis.totalOutflow}
+                netFlow={analysis.netFlow}
+                currency={analysis.currency}
+              />
+
+              {analysis.inflows.length === 0 &&
+              analysis.outflows.length === 0 ? (
+                <Paper p="xl" radius="md" withBorder>
+                  <Stack align="center" gap="sm">
+                    <Text data-typography="sectionHeading">
+                      No transactions in this period
+                    </Text>
+                    <Text data-typography="metadata" c="dimmed" ta="center">
+                      Choose another date range to see your cashflow.
+                    </Text>
+                    <Button
+                      variant="default"
+                      onClick={() => {
+                        const previousMonth = dayjs(startDate).subtract(
+                          1,
+                          'month',
+                        )
+                        handleDateRangeChange([
+                          previousMonth.startOf('month').format('YYYY-MM-DD'),
+                          previousMonth.endOf('month').format('YYYY-MM-DD'),
+                        ])
+                      }}
+                    >
+                      View previous month
+                    </Button>
+                  </Stack>
+                </Paper>
+              ) : (
+                <>
+                  {analysisSankeyEnabled ? (
+                    <DeferredFeature label="Cashflow chart" minHeight={320}>
+                      <AnalysisSankeyChart
+                        showTotals={false}
+                        analysis={analysis}
+                        onCategoryClick={handleCategoryClick}
+                      />
+                    </DeferredFeature>
+                  ) : (
+                    <Grid>
+                      <Grid.Col span={{ base: 12, md: 6 }}>
+                        <FlowSection
+                          title="Inflows"
+                          icon={ArrowDownLeft}
+                          iconColor="var(--splice-positive)"
+                          categories={analysis.inflows}
+                          total={analysis.totalInflow}
+                          currency={analysis.currency}
+                          onCategoryClick={(cat) =>
+                            handleCategoryClick(cat, 'inflow')
+                          }
+                        />
+                      </Grid.Col>
+                      <Grid.Col span={{ base: 12, md: 6 }}>
+                        <FlowSection
+                          title="Outflows"
+                          icon={ArrowUpRight}
+                          iconColor="var(--splice-negative)"
+                          categories={analysis.outflows}
+                          total={analysis.totalOutflow}
+                          currency={analysis.currency}
+                          onCategoryClick={(cat) =>
+                            handleCategoryClick(cat, 'outflow')
+                          }
+                        />
+                      </Grid.Col>
+                    </Grid>
+                  )}
+                </>
+              )}
+            </Stack>
+          )}
+        </DataState>
+
+        {modalOpened && (
+          <DeferredOverlay
+            label="Category transactions"
+            title={`${selectedCategory ? formatPrimaryCategory(selectedCategory) : 'Transactions'} Transactions (${selectedFlowDirection === 'inflow' ? 'Inflows' : 'Outflows'})`}
+            kind="drilldown"
+            skeleton={<TableSkeleton />}
+            onClose={closeModal}
+          >
+            <CategoryTransactionsModal
+              opened={modalOpened}
+              onClose={closeModal}
+              categoryPrimary={selectedCategory}
+              startDate={startDate}
+              endDate={endDate}
+              flowDirection={selectedFlowDirection}
+            />
+          </DeferredOverlay>
+        )}
+        {auditOpened && (
+          <DeferredOverlay
+            label="Analysis audit"
+            kind="audit"
+            header={
+              <AnalysisAuditHeader
+                startDate={startDate}
+                endDate={endDate}
+                lookaroundDays={auditQuery.data?.neutralizationLookaroundDays}
+              />
+            }
+            skeleton={<TableSkeleton rows={4} />}
             onClose={closeAudit}
-            startDate={startDate}
-            endDate={endDate}
-            auditQuery={auditQuery}
-          />
-        </DeferredOverlay>
-      )}
+          >
+            <AnalysisAuditDrawer
+              opened={auditOpened}
+              onClose={closeAudit}
+              startDate={startDate}
+              endDate={endDate}
+              auditQuery={auditQuery}
+            />
+          </DeferredOverlay>
+        )}
+      </PageLayout>
     </>
   )
 }

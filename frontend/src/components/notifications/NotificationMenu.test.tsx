@@ -15,6 +15,7 @@ const api = vi.hoisted(() => ({
   inbox: vi.fn(),
   read: vi.fn(),
   archive: vi.fn(),
+  archiveAll: vi.fn(),
   transition: vi.fn(),
 }))
 vi.mock('../../api/clients/spliceAPI', () => ({
@@ -22,6 +23,7 @@ vi.mock('../../api/clients/spliceAPI', () => ({
   notificationControllerGetInbox: api.inbox,
   notificationControllerMarkRead: api.read,
   notificationControllerArchive: api.archive,
+  notificationControllerArchiveAll: api.archiveAll,
 }))
 vi.mock('../../lib/pwa/app-transition', () => ({
   requestAppTransition: api.transition,
@@ -59,6 +61,8 @@ beforeEach(() => {
     nextCursor: null,
   })
   api.read.mockResolvedValue(undefined)
+  api.archive.mockResolvedValue(undefined)
+  api.archiveAll.mockResolvedValue(undefined)
 })
 afterEach(() => {
   cleanup()
@@ -148,5 +152,44 @@ describe('authenticated notification menu', () => {
     expect(navigate).toHaveBeenCalledWith(
       '/transactions?categoryId=UNCATEGORIZED',
     )
+  })
+  it('clears every notification while preserving the independent transaction count', async () => {
+    mount()
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Notifications, 1 unread' }),
+    )
+    await screen.findByText(item.body)
+    api.inbox.mockResolvedValue({ items: [], hasMore: false, nextCursor: null })
+    api.summary.mockResolvedValue({
+      unreadNotificationCount: 0,
+      uncategorizedTransactionCount: 12,
+      computedAt: '2026-09-06T12:01:00Z',
+    })
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Clear all notifications' }),
+    )
+
+    await screen.findByText("You're all caught up.")
+    expect(api.archiveAll).toHaveBeenCalledOnce()
+    expect(client.getQueryData(['/notification/summary'])).toMatchObject({
+      unreadNotificationCount: 0,
+      uncategorizedTransactionCount: 12,
+    })
+  })
+  it('retains notifications when clearing fails', async () => {
+    mount()
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Notifications, 1 unread' }),
+    )
+    await screen.findByText(item.body)
+    api.archiveAll.mockRejectedValueOnce(new Error('Unavailable'))
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Clear all notifications' }),
+    )
+
+    await screen.findByText('Unable to clear notifications. Please try again.')
+    expect(screen.getByText(item.body)).toBeTruthy()
   })
 })

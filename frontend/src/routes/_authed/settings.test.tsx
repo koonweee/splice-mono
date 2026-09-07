@@ -133,7 +133,11 @@ let queryClientState: {
 let meState: {
   data: {
     settings: {
-      appearance?: { mode: string; accent: string | null } | null
+      appearance?: {
+        mode: string
+        accent: string | null
+        monospaceAmounts?: boolean
+      } | null
       currency: string | null
       timezone: string | null
       hideZeroBalanceAccounts?: boolean | null
@@ -475,11 +479,92 @@ describe('SettingsPage', () => {
     expect(screen.queryByRole('tab', { name: /mcp/i })).toBeNull()
   })
 
+  it('previews, cancels and saves the amount-font preference with General settings', () => {
+    const dispatch = vi.spyOn(window, 'dispatchEvent')
+    updateSettingsState.mutate.mockImplementation((_variables, options) => {
+      options?.onSuccess?.({}, undefined, undefined)
+    })
+    renderSettingsPage()
+    const toggle = screen.getByRole<HTMLInputElement>('switch', {
+      name: 'Use monospace font for amounts',
+    })
+    expect(toggle.checked).toBe(false)
+    fireEvent.click(toggle)
+    expect(toggle.checked).toBe(true)
+    expect(
+      dispatch.mock.calls.some(
+        ([event]) =>
+          event instanceof CustomEvent &&
+          event.detail?.monospaceAmounts === true,
+      ),
+    ).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }))
+    expect(toggle.checked).toBe(false)
+    fireEvent.click(toggle)
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+    expect(updateSettingsState.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          appearance: {
+            mode: 'dark',
+            accent: '#83b59b',
+            monospaceAmounts: true,
+          },
+        }),
+      }),
+      expect.any(Object),
+    )
+    expect(localStorageState.setItem).toHaveBeenCalledWith(
+      'splice:appearance',
+      encodeAppearance({
+        mode: 'dark',
+        accent: '#83b59b',
+        monospaceAmounts: true,
+      }),
+    )
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: /save changes/i })
+        .disabled,
+    ).toBe(true)
+  })
+
+  it('loads the saved amount-font choice and locks the toggle during save', () => {
+    meState.data!.settings.appearance = {
+      mode: 'dark',
+      accent: '#83b59b',
+      monospaceAmounts: true,
+    }
+    updateSettingsState.isPending = true
+    renderSettingsPage()
+    const toggle = screen.getByRole<HTMLInputElement>('switch', {
+      name: 'Use monospace font for amounts',
+    })
+    expect(toggle.checked).toBe(true)
+    expect(toggle.disabled).toBe(true)
+  })
+
+  it('retains a failed amount-font draft without persisting it', () => {
+    updateSettingsState.mutate.mockImplementation((_variables, options) => {
+      options?.onError?.(new Error('Save failed'), undefined, undefined)
+    })
+    renderSettingsPage()
+    localStorageState.setItem.mockClear()
+    const toggle = screen.getByRole<HTMLInputElement>('switch', {
+      name: 'Use monospace font for amounts',
+    })
+    fireEvent.click(toggle)
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
+    expect(toggle.checked).toBe(true)
+    expect(localStorageState.setItem).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }))
+    expect(toggle.checked).toBe(false)
+  })
+
   it('saves the hide zero balance accounts setting', () => {
     renderSettingsPage()
 
     fireEvent.click(
-      screen.getByRole('switch', { name: /hide 0 balance accounts/i }),
+      screen.getByRole('switch', { name: /hide zero balances on home/i }),
     )
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }))
 
@@ -633,7 +718,7 @@ describe('SettingsPage', () => {
     renderSettingsPage()
 
     fireEvent.click(
-      screen.getByRole('switch', { name: /hide 0 balance accounts/i }),
+      screen.getByRole('switch', { name: /hide zero balances on home/i }),
     )
     const saveButton = screen.getByRole('button', { name: /save changes/i })
     fireEvent.click(saveButton)
@@ -673,7 +758,7 @@ describe('SettingsPage', () => {
       ).toBe(true)
     })
     const hideZeroSwitch = screen.getByRole('switch', {
-      name: /hide 0 balance accounts/i,
+      name: /hide zero balances on home/i,
     })
     const currencyInput = screen.getByPlaceholderText('Select currency')
     const saveButton = screen.getByRole('button', { name: /save changes/i })
@@ -734,7 +819,7 @@ describe('SettingsPage', () => {
     })
     const currencyInput = screen.getByPlaceholderText('Select currency')
     const hideZeroSwitch = screen.getByRole('switch', {
-      name: /hide 0 balance accounts/i,
+      name: /hide zero balances on home/i,
     })
     const saveButton = screen.getByRole('button', {
       name: /save changes/i,

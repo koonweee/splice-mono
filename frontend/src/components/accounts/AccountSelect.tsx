@@ -50,6 +50,10 @@ export function AccountSelect({
           <ActionIcon
             aria-label="Clear account"
             onClick={handleClear}
+            onMouseDown={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+            }}
             size="sm"
             variant="subtle"
           >

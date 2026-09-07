@@ -57,7 +57,7 @@ export function TransactionBulkEditToolbar({
       size="md"
     />
   ) : (
-    <Text className={styles.selectedCount} fw={600} size="sm">
+    <Text data-typography="subsectionHeading" className={styles.selectedCount}>
       {selectedCount} selected
     </Text>
   )

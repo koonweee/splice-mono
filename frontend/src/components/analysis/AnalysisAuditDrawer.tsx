@@ -92,18 +92,18 @@ function TransactionSummary({
               {label}
             </Badge>
           )}
-          <Text fw={600} size="sm" truncate>
+          <Text data-typography="rowTitleSmall" truncate>
             {getTransactionTitle(transaction)}
           </Text>
         </Group>
-        <Text fw={700} size="sm" style={{ flexShrink: 0 }}>
+        <Text data-typography="amountSmall" style={{ flexShrink: 0 }}>
           {formatAuditAmount(transaction)}
         </Text>
       </Group>
-      <Text c="dimmed" size="xs" mt={4}>
+      <Text data-typography="caption" c="dimmed" mt={4}>
         {formatDateTime(transaction.activityDate)} · {transaction.accountName}
       </Text>
-      <Text c="dimmed" size="xs">
+      <Text data-typography="caption" c="dimmed">
         {primary}
         {detailed && detailed !== primary ? ` · ${detailed}` : ''}
       </Text>
@@ -222,7 +222,7 @@ export function AnalysisAuditDrawer({
             {groups.map((group) => (
               <Stack gap="xs" key={group.key}>
                 <Group justify="space-between" gap="sm">
-                  <Text fw={700}>{group.label}</Text>
+                  <Text data-typography="sectionHeading">{group.label}</Text>
                   <Badge variant="light">{group.rows.length}</Badge>
                 </Group>
                 <Stack gap="xs">

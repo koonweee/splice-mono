@@ -33,7 +33,7 @@
 }
 
 .categorySelect input {
-  font-size: var(--splice-size-mobile-input-font);
+  @splice-type input;
 }
 
 .saveButton {

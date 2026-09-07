@@ -22,6 +22,7 @@ import type { FocusEvent, KeyboardEvent } from 'react'
 
 type DateRangeControlProps = {
   clearable?: boolean
+  growOnMobile?: boolean
   onChange: (range: DatesRangeValue) => void
   value: DatesRangeValue
   width?: number
@@ -149,6 +150,7 @@ export function DateRangeFields({
 
 export function DateRangeControl({
   clearable = true,
+  growOnMobile = false,
   onChange,
   value,
   width = 300,
@@ -178,7 +180,7 @@ export function DateRangeControl({
 
   const trigger = (
     <Box
-      className={styles.trigger}
+      className={`${styles.trigger} ${growOnMobile ? styles.growOnMobile : ''}`}
       pos="relative"
       style={{ '--date-range-width': `${width}px` }}
     >
@@ -206,7 +208,11 @@ export function DateRangeControl({
         size="md"
         variant="default"
       >
-        <Text component="span" size="sm" style={{ whiteSpace: 'normal' }}>
+        <Text
+          data-typography="control"
+          component="span"
+          style={{ whiteSpace: 'normal' }}
+        >
           {formatDateRangeLabel(value)}
         </Text>
       </Button>

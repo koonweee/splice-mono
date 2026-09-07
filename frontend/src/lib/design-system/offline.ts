@@ -1,6 +1,8 @@
+import { BASES } from './bases'
+
 /** Privacy-safe static colors when user appearance is unavailable (PWA/offline). */
 export const OFFLINE_COLORS = {
-  canvas: '#191c21',
-  text: '#e6e9ed',
-  dimmed: '#a8b0bc',
+  canvas: BASES.dark.canvas,
+  text: BASES.dark.text,
+  dimmed: BASES.dark.dimmed,
 } as const

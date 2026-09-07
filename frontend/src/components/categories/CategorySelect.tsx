@@ -76,10 +76,10 @@ export function CategorySelect({
               style={getCategoryColorStyles(categoryOption.color ?? '')}
             />
             <Stack className={styles.optionText} gap={2}>
-              <Text className={styles.label} size="sm">
+              <Text data-typography="rowTitleSmall" className={styles.label}>
                 {categoryOption.secondary}
               </Text>
-              <Text className={styles.meta} size="xs">
+              <Text data-typography="caption" className={styles.meta}>
                 {categoryOption.primary}
               </Text>
             </Stack>
@@ -91,6 +91,10 @@ export function CategorySelect({
           <ActionIcon
             aria-label="Clear category"
             onClick={handleClear}
+            onMouseDown={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+            }}
             size="sm"
             variant="subtle"
           >

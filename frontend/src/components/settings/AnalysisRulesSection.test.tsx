@@ -203,7 +203,7 @@ describe('AnalysisRulesSection', () => {
     })
   })
 
-  it('renders rules as a mobile list on narrow screens', () => {
+  it('renders rules as a mobile list on narrow screens', async () => {
     Object.defineProperty(window, 'matchMedia', {
       value: vi.fn().mockImplementation(() => ({
         matches: true,
@@ -223,7 +223,12 @@ describe('AnalysisRulesSection', () => {
     expect(screen.getByLabelText('Analysis rules list, 2 total')).toBeTruthy()
     expect(screen.queryByText('Actions')).toBeNull()
 
-    fireEvent.click(screen.getByLabelText('Archive rule'))
+    fireEvent.click(
+      screen.getByRole('button', { name: `Actions for ${activeRule.name}` }),
+    )
+    fireEvent.click(
+      await screen.findByRole('menuitem', { name: 'Archive rule' }),
+    )
 
     expect(mockFns.updateMutateMock).toHaveBeenCalledWith({
       id: activeRule.id,

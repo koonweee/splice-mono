@@ -303,9 +303,7 @@ export function TransactionConditionInput({
 
       return (
         <Stack gap={4}>
-          <Text size="sm" fw={500}>
-            Value
-          </Text>
+          <Text data-typography="label">Value</Text>
           <Group gap="xs" wrap="nowrap">
             <DecimalInput
               aria-label="Minimum amount"
@@ -321,7 +319,7 @@ export function TransactionConditionInput({
               }
               style={{ flex: '1 1 0' }}
             />
-            <Text c="dimmed" size="sm">
+            <Text data-typography="metadata" c="dimmed">
               and
             </Text>
             <DecimalInput
@@ -363,7 +361,7 @@ export function TransactionConditionInput({
       {conditions.map((condition, index) => (
         <Stack key={index} gap="xs">
           {index > 0 && (
-            <Text c="dimmed" fw={700} size="xs" ta="center">
+            <Text data-typography="captionStrong" c="dimmed" ta="center">
               AND
             </Text>
           )}

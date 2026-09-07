@@ -613,31 +613,34 @@ describe('UserService', () => {
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
-    it('should update appearance without affecting currency or timezone events', async () => {
-      const mockEntity = new UserEntity();
-      mockEntity.id = 'user-uuid-123';
-      mockEntity.email = 'test@example.com';
-      mockEntity.hashedPassword = 'hashed';
-      mockEntity.settings = defaultSettings;
-      mockEntity.providerDetails = null;
-      mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
-      mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
+    it.each([true, false])(
+      'should save amount-font preference %s without currency or timezone events',
+      async (monospaceAmounts) => {
+        const mockEntity = new UserEntity();
+        mockEntity.id = 'user-uuid-123';
+        mockEntity.email = 'test@example.com';
+        mockEntity.hashedPassword = 'hashed';
+        mockEntity.settings = defaultSettings;
+        mockEntity.providerDetails = null;
+        mockEntity.createdAt = new Date('2024-01-01T00:00:00Z');
+        mockEntity.updatedAt = new Date('2024-01-01T00:00:00Z');
 
-      mockRepository.findOne.mockResolvedValue(mockEntity);
-      mockRepository.save.mockImplementation((entity) =>
-        Promise.resolve(entity),
-      );
+        mockRepository.findOne.mockResolvedValue(mockEntity);
+        mockRepository.save.mockImplementation((entity) =>
+          Promise.resolve(entity),
+        );
 
-      const result = await service.updateSettings('user-uuid-123', {
-        appearance: { mode: 'dark', accent: '#b399cf' },
-      });
+        const result = await service.updateSettings('user-uuid-123', {
+          appearance: { mode: 'dark', accent: '#b399cf', monospaceAmounts },
+        });
 
-      expect(result).toEqual({
-        ...defaultSettings,
-        appearance: { mode: 'dark', accent: '#b399cf' },
-      });
-      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
-    });
+        expect(result).toEqual({
+          ...defaultSettings,
+          appearance: { mode: 'dark', accent: '#b399cf', monospaceAmounts },
+        });
+        expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+      },
+    );
 
     it('should update neutralizationLookaroundDays without dropping existing settings', async () => {
       const mockEntity = new UserEntity();

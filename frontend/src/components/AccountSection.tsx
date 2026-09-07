@@ -3,6 +3,12 @@ import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { AccountType } from '../api/models'
 import { compareIntegers, ratioPercent, signedMinorUnits } from '../lib/money'
+import {
+  HIDDEN_BALANCE_PLACEHOLDER,
+  formatMinorMoneyString,
+} from '../lib/format'
+import { PercentAmountPopover } from './PercentAmountPopover'
+import toggleStyles from './SectionToggle.module.css'
 import { CompactAccountRow } from './CompactAccountRow'
 import { Pressable } from './Pressable'
 import styles from './AccountSection.module.css'
@@ -32,6 +38,7 @@ function groupAccountsByType(accounts: Array<AccountSummaryData>): Array<{
   label: string
   accounts: Array<AccountSummaryData>
   percent: number
+  amount?: string
 }> {
   const groupOrder = ['Investment', 'Depository', 'Other']
   const grouped = new Map<string, Array<AccountSummaryData>>()
@@ -58,7 +65,22 @@ function groupAccountsByType(accounts: Array<AccountSummaryData>): Array<{
       const groupAccounts = grouped.get(label)!
       const groupTotal = getGroupTotal(groupAccounts)
       const percent = ratioPercent(groupTotal, totalAssets)
-      return { label, accounts: groupAccounts, percent }
+      const currencies = new Set(
+        groupAccounts.map(
+          (account) =>
+            (account.convertedEffectiveBalance ?? account.effectiveBalance)
+              .money.currency,
+        ),
+      )
+      // A missing conversion must not present mixed currencies as one total.
+      const currency = currencies.size === 1 ? [...currencies][0] : undefined
+      const amount = currency
+        ? formatMinorMoneyString({
+            value: groupTotal.toString(),
+            currency,
+          })
+        : undefined
+      return { label, accounts: groupAccounts, percent, amount }
     })
 }
 
@@ -83,7 +105,7 @@ export function AccountSection({
   return (
     <>
       <Pressable
-        className={styles.toggle}
+        className={toggleStyles.toggle}
         aria-expanded={opened}
         aria-label={`${opened ? 'Collapse' : 'Expand'} ${title}`}
         onClick={toggle}
@@ -93,19 +115,17 @@ export function AccountSection({
         }}
       >
         <Group justify="space-between" px={4} py={2}>
-          <Text size="sm" fw={600}>
-            {title}
-          </Text>
+          <Text data-typography="sectionHeading">{title}</Text>
           {opened ? (
-            <IconChevronUp size={16} className={styles.chevron} />
+            <IconChevronUp size={16} className={toggleStyles.chevron} />
           ) : (
-            <IconChevronDown size={16} className={styles.chevron} />
+            <IconChevronDown size={16} className={toggleStyles.chevron} />
           )}
         </Group>
       </Pressable>
       <Collapse in={opened}>
         {accounts.length === 0 ? (
-          <Text c="dimmed" size="sm">
+          <Text data-typography="metadata" c="dimmed">
             No {title.toLowerCase()}
           </Text>
         ) : (
@@ -121,14 +141,21 @@ export function AccountSection({
                         className={styles.groupHeader}
                         justify="space-between"
                         px="sm"
-                        py="xs"
                       >
-                        <Text size="sm" fw={500} c="dimmed">
+                        <Text data-typography="label" c="dimmed">
                           {group.label}
                         </Text>
-                        <Text size="xs" fw={600} c="dimmed">
-                          {group.percent.toFixed(1)}%
-                        </Text>
+                        <PercentAmountPopover
+                          percent={`${group.percent.toFixed(1)}%`}
+                          amount={
+                            balancesHidden
+                              ? HIDDEN_BALANCE_PLACEHOLDER
+                              : group.amount
+                          }
+                          label={`Show ${group.label.toLowerCase()} total`}
+                          color="dimmed"
+                          textRole="captionStrong"
+                        />
                       </Group>
                       <Divider className={styles.groupHeaderDivider} />
                       {group.accounts.map((account, accountIndex) => (

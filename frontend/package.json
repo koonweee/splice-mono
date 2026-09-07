@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "orval": "node ../backend/scripts/generate-currency-scales.mjs && orval && prettier --write src/api/",
-    "tokens:check": "node scripts/check-style-tokens.mjs"
+    "tokens:check": "node scripts/check-style-tokens.mjs && node scripts/check-typography.mjs"
   },
   "dependencies": {
     "@mantine/charts": "^8.3.9",

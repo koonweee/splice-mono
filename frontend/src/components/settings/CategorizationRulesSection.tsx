@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
+import { PageToolbar } from '../PageLayout'
 import { ResponsiveSlot } from '../ResponsiveSlot'
 import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
@@ -60,6 +61,8 @@ import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
 import { TransactionsTable } from '../TransactionsTable'
 import { TransactionsMobileList } from '../transactions/TransactionsMobileList'
+import compactStyles from './SettingsCompactRow.module.css'
+import { SettingsRowActions } from './SettingsRowActions'
 import { SettingsToolbar } from './SettingsToolbar'
 import { SettingsStatusBadge } from './SettingsStatusBadge'
 import { SettingsArchiveFilter } from './SettingsArchiveFilter'
@@ -580,7 +583,7 @@ export function CategorizationRulesSection() {
     return (
       <Group gap="xs" wrap="nowrap">
         <ColorSwatch color={category.color} size={14} withShadow={false} />
-        <Text size="sm" lineClamp={1}>
+        <Text data-typography="bodySmall" lineClamp={1}>
           {getCategoryLabel(category)}
         </Text>
       </Group>
@@ -611,11 +614,11 @@ export function CategorizationRulesSection() {
           wrap="nowrap"
         >
           <Box style={{ flex: '1 1 auto', minWidth: 0 }}>
-            <Text fw={700} truncate>
+            <Text data-typography="rowTitle" truncate>
               {suggestion.name}
             </Text>
             <Box mt={4}>{renderCategoryLabel(suggestion.targetCategory)}</Box>
-            <Text c="dimmed" lineClamp={2} mt={6} size="sm">
+            <Text data-typography="metadata" c="dimmed" lineClamp={2} mt={6}>
               When {renderConditionSummary(suggestion)}
             </Text>
             <Group gap="xs" mt={8}>
@@ -630,7 +633,7 @@ export function CategorizationRulesSection() {
               </Badge>
             </Group>
             {suggestion.rationale && (
-              <Text c="dimmed" lineClamp={2} mt={6} size="xs">
+              <Text data-typography="caption" c="dimmed" lineClamp={2} mt={6}>
                 {suggestion.rationale}
               </Text>
             )}
@@ -686,90 +689,73 @@ export function CategorizationRulesSection() {
 
   function renderRuleRowActions(rule: CategorizationRuleView) {
     return (
-      <Group
-        className={tableChrome.actions}
-        gap={4}
-        justify="flex-end"
-        wrap="nowrap"
-      >
-        <Tooltip label="Edit rule">
-          <ActionIcon
-            aria-label="Edit rule"
-            size={isMobile ? 44 : 36}
-            onClick={() => openEditPanel(rule)}
-            variant="subtle"
-          >
-            <Pencil size={16} />
-          </ActionIcon>
-        </Tooltip>
-        {!rule.archivedAt && (
-          <Tooltip label="Apply to existing transactions">
-            <ActionIcon
-              aria-label="Apply rule to existing transactions"
-              size={isMobile ? 44 : 36}
-              onClick={() => openApply(rule)}
-              variant="subtle"
-            >
-              <Play size={16} />
-            </ActionIcon>
-          </Tooltip>
-        )}
-        {rule.archivedAt ? (
-          <Tooltip label="Restore rule">
-            <ActionIcon
-              aria-label="Restore rule"
-              size={isMobile ? 44 : 36}
-              onClick={() => archiveOrRestore(rule, false)}
-              variant="subtle"
-            >
-              <RotateCcw size={16} />
-            </ActionIcon>
-          </Tooltip>
-        ) : (
-          <Tooltip label="Archive rule">
-            <ActionIcon
-              aria-label="Archive rule"
-              size={isMobile ? 44 : 36}
-              onClick={() => archiveOrRestore(rule, true)}
-              variant="subtle"
-            >
-              <Archive size={16} />
-            </ActionIcon>
-          </Tooltip>
-        )}
-      </Group>
+      <SettingsRowActions
+        label={`Actions for ${rule.name}`}
+        actions={[
+          {
+            id: 'edit',
+            label: 'Edit rule',
+            icon: Pencil,
+            onClick: () => openEditPanel(rule),
+          },
+          ...(!rule.archivedAt
+            ? [
+                {
+                  id: 'apply',
+                  label: 'Apply rule to existing transactions',
+                  icon: Play,
+                  onClick: () => openApply(rule),
+                },
+              ]
+            : []),
+          {
+            id: 'archive',
+            label: rule.archivedAt ? 'Restore rule' : 'Archive rule',
+            icon: rule.archivedAt ? RotateCcw : Archive,
+            onClick: () => archiveOrRestore(rule, !rule.archivedAt),
+          },
+        ]}
+      />
     )
   }
 
   function renderMobileRuleRow(rule: CategorizationRuleView) {
     return (
-      <Stack px="sm" py="sm" gap="xs">
-        <Text fw={700}>{rule.name}</Text>
-        <Text c="dimmed" lineClamp={3} size="sm">
-          When {renderConditionSummary(rule)}
+      <div className={compactStyles.row}>
+        <div className={compactStyles.heading}>
+          <Text
+            data-typography="sectionHeading"
+            className={compactStyles.title}
+          >
+            {rule.name}
+          </Text>
+          <SettingsStatusBadge status={getRuleStatus(rule)} />
+          {renderRuleRowActions(rule)}
+        </div>
+        <Text data-typography="metadata" c="dimmed" lineClamp={3}>
+          {renderConditionSummary(rule)}
         </Text>
-        <Group gap={6}>
-          <Text size="sm" c="dimmed">
-            Then categorize as
+        <div className={compactStyles.result}>
+          <Text
+            data-typography="metadata"
+            c="dimmed"
+            aria-label="Categorize as"
+          >
+            →
           </Text>
           {renderTargetCategory(rule)}
-        </Group>
-        <Group justify="space-between" gap="xs" wrap="nowrap">
-          <Group gap={6}>
-            <SettingsStatusBadge status={getRuleStatus(rule)} />
-            <Badge
-              color="gray"
-              c="var(--splice-status-neutral-fg)"
-              bg="var(--splice-status-neutral-bg)"
-              size="sm"
-              variant="light"
-            >
-              Priority {rule.priority}
-            </Badge>
-          </Group>
-          {renderRuleRowActions(rule)}
-        </Group>
-      </Stack>
+          <Badge
+            className={compactStyles.priority}
+            color="gray"
+            c="var(--splice-status-neutral-fg)"
+            bg="var(--splice-status-neutral-bg)"
+            size="sm"
+            variant="light"
+          >
+            Priority {rule.priority}
+          </Badge>
+        </div>
+      </div>
     )
   }
 
@@ -779,9 +765,7 @@ export function CategorizationRulesSection() {
       header: 'Name',
       minSize: 180,
       Cell: ({ row }) => (
-        <Text fw={600} size="sm">
-          {row.original.name}
-        </Text>
+        <Text data-typography="subsectionHeading">{row.original.name}</Text>
       ),
     },
     {
@@ -797,7 +781,7 @@ export function CategorizationRulesSection() {
       accessorFn: renderConditionSummary,
       minSize: 280,
       Cell: ({ row }) => (
-        <Text size="sm" lineClamp={2}>
+        <Text data-typography="bodySmall" lineClamp={2}>
           {renderConditionSummary(row.original)}
         </Text>
       ),
@@ -864,7 +848,7 @@ export function CategorizationRulesSection() {
     },
     renderRowActions: ({ row }) => renderRuleRowActions(row.original),
     renderEmptyRowsFallback: () => (
-      <Text c="dimmed" size="sm" ta="center" py="lg">
+      <Text data-typography="metadata" c="dimmed" ta="center" py="lg">
         No categorization rules match the current filters.
       </Text>
     ),
@@ -918,32 +902,33 @@ export function CategorizationRulesSection() {
         description="Automatically categorize new transactions when they match your rules."
         addLabel="Add rule"
         onAdd={resetFormForCreate}
-      >
-        <Button
-          aria-label="Rule recommendations"
-          leftSection={<Sparkles size={16} />}
-          loading={generateRecommendations.isPending}
-          onClick={openRecommendations}
-          variant="default"
-        >
-          Suggestions
-        </Button>
-      </SettingsToolbar>
+        secondary={[
+          {
+            id: 'suggestions',
+            label: 'Rule recommendations',
+            icon: Sparkles,
+            loading: generateRecommendations.isPending,
+            onClick: openRecommendations,
+          },
+        ]}
+      />
 
-      <Group gap="xs" wrap={isMobile ? 'wrap' : 'nowrap'}>
-        <TextInput
-          aria-label="Search categorization rules"
-          onChange={(event) => setSearch(event.currentTarget.value)}
-          placeholder="Search rules..."
-          size="md"
-          style={{ flex: '1 1 240px', minWidth: 0 }}
-          value={search}
-        />
-        <SettingsArchiveFilter
-          checked={archivedMode}
-          onChange={setArchivedMode}
-        />
-      </Group>
+      <PageToolbar section>
+        <Group w="100%" gap="xs" wrap={isMobile ? 'wrap' : 'nowrap'}>
+          <TextInput
+            aria-label="Search categorization rules"
+            onChange={(event) => setSearch(event.currentTarget.value)}
+            placeholder="Search rules..."
+            size="md"
+            style={{ flex: '1 1 240px', minWidth: 0 }}
+            value={search}
+          />
+          <SettingsArchiveFilter
+            checked={archivedMode}
+            onChange={setArchivedMode}
+          />
+        </Group>
+      </PageToolbar>
 
       <DataState
         loadingFallback={<TableSkeleton rows={4} />}
@@ -1012,9 +997,7 @@ export function CategorizationRulesSection() {
             />
 
             <Stack gap="xs">
-              <Text fw={600} size="sm">
-                Conditions
-              </Text>
+              <Text data-typography="subsectionHeading">Conditions</Text>
               <TransactionConditionInput
                 accounts={accounts}
                 conditions={conditions}
@@ -1024,7 +1007,7 @@ export function CategorizationRulesSection() {
 
             {(createRule.isError || updateRule.isError) && (
               <Alert color="yellow" title="Duplicate detected">
-                <Text size="sm">
+                <Text data-typography="bodySmall">
                   Categorization rule already exists
                   {conflict ? `: ${conflict.label}` : '.'}
                 </Text>
@@ -1042,10 +1025,8 @@ export function CategorizationRulesSection() {
             )}
 
             <Paper withBorder p="sm" radius="md">
-              <Text size="sm" fw={600}>
-                Summary
-              </Text>
-              <Text size="sm" c="dimmed">
+              <Text data-typography="subsectionHeading">Summary</Text>
+              <Text data-typography="metadata" c="dimmed">
                 When{' '}
                 {conditions
                   .map((condition) => getConditionLabel(condition, accounts))
@@ -1089,18 +1070,18 @@ export function CategorizationRulesSection() {
         {applyRule && (
           <Stack gap="md">
             <Paper withBorder p="sm" radius="md">
-              <Text fw={700}>{applyRule.name}</Text>
+              <Text data-typography="sectionHeading">{applyRule.name}</Text>
               <Group gap="xs" mt={6}>
                 <ColorSwatch
                   color={applyRule.targetCategory.color}
                   size={14}
                   withShadow={false}
                 />
-                <Text size="sm">
+                <Text data-typography="bodySmall">
                   {getCategoryLabel(applyRule.targetCategory)}
                 </Text>
               </Group>
-              <Text c="dimmed" mt={6} size="sm">
+              <Text data-typography="metadata" c="dimmed" mt={6}>
                 {renderConditionSummary(applyRule)}
               </Text>
             </Paper>
@@ -1112,12 +1093,10 @@ export function CategorizationRulesSection() {
                 ['Skipped manual', applicationCounts?.skippedManual],
               ].map(([label, value]) => (
                 <Paper key={label} withBorder p="sm" radius="md">
-                  <Text c="dimmed" size="xs" tt="uppercase">
+                  <Text data-typography="caption" c="dimmed" tt="uppercase">
                     {label}
                   </Text>
-                  <Text fw={800} size="xl">
-                    {value ?? '-'}
-                  </Text>
+                  <Text data-typography="amountLarge">{value ?? '-'}</Text>
                 </Paper>
               ))}
             </SimpleGrid>
@@ -1126,11 +1105,11 @@ export function CategorizationRulesSection() {
 
             <Stack gap="xs">
               <Group justify="space-between" mih={42}>
-                <Text fw={700} size="sm">
+                <Text data-typography="subsectionHeading">
                   Transactions to update
                 </Text>
                 {applicationCounts && (
-                  <Text c="dimmed" size="xs">
+                  <Text data-typography="caption" c="dimmed">
                     Most recent{' '}
                     {applicationPreview.data?.transactions.length ?? 0} of{' '}
                     {applicationCounts.updated.toLocaleString()}
@@ -1218,7 +1197,7 @@ export function CategorizationRulesSection() {
         title={
           <Group gap="xs" wrap="nowrap">
             <Sparkles size={18} />
-            <Text fw={700}>Rule recommendations</Text>
+            <Text data-typography="sectionHeading">Rule recommendations</Text>
           </Group>
         }
         position={isMobile ? 'bottom' : 'right'}
@@ -1228,16 +1207,16 @@ export function CategorizationRulesSection() {
         <Stack gap="md">
           <Group align="flex-start" justify="space-between" wrap="nowrap">
             <Box style={{ minWidth: 0 }}>
-              <Text size="sm" c="dimmed">
+              <Text data-typography="metadata" c="dimmed">
                 Based on your manually categorized transactions.
               </Text>
-              <Text size="sm" c="dimmed" mt={4} mih={20}>
+              <Text data-typography="metadata" c="dimmed" mt={4} mih={20}>
                 {recommendationLastRun
                   ? `Last run ${recommendationLastRun}.`
                   : '\u00a0'}
               </Text>
               {recommendationGenerationRunning && (
-                <Text size="sm" c="dimmed" mt={4}>
+                <Text data-typography="metadata" c="dimmed" mt={4}>
                   You can close this panel and come back later.
                 </Text>
               )}
@@ -1299,10 +1278,10 @@ export function CategorizationRulesSection() {
                 <Group align="flex-start" gap="sm" wrap="nowrap">
                   <Loader size="sm" />
                   <Box>
-                    <Text fw={700} size="sm">
+                    <Text data-typography="subsectionHeading">
                       Finding patterns in manual categories
                     </Text>
-                    <Text c="dimmed" size="sm">
+                    <Text data-typography="metadata" c="dimmed">
                       This may take a moment. You can leave and return later.
                     </Text>
                   </Box>
@@ -1315,12 +1294,12 @@ export function CategorizationRulesSection() {
               recommendationSuggestions.length === 0 && (
                 <Paper withBorder p="md" radius="md">
                   <Stack gap="sm">
-                    <Text fw={700} size="sm">
+                    <Text data-typography="subsectionHeading">
                       {hasRecommendationRun
                         ? 'No recommendations found'
                         : 'No recommendations yet'}
                     </Text>
-                    <Text c="dimmed" size="sm">
+                    <Text data-typography="metadata" c="dimmed">
                       {hasRecommendationRun
                         ? 'The last run did not produce suggestions that passed validation.'
                         : 'Generate suggestions from transactions you categorized manually.'}
@@ -1364,11 +1343,13 @@ export function CategorizationRulesSection() {
         {previewSuggestion && (
           <Stack gap="md">
             <Paper withBorder p="sm" radius="md">
-              <Text fw={700}>{previewSuggestion.name}</Text>
+              <Text data-typography="sectionHeading">
+                {previewSuggestion.name}
+              </Text>
               <Box mt={6}>
                 {renderCategoryLabel(previewSuggestion.targetCategory)}
               </Box>
-              <Text c="dimmed" mt={6} size="sm">
+              <Text data-typography="metadata" c="dimmed" mt={6}>
                 {renderConditionSummary(previewSuggestion)}
               </Text>
             </Paper>
@@ -1380,12 +1361,10 @@ export function CategorizationRulesSection() {
                 ['Skipped manual', suggestionPreviewCounts?.skippedManual],
               ].map(([label, value]) => (
                 <Paper key={label} withBorder p="sm" radius="md">
-                  <Text c="dimmed" size="xs" tt="uppercase">
+                  <Text data-typography="caption" c="dimmed" tt="uppercase">
                     {label}
                   </Text>
-                  <Text fw={800} size="xl">
-                    {value ?? '-'}
-                  </Text>
+                  <Text data-typography="amountLarge">{value ?? '-'}</Text>
                 </Paper>
               ))}
             </SimpleGrid>
@@ -1394,17 +1373,17 @@ export function CategorizationRulesSection() {
 
             <Stack gap="xs">
               <Group justify="space-between" mih={42}>
-                <Text fw={700} size="sm">
+                <Text data-typography="subsectionHeading">
                   Transactions to update
                 </Text>
-                <Text c="dimmed" size="xs">
+                <Text data-typography="caption" c="dimmed">
                   Most recent{' '}
                   {previewSuggestion.previewTransactions.length.toLocaleString()}{' '}
                   of {previewSuggestion.updated.toLocaleString()}
                 </Text>
               </Group>
               {previewSuggestion.previewTransactions.length === 0 ? (
-                <Text c="dimmed" size="sm">
+                <Text data-typography="metadata" c="dimmed">
                   No eligible transactions to update.
                 </Text>
               ) : isMobile ? (

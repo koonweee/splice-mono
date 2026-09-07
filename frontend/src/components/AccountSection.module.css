@@ -1,12 +1,9 @@
-.toggle {
-  --pressable-feedback-background: transparent;
-}
-
 .groupDivider {
   opacity: 0.6;
 }
 
 .groupHeader {
+  padding-block: var(--mantine-spacing-xs);
   background-color: var(--splice-group-header);
 }
 
@@ -18,17 +15,9 @@
   opacity: 0.3;
 }
 
-.chevron {
-  opacity: 0.6;
-}
-
-.toggle:focus-visible .chevron,
-.toggle[data-pressed='true'] .chevron {
-  opacity: 1;
-}
-
-@media (--supports-hover) {
-  .toggle:hover .chevron {
-    opacity: 1;
+/* The percentage keeps a full touch target without adding another inset. */
+@media (--touch-controls) {
+  .groupHeader {
+    padding-block: 0;
   }
 }

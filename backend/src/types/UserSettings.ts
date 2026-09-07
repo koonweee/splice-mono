@@ -6,6 +6,8 @@ export const AppearancePreferenceSchema = registerSchema(
   z
     .object({
       mode: z.enum(['light', 'dark', 'oled']),
+      /** Use monospace for monetary figures; omitted means the normal body font. */
+      monospaceAmounts: z.boolean().optional(),
       accent: z
         .string()
         .regex(/^#[0-9a-fA-F]{6}$/)

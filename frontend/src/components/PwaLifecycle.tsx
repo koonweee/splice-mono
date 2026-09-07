@@ -397,7 +397,7 @@ export function PwaLifecycle() {
           role="alert"
         >
           <Group gap="sm" justify="space-between">
-            <Text size="sm">
+            <Text data-typography="bodySmall">
               Private data is hidden on this device. Reconnect to finish signing
               out on the server.
             </Text>
@@ -420,7 +420,7 @@ export function PwaLifecycle() {
           role="alert"
         >
           <Group gap="sm" justify="space-between">
-            <Text size="sm">{error}</Text>
+            <Text data-typography="bodySmall">{error}</Text>
             <Button
               size="xs"
               disabled={!online}
@@ -441,8 +441,8 @@ export function PwaLifecycle() {
           title="Update available"
           variant="light"
         >
-          <Group gap="sm" justify="space-between">
-            <Text size="sm">
+          <Group gap="sm" justify="space-between" wrap="nowrap">
+            <Text data-typography="bodySmall">
               {transition.blocked
                 ? 'Finish your edits and saves before updating.'
                 : 'Update to use the latest version of Splice.'}
@@ -472,7 +472,7 @@ export function PwaLifecycle() {
           role="status"
         >
           <Group gap="sm" justify="space-between">
-            <Text size="sm">
+            <Text data-typography="bodySmall">
               {transition.blocked
                 ? 'Finish your edits and saves, then open the notification.'
                 : 'Your notification is ready.'}

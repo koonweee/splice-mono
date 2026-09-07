@@ -113,7 +113,7 @@ export function ManualBrokeragePositionsEditor({
   return (
     <Stack gap="sm">
       <Box>
-        <Text fw={500} size="sm" mb={4}>
+        <Text data-typography="label" mb={4}>
           Positions
         </Text>
         <Popover
@@ -188,11 +188,15 @@ export function ManualBrokeragePositionsEditor({
             }}
           >
             {searchQuery.isError ? (
-              <Text c="var(--splice-error)" role="alert" size="sm">
+              <Text
+                data-typography="bodySmall"
+                c="var(--splice-error)"
+                role="alert"
+              >
                 Stock search failed. Try again in a moment.
               </Text>
             ) : searchQuery.isSuccess && searchQuery.data.length === 0 ? (
-              <Text c="dimmed" size="sm">
+              <Text data-typography="metadata" c="dimmed">
                 No supported stocks or ETFs found.
               </Text>
             ) : searchQuery.isSuccess ? (
@@ -226,15 +230,15 @@ export function ManualBrokeragePositionsEditor({
                       >
                         <Group justify="space-between" wrap="nowrap" w="100%">
                           <Box style={{ minWidth: 0, textAlign: 'left' }}>
-                            <Text fw={600} size="sm">
+                            <Text data-typography="rowTitleSmall">
                               {security.symbol} · {security.name}
                             </Text>
-                            <Text c="dimmed" size="xs">
+                            <Text data-typography="caption" c="dimmed">
                               {security.exchangeName} · {security.currency}
                             </Text>
                           </Box>
                           {alreadyAdded && (
-                            <Text c="dimmed" size="xs">
+                            <Text data-typography="caption" c="dimmed">
                               Added
                             </Text>
                           )}
@@ -257,15 +261,15 @@ export function ManualBrokeragePositionsEditor({
 
       {positions.length === 0 ? (
         <Paper withBorder p="md">
-          <Text c="dimmed" size="sm" ta="center">
+          <Text data-typography="metadata" c="dimmed" ta="center">
             No positions added yet.
           </Text>
         </Paper>
       ) : (
         <Stack gap="xs">
           <div aria-hidden="true" className={styles.positionHeader}>
-            <Text size="xs">Stock</Text>
-            <Text size="xs">Shares</Text>
+            <Text data-typography="caption">Stock</Text>
+            <Text data-typography="caption">Shares</Text>
             <span />
           </div>
           {positions.map((position, index) => {
@@ -273,14 +277,14 @@ export function ManualBrokeragePositionsEditor({
             return (
               <div className={styles.positionRow} key={position.symbol}>
                 <Box className={styles.positionDetails}>
-                  <Text fw={600} size="sm" truncate>
+                  <Text data-typography="rowTitleSmall" truncate>
                     {position.symbol}
                     {position.security?.name
                       ? ` · ${position.security.name}`
                       : ''}
                   </Text>
                   {position.security && (
-                    <Text c="dimmed" size="xs" truncate>
+                    <Text data-typography="caption" c="dimmed" truncate>
                       {position.security.exchangeName} ·{' '}
                       {position.security.currency}
                     </Text>

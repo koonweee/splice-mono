@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import {
   notificationInboxQueryOptions,
   notificationSummaryQueryOptions,
+  useClearNotifications,
   useNotificationAction,
 } from '../../lib/queries/notification'
 import { getApiErrorMessage } from '../../lib/api-errors'
@@ -29,6 +30,7 @@ export function NotificationMenu({
     enabled: opened,
   })
   const mutation = useNotificationAction()
+  const clearMutation = useClearNotifications()
 
   const act = async (
     item: NotificationInboxItem,
@@ -71,6 +73,27 @@ export function NotificationMenu({
     }
   }
 
+  const clearAll = async () => {
+    if (busy.current) return
+    busy.current = true
+    setError(undefined)
+    const generation = getAuthGeneration()
+    try {
+      await clearMutation.mutateAsync()
+      assertAuthGeneration(generation)
+    } catch (cause) {
+      if (getAuthGeneration() === generation)
+        setError(
+          getApiErrorMessage(
+            cause,
+            'Unable to clear notifications. Please try again.',
+          ),
+        )
+    } finally {
+      busy.current = false
+    }
+  }
+
   return (
     <>
       <NotificationBell
@@ -104,6 +127,8 @@ export function NotificationMenu({
         hasMore={inbox.hasNextPage}
         loadingMore={inbox.isFetchingNextPage}
         onLoadMore={() => void inbox.fetchNextPage()}
+        clearing={clearMutation.isPending}
+        onClearAll={() => void clearAll()}
       />
     </>
   )

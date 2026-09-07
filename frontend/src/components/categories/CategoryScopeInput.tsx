@@ -88,9 +88,7 @@ export function CategoryScopeInput({
 
   return (
     <Stack gap="xs">
-      <Text fw={600} size="sm">
-        {label}
-      </Text>
+      <Text data-typography="subsectionHeading">{label}</Text>
       <SegmentedControl
         size={size}
         value={value.mode}
@@ -189,11 +187,11 @@ export function CategoryScopeInput({
                     }}
                   />
                   <Box style={{ minWidth: 0 }}>
-                    <Text size="sm" truncate>
+                    <Text data-typography="bodySmall" truncate>
                       {category.detailed}
                     </Text>
                     <Group gap={4} wrap="nowrap">
-                      <Text size="xs" c="dimmed" truncate>
+                      <Text data-typography="caption" c="dimmed" truncate>
                         {category.primary}
                       </Text>
                       {category.archivedAt && (

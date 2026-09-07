@@ -7,6 +7,7 @@ import {
   getCryptoNetworkFromInstitution,
 } from '../../lib/crypto-utils'
 import { Pressable } from '../Pressable'
+import toggleStyles from '../SectionToggle.module.css'
 import { AccountRow } from './AccountRow'
 import { ProviderBadge } from './ProviderBadge'
 import type { Account } from '../../api/models'
@@ -25,19 +26,24 @@ export function InstitutionSection({
   const cryptoNetwork = getCryptoNetworkFromInstitution(institution)
 
   return (
-    <Paper withBorder p="md" radius="md">
+    <section>
       <Pressable
+        className={toggleStyles.toggle}
         aria-expanded={opened}
         aria-label={`${opened ? 'Collapse' : 'Expand'} ${institution}`}
         onClick={toggle}
         style={{
           borderRadius: 'var(--mantine-radius-sm)',
-          marginBottom: opened ? 'var(--mantine-spacing-md)' : 0,
+          marginBottom: opened ? 'var(--mantine-spacing-xs)' : 0,
         }}
       >
-        <Group justify="space-between" px={4} py={2}>
-          <Group gap="sm">
-            <Title order={3}>
+        <Group justify="space-between" wrap="nowrap" px={4} py={2}>
+          <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+            <Title
+              data-typography="sectionHeading"
+              order={3}
+              style={{ minWidth: 0, overflowWrap: 'anywhere' }}
+            >
               {cryptoNetwork && (
                 <span
                   style={{
@@ -53,19 +59,31 @@ export function InstitutionSection({
             <ProviderBadge provider={provider} />
           </Group>
           {opened ? (
-            <IconChevronUp aria-hidden size={18} />
+            <IconChevronUp
+              aria-hidden
+              size={18}
+              className={toggleStyles.chevron}
+              style={{ flexShrink: 0 }}
+            />
           ) : (
-            <IconChevronDown aria-hidden size={18} />
+            <IconChevronDown
+              aria-hidden
+              size={18}
+              className={toggleStyles.chevron}
+              style={{ flexShrink: 0 }}
+            />
           )}
         </Group>
       </Pressable>
       <Collapse in={opened}>
-        <Stack gap="xs">
-          {accounts.map((account) => (
-            <AccountRow key={account.id} account={account} />
-          ))}
-        </Stack>
+        <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
+          <Stack gap={0}>
+            {accounts.map((account) => (
+              <AccountRow key={account.id} account={account} />
+            ))}
+          </Stack>
+        </Paper>
       </Collapse>
-    </Paper>
+    </section>
   )
 }

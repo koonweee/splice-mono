@@ -23,7 +23,7 @@
 }
 
 .label {
-  font-weight: 600;
+  @splice-type rowTitleSmall;
 }
 
 .meta {

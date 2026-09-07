@@ -110,7 +110,7 @@ window.__usefulLoadingUX=()=>{
  if(location.pathname==='/transactions')return heading==='Transactions'&&text.includes('Fixture merchant')&&text.includes('Fixture checking')&&document.querySelectorAll('tbody tr').length>1;
  if(location.pathname==='/accounts')return heading==='Accounts'&&text.includes('Fixture checking')&&text.includes('Fixture brokerage');
  if(location.pathname==='/analysis')return heading==='Analysis'&&text.includes('Inflows')&&text.includes('Outflows')&&!!text.match(/\\$[0-9]/);
- if(location.pathname==='/settings')return heading==='Settings'&&text.includes('Display currency')&&text.includes('Hide 0 balance accounts');
+ if(location.pathname==='/settings')return heading==='Settings'&&text.includes('Display currency')&&text.includes('Hide zero balances on Home');
  return false;
 };
 addEventListener('error',e=>state.errors.push({at:performance.now(),message:e.message}));

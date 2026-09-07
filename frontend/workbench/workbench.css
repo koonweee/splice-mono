@@ -53,3 +53,9 @@ html[data-workbench-motion='reduce'] *::after {
   animation: none !important;
   transition-duration: 0.01ms !important;
 }
+
+.touch-audit[data-outlines='true']
+  :is(button, .splice-choice-body, .splice-input-input) {
+  outline: 1px dashed var(--mantine-color-dimmed);
+  outline-offset: -1px;
+}

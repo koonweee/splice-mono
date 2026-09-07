@@ -81,17 +81,17 @@ afterEach(() => {
 })
 
 describe('NetWorthCard', () => {
-  it('renders the current value', () => {
+  it('renders the current value without cents', () => {
     renderNetWorthCard()
 
-    expect(screen.getByText('$123.45')).toBeTruthy()
+    expect(screen.getByText('$123')).toBeTruthy()
   })
 
   it('masks the summary value and hovered chart value when hidden', () => {
     renderNetWorthCard({ balancesHidden: true })
 
     expect(screen.getByText('****')).toBeTruthy()
-    expect(screen.queryByText('$123.45')).toBeNull()
+    expect(screen.queryByText('$123')).toBeNull()
     expect(screen.getByText('+12.34%')).toBeTruthy()
     expect(screen.getByText('from last month')).toBeTruthy()
 
@@ -99,7 +99,7 @@ describe('NetWorthCard', () => {
 
     expect(screen.getByText('Apr 1')).toBeTruthy()
     expect(screen.getByText('****')).toBeTruthy()
-    expect(screen.queryByText('$4,321.00')).toBeNull()
+    expect(screen.queryByText('$4,321')).toBeNull()
   })
 
   it('uses exact money and its currency for the hovered summary', () => {
@@ -117,7 +117,7 @@ describe('NetWorthCard', () => {
       ],
     })
     fireEvent.click(screen.getByRole('button', { name: /hover point/i }))
-    expect(screen.getByText('€9,007,199,254,740,993.01')).toBeTruthy()
+    expect(screen.getByText('€9,007,199,254,740,993')).toBeTruthy()
   })
 
   it('shows the absolute net worth change from the percentage trigger', async () => {
@@ -158,16 +158,16 @@ it('discards an old hovered value and open comparison when the period changes', 
   const { rerender } = render(card(false))
   fireEvent.click(screen.getByText('+10.00%'))
   fireEvent.click(screen.getByRole('button', { name: 'hover point' }))
-  expect(screen.getByText('$999.00')).toBeTruthy()
+  expect(screen.getByText('$999')).toBeTruthy()
   rerender(card(true))
-  expect(screen.getByText('$123.45')).toBeTruthy()
+  expect(screen.getByText('$123')).toBeTruthy()
   expect(screen.queryByText('+10.00%')).toBeNull()
   expect(screen.queryByText('from last month')).toBeNull()
   expect(screen.queryByText('+$123.45')).toBeNull()
   expect(screen.getByRole('button', { name: 'hover point' })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'hover point' }))
-  expect(screen.queryByText('$999.00')).toBeNull()
+  expect(screen.queryByText('$999')).toBeNull()
   rerender(card(false, [...chartData]))
-  expect(screen.getByText('$123.45')).toBeTruthy()
-  expect(screen.queryByText('$999.00')).toBeNull()
+  expect(screen.getByText('$123')).toBeTruthy()
+  expect(screen.queryByText('$999')).toBeNull()
 })

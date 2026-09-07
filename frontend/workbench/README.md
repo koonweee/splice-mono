@@ -13,8 +13,9 @@ All states use generated TanStack mutations and a per-document in-memory store.
 ## Notification inbox
 
 `/?frame=true&example=notification-inbox&state=ready&mode=light&width=390`
-opens the compact production drawer directly. Its states include `loading`,
-`empty`, `error`, `refresh-error`, `refreshing`, `pending`, and `mutation-error`.
+opens the production bottom sheet directly. Its states include `loading`,
+`empty`, `error`, `refresh-error`, `refreshing`, `pending`, `mutation-error`,
+`clearing`, and `clear-error`.
 Read and dismiss use separate icon buttons; opening a row follows its local
 fixture destination. The example keeps its transaction count independent from
 the unread indicator and has no retention footer.
@@ -38,10 +39,10 @@ yarn workbench        # localhost:4001, no backend required
 yarn workbench:build  # static output in .workbench/
 ```
 
-The workbench contains 36 examples, including real Home, Accounts, Transactions,
+The workbench contains 40 examples, including real Home, Accounts, Transactions,
 Analysis, Settings and landing routes; account dialogs; controls/status;
 interactive rows/retained errors; editors/nested pickers/confirmation; and chart
-compositions. `catalog.json` maps 87 rendered components to examples. Registration
+compositions. `catalog.json` maps 93 rendered components to examples. Registration
 is checked against exported JSX components in `src/components`; the completed
 initial visual/state review is recorded in the validation document above. Catalog membership alone is not proof
 that every interaction has been verified.
@@ -83,6 +84,30 @@ The phone date drawer and confirmation should consume the first Escape and keep
 their editor open. In the position editor, type a search, use Arrow Down to enter
 the result buttons, Tab between results, and Enter to select; Escape returns to
 the search field without closing an enclosing editor.
+
+## Shared control coverage
+
+The Analysis and Transactions page examples cover `DateRangeControl` with
+`growOnMobile`: the date trigger fills the Analysis toolbar and shares one row
+with the Filters icon in Transactions. Desktop keeps the normal fixed width.
+In Transactions, enter Bulk edit to review the selection count on the first row,
+with category selection and Save on the second row. Toggle the header's bulk
+selection action again to exit selection mode.
+
+[Controls and status](http://localhost:4001/?example=controls) is the shared
+primitive reference: segmented selector, text/decimal/number inputs, select and
+multi-select, autocomplete, textarea, color/file inputs, checkbox/radio/switch,
+button variants, icon/close/menu buttons, burger, tabs, navigation links and date
+range picker. The segmented selector also appears in
+[Compact touch targets](http://localhost:4001/?example=touch-controls), with its
+target boundary overlay and disabled state.
+
+Specialized controls remain in their production compositions: account/category
+pickers in category-inputs and editors, Home periods in interaction-surfaces, and page
+actions in page and touch examples. The exported-component catalog does not
+enumerate Mantine primitives or guarantee every interaction state. When adding
+or changing a shared primitive, update Controls alongside the relevant real
+composition; use touch-controls for target geometry and touch state comparisons.
 
 ## Baseline findings
 
@@ -136,7 +161,6 @@ Run `yarn test workbench --maxWorkers=2`, `yarn tokens:check`, and
 `yarn workbench:build`. CI runs those checks. The account-card
 legacy component has no masking prop; its fixture tile is labelled accordingly.
 
-
 ## Recurring and access lifecycle fixtures
 
 The real Settings panels use `settings-store.ts` through the same fixture request
@@ -152,7 +176,6 @@ Three tests cover per-instance isolation, one-time token response shape, monthly
 preview behavior and failed-write integrity. The OLED phone browser has verified
 reveal/revoke, schedule pause/resume and edit/save. Complete mode/viewport coverage remains pending; rule-management fixtures are
 documented below.
-
 
 ## Transaction bulk fixtures
 
@@ -182,7 +205,6 @@ clicking Undo in automated captures; clicking immediately can miss the moving
 button. The successful check compared both the rendered row and the exact fixture
 module instance. Vite HMR query suffixes matter when inspecting a module: importing
 an unversioned URL can create a separate fixture store.
-
 
 ## Rule manager fixtures
 
@@ -266,9 +288,9 @@ state. Deliberate chunk failures are expected fixtures, and Reload repeats the
 selected scenario rather than silently changing its result.
 
 Stable capture URLs:
+
 - `/?frame=true&example=editors&state=confirm-error&mode=light`
 - `/?frame=true&example=deferred&state=overlay-loading&mode=oled`
-
 
 Settings examples include a section selector. Use `tab=categories`, `tab=analysis`,
 `tab=categorization`, `tab=recurring`, or `tab=access` together with `state=empty`
@@ -278,9 +300,150 @@ remain available. Example:
 The production Settings route validates the tab, and comparison frames receive the
 same section. Unknown tabs fall back to General.
 
-
 ## Chart gesture checks
 
 Use the Home or history example for chart interaction changes. On touch devices, tap selects immediately; horizontal scrubbing tracks the nearest point and keeps the selection after release. The touch tooltip stays above the chart while a vertical guide marks the point. Outside presses, vertical scrolling, cancellation and data/range changes dismiss inspection. Verify that masking remains intact and yearly labels include the year.
 
 Check mouse hover/click/drag and keyboard arrows/Escape separately. Tooltip position should update without a transition lag. Use native touch input in a mobile browser or emulated device rather than treating a mouse click as proof of touch behavior. Workbench fixtures cover interactions; also test real Home data when changing chart selection or range handling.
+
+## Tint and interaction review
+
+`/?frame=true&example=interaction-surfaces&mode=dark&accent=%23ce9a7e`
+puts the real Home period control alongside shared secondary actions, menus,
+inputs, a picker, navigation, tabs and segmented controls. Use `state=extended`
+for the selected More trigger and `state=disabled` for disabled sample controls.
+Hover an unselected period beside the selected period, hover the selected period,
+open the menu and move with arrow keys, then Tab through controls. Repeat in
+Light/Dark/OLED with Neutral and a warm/cool accent. Use `account-overview` for
+real account cards and row hovers. Status badges/destructive actions are comparison
+anchors and retain semantic colors. These are live interactions, not simulated
+hover classes; loading the URL alone does not verify them.
+
+The compact `page-transactions` example renders the page list edge-to-edge:
+date header backgrounds, row hit areas and dividers reach the shell edges, while
+rows remain transparent and their text and actions retain the previous inset. Check ready and refresh-error
+with Bulk edit enabled. Dialog/drilldown examples remain contained. Desktop keeps
+its table layout. This is part of the existing real-page fixture, not a replica.
+
+Input border experiment: `editors` and `controls` now show borderless resting
+inputs. Focus still shows the accent border; `state=error` preserves validation
+borders. Check ready/error/pending against each base mode. Border width remains
+reserved to avoid a layout shift on focus.
+
+Bordered default/outline buttons and action icons also use transparent borders;
+keyboard focus rings remain. Compare these in controls and interaction-surfaces.
+
+The `page-accounts` real-page example now uses subtle Sync all, Backfill and Add
+account buttons. Inspect these alongside the existing subtle row actions.
+
+## All pages side by side
+
+Choose **View → All pages side by side**, or open
+`/?view=pages&mode=dark&accent=%2386aee0&width=390`.
+Home, Accounts, Transactions, Analysis and Settings render in separate interactive
+frames. Shared theme, accent, width, masking, motion and API controls apply to
+all five. Settings section also works here. Unsupported component states fall
+back to each page's first state. Theme comparison is disabled in this view.
+
+## Shared page layout checks
+
+Home account sections and Accounts institution sections share
+`SectionToggle.module.css`: hovering, pressing or keyboard-focusing a section
+brightens its chevron without filling the header background.
+
+Use `view=pages` to compare the non-Home headers. Accounts: one icon plus More on
+phones; three labeled actions on desktop (a lone overflow action is promoted).
+Transactions: Add and Bulk edit are both directly visible; Bulk edit
+replaces filters; toggling the header action again restores them. Settings: mobile section selector replaces
+tabs, and Categories/rule/Recurring Add actions appear in the page header. Switch
+sections to check that old actions and filters disappear. General/Access forms
+retain their own submission controls. Analysis keeps Audit in the title row and
+dates in the toolbar. Existing Home examples are unchanged by this layout pass.
+
+Validated September 7, 2026: Accounts in Dark/Warm clay at 390, 744 and
+1280px; Transactions in Dark/Warm clay at 390px and Light/Slate blue at 320
+and 1280px; Analysis in OLED/Slate blue at 390px; Settings in Light/Slate blue
+and Dark/Warm clay at phone and desktop widths. Checked action overflow,
+bulk selection/Done, full-width mobile rows, section navigation, and removal
+of section actions/filters. Real local Accounts opened its Add dialog; real
+Settings changed from Categories to General with the route updating. No data
+was saved. PageActions tests cover action limits, pending overflow and section
+unmount cleanup.
+
+The workbench uses `node_modules/.vite-workbench` for dependency optimization.
+Keep its cache separate from the main app so simultaneous dev servers do not
+invalidate each other's optimized imports.
+
+## Compact touch target review
+
+Open `/?example=touch-controls&mode=dark&width=390` (ready or disabled), or
+`/?frame=true&example=touch-controls` at the actual viewport. Toggle Show target
+boundaries, tap checkbox padding, clear/reselect inputs, open the menu and inspect
+focus. Check 1280px with a coarse pointer as well as a normal desktop mouse.
+The dedicated example intentionally includes xs controls: shared defaults must
+keep them tappable. Use page-accounts to check the single touch action menu,
+page-transactions for table actions, page-home for range/graph interactions, and
+page-settings for row and form density. See the [touch audit](../docs/touch-interaction-audit.md).
+
+## Typography
+
+`/?example=typography&mode=dark&width=390` renders every production type role and
+its canonical metrics, plus a section/row/input composition. The role definitions
+are the source of the sample labels too. Compare 390px and 1280px for page-title
+responsiveness, and use the all-pages view to evaluate hierarchy. See
+`../docs/typography-audit.md` for the migration, size choices and actual checks.
+New typography must be a named role; `yarn tokens:check` rejects local overrides.
+
+## Page density review
+
+The all-pages view remains the maintained comparison of production compositions.
+Accounts, Settings and Analysis now support `state=long-content` in addition to
+ready/empty. General uses its real form; Settings lists share SettingsRowActions.
+Useful captures (add `frame=true` for an actual browser viewport):
+
+- `/?example=page-accounts&state=long-content&mode=dark&width=320` — manual, linked,
+  disconnected and long names; open the menu to rename or inspect confirmation.
+- `/?example=page-settings&tab=general&mode=light&width=390&failure=writes` — failed
+  saves retain drafts. Use `latency=600` to inspect pending actions.
+- `/?example=page-settings&tab=categorization&state=long-content&width=390` — long
+  conditions/results, archive/restore, and menu-to-editor focus. Also use tabs
+  categories, analysis and recurring for selection, matching window and schedules.
+- `/?example=page-analysis&state=long-content&mode=oled&width=320` — large totals
+  and category drilldown. Use `latency=10000` for initial loading, `failure=reads`
+  for initial error and `state=empty` for a zero-value period.
+- `/?view=pages&mode=dark&accent=%23ce9a7e&width=390&motion=reduce&masked=true` —
+  compare all five pages. Masking hides Home balances; Analysis and Transactions
+  amounts have never consumed that preference and remain visible.
+
+Validated September 7, 2026: 320/390px phones, 744px Accounts, 1280px desktop
+Settings/Analysis, and 1280px coarse-pointer row menus. Light, Dark, OLED, warm
+clay, slate blue and neutral were represented. Inspected long content, loading,
+empty and read errors, failed save/rename drafts, category selection, archive and
+restore, collapse, category drilldowns and editor focus/return. Tested retained
+refresh errors in the existing route/section behavior suites. No new browser
+runtime errors; local Accounts, General Settings and empty Analysis were also
+smoke-checked without writing real data. This was Chromium validation, not a
+physical-device test. See the density plan for test/build results and screenshots.
+
+Asset group percentages in `account-overview` and `page-home` reveal the group
+amount on hover/tap (including Other), using the same PercentAmountPopover as
+change percentages. Verify keyboard activation and dismissal, converted currency
+totals and masking. Mixed currencies without conversion retain a plain percentage
+rather than showing a misleading combined amount. Shared behavior and exact sums
+are covered by AccountSection.test.tsx and ChangePercentPopover.test.tsx.
+
+Account modal tabs are ordered History, Details, then Holdings/Activity where
+available. The account-dialogs example and its loading skeleton use these labels;
+existing account-type defaults are retained.
+
+Amount font preference: General exposes “Use monospace font for amounts” below
+Hide zero balances on Home. It previews immediately and follows Save/Cancel;
+`failure=writes` retains the draft and restores the saved preview after failure.
+The workbench's Monospace amounts checkbox (`monospace=true`) sets the same
+appearance field in every frame for side-by-side review. It defaults off. Check
+Typography, Home, dialogs, percentages and numeric inputs with either font.
+Saving in a fixture remains isolated from real user preferences.
+
+Home headline net worth uses whole-currency formatting, including hovered history
+values; percentage popovers retain exact cents. The comparison percentage and
+its period label use a 6px gap. Review in page-home or all-pages.

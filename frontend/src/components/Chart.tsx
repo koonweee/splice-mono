@@ -33,14 +33,14 @@ function ChartTooltip({
   }, [inspectedPoint, inspectionEnabled])
   return (
     <Paper px="md" py="xs" withBorder shadow="md" radius="md">
-      <Text size="xs" c={value ? 'dimmed' : undefined} mb={value ? 4 : 0}>
+      <Text
+        data-typography="caption"
+        c={value ? 'dimmed' : undefined}
+        mb={value ? 4 : 0}
+      >
         {label}
       </Text>
-      {value && (
-        <Text fw={600} size="lg">
-          {value}
-        </Text>
-      )}
+      {value && <Text data-typography="amountLarge">{value}</Text>}
     </Paper>
   )
 }

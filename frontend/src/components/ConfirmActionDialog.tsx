@@ -56,10 +56,13 @@ export function ConfirmActionDialog({
       }}
     >
       <Stack gap="sm">
-        <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
+        <Text
+          data-typography="sectionHeading"
+          style={{ overflowWrap: 'anywhere' }}
+        >
           {targetLabel}
         </Text>
-        <Text component="div" size="sm">
+        <Text data-typography="bodySmall" component="div">
           {consequence}
         </Text>
         {error && (

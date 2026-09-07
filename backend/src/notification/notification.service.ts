@@ -295,6 +295,22 @@ export class NotificationService {
     if (!result.affected) throw new NotFoundException('Notification not found');
   }
 
+  async archiveAll(userId: string): Promise<void> {
+    await this.notificationRepository
+      .createQueryBuilder()
+      .update(NotificationEntity)
+      .set({
+        status: 'archived',
+        archivedAt: () => 'COALESCE("archivedAt", now())',
+      })
+      .where('"userId" = :userId AND type <> :test AND status <> :archived', {
+        userId,
+        test: 'system.test',
+        archived: 'archived',
+      })
+      .execute();
+  }
+
   async registerPushSubscription(
     userId: string,
     dto: RegisterPushSubscriptionDto,

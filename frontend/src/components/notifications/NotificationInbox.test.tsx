@@ -34,6 +34,7 @@ function mount(props: Partial<NotificationInboxProps> = {}) {
     onRead: vi.fn(),
     onDismiss: vi.fn(),
     onOpen: vi.fn(),
+    onClearAll: vi.fn(),
   }
   render(
     <MantineProvider>
@@ -89,6 +90,27 @@ describe('notification inbox', () => {
         .hasAttribute('disabled'),
     ).toBe(true)
     expect(screen.getByText('Please reconnect and retry.')).toBeTruthy()
+  })
+  it('clears the inbox from the sheet header and disables actions while clearing', () => {
+    const actions = mount()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Clear all notifications' }),
+    )
+    expect(actions.onClearAll).toHaveBeenCalledOnce()
+    expect(actions.onOpen).not.toHaveBeenCalled()
+
+    cleanup()
+    mount({ clearing: true })
+    expect(
+      screen
+        .getByRole('button', { name: 'Clear all notifications' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+    expect(
+      screen
+        .getByRole('button', { name: 'Dismiss: New transactions synced' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
   })
   it('announces unread count independently of any transaction badge', () => {
     render(

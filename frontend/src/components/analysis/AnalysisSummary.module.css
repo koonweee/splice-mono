@@ -1,0 +1,14 @@
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mantine-spacing-sm);
+}
+.summary > div {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 max-content;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}

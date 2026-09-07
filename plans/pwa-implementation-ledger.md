@@ -90,7 +90,7 @@ Status: verified
 
 ## 6. Make Releases Discoverable Without Losing Work
 
-Status: in_progress
+Status: verified
 
 - **6.task.1 — verified:** Generate one opaque `buildId` per production build and use it consistently in the application bundle, worker, and `/version.json`. Include it in worker bytes so a UI-only release changes the worker. Do not expose environment values or credentials through version metadata.
 - **6.task.2 — verified:** Check version on initial readiness and visible/online resume, throttled to at most once per minute. Explicitly call `registration.update()` as needed. Surface detection/check/apply failures separately and keep retry available; a failed version request must not log the user out.
@@ -102,7 +102,7 @@ Status: in_progress
 - **6.acceptance.1 — verified:** An A/B production-build test changes UI only, observes different worker/version metadata, and shows an actionable update in the A client within one foreground check after B is served.
 - **6.acceptance.2 — verified:** In two tabs, Update in a clean tab does not reload a tab with a manual transaction editor or dirty Settings. The blocked tab can later update without losing a submitted save or restoring private drafts from storage.
 - **6.acceptance.3 — verified:** A notification click during editing preserves the draft and exposes the pending destination; a cold click opens the correct page through authentication.
-- **6.acceptance.4 — in_progress:** Offline update attempts, failed worker installs, missing old lazy chunks, server rollback, and repeated clicks recover without reload loops or mixed-version asset substitution. A forced Chromium worker-restart race activates after31s, beyond the initial10s listener deadline; bounded late-activation support and its production regression are being implemented.
+- **6.acceptance.4 — verified:** Offline update attempts, failed worker installs, missing old lazy chunks, server rollback, and repeated clicks recover without reload loops or mixed-version asset substitution. Fresh Linux18 validation includes a forced native worker restart; the app completes its update in31.293s within the45s activation budget, with draft guards and debugger restoration verified.
 
 ## 7. Cache Useful Static Assets And Reduce Startup Overhead
 
@@ -138,7 +138,7 @@ Status: verified
 
 ## 9. Polish Installed Layout And Add Shortcuts
 
-Status: in_progress
+Status: blocked (implementation verified; physical installed-device checks unavailable)
 
 - **9.task.1 — verified:** Coordinate `frontend/src/routes/__root.tsx`, `AppShellLayout.tsx/.module.css`, `PwaLifecycle.module.css`, `DataState.module.css`, and `forms/EditorModal.module.css` around `viewport-fit=cover` and shared safe-area variables. Extend header/main offsets together; avoid double-padding already inset editor footers.
 - **9.task.2 — verified:** Cover top, bottom, and landscape side insets; preserve `100dvh`/scrolling behavior and make save actions reachable with the software keyboard. Apply shared design-system tokens and maintain theme/status-bar contrast in Light, Dark, and OLED.
@@ -152,27 +152,27 @@ Status: in_progress
 
 ## 10. Validate Upgrade, Privacy Cutover, And Rollback
 
-Status: in_progress
+Status: verified
 
 - **10.task.1 — verified:** Add an automated production-build lifecycle harness under proposed `frontend/scripts/test-pwa-lifecycle.mjs`. Serve A and B from one isolated test origin and drive real service-worker/cache events; do not equate Vitest mocks with release validation. Use the production local-auth flow for authenticated checks, with synthetic users/data.
 - **10.task.2 — verified:** Add proposed `frontend/scripts/check-pwa-artifacts.mjs` to verify cache contents, build-ID agreement, byte budgets, shortcut destinations, and no-store public version/worker headers. Wire these focused commands into `frontend/package.json` and the relevant frontend CI job.
 - **10.task.3 — verified:** Use `backend/test/helpers/isolated-postgres.ts` for migrations and concurrency tests. The dedicated loopback benchmark database is mandatory; a skipped PostgreSQL suite is not a passing acceptance check.
-- **10.task.4 — pending:** Roll out additive schema and compatible server support first. Stop/drain old push processors before the one-time legacy pause so an old binary cannot keep selecting unbound rows. Deploy the new frontend/worker, then enable only session-bound V2 sends. Rebind migration-eligible devices on open without replaying old deliveries.
+- **10.task.4 — verified:** Roll out additive schema and compatible server support first. Stop/drain old push processors before the one-time legacy pause so an old binary cannot keep selecting unbound rows. Deploy the new frontend/worker, then enable only session-bound V2 sends. Rebind migration-eligible devices on open without replaying old deliveries.
 - **10.task.5 — verified:** Retain compatibility for existing auth tokens and top-level worker payload fields. Record that a suspended old page may need one reload to obtain the enrollment protocol; keep server-side privacy enforcement authoritative throughout.
 - **10.task.6 — verified:** On rollback, disable push processing rather than running an old processor against session-bound/revoked data. Preserve the new columns and revocations; do not resurrect subscriptions with a destructive down migration. Use a frontend rollback built with the new lifecycle/privacy protocol, or require worker recovery before re-enabling sends.
-- **10.task.7 — pending:** Record actual validation and operational handoff in `frontend/docs/pwa-validation.md` and `backend/docs/pwa-delivery-and-logout.md`. Live rollout follows `/Users/jtkw/projects/stack/AGENTS.md` under the user's explicit implementation/deployment authorization.
+- **10.task.7 — verified:** Record actual validation and operational handoff in `frontend/docs/pwa-validation.md` and `backend/docs/pwa-delivery-and-logout.md`. Live rollout follows `/Users/jtkw/projects/stack/AGENTS.md` under the user's explicit implementation/deployment authorization.
 - **10.acceptance.1 — verified:** A/B update, rollback, multi-tab editor protection, legacy rebind, offline logout/reconnect, and user A -> user B push isolation all pass against real built assets and isolated backend data.
 - **10.acceptance.2 — verified:** Dead sockets release resources, another healthy endpoint progresses, and shutdown/restart cannot let an old claim overwrite or send a newer claim.
-- **10.acceptance.3 — pending:** Verification evidence distinguishes automated checks, browser emulation, installed-device checks, and remaining platform limitations. Required checks have no unexplained skips.
+- **10.acceptance.3 — verified:** Verification evidence distinguishes automated checks, browser emulation, installed-device checks, and remaining platform limitations. Required checks have no unexplained skips.
 
 ## Integration and release
 
 - **baseline — verified:** Record pre-change production build, startup measurements, and focused test baseline.
 - **contracts — verified:** Regenerate API clients; verify all generated changes.
-- **full-validation — pending:** Complete every Tests and Validation Commands requirement in the plan and record actual evidence.
-- **independent-review — pending:** Read-only review against this ledger; fix all major findings and repeat.
-- **merge — pending:** Commit, open PR, pass required CI, merge to main.
-- **deploy — pending:** Execute documented Deploy workflow and verify production rollout/migration health.
+- **full-validation — verified:** Complete every Tests and Validation Commands requirement in the plan and record actual evidence.
+- **independent-review — verified:** Read-only review against this ledger; fix all major findings and repeat.
+- **merge — verified:** Commit, open PR, pass required CI, merge to main.
+- **deploy — verified:** Execute documented Deploy workflow and verify production rollout/migration health.
 - **installed-device — verified:** Record actual iOS/Android validation or specific unavailable-device dependency.
 
 ## Evidence and review log
@@ -220,3 +220,43 @@ Worktree created clean before carrying in the plan. No original checkout files w
 - Final22053cf source: whole frontend106 files/763 tests passed; fresh A/B/C Chromium153 production17/17 passed. Source provenance matches512 selected files. Static-stall Update completes in6.11s with one request and the fault still enabled. Linux native tracing identifies a new background API request restarting the outgoing worker during shutdown; a debugger-detached contrast is underway before the release gate can pass.
 - Forced native restart with all worker debugging excluded confirms activation at31.096s: the original10s app listener expired too early. The initial debugger-only hypothesis was insufficient. Activation now waits up to45s while registration remains10s;15 focused lifecycle tests, typecheck/lint, and independent review pass. The all-frame debugger isolation and deterministic18th production gate are being completed before the next Linux release run.
 - Whole frontend afterfc55bed passes106 files/765 tests. The candidate18-case harness preserves registration, offline/navigation, static-header, privacy, and draft assertions; update document waits now match the evidence-based45s activation budget. Linux and final CI remain required before merge.
+- Fresh Linux Chromium15318/18 passes against all three rebuilt releases at0592b82. Forced request enters the exact outgoing-worker stop/restart window and the updated document appears in31.293s; static-header Update takes6.174s with one request and the fault still enabled. All8 debugger scopes restore and no worker debugger attaches during Update. Final GitHub CI and live rollout remain pending.
+
+- Release CI34162866084 passed every required gate, including18 production browser cases and GitGuardian. PR280 merged into main as37fe5bd4ea4e35dbfce65da85434758b6137fe2b. Protected Deploy workflow34163505505 is validating the main-to-deploy comparison before live rollout.
+
+- Deploy comparison CI34163516439 stopped at the forced native-race setup assertion: the app updated in1.127s, but the injected benign GET arrived after shutdown had already completed and therefore did not restart the outgoing worker. No live mutation occurred. The fixture is being corrected to make bounded fresh setup attempts while preserving strict actual-update deadlines and failing real update errors immediately.
+
+- Harness correction9903776 independently reviewed: at most3 fresh setup attempts, every actual update/request/debugger/controller failure stops immediately, allmisses fail. Targeted Linux race passed31.66s with witnessedrestart and no unexpectedworkerattachment;6 extracted control-flow checks verified boundedmiss retries/failfast. Full correction CI34164019900 remains the merge gate.
+
+- Corrected full browser CI34164019900 passed18/18; PR282 merged0cf7d9906598f9b849fa0034ecb4c7fe1e3c3148. Both final deploy comparison runs34164505106 and34164498630 passed, protectedDeploy34164495422 succeeded, and deployPR281 merged55ca895ee0cff8352de8cdfbedee54e0cb5ef193. Both Komodo image builds are active; live cutover remains gated on approved image identities.
+
+### Completed release
+
+Production rollout verified at 22:07 UTC on September 7, 2026. The protected
+workflow and both comparison CI runs passed. All approved images were pulled
+before all old API processors exited; both migrations and the backfill passed
+before compatible services started. All six containers are healthy with the
+approved digests. All regional and public build/privacy/recovery checks passed.
+Backfill remaining, unbound active tokens, eligible unbound push, ready backlog,
+stale claims, excessive attempts, recent failures, and lock waiters are zero.
+Three legacy subscriptions remain paused for next-open rebind.
+
+All non-blocked tasks and acceptance criteria are verified. Physical installed
+iOS/Android validation remains blocked at 9.acceptance.2 because no devices are
+connected; the validation document gives the exact manual checks. Independent
+subagents reviewed implementation, final reliability fixes, test correction, and
+rollout gates. The final reliability sequence included four runtime fix/review
+cycles (startup reconciliation, cooldown guard, bounded static headers, and
+delayed native activation) plus one test setup correction.
+
+See [production release evidence](../frontend/docs/pwa-evidence/production-release.json)
+and [validation](../frontend/docs/pwa-validation.md). The separate unrestricted
+push-destination P1 is outside this plan and remains unresolved.
+
+- Final independent completion audit passed: 116 ledger items comprise 115 verified
+  and one explicitly blocked physical-device acceptance item. Reviewers matched
+  the backup restore, all running/pulled image identities, migration/backfill
+  counts, regional/public probes, and corrected 18-case CI results to saved
+  evidence. No major issues remain within this plan. Removed only task-owned
+  `splice-pwa-linux-review` and `splice-pwa-linux-review-db` containers; user
+  containers, original checkout changes, and saved evidence were preserved.

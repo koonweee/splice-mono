@@ -1,26 +1,46 @@
 .content {
-  height: 100dvh;
-  max-width: 100%;
+  display: flex;
+  width: min(100%, 42rem);
+  height: var(--drawer-size);
+  flex: 0 0 min(100%, 42rem);
+  flex-direction: column;
   background: var(--splice-surface-overlay);
 }
 
+.content.content {
+  margin-inline: auto;
+}
+
 .header {
-  padding-top: calc(
-    var(--mantine-spacing-md) + var(--splice-safe-area-top, 0px)
-  );
-  padding-right: max(
-    var(--mantine-spacing-md),
-    var(--splice-safe-area-right, 0px)
-  );
-  padding-left: max(
-    var(--mantine-spacing-md),
-    var(--splice-safe-area-left, 0px)
-  );
+  flex: 0 0 auto;
+  padding: var(--mantine-spacing-md)
+    max(var(--mantine-spacing-md), var(--splice-safe-area-right, 0px))
+    var(--mantine-spacing-md)
+    max(var(--mantine-spacing-md), var(--splice-safe-area-left, 0px));
+}
+
+.headerActions {
+  margin-left: auto;
 }
 
 .body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   padding: 0;
+}
+
+.scroller {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding-bottom: var(--splice-safe-area-bottom, 0px);
+}
+
+.bodyContent {
+  width: 100%;
 }
 
 .list {
@@ -39,17 +59,19 @@
 
 .row {
   display: flex;
-  gap: var(--mantine-spacing-sm);
-  padding: var(--mantine-spacing-sm)
-    max(var(--mantine-spacing-md), var(--splice-safe-area-right, 0px))
-    var(--mantine-spacing-sm)
-    max(var(--mantine-spacing-md), var(--splice-safe-area-left, 0px));
+  gap: var(--mantine-spacing-xs);
+  padding: var(--mantine-spacing-xs)
+    max(var(--mantine-spacing-sm), var(--splice-safe-area-right, 0px))
+    var(--mantine-spacing-xs)
+    max(var(--mantine-spacing-sm), var(--splice-safe-area-left, 0px));
   align-items: flex-start;
 }
 
 .detail {
+  display: grid;
   flex: 1;
   min-width: 0;
+  gap: 2px;
   overflow-wrap: anywhere;
 }
 
@@ -61,21 +83,7 @@
   background: var(--mantine-primary-color-filled);
 }
 
-.meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--mantine-spacing-xs);
-}
-
-.meta > :last-child {
-  margin-left: auto;
-}
-
-@media (--phone-layout) {
-  .content {
-    flex-basis: 100%;
-    width: 100%;
-  }
+.rowActions {
+  flex: 0 0 auto;
+  align-self: center;
 }

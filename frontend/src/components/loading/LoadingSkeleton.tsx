@@ -13,6 +13,7 @@ import {
 import { foundation } from '../../lib/design-system/foundation'
 import accountStyles from '../AccountModal.module.css'
 import toolbarStyles from '../settings/SettingsToolbar.module.css'
+import summaryStyles from '../analysis/AnalysisSummary.module.css'
 import styles from './LoadingSkeleton.module.css'
 import type { AccountSummaryData } from '../../lib/balance-utils'
 import type { ReactNode } from 'react'
@@ -129,10 +130,8 @@ export function SettingsSkeleton({
         <Box className={toolbarStyles.heading}>
           {labels ? (
             <>
-              <Text fw={700} size="lg">
-                {labels[0]}
-              </Text>
-              <Text c="dimmed" size="sm">
+              <Text data-typography="sectionHeading">{labels[0]}</Text>
+              <Text data-typography="metadata" c="dimmed">
                 {labels[1]}
               </Text>
             </>
@@ -188,70 +187,108 @@ export function AccountsSkeleton() {
   return (
     <Stack gap="lg">
       {[0, 1].map((index) => (
-        <Paper withBorder radius="md" p="md" key={index}>
-          <Skeleton h={22} w={180} mb="md" />
-          <RowSkeleton rows={2} />
-        </Paper>
+        <div key={index}>
+          <Group h={44} mb="xs" justify="space-between">
+            <Skeleton h={22} w={180} />
+            <Skeleton h={18} w={18} />
+          </Group>
+          <Paper withBorder radius="md">
+            {[0, 1].map((row) => (
+              <Group key={row} p="sm" wrap="nowrap" className={styles.row}>
+                <Stack gap={4} flex={1}>
+                  <Skeleton h={22} w="80%" />
+                  <Skeleton h={20} w="40%" />
+                  <Skeleton h={20} w={64} mt={4} />
+                </Stack>
+                <Skeleton h={20} w={20} />
+              </Group>
+            ))}
+          </Paper>
+        </div>
       ))}
     </Stack>
   )
 }
 
-export function AnalysisSkeleton() {
+export function AnalysisSkeleton({ sankey = true }: { sankey?: boolean }) {
   return (
-    <Stack gap="lg">
-      <Paper withBorder p="md" radius="md">
-        <Group justify="space-between" wrap="wrap" gap="md" mb="sm">
-          <Group gap="lg">
-            {['Inflows', 'Outflows'].map((label) => (
-              <Group gap={6} key={label}>
-                <Skeleton circle h={16} w={16} />
-                <Text size="sm" c="dimmed" fw={500}>
+    <Stack gap="md">
+      <Paper withBorder p="sm" radius="md">
+        <div
+          className={summaryStyles.summary}
+          style={{ marginBottom: 'var(--mantine-spacing-sm)' }}
+        >
+          {['Inflows', 'Outflows', 'Net'].map((label) => (
+            <div key={label}>
+              <Text data-typography="label" c="dimmed">
+                {label}
+              </Text>
+              <Skeleton h={25} w={64} />
+            </div>
+          ))}
+        </div>
+        <Skeleton h={5} radius="xl" />
+      </Paper>
+      {sankey ? (
+        <Paper withBorder p="sm" radius="md">
+          <Text data-typography="sectionHeading" mb="sm">
+            Cashflow
+          </Text>
+          <div className={styles.sankeyDesktop}>
+            <Skeleton h={360} />
+          </div>
+          <Stack gap="sm">
+            {['Outflows', 'Inflows'].map((label) => (
+              <div key={label}>
+                <Text data-typography="subsectionHeading" mb={4}>
                   {label}
                 </Text>
-                <Skeleton h={25} w={64} />
-              </Group>
-            ))}
-          </Group>
-          <Group gap={6}>
-            <Text size="sm" c="dimmed" fw={500}>
-              Net
-            </Text>
-            <Skeleton h={25} w={64} />
-          </Group>
-        </Group>
-        <Skeleton h={8} radius="xl" />
-      </Paper>
-      <Grid>
-        {[0, 1].map((index) => (
-          <Grid.Col span={{ base: 12, md: 6 }} key={index}>
-            <Paper withBorder p="lg" radius="md">
-              <Group justify="space-between" mb="md">
-                <Skeleton h={25} w="35%" />
-                <Skeleton h={25} w={64} />
-              </Group>
-              <Grid gutter="lg" align="center">
-                <Grid.Col span={{ base: 12, sm: 4 }}>
-                  <Group justify="center">
-                    <Skeleton circle h={160} w={160} />
-                  </Group>
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 8 }}>
-                  <Stack gap={4}>
-                    {[0, 1, 2].map((row) => (
-                      <Group key={row} py={6} px="xs" wrap="nowrap">
-                        <Skeleton circle h={10} w={10} />
-                        <Skeleton h={22} flex={1} />
-                        <Skeleton h={22} w={56} />
-                      </Group>
-                    ))}
+                {[0, 1].map((row) => (
+                  <Stack key={row} gap={4} py={6} mih={44}>
+                    <Group wrap="nowrap">
+                      <Skeleton circle h={10} w={10} />
+                      <Skeleton h={20} flex={1} />
+                      <Skeleton h={20} w={48} />
+                    </Group>
+                    <Skeleton h={4} />
                   </Stack>
-                </Grid.Col>
-              </Grid>
-            </Paper>
-          </Grid.Col>
-        ))}
-      </Grid>
+                ))}
+              </div>
+            ))}
+          </Stack>
+        </Paper>
+      ) : (
+        <Grid>
+          {[0, 1].map((index) => (
+            <Grid.Col span={{ base: 12, md: 6 }} key={index}>
+              <Paper withBorder p="lg" radius="md">
+                <Group justify="space-between" mb="md">
+                  <Skeleton h={25} w="35%" />
+                  <Skeleton h={25} w={64} />
+                </Group>
+                <Grid gutter="lg" align="center">
+                  <Grid.Col span={{ base: 12, sm: 4 }}>
+                    <Group justify="center">
+                      <Skeleton circle h={160} w={160} />
+                    </Group>
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, sm: 8 }}>
+                    <Stack gap={4}>
+                      {[0, 1, 2].map((row) => (
+                        <Group key={row} py={6} px="xs" wrap="nowrap">
+                          <Skeleton circle h={10} w={10} />
+                          <Skeleton h={22} flex={1} />
+                          <Skeleton h={22} w={56} />
+                        </Group>
+                      ))}
+                    </Stack>
+                  </Grid.Col>
+                </Grid>
+              </Paper>
+            </Grid.Col>
+          ))}
+        </Grid>
+      )}
     </Stack>
   )
 }
@@ -265,21 +302,21 @@ export function AccountDetailsSkeleton({
 }) {
   const investment =
     account?.type === 'investment' || account?.type === 'brokerage'
-  const selected = section ?? (investment ? 'holdings' : 'overview')
+  const selected = section ?? (investment ? 'holdings' : 'details')
   const convertedBalance =
     account?.valuationMode !== 'holdings' &&
     account?.convertedEffectiveBalance &&
     account.effectiveBalance.money.currency !==
       account.convertedEffectiveBalance.money.currency
   const labels = [
-    'Overview',
+    'History',
+    'Details',
     ...(investment
       ? [
           'Holdings',
           ...(account.valuationMode !== 'holdings' ? ['Activity'] : []),
         ]
       : []),
-    'History',
   ]
   return (
     <Stack gap="md" className={accountStyles.detailsBody}>
@@ -289,7 +326,9 @@ export function AccountDetailsSkeleton({
         className={accountStyles.balanceRow}
         data-converted={Boolean(convertedBalance)}
       >
-        <Text c="dimmed">Current balance</Text>
+        <Text data-typography="body" c="dimmed">
+          Current balance
+        </Text>
         <Group justify="flex-end" className={accountStyles.balanceValue}>
           <Skeleton h={20} w={120} />
         </Group>
@@ -303,17 +342,17 @@ export function AccountDetailsSkeleton({
           }}
         >
           {labels.map((label) => (
-            <Text key={label} size="sm" ta="center" flex={1}>
+            <Text data-typography="bodySmall" key={label} ta="center" flex={1}>
               {label}
             </Text>
           ))}
         </Group>
         <Box pt="md">
-          {selected === 'overview' ? (
+          {selected === 'details' ? (
             <Stack gap="md">
               {account?.institutionName && (
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">
+                  <Text data-typography="metadata" c="dimmed">
                     Institution
                   </Text>
                   <Skeleton h={14} w={120} />
@@ -321,16 +360,14 @@ export function AccountDetailsSkeleton({
               )}
               {account?.syncedAt && (
                 <Group justify="space-between">
-                  <Text c="dimmed" size="sm">
+                  <Text data-typography="metadata" c="dimmed">
                     Last synced
                   </Text>
                   <Skeleton h={14} w={120} />
                 </Group>
               )}
               <Group justify="space-between">
-                <Text size="sm" fw={500}>
-                  Notes
-                </Text>
+                <Text data-typography="label">Notes</Text>
                 <Button disabled size="compact-md" variant="subtle">
                   <Skeleton h={14} w={82} />
                 </Button>
@@ -338,7 +375,7 @@ export function AccountDetailsSkeleton({
             </Stack>
           ) : selected === 'history' ? (
             <>
-              <Text fw={500} mb="sm">
+              <Text data-typography="rowTitle" mb="sm">
                 Balance history
               </Text>
               <ChartSkeleton height={200} />

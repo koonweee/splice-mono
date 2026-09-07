@@ -16,7 +16,9 @@ function InboxExample({ state }: ExampleProps) {
     ),
   )
   const [retried, setRetried] = useState(false)
-  const [error, setError] = useState(state === 'mutation-error')
+  const [error, setError] = useState(
+    state === 'mutation-error' || state === 'clear-error',
+  )
   const [destination, setDestination] = useState('')
   const unreadCount = items.filter((item) => !item.readAt).length
   const update = (id: string, dismiss = false) => {
@@ -32,12 +34,17 @@ function InboxExample({ state }: ExampleProps) {
           ),
     )
   }
+  const clearAll = () => {
+    if (state === 'clear-error') {
+      setError(true)
+      return
+    }
+    setItems([])
+  }
   return (
-    <Stack>
+    <Stack component="main">
       <Group justify="space-between">
-        <Text fw={700} size="lg">
-          Splice
-        </Text>
+        <Text data-typography="brand">Splice</Text>
         <NotificationBell
           opened={opened}
           unreadCount={unreadCount}
@@ -58,7 +65,9 @@ function InboxExample({ state }: ExampleProps) {
         pendingId={state === 'pending' ? items[0]?.id : undefined}
         mutationError={
           error
-            ? 'Unable to update this notification. Please try again.'
+            ? state === 'clear-error'
+              ? 'Unable to clear notifications. Please try again.'
+              : 'Unable to update this notification. Please try again.'
             : undefined
         }
         onRetry={() => {
@@ -76,6 +85,8 @@ function InboxExample({ state }: ExampleProps) {
           setDestination(`Opened ${item.url}`)
           setOpened(false)
         }}
+        clearing={state === 'clearing'}
+        onClearAll={clearAll}
       />
     </Stack>
   )
@@ -95,6 +106,8 @@ export const notificationExamples = [
       'refreshing',
       'pending',
       'mutation-error',
+      'clearing',
+      'clear-error',
     ],
     components: ['NotificationBell', 'NotificationInbox'],
   },

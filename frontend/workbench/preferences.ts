@@ -6,6 +6,7 @@ import {
 export function appearanceFromSearch(search: string) {
   const params = new URLSearchParams(search)
   return resolveAppearance({
+    monospaceAmounts: params.get('monospace') === 'true',
     mode: params.get('mode') ?? DEFAULT_APPEARANCE.mode,
     accent:
       params.get('accent') === 'neutral'

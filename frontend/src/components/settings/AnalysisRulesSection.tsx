@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Archive, CircleHelp, Pencil, RotateCcw, Save } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useMemo, useState } from 'react'
+import { PageToolbar } from '../PageLayout'
 import { ResponsiveSlot } from '../ResponsiveSlot'
 import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
@@ -33,6 +34,8 @@ import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
 import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
+import compactStyles from './SettingsCompactRow.module.css'
+import { SettingsRowActions } from './SettingsRowActions'
 import { SettingsArchiveFilter } from './SettingsArchiveFilter'
 import { SettingsStatusBadge } from './SettingsStatusBadge'
 import { SettingsToolbar } from './SettingsToolbar'
@@ -491,91 +494,63 @@ export function AnalysisRulesSection({
   }
 
   function renderRuleRowActions(item: AnalysisRuleTableItem) {
-    if (isLookaroundItem(item)) {
+    if (isLookaroundItem(item))
       return (
-        <Group
-          className={tableChrome.actions}
-          gap={4}
-          justify="flex-end"
-          wrap="nowrap"
-        >
-          <Tooltip label="Edit setting">
-            <ActionIcon
-              aria-label="Edit matching window"
-              size={isMobile ? 44 : 36}
-              variant="subtle"
-              onClick={openLookaroundPanel}
-            >
-              <Pencil size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </Group>
+        <SettingsRowActions
+          label="Matching window actions"
+          actions={[
+            {
+              id: 'edit',
+              label: 'Edit matching window',
+              icon: Pencil,
+              onClick: openLookaroundPanel,
+            },
+          ]}
+        />
       )
-    }
-
     return (
-      <Group
-        className={tableChrome.actions}
-        gap={4}
-        justify="flex-end"
-        wrap="nowrap"
-      >
-        <Tooltip label="Edit rule">
-          <ActionIcon
-            aria-label="Edit rule"
-            size={isMobile ? 44 : 36}
-            variant="subtle"
-            onClick={() => openEditPanel(item)}
-          >
-            <Pencil size={16} />
-          </ActionIcon>
-        </Tooltip>
-        {item.archivedAt ? (
-          <Tooltip label="Restore rule">
-            <ActionIcon
-              aria-label="Restore rule"
-              size={isMobile ? 44 : 36}
-              variant="subtle"
-              onClick={() => archiveOrRestore(item, false)}
-            >
-              <RotateCcw size={16} />
-            </ActionIcon>
-          </Tooltip>
-        ) : (
-          <Tooltip label="Archive rule">
-            <ActionIcon
-              aria-label="Archive rule"
-              size={isMobile ? 44 : 36}
-              variant="subtle"
-              onClick={() => archiveOrRestore(item, true)}
-            >
-              <Archive size={16} />
-            </ActionIcon>
-          </Tooltip>
-        )}
-      </Group>
+      <SettingsRowActions
+        label={`Actions for ${item.name}`}
+        actions={[
+          {
+            id: 'edit',
+            label: 'Edit rule',
+            icon: Pencil,
+            onClick: () => openEditPanel(item),
+          },
+          {
+            id: 'archive',
+            label: item.archivedAt ? 'Restore rule' : 'Archive rule',
+            icon: item.archivedAt ? RotateCcw : Archive,
+            onClick: () => archiveOrRestore(item, !item.archivedAt),
+          },
+        ]}
+      />
     )
   }
 
   function renderMobileRuleRow(item: AnalysisRuleTableItem) {
     return (
-      <Stack px="sm" py="sm" gap="xs">
-        <Text fw={700}>
-          {isLookaroundItem(item) ? 'Matching window' : item.name}
-        </Text>
-        <Text c="dimmed" lineClamp={3} size="sm">
+      <div className={compactStyles.row}>
+        <div className={compactStyles.heading}>
+          <Text
+            data-typography="sectionHeading"
+            className={compactStyles.title}
+          >
+            {isLookaroundItem(item) ? 'Matching window' : item.name}
+          </Text>
+          <SettingsStatusBadge status={getItemStatus(item)} />
+          {renderRuleRowActions(item)}
+        </div>
+        <Text data-typography="metadata" c="dimmed" lineClamp={3}>
           {getItemScopeSummary(item)}
         </Text>
-        <Group justify="space-between" gap="xs" wrap="nowrap">
-          <Group gap={6}>
-            <SettingsStatusBadge status={getItemStatus(item)} />
-            <Badge variant="light" size="sm" color="gray">
-              {getItemTypeLabel(item)}
-            </Badge>
-          </Group>
-          {renderRuleRowActions(item)}
-        </Group>
-      </Stack>
+        <div className={compactStyles.metadata}>
+          <Badge variant="light" size="sm" color="gray">
+            {getItemTypeLabel(item)}
+          </Badge>
+        </div>
+      </div>
     )
   }
 
@@ -597,12 +572,12 @@ export function AnalysisRulesSection({
       minSize: 180,
       Cell: ({ row }) => (
         <Box>
-          <Text fw={600} size="sm">
+          <Text data-typography="subsectionHeading">
             {isLookaroundItem(row.original)
               ? 'Matching window'
               : row.original.name}
           </Text>
-          <Text size="xs" c="dimmed" hiddenFrom="sm">
+          <Text data-typography="caption" c="dimmed" hiddenFrom="sm">
             {getItemScopeSummary(row.original)}
           </Text>
         </Box>
@@ -634,7 +609,7 @@ export function AnalysisRulesSection({
       accessorFn: getItemScopeSummary,
       minSize: 260,
       Cell: ({ row }) => (
-        <Text size="sm" lineClamp={2}>
+        <Text data-typography="bodySmall" lineClamp={2}>
           {getItemScopeSummary(row.original)}
         </Text>
       ),
@@ -676,7 +651,7 @@ export function AnalysisRulesSection({
     },
     renderRowActions: ({ row }) => renderRuleRowActions(row.original),
     renderEmptyRowsFallback: () => (
-      <Text c="dimmed" size="sm" ta="center" py="lg">
+      <Text data-typography="metadata" c="dimmed" ta="center" py="lg">
         No analysis rules match the current filters.
       </Text>
     ),
@@ -699,20 +674,22 @@ export function AnalysisRulesSection({
         onAdd={resetFormForCreate}
       />
 
-      <Group gap="xs" wrap={isMobile ? 'wrap' : 'nowrap'}>
-        <TextInput
-          aria-label="Search analysis rules"
-          placeholder="Search rules..."
-          value={search}
-          onChange={(event) => setSearch(event.currentTarget.value)}
-          size="md"
-          style={{ flex: '1 1 240px', minWidth: 0 }}
-        />
-        <SettingsArchiveFilter
-          checked={archivedMode}
-          onChange={setArchivedMode}
-        />
-      </Group>
+      <PageToolbar section>
+        <Group w="100%" gap="xs" wrap={isMobile ? 'wrap' : 'nowrap'}>
+          <TextInput
+            aria-label="Search analysis rules"
+            placeholder="Search rules..."
+            value={search}
+            onChange={(event) => setSearch(event.currentTarget.value)}
+            size="md"
+            style={{ flex: '1 1 240px', minWidth: 0 }}
+          />
+          <SettingsArchiveFilter
+            checked={archivedMode}
+            onChange={setArchivedMode}
+          />
+        </Group>
+      </PageToolbar>
 
       <DataState
         loadingFallback={<TableSkeleton rows={4} />}
@@ -771,10 +748,8 @@ export function AnalysisRulesSection({
               />
 
               <Paper withBorder p="sm" radius="md">
-                <Text size="sm" fw={600}>
-                  Summary
-                </Text>
-                <Text size="sm" c="dimmed">
+                <Text data-typography="subsectionHeading">Summary</Text>
+                <Text data-typography="metadata" c="dimmed">
                   {getLookaroundScopeSummary(
                     getValidatedLookaroundDays() ??
                       lookaroundItem.lookaroundDays,
@@ -858,7 +833,9 @@ export function AnalysisRulesSection({
 
               {(createRule.isError || updateRule.isError) && (
                 <Alert color="yellow" title="Duplicate detected">
-                  <Text size="sm">{getRuleErrorMessage(activeError)}</Text>
+                  <Text data-typography="bodySmall">
+                    {getRuleErrorMessage(activeError)}
+                  </Text>
                   {conflict?.archivedAt && (
                     <Button
                       size="xs"
@@ -874,9 +851,7 @@ export function AnalysisRulesSection({
 
               <Paper withBorder p="sm" radius="md">
                 <Group gap={6} wrap="nowrap">
-                  <Text size="sm" fw={600}>
-                    Summary
-                  </Text>
+                  <Text data-typography="subsectionHeading">Summary</Text>
                   {type === 'neutralize' && (
                     <Tooltip
                       label="Matches must have the same amount and currency. Older payments are matched first, using the nearest matching money-in date."
@@ -893,7 +868,7 @@ export function AnalysisRulesSection({
                     </Tooltip>
                   )}
                 </Group>
-                <Text size="sm" c="dimmed">
+                <Text data-typography="metadata" c="dimmed">
                   {type === 'exclude'
                     ? `When a transaction is in ${getScopeSummary(
                         excludeScope.mode === 'all'

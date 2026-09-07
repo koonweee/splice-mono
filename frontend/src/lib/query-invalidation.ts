@@ -135,8 +135,10 @@ export const mutationDependencies: Partial<
   userControllerCreateToken: ['tokens'],
   userControllerRevokeToken: ['tokens'],
   notificationInboxAction: ['notifications', 'notificationSummary'],
+  notificationInboxClear: ['notifications', 'notificationSummary'],
   notificationControllerMarkRead: ['notifications', 'notificationSummary'],
   notificationControllerArchive: ['notifications', 'notificationSummary'],
+  notificationControllerArchiveAll: ['notifications', 'notificationSummary'],
 }
 
 type Metadata = Pick<Account, 'name' | 'customName' | 'notes'>

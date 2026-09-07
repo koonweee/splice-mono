@@ -18,6 +18,9 @@ contents or badge counts are persisted in browser storage.
 
 1. Verify a recent restorable database backup using the stack repository's backup
    procedure. A failed scheduled backup is not evidence of a usable backup.
+   Wait for both image builds to match the approved deploy commit. Pull the new
+   app images in all three regions and the migration image before stopping APIs;
+   verify the pulled migration image's registry digest and commit tag.
 2. Stop **all old backend instances that run `NotificationPushProcessor`** before
    applying the migrations. An old send has no total deadline and holds database
    locks, so merely waiting for graceful application drain can wait indefinitely.
@@ -30,12 +33,7 @@ contents or badge counts are persisted in browser storage.
    their queued deliveries, and backfills live refresh-token chains. Its trigger
    also pauses unbound records written by an old binary. This trigger is a
    compatibility safeguard, not a substitute for stopping old processors.
-4. Launch the upgraded API with `PUSH_PROCESSING_ENABLED=false` if a staged
-   verification window is needed. This flag leaves ordinary API/auth/inbox
-   functionality available while preventing new push batches. Existing in-flight
-   work must finish or be stopped separately; the flag does not recall messages
-   already accepted by a provider.
-5. After old auth instances have exited, run
+4. While all old auth instances remain stopped, run
    `node dist/auth/browser-session-backfill.js` with the migration service's
    database environment to reconcile any token families created during the
    transition. For a one-shot container, explicitly override the entrypoint to
@@ -44,15 +42,20 @@ contents or badge counts are persisted in browser storage.
    overriding only the command does not run the backfill. For Komodo
    `RunStackService`, use `entrypoint: "node"` and
    `command: ["dist/auth/browser-session-backfill.js"]`. Require a successful exit
-   and the count-only result `remaining: 0`; verify both migration-history entries
-   before continuing.
-6. Publish the compatible frontend and worker, then verify session continuity,
+   and the count-only result `remaining: 0`; require both migration-history entries,
+   zero unbound active refresh tokens, and zero eligible unbound subscriptions
+   before continuing. Printed counts must be checked, not treated as assertions.
+5. Deploy the compatible upgraded API, frontend, and worker in all three regions.
+   The current stack uses the backend's default enabled processor, which selects
+   only session-bound eligible enrollments after the migration. Do not restart
+   an old binary against the new schema.
+6. Verify session continuity,
    private inbox/summary responses, logout, and reenrollment using synthetic
    accounts or an explicitly authorized test device. Existing clients must open
    the upgraded app to rebind; do not bulk-reactivate paused records or replay the
    migration backlog.
-7. Set `PUSH_PROCESSING_ENABLED=true` (the default) and restart upgraded backend
-   instances through the declared stack configuration. Monitor delivery outcomes,
+7. Verify matching per-service registry digests and frontend build IDs across all
+   regions, then monitor delivery outcomes,
    attempt counts, backlog age, lock contention, and current session eligibility.
 
 Keep lasting environment changes in the stack repository. Operational stop,
@@ -62,9 +65,17 @@ application logs.
 
 ## Failure and rollback behavior
 
-- Set `PUSH_PROCESSING_ENABLED=false` and restart **compatible upgraded** backends
-  to pause new delivery work while keeping the app online. Pending jobs retain
-  their normal age limits and should not be replayed after expiry.
+- The current Splice Compose service does not forward `PUSH_PROCESSING_ENABLED`.
+  Setting that variable only in Komodo's stack environment does not pause push.
+  For an immediate reliable pause, use `StopStack` for `splice-backend` in
+  `splice-app-vps`, `splice-app-sg`, and `splice-app-sf`, with `stop_time: 10`, and
+  verify all containers have exited. This also interrupts the API. Keep them
+  stopped until a compatible corrected release is ready.
+- The application supports `PUSH_PROCESSING_ENABLED=false` for an API-online
+  pause, but using it in this stack first requires a reviewed, declarative Compose
+  environment mapping and deployment. Existing in-flight work must finish or be
+  stopped separately; the flag cannot recall provider-accepted messages. Pending
+  jobs retain their normal age limits and must not be replayed after expiry.
 - A pre-upgrade binary does not recognize this switch. Keep old processors
   stopped. Use a rollback build that preserves the session/enrollment protocol
   and processing gate; rolling back only the frontend must preserve its privacy
@@ -126,3 +137,23 @@ as successful/provider-failed sends, using record IDs and numeric metrics only.
 The implementation was reconstructed from saved edit history after local temporary
 files were lost. The recovered worktree passed all four backend gates again: lint,
 typecheck, production build, and the complete selected acceptance suite.
+
+## September 7 production cutover
+
+Deploy commit `55ca895ee0cff8352de8cdfbedee54e0cb5ef193` is running in all three
+regions (backend `0.0.122`, frontend `0.0.119`). The approved images were pulled
+and their digests checked before all three old backends were stopped and
+confirmed exited. Migration operation `6a9f34d9d28c58b2ef419eb5` and backfill
+operation `6a9f34f7d28c58b2ef419ebc` succeeded. Backfill returned
+`{reconciled: 0, remaining: 0}`. The explicit pre-start gate found both migration
+history entries, zero unbound active tokens, zero eligible unbound push records,
+and three paused legacy subscriptions.
+
+The new APIs started only after those gates passed. All six app containers are
+healthy with matching approved registry digests. Initial count-only monitoring
+found no ready backlog, stale processing claims, excessive active attempts,
+recent non-migration failures, or database lock waiters. No legacy device had
+rebound at observation; provider delivery is not certified by these checks.
+See the [release record](../../frontend/docs/pwa-evidence/production-release.json)
+for operation IDs, images, public checks, and limitations. The default enabled
+processor is in use; no unwired environment switch was relied on during cutover.

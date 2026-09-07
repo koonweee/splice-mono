@@ -688,7 +688,7 @@ async function login(page) {
   })
   await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor()
   await page
-    .getByRole('switch', { name: 'Hide 0 balance accounts' })
+    .getByRole('switch', { name: 'Hide zero balances on Home' })
     .waitFor({ state: 'attached' })
   await hydrated(page)
 }
@@ -982,11 +982,11 @@ try {
     dirty = await context.newPage()
     await dirty.goto(`${origin}/settings`)
     const toggle = dirty.getByRole('switch', {
-      name: 'Hide 0 balance accounts',
+      name: 'Hide zero balances on Home',
     })
     const original = await toggle.isChecked()
     initialHideZero = original
-    await dirty.getByText('Hide 0 balance accounts', { exact: true }).click()
+    await dirty.getByText('Hide zero balances on Home', { exact: true }).click()
     await dirty
       .getByRole('button', { name: 'Save changes', exact: true })
       .waitFor()
@@ -1156,7 +1156,7 @@ try {
     })
     assert.equal(
       await dirty
-        .getByRole('switch', { name: 'Hide 0 balance accounts' })
+        .getByRole('switch', { name: 'Hide zero balances on Home' })
         .isChecked(),
       initialHideZero,
     )
@@ -1577,10 +1577,12 @@ try {
       )
       await test('real worker notification click preserves a dirty Settings draft until explicit Open', async () => {
         const toggle = page.getByRole('switch', {
-          name: 'Hide 0 balance accounts',
+          name: 'Hide zero balances on Home',
         })
         const original = await toggle.isChecked()
-        await page.getByText('Hide 0 balance accounts', { exact: true }).click()
+        await page
+          .getByText('Hide zero balances on Home', { exact: true })
+          .click()
         const marker = await page.evaluate(() => {
           window.__pwaNotificationDraft = crypto.randomUUID()
           return window.__pwaNotificationDraft
@@ -1660,7 +1662,7 @@ try {
           .waitFor()
         assert.equal(
           await page
-            .getByRole('switch', { name: 'Hide 0 balance accounts' })
+            .getByRole('switch', { name: 'Hide zero balances on Home' })
             .isChecked(),
           original,
         )
@@ -2161,7 +2163,7 @@ try {
       await controlled(page)
       const count = await page.evaluate(() => window.__pwaDocumentCount)
       const original = await page
-        .getByRole('switch', { name: 'Hide 0 balance accounts' })
+        .getByRole('switch', { name: 'Hide zero balances on Home' })
         .isChecked()
       assert(
         !(await cacheInventory(page)).some((cache) =>
@@ -2169,7 +2171,9 @@ try {
         ),
         'Lazy feature was unexpectedly precached',
       )
-      await page.getByText('Hide 0 balance accounts', { exact: true }).click()
+      await page
+        .getByText('Hide zero balances on Home', { exact: true })
+        .click()
       state.release = 'b'
       const failedImport = page.waitForResponse(
         (response) => response.url() === `${origin}/assets/${oldChunk}`,
@@ -2211,7 +2215,7 @@ try {
       await page.getByRole('tab', { name: 'General', exact: true }).click()
       assert.equal(
         await page
-          .getByRole('switch', { name: 'Hide 0 balance accounts' })
+          .getByRole('switch', { name: 'Hide zero balances on Home' })
           .isChecked(),
         !original,
       )
@@ -2232,7 +2236,7 @@ try {
       )
       assert.equal(
         await page
-          .getByRole('switch', { name: 'Hide 0 balance accounts' })
+          .getByRole('switch', { name: 'Hide zero balances on Home' })
           .isChecked(),
         original,
       )
