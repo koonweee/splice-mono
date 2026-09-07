@@ -1,0 +1,55 @@
+.wb-shell {
+  padding: 24px;
+}
+.wb-shell h1 {
+  margin: 0;
+  font-size: 24px;
+}
+.wb-shell header p {
+  color: var(--mantine-color-dimmed);
+}
+.wb-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  margin: 24px 0;
+}
+.wb-controls label {
+  display: flex;
+  gap: 6px;
+  flex-direction: column;
+  font-size: 13px;
+}
+.wb-controls input,
+.wb-controls select {
+  font: inherit;
+  padding: 8px;
+}
+.wb-controls input[type='checkbox'] {
+  align-self: start;
+}
+.wb-frames {
+  display: flex;
+  gap: 24px;
+  overflow: auto;
+}
+.wb-frames h2 {
+  font-size: 14px;
+  font-weight: 500;
+}
+.wb-frames iframe {
+  display: block;
+  height: 840px;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: 8px;
+}
+.wb-preview {
+  padding: 20px;
+}
+html[data-workbench-motion='reduce'] *,
+html[data-workbench-motion='reduce'] *::before,
+html[data-workbench-motion='reduce'] *::after {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
+}

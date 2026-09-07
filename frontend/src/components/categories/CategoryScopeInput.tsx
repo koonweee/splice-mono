@@ -232,6 +232,8 @@ export function CategoryScopeInput({
                     key={category.id}
                     variant="light"
                     color="gray"
+                    c="var(--splice-status-neutral-fg)"
+                    bg="var(--splice-status-neutral-bg)"
                     leftSection={swatch}
                   >
                     {getCategoryLabel(category)}

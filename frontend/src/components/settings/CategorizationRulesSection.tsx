@@ -757,7 +757,13 @@ export function CategorizationRulesSection() {
         <Group justify="space-between" gap="xs" wrap="nowrap">
           <Group gap={6}>
             <SettingsStatusBadge status={getRuleStatus(rule)} />
-            <Badge color="gray" size="sm" variant="light">
+            <Badge
+              color="gray"
+              c="var(--splice-status-neutral-fg)"
+              bg="var(--splice-status-neutral-bg)"
+              size="sm"
+              variant="light"
+            >
               Priority {rule.priority}
             </Badge>
           </Group>
@@ -1206,6 +1212,8 @@ export function CategorizationRulesSection() {
 
       <Drawer
         opened={recommendationsOpen}
+        trapFocus={previewSuggestion === null}
+        closeOnEscape={previewSuggestion === null}
         onClose={closeRecommendations}
         title={
           <Group gap="xs" wrap="nowrap">

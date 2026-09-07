@@ -5,7 +5,7 @@ const INITIAL_SETTINGS = {
   currency: 'USD',
   timezone: 'America/Los_Angeles',
   hideZeroBalanceAccounts: false,
-  theme: 'oled-black',
+  appearance: { mode: 'oled', accent: null },
   neutralizationLookaroundDays: 17,
   analysisSankeyEnabled: true,
   notifications: {
@@ -19,7 +19,7 @@ function canonicalSettings(settings) {
     currency: settings.currency,
     timezone: settings.timezone,
     hideZeroBalanceAccounts: settings.hideZeroBalanceAccounts,
-    theme: settings.theme,
+    appearance: settings.appearance,
     neutralizationLookaroundDays: settings.neutralizationLookaroundDays,
     analysisSankeyEnabled: settings.analysisSankeyEnabled,
     notifications: {

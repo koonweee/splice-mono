@@ -19,6 +19,7 @@ import dayjs from 'dayjs'
 import { Check, Info, Pencil, RotateCcw, Trash2, X } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { foundation } from '../lib/design-system/foundation'
 import { invalidateMutationFamilies } from '../lib/query-invalidation'
 import { useSupportsHover } from '../lib/responsive'
 import {
@@ -565,44 +566,6 @@ function ProviderCategoryHintPopover({
   )
 }
 
-function getCategoryToneClass(label: string) {
-  const normalized = label.toLowerCase()
-
-  if (
-    normalized.includes('restaurant') ||
-    normalized.includes('food') ||
-    normalized.includes('groceries')
-  ) {
-    return styles.categoryFoodBadge
-  }
-
-  if (normalized.includes('deposit')) {
-    return styles.categoryDepositBadge
-  }
-
-  if (normalized.includes('transfer')) {
-    return styles.categoryTransferBadge
-  }
-
-  if (normalized.includes('electronics')) {
-    return styles.categoryElectronicsBadge
-  }
-
-  if (
-    normalized.includes('sport') ||
-    normalized.includes('entertainment') ||
-    normalized.includes('amusement')
-  ) {
-    return styles.categoryEntertainmentBadge
-  }
-
-  if (normalized.includes('service')) {
-    return styles.categoryServiceBadge
-  }
-
-  return ''
-}
-
 function invalidateTransactionQueries(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
@@ -829,7 +792,7 @@ export function TransactionsTable({
                   position="bottom-start"
                   shadow="md"
                   withinPortal
-                  zIndex={400}
+                  zIndex={foundation.layers.tablePopover}
                 >
                   <Popover.Target>
                     <UnstyledButton
@@ -1017,7 +980,10 @@ export function TransactionsTable({
                   size="sm"
                   value={transaction.categoryId}
                   w={280}
-                  comboboxProps={{ withinPortal: true, zIndex: 400 }}
+                  comboboxProps={{
+                    withinPortal: true,
+                    zIndex: foundation.layers.tablePopover,
+                  }}
                 />
               </Group>
             )
@@ -1028,9 +994,7 @@ export function TransactionsTable({
               <Badge
                 aria-label={categoryLabel}
                 classNames={{
-                  root: `${styles.categoryBadge} ${
-                    category ? getCategoryToneClass(categoryLabel) : ''
-                  }`,
+                  root: styles.categoryBadge,
                 }}
                 radius="sm"
                 size="sm"

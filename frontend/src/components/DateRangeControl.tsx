@@ -13,11 +13,12 @@ import { DatePicker } from '@mantine/dates'
 import { useDisclosure } from '@mantine/hooks'
 import dayjs from 'dayjs'
 import { X } from 'lucide-react'
-import { useId } from 'react'
+import { useId, useRef } from 'react'
 import { useCompactLayout } from '../lib/responsive'
 import { formatDateRangeLabel } from '../lib/date-range'
 import styles from './DateRangeControl.module.css'
 import type { DatesRangeValue } from '@mantine/dates'
+import type { FocusEvent, KeyboardEvent } from 'react'
 
 type DateRangeControlProps = {
   clearable?: boolean
@@ -155,6 +156,19 @@ export function DateRangeControl({
   const isMobile = useCompactLayout()
   const [opened, { close, toggle }] = useDisclosure(false)
   const dropdownId = useId()
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const protectPickerFocus = (event: FocusEvent<HTMLElement>) => {
+    // Mantine dialogs inspect the focused target in a window capture listener.
+    event.target.setAttribute('data-mantine-stop-propagation', 'true')
+  }
+  const dismissPickerOnEscape = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      close()
+      triggerRef.current?.focus()
+    }
+  }
   const hasValue = value[0] !== null || value[1] !== null
   const pickerValue: [string | null, string | null] = [
     value[0] ? dayjs(value[0]).format('YYYY-MM-DD') : null,
@@ -169,6 +183,14 @@ export function DateRangeControl({
       style={{ '--date-range-width': `${width}px` }}
     >
       <Button
+        ref={triggerRef}
+        data-mantine-stop-propagation={opened || undefined}
+        onKeyDown={(event) => {
+          if (opened && event.key === 'Escape') {
+            event.stopPropagation()
+            close()
+          }
+        }}
         aria-label="Choose date range"
         aria-haspopup="dialog"
         aria-expanded={opened}
@@ -215,6 +237,9 @@ export function DateRangeControl({
         <Drawer
           opened={opened}
           onClose={close}
+          closeOnEscape={false}
+          onFocusCapture={protectPickerFocus}
+          onKeyDownCapture={dismissPickerOnEscape}
           position="bottom"
           size="min(300px, 80dvh)"
           title="Date range"
@@ -240,11 +265,19 @@ export function DateRangeControl({
         }
       }}
       position="bottom-start"
+      floatingStrategy="fixed"
+      middlewares={{ flip: true, shift: { padding: 8, crossAxis: true } }}
       shadow="md"
-      withinPortal={false}
+      withinPortal
+      trapFocus
+      returnFocus
+      closeOnEscape={false}
     >
       <Popover.Target>{trigger}</Popover.Target>
       <Popover.Dropdown
+        data-mantine-stop-propagation
+        onFocusCapture={protectPickerFocus}
+        onKeyDownCapture={dismissPickerOnEscape}
         id={dropdownId}
         role="dialog"
         aria-label="Date range"

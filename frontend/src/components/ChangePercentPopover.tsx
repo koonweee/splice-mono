@@ -73,9 +73,8 @@ export function ChangePercentPopover({
           onBlur={() => setOpened(false)}
           onClick={(event) => {
             event.stopPropagation()
-            setOpened((current) => !current)
+            setOpened(true)
           }}
-          onFocus={() => setOpened(true)}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return
             event.preventDefault()

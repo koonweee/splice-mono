@@ -2,20 +2,16 @@ import {
   Alert,
   Box,
   Button,
-  ColorSwatch,
   Group,
   Paper,
   Select,
-  SimpleGrid,
   Stack,
   Switch,
   Tabs,
   Text,
   Title,
-  UnstyledButton,
 } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { Check } from 'lucide-react'
 import { lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { loadSettingsSection } from '../../lib/queries/settings'
 import {
@@ -34,11 +30,13 @@ import { DeferredFeature } from '../DeferredFeature'
 import { getUserControllerMeQueryOptions } from '../../api/clients/spliceAPI'
 import { PageHeader } from '../PageHeader'
 import {
-  THEME_PRESETS,
-  applyThemePresetId,
-  normalizeThemePresetId,
-  previewThemePresetId,
-} from '../../lib/theme'
+  appearanceEqual,
+  applyAppearance,
+  normalizeAppearance,
+  previewAppearance,
+} from '../../lib/appearance-preferences'
+import { DEFAULT_APPEARANCE } from '../../lib/design-system/appearance'
+import { AppearanceControl } from '../settings/AppearanceControl'
 import {
   disableCurrentDeviceNotifications,
   enableCurrentDeviceNotifications,
@@ -46,7 +44,7 @@ import {
 } from '../../lib/notifications/browser-push'
 import styles from './SettingsPage.module.css'
 import type { NotificationSupportStatus } from '../../lib/notifications/browser-push'
-import type { ThemePreset, ThemePresetId } from '../../lib/theme'
+import type { AppearancePreference } from '../../lib/design-system/appearance'
 
 import type { SettingsTab } from '../../lib/route-search'
 
@@ -59,7 +57,7 @@ const RecurringManualTransactionsSection = lazy(
 )
 
 type GeneralSettingsValues = {
-  theme: ThemePresetId
+  appearance: AppearancePreference
   currency: string
   timezone: string
   hideZeroBalanceAccounts: boolean
@@ -125,59 +123,6 @@ function getBrowserTimezone() {
   }
 }
 
-function ThemePresetOption({
-  preset,
-  selected,
-  onSelect,
-}: {
-  preset: ThemePreset
-  selected: boolean
-  onSelect: (theme: ThemePresetId) => void
-}) {
-  return (
-    <UnstyledButton
-      role="radio"
-      aria-checked={selected}
-      aria-label={preset.label}
-      className={styles.themePresetOption}
-      data-selected={selected}
-      onClick={() => onSelect(preset.id)}
-      p="sm"
-    >
-      <Stack gap={8}>
-        <Group justify="space-between" gap="sm" wrap="nowrap">
-          <Group gap={4} aria-hidden>
-            {preset.swatches.map((swatch) => (
-              <ColorSwatch
-                key={swatch}
-                color={swatch}
-                className={styles.themeSwatch}
-                size={18}
-                withShadow={false}
-              />
-            ))}
-          </Group>
-          <Box
-            aria-hidden
-            className={styles.themeCheck}
-            data-selected={selected}
-          >
-            <Check size={16} strokeWidth={3} />
-          </Box>
-        </Group>
-        <Box>
-          <Text fw={600} size="sm">
-            {preset.label}
-          </Text>
-          <Text size="xs" c="dimmed" lineClamp={2}>
-            {preset.description}
-          </Text>
-        </Box>
-      </Stack>
-    </UnstyledButton>
-  )
-}
-
 type UserSettingsWithNotifications = {
   notifications?: {
     transactions?: {
@@ -233,9 +178,11 @@ export function SettingsPage({
   const timezoneOptions = useMemo(() => getTimezoneOptions(), [])
   const browserTimezone = useMemo(() => getBrowserTimezone(), [])
 
-  const [theme, setTheme] = useState<ThemePresetId>(() =>
-    normalizeThemePresetId(user?.settings.theme),
+  const [appearance, setAppearance] = useState<AppearancePreference>(() =>
+    normalizeAppearance(user?.settings.appearance),
   )
+  const [appearanceReset, setAppearanceReset] = useState(0)
+  const [appearanceValid, setAppearanceValid] = useState(true)
   const [currency, setCurrency] = useState<string>(
     user?.settings.currency ?? 'USD',
   )
@@ -272,7 +219,7 @@ export function SettingsPage({
     useState(false)
   const [settingsBaseline, setSettingsBaseline] =
     useState<GeneralSettingsValues | null>(() =>
-      user ? { theme, currency, timezone, hideZeroBalanceAccounts } : null,
+      user ? { appearance, currency, timezone, hideZeroBalanceAccounts } : null,
     )
   const settingsBaselineRef = useRef<GeneralSettingsValues | null>(
     settingsBaseline,
@@ -281,20 +228,20 @@ export function SettingsPage({
     settingsBaseline,
   )
   const generalDraftRef = useRef<GeneralSettingsValues>({
-    theme,
+    appearance,
     currency,
     timezone,
     hideZeroBalanceAccounts,
   })
   generalDraftRef.current = {
-    theme,
+    appearance,
     currency,
     timezone,
     hideZeroBalanceAccounts,
   }
   const hasChanges =
     settingsBaseline !== null &&
-    (theme !== settingsBaseline.theme ||
+    (!appearanceEqual(appearance, settingsBaseline.appearance) ||
       currency !== settingsBaseline.currency ||
       timezone !== settingsBaseline.timezone ||
       hideZeroBalanceAccounts !== settingsBaseline.hideZeroBalanceAccounts)
@@ -304,7 +251,7 @@ export function SettingsPage({
   useEffect(() => {
     if (user?.settings) {
       const nextGeneralSettings: GeneralSettingsValues = {
-        theme: normalizeThemePresetId(user.settings.theme),
+        appearance: normalizeAppearance(user.settings.appearance),
         currency: user.settings.currency ?? 'USD',
         timezone: user.settings.timezone ?? 'UTC',
         hideZeroBalanceAccounts: user.settings.hideZeroBalanceAccounts ?? false,
@@ -314,7 +261,10 @@ export function SettingsPage({
       const currentDraft = generalDraftRef.current
       const draftIsDirty =
         currentBaseline !== null &&
-        (currentDraft.theme !== currentBaseline.theme ||
+        (!appearanceEqual(
+          currentDraft.appearance,
+          currentBaseline.appearance,
+        ) ||
           currentDraft.currency !== currentBaseline.currency ||
           currentDraft.timezone !== currentBaseline.timezone ||
           currentDraft.hideZeroBalanceAccounts !==
@@ -323,8 +273,8 @@ export function SettingsPage({
       if (!draftIsDirty) {
         settingsBaselineRef.current = nextGeneralSettings
         setSettingsBaseline(nextGeneralSettings)
-        setTheme(nextGeneralSettings.theme)
-        applyThemePresetId(nextGeneralSettings.theme)
+        setAppearance(nextGeneralSettings.appearance)
+        applyAppearance(nextGeneralSettings.appearance)
         setCurrency(nextGeneralSettings.currency)
         setTimezone(nextGeneralSettings.timezone)
         setHideZeroBalanceAccounts(nextGeneralSettings.hideZeroBalanceAccounts)
@@ -371,7 +321,10 @@ export function SettingsPage({
     const currentDraft = generalDraftRef.current
     if (
       !latestServerSettings ||
-      (currentDraft.theme === latestServerSettings.theme &&
+      (appearanceEqual(
+        currentDraft.appearance,
+        latestServerSettings.appearance,
+      ) &&
         currentDraft.currency === latestServerSettings.currency &&
         currentDraft.timezone === latestServerSettings.timezone &&
         currentDraft.hideZeroBalanceAccounts ===
@@ -382,8 +335,8 @@ export function SettingsPage({
 
     settingsBaselineRef.current = latestServerSettings
     setSettingsBaseline(latestServerSettings)
-    setTheme(latestServerSettings.theme)
-    applyThemePresetId(latestServerSettings.theme)
+    setAppearance(latestServerSettings.appearance)
+    applyAppearance(latestServerSettings.appearance)
     setCurrency(latestServerSettings.currency)
     setTimezone(latestServerSettings.timezone)
     setHideZeroBalanceAccounts(latestServerSettings.hideZeroBalanceAccounts)
@@ -421,10 +374,33 @@ export function SettingsPage({
     }
   }, [])
 
+  useEffect(
+    () => () => {
+      previewAppearance(
+        latestServerGeneralSettingsRef.current?.appearance ??
+          DEFAULT_APPEARANCE,
+      )
+    },
+    [],
+  )
+
+  const handleCancel = () => {
+    const saved = latestServerGeneralSettingsRef.current
+    if (!saved) return
+    setAppearance(saved.appearance)
+    setAppearanceReset((current) => current + 1)
+    setCurrency(saved.currency)
+    setTimezone(saved.timezone)
+    setHideZeroBalanceAccounts(saved.hideZeroBalanceAccounts)
+    settingsBaselineRef.current = saved
+    setSettingsBaseline(saved)
+    previewAppearance(saved.appearance)
+  }
+
   const handleSave = () => {
-    const savedTheme = settingsBaseline?.theme ?? 'splice-dark'
+    const savedAppearance = settingsBaseline?.appearance ?? DEFAULT_APPEARANCE
     const submittedSettings = {
-      theme,
+      appearance,
       currency,
       timezone,
       hideZeroBalanceAccounts,
@@ -434,7 +410,7 @@ export function SettingsPage({
       { data: submittedSettings },
       {
         onSuccess: () => {
-          applyThemePresetId(theme)
+          applyAppearance(appearance)
           latestServerGeneralSettingsRef.current = submittedSettings
           settingsBaselineRef.current = submittedSettings
           setSettingsBaseline(submittedSettings)
@@ -442,7 +418,7 @@ export function SettingsPage({
           invalidateMutationFamilies(queryClient, ['user'])
         },
         onError: () => {
-          previewThemePresetId(savedTheme)
+          previewAppearance(savedAppearance)
         },
       },
     )
@@ -452,9 +428,9 @@ export function SettingsPage({
     setTimezone(browserTimezone)
   }
 
-  const handleThemeSelect = (nextTheme: ThemePresetId) => {
-    setTheme(nextTheme)
-    previewThemePresetId(nextTheme)
+  const handleAppearanceSelect = (nextAppearance: AppearancePreference) => {
+    setAppearance(nextAppearance)
+    previewAppearance(nextAppearance)
   }
 
   const handleSaveNeutralizationLookaround = async (days: number) => {
@@ -635,24 +611,13 @@ export function SettingsPage({
                 <Title order={4} mb="xs">
                   Appearance
                 </Title>
-                <Text size="sm" c="dimmed" mb="sm">
-                  Choose your theme.
-                </Text>
-                <SimpleGrid
-                  cols={{ base: 1, sm: 2 }}
-                  spacing="sm"
-                  role="radiogroup"
-                  aria-label="Theme"
-                >
-                  {THEME_PRESETS.map((preset) => (
-                    <ThemePresetOption
-                      key={preset.id}
-                      preset={preset}
-                      selected={theme === preset.id}
-                      onSelect={handleThemeSelect}
-                    />
-                  ))}
-                </SimpleGrid>
+                <AppearanceControl
+                  resetVersion={appearanceReset}
+                  value={appearance}
+                  onChange={handleAppearanceSelect}
+                  disabled={updateSettingsMutation.isPending}
+                  onValidityChange={setAppearanceValid}
+                />
               </div>
 
               <div>
@@ -725,9 +690,19 @@ export function SettingsPage({
 
               <Group justify="flex-end" mt="md">
                 <Button
+                  variant="default"
+                  onClick={handleCancel}
+                  disabled={
+                    (!hasChanges && appearanceValid) ||
+                    updateSettingsMutation.isPending
+                  }
+                >
+                  Cancel
+                </Button>
+                <Button
                   onClick={handleSave}
                   loading={updateSettingsMutation.isPending}
-                  disabled={!hasChanges}
+                  disabled={!hasChanges || !appearanceValid}
                 >
                   Save changes
                 </Button>

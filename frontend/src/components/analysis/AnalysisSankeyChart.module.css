@@ -22,7 +22,7 @@
 }
 
 .clickableNode rect {
-  transition: opacity 120ms ease;
+  transition: opacity var(--splice-motion-quick) ease;
 }
 
 .clickableNode[data-pressed='true'] rect {
@@ -30,14 +30,14 @@
 }
 
 .clickableNode:focus-visible rect {
-  outline: 2px solid var(--mantine-primary-color-filled);
+  outline: 2px solid var(--splice-focus);
   outline-offset: 2px;
 }
 
 .link {
   transition:
-    opacity 120ms ease,
-    stroke-opacity 120ms ease;
+    opacity var(--splice-motion-quick) ease,
+    stroke-opacity var(--splice-motion-quick) ease;
 }
 
 .clickableLink {
@@ -91,7 +91,7 @@
 }
 
 .categoryButton {
-  border-radius: 6px;
+  border-radius: var(--mantine-radius-sm);
   padding: 6px var(--mantine-spacing-xs);
 }
 .compactProgress {

@@ -6,6 +6,8 @@ import {
   readPresentationCookies,
   usePresentationPreferences,
 } from './presentation-preferences'
+import { encodeAppearance } from './appearance-preferences'
+import type { AppearanceMode } from './design-system/appearance'
 import type { User } from '../api/models/user'
 
 vi.mock('@tanstack/react-start', () => ({
@@ -15,8 +17,13 @@ vi.mock('@tanstack/react-start', () => ({
 }))
 afterEach(cleanup)
 const now = new Date('2026-09-06T02:00:00Z')
-const user = (theme = 'dracula') =>
-  ({ settings: { theme, timezone: 'America/Los_Angeles' } }) as User
+const user = (mode: AppearanceMode = 'dark') =>
+  ({
+    settings: {
+      appearance: { mode, accent: '#b399cf' },
+      timezone: 'America/Los_Angeles',
+    },
+  }) as User
 function Sample() {
   const { maskBalances, setMaskBalances } = usePresentationPreferences()
   return (
@@ -26,21 +33,29 @@ function Sample() {
   )
 }
 describe('presentation preferences before hydration', () => {
-  it.each(['splice-light', 'splice-dark', 'dracula', 'oled-black'])(
+  it.each(['light', 'dark', 'oled'] as const)(
     'uses saved %s instead of a stale browser theme',
-    (theme) => {
+    (mode) => {
       expect(
-        readPresentationCookies('splice_theme=splice-light', user(theme), now),
-      ).toEqual({ theme, maskBalances: null, today: '2026-09-05' })
+        readPresentationCookies(
+          `splice_appearance=${encodeAppearance({ mode: 'light', accent: null })}`,
+          user(mode),
+          now,
+        ),
+      ).toEqual({
+        appearance: { mode, accent: '#b399cf' },
+        maskBalances: null,
+        today: '2026-09-05',
+      })
     },
   )
   it('validates cookies and defaults unknown masking to masked SSR HTML', () => {
     const initial = readPresentationCookies(
-      'splice_theme=bogus; splice_mask_balances=bogus',
+      'splice_appearance=bogus; splice_mask_balances=bogus',
       null,
       now,
     )
-    expect(initial.theme).toBe('splice-dark')
+    expect(initial.appearance).toEqual({ mode: 'dark', accent: '#83b59b' })
     const html = renderToString(
       <PresentationProvider initial={initial}>
         <Sample />

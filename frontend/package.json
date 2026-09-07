@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 4000",
+    "workbench": "vite --config workbench/vite.config.ts --port 4001",
+    "workbench:build": "vite build --config workbench/vite.config.ts",
     "build": "vite build",
     "serve": "vite preview",
     "test": "vitest run",
@@ -11,7 +13,8 @@
     "lint:fix": "eslint --fix",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "orval": "node ../backend/scripts/generate-currency-scales.mjs && orval && prettier --write src/api/"
+    "orval": "node ../backend/scripts/generate-currency-scales.mjs && orval && prettier --write src/api/",
+    "tokens:check": "node scripts/check-style-tokens.mjs"
   },
   "dependencies": {
     "@mantine/charts": "^8.3.9",

@@ -1,0 +1,506 @@
+[
+  {
+    "component": "AccountCard",
+    "source": "components/AccountCard.tsx",
+    "example": "account-overview",
+    "states": ["ready", "loading", "empty"]
+  },
+  {
+    "component": "AccountModal",
+    "source": "components/AccountModal.tsx",
+    "example": "account-dialogs",
+    "states": ["account", "add", "backfill", "holdings"]
+  },
+  {
+    "component": "AccountSection",
+    "source": "components/AccountSection.tsx",
+    "example": "account-overview",
+    "states": ["ready", "loading", "empty"]
+  },
+  {
+    "component": "AppThemeProvider",
+    "source": "components/AppThemeProvider.tsx",
+    "example": "page-home",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "CategoryTransactionsModal",
+    "source": "components/CategoryTransactionsModal.tsx",
+    "example": "page-analysis",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "ChangePercentPopover",
+    "source": "components/ChangePercentPopover.tsx",
+    "example": "account-overview",
+    "states": ["ready", "loading", "empty"]
+  },
+  {
+    "component": "Chart",
+    "source": "components/Chart.tsx",
+    "example": "history",
+    "states": ["ready", "loading", "empty", "single", "refresh-error"]
+  },
+  {
+    "component": "CompactAccountRow",
+    "source": "components/CompactAccountRow.tsx",
+    "example": "account-overview",
+    "states": ["ready", "loading", "empty"]
+  },
+  {
+    "component": "ConfirmActionDialog",
+    "source": "components/ConfirmActionDialog.tsx",
+    "example": "editors",
+    "states": ["confirm-ready", "confirm-pending", "confirm-error"]
+  },
+  {
+    "component": "DataState",
+    "source": "components/DataState.tsx",
+    "example": "rows",
+    "states": ["ready", "error", "pending"]
+  },
+  {
+    "component": "DateRangeFields",
+    "source": "components/DateRangeControl.tsx",
+    "example": "editors",
+    "states": ["ready", "error", "pending", "validation-pending"]
+  },
+  {
+    "component": "DateRangeControl",
+    "source": "components/DateRangeControl.tsx",
+    "example": "editors",
+    "states": ["ready", "error", "pending", "validation-pending"]
+  },
+  {
+    "component": "DeferredFeature",
+    "source": "components/DeferredFeature.tsx",
+    "example": "deferred",
+    "states": ["ready", "loading", "error"]
+  },
+  {
+    "component": "DeferredOverlay",
+    "source": "components/DeferredOverlay.tsx",
+    "example": "deferred",
+    "states": ["overlay-ready", "overlay-loading", "overlay-error"]
+  },
+  {
+    "component": "HomePeriodControl",
+    "source": "components/HomePeriodControl.tsx",
+    "example": "history",
+    "states": ["ready", "loading", "empty", "single", "refresh-error"]
+  },
+  {
+    "component": "InteractiveRow",
+    "source": "components/InteractiveRow.tsx",
+    "example": "rows",
+    "states": ["ready", "error", "pending"]
+  },
+  {
+    "component": "LazyChart",
+    "source": "components/LazyChart.tsx",
+    "example": "page-home",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "LifecycleBadge",
+    "source": "components/LifecycleBadge.tsx",
+    "example": "controls",
+    "states": ["ready", "error", "pending"]
+  },
+  {
+    "component": "LoginCard",
+    "source": "components/LoginCard.tsx",
+    "example": "page-landing",
+    "states": ["ready", "anonymous", "unavailable"]
+  },
+  {
+    "component": "MobileTableList",
+    "source": "components/MobileTableList.tsx",
+    "example": "rows",
+    "states": ["ready", "error", "pending"]
+  },
+  {
+    "component": "NetWorthCard",
+    "source": "components/NetWorthCard.tsx",
+    "example": "page-home",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "PageHeader",
+    "source": "components/PageHeader.tsx",
+    "example": "controls",
+    "states": ["ready", "error", "pending"]
+  },
+  {
+    "component": "Pressable",
+    "source": "components/Pressable.tsx",
+    "example": "account-overview",
+    "states": ["ready", "loading", "empty"]
+  },
+  {
+    "component": "PrivateSessionBoundary",
+    "source": "components/PrivateSessionBoundary.tsx",
+    "example": "session-boundary",
+    "states": ["ready", "blocked"]
+  },
+  {
+    "component": "PwaLifecycle",
+    "source": "components/PwaLifecycle.tsx",
+    "example": "pwa-lifecycle",
+    "states": ["ready", "offline", "update"]
+  },
+  {
+    "component": "ResponsiveSlot",
+    "source": "components/ResponsiveSlot.tsx",
+    "example": "investments",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "TransactionsTable",
+    "source": "components/TransactionsTable.tsx",
+    "example": "page-transactions",
+    "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "component": "AccountRow",
+    "source": "components/accounts/AccountRow.tsx",
+    "example": "account-management",
+    "states": ["ready", "disabled"]
+  },
+  {
+    "component": "AccountSelect",
+    "source": "components/accounts/AccountSelect.tsx",
+    "example": "account-management",
+    "states": ["ready", "disabled"]
+  },
+  {
+    "component": "AddAccountModal",
+    "source": "components/accounts/AddAccountModal.tsx",
+    "example": "account-dialogs",
+    "states": ["account", "add", "backfill", "holdings"]
+  },
+  {
+    "component": "BackfillInstructions",
+    "source": "components/accounts/BackfillInstructions.tsx",
+    "example": "loading-backfill",
+    "states": ["loading"]
+  },
+  {
+    "component": "BackfillModal",
+    "source": "components/accounts/BackfillModal.tsx",
+    "example": "account-dialogs",
+    "states": ["account", "add", "backfill", "holdings"]
+  },
+  {
+    "component": "InlineBalanceEditor",
+    "source": "components/accounts/InlineBalanceEditor.tsx",
+    "example": "account-management",
+    "states": ["ready", "disabled"]
+  },
+  {
+    "component": "InstitutionSection",
+    "source": "components/accounts/InstitutionSection.tsx",
+    "example": "account-management",
+    "states": ["ready", "disabled"]
+  },
+  {
+    "component": "ProviderBadge",
+    "source": "components/accounts/ProviderBadge.tsx",
+    "example": "status-colors",
+    "states": ["ready"]
+  },
+  {
+    "component": "StatusBadge",
+    "source": "components/accounts/StatusBadge.tsx",
+    "example": "status-colors",
+    "states": ["ready"]
+  },
+  {
+    "component": "AnalysisAuditDrawer",
+    "source": "components/analysis/AnalysisAuditDrawer.tsx",
+    "example": "page-analysis",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "AnalysisAuditHeader",
+    "source": "components/analysis/AnalysisAuditHeader.tsx",
+    "example": "page-analysis",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "AnalysisSankeyChart",
+    "source": "components/analysis/AnalysisSankeyChart.tsx",
+    "example": "page-analysis",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "CategoryScopeInput",
+    "source": "components/categories/CategoryScopeInput.tsx",
+    "example": "category-inputs",
+    "states": ["ready", "empty", "disabled"]
+  },
+  {
+    "component": "CategorySelect",
+    "source": "components/categories/CategorySelect.tsx",
+    "example": "category-inputs",
+    "states": ["ready", "empty", "disabled"]
+  },
+  {
+    "component": "DecimalInput",
+    "source": "components/forms/DecimalInput.tsx",
+    "example": "controls",
+    "states": ["ready", "error", "pending"]
+  },
+  {
+    "component": "EditorModal",
+    "source": "components/forms/EditorModal.tsx",
+    "example": "editors",
+    "states": ["ready", "error", "pending", "validation-pending"]
+  },
+  {
+    "component": "FormActions",
+    "source": "components/forms/FormActions.tsx",
+    "example": "editors",
+    "states": ["ready", "error", "pending", "validation-pending"]
+  },
+  {
+    "component": "InvestmentActivityTable",
+    "source": "components/investments/InvestmentActivityTable.tsx",
+    "example": "investments",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "InvestmentHoldingsTable",
+    "source": "components/investments/InvestmentHoldingsTable.tsx",
+    "example": "investments",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "ManualBrokerageHoldingsModal",
+    "source": "components/investments/ManualBrokerageHoldingsModal.tsx",
+    "example": "account-dialogs",
+    "states": ["account", "add", "backfill", "holdings"]
+  },
+  {
+    "component": "ManualBrokeragePositionsEditor",
+    "source": "components/investments/ManualBrokeragePositionsEditor.tsx",
+    "example": "positions",
+    "states": ["ready", "empty", "error", "disabled"]
+  },
+  {
+    "component": "AddAccountSkeleton",
+    "source": "components/loading/AccountDialogSkeletons.tsx",
+    "example": "loading-account-add",
+    "states": ["loading"]
+  },
+  {
+    "component": "BackfillSkeleton",
+    "source": "components/loading/AccountDialogSkeletons.tsx",
+    "example": "loading-backfill",
+    "states": ["loading"]
+  },
+  {
+    "component": "ChartSkeleton",
+    "source": "components/loading/ChartSkeleton.tsx",
+    "example": "loading-chart",
+    "states": ["loading"]
+  },
+  {
+    "component": "HomeSkeleton",
+    "source": "components/loading/HomeSkeleton.tsx",
+    "example": "loading-home",
+    "states": ["loading"]
+  },
+  {
+    "component": "LoadingSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-tableskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "RowSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-rowskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "TableSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-tableskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "ChartSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-chartskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "FormSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-formskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "SettingsSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-settingsskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "AccountsSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-accountsskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "AnalysisSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-analysisskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "AccountDetailsSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-accountdetailsskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "AccessTokensSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-accesstokensskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "CategoriesTableSkeleton",
+    "source": "components/loading/LoadingSkeleton.tsx",
+    "example": "loading-categoriestableskeleton",
+    "states": ["loading"]
+  },
+  {
+    "component": "RoutePendingSkeleton",
+    "source": "components/loading/RoutePendingSkeleton.tsx",
+    "example": "page-home",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "HomePage",
+    "source": "components/pages/HomePage.tsx",
+    "example": "page-home",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "LandingPage",
+    "source": "components/pages/LandingPage.tsx",
+    "example": "page-landing",
+    "states": ["ready", "anonymous", "unavailable"]
+  },
+  {
+    "component": "SettingsPage",
+    "source": "components/pages/SettingsPage.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "AnalysisRulesSection",
+    "source": "components/settings/AnalysisRulesSection.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "CategorizationRulesSection",
+    "source": "components/settings/CategorizationRulesSection.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "CustomCategoriesSection",
+    "source": "components/settings/CustomCategoriesSection.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "PersonalAccessTokenSection",
+    "source": "components/settings/PersonalAccessTokenSection.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "RecurringManualTransactionsSection",
+    "source": "components/settings/RecurringManualTransactionsSection.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "SettingsArchiveFilter",
+    "source": "components/settings/SettingsArchiveFilter.tsx",
+    "example": "status-colors",
+    "states": ["ready"]
+  },
+  {
+    "component": "SettingsStatusBadge",
+    "source": "components/settings/SettingsStatusBadge.tsx",
+    "example": "status-colors",
+    "states": ["ready"]
+  },
+  {
+    "component": "SettingsToolbar",
+    "source": "components/settings/SettingsToolbar.tsx",
+    "example": "status-colors",
+    "states": ["ready"]
+  },
+  {
+    "component": "TransactionConditionInput",
+    "source": "components/settings/categorization/TransactionConditionInput.tsx",
+    "example": "category-inputs",
+    "states": ["ready", "empty", "disabled"]
+  },
+  {
+    "component": "ManualTransactionModal",
+    "source": "components/transactions/ManualTransactionModal.tsx",
+    "example": "page-transactions",
+    "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "component": "TransactionBulkEditToolbar",
+    "source": "components/transactions/TransactionBulkEditToolbar.tsx",
+    "example": "page-transactions",
+    "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "component": "TransactionsMobileList",
+    "source": "components/transactions/TransactionsMobileList.tsx",
+    "example": "page-transactions",
+    "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "component": "AppearanceControl",
+    "source": "components/settings/AppearanceControl.tsx",
+    "example": "appearance",
+    "states": ["ready"]
+  },
+  {
+    "component": "AccountsPage",
+    "source": "routes/_authed/accounts.tsx",
+    "example": "page-accounts",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "TransactionsPage",
+    "source": "routes/_authed/transactions.tsx",
+    "example": "page-transactions",
+    "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "component": "AnalysisPage",
+    "source": "routes/_authed/analysis.tsx",
+    "example": "page-analysis",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "AppShellLayout",
+    "source": "components/AppShellLayout.tsx",
+    "example": "page-home",
+    "states": ["ready", "empty"]
+  }
+]

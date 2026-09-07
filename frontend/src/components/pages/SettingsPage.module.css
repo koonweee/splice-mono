@@ -35,12 +35,12 @@
 .settingsTabList {
   width: max-content;
   min-width: 100%;
-  min-height: 44px;
+  min-height: var(--splice-size-touch-target);
   flex-wrap: nowrap;
 }
 
 .settingsTabList :global(.mantine-Tabs-tab) {
-  min-height: 44px;
+  min-height: var(--splice-size-touch-target);
   flex: 0 0 auto;
   align-items: center;
 }
@@ -59,36 +59,4 @@
   overflow-x: hidden;
   overflow-y: auto;
   padding-bottom: 1px;
-}
-
-.themePresetOption {
-  width: 100%;
-  min-height: 96px;
-  border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-body);
-  transition:
-    background-color 120ms ease,
-    border-color 120ms ease;
-}
-
-.themePresetOption[data-selected='true'] {
-  border: 2px solid var(--mantine-primary-color-filled);
-  background: var(--mantine-primary-color-light);
-}
-
-.themeSwatch {
-  border: 1px solid var(--mantine-color-default-border);
-}
-
-.themeCheck {
-  display: grid;
-  width: 18px;
-  height: 18px;
-  color: transparent;
-  place-items: center;
-}
-
-.themeCheck[data-selected='true'] {
-  color: var(--mantine-primary-color-filled);
 }

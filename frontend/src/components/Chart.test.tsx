@@ -9,7 +9,18 @@ let chartProps: ComponentProps<typeof AreaChart>
 vi.mock('@mantine/charts', () => ({
   AreaChart: (props: ComponentProps<typeof AreaChart>) => {
     chartProps = props
-    return <div data-testid="chart" />
+    const content = props.tooltipProps?.content
+    return (
+      <div data-testid="chart" tabIndex={0}>
+        {typeof content === 'function'
+          ? content({
+              active: props.tooltipProps?.active !== false,
+              label: point.date,
+              payload: [{ payload: point, value: point.value }],
+            } as never)
+          : null}
+      </div>
+    )
   },
 }))
 
@@ -248,4 +259,39 @@ it('never exposes decorative points to hover while loading', () => {
   expect(chartProps.data).toEqual([point])
   move()
   expect(onDataPointHover).toHaveBeenLastCalledWith(point)
+})
+
+it('reports the exact keyboard-selected point and clears it on Escape and blur', () => {
+  const { chart, onDataPointHover } = setup()
+  fireEvent.focus(chart)
+  expect(onDataPointHover).toHaveBeenLastCalledWith(point)
+  expect(chartProps.tooltipProps?.active).toBeUndefined()
+  fireEvent.keyDown(chart, { key: 'Escape' })
+  expect(onDataPointHover).toHaveBeenLastCalledWith()
+  expect(chartProps.tooltipProps?.active).toBe(false)
+  fireEvent.keyDown(chart, { key: 'ArrowRight' })
+  expect(onDataPointHover).toHaveBeenLastCalledWith(point)
+  fireEvent.blur(chart)
+  expect(onDataPointHover).toHaveBeenLastCalledWith()
+  expect(chartProps.tooltipProps?.active).toBe(false)
+})
+
+it('does not report a keyboard-selected value while showing decorative loading points', () => {
+  const onDataPointHover = vi.fn()
+  render(
+    <MantineProvider env="test">
+      <Chart
+        data={[point]}
+        valueFormatter={String}
+        placeholder
+        loading
+        onDataPointHover={onDataPointHover}
+      />
+    </MantineProvider>,
+  )
+  const chart = screen.getByTestId('chart')
+  fireEvent.focus(chart)
+  fireEvent.keyDown(chart, { key: 'ArrowRight' })
+  expect(onDataPointHover).not.toHaveBeenCalled()
+  expect(chartProps.tooltipProps?.active).toBe(false)
 })

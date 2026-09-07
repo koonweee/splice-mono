@@ -1,4 +1,5 @@
 import { Box, Drawer, Modal, Stack } from '@mantine/core'
+import { foundation } from '../lib/design-system/foundation'
 import { useCompactLayout } from '../lib/responsive'
 import styles from './DeferredOverlay.module.css'
 import { DeferredFeature } from './DeferredFeature'
@@ -75,7 +76,7 @@ export function DeferredOverlay({
             body: drilldownStyles.drilldownModalBody,
             content: drilldownStyles.drilldownModalContent,
           }}
-          transitionProps={{ transition: 'fade', duration: 200 }}
+          transitionProps={{ transition: 'fade', duration: foundation.motion.overlay }}
         >
           {body}
         </Modal>

@@ -3,6 +3,7 @@ import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, X } from 'lucide-react'
+import { foundation } from '../../lib/design-system/foundation'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { useCoarsePointer } from '../../lib/responsive'
 import { useAccountControllerUpdateBalance } from '../../api/clients/spliceAPI'
@@ -72,7 +73,11 @@ export function InlineBalanceEditor({
     <form
       aria-label="Edit balance"
       onSubmit={form.onSubmit(handleSubmit)}
-      style={{ alignItems: 'center', display: 'flex', minHeight: 44 }}
+      style={{
+        alignItems: 'center',
+        display: 'flex',
+        minHeight: foundation.dimensions.touchTarget,
+      }}
     >
       <Group gap={4} justify="flex-end" wrap="nowrap">
         <DecimalInput

@@ -1,4 +1,4 @@
-import { Badge, useComputedColorScheme } from '@mantine/core'
+import { Badge } from '@mantine/core'
 import type { BadgeProps } from '@mantine/core'
 import type { ReactNode } from 'react'
 
@@ -17,18 +17,23 @@ export function LifecycleBadge({
   size = 'sm',
   leftSection,
 }: LifecycleBadgeProps) {
-  const isLight = useComputedColorScheme() === 'light'
   const color =
     status === 'Active' ? 'green' : status === 'Paused' ? 'yellow' : 'gray'
+  const role =
+    status === 'Active'
+      ? 'success'
+      : status === 'Paused'
+        ? 'warning'
+        : 'neutral'
 
   return (
     <Badge
       color={color}
-      c={isLight ? `${color}.${color === 'gray' ? 7 : 9}` : undefined}
+      c={`var(--splice-status-${role}-fg)`}
       variant="light"
       size={size}
       leftSection={leftSection}
-      style={{ flexShrink: 0 }}
+      style={{ flexShrink: 0, background: `var(--splice-status-${role}-bg)` }}
     >
       {children && <>{children} - </>}
       {status}

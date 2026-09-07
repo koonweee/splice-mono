@@ -9,7 +9,7 @@
   font: inherit;
   text-align: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color 120ms ease;
+  transition: background-color var(--splice-motion-quick) ease;
 }
 
 .root[data-pressed='true'] {

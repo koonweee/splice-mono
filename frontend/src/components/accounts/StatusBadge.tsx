@@ -49,18 +49,31 @@ interface StatusBadgeProps {
 export function StatusBadge({ status, statusBody, onFix }: StatusBadgeProps) {
   if (!status) {
     return (
-      <Badge color="gray" variant="light">
+      <Badge
+        color="gray"
+        variant="light"
+        c="var(--splice-status-neutral-fg)"
+        bg="var(--splice-status-neutral-bg)"
+      >
         Manual
       </Badge>
     )
   }
 
   const config = statusConfig[status] ?? { color: 'gray', label: status }
+  const role =
+    status === SanitizedBankLinkStatus.OK
+      ? 'success'
+      : status === SanitizedBankLinkStatus.ERROR
+        ? 'danger'
+        : 'warning'
   const tooltipLabel = getTooltipLabel(status, statusBody)
 
   const badge = (
     <Badge
       color={config.color}
+      c={`var(--splice-status-${role}-fg)`}
+      bg={`var(--splice-status-${role}-bg)`}
       variant="light"
       style={{ cursor: tooltipLabel ? 'help' : undefined }}
     >

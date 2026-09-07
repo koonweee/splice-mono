@@ -14,7 +14,8 @@ import {
 import { useDebouncedValue } from '@mantine/hooks'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, Search, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { foundation } from '../../lib/design-system/foundation'
 import styles from './ManualBrokeragePositionsEditor.module.css'
 import type { MarketSecuritySearchResult } from '../../api/models'
 
@@ -50,6 +51,8 @@ export function ManualBrokeragePositionsEditor({
   disabled = false,
 }: ManualBrokeragePositionsEditorProps) {
   const [searchInput, setSearchInput] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  const resultsRef = useRef<HTMLDivElement>(null)
   const [searchFocused, setSearchFocused] = useState(false)
   const [debouncedSearch] = useDebouncedValue(searchInput.trim(), 300)
   const [duplicateSymbol, setDuplicateSymbol] = useState<string | null>(null)
@@ -66,9 +69,7 @@ export function ManualBrokeragePositionsEditor({
     !searchQuery.isFetching &&
     (searchQuery.isSuccess || searchQuery.isError)
   const searchPopoverOpened =
-    searchFocused &&
-    trimmedSearchInput.length >= 2 &&
-    settledSearchMatchesInput
+    searchFocused && trimmedSearchInput.length >= 2 && settledSearchMatchesInput
 
   const positionSymbols = useMemo(
     () => new Set(positions.map((position) => position.symbol.toUpperCase())),
@@ -90,6 +91,7 @@ export function ManualBrokeragePositionsEditor({
       },
     ])
     setSearchInput('')
+    inputRef.current?.focus()
     setSearchFocused(false)
     setDuplicateSymbol(null)
   }
@@ -115,7 +117,9 @@ export function ManualBrokeragePositionsEditor({
           Positions
         </Text>
         <Popover
+          keepMounted
           opened={searchPopoverOpened}
+          onChange={setSearchFocused}
           position="bottom-start"
           shadow="md"
           width="target"
@@ -123,28 +127,68 @@ export function ManualBrokeragePositionsEditor({
         >
           <Popover.Target>
             <TextInput
+              ref={inputRef}
+              role="combobox"
+              data-mantine-stop-propagation={searchPopoverOpened || undefined}
               aria-label="Search stocks and ETFs"
               disabled={disabled}
               leftSection={<Search size={14} />}
-              onBlur={() => setSearchFocused(false)}
+              onBlur={(event) => {
+                if (!resultsRef.current?.contains(event.relatedTarget))
+                  setSearchFocused(false)
+              }}
               onChange={(event) => {
                 setSearchInput(event.currentTarget.value)
+                setSearchFocused(true)
                 setDuplicateSymbol(null)
               }}
               onFocus={() => setSearchFocused(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowDown' && searchPopoverOpened) {
+                  event.preventDefault()
+                  resultsRef.current
+                    ?.querySelector<HTMLButtonElement>('button:not(:disabled)')
+                    ?.focus()
+                }
+                if (event.key === 'Escape') {
+                  event.stopPropagation()
+                  setSearchFocused(false)
+                }
+              }}
               placeholder="Search AAPL or C6L.SI"
               rightSection={
                 searchQuery.isFetching ? <Loader size={14} /> : undefined
               }
               rightSectionPointerEvents="none"
               size="md"
-              styles={{ input: { minHeight: 44 } }}
+              styles={{
+                input: { minHeight: foundation.dimensions.touchTarget },
+              }}
               value={searchInput}
             />
           </Popover.Target>
-          <Popover.Dropdown aria-label="Security search results" p="xs">
+          <Popover.Dropdown
+            ref={resultsRef}
+            aria-label="Security search results"
+            p="xs"
+            onBlurCapture={(event) => {
+              if (
+                event.relatedTarget !== inputRef.current &&
+                !event.currentTarget.contains(event.relatedTarget)
+              )
+                setSearchFocused(false)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                event.stopPropagation()
+                inputRef.current?.focus()
+                setSearchFocused(false)
+              }
+            }}
+          >
             {searchQuery.isError ? (
-              <Text c="red" role="alert" size="sm">
+              <Text c="var(--splice-error)" role="alert" size="sm">
                 Stock search failed. Try again in a moment.
               </Text>
             ) : searchQuery.isSuccess && searchQuery.data.length === 0 ? (
@@ -161,6 +205,7 @@ export function ManualBrokeragePositionsEditor({
                     return (
                       <Button
                         aria-label={`Add ${security.symbol}`}
+                        data-mantine-stop-propagation
                         disabled={disabled}
                         justify="flex-start"
                         key={`${security.symbol}-${security.exchangeCode}`}
@@ -255,7 +300,9 @@ export function ManualBrokeragePositionsEditor({
                     updateQuantity(index, event.currentTarget.value)
                   }
                   size="md"
-                  styles={{ input: { minHeight: 44 } }}
+                  styles={{
+                    input: { minHeight: foundation.dimensions.touchTarget },
+                  }}
                   value={position.quantity}
                 />
                 <ActionIcon
@@ -263,7 +310,7 @@ export function ManualBrokeragePositionsEditor({
                   color="red"
                   disabled={disabled}
                   onClick={() => removePosition(index)}
-                  size={44}
+                  size={foundation.dimensions.touchTarget}
                   variant="subtle"
                 >
                   <Trash2 size={16} />

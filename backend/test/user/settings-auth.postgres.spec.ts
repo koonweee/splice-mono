@@ -59,6 +59,36 @@ postgresSuite('settings and token concurrency on PostgreSQL', () => {
   const storedUser = () =>
     fixture.database.getRepository(UserEntity).findOneByOrFail({ id: user.id });
 
+  it('persists atomic appearance, preserves omitted values, and scopes writes to the selected user', async () => {
+    const other = await fixture.database.getRepository(UserEntity).save(
+      UserEntity.fromGoogleIdentity({
+        email: `${randomUUID()}@fixture.test`,
+        googleSubject: randomUUID(),
+      }),
+    );
+    await service.updateSettings(user.id, {
+      appearance: { mode: 'oled', accent: '#b399cf' },
+    });
+    await service.updateSettings(user.id, { currency: 'SGD' });
+    expect((await storedUser()).settings.appearance).toEqual({
+      mode: 'oled',
+      accent: '#b399cf',
+    });
+    await service.updateSettings(user.id, {
+      appearance: { mode: 'light', accent: null },
+    });
+    expect((await storedUser()).settings).toMatchObject({
+      currency: 'SGD',
+      appearance: { mode: 'light', accent: null },
+    });
+    expect(
+      (
+        await fixture.database
+          .getRepository(UserEntity)
+          .findOneByOrFail({ id: other.id })
+      ).settings.appearance,
+    ).toEqual({ mode: 'dark', accent: '#83b59b' });
+  });
   it('preserves concurrent disjoint and nested patches and committed event values', async () => {
     await Promise.all([
       service.updateSettings(user.id, { currency: 'EUR' }),

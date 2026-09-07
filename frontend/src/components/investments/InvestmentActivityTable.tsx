@@ -74,6 +74,7 @@ export function InvestmentActivityTable({
   if (isMobile) {
     return (
       <Box
+        role="region"
         aria-label={`Investment activity list, ${activity.length} of ${total} shown`}
       >
         {activity.map((row) => (

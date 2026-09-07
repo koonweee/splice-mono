@@ -10,34 +10,36 @@
 .sectionTab {
   flex: 1;
   min-width: 0;
-  min-height: 44px;
+  min-height: var(--splice-size-touch-target);
   padding-right: var(--mantine-spacing-xs);
   padding-left: var(--mantine-spacing-xs);
 }
 
 .balanceRow {
-  min-height: 44px;
+  min-height: var(--splice-size-touch-target);
 }
 
 .balanceRow[data-converted='true'] {
   min-height: calc(
-    44px + var(--mantine-font-size-md) * var(--mantine-line-height-md)
+    var(--splice-size-touch-target) + var(--mantine-font-size-md) *
+      var(--mantine-line-height-md)
   );
 }
 
 .balanceValue {
   min-width: 0;
-  min-height: 44px;
+  min-height: var(--splice-size-touch-target);
 }
 
 .balanceRow[data-converted='true'] > .balanceValue {
   min-height: calc(
-    44px + var(--mantine-font-size-md) * var(--mantine-line-height-md)
+    var(--splice-size-touch-target) + var(--mantine-font-size-md) *
+      var(--mantine-line-height-md)
   );
 }
 
 .nativeBalanceRow {
-  min-height: 44px;
+  min-height: var(--splice-size-touch-target);
 }
 
 @media (max-width: 22.5em) {
@@ -60,8 +62,8 @@
     padding-inline: var(--mantine-spacing-xs);
   }
   .compactAction {
-    width: 44px;
-    height: 44px;
+    width: var(--splice-size-touch-target);
+    height: var(--splice-size-touch-target);
   }
 }
 

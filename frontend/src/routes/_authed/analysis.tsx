@@ -140,14 +140,14 @@ function SummaryStrip({
       >
         <Group gap="lg">
           <Group gap={6}>
-            <ArrowDownLeft size={16} color="var(--mantine-color-teal-6)" />
+            <ArrowDownLeft size={16} color="var(--splice-positive)" />
             <Text size="sm" c="dimmed" fw={500}>
               Inflows
             </Text>
             <Text fw={700}>{formatAmount(totalInflow, currency)}</Text>
           </Group>
           <Group gap={6}>
-            <ArrowUpRight size={16} color="var(--mantine-color-red-6)" />
+            <ArrowUpRight size={16} color="var(--splice-negative)" />
             <Text size="sm" c="dimmed" fw={500}>
               Outflows
             </Text>
@@ -158,7 +158,16 @@ function SummaryStrip({
           <Text size="sm" c="dimmed" fw={500}>
             Net
           </Text>
-          <Text fw={700} c={net === 0n ? undefined : net > 0n ? 'teal' : 'red'}>
+          <Text
+            fw={700}
+            c={
+              net === 0n
+                ? undefined
+                : net > 0n
+                  ? 'var(--splice-positive)'
+                  : 'var(--splice-negative)'
+            }
+          >
             {net > 0n ? '+' : ''}
             {formatAmount(netFlow, currency)}
           </Text>
@@ -168,12 +177,12 @@ function SummaryStrip({
         <Progress.Root size="sm" radius="xl">
           <Progress.Section
             value={inflowPct}
-            color="teal"
+            color="var(--splice-positive)"
             aria-label="Inflow share"
           />
           <Progress.Section
             value={100 - inflowPct}
-            color="red"
+            color="var(--splice-negative)"
             aria-label="Outflow share"
           />
         </Progress.Root>
@@ -477,7 +486,7 @@ function AnalysisPage() {
                       <FlowSection
                         title="Inflows"
                         icon={ArrowDownLeft}
-                        iconColor="var(--mantine-color-teal-6)"
+                        iconColor="var(--splice-positive)"
                         categories={analysis.inflows}
                         total={analysis.totalInflow}
                         currency={analysis.currency}
@@ -490,7 +499,7 @@ function AnalysisPage() {
                       <FlowSection
                         title="Outflows"
                         icon={ArrowUpRight}
-                        iconColor="var(--mantine-color-red-6)"
+                        iconColor="var(--splice-negative)"
                         categories={analysis.outflows}
                         total={analysis.totalOutflow}
                         currency={analysis.currency}

@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
+import { OFFLINE_COLORS } from './lib/design-system/offline'
 
 declare const self: ServiceWorkerGlobalScope
 
@@ -24,8 +25,8 @@ const OFFLINE_FALLBACK_HTML = `<!doctype html>
         margin: 0;
         display: grid;
         place-items: center;
-        background: #282a36;
-        color: #f8f8f2;
+        background: ${OFFLINE_COLORS.canvas};
+        color: ${OFFLINE_COLORS.text};
       }
 
       main {
@@ -43,7 +44,7 @@ const OFFLINE_FALLBACK_HTML = `<!doctype html>
 
       p {
         margin: 0;
-        color: #d7d7d2;
+        color: ${OFFLINE_COLORS.dimmed};
         font-size: 1rem;
         line-height: 1.5;
       }

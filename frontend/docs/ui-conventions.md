@@ -89,7 +89,8 @@ compatibility wrapper. Domain-specific transaction/provider statuses stay separa
 
 ## Appearance and interaction
 
-[theme.ts](../src/lib/theme.ts) owns Mantine component defaults and palettes;
+[design-system](../src/lib/design-system/appearance.ts) owns the appearance resolver
+and shared Mantine component defaults;
 [styles.css](../src/styles.css) owns shared appearance and responsive input
 rules. Use theme spacing, radii, and semantic colors before adding local values.
 Buttons and common form inputs default to `md`. Keep explicit size overrides
@@ -241,3 +242,52 @@ identity changes, and warms only default primary data using the existing
 all filter combinations or security/access-token inventory. Explicit intent can
 prepare selected Settings sections using their own authoritative freshness rules.
 No private data belongs in the code registry or persistent browser storage.
+
+## Styling tokens and appearance
+
+Use `lib/design-system/appearance.ts` for the pure Light/Dark/OLED + accent
+resolver, `foundation.ts` for shared numeric roles, `components.ts` for Mantine
+component defaults, and `variables.ts` for the CSS adapter. Persistence and
+preview events belong in `lib/appearance-preferences.ts`, outside styling.
+The dependency flows from foundations and component defaults to appearance to
+providers and consumers; a component must not import persistence to obtain a color.
+
+Prefer Mantine's spacing, type, radius, shadow and named breakpoint conventions.
+Use `--splice-canvas`, `--splice-surface-raised`, `--splice-surface-muted`,
+`--splice-surface-overlay`, `--splice-border`, and `--splice-separator` for
+application surfaces. `--splice-control-border` and `--splice-focus` have stronger
+contrast requirements than decorative separators. Use `--splice-selected` and
+`--splice-selected-hover` for selected surfaces, and `--splice-chart-color` for
+net-worth history. Positive/negative financial meaning and provider/category
+colors remain independent of the personal accent.
+
+Shared layers, durations and input/touch dimensions originate in `foundation.ts`;
+React reads the values there and CSS consumes the adapter's `--splice-layer-*`,
+`--splice-motion-*`, and `--splice-size-*` variables. Keep local chart geometry,
+table column widths, circular swatches, structural zero radii and stacking within
+an existing local context local. Do not convert every number into a global token.
+Do not suppress keyboard focus to improve a pointer screenshot.
+
+Run `yarn tokens:check` when changing styles. It rejects raw color literals in
+application consumers while allowing the documented palette owners in
+`design-system`, `category-colors.ts`, and `crypto-utils.ts`. A new exception
+requires a domain-specific reason in the audit; it is not an escape hatch for a
+component-specific theme. Tests, generated API models, and static assets are
+outside this guard.
+
+## Component workbench
+
+Every new shared rendered component needs a real example in `workbench/`, with
+its source and meaningful states recorded in `catalog.json` and `catalog.md`.
+A nonvisual export should instead document its role and behavior test. Run
+`yarn workbench` and use mode/accent, viewport, masking, motion and API controls
+to inspect combinations. The registry smoke test checks that documented capture
+URLs and selectable states resolve. CI builds the static workbench and runs its
+isolation checks without a backend.
+
+Keep workbench fixtures and transport adapters outside `src`; production routes
+must never import them. The workbench uses independent frame documents and
+QueryClients. API examples opt into explicit in-memory handlers. Unknown requests
+fail visibly instead of falling through to real HTTP. Never use real user data,
+bank-link URLs, notification permission prompts or persisted preferences in an
+example. See `workbench/README.md` for the current provider and coverage status.

@@ -11,7 +11,7 @@ const defaultSettings: UserSettings = {
   currency: 'USD',
   timezone: 'UTC',
   hideZeroBalanceAccounts: false,
-  theme: 'splice-dark',
+  appearance: { mode: 'dark', accent: '#83b59b' },
   neutralizationLookaroundDays: 60,
   analysisSankeyEnabled: false,
   notifications: {
@@ -236,7 +236,10 @@ describe('UserService', () => {
       expect(result?.id).toBe('user-uuid-123');
       expect(result?.email).toBe('test@example.com');
       expect(result?.settings.hideZeroBalanceAccounts).toBe(false);
-      expect(result?.settings.theme).toBe('splice-dark');
+      expect(result?.settings.appearance).toEqual({
+        mode: 'dark',
+        accent: '#83b59b',
+      });
       expect(result).not.toHaveProperty('hashedPassword');
     });
 
@@ -610,7 +613,7 @@ describe('UserService', () => {
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
-    it('should update theme without affecting currency or timezone events', async () => {
+    it('should update appearance without affecting currency or timezone events', async () => {
       const mockEntity = new UserEntity();
       mockEntity.id = 'user-uuid-123';
       mockEntity.email = 'test@example.com';
@@ -626,12 +629,12 @@ describe('UserService', () => {
       );
 
       const result = await service.updateSettings('user-uuid-123', {
-        theme: 'dracula',
+        appearance: { mode: 'dark', accent: '#b399cf' },
       });
 
       expect(result).toEqual({
         ...defaultSettings,
-        theme: 'dracula',
+        appearance: { mode: 'dark', accent: '#b399cf' },
       });
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
@@ -646,7 +649,7 @@ describe('UserService', () => {
         currency: 'EUR',
         timezone: 'America/New_York',
         hideZeroBalanceAccounts: true,
-        theme: 'dracula',
+        appearance: { mode: 'dark', accent: '#b399cf' },
         analysisSankeyEnabled: true,
       };
       mockEntity.providerDetails = null;
@@ -666,7 +669,7 @@ describe('UserService', () => {
         currency: 'EUR',
         timezone: 'America/New_York',
         hideZeroBalanceAccounts: true,
-        theme: 'dracula',
+        appearance: { mode: 'dark', accent: '#b399cf' },
         neutralizationLookaroundDays: 120,
         analysisSankeyEnabled: true,
         notifications: defaultSettings.notifications,

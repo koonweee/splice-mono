@@ -7,7 +7,7 @@
 }
 
 .groupHeader {
-  background-color: light-dark(rgb(0 0 0 / 4%), rgb(0 0 0 / 14%));
+  background-color: var(--splice-group-header);
 }
 
 .groupHeaderDivider {

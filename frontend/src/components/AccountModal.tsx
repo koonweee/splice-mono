@@ -15,6 +15,7 @@ import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, RefreshCw } from 'lucide-react'
 import { lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { foundation } from '../lib/design-system/foundation'
 import {
   featureIntent,
   loadManualBrokerageHoldingsModal,
@@ -292,7 +293,10 @@ export function AccountModal({
         title={account?.customName ?? account?.name ?? 'Account details'}
         size="xl"
         centered={false}
-        transitionProps={{ transition: 'fade', duration: 200 }}
+        transitionProps={{
+          transition: 'fade',
+          duration: foundation.motion.overlay,
+        }}
       >
         <DataState
           hasData={!isLoading && (!balanceHistoryError || Boolean(fullAccount))}
@@ -567,7 +571,7 @@ export function AccountModal({
                     align="center"
                     mb="sm"
                     gap="xs"
-                    mih={44}
+                    mih={foundation.dimensions.touchTarget}
                   >
                     <Text size="sm" c="dimmed">
                       {snapshotDate

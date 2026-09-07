@@ -1,7 +1,7 @@
 .positionHeader,
 .positionRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 8rem 44px;
+  grid-template-columns: minmax(0, 1fr) 8rem var(--splice-size-touch-target);
   column-gap: var(--mantine-spacing-sm);
   align-items: center;
 }
@@ -28,7 +28,7 @@
 @media (--compact-layout) {
   .positionHeader,
   .positionRow {
-    grid-template-columns: minmax(0, 1fr) 6.5rem 44px;
+    grid-template-columns: minmax(0, 1fr) 6.5rem var(--splice-size-touch-target);
     column-gap: var(--mantine-spacing-xs);
   }
 
@@ -47,6 +47,8 @@
 @media (max-width: 23.125em) {
   .positionHeader,
   .positionRow {
-    grid-template-columns: minmax(0, 1fr) 5.75rem 44px;
+    grid-template-columns: minmax(0, 1fr) 5.75rem var(
+        --splice-size-touch-target
+      );
   }
 }

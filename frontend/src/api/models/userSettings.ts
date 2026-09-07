@@ -5,14 +5,14 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
-import type { UserSettingsTheme } from './userSettingsTheme'
+import type { UserSettingsAppearance } from './userSettingsAppearance'
 import type { UserSettingsNotifications } from './userSettingsNotifications'
 
 export interface UserSettings {
   currency?: string
   timezone?: string
   hideZeroBalanceAccounts?: boolean
-  theme?: UserSettingsTheme
+  appearance?: UserSettingsAppearance
   /**
    * @minimum 0
    * @maximum 180

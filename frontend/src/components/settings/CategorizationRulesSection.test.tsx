@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -705,8 +706,25 @@ describe('CategorizationRulesSection', () => {
       ),
     ).toBeTruthy()
 
-    fireEvent.click(
+    fireEvent.keyDown(
       within(previewDialog).getByRole('button', { name: /^close$/i }),
+      { key: 'Escape' },
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', {
+          name: /preview recommendation: suggested uber rideshare/i,
+        }),
+      ).toBeNull(),
+    )
+    const drawer = screen.getByRole('dialog', {
+      name: /^rule recommendations$/i,
+    })
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: /^rule recommendations$/i }),
+      ).toBeNull(),
     )
   })
 

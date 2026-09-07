@@ -1,0 +1,10 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.header {
+  background: var(--splice-header);
+  border-bottom-color: var(--splice-header-divider);
+}

@@ -10,6 +10,7 @@ import { AuthService } from '../../src/auth/auth.service';
 import { OAUTH_STATE_COOKIE } from '../../src/auth/auth-cookies';
 import { GoogleOAuthService } from '../../src/auth/google-oauth.service';
 import { PersonalAccessTokenService } from '../../src/auth/personal-access-token.service';
+import { UpdateUserSettingsDtoSchema } from '../../src/types/UserSettings';
 import { UserController } from '../../src/user/user.controller';
 import { UserService } from '../../src/user/user.service';
 import { mockUserService } from '../mocks/user/user-service.mock';
@@ -37,6 +38,19 @@ const mockRequest = (
 
 describe('UserController', () => {
   let controller: UserController;
+  it('updates appearance only for the authenticated principal', async () => {
+    const appearance = { mode: 'oled' as const, accent: null };
+    await controller.updateSettings(
+      { userId: mockUser.id, email: mockUser.email },
+      { appearance },
+    );
+    expect(mockUserService.updateSettings).toHaveBeenCalledWith(mockUser.id, {
+      appearance,
+    });
+    expect(() =>
+      UpdateUserSettingsDtoSchema.parse({ userId: 'another-user', appearance }),
+    ).toThrow();
+  });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let service: UserService;
   const originalJwtSecret = process.env.JWT_SECRET;

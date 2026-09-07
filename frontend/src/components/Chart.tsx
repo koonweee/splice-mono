@@ -2,10 +2,26 @@ import { AreaChart } from '@mantine/charts'
 import { useReducedMotion } from '@mantine/hooks'
 import { Box, Paper, Text } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
+import { foundation } from '../lib/design-system/foundation'
 import placeholderStyles from './loading/ChartSkeleton.module.css'
+import styles from './Chart.module.css'
 import type { MoneyWithSign } from '../api/models'
 
-function ChartTooltip({ label, value }: { label: string; value?: string }) {
+function ChartTooltip({
+  label,
+  value,
+  inspectedPoint,
+  onInspect,
+}: {
+  label: string
+  value?: string
+  inspectedPoint?: ChartDataPoint
+  onInspect?: (point?: ChartDataPoint) => void
+}) {
+  // Recharts keyboard selection does not emit its pointer movement callback.
+  useEffect(() => {
+    onInspect?.(inspectedPoint)
+  }, [inspectedPoint, onInspect])
   return (
     <Paper px="md" py="xs" withBorder shadow="md" radius="md">
       <Text size="xs" c={value ? 'dimmed' : undefined} mb={value ? 4 : 0}>
@@ -62,7 +78,7 @@ export function Chart({
   placeholder = false,
   loading = false,
   interactive = true,
-  color = 'teal.6',
+  color = 'var(--splice-chart-color)',
   mb,
   onDataPointHover,
 }: ChartProps) {
@@ -81,6 +97,7 @@ export function Chart({
   const interacting = useRef(false)
   const pointerWithin = useRef(false)
   const [interactionActive, setInteractionActive] = useState(false)
+  const [keyboardActive, setKeyboardActive] = useState(false)
 
   useEffect(() => {
     const clearInteraction = () => {
@@ -88,11 +105,13 @@ export function Chart({
       if (!interacting.current) return
       interacting.current = false
       setInteractionActive(false)
+      setKeyboardActive(false)
       onDataPointHover?.()
     }
     if (!canInteract && interacting.current) {
       interacting.current = false
       setInteractionActive(false)
+      setKeyboardActive(false)
       onDataPointHover?.()
     }
     const handlePointerMove = (event: PointerEvent) => {
@@ -144,6 +163,7 @@ export function Chart({
   const domainMax = maxValue + padding
 
   const handleStart = () => {
+    setKeyboardActive(false)
     pointerWithin.current = true
     if (!canInteract) return
     interacting.current = true
@@ -154,6 +174,7 @@ export function Chart({
     pointerWithin.current = false
     interacting.current = false
     setInteractionActive(false)
+    setKeyboardActive(false)
     onDataPointHover?.()
   }
 
@@ -181,6 +202,7 @@ export function Chart({
     <Box
       ref={containerRef}
       aria-busy={!interactive || showingPlaceholder}
+      role={showingPlaceholder ? 'status' : undefined}
       aria-label={showingPlaceholder ? 'Loading chart' : undefined}
       className={showingPlaceholder ? placeholderStyles.graph : undefined}
       mb={mb}
@@ -189,10 +211,27 @@ export function Chart({
       onTouchStart={handleStart}
       onTouchEnd={handleLeave}
       onTouchCancel={handleLeave}
-      onKeyDown={handleStart}
+      onFocus={() => {
+        if (!canInteract) return
+        interacting.current = true
+        setKeyboardActive(true)
+        setInteractionActive(true)
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') handleLeave()
+        else if (
+          canInteract &&
+          ['ArrowLeft', 'ArrowRight', 'Enter'].includes(event.key)
+        ) {
+          interacting.current = true
+          setKeyboardActive(true)
+          setInteractionActive(true)
+        }
+      }}
       onBlur={handleLeave}
     >
       <AreaChart
+        className={minimal ? styles.softArea : undefined}
         h={height}
         data={plottedData}
         dataKey="date"
@@ -204,13 +243,16 @@ export function Chart({
         withXAxis={false}
         withYAxis={false}
         withGradient
+        fillOpacity={
+          minimal ? foundation.chart.minimalFill : foundation.chart.fill
+        }
         yAxisProps={{
           domain: [domainMin, domainMax],
         }}
         valueFormatter={valueFormatter}
         areaProps={{
           isAnimationActive: animate && !reducedMotion && !showingPlaceholder,
-          animationDuration: 400,
+          animationDuration: foundation.motion.chart,
           animationEasing: 'ease-in-out',
         }}
         areaChartProps={{
@@ -219,12 +261,16 @@ export function Chart({
         }}
         tooltipProps={{
           active: canInteract && interactionActive ? undefined : false,
-          content: ({ label, payload }) => {
+          content: ({ label, payload, active }) => {
             if (!payload.length) return null
             const point = payload[0]
             return (
               <ChartTooltip
                 label={point.payload.label || String(label)}
+                inspectedPoint={active ? point.payload : undefined}
+                onInspect={
+                  canInteract && keyboardActive ? onDataPointHover : undefined
+                }
                 value={
                   onDataPointHover
                     ? undefined

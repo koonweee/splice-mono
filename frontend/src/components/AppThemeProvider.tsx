@@ -1,14 +1,22 @@
 import { MantineProvider } from '@mantine/core'
 import { useEffect, useLayoutEffect, useState } from 'react'
+import { designVariables } from '../lib/design-system/variables'
 import {
-  DEFAULT_THEME_PRESET_ID,
-  THEME_CHANGE_EVENT,
-  THEME_STORAGE_KEY,
-  applyThemePresetId,
-  getThemePreset,
-  readStoredThemePresetId,
-} from '../lib/theme'
-import type { ThemePresetId } from '../lib/theme'
+  DEFAULT_APPEARANCE,
+  parseAppearance,
+  resolveAppearance,
+} from '../lib/design-system/appearance'
+import {
+  APPEARANCE_CHANGE_EVENT,
+  APPEARANCE_COOKIE,
+  APPEARANCE_STORAGE_KEY,
+  applyAppearance,
+  decodeAppearance,
+  encodeAppearance,
+  readStoredAppearance,
+  writeAppearanceCookie,
+} from '../lib/appearance-preferences'
+import type { AppearancePreference } from '../lib/design-system/appearance'
 import type { ReactNode } from 'react'
 
 const useIsomorphicLayoutEffect =
@@ -16,50 +24,54 @@ const useIsomorphicLayoutEffect =
 
 export function AppThemeProvider({
   children,
-  initialTheme = DEFAULT_THEME_PRESET_ID,
+  initialAppearance = DEFAULT_APPEARANCE,
   authenticated = false,
 }: {
   children: ReactNode
-  initialTheme?: ThemePresetId
+  initialAppearance?: AppearancePreference
   authenticated?: boolean
 }) {
-  const [themePresetId, setThemePresetId] =
-    useState<ThemePresetId>(initialTheme)
-  const preset = getThemePreset(themePresetId)
-
+  const [appearance, setAppearance] = useState(initialAppearance)
+  const resolved = resolveAppearance(appearance)
+  const initialKey = encodeAppearance(initialAppearance)
   useIsomorphicLayoutEffect(() => {
-    const handleThemeChange = (event: Event) => {
-      if (event instanceof StorageEvent && event.key !== THEME_STORAGE_KEY)
-        return
-      if (event instanceof CustomEvent && event.detail?.theme) {
-        setThemePresetId(getThemePreset(event.detail.theme).id)
-        return
-      }
-
-      setThemePresetId(readStoredThemePresetId())
+    const handlePreview = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return
+      const value = parseAppearance(event.detail)
+      if (value) setAppearance(value)
     }
-
-    window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange)
-    window.addEventListener('storage', handleThemeChange)
-    if (authenticated) applyThemePresetId(initialTheme)
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== APPEARANCE_STORAGE_KEY) return
+      const value = decodeAppearance(event.newValue) ?? DEFAULT_APPEARANCE
+      setAppearance(value)
+      writeAppearanceCookie(value)
+    }
+    window.addEventListener(APPEARANCE_CHANGE_EVENT, handlePreview)
+    window.addEventListener('storage', handleStorage)
+    if (authenticated)
+      applyAppearance(decodeAppearance(initialKey) ?? DEFAULT_APPEARANCE)
     else if (
       !document.cookie
         .split(';')
-        .some((entry) => entry.trim().startsWith('splice_theme='))
+        .some((entry) => entry.trim().startsWith(`${APPEARANCE_COOKIE}=`))
     )
-      applyThemePresetId(readStoredThemePresetId())
-
+      applyAppearance(readStoredAppearance())
     return () => {
-      window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange)
-      window.removeEventListener('storage', handleThemeChange)
+      window.removeEventListener(APPEARANCE_CHANGE_EVENT, handlePreview)
+      window.removeEventListener('storage', handleStorage)
     }
-  }, [authenticated, initialTheme])
-
+  }, [authenticated, initialKey])
+  useIsomorphicLayoutEffect(() => {
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', resolved.colors.canvas)
+  }, [resolved.colors.canvas])
   return (
     <MantineProvider
-      defaultColorScheme={preset.colorScheme}
-      forceColorScheme={preset.colorScheme}
-      theme={preset.theme}
+      cssVariablesResolver={designVariables}
+      defaultColorScheme={resolved.colorScheme}
+      forceColorScheme={resolved.colorScheme}
+      theme={resolved.theme}
     >
       {children}
     </MantineProvider>

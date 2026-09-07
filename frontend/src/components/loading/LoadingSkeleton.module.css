@@ -27,7 +27,7 @@
 }
 @media (--compact-layout) {
   .settingsInput {
-    height: 48px;
+    height: var(--splice-size-touch-input);
   }
   .desktopCategoryFilter {
     display: none;

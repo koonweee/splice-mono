@@ -1,7 +1,7 @@
 .clickable {
   transition:
-    background-color 150ms ease,
-    transform 150ms ease;
+    background-color var(--splice-motion-feedback) ease,
+    transform var(--splice-motion-feedback) ease;
 }
 
 @media (hover: hover) {

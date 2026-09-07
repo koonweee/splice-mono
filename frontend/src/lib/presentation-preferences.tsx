@@ -1,19 +1,18 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { createIsomorphicFn } from '@tanstack/react-start'
 import {
-  DEFAULT_THEME_PRESET_ID,
-  isThemePresetId,
-  normalizeThemePresetId,
-} from './theme'
-import type { ThemePresetId } from './theme'
+  APPEARANCE_COOKIE,
+  decodeAppearance,
+  normalizeAppearance,
+} from './appearance-preferences'
+import type { AppearancePreference } from './design-system/appearance'
 import type { ReactNode } from 'react'
 import type { User } from '../api/models/user'
 
-export const THEME_COOKIE = 'splice_theme'
 export const MASK_COOKIE = 'splice_mask_balances'
 export const HOME_BALANCES_HIDDEN_STORAGE_KEY = 'splice:home-balances-hidden'
 export interface PresentationPreferences {
-  theme: ThemePresetId
+  appearance: AppearancePreference
   maskBalances: boolean | null
   today: string
 }
@@ -40,13 +39,10 @@ export function readPresentationCookies(
   } catch {
     today = now.toISOString().slice(0, 10)
   }
-  const cookieTheme = entries.get(THEME_COOKIE)
   return {
-    theme: user
-      ? normalizeThemePresetId(user.settings.theme)
-      : isThemePresetId(cookieTheme)
-        ? cookieTheme
-        : DEFAULT_THEME_PRESET_ID,
+    appearance: user
+      ? normalizeAppearance(user.settings.appearance)
+      : normalizeAppearance(decodeAppearance(entries.get(APPEARANCE_COOKIE))),
     maskBalances:
       entries.get(MASK_COOKIE) === '1'
         ? true
@@ -66,10 +62,7 @@ export const getPresentationPreferences = createIsomorphicFn()
     readPresentationCookies(document.cookie, user),
   )
 
-export function writePreferenceCookie(
-  name: typeof THEME_COOKIE | typeof MASK_COOKIE,
-  value: string,
-) {
+export function writePreferenceCookie(name: typeof MASK_COOKIE, value: string) {
   if (typeof document === 'undefined') return
   document.cookie = `${name}=${value}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
 }

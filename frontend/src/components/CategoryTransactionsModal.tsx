@@ -1,4 +1,5 @@
 import { Box, Modal } from '@mantine/core'
+import { foundation } from '../lib/design-system/foundation'
 import { useTransactionAnalysisControllerGetTransactions } from '../api/clients/spliceAPI'
 import { formatPrimaryCategory } from '../lib/format'
 import { useCompactLayout } from '../lib/responsive'
@@ -90,7 +91,7 @@ export function CategoryTransactionsModal({
         body: styles.drilldownModalBody,
         content: styles.drilldownModalContent,
       }}
-      transitionProps={{ transition: 'fade', duration: 200 }}
+      transitionProps={{ transition: 'fade', duration: foundation.motion.overlay }}
     >
       <Box className={styles.drilldownBody}>
         <TransactionsDrilldown />

@@ -72,7 +72,7 @@ function AccountList() {
 
 ### Styling
 
-Mantine defaults and palettes live in `src/lib/theme.ts`. Shared global styles live in `src/styles.css`; component layouts also use CSS modules. Tailwind CSS 4 is available through the Vite plugin.
+Styling foundations, semantic appearance roles, and Mantine defaults live in `src/lib/design-system/`. Appearance persistence lives in `src/lib/appearance-preferences.ts`. Shared global styles live in `src/styles.css`; component layouts also use CSS modules. Tailwind CSS 4 is available through the Vite plugin.
 
 Read [Shared UI conventions](docs/ui-conventions.md) before changing UI. Reuse the editor, form-action, settings, date, and table primitives described there. Implementation status and verification are tracked in the [standardization audit](docs/ui-standardization-audit.md).
 

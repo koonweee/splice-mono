@@ -10,6 +10,7 @@ import {
   Text,
   VisuallyHidden,
 } from '@mantine/core'
+import { foundation } from '../../lib/design-system/foundation'
 import accountStyles from '../AccountModal.module.css'
 import toolbarStyles from '../settings/SettingsToolbar.module.css'
 import styles from './LoadingSkeleton.module.css'
@@ -167,8 +168,8 @@ export function SettingsSkeleton({
               />
               <Skeleton
                 className={styles.compactCategoryFilter}
-                h={48}
-                w={48}
+                h={foundation.dimensions.touchInput}
+                w={foundation.dimensions.touchInput}
               />
             </>
           )}
@@ -296,7 +297,7 @@ export function AccountDetailsSkeleton({
       <div>
         <Group
           gap={0}
-          h={44}
+          h={foundation.dimensions.touchTarget}
           style={{
             borderBottom: '2px solid var(--mantine-color-default-border)',
           }}
@@ -344,7 +345,11 @@ export function AccountDetailsSkeleton({
             </>
           ) : (
             <>
-              <Group justify="space-between" mb="sm" mih={44}>
+              <Group
+                justify="space-between"
+                mb="sm"
+                mih={foundation.dimensions.touchTarget}
+              >
                 <Skeleton h={14} w={150} />
                 <Skeleton h={34} w={72} />
               </Group>

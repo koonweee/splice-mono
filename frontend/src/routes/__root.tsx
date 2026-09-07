@@ -13,7 +13,7 @@ import mantineDatesCss from '@mantine/dates/styles.css?url'
 import mantineNotificationsCss from '@mantine/notifications/styles.css?url'
 import mantineReactTableCss from 'mantine-react-table/styles.css?url'
 import appCss from '../styles.css?url'
-import { getThemePreset } from '../lib/theme'
+import { resolveAppearance } from '../lib/design-system/appearance'
 import {
   PresentationProvider,
   getPresentationPreferences,
@@ -124,7 +124,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     sessionOutcome: context.sessionOutcome,
     authenticated: Boolean(context.sessionUser),
   }),
-  head: () => ({
+  head: ({ loaderData }) => ({
     meta: [
       {
         charSet: 'utf-8',
@@ -138,7 +138,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
       {
         name: 'theme-color',
-        content: '#282a36',
+        content: resolveAppearance(loaderData?.presentation.appearance).colors
+          .canvas,
       },
       {
         name: 'apple-mobile-web-app-capable',
@@ -195,7 +196,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
       {
         rel: 'stylesheet',
-        href: appCss,
+        // Vite's ?url export can gain a client-only HMR timestamp.
+        // The dev server revalidates this stable CSS URL on refresh.
+        href: import.meta.env.DEV ? '/src/styles.css' : appCss,
       },
     ],
   }),
@@ -205,7 +208,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   const { presentation, sessionOutcome, authenticated } = Route.useLoaderData()
-  const preset = getThemePreset(presentation.theme)
+  const preset = resolveAppearance(presentation.appearance)
   return (
     <html
       lang="en"
@@ -219,7 +222,7 @@ function RootComponent() {
       </head>
       <body>
         <AppThemeProvider
-          initialTheme={presentation.theme}
+          initialAppearance={presentation.appearance}
           authenticated={authenticated}
         >
           <SessionOutcomeContext.Provider value={sessionOutcome}>
