@@ -19,6 +19,7 @@ import dayjs from 'dayjs'
 import { Check, Info, Pencil, RotateCcw, Trash2, X } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useAppTransitionGuard } from '../lib/pwa/app-transition'
 import { foundation } from '../lib/design-system/foundation'
 import { invalidateMutationFamilies } from '../lib/query-invalidation'
 import { useSupportsHover } from '../lib/responsive'
@@ -628,6 +629,9 @@ export function TransactionsTable({
     null,
   )
 
+  useAppTransitionGuard(
+    editingTransactionId !== null || editingReportingDateTransactionId !== null,
+  )
   useEffect(() => {
     if (!bulkModeEnabled) {
       return

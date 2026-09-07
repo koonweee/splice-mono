@@ -80,6 +80,45 @@ postgresSuite(
       await harness?.close();
     });
 
+    it('counts uncategorized rows with list ownership, manual and archived account semantics', async () => {
+      const all = await queries.readPage(userId, {
+        pageSize: 100,
+        categoryId: 'UNCATEGORIZED',
+      });
+      expect(await queries.countUncategorized(userId)).toBe(all.total);
+      expect(await queries.countUncategorized(foreignUser)).toBe(0);
+      await harness.database.query(
+        'UPDATE account_entity SET "archivedAt"=now() WHERE id=$1',
+        [accountId],
+      );
+      await harness.database.query(
+        `UPDATE banking_transaction_entity SET source='manual' WHERE id=$1`,
+        [all.entities[0].id],
+      );
+      expect(await queries.countUncategorized(userId)).toBe(all.total);
+      const categoryId = randomUUID();
+      await harness.database.query(
+        `INSERT INTO category_entity (id,"userId","primary","normalizedPrimary",detailed,"normalizedDetailed",description,color) VALUES ($1,$2,'Synthetic','synthetic','Synthetic','synthetic','Synthetic','#83b59b')`,
+        [categoryId, userId],
+      );
+      await harness.database.query(
+        `UPDATE banking_transaction_entity SET "categoryId"=$1 WHERE id=$2`,
+        [categoryId, all.entities[0].id],
+      );
+      expect(await queries.countUncategorized(userId)).toBe(
+        all.entities.length - 1,
+      );
+      await harness.database.query(
+        `UPDATE banking_transaction_entity SET "categoryId"=NULL WHERE id=$1`,
+        [all.entities[0].id],
+      );
+      expect(await queries.countUncategorized(userId)).toBe(all.total);
+      await harness.database.query(
+        'UPDATE account_entity SET "archivedAt"=NULL WHERE id=$1',
+        [accountId],
+      );
+    });
+
     it.each(
       ['activityDate', 'merchantName', 'pending', 'amount'].flatMap((sortBy) =>
         ['ASC', 'DESC'].map((sortOrder) => ({

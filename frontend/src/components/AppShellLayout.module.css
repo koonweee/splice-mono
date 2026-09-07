@@ -2,9 +2,56 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  padding-inline-start: calc(
+    var(--app-shell-navbar-offset, 0px) +
+      max(var(--mantine-spacing-md), var(--splice-safe-area-left, 0px))
+  );
+  padding-inline-end: max(
+    var(--mantine-spacing-md),
+    var(--splice-safe-area-right, 0px)
+  );
+  padding-bottom: calc(
+    var(--splice-lifecycle-space, 0px) +
+      max(var(--mantine-spacing-md), var(--splice-safe-area-bottom, 0px))
+  );
+}
+
+.headerContent {
+  padding-top: var(--splice-safe-area-top, 0px);
+  padding-left: max(16px, var(--splice-safe-area-left, 0px));
+  padding-right: max(16px, var(--splice-safe-area-right, 0px));
+}
+
+.navbar {
+  padding-left: max(
+    var(--mantine-spacing-md),
+    var(--splice-safe-area-left, 0px)
+  );
+  padding-bottom: max(
+    var(--mantine-spacing-md),
+    var(--splice-safe-area-bottom, 0px)
+  );
 }
 
 .header {
   background: var(--splice-header);
   border-bottom-color: var(--splice-header-divider);
+}
+
+/* Header controls keep touch targets while text zoom expands the shell offset. */
+.headerActions {
+  flex-shrink: 0;
+}
+
+.headerActions :global(.mantine-ActionIcon-root),
+.navigationToggle {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.navigationToggle {
+  --burger-size: 24px;
 }

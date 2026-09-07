@@ -97,6 +97,7 @@ export const PushSubscriptionKeysSchema = z.object({
 export const RegisterPushSubscriptionDtoSchema = registerSchema(
   'RegisterPushSubscriptionDto',
   z.object({
+    protocolVersion: z.literal(2),
     endpoint: z.string().url(),
     expirationTime: z.number().nullable().optional(),
     keys: PushSubscriptionKeysSchema,
@@ -134,6 +135,8 @@ export const PushSubscriptionStatusResponseSchema = registerSchema(
   z.object({
     configured: z.boolean(),
     subscribed: z.boolean(),
+    rebindRequired: z.boolean(),
+    enrollmentId: z.string().uuid().nullable(),
   }),
 );
 
@@ -147,6 +150,8 @@ export const PushSubscriptionResponseSchema = registerSchema(
     id: z.string().uuid(),
     endpoint: z.string().url(),
     revokedAt: z.coerce.date().nullable(),
+    enrollmentId: z.string().uuid(),
+    rebindRequired: z.boolean(),
   }),
 );
 
@@ -165,4 +170,54 @@ export const TestNotificationResponseSchema = registerSchema(
 
 export type TestNotificationResponse = z.infer<
   typeof TestNotificationResponseSchema
+>;
+
+export const NotificationSummarySchema = registerSchema(
+  'NotificationSummary',
+  z.object({
+    uncategorizedTransactionCount: z.number().int().nonnegative(),
+    unreadNotificationCount: z.number().int().nonnegative(),
+    computedAt: z.string().datetime(),
+  }),
+);
+export type NotificationSummary = z.infer<typeof NotificationSummarySchema>;
+export const NotificationInboxItemSchema = registerSchema(
+  'NotificationInboxItem',
+  z.object({
+    id: z.string().uuid(),
+    type: z.enum(['transactions.new_synced', 'bank_link.needs_attention']),
+    title: z.string(),
+    body: z.string(),
+    url: z.string(),
+    createdAt: z.string().datetime(),
+    readAt: z.string().datetime().nullable(),
+  }),
+);
+export type NotificationInboxItem = z.infer<typeof NotificationInboxItemSchema>;
+export const NotificationInboxPageSchema = registerSchema(
+  'NotificationInboxPage',
+  z.object({
+    items: z.array(NotificationInboxItemSchema),
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
+  }),
+);
+export type NotificationInboxPage = z.infer<typeof NotificationInboxPageSchema>;
+export const NotificationInboxQuerySchema = registerSchema(
+  'NotificationInboxQuery',
+  z.object({
+    cursor: z.string().max(512).optional(),
+    pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  }),
+);
+export type NotificationInboxQuery = z.infer<
+  typeof NotificationInboxQuerySchema
+>;
+
+export const PushEnrollmentEligibilitySchema = registerSchema(
+  'PushEnrollmentEligibility',
+  z.object({ eligible: z.boolean() }),
+);
+export type PushEnrollmentEligibility = z.infer<
+  typeof PushEnrollmentEligibilitySchema
 >;

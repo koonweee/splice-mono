@@ -1,3 +1,6 @@
+import { BrowserSessionModule } from '../auth/browser-session.module';
+import { TransactionQueryService } from '../transaction/transaction-query.service';
+import { TransactionEntity } from '../transaction/transaction.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from '../user/user.module';
@@ -14,14 +17,17 @@ import { WebPushAdapter } from './web-push.adapter';
   imports: [
     TypeOrmModule.forFeature([
       NotificationEntity,
+      TransactionEntity,
       PushSubscriptionEntity,
       NotificationPushDeliveryEntity,
     ]),
     UserModule,
+    BrowserSessionModule,
   ],
   controllers: [NotificationController],
   providers: [
     NotificationService,
+    TransactionQueryService,
     NotificationListener,
     NotificationPushProcessor,
     WebPushAdapter,

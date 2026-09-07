@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import { Repository } from 'typeorm';
 import { RefreshTokenEntity } from './refresh-token.entity';
+import { BrowserSessionService } from './browser-session.service';
 
 const REFRESH_TOKEN_TTL_DAYS = 30;
 const REFRESH_TOKEN_ROTATION_GRACE_MS = 10_000;
@@ -17,6 +18,7 @@ export class AuthService {
     @InjectRepository(RefreshTokenEntity)
     private refreshTokenRepository: Repository<RefreshTokenEntity>,
     private jwtService: JwtService,
+    private readonly browserSessions: BrowserSessionService,
   ) {}
 
   /**
@@ -44,7 +46,15 @@ export class AuthService {
     entity.rotationGraceExpiresAt = null;
     entity.replacedByTokenId = null;
 
-    await this.refreshTokenRepository.save(entity);
+    await this.refreshTokenRepository.manager.transaction(async (manager) => {
+      const session = await this.browserSessions.createSession(
+        manager,
+        userId,
+        entity.expiresAt,
+      );
+      entity.sessionId = session.id;
+      await manager.getRepository(RefreshTokenEntity).save(entity);
+    });
     this.logger.log({ userId }, 'Generated refresh token for user');
 
     return rawToken;
@@ -57,17 +67,17 @@ export class AuthService {
   async rotateRefreshToken(
     oldRawToken: string,
   ): Promise<{ userId: string; newRefreshToken: string }> {
-    const hashedOldToken = this.hashToken(oldRawToken);
     const result = await this.refreshTokenRepository.manager.transaction(
       async (manager) => {
         const refreshTokenRepository =
           manager.getRepository(RefreshTokenEntity);
         const now = new Date();
 
-        const oldTokenEntity = await refreshTokenRepository.findOne({
-          where: { token: hashedOldToken },
-          lock: { mode: 'pessimistic_write' },
-        });
+        const locked = await this.browserSessions.lockRefreshToken(
+          manager,
+          oldRawToken,
+        );
+        const oldTokenEntity = locked?.token;
 
         if (!oldTokenEntity) {
           this.logger.warn(
@@ -88,6 +98,16 @@ export class AuthService {
             'Expired refresh token rotation attempted',
           );
           throw new UnauthorizedException('Refresh token expired');
+        }
+
+        if (
+          !locked ||
+          locked.session.revokedAt ||
+          locked.session.expiresAt <= now
+        ) {
+          throw new UnauthorizedException(
+            'Browser session is no longer active',
+          );
         }
 
         if (oldTokenEntity.revoked) {
@@ -113,6 +133,7 @@ export class AuthService {
         newTokenEntity.id = replacementTokenId;
         newTokenEntity.token = this.hashToken(newRefreshToken);
         newTokenEntity.userId = oldTokenEntity.userId;
+        newTokenEntity.sessionId = locked.session.id;
         newTokenEntity.expiresAt = this.getRefreshTokenExpiresAt(now);
         newTokenEntity.revoked = false;
         newTokenEntity.revokedAt = null;
@@ -128,6 +149,11 @@ export class AuthService {
 
         await refreshTokenRepository.save(newTokenEntity);
         await refreshTokenRepository.save(oldTokenEntity);
+        await this.browserSessions.extendSession(
+          manager,
+          locked.session,
+          newTokenEntity.expiresAt,
+        );
 
         return { userId: oldTokenEntity.userId, newRefreshToken };
       },
@@ -144,18 +170,7 @@ export class AuthService {
    * Revoke a specific refresh token (single device logout)
    */
   async revokeToken(rawToken: string): Promise<void> {
-    const hashedToken = this.hashToken(rawToken);
-    const revokedAt = new Date();
-    await this.refreshTokenRepository.update(
-      { token: hashedToken },
-      {
-        revoked: true,
-        revokedAt,
-        revocationReason: 'logout',
-        rotationGraceExpiresAt: null,
-        replacedByTokenId: null,
-      },
-    );
+    await this.browserSessions.revokeToken(rawToken);
     this.logger.log({}, 'Revoked refresh token');
   }
 
@@ -163,17 +178,7 @@ export class AuthService {
    * Revoke all refresh tokens for a user (logout from all devices)
    */
   async revokeAllUserTokens(userId: string): Promise<void> {
-    const revokedAt = new Date();
-    await this.refreshTokenRepository.update(
-      { userId, revoked: false },
-      {
-        revoked: true,
-        revokedAt,
-        revocationReason: 'logout_all',
-        rotationGraceExpiresAt: null,
-        replacedByTokenId: null,
-      },
-    );
+    await this.browserSessions.revokeAll(userId);
     this.logger.log({ userId }, 'Revoked all refresh tokens for user');
   }
 

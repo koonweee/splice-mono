@@ -119,6 +119,16 @@ export class TransactionQueryService {
     private readonly repository: Repository<TransactionEntity>,
   ) {}
 
+  /** Count with exactly the same owner and category semantics as the Transactions view. */
+  countUncategorized(userId: string, manager?: EntityManager): Promise<number> {
+    return this.query(
+      userId,
+      { categoryId: 'UNCATEGORIZED' },
+      'list',
+      manager,
+    ).getCount();
+  }
+
   /** Stage financial inputs coherently, then release SQL before caller conversion/formatting. */
   withReadSnapshot<T>(
     reader: (manager: EntityManager) => Promise<T>,

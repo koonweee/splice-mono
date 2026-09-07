@@ -5,6 +5,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import { AuthService } from '../../src/auth/auth.service';
 import { RefreshTokenEntity } from '../../src/auth/refresh-token.entity';
+import { BrowserSessionService } from '../../src/auth/browser-session.service';
 
 const NOW = new Date('2026-05-14T12:00:00.000Z');
 const FUTURE = new Date('2026-05-14T12:05:00.000Z');
@@ -32,6 +33,13 @@ describe('AuthService', () => {
   const mockJwtService = {
     sign: jest.fn(),
   };
+  const mockSessions = {
+    lockRefreshToken: jest.fn(),
+    createSession: jest.fn(),
+    extendSession: jest.fn(),
+    revokeToken: jest.fn(),
+    revokeAll: jest.fn(),
+  };
 
   beforeAll(() => {
     originalJwtSecret = process.env.JWT_SECRET;
@@ -47,10 +55,21 @@ describe('AuthService', () => {
     mockRefreshTokenRepository.save.mockImplementation(
       async (entity) => entity,
     );
+    mockSessions.lockRefreshToken.mockImplementation(async () => {
+      const token = await mockRefreshTokenRepository.findOne();
+      return token
+        ? {
+            token,
+            session: { id: 'session-id', expiresAt: FUTURE, revokedAt: null },
+          }
+        : null;
+    });
+    mockSessions.createSession.mockResolvedValue({ id: 'session-id' });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
+        { provide: BrowserSessionService, useValue: mockSessions },
         {
           provide: getRepositoryToken(RefreshTokenEntity),
           useValue: mockRefreshTokenRepository,
@@ -100,6 +119,12 @@ describe('AuthService', () => {
     expect(savedReplacement.token).toBe(hashToken(expectedReplacement));
     expect(savedReplacement.token).not.toBe(expectedReplacement);
     expect(savedReplacement.revoked).toBe(false);
+    expect(savedReplacement.sessionId).toBe('session-id');
+    expect(mockSessions.extendSession).toHaveBeenCalledWith(
+      mockManager,
+      expect.objectContaining({ id: 'session-id' }),
+      savedReplacement.expiresAt,
+    );
     expect(savedOldToken.revoked).toBe(true);
     expect(savedOldToken.revokedAt).toEqual(NOW);
     expect(savedOldToken.revocationReason).toBe('rotated');
@@ -118,6 +143,40 @@ describe('AuthService', () => {
 
     await expect(
       service.rotateRefreshToken('expired-refresh-token'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(mockRefreshTokenRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('creates a browser session for each login without exposing its identity in tokens', async () => {
+    const raw = await service.generateRefreshToken('user-123');
+    expect(mockSessions.createSession).toHaveBeenCalledWith(
+      mockManager,
+      'user-123',
+      expect.any(Date),
+    );
+    expect(mockRefreshTokenRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: 'session-id',
+        token: hashToken(raw),
+      }),
+    );
+  });
+
+  it('uses atomic session revocation for logout and logout-all', async () => {
+    await service.revokeToken('synthetic-token');
+    await service.revokeAllUserTokens('user-123');
+    expect(mockSessions.revokeToken).toHaveBeenCalledWith('synthetic-token');
+    expect(mockSessions.revokeAll).toHaveBeenCalledWith('user-123');
+    expect(mockRefreshTokenRepository.update).not.toHaveBeenCalled();
+  });
+
+  it('never rotates a token belonging to a revoked session', async () => {
+    mockSessions.lockRefreshToken.mockResolvedValue({
+      token: createRefreshTokenEntity(),
+      session: { id: 'session-id', expiresAt: FUTURE, revokedAt: NOW },
+    });
+    await expect(
+      service.rotateRefreshToken('synthetic-token'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(mockRefreshTokenRepository.save).not.toHaveBeenCalled();
   });

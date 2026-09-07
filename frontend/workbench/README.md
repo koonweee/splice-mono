@@ -1,6 +1,35 @@
 # Splice component workbench
 
-Current delivery status: all 84 rendered components and registered state choices have reviewed coverage. Nonvisual helper exclusions and tests are documented in `catalog.md`. Final checks pass (590 frontend tests, typecheck, token guard, app/workbench builds; lint has three existing warnings). `../docs/appearance-visual-validation.md` records the final matrix and supersedes historical pending notes below.
+## Manual save recovery
+
+`/?frame=true&example=manual-save&state=lost-response&mode=light&width=390`
+opens the real transaction editor with a complete synthetic draft. Save once to
+simulate a committed write whose response was lost. The warning blocks another
+save until an explicit read check; a matching entry can be accepted with Done.
+The `offline` state rejects before changing the fixture store; `reconcile-error`
+commits the write but fails the subsequent read, leaving repeat submission blocked.
+All states use generated TanStack mutations and a per-document in-memory store.
+
+## Notification inbox
+
+`/?frame=true&example=notification-inbox&state=ready&mode=light&width=390`
+opens the compact production drawer directly. Its states include `loading`,
+`empty`, `error`, `refresh-error`, `refreshing`, `pending`, and `mutation-error`.
+Read and dismiss use separate icon buttons; opening a row follows its local
+fixture destination. The example keeps its transaction count independent from
+the unread indicator and has no retention footer.
+
+The header bell in `page-home` exercises the production query/mutation wiring
+against the per-frame notification store. `latency=800` and `failure=writes`
+cover pending actions and failures; no system notification permission or push
+subscription is requested. `notification-store.test.ts` verifies repeat actions,
+failed writes, and frame isolation. Production query and menu tests cover cursor
+pagination, summary deduplication, authentication changes, deferred navigation,
+focus restoration, and failed-write retention. Browser inspection remains part
+of the implementation validation matrix; these fixture registrations alone do
+not establish visual correctness.
+
+Before the inbox addition, all 84 rendered components and registered state choices have reviewed coverage. Nonvisual helper exclusions and tests are documented in `catalog.md`. Final checks pass (590 frontend tests, typecheck, token guard, app/workbench builds; lint has three existing warnings). `../docs/appearance-visual-validation.md` records the final matrix and supersedes historical pending notes below.
 
 Run from `frontend/`:
 
@@ -9,10 +38,10 @@ yarn workbench        # localhost:4001, no backend required
 yarn workbench:build  # static output in .workbench/
 ```
 
-The workbench contains 35 examples, including real Home, Accounts, Transactions,
+The workbench contains 36 examples, including real Home, Accounts, Transactions,
 Analysis, Settings and landing routes; account dialogs; controls/status;
 interactive rows/retained errors; editors/nested pickers/confirmation; and chart
-compositions. `catalog.json` maps 84 rendered components to examples. Registration
+compositions. `catalog.json` maps 87 rendered components to examples. Registration
 is checked against exported JSX components in `src/components`; the completed
 initial visual/state review is recorded in the validation document above. Catalog membership alone is not proof
 that every interaction has been verified.

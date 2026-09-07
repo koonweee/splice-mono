@@ -9,6 +9,7 @@ import {
   getAuthGeneration,
 } from './auth-generation'
 import { resolveApiUrl } from './api-base-url'
+import { getPendingLogout } from './pwa/logout-state'
 import {
   ConfirmedLoggedOutError,
   TransientAuthError,
@@ -31,6 +32,7 @@ export type SessionState = {
 export const sessionQueryKey = ['/user/me'] as const
 
 async function browserSession(): Promise<User> {
+  if (getPendingLogout()) throw new ConfirmedLoggedOutError()
   const generation = getAuthGeneration()
   const firstResponse = await fetchCurrentUser()
   if (firstResponse.ok) {

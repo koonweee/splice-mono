@@ -147,7 +147,15 @@
     "component": "PwaLifecycle",
     "source": "components/PwaLifecycle.tsx",
     "example": "pwa-lifecycle",
-    "states": ["ready", "offline", "update"]
+    "states": [
+      "offline",
+      "update",
+      "blocked-update",
+      "error",
+      "deferred",
+      "logout-pending",
+      "ready"
+    ]
   },
   {
     "component": "ResponsiveSlot",
@@ -399,7 +407,17 @@
     "component": "SettingsPage",
     "source": "components/pages/SettingsPage.tsx",
     "example": "page-settings",
-    "states": ["ready", "empty"]
+    "states": [
+      "ready",
+      "empty",
+      "notification-error",
+      "notification-denied",
+      "notification-unconfigured",
+      "notification-install-required",
+      "notification-rebind",
+      "notification-registering",
+      "notification-enabling"
+    ]
   },
   {
     "component": "AnalysisRulesSection",
@@ -458,8 +476,8 @@
   {
     "component": "ManualTransactionModal",
     "source": "components/transactions/ManualTransactionModal.tsx",
-    "example": "page-transactions",
-    "states": ["ready", "empty", "refresh-error"]
+    "example": "manual-save",
+    "states": ["ready", "offline", "lost-response", "reconcile-error"]
   },
   {
     "component": "TransactionBulkEditToolbar",
@@ -500,6 +518,42 @@
   {
     "component": "AppShellLayout",
     "source": "components/AppShellLayout.tsx",
+    "example": "page-home",
+    "states": ["ready", "empty"]
+  },
+  {
+    "component": "NotificationBell",
+    "source": "components/notifications/NotificationInbox.tsx",
+    "example": "notification-inbox",
+    "states": [
+      "ready",
+      "loading",
+      "empty",
+      "error",
+      "refresh-error",
+      "refreshing",
+      "pending",
+      "mutation-error"
+    ]
+  },
+  {
+    "component": "NotificationInbox",
+    "source": "components/notifications/NotificationInbox.tsx",
+    "example": "notification-inbox",
+    "states": [
+      "ready",
+      "loading",
+      "empty",
+      "error",
+      "refresh-error",
+      "refreshing",
+      "pending",
+      "mutation-error"
+    ]
+  },
+  {
+    "component": "NotificationMenu",
+    "source": "components/notifications/NotificationMenu.tsx",
     "example": "page-home",
     "states": ["ready", "empty"]
   }

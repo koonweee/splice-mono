@@ -1,4 +1,5 @@
 import Axios from 'axios'
+import { OfflineMutationError } from './offline-mutation'
 import {
   assertAuthGeneration,
   clearPrivateCaches,
@@ -29,6 +30,15 @@ let refreshInFlight: { generation: number; promise: Promise<void> } | undefined
 // Preserve the original identity on every dispatch, including interceptor replays.
 axiosInstance.interceptors.request.use(
   (config: AuthenticatedRequestConfig) => {
+    if (
+      typeof navigator !== 'undefined' &&
+      navigator.onLine === false &&
+      !['get', 'head', 'options'].includes(
+        (config.method ?? 'get').toLowerCase(),
+      )
+    ) {
+      throw new OfflineMutationError()
+    }
     config._authGeneration ??= getAuthGeneration()
     assertAuthGeneration(config._authGeneration)
     return config

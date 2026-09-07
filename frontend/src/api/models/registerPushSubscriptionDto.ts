@@ -5,9 +5,11 @@
  * Financial account management API
  * OpenAPI spec version: 1.0
  */
+import type { RegisterPushSubscriptionDtoProtocolVersion } from './registerPushSubscriptionDtoProtocolVersion'
 import type { RegisterPushSubscriptionDtoKeys } from './registerPushSubscriptionDtoKeys'
 
 export interface RegisterPushSubscriptionDto {
+  protocolVersion: RegisterPushSubscriptionDtoProtocolVersion
   endpoint: string
   /** @nullable */
   expirationTime?: number | null

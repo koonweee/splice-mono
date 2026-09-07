@@ -1,157 +1,319 @@
-import type { RegisterSWOptions } from 'vite-plugin-pwa/types'
+import { isAppTransitionBlocked } from './app-transition'
+import { fetchWithDeadline, withDeadline } from './deadline'
 
+declare const __SPLICE_BUILD_ID__: string
+export const APP_BUILD_ID =
+  typeof __SPLICE_BUILD_ID__ === 'string' ? __SPLICE_BUILD_ID__ : 'development'
+export type PwaRegistrationStatus =
+  | 'unsupported'
+  | 'registering'
+  | 'ready'
+  | 'failed'
+  | 'update-waiting'
 export type PwaUpdateState = {
   needRefresh: boolean
   updateServiceWorker: (() => Promise<void>) | null
+  status?: PwaRegistrationStatus
+  error?: string | null
 }
-
-type RegisterSW = (
-  options?: RegisterSWOptions,
-) => (reloadPage?: boolean) => Promise<void>
-
 type PwaRegistrationOptions = {
   onOfflineReady?: () => void
   onRegisterError?: (error: unknown) => void
 }
-
-type PwaUpdateListener = (state: PwaUpdateState) => void
-
-const listeners = new Set<PwaUpdateListener>()
-const PWA_CACHE_SCHEMA_KEY = 'splice-pwa-cache-schema'
-const PWA_CACHE_SCHEMA_VERSION = '2'
-const LEGACY_APP_SHELL_CACHE = 'splice-app-shell-v1'
-
-let loadRegisterSW: () => Promise<RegisterSW> = async () => {
-  const pwaModule = await import('virtual:pwa-register')
-
-  return pwaModule.registerSW
-}
-
-let registrationStarted = false
-let registrationPromise: Promise<void> | null = null
-let serviceWorkerRegistrationPromise: Promise<ServiceWorkerRegistration> | null =
-  null
+const listeners = new Set<(state: PwaUpdateState) => void>()
+let registrationPromise: Promise<ServiceWorkerRegistration> | undefined
+let registration: ServiceWorkerRegistration | undefined
+let attempt = 0
 let needRefresh = false
-let updateServiceWorker: (() => Promise<void>) | null = null
-
-function isServiceWorkerSupported(): boolean {
-  return typeof window !== 'undefined' && 'serviceWorker' in navigator
-}
-
-async function clearLegacyPwaCaches(): Promise<void> {
-  if (
-    typeof window === 'undefined' ||
-    !('caches' in window) ||
-    window.localStorage.getItem(PWA_CACHE_SCHEMA_KEY) ===
-      PWA_CACHE_SCHEMA_VERSION
-  ) {
-    return
-  }
-
-  const cacheNames = await window.caches.keys()
-  const legacyCacheNames = cacheNames.filter(
-    (cacheName) =>
-      cacheName === LEGACY_APP_SHELL_CACHE ||
-      cacheName.startsWith('workbox-precache'),
+let status: PwaRegistrationStatus = 'unsupported'
+let error: string | null = null
+let lastVersionCheck = 0
+let updatePromise: Promise<void> | undefined
+let cleanupListeners: Array<() => void> = []
+export const pwaNavigation = { reload: () => window.location.reload() }
+function supported() {
+  return (
+    typeof window !== 'undefined' &&
+    'serviceWorker' in navigator &&
+    (!import.meta.env.DEV || import.meta.env.MODE === 'test')
   )
-
-  await Promise.all(
-    legacyCacheNames.map((cacheName) => window.caches.delete(cacheName)),
-  )
-  window.localStorage.setItem(PWA_CACHE_SCHEMA_KEY, PWA_CACHE_SCHEMA_VERSION)
 }
-
-function emitUpdateState() {
-  const state = getPwaUpdateState()
-
-  listeners.forEach((listener) => {
-    listener(state)
-  })
+function emit() {
+  for (const listener of listeners) listener(getPwaUpdateState())
 }
-
 export function getPwaUpdateState(): PwaUpdateState {
   return {
     needRefresh,
-    updateServiceWorker,
+    status,
+    error,
+    updateServiceWorker: registration ? applyUpdate : null,
   }
 }
-
-export function subscribeToPwaUpdates(listener: PwaUpdateListener): () => void {
+export function subscribeToPwaUpdates(
+  listener: (state: PwaUpdateState) => void,
+) {
   listeners.add(listener)
-
   return () => {
     listeners.delete(listener)
   }
 }
-
+function listen(target: EventTarget, event: string, listener: () => void) {
+  target.addEventListener(event, listener)
+  cleanupListeners.push(() => target.removeEventListener(event, listener))
+}
+function watchRegistration(current: ServiceWorkerRegistration, token: number) {
+  const hadController = Boolean(navigator.serviceWorker.controller)
+  const changed = () => {
+    if (token !== attempt) return
+    if (current.waiting) {
+      needRefresh = true
+      status = 'update-waiting'
+      emit()
+    }
+  }
+  const installing = () => {
+    if (current.installing) listen(current.installing, 'statechange', changed)
+    changed()
+  }
+  listen(current, 'updatefound', installing)
+  // Controller changes never reload other tabs. Only applyUpdate owns reload.
+  listen(navigator.serviceWorker, 'controllerchange', () => {
+    if (
+      token === attempt &&
+      hadController &&
+      navigator.serviceWorker.controller
+    ) {
+      needRefresh = true
+      emit()
+    }
+  })
+  installing()
+}
+async function activeRegistration(current: ServiceWorkerRegistration) {
+  if (current.active?.state === 'activated') return current
+  await new Promise<void>((resolve, reject) => {
+    const workers = [
+      current.installing,
+      current.waiting,
+      current.active,
+    ].filter(Boolean) as Array<ServiceWorker>
+    const changed = () => {
+      if (current.active?.state === 'activated') {
+        cleanup()
+        resolve()
+      } else if (
+        workers.length &&
+        workers.every((worker) => worker.state === 'redundant')
+      ) {
+        cleanup()
+        reject(new Error('App installation failed. Try again.'))
+      }
+    }
+    const timer = setTimeout(() => {
+      cleanup()
+      reject(new Error('App installation timed out. Try again.'))
+    }, 10_000)
+    function cleanup() {
+      clearTimeout(timer)
+      workers.forEach((worker) =>
+        worker.removeEventListener('statechange', changed),
+      )
+      navigator.serviceWorker.removeEventListener('controllerchange', changed)
+    }
+    workers.forEach((worker) => worker.addEventListener('statechange', changed))
+    navigator.serviceWorker.addEventListener('controllerchange', changed)
+    changed()
+  })
+  return current
+}
+export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration> {
+  if (!supported())
+    throw new Error('Installed app features are unavailable in this browser.')
+  if (registrationPromise) return registrationPromise
+  const token = ++attempt
+  cleanupListeners.forEach((cleanup) => cleanup())
+  cleanupListeners = []
+  status = 'registering'
+  error = null
+  emit()
+  const promise = withDeadline(
+    (async () => {
+      if ('caches' in window)
+        await window.caches.delete('splice-app-shell-v1').catch(() => false)
+      const current = await navigator.serviceWorker.register('/sw.js', {
+        scope: '/',
+        updateViaCache: 'none',
+      })
+      if (token !== attempt) throw new Error('App registration was superseded.')
+      watchRegistration(current, token)
+      await activeRegistration(current)
+      if (token !== attempt) throw new Error('App registration was superseded.')
+      registration = current
+      status = current.waiting ? 'update-waiting' : 'ready'
+      needRefresh ||= Boolean(current.waiting)
+      emit()
+      return current
+    })(),
+    10_000,
+    'App registration timed out. Try again.',
+  ).catch((cause: unknown) => {
+    if (token === attempt) {
+      attempt += 1
+      cleanupListeners.forEach((cleanup) => cleanup())
+      cleanupListeners = []
+      registrationPromise = undefined
+      status = 'failed'
+      error =
+        cause instanceof Error
+          ? cause.message
+          : 'App registration failed. Try again.'
+      emit()
+    }
+    throw cause
+  })
+  registrationPromise = promise
+  return promise
+}
 export async function registerPwaServiceWorker(
   options: PwaRegistrationOptions = {},
-): Promise<void> {
-  if (!isServiceWorkerSupported() || registrationStarted) {
-    return registrationPromise ?? Promise.resolve()
+) {
+  if (!supported()) return
+  try {
+    await getServiceWorkerRegistration()
+    options.onOfflineReady?.()
+  } catch (cause) {
+    options.onRegisterError?.(cause)
+    throw cause
   }
-
-  registrationStarted = true
-  registrationPromise = clearLegacyPwaCaches()
-    .catch(() => undefined)
-    .then(() => loadRegisterSW())
-    .then((registerSW) => {
-      const update = registerSW({
-        immediate: true,
-        onNeedRefresh() {
-          needRefresh = true
-          emitUpdateState()
-        },
-        onOfflineReady() {
-          options.onOfflineReady?.()
-        },
-        onRegisterError(error) {
-          options.onRegisterError?.(error)
-        },
+}
+export async function checkForPwaUpdate(force = false) {
+  if (
+    !supported() ||
+    navigator.onLine === false ||
+    document.visibilityState === 'hidden'
+  )
+    return
+  if (!force && Date.now() - lastVersionCheck < 60_000) return
+  lastVersionCheck = Date.now()
+  try {
+    const current = await getServiceWorkerRegistration()
+    const response = await fetchWithDeadline('/version.json', {
+      cache: 'no-store',
+      credentials: 'same-origin',
+    })
+    if (!response.ok)
+      throw new Error('Could not check for app updates. Try again.')
+    const version: unknown = await withDeadline(
+      response.json(),
+      5_000,
+      'Update check timed out.',
+    )
+    if (
+      !version ||
+      typeof version !== 'object' ||
+      !('buildId' in version) ||
+      typeof version.buildId !== 'string'
+    )
+      throw new Error('Invalid app version response.')
+    if (version.buildId !== APP_BUILD_ID) {
+      needRefresh = true
+      await withDeadline(
+        current.update(),
+        10_000,
+        'Update download timed out. Try again.',
+      )
+    }
+    error = null
+    emit()
+  } catch (cause) {
+    error =
+      cause instanceof Error
+        ? cause.message
+        : 'Could not check for app updates.'
+    emit()
+  }
+}
+async function applyUpdate(): Promise<void> {
+  if (updatePromise || isAppTransitionBlocked()) return updatePromise
+  updatePromise = (async () => {
+    if (navigator.onLine === false)
+      throw new Error('Reconnect before updating Splice.')
+    const current = await getServiceWorkerRegistration()
+    if (!current.waiting) {
+      await withDeadline(
+        current.update(),
+        10_000,
+        'Update download timed out. Try again.',
+      )
+      if (current.installing) {
+        let cleanup = () => {}
+        await withDeadline(
+          new Promise<void>((resolve, reject) => {
+            const worker = current.installing!
+            const changed = () => {
+              if (
+                worker.state === 'installed' ||
+                worker.state === 'redundant'
+              ) {
+                worker.removeEventListener('statechange', changed)
+                if (worker.state === 'installed') resolve()
+                else reject(new Error('Update installation failed. Try again.'))
+              }
+            }
+            cleanup = () => worker.removeEventListener('statechange', changed)
+            worker.addEventListener('statechange', changed)
+            changed()
+          }),
+          10_000,
+          'Update installation timed out.',
+        ).finally(() => cleanup())
+      }
+    }
+    if (isAppTransitionBlocked()) return
+    if (current.waiting) {
+      await new Promise<void>((resolve, reject) => {
+        const done = () => {
+          clearTimeout(timer)
+          navigator.serviceWorker.removeEventListener('controllerchange', done)
+          resolve()
+        }
+        const timer = setTimeout(() => {
+          navigator.serviceWorker.removeEventListener('controllerchange', done)
+          reject(new Error('Update activation timed out. Try again.'))
+        }, 10_000)
+        navigator.serviceWorker.addEventListener('controllerchange', done)
+        current.waiting?.postMessage({ type: 'SKIP_WAITING' })
       })
-
-      updateServiceWorker = () => update(true)
-      emitUpdateState()
+    }
+    if (!isAppTransitionBlocked()) pwaNavigation.reload()
+  })()
+    .catch((cause: unknown) => {
+      error =
+        cause instanceof Error
+          ? cause.message
+          : 'Could not apply update. Try again.'
+      emit()
     })
-    .catch((error: unknown) => {
-      registrationStarted = false
-      registrationPromise = null
-      options.onRegisterError?.(error)
-
-      throw error
+    .finally(() => {
+      updatePromise = undefined
     })
-
-  return registrationPromise
+  return updatePromise
 }
-
-export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration> {
-  if (!isServiceWorkerSupported()) {
-    throw new Error('Service workers are not supported')
-  }
-
-  await registerPwaServiceWorker()
-
-  if (!serviceWorkerRegistrationPromise) {
-    serviceWorkerRegistrationPromise = navigator.serviceWorker
-      .getRegistration()
-      .then((registration) => registration ?? navigator.serviceWorker.ready)
-  }
-
-  return serviceWorkerRegistrationPromise
+export function reportChunkLoadFailure() {
+  needRefresh = true
+  error = 'Part of Splice could not load. Update when your work is saved.'
+  emit()
 }
-
-export function setRegisterSWLoaderForTests(
-  loader: () => Promise<RegisterSW>,
-): void {
-  loadRegisterSW = loader
-  resetPwaServiceWorkerStateForTests()
-}
-
-export function resetPwaServiceWorkerStateForTests(): void {
+export function resetPwaServiceWorkerStateForTests() {
+  attempt += 1
+  cleanupListeners.forEach((cleanup) => cleanup())
+  cleanupListeners = []
   listeners.clear()
-  registrationStarted = false
-  registrationPromise = null
-  serviceWorkerRegistrationPromise = null
+  registrationPromise = undefined
+  registration = undefined
+  status = 'unsupported'
+  error = null
   needRefresh = false
-  updateServiceWorker = null
+  lastVersionCheck = 0
+  updatePromise = undefined
 }

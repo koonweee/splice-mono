@@ -1,7 +1,10 @@
 .toolbarWrap {
   position: fixed;
   right: var(--mantine-spacing-md);
-  bottom: var(--mantine-spacing-md);
+  bottom: calc(
+    var(--splice-lifecycle-space, 0px) +
+      max(var(--mantine-spacing-md), var(--splice-safe-area-bottom, 0px))
+  );
   left: var(--mantine-spacing-md);
   z-index: var(--splice-layer-bulk-toolbar);
   display: flex;
@@ -80,7 +83,10 @@
 @media (--compact-layout) {
   .toolbarWrap {
     right: var(--mantine-spacing-xs);
-    bottom: var(--mantine-spacing-xs);
+    bottom: calc(
+      var(--splice-lifecycle-space, 0px) +
+        max(var(--mantine-spacing-xs), var(--splice-safe-area-bottom, 0px))
+    );
     left: var(--mantine-spacing-xs);
   }
 

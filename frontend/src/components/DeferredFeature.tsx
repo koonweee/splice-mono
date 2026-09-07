@@ -1,5 +1,6 @@
 import { Alert, Box, Button, Stack, Text } from '@mantine/core'
 import { Component, Suspense } from 'react'
+import { requestAppTransition } from '../lib/pwa/app-transition'
 import {
   ChartSkeleton,
   FormSkeleton,
@@ -32,7 +33,12 @@ class FeatureErrorBoundary extends Component<
         >
           <Stack gap="sm">
             <Text size="sm">Reload the page to try again.</Text>
-            <Button variant="light" onClick={() => window.location.reload()}>
+            <Button
+              variant="light"
+              onClick={() =>
+                requestAppTransition(() => window.location.reload())
+              }
+            >
               Reload
             </Button>
           </Stack>

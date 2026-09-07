@@ -42,6 +42,7 @@ import {
   enableCurrentDeviceNotifications,
   loadCurrentDeviceNotificationState,
 } from '../../lib/notifications/browser-push'
+import { useAppTransitionGuard } from '../../lib/pwa/app-transition'
 import styles from './SettingsPage.module.css'
 import type { NotificationSupportStatus } from '../../lib/notifications/browser-push'
 import type { AppearancePreference } from '../../lib/design-system/appearance'
@@ -154,6 +155,8 @@ function getNotificationSupportMessage(status: NotificationSupportStatus) {
       return 'Notifications are blocked in this browser.'
     case 'unconfigured':
       return 'Push notifications are not configured for this environment.'
+    case 'install-required':
+      return 'Add Splice to your Home Screen, then open it there to enable notifications.'
     case 'supported':
       return null
   }
@@ -209,6 +212,8 @@ export function SettingsPage({
   const [notificationError, setNotificationError] = useState<string | null>(
     null,
   )
+  const [notificationRetry, setNotificationRetry] = useState(0)
+  const [deviceRebindRequired, setDeviceRebindRequired] = useState(false)
   const [newSyncedTransactionsEnabled, setNewSyncedTransactionsEnabled] =
     useState(() => getNewSyncedTransactionsEnabled(user?.settings ?? {}))
   const [newSyncedTransactionsPending, setNewSyncedTransactionsPending] =
@@ -245,6 +250,7 @@ export function SettingsPage({
       currency !== settingsBaseline.currency ||
       timezone !== settingsBaseline.timezone ||
       hideZeroBalanceAccounts !== settingsBaseline.hideZeroBalanceAccounts)
+  useAppTransitionGuard(hasChanges)
 
   // Adopt server values only while the General form is clean. Unrelated
   // immediate-save refetches must not replace an in-progress draft.
@@ -354,6 +360,7 @@ export function SettingsPage({
         if (!cancelled) {
           setNotificationSupportStatus(state.supported)
           setDeviceNotificationsEnabled(state.subscribed)
+          setDeviceRebindRequired(Boolean(state.rebindRequired))
         }
       } catch {
         if (!cancelled) {
@@ -368,11 +375,14 @@ export function SettingsPage({
     }
 
     void loadNotificationState()
+    const refresh = () => setNotificationRetry((value) => value + 1)
+    window.addEventListener('splice:notification-state-changed', refresh)
 
     return () => {
       cancelled = true
+      window.removeEventListener('splice:notification-state-changed', refresh)
     }
-  }, [])
+  }, [notificationRetry])
 
   useEffect(
     () => () => {
@@ -743,9 +753,26 @@ export function SettingsPage({
                   }}
                 />
                 <Text c="dimmed" size="sm" mih={42} aria-live="polite">
-                  {getNotificationSupportMessage(notificationSupportStatus) ??
-                    'Device notifications are configured separately in each browser.'}
+                  {deviceNotificationsLoading
+                    ? 'Checking device notification status…'
+                    : deviceNotificationsPending
+                      ? 'Updating device notifications…'
+                      : deviceRebindRequired
+                        ? 'This device needs to reconnect notifications after the app update.'
+                        : (getNotificationSupportMessage(
+                            notificationSupportStatus,
+                          ) ??
+                          'Device notifications are configured separately in each browser.')}
                 </Text>
+                {deviceRebindRequired && !deviceNotificationsLoading && (
+                  <Button
+                    variant="light"
+                    onClick={() => void handleDeviceNotificationsChange(true)}
+                    loading={deviceNotificationsPending}
+                  >
+                    Reconnect notifications
+                  </Button>
+                )}
               </Stack>
             </Paper>
 
@@ -778,6 +805,17 @@ export function SettingsPage({
             {notificationError && (
               <Alert color="red" title="Error">
                 {notificationError}
+                <Button
+                  size="xs"
+                  variant="light"
+                  ml="sm"
+                  onClick={() => setNotificationRetry((value) => value + 1)}
+                  disabled={
+                    deviceNotificationsLoading || deviceNotificationsPending
+                  }
+                >
+                  Retry
+                </Button>
               </Alert>
             )}
           </Stack>

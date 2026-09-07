@@ -7,6 +7,8 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { NotificationController } from '../../src/notification/notification.controller';
+import { NotificationService } from '../../src/notification/notification.service';
 import { AccountController } from '../../src/account/account.controller';
 import { AccountService } from '../../src/account/account.service';
 import { JwtAuthGuard } from '../../src/auth/guards/jwt-auth.guard';
@@ -51,6 +53,7 @@ describe('Private API response headers', () => {
     process.env.JWT_SECRET = secret;
     const module = await Test.createTestingModule({
       controllers: [
+        NotificationController,
         AccountController,
         UserController,
         TransactionController,
@@ -58,6 +61,24 @@ describe('Private API response headers', () => {
       ],
       providers: [
         JwtStrategy,
+        {
+          provide: NotificationService,
+          useValue: {
+            getSummary: async () => ({
+              uncategorizedTransactionCount: 0,
+              unreadNotificationCount: 0,
+              computedAt: new Date().toISOString(),
+            }),
+            getInbox: async () => ({
+              items: [],
+              nextCursor: null,
+              hasMore: false,
+            }),
+            markRead: async () => undefined,
+            archive: async () => undefined,
+            getEnrollmentEligibility: async () => ({ eligible: false }),
+          },
+        },
         { provide: AccountService, useValue: accounts },
         { provide: UserService, useValue: users },
         { provide: AuthService, useValue: { revokeToken: jest.fn() } },
@@ -101,7 +122,13 @@ describe('Private API response headers', () => {
     else process.env.JWT_SECRET = previousSecret;
   });
 
-  it.each(['/account', '/transaction', '/user/me'])(
+  it.each([
+    '/account',
+    '/transaction',
+    '/user/me',
+    '/notification/summary',
+    '/notification/inbox',
+  ])(
     'protects actual %s responses for JWTs, PATs and unauthorized requests',
     async (path) => {
       for (const token of [bearer, 'splice_pat_valid']) {
@@ -136,6 +163,31 @@ describe('Private API response headers', () => {
       .send({ balance: 123 })
       .expect('Cache-Control', 'private, no-store')
       .expect(400);
+  });
+
+  it('protects inbox mutations, validation errors, and session-only enrollment eligibility', async () => {
+    for (const action of ['read', 'archive']) {
+      await request(app.getHttpServer())
+        .patch(`/notification/00000000-0000-4000-8000-000000000001/${action}`)
+        .set('Authorization', `Bearer ${bearer}`)
+        .expect('Cache-Control', 'private, no-store')
+        .expect(204);
+      await request(app.getHttpServer())
+        .patch(`/notification/invalid/${action}`)
+        .set('Authorization', `Bearer ${bearer}`)
+        .expect('Cache-Control', 'private, no-store')
+        .expect(400);
+    }
+    await request(app.getHttpServer())
+      .get('/notification/inbox?pageSize=101')
+      .set('Authorization', `Bearer ${bearer}`)
+      .expect('Cache-Control', 'private, no-store')
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/notification/push/enrollment/00000000-0000-4000-8000-000000000001')
+      .set('Authorization', 'Bearer splice_pat_valid')
+      .expect('Cache-Control', 'private, no-store')
+      .expect(401);
   });
 
   it('protects temporary backend errors and missing users', async () => {

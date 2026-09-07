@@ -1,21 +1,29 @@
 import {
   ActionIcon,
+  Alert,
+  Box,
   Button,
   Group,
   NumberInput,
   Stack,
   Switch,
+  Text,
   TextInput,
 } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import dayjs from 'dayjs'
 import { Minus, Plus } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   moneyToMajorString,
   toggleMoneyDraftSign,
   tryParseMoneyDraft,
 } from '../../lib/money'
+import {
+  OfflineMutationError,
+  isUncertainMutationError,
+} from '../../lib/offline-mutation'
+import { getApiErrorMessage } from '../../lib/api-errors'
+import { checkManualSave } from '../../lib/transactions/manual-save-recovery'
 import { DecimalInput } from '../forms/DecimalInput'
 import { useCompactLayout } from '../../lib/responsive'
 import {
@@ -33,6 +41,7 @@ import { AccountSelect } from '../accounts/AccountSelect'
 import { CategorySelect } from '../categories/CategorySelect'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
+import type { ManualSaveAttempt } from '../../lib/transactions/manual-save-recovery'
 import type { CategorySelectOption } from '../categories/CategorySelect'
 import type { Account, Category, Transaction } from '../../api/models'
 import type { NumberInputProps } from '@mantine/core'
@@ -147,10 +156,24 @@ export function ManualTransactionModal({
   const [recurrenceDay, setRecurrenceDay] =
     useState<NumberInputProps['value']>(1)
   const [errors, setErrors] = useState<FormErrors>({})
-  const createManualTransaction = useTransactionControllerCreateManual()
-  const updateManualTransaction = useTransactionControllerUpdateManual()
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [uncertain, setUncertain] = useState<{
+    attempt: ManualSaveAttempt
+    matches?: number
+  } | null>(null)
+  const [checkingSave, setCheckingSave] = useState(false)
+  const initializedDraft = useRef<string | null>(null)
+  const draftVersion = useRef(0)
+  const submissionPending = useRef(false)
+  const mutationPolicy = {
+    mutation: { networkMode: 'always' as const, retry: false },
+  }
+  const createManualTransaction =
+    useTransactionControllerCreateManual(mutationPolicy)
+  const updateManualTransaction =
+    useTransactionControllerUpdateManual(mutationPolicy)
   const createRecurringManualTransaction =
-    useRecurringManualTransactionControllerCreate()
+    useRecurringManualTransactionControllerCreate(mutationPolicy)
   const isEditing = transaction !== null
   const activeAccounts = useMemo(
     () => accounts.filter((account) => !account.archivedAt),
@@ -186,13 +209,22 @@ export function ManualTransactionModal({
     createManualTransaction.isPending ||
     updateManualTransaction.isPending ||
     createRecurringManualTransaction.isPending
+  const formLocked = isSaving || Boolean(uncertain)
   const amountIsNegative = amount.trim().startsWith('-')
 
   useEffect(() => {
     if (!opened) {
+      initializedDraft.current = null
+      draftVersion.current++
       return
     }
-
+    const key = transaction?.id ?? 'new'
+    if (initializedDraft.current === key) return
+    initializedDraft.current = key
+    draftVersion.current++
+    setSaveError(null)
+    setUncertain(null)
+    setCheckingSave(false)
     setAccountId(getInitialAccountId(accounts, defaultAccountId, transaction))
     setAmount(getSignedAmountDraft(transaction))
     setMerchantName(transaction?.merchantName ?? '')
@@ -203,6 +235,13 @@ export function ManualTransactionModal({
     setRecurrenceDay(nextProviderDate ? getDateDayOfMonth(nextProviderDate) : 1)
     setErrors({})
   }, [accounts, defaultAccountId, opened, transaction])
+
+  useEffect(
+    () => () => {
+      draftVersion.current++
+    },
+    [],
+  )
 
   function validate() {
     const nextErrors: FormErrors = {}
@@ -254,7 +293,15 @@ export function ManualTransactionModal({
     event.preventDefault()
 
     const { isValid, parsedAmount, numericRecurrenceDay } = validate()
-    if (isSaving || !isValid || !currency || !categoryId || !parsedAmount) {
+    if (
+      isSaving ||
+      submissionPending.current ||
+      uncertain ||
+      !isValid ||
+      !currency ||
+      !categoryId ||
+      !parsedAmount
+    ) {
       return
     }
 
@@ -265,17 +312,35 @@ export function ManualTransactionModal({
       providerDate,
       categoryId,
     }
+    submissionPending.current = true
+    setSaveError(null)
+    const attempt: ManualSaveAttempt = {
+      payload,
+      transactionId: transaction?.id,
+      recurrenceDay:
+        !isEditing && recurringEnabled ? numericRecurrenceDay : undefined,
+    }
     const mutationOptions = {
       onSuccess: () => {
+        submissionPending.current = false
         onSaved?.()
         onClose()
       },
-      onError: () => {
-        notifications.show({
-          title: 'Transaction save failed',
-          message: 'The manual transaction was not saved.',
-          color: 'red',
-        })
+      onError: (cause: unknown) => {
+        submissionPending.current = false
+        if (isUncertainMutationError(cause)) {
+          setUncertain({ attempt })
+          setSaveError(null)
+        } else {
+          setSaveError(
+            cause instanceof OfflineMutationError
+              ? cause.message
+              : getApiErrorMessage(
+                  cause,
+                  'Unable to save this transaction. Review the form and try again.',
+                ),
+          )
+        }
       },
     }
 
@@ -309,157 +374,263 @@ export function ManualTransactionModal({
     createManualTransaction.mutate({ data: payload }, mutationOptions)
   }
 
+  async function checkSavedEntries() {
+    if (!uncertain || checkingSave) return
+    const version = draftVersion.current
+    setCheckingSave(true)
+    setSaveError(null)
+    try {
+      const matches = await checkManualSave(uncertain.attempt)
+      if (draftVersion.current === version)
+        setUncertain({ attempt: uncertain.attempt, matches })
+    } catch {
+      if (draftVersion.current === version)
+        setSaveError('Unable to check saved entries. Reconnect and try again.')
+    } finally {
+      if (draftVersion.current === version) setCheckingSave(false)
+    }
+  }
+
   return (
     <EditorModal
       opened={opened}
-      onClose={onClose}
+      onClose={() => {
+        if (!isSaving) onClose()
+      }}
+      closeOnEscape={!isSaving}
+      closeOnClickOutside={!isSaving}
+      closeButtonProps={{ disabled: isSaving }}
       title={isEditing ? 'Edit transaction' : 'Add transaction'}
       size="md"
       transitionProps={{ duration: 0 }}
     >
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
-          <AccountSelect
-            allowDeselect={false}
-            comboboxProps={comboboxProps}
-            data={accountOptions}
-            error={errors.accountId}
-            label="Account"
-            maxDropdownHeight={maxDropdownHeight}
-            onChange={(value) => {
-              setAccountId(value ?? '')
-              setErrors((current) => ({ ...current, accountId: undefined }))
-            }}
-            placeholder="Select account"
-            required
-            searchable
-            value={accountId}
-          />
-          <Group align="flex-start" grow>
-            <DecimalInput
-              error={errors.amount}
-              label="Amount"
-              onChange={(value) => {
-                setAmount(value)
-                setErrors((current) => ({ ...current, amount: undefined }))
-              }}
-              placeholder="0.00"
-              required
-              rightSection={
-                <ActionIcon
-                  aria-label={
-                    amountIsNegative
-                      ? 'Make amount positive'
-                      : 'Make amount negative'
-                  }
-                  onClick={() => {
-                    setAmount((current) => toggleMoneyDraftSign(current))
+          {saveError && (
+            <Alert color="red" role="alert">
+              {saveError}
+            </Alert>
+          )}
+          {uncertain && (
+            <Alert
+              color="yellow"
+              title="Save confirmation missing"
+              role="alert"
+            >
+              <Stack gap="xs">
+                <Text size="sm">
+                  The server may have saved this entry. Your draft is still
+                  here. Check saved entries before trying again.
+                </Text>
+                {uncertain.matches !== undefined && (
+                  <Text size="sm">
+                    {uncertain.matches > 0
+                      ? `${uncertain.matches} saved ${uncertain.matches === 1 ? 'entry matches' : 'entries match'} these details.`
+                      : 'No match in the latest results. A delayed save may still finish.'}
+                  </Text>
+                )}
+                <Group gap="xs">
+                  <Button
+                    variant="light"
+                    loading={checkingSave}
+                    onClick={() => void checkSavedEntries()}
+                  >
+                    Check saved{' '}
+                    {uncertain.attempt.recurrenceDay === undefined
+                      ? 'transactions'
+                      : 'schedules'}
+                  </Button>
+                  {uncertain.matches !== undefined && (
+                    <Button
+                      variant="default"
+                      onClick={() => {
+                        setUncertain(null)
+                        setSaveError(
+                          'Check for duplicates if a delayed save finishes. Your draft is ready to submit again.',
+                        )
+                      }}
+                    >
+                      Try saving again
+                    </Button>
+                  )}
+                  {Boolean(uncertain.matches) && (
+                    <Button
+                      variant="subtle"
+                      onClick={() => {
+                        onSaved?.()
+                        onClose()
+                      }}
+                    >
+                      Done
+                    </Button>
+                  )}
+                </Group>
+              </Stack>
+            </Alert>
+          )}
+          <Box component="fieldset" disabled={formLocked} m={0} p={0} bd={0}>
+            <Stack gap="md">
+              <AccountSelect
+                disabled={formLocked}
+                allowDeselect={false}
+                comboboxProps={comboboxProps}
+                data={accountOptions}
+                error={errors.accountId}
+                label="Account"
+                maxDropdownHeight={maxDropdownHeight}
+                onChange={(value) => {
+                  setAccountId(value ?? '')
+                  setErrors((current) => ({ ...current, accountId: undefined }))
+                }}
+                placeholder="Select account"
+                required
+                searchable
+                value={accountId}
+              />
+              <Group align="flex-start" grow>
+                <DecimalInput
+                  disabled={formLocked}
+                  error={errors.amount}
+                  label="Amount"
+                  onChange={(value) => {
+                    setAmount(value)
                     setErrors((current) => ({ ...current, amount: undefined }))
                   }}
-                  size="sm"
-                  type="button"
-                  variant="subtle"
-                >
-                  {amountIsNegative ? (
-                    <Plus aria-hidden size={16} />
-                  ) : (
-                    <Minus aria-hidden size={16} />
-                  )}
-                </ActionIcon>
-              }
-              rightSectionPointerEvents="auto"
-              rightSectionWidth={40}
-              value={amount}
-            />
-            <TextInput label="Currency" readOnly value={currency} />
-          </Group>
-          <TextInput
-            error={errors.providerDate}
-            label="Date"
-            onChange={(event) => {
-              const nextProviderDate = event.currentTarget.value
-              setProviderDate(nextProviderDate)
-              if (!isEditing && recurringEnabled && nextProviderDate) {
-                setRecurrenceDay(getDateDayOfMonth(nextProviderDate))
-              }
-              setErrors((current) => ({
-                ...current,
-                providerDate: undefined,
-              }))
-            }}
-            required
-            type="date"
-            value={providerDate}
-          />
-          <TextInput
-            error={errors.merchantName}
-            label="Merchant"
-            onChange={(event) => {
-              setMerchantName(event.currentTarget.value)
-              setErrors((current) => ({
-                ...current,
-                merchantName: undefined,
-              }))
-            }}
-            placeholder="Merchant or transaction name"
-            required
-            value={merchantName}
-          />
-          <CategorySelect
-            aria-label="Category"
-            clearable={false}
-            comboboxProps={comboboxProps}
-            data={categoryOptions}
-            error={errors.categoryId}
-            label="Category"
-            maxDropdownHeight={maxDropdownHeight}
-            onChange={(value) => {
-              setCategoryId(value)
-              setErrors((current) => ({ ...current, categoryId: undefined }))
-            }}
-            placeholder="Select category"
-            required
-            value={categoryId}
-          />
-          {!isEditing && (
-            <>
-              <Switch
-                checked={recurringEnabled}
-                label="Repeat monthly"
+                  placeholder="0.00"
+                  required
+                  rightSection={
+                    <ActionIcon
+                      disabled={formLocked}
+                      aria-label={
+                        amountIsNegative
+                          ? 'Make amount positive'
+                          : 'Make amount negative'
+                      }
+                      onClick={() => {
+                        setAmount((current) => toggleMoneyDraftSign(current))
+                        setErrors((current) => ({
+                          ...current,
+                          amount: undefined,
+                        }))
+                      }}
+                      size="sm"
+                      type="button"
+                      variant="subtle"
+                    >
+                      {amountIsNegative ? (
+                        <Plus aria-hidden size={16} />
+                      ) : (
+                        <Minus aria-hidden size={16} />
+                      )}
+                    </ActionIcon>
+                  }
+                  rightSectionPointerEvents="auto"
+                  rightSectionWidth={40}
+                  value={amount}
+                />
+                <TextInput label="Currency" readOnly value={currency} />
+              </Group>
+              <TextInput
+                disabled={formLocked}
+                error={errors.providerDate}
+                label="Date"
                 onChange={(event) => {
-                  const checked = event.currentTarget.checked
-                  setRecurringEnabled(checked)
-                  if (checked && providerDate) {
-                    setRecurrenceDay(getDateDayOfMonth(providerDate))
+                  const nextProviderDate = event.currentTarget.value
+                  setProviderDate(nextProviderDate)
+                  if (!isEditing && recurringEnabled && nextProviderDate) {
+                    setRecurrenceDay(getDateDayOfMonth(nextProviderDate))
                   }
                   setErrors((current) => ({
                     ...current,
-                    recurrenceDay: undefined,
+                    providerDate: undefined,
                   }))
                 }}
+                required
+                type="date"
+                value={providerDate}
               />
-              {recurringEnabled && (
-                <NumberInput
-                  allowDecimal={false}
-                  clampBehavior="strict"
-                  error={errors.recurrenceDay}
-                  label="Day of month"
-                  max={31}
-                  min={1}
-                  onChange={(value) => {
-                    setRecurrenceDay(value)
-                    setErrors((current) => ({
-                      ...current,
-                      recurrenceDay: undefined,
-                    }))
-                  }}
-                  value={recurrenceDay}
-                />
+              <TextInput
+                disabled={formLocked}
+                error={errors.merchantName}
+                label="Merchant"
+                onChange={(event) => {
+                  setMerchantName(event.currentTarget.value)
+                  setErrors((current) => ({
+                    ...current,
+                    merchantName: undefined,
+                  }))
+                }}
+                placeholder="Merchant or transaction name"
+                required
+                value={merchantName}
+              />
+              <CategorySelect
+                disabled={formLocked}
+                aria-label="Category"
+                clearable={false}
+                comboboxProps={comboboxProps}
+                data={categoryOptions}
+                error={errors.categoryId}
+                label="Category"
+                maxDropdownHeight={maxDropdownHeight}
+                onChange={(value) => {
+                  setCategoryId(value)
+                  setErrors((current) => ({
+                    ...current,
+                    categoryId: undefined,
+                  }))
+                }}
+                placeholder="Select category"
+                required
+                value={categoryId}
+              />
+              {!isEditing && (
+                <>
+                  <Switch
+                    disabled={formLocked}
+                    checked={recurringEnabled}
+                    label="Repeat monthly"
+                    onChange={(event) => {
+                      const checked = event.currentTarget.checked
+                      setRecurringEnabled(checked)
+                      if (checked && providerDate) {
+                        setRecurrenceDay(getDateDayOfMonth(providerDate))
+                      }
+                      setErrors((current) => ({
+                        ...current,
+                        recurrenceDay: undefined,
+                      }))
+                    }}
+                  />
+                  {recurringEnabled && (
+                    <NumberInput
+                      disabled={formLocked}
+                      allowDecimal={false}
+                      clampBehavior="strict"
+                      error={errors.recurrenceDay}
+                      label="Day of month"
+                      max={31}
+                      min={1}
+                      onChange={(value) => {
+                        setRecurrenceDay(value)
+                        setErrors((current) => ({
+                          ...current,
+                          recurrenceDay: undefined,
+                        }))
+                      }}
+                      value={recurrenceDay}
+                    />
+                  )}
+                </>
               )}
-            </>
-          )}
+            </Stack>
+          </Box>
           <FormActions onCancel={onClose} cancelDisabled={isSaving}>
-            <Button loading={isSaving} type="submit">
+            <Button
+              loading={isSaving}
+              disabled={Boolean(uncertain)}
+              type="submit"
+            >
               Save
             </Button>
           </FormActions>

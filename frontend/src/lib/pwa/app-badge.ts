@@ -1,71 +1,38 @@
-import { axios } from '../../api/axios'
-import type { PaginatedTransactionResponse } from '../../api/models/paginatedTransactionResponse'
+import { assertAuthGeneration, getAuthGeneration } from '../auth-generation'
+import { withDeadline } from './deadline'
+import { sendWorkerBadge } from './worker-channel'
+import { validBadgeSnapshot } from './worker-state'
+import type { NotificationSummary } from '../../api/models'
 
-type BadgingNavigator = Navigator & {
-  setAppBadge?: (contents?: number) => Promise<void>
-  clearAppBadge?: () => Promise<void>
-}
+type BadgingNavigator = Navigator & { clearAppBadge?: () => Promise<void> }
 
-const UNCATEGORIZED_BADGE_PARAMS = {
-  categoryId: 'UNCATEGORIZED',
-  pageIndex: '0',
-  pageSize: '1',
-  sortBy: 'activityDate',
-  sortOrder: 'DESC',
-} as const
-
-function getBadgingNavigator(): BadgingNavigator | null {
-  if (typeof navigator === 'undefined') {
-    return null
-  }
-
-  return navigator as BadgingNavigator
-}
-
-export function isAppBadgeSupported(): boolean {
-  const badgingNavigator = getBadgingNavigator()
-
-  return (
-    typeof badgingNavigator?.setAppBadge === 'function' &&
-    typeof badgingNavigator.clearAppBadge === 'function'
-  )
-}
-
-export async function setAppBadgeCount(count: number): Promise<void> {
-  const badgingNavigator = getBadgingNavigator()
-
+/** All foreground counts go through the active worker's serialized, fenced writer. */
+export async function applyNotificationSummaryBadge(
+  summary: NotificationSummary,
+): Promise<void> {
   if (
-    typeof badgingNavigator?.setAppBadge !== 'function' ||
-    typeof badgingNavigator.clearAppBadge !== 'function'
-  ) {
+    !validBadgeSnapshot(
+      summary.uncategorizedTransactionCount,
+      summary.computedAt,
+    )
+  )
     return
-  }
-
-  if (count > 0) {
-    await badgingNavigator.setAppBadge(count)
-    return
-  }
-
-  await badgingNavigator.clearAppBadge()
+  const generation = getAuthGeneration()
+  await sendWorkerBadge(
+    summary.uncategorizedTransactionCount,
+    summary.computedAt,
+  )
+  assertAuthGeneration(generation)
 }
 
+/** Logout calls worker disable separately; local clearing must not await any other work. */
 export async function clearAppBadge(): Promise<void> {
-  await setAppBadgeCount(0)
-}
-
-export async function fetchUncategorizedTransactionCount(): Promise<number> {
-  const response = await axios<PaginatedTransactionResponse>({
-    url: '/transaction',
-    method: 'GET',
-    params: UNCATEGORIZED_BADGE_PARAMS,
-  })
-
-  return response.total ?? 0
-}
-
-export async function refreshUncategorizedTransactionBadge(): Promise<number> {
-  const count = await fetchUncategorizedTransactionCount()
-  await setAppBadgeCount(count)
-
-  return count
+  if (typeof navigator === 'undefined') return
+  const badgingNavigator = navigator as BadgingNavigator
+  if (typeof badgingNavigator.clearAppBadge === 'function')
+    await withDeadline(
+      badgingNavigator.clearAppBadge(),
+      3_000,
+      'Badge cleanup timed out.',
+    )
 }

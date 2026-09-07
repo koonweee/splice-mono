@@ -39,6 +39,33 @@ describe('request-isolated server API', () => {
     expect(() => getServerApiClient()).toThrow('outside request middleware')
   })
 
+  it.each([
+    '1',
+    'device',
+    'all',
+    'device.00000000-0000-4000-8000-000000000001',
+    'all.00000000-0000-4000-8000-000000000002',
+    'all.00000000-0000-4000-8000-000000000003.1788800000000',
+  ])(
+    'blocks SSR identity and financial reads while logout marker %s is present',
+    async (marker) => {
+      const fetcher = vi.fn()
+      const client = createServerApiClient({
+        baseUrl,
+        cookieHeader: `splice_access_token=old; splice_refresh_token=old; splice_logout_pending=${marker}`,
+        fetcher,
+        onSetCookie: vi.fn(),
+      })
+      await expect(client.request({ url: '/user/me' })).rejects.toBeInstanceOf(
+        ConfirmedLoggedOutError,
+      )
+      await expect(client.request({ url: '/account' })).rejects.toBeInstanceOf(
+        ConfirmedLoggedOutError,
+      )
+      expect(fetcher).not.toHaveBeenCalled()
+    },
+  )
+
   it('coordinates one refresh, preserves separate cookies, and retries with the updated jar', async () => {
     const setCookies = vi.fn()
     const fetcher = vi.fn(
