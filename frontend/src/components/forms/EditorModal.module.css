@@ -25,6 +25,17 @@
   }
   .header {
     border-radius: 0;
+    padding-top: calc(
+      var(--mantine-spacing-lg) + var(--splice-safe-area-top, 0px)
+    );
+    padding-left: max(
+      var(--mantine-spacing-lg),
+      var(--splice-safe-area-left, 0px)
+    );
+    padding-right: max(
+      var(--mantine-spacing-lg),
+      var(--splice-safe-area-right, 0px)
+    );
   }
 
   .content {
@@ -42,6 +53,14 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    padding-left: max(
+      var(--mantine-spacing-lg),
+      var(--splice-safe-area-left, 0px)
+    );
+    padding-right: max(
+      var(--mantine-spacing-lg),
+      var(--splice-safe-area-right, 0px)
+    );
   }
 
   .body form {
@@ -59,7 +78,10 @@
 
   .actions {
     margin-top: auto;
-    padding-bottom: max(var(--mantine-spacing-md), env(safe-area-inset-bottom));
+    padding-bottom: max(
+      var(--mantine-spacing-md),
+      var(--splice-safe-area-bottom, 0px)
+    );
   }
 
   .actions > button {

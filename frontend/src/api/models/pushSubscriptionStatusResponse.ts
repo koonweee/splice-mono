@@ -9,4 +9,7 @@
 export interface PushSubscriptionStatusResponse {
   configured: boolean
   subscribed: boolean
+  rebindRequired: boolean
+  /** @nullable */
+  enrollmentId: string | null
 }

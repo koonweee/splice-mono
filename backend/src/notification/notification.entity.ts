@@ -8,6 +8,12 @@ import type {
 } from '../types/Notification';
 
 @Entity()
+@Index('IDX_notification_inbox_feed', ['userId', 'createdAt', 'id'], {
+  where: "status = 'active' AND type <> 'system.test'",
+})
+@Index('IDX_notification_inbox_unread', ['userId', 'createdAt'], {
+  where: "status = 'active' AND \"readAt\" IS NULL AND type <> 'system.test'",
+})
 @Index('UQ_notification_type_dedupe', ['type', 'dedupeKey'], { unique: true })
 export class NotificationEntity extends OwnedEntity {
   @PrimaryGeneratedColumn('uuid')

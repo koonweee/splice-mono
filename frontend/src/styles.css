@@ -1,5 +1,10 @@
 html {
+  --splice-safe-area-top: env(safe-area-inset-top, 0px);
+  --splice-safe-area-right: env(safe-area-inset-right, 0px);
+  --splice-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --splice-safe-area-left: env(safe-area-inset-left, 0px);
   scrollbar-gutter: stable;
+  scroll-padding-bottom: var(--splice-lifecycle-space, 0px);
 }
 
 /* Doubled attribute selector beats react-remove-scroll-bar's injected

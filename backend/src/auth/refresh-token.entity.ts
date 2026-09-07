@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { TimestampedEntity } from '../common/base.entity';
 import { UserEntity } from '../user/user.entity';
+import { BrowserSessionEntity } from './browser-session.entity';
 
 export type RefreshTokenRevocationReason =
   | 'rotated'
@@ -29,6 +30,14 @@ export class RefreshTokenEntity extends TimestampedEntity {
 
   @Column({ type: 'uuid' })
   userId: string;
+
+  @Index('IDX_refresh_token_session')
+  @Column({ type: 'uuid', nullable: true })
+  @ForeignKey(() => BrowserSessionEntity, {
+    name: 'FK_refresh_token_session',
+    onDelete: 'RESTRICT',
+  })
+  sessionId: string | null;
 
   @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
   user: UserEntity;

@@ -24,8 +24,11 @@
 }
 .refreshError {
   position: fixed;
-  bottom: calc(var(--mantine-spacing-md) + env(safe-area-inset-bottom));
-  right: var(--mantine-spacing-md);
+  bottom: calc(
+    var(--splice-lifecycle-space, 0px) +
+      max(var(--mantine-spacing-md), var(--splice-safe-area-bottom, 0px))
+  );
+  right: max(var(--mantine-spacing-md), var(--splice-safe-area-right, 0px));
   z-index: var(--splice-layer-retained-error);
   max-width: min(360px, calc(100vw - 32px));
   box-shadow: var(--mantine-shadow-md);

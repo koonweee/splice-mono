@@ -1,4 +1,5 @@
 import { Modal } from '@mantine/core'
+import { useAppTransitionGuard } from '../../lib/pwa/app-transition'
 import styles from './EditorModal.module.css'
 import type { ModalProps } from '@mantine/core'
 
@@ -10,6 +11,7 @@ export function EditorModal({
   centered,
   ...props
 }: ModalProps) {
+  useAppTransitionGuard(props.opened)
   return (
     <Modal
       size={size}

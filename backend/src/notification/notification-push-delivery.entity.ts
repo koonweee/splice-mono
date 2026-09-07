@@ -51,6 +51,9 @@ export class NotificationPushDeliveryEntity extends TimestampedEntity {
   @Column({ type: 'timestamptz', nullable: true })
   processingStartedAt: Date | null;
 
+  @Column({ type: 'uuid', nullable: true })
+  claimToken: string | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   sentAt: Date | null;
 

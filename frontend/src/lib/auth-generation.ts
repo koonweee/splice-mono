@@ -1,8 +1,10 @@
+import { getPendingLogout } from './pwa/logout-state'
+import { clearPendingAppTransition } from './pwa/app-transition'
 import type { QueryClient } from '@tanstack/react-query'
 
 let generation = 0
 let identity: string | undefined
-let privateUiBlocked = false
+let privateUiBlocked = Boolean(getPendingLogout())
 let replacementRequested = false
 const boundaryListeners = new Set<() => void>()
 const clients = new Set<QueryClient>()
@@ -24,7 +26,12 @@ export const authDocumentNavigation = {
   replace: () => window.location.replace('/'),
 }
 function replaceIdentityDocument() {
-  if (replacementRequested || typeof window === 'undefined') return
+  if (
+    replacementRequested ||
+    typeof window === 'undefined' ||
+    getPendingLogout()
+  )
+    return
   replacementRequested = true
   authDocumentNavigation.replace()
 }
@@ -34,6 +41,7 @@ export function assertAuthGeneration(expected: number) {
 }
 
 export function clearPrivateCaches(broadcast = true) {
+  clearPendingAppTransition()
   generation += 1
   identity = undefined
   if (typeof window !== 'undefined') {
@@ -45,6 +53,11 @@ export function clearPrivateCaches(broadcast = true) {
     client.clear()
   }
   if (broadcast && typeof window !== 'undefined') {
+    try {
+      identityChannel?.postMessage({ type: 'clear' })
+    } catch {
+      /* Storage remains an independent cross-tab transport. */
+    }
     try {
       window.localStorage.setItem(AUTH_EVENT_KEY, crypto.randomUUID())
     } catch {
@@ -80,26 +93,42 @@ export function bindBrowserQueryClient(client: QueryClient) {
   if (!listening) {
     listening = true
     if (typeof BroadcastChannel !== 'undefined') {
-      identityChannel = new BroadcastChannel('splice-identity')
-      identityChannel.onmessage = (event: MessageEvent<unknown>) => {
-        const data = event.data
-        if (
-          data &&
-          typeof data === 'object' &&
-          'identity' in data &&
-          typeof data.identity === 'string' &&
-          identity &&
-          data.identity !== identity
-        ) {
-          clearPrivateCaches(false)
-          replaceIdentityDocument()
-        }
+      try {
+        identityChannel = new BroadcastChannel('splice-identity')
+      } catch {
+        /* Storage events still provide a best-effort boundary. */
       }
+      if (identityChannel)
+        identityChannel.onmessage = (event: MessageEvent<unknown>) => {
+          const data = event.data
+          if (
+            data &&
+            typeof data === 'object' &&
+            'type' in data &&
+            data.type === 'clear'
+          ) {
+            clearPrivateCaches(false)
+            replaceIdentityDocument()
+            return
+          }
+          if (
+            data &&
+            typeof data === 'object' &&
+            'identity' in data &&
+            typeof data.identity === 'string' &&
+            identity &&
+            data.identity !== identity
+          ) {
+            clearPrivateCaches(false)
+            replaceIdentityDocument()
+          }
+        }
     }
     window.addEventListener('storage', (event) => {
       if (event.key === AUTH_EVENT_KEY && event.newValue) {
         clearPrivateCaches(false)
-        // A new document guarantees old observers and mutation callbacks cannot survive.
+        // Keep the cleared live document for pending logout recovery. Otherwise a
+        // new document guarantees old observers and callbacks cannot survive.
         replaceIdentityDocument()
       }
     })
@@ -119,5 +148,11 @@ export function acceptBrowserIdentity(next: string) {
   }
   const changed = identity !== next
   identity = next
-  if (changed) identityChannel?.postMessage({ identity: next })
+  if (changed) {
+    try {
+      identityChannel?.postMessage({ identity: next })
+    } catch {
+      /* A failed optional broadcast must not interrupt verified login. */
+    }
+  }
 }

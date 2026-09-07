@@ -1,4 +1,5 @@
 import { MutationCache } from '@tanstack/react-query'
+import { OfflineMutationError } from './offline-mutation'
 import { assertAuthGeneration, getAuthGeneration } from './auth-generation'
 import type { QueryClient, QueryKey } from '@tanstack/react-query'
 import type { Account, User, UserSettings } from '../api/models'
@@ -20,6 +21,8 @@ export const queryFamilies = {
   schedules: ['/recurring-manual-transaction'],
   user: ['/user/me'],
   tokens: ['/user/tokens'],
+  notifications: ['/notification/inbox'],
+  notificationSummary: ['/notification/summary'],
 } as const
 export type QueryFamily = keyof typeof queryFamilies
 
@@ -47,6 +50,7 @@ export function invalidateFamilies(
   })
 }
 const transactionChanges: Array<QueryFamily> = [
+  'notificationSummary',
   'transactions',
   'analysis',
   'categories',
@@ -63,13 +67,18 @@ export const mutationDependencies: Partial<
   accountControllerUpdate: ['accounts', 'dashboardSummary', 'accountHistory'],
   accountControllerCreate: balanceChanges,
   accountControllerRemove: [...balanceChanges, ...transactionChanges],
-  accountControllerArchive: balanceChanges,
+  accountControllerArchive: [...balanceChanges, 'notificationSummary'],
   accountControllerUpdateBalance: balanceChanges,
   balanceSnapshotControllerImportCsv: balanceChanges,
-  bankLinkControllerSyncAllAccounts: [...balanceChanges, ...transactionChanges],
+  bankLinkControllerSyncAllAccounts: [
+    ...balanceChanges,
+    ...transactionChanges,
+    'notifications',
+  ],
   bankLinkControllerSyncAllTransactions: [
     ...transactionChanges,
     'categorizationRules',
+    'notifications',
   ],
   bankLinkControllerSyncAllInvestmentHoldings: balanceChanges,
   bankLinkControllerSyncAllInvestmentTransactions: [
@@ -125,6 +134,9 @@ export const mutationDependencies: Partial<
   recurringManualTransactionControllerResume: ['schedules'],
   userControllerCreateToken: ['tokens'],
   userControllerRevokeToken: ['tokens'],
+  notificationInboxAction: ['notifications', 'notificationSummary'],
+  notificationControllerMarkRead: ['notifications', 'notificationSummary'],
+  notificationControllerArchive: ['notifications', 'notificationSummary'],
 }
 
 type Metadata = Pick<Account, 'name' | 'customName' | 'notes'>
@@ -265,6 +277,8 @@ export function createMutationCache(getClient: () => QueryClient) {
         editGeneration = generation
       }
       generations.set(mutation, generation)
+      if (typeof navigator !== 'undefined' && navigator.onLine === false)
+        throw new OfflineMutationError()
       const userId = getClient().getQueryData<User>(['/user/me'])?.id
       if (userId) userIds.set(mutation, userId)
       // Paused entity mutations must never start using a replacement identity.

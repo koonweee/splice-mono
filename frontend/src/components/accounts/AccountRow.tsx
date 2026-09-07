@@ -2,6 +2,7 @@ import { ActionIcon, Group, Text, TextInput, Tooltip } from '@mantine/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Archive, Check, Link2, Pencil, RotateCcw, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
+import { useAppTransitionGuard } from '../../lib/pwa/app-transition'
 import { useAccountMetadataMutation } from '../../hooks/useAccountMetadataMutation'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { SanitizedBankLinkStatus } from '../../api/models/sanitizedBankLinkStatus'
@@ -31,6 +32,7 @@ export function AccountRow({ account }: { account: Account }) {
   const queryClient = useQueryClient()
 
   const [isEditing, setIsEditing] = useState(false)
+  useAppTransitionGuard(isEditing)
   const [editedName, setEditedName] = useState('')
   const [nameError, setNameError] = useState<string | null>(null)
   const [archiveModalOpened, setArchiveModalOpened] = useState(false)

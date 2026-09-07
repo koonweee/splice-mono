@@ -10,6 +10,13 @@ export function configureQueryPolicy(client: QueryClient) {
       ...client.getDefaultOptions().queries,
       staleTime: FINANCIAL_STALE_TIME,
     },
+    mutations: {
+      ...client.getDefaultOptions().mutations,
+      // Financial writes fail visibly through the transport; they never queue
+      // silently for a reconnect. Explicit settings scopes still serialize.
+      networkMode: 'always',
+      retry: false,
+    },
   })
   client.setQueryDefaults(['/user/me'], { staleTime: SESSION_STALE_TIME })
   client.setQueryDefaults(['/user/tokens'], { staleTime: 0 })

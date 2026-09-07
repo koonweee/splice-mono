@@ -38,6 +38,7 @@ import { fixtureDashboard } from './page-fixtures'
 import { investmentExamples } from './investment-examples'
 import { categoryExamples } from './category-examples'
 import { appearanceFromSearch } from './preferences'
+import { notificationExamples } from './notification-examples'
 import { dialogExamples } from './dialog-examples'
 import { pageExamples } from './page-examples'
 import { accountExamples } from './account-examples'
@@ -372,6 +373,7 @@ export const examples = [
   ...accountExamples,
   ...pageExamples,
   ...dialogExamples,
+  ...notificationExamples,
   ...investmentExamples,
   ...categoryExamples,
   {

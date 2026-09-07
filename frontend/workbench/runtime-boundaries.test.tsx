@@ -65,6 +65,8 @@ it('simulates notification subscription without requesting browser permission', 
   expect(await loadCurrentDeviceNotificationState()).toEqual({
     supported: 'supported',
     subscribed: true,
+    rebindRequired: false,
+    enrollmentId: 'workbench-enrollment',
   })
   expect(fetch).not.toHaveBeenCalled()
 })

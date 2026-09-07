@@ -47,6 +47,8 @@ This directory tracks product and implementation plans for Splice.
 | [Mantine Theme Cleanup](./mantine-theme-cleanup.md)                                                                   | Planned     | Centralize reusable Mantine component chrome while preserving feature-specific layout, behavior, and accessibility.                                                                                  |
 | [Mobile Table Variants](./mobile-table-variants.md)                                                                   | Done        | Replace remaining mobile table surfaces with purpose-built lists and add a shared mobile table-list shell.                                                                                           |
 
+| [PWA Reliability, Privacy, And App Experience](./pwa-reliability-privacy-and-experience.md) | In Progress | Implement reliable session-bound push, compact inbox, safe updates, static caching, recovery, layout, and shortcuts. |
+
 ## Templates
 
 - [Plan Template](./template.md)

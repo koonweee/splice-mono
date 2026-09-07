@@ -1,18 +1,32 @@
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'crypto';
-import { Brackets, EntityManager, In, IsNull, Repository } from 'typeorm';
+import { Brackets, EntityManager, In, IsNull, Not, Repository } from 'typeorm';
 import type {
   Notification,
+  NotificationInboxItem,
+  NotificationInboxPage,
+  NotificationInboxQuery,
+  NotificationSummary,
   NotificationPayload,
   NotificationType,
   PushConfigResponse,
+  PushEnrollmentEligibility,
   PushSubscriptionResponse,
   PushSubscriptionStatusResponse,
   RegisterPushSubscriptionDto,
   TestNotificationResponse,
 } from '../types/Notification';
 import { getPostgresMutationAffectedCount } from '../common/postgres-mutation-result';
+import { BrowserSessionService } from '../auth/browser-session.service';
+import { TransactionQueryService } from '../transaction/transaction-query.service';
 import { UserService } from '../user/user.service';
 import { NotificationPushDeliveryEntity } from './notification-push-delivery.entity';
 import { NotificationEntity } from './notification.entity';
@@ -64,6 +78,8 @@ export class NotificationService {
     private readonly pushDeliveryRepository: Repository<NotificationPushDeliveryEntity>,
     private readonly userService: UserService,
     private readonly webPushAdapter: WebPushAdapter,
+    private readonly browserSessions: BrowserSessionService,
+    private readonly transactionQueries: TransactionQueryService,
   ) {}
 
   getPushConfig(): PushConfigResponse {
@@ -76,32 +92,225 @@ export class NotificationService {
   async getCurrentSubscriptionStatus(
     userId: string,
     endpoint?: string,
+    refreshToken?: string,
   ): Promise<PushSubscriptionStatusResponse> {
-    if (!endpoint) {
-      return {
-        configured: this.webPushAdapter.isConfigured(),
-        subscribed: false,
-      };
+    if (!refreshToken)
+      throw new UnauthorizedException('A browser session is required');
+    return this.pushSubscriptionRepository.manager.transaction(
+      async (manager) => {
+        const session = await this.browserSessions.resolveForRefreshToken(
+          manager,
+          refreshToken,
+          userId,
+        );
+        const subscription = endpoint
+          ? await manager.getRepository(PushSubscriptionEntity).findOne({
+              where: { userId, endpoint },
+            })
+          : null;
+        const ownedEnrollment = subscription?.sessionId === session.id;
+        return {
+          configured: this.webPushAdapter.isConfigured(),
+          subscribed: Boolean(
+            ownedEnrollment &&
+              !subscription?.revokedAt &&
+              !subscription?.rebindRequired,
+          ),
+          rebindRequired: Boolean(
+            subscription?.rebindRequired &&
+              (!subscription.sessionId || ownedEnrollment),
+          ),
+          enrollmentId:
+            ownedEnrollment && !subscription?.revokedAt
+              ? (subscription?.enrollmentId ?? null)
+              : null,
+        };
+      },
+    );
+  }
+
+  async getEnrollmentEligibility(
+    userId: string,
+    enrollmentId: string,
+    refreshToken?: string,
+  ): Promise<PushEnrollmentEligibility> {
+    if (!refreshToken) return { eligible: false };
+    try {
+      return await this.pushSubscriptionRepository.manager.transaction(
+        async (manager) => {
+          const session = await this.browserSessions.resolveForRefreshToken(
+            manager,
+            refreshToken,
+            userId,
+          );
+          const subscription = await manager
+            .getRepository(PushSubscriptionEntity)
+            .findOne({
+              where: {
+                userId,
+                sessionId: session.id,
+                enrollmentId,
+                revokedAt: IsNull(),
+                rebindRequired: false,
+              },
+              lock: { mode: 'pessimistic_read' },
+            });
+          return { eligible: Boolean(subscription) };
+        },
+      );
+    } catch (error) {
+      if (error instanceof UnauthorizedException) return { eligible: false };
+      throw error;
     }
+  }
 
-    const subscription = await this.pushSubscriptionRepository.findOne({
-      where: { userId, endpoint, revokedAt: IsNull() },
+  async getSummary(userId: string): Promise<NotificationSummary> {
+    return this.notificationRepository.manager.transaction(
+      'REPEATABLE READ',
+      async (manager) => {
+        const rows: Array<{ computedAt: Date }> = await manager.query(
+          'SELECT transaction_timestamp() AS "computedAt"',
+        );
+        const uncategorizedTransactionCount =
+          await this.transactionQueries.countUncategorized(userId, manager);
+        const unreadNotificationCount = await this.inboxQuery(manager, userId)
+          .andWhere('notification.readAt IS NULL')
+          .getCount();
+        return {
+          uncategorizedTransactionCount,
+          unreadNotificationCount,
+          computedAt: rows[0].computedAt.toISOString(),
+        };
+      },
+    );
+  }
+
+  private inboxQuery(manager: EntityManager, userId: string) {
+    return manager
+      .getRepository(NotificationEntity)
+      .createQueryBuilder('notification')
+      .where('notification.userId = :userId', { userId })
+      .andWhere('notification.status = :status', { status: 'active' })
+      .andWhere('notification.type IN (:...types)', {
+        types: ['transactions.new_synced', 'bank_link.needs_attention'],
+      })
+      .andWhere(`notification.createdAt >= now() - interval '90 days'`);
+  }
+
+  async getInbox(
+    userId: string,
+    query: NotificationInboxQuery,
+  ): Promise<NotificationInboxPage> {
+    const builder = this.inboxQuery(this.notificationRepository.manager, userId)
+      .addSelect('notification."createdAt"::text', 'cursorCreatedAt')
+      .orderBy('notification.createdAt', 'DESC')
+      .addOrderBy('notification.id', 'DESC')
+      .take(query.pageSize + 1);
+    if (query.cursor) {
+      let cursor: unknown;
+      try {
+        cursor = JSON.parse(
+          Buffer.from(query.cursor, 'base64url').toString('utf8'),
+        );
+      } catch {
+        throw new BadRequestException('Invalid inbox cursor');
+      }
+      if (
+        !Array.isArray(cursor) ||
+        cursor.length !== 2 ||
+        typeof cursor[0] !== 'string' ||
+        typeof cursor[1] !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d{1,6})?([+-]\d{2}(:\d{2})?|Z)?$/.test(
+          cursor[0],
+        ) ||
+        !Number.isFinite(Date.parse(cursor[0])) ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          cursor[1],
+        )
+      )
+        throw new BadRequestException('Invalid inbox cursor');
+      builder.andWhere(
+        '(notification."createdAt", notification.id) < (:createdAt, :id)',
+        { createdAt: cursor[0], id: cursor[1] },
+      );
+    }
+    const result = await builder.getRawAndEntities<{
+      cursorCreatedAt: string;
+    }>();
+    const hasMore = result.entities.length > query.pageSize;
+    const entities = result.entities.slice(0, query.pageSize);
+    const items: NotificationInboxItem[] = entities.map((notification) => {
+      const rendered = this.renderPushPayload(notification);
+      return {
+        id: notification.id,
+        type: notification.type as NotificationInboxItem['type'],
+        title: rendered.title,
+        body: rendered.body,
+        url: rendered.url,
+        createdAt: notification.createdAt.toISOString(),
+        readAt: notification.readAt?.toISOString() ?? null,
+      };
     });
+    const last = entities.at(-1);
+    const nextCursor =
+      hasMore && last
+        ? Buffer.from(
+            JSON.stringify([
+              result.raw[entities.length - 1].cursorCreatedAt,
+              last.id,
+            ]),
+          ).toString('base64url')
+        : null;
+    return { items, nextCursor, hasMore };
+  }
 
-    return {
-      configured: this.webPushAdapter.isConfigured(),
-      subscribed: Boolean(subscription),
-    };
+  async markRead(userId: string, id: string): Promise<void> {
+    const result = await this.notificationRepository
+      .createQueryBuilder()
+      .update(NotificationEntity)
+      .set({ readAt: () => 'COALESCE("readAt", now())' })
+      .where('id = :id AND "userId" = :userId AND type <> :test', {
+        id,
+        userId,
+        test: 'system.test',
+      })
+      .execute();
+    if (!result.affected) throw new NotFoundException('Notification not found');
+  }
+
+  async archive(userId: string, id: string): Promise<void> {
+    const result = await this.notificationRepository
+      .createQueryBuilder()
+      .update(NotificationEntity)
+      .set({
+        status: 'archived',
+        archivedAt: () => 'COALESCE("archivedAt", now())',
+      })
+      .where('id = :id AND "userId" = :userId AND type <> :test', {
+        id,
+        userId,
+        test: 'system.test',
+      })
+      .execute();
+    if (!result.affected) throw new NotFoundException('Notification not found');
   }
 
   async registerPushSubscription(
     userId: string,
     dto: RegisterPushSubscriptionDto,
+    refreshToken?: string,
   ): Promise<PushSubscriptionResponse> {
-    await this.userService.enableDefaultNotificationsIfUnset(userId);
+    if (!refreshToken)
+      throw new UnauthorizedException('A browser session is required');
 
     return this.pushSubscriptionRepository.manager.transaction(
       async (manager) => {
+        const session = await this.browserSessions.resolveForRefreshToken(
+          manager,
+          refreshToken,
+          userId,
+        );
+        await this.userService.enableDefaultNotificationsIfUnset(userId);
         await manager.query(
           'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
           [dto.endpoint],
@@ -180,6 +389,32 @@ export class NotificationService {
           entity = new PushSubscriptionEntity();
         }
 
+        const enrollmentChanged =
+          !entity.enrollmentId ||
+          entity.sessionId !== session.id ||
+          entity.revokedAt !== null ||
+          entity.rebindRequired ||
+          entity.p256dh !== dto.keys.p256dh ||
+          entity.auth !== dto.keys.auth;
+        if (enrollmentChanged && entity.id) {
+          await deliveryRepo.update(
+            {
+              subscriptionId: entity.id,
+              status: In(['pending', 'processing']),
+            },
+            {
+              status: 'failed',
+              processingStartedAt: null,
+              claimToken: null,
+              lastError: 'Push enrollment changed',
+            },
+          );
+        }
+        entity.sessionId = session.id;
+        entity.enrollmentId = enrollmentChanged
+          ? randomUUID()
+          : entity.enrollmentId;
+        entity.rebindRequired = false;
         entity.userId = userId;
         entity.endpoint = dto.endpoint;
         entity.p256dh = dto.keys.p256dh;
@@ -205,7 +440,7 @@ export class NotificationService {
         );
         const subscriptionRepo = manager.getRepository(PushSubscriptionEntity);
         const subscription = await subscriptionRepo.findOne({
-          where: { userId, endpoint, revokedAt: IsNull() },
+          where: { userId, endpoint },
           lock: { mode: 'pessimistic_write' },
         });
 
@@ -219,6 +454,7 @@ export class NotificationService {
           'Push subscription revoked',
         );
         subscription.revokedAt = new Date();
+        subscription.rebindRequired = false;
         await subscriptionRepo.save(subscription);
         return true;
       },
@@ -233,7 +469,7 @@ export class NotificationService {
             SELECT endpoint
             FROM push_subscription_entity
             WHERE "userId" = $1
-              AND "revokedAt" IS NULL
+              AND ("revokedAt" IS NULL OR "rebindRequired" = true)
             ORDER BY endpoint
           `,
           [userId],
@@ -252,7 +488,10 @@ export class NotificationService {
         );
         const subscriptionRepo = manager.getRepository(PushSubscriptionEntity);
         const subscriptions = await subscriptionRepo.find({
-          where: { userId, revokedAt: IsNull() },
+          where: [
+            { userId, revokedAt: IsNull() },
+            { userId, rebindRequired: true },
+          ],
           order: { endpoint: 'ASC' },
           lock: { mode: 'pessimistic_write' },
         });
@@ -268,6 +507,7 @@ export class NotificationService {
         const revokedAt = new Date();
         subscriptions.forEach((subscription) => {
           subscription.revokedAt = revokedAt;
+          subscription.rebindRequired = false;
         });
         await subscriptionRepo.save(subscriptions);
         return subscriptions.length;
@@ -414,6 +654,8 @@ export class NotificationService {
               )
               AND (
                 subscription."revokedAt" IS NOT NULL
+                OR subscription."rebindRequired" = true
+                OR subscription."sessionId" IS NULL
                 OR notification."userId" <> subscription."userId"
               )
             ORDER BY delivery."createdAt", delivery.id
@@ -454,14 +696,19 @@ export class NotificationService {
                     .where('delivery.status = :processingStatus', {
                       processingStatus: 'processing',
                     })
-                    .andWhere('delivery.processingStartedAt <= :staleBefore', {
-                      staleBefore,
-                    });
+                    .andWhere(
+                      '(delivery.processingStartedAt IS NULL OR delivery.processingStartedAt <= :staleBefore)',
+                      {
+                        staleBefore,
+                      },
+                    );
                 }),
               );
           }),
         )
         .andWhere('subscription.revokedAt IS NULL')
+        .andWhere('subscription.rebindRequired = false')
+        .andWhere('subscription.sessionId IS NOT NULL')
         .andWhere('notification.userId = subscription.userId')
         .orderBy('delivery.createdAt', 'ASC')
         .setLock('pessimistic_write', undefined, ['delivery', 'subscription'])
@@ -473,10 +720,15 @@ export class NotificationService {
         return [];
       }
 
+      for (const delivery of deliveries) {
+        if (delivery.status === 'processing')
+          this.logPushOutcome(delivery, 'stale_claim_reclaimed', Date.now());
+      }
       deliveries.forEach((delivery) => {
         delivery.status = 'processing';
         delivery.processingStartedAt = now;
         delivery.attemptCount += 1;
+        delivery.claimToken = randomUUID();
       });
 
       await deliveryRepo.save(deliveries);
@@ -589,7 +841,6 @@ export class NotificationService {
               : `${transactionsPayload.count} new uncategorized transactions were added`,
           url: '/transactions?categoryId=UNCATEGORIZED',
           tag: notification.id,
-          badgeCount: transactionsPayload.count,
         };
       }
       case 'bank_link.needs_attention': {
@@ -622,79 +873,190 @@ export class NotificationService {
   async sendPushDelivery(
     delivery: NotificationPushDeliveryEntity,
   ): Promise<void> {
-    await this.pushDeliveryRepository.manager.transaction(async (manager) => {
-      const lockedRows: Array<{ id: string; ownersMatch: boolean }> =
-        await manager.query(
-          `
-            SELECT delivery.id,
-              (notification."userId" = subscription."userId") AS "ownersMatch"
-            FROM notification_push_delivery_entity delivery
-            JOIN push_subscription_entity subscription
-              ON subscription.id = delivery."subscriptionId"
-            JOIN notification_entity notification
-              ON notification.id = delivery."notificationId"
-            WHERE delivery.id = $1
-              AND delivery.status = 'processing'
-            FOR UPDATE OF delivery, subscription
-          `,
-          [delivery.id],
+    if (!delivery.claimToken) {
+      this.logPushOutcome(delivery, 'stale_claim_ignored', Date.now());
+      return;
+    }
+    const claimToken = delivery.claimToken;
+    const startedAt = Date.now();
+    try {
+      await this.pushDeliveryRepository.manager.transaction(async (manager) => {
+        await manager.query("SET LOCAL lock_timeout = '6s'");
+        await manager.query("SET LOCAL statement_timeout = '8s'");
+        const sessionId = delivery.subscription.sessionId;
+        if (!sessionId)
+          throw new UnauthorizedException('Push session unavailable');
+        await this.browserSessions.lockActiveSession(
+          manager,
+          sessionId,
+          delivery.subscription.userId,
         );
-      const deliveryRepo = manager.getRepository(
-        NotificationPushDeliveryEntity,
-      );
-      const subscriptionRepo = manager.getRepository(PushSubscriptionEntity);
-      const locked = lockedRows[0];
-      if (!locked) {
-        return;
-      }
-      if (!locked.ownersMatch) {
-        await deliveryRepo.update(
-          { id: delivery.id, status: 'processing' },
-          {
-            status: 'failed',
-            processingStartedAt: null,
-            lastError: 'Push delivery owner mismatch',
-          },
+        const lockedRows: Array<{ id: string; ownersMatch: boolean }> =
+          await manager.query(
+            `
+          SELECT delivery.id, (notification."userId" = subscription."userId") AS "ownersMatch"
+          FROM notification_push_delivery_entity delivery
+          JOIN push_subscription_entity subscription ON subscription.id = delivery."subscriptionId"
+          JOIN notification_entity notification ON notification.id = delivery."notificationId"
+          WHERE delivery.id = $1 AND delivery.status = 'processing' AND delivery."claimToken" = $2
+          FOR UPDATE OF subscription, delivery
+        `,
+            [delivery.id, claimToken],
+          );
+        const deliveryRepo = manager.getRepository(
+          NotificationPushDeliveryEntity,
         );
-        return;
-      }
-
-      const current = await deliveryRepo.findOne({
-        where: { id: delivery.id, status: 'processing' },
-        relations: { notification: true, subscription: true },
-      });
-      if (
-        !current ||
-        current.subscription.revokedAt !== null ||
-        current.notification.userId !== current.subscription.userId
-      ) {
-        if (current) {
+        const subscriptionRepo = manager.getRepository(PushSubscriptionEntity);
+        if (!lockedRows[0]) {
+          this.logPushOutcome(delivery, 'stale_claim_ignored', startedAt);
+          return;
+        }
+        const current = await deliveryRepo.findOne({
+          where: { id: delivery.id, status: 'processing', claimToken },
+          relations: { notification: true, subscription: true },
+        });
+        if (!current) {
+          this.logPushOutcome(delivery, 'stale_claim_ignored', startedAt);
+          return;
+        }
+        if (
+          !lockedRows[0].ownersMatch ||
+          current.subscription.revokedAt !== null ||
+          current.subscription.rebindRequired ||
+          current.subscription.sessionId !== sessionId ||
+          current.notification.userId !== current.subscription.userId
+        ) {
           current.status = 'failed';
           current.processingStartedAt = null;
+          current.claimToken = null;
           current.lastError = 'Push delivery is no longer owner-eligible';
           await deliveryRepo.save(current);
+          this.logPushOutcome(current, 'owner_ineligible', startedAt);
+          return;
         }
-        return;
-      }
+        const lifetime =
+          current.notification.type === 'transactions.new_synced'
+            ? 86400
+            : current.notification.type === 'bank_link.needs_attention'
+              ? 3600
+              : 300;
+        const ttl = Math.floor(
+          lifetime -
+            (Date.now() - current.notification.createdAt.getTime()) / 1000,
+        );
+        let relevant = ttl > 0 && current.notification.status !== 'archived';
+        if (
+          relevant &&
+          current.notification.type === 'bank_link.needs_attention'
+        ) {
+          const payload = current.notification.payload as {
+            bankLinkId: string;
+          };
+          const links: Array<{ id: string }> = await manager.query(
+            `SELECT id FROM bank_link_entity WHERE id = $1 AND "userId" = $2 AND status IN ('ERROR', 'PENDING_REAUTH')`,
+            [payload.bankLinkId, current.notification.userId],
+          );
+          relevant = links.length > 0;
+        }
+        if (!relevant) {
+          current.status = 'skipped';
+          current.processingStartedAt = null;
+          current.claimToken = null;
+          current.lastError = 'Push notification expired or resolved';
+          await deliveryRepo.save(current);
+          this.logPushOutcome(current, 'expired_or_resolved', startedAt);
+          return;
+        }
+        try {
+          const timestamps: Array<{ computedAt: Date }> = await manager.query(
+            'SELECT clock_timestamp() AS "computedAt"',
+          );
+          const badgeCount = await this.transactionQueries.countUncategorized(
+            current.notification.userId,
+            manager,
+          );
+          await this.webPushAdapter.send(
+            current.subscription,
+            {
+              ...this.renderPushPayload(current.notification),
+              version: 2,
+              enrollmentId: current.subscription.enrollmentId,
+              badgeCount,
+              badgeAsOf: timestamps[0].computedAt.toISOString(),
+            },
+            ttl,
+          );
+          current.status = 'sent';
+          current.sentAt = new Date();
+          current.lastError = null;
+          current.processingStartedAt = null;
+          current.claimToken = null;
+          await deliveryRepo.save(current);
+        } catch (error) {
+          await this.handlePushDeliveryFailure(
+            current,
+            error,
+            subscriptionRepo,
+            deliveryRepo,
+          );
+        }
+        this.logPushOutcome(current, current.status, startedAt);
+      });
+    } catch (error) {
+      await this.pushDeliveryRepository.manager.transaction(async (manager) => {
+        await manager.query("SET LOCAL lock_timeout = '6s'");
+        const result = await manager
+          .getRepository(NotificationPushDeliveryEntity)
+          .update(
+            {
+              id: delivery.id,
+              status: 'processing',
+              claimToken,
+            },
+            {
+              status:
+                error instanceof UnauthorizedException ||
+                delivery.attemptCount >= MAX_PUSH_DELIVERY_ATTEMPTS
+                  ? 'failed'
+                  : 'pending',
+              availableAt: new Date(Date.now() + PUSH_RETRY_DELAY_MS),
+              processingStartedAt: null,
+              claimToken: null,
+              lastError:
+                error instanceof UnauthorizedException
+                  ? 'Push session unavailable'
+                  : 'Push delivery interrupted or lock contention',
+            },
+          );
+        this.logPushOutcome(
+          delivery,
+          !result?.affected
+            ? 'stale_claim_ignored'
+            : error instanceof UnauthorizedException
+              ? 'session_ineligible'
+              : 'interrupted_or_contended',
+          startedAt,
+        );
+      });
+    }
+  }
 
-      try {
-        await this.webPushAdapter.send(
-          current.subscription,
-          this.renderPushPayload(current.notification),
-        );
-        current.status = 'sent';
-        current.sentAt = new Date();
-        current.lastError = null;
-        await deliveryRepo.save(current);
-      } catch (error) {
-        await this.handlePushDeliveryFailure(
-          current,
-          error,
-          subscriptionRepo,
-          deliveryRepo,
-        );
-      }
-    });
+  private logPushOutcome(
+    delivery: NotificationPushDeliveryEntity,
+    outcome: string,
+    startedAt: number,
+  ): void {
+    this.logger.log(
+      {
+        deliveryId: delivery.id,
+        notificationId: delivery.notificationId,
+        outcome,
+        durationMs: Math.max(0, Date.now() - startedAt),
+        attempt: delivery.attemptCount,
+        backlogAgeMs: Math.max(0, startedAt - delivery.createdAt.getTime()),
+      },
+      'Push delivery outcome',
+    );
   }
 
   async cleanupOldNotificationRecords(
@@ -703,7 +1065,7 @@ export class NotificationService {
     const deliveryCutoff = new Date(
       now.getTime() - NOTIFICATION_PUSH_DELIVERY_RETENTION_MS,
     );
-    const terminalStatuses = ['sent', 'failed'] as const;
+    const terminalStatuses = ['sent', 'failed', 'skipped'] as const;
     const notificationCutoff = new Date(
       now.getTime() - NOTIFICATION_RETENTION_MS,
     );
@@ -773,10 +1135,16 @@ export class NotificationService {
     deliveryRepository: Repository<NotificationPushDeliveryEntity>,
   ): Promise<void> {
     const statusCode = this.getWebPushStatusCode(error);
-    const message = error instanceof Error ? error.message : String(error);
+    const message =
+      statusCode === null
+        ? 'Push transport failed'
+        : `Push provider status ${statusCode}`;
+    delivery.processingStartedAt = null;
+    delivery.claimToken = null;
 
     if (statusCode === 404 || statusCode === 410) {
       delivery.subscription.revokedAt = new Date();
+      delivery.subscription.rebindRequired = false;
       delivery.status = 'failed';
       delivery.lastError = message;
       await subscriptionRepository.save(delivery.subscription);
@@ -821,7 +1189,12 @@ export class NotificationService {
 
       if (this.webPushAdapter.isConfigured()) {
         const subscriptions = await subscriptionRepo.find({
-          where: { userId: input.userId, revokedAt: IsNull() },
+          where: {
+            userId: input.userId,
+            revokedAt: IsNull(),
+            rebindRequired: false,
+            sessionId: Not(IsNull()),
+          },
         });
         deliveryCount = subscriptions.length;
 
@@ -835,6 +1208,7 @@ export class NotificationService {
               delivery.attemptCount = 0;
               delivery.availableAt = new Date();
               delivery.processingStartedAt = null;
+              delivery.claimToken = null;
               delivery.sentAt = null;
               delivery.lastError = null;
               return delivery;

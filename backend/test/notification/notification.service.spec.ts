@@ -45,6 +45,9 @@ function buildSubscription(id: string): PushSubscriptionEntity {
   entity.auth = 'auth';
   entity.userAgent = 'test';
   entity.revokedAt = null;
+  entity.sessionId = 'session-id';
+  entity.enrollmentId = 'enrollment-id';
+  entity.rebindRequired = false;
   entity.createdAt = new Date('2026-01-01T00:00:00.000Z');
   entity.updatedAt = new Date('2026-01-01T00:00:00.000Z');
   return entity;
@@ -110,7 +113,13 @@ describe('NotificationService', () => {
         callback({
           query: jest
             .fn()
-            .mockResolvedValue([{ id: 'delivery-id', ownersMatch: true }]),
+            .mockImplementation((sql: string) =>
+              Promise.resolve(
+                sql.includes('computedAt')
+                  ? [{ computedAt: new Date() }]
+                  : [{ id: 'delivery-id', ownersMatch: true }],
+              ),
+            ),
           getRepository: (entity: unknown) =>
             entity === PushSubscriptionEntity
               ? pushSubscriptionRepository
@@ -123,6 +132,13 @@ describe('NotificationService', () => {
       pushDeliveryRepository as never,
       userService as never,
       webPushAdapter as never,
+      {
+        resolveForRefreshToken: jest
+          .fn()
+          .mockResolvedValue({ id: 'session-id' }),
+        lockActiveSession: jest.fn().mockResolvedValue({ id: 'session-id' }),
+      } as never,
+      { countUncategorized: jest.fn().mockResolvedValue(12) } as never,
     );
   });
 
@@ -139,11 +155,16 @@ describe('NotificationService', () => {
       .mockResolvedValueOnce([{ id: 'pending-delivery', status: 'pending' }]);
     pushDeliveryRepository.update.mockResolvedValueOnce({ affected: 2 });
 
-    await service.registerPushSubscription(userId, {
-      endpoint: subscription.endpoint,
-      keys: { p256dh: 'new-key', auth: 'new-auth' },
-      userAgent: 'new browser',
-    });
+    await service.registerPushSubscription(
+      userId,
+      {
+        protocolVersion: 2,
+        endpoint: subscription.endpoint,
+        keys: { p256dh: 'new-key', auth: 'new-auth' },
+        userAgent: 'new browser',
+      },
+      'test-refresh-cookie',
+    );
 
     expect(pushDeliveryRepository.update).toHaveBeenCalledWith(
       {
@@ -183,11 +204,16 @@ describe('NotificationService', () => {
       ]);
 
     await expect(
-      service.registerPushSubscription(userId, {
-        endpoint: subscription.endpoint,
-        keys: { p256dh: 'new-key', auth: 'new-auth' },
-        userAgent: 'new browser',
-      }),
+      service.registerPushSubscription(
+        userId,
+        {
+          protocolVersion: 2,
+          endpoint: subscription.endpoint,
+          keys: { p256dh: 'new-key', auth: 'new-auth' },
+          userAgent: 'new browser',
+        },
+        'test-refresh-cookie',
+      ),
     ).rejects.toThrow(
       'Push subscription is currently delivering a notification; retry registration shortly',
     );
@@ -210,10 +236,15 @@ describe('NotificationService', () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
-    await service.registerPushSubscription(userId, {
-      endpoint: 'https://push.example.com/shared',
-      keys: { p256dh: 'new-key', auth: 'new-auth' },
-    });
+    await service.registerPushSubscription(
+      userId,
+      {
+        protocolVersion: 2,
+        endpoint: 'https://push.example.com/shared',
+        keys: { p256dh: 'new-key', auth: 'new-auth' },
+      },
+      'test-refresh-cookie',
+    );
 
     const tombstone = pushSubscriptionRepository.save.mock.calls[0][0];
     const replacement = pushSubscriptionRepository.save.mock.calls[1][0];
@@ -246,10 +277,15 @@ describe('NotificationService', () => {
       ]);
     pushDeliveryRepository.update.mockResolvedValueOnce({ affected: 1 });
 
-    await service.registerPushSubscription(userId, {
-      endpoint: subscription.endpoint,
-      keys: { p256dh: 'new-key', auth: 'new-auth' },
-    });
+    await service.registerPushSubscription(
+      userId,
+      {
+        protocolVersion: 2,
+        endpoint: subscription.endpoint,
+        keys: { p256dh: 'new-key', auth: 'new-auth' },
+      },
+      'test-refresh-cookie',
+    );
 
     expect(pushDeliveryRepository.update).toHaveBeenCalledWith(
       {
@@ -344,7 +380,7 @@ describe('NotificationService', () => {
     );
   });
 
-  it('preserves same-owner subscription refreshes while a delivery is processing', async () => {
+  it('fences old claims when same-owner subscription keys change', async () => {
     const subscription = buildSubscription('subscription-id');
     subscription.endpoint = 'https://push.example.com/shared';
     pushSubscriptionRepository.findOne.mockResolvedValueOnce(subscription);
@@ -352,16 +388,23 @@ describe('NotificationService', () => {
       Promise.resolve(entity),
     );
 
-    await service.registerPushSubscription(userId, {
-      endpoint: subscription.endpoint,
-      keys: { p256dh: 'refreshed-key', auth: 'refreshed-auth' },
-      userAgent: 'new browser',
-    });
+    await service.registerPushSubscription(
+      userId,
+      {
+        protocolVersion: 2,
+        endpoint: subscription.endpoint,
+        keys: { p256dh: 'refreshed-key', auth: 'refreshed-auth' },
+        userAgent: 'new browser',
+      },
+      'test-refresh-cookie',
+    );
 
-    // Only the endpoint advisory lock runs; delivery fencing is necessary
-    // solely when ownership crosses users.
+    // Changed encryption keys establish a new enrollment and fence queued work.
     expect(pushSubscriptionTransactionQuery).toHaveBeenCalledTimes(1);
-    expect(pushDeliveryRepository.update).not.toHaveBeenCalled();
+    expect(pushDeliveryRepository.update).toHaveBeenCalledWith(
+      expect.objectContaining({ subscriptionId: subscription.id }),
+      expect.objectContaining({ claimToken: null, status: 'failed' }),
+    );
     expect(subscription.userId).toBe(userId);
     expect(subscription.p256dh).toBe('refreshed-key');
   });
@@ -549,7 +592,6 @@ describe('NotificationService', () => {
       body: '3 new uncategorized transactions were added',
       url: '/transactions?categoryId=UNCATEGORIZED',
       tag: notification.id,
-      badgeCount: 3,
     });
   });
 
@@ -687,8 +729,11 @@ describe('NotificationService', () => {
     const delivery = new NotificationPushDeliveryEntity();
     delivery.id = '00000000-0000-4000-8000-000000000501';
     delivery.status = 'processing';
+    delivery.claimToken = 'claim-token';
+    delivery.createdAt = new Date();
     delivery.attemptCount = 1;
     delivery.notification = new NotificationEntity();
+    delivery.notification.createdAt = new Date();
     delivery.notification.id = '00000000-0000-4000-8000-000000000301';
     delivery.notification.userId = userId;
     delivery.notification.type = 'transactions.new_synced';
@@ -724,8 +769,11 @@ describe('NotificationService', () => {
     const delivery = new NotificationPushDeliveryEntity();
     delivery.id = '00000000-0000-4000-8000-000000000501';
     delivery.status = 'processing';
+    delivery.claimToken = 'claim-token';
+    delivery.createdAt = new Date();
     delivery.attemptCount = 1;
     delivery.notification = new NotificationEntity();
+    delivery.notification.createdAt = new Date();
     delivery.notification.id = '00000000-0000-4000-8000-000000000301';
     delivery.notification.userId = userId;
     delivery.notification.type = 'transactions.new_synced';
@@ -749,6 +797,8 @@ describe('NotificationService', () => {
 
     delivery.attemptCount = 3;
     delivery.status = 'processing';
+    delivery.claimToken = 'claim-token';
+    delivery.createdAt = new Date();
     webPushAdapter.send.mockRejectedValueOnce(new Error('temporary'));
     pushDeliveryRepository.save.mockResolvedValueOnce(delivery);
     pushDeliveryRepository.findOne.mockResolvedValueOnce(delivery);
@@ -770,6 +820,7 @@ describe('NotificationService', () => {
     const staleProcessingDelivery = new NotificationPushDeliveryEntity();
     staleProcessingDelivery.id = '00000000-0000-4000-8000-000000000502';
     staleProcessingDelivery.status = 'processing';
+    staleProcessingDelivery.createdAt = new Date('2026-01-01T00:00:00.000Z');
     staleProcessingDelivery.attemptCount = 1;
     staleProcessingDelivery.notification = new NotificationEntity();
     staleProcessingDelivery.notification.userId = userId;
@@ -868,7 +919,15 @@ describe('NotificationService', () => {
   it('rechecks ownership under the subscription lock before sending', async () => {
     const delivery = new NotificationPushDeliveryEntity();
     delivery.id = 'mismatched-delivery';
+    delivery.createdAt = new Date();
+    delivery.attemptCount = 1;
     delivery.status = 'processing';
+    delivery.claimToken = 'claim-token';
+    delivery.subscription = buildSubscription('subscription-id');
+    delivery.notification = Object.assign(new NotificationEntity(), {
+      userId: 'other-user',
+    });
+    pushDeliveryRepository.findOne.mockResolvedValueOnce(delivery);
     pushDeliveryRepository.manager.transaction.mockImplementationOnce(
       async (callback) =>
         callback({
@@ -881,15 +940,12 @@ describe('NotificationService', () => {
               : pushDeliveryRepository,
         }),
     );
-
     await service.sendPushDelivery(delivery);
-
     expect(webPushAdapter.send).not.toHaveBeenCalled();
-    expect(pushDeliveryRepository.update).toHaveBeenCalledWith(
-      { id: delivery.id, status: 'processing' },
+    expect(pushDeliveryRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         status: 'failed',
-        lastError: 'Push delivery owner mismatch',
+        lastError: 'Push delivery is no longer owner-eligible',
       }),
     );
   });
@@ -941,6 +997,7 @@ describe('NotificationService', () => {
     delivery.status = 'pending';
     delivery.attemptCount = 0;
     delivery.notification = new NotificationEntity();
+    delivery.notification.createdAt = new Date();
     delivery.notification.userId = 'old-user';
     delivery.subscription = buildSubscription('changed-subscription');
     delivery.subscription.userId = 'new-user';

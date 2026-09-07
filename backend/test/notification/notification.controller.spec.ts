@@ -1,3 +1,5 @@
+import { RegisterPushSubscriptionDtoSchema } from '../../src/types/Notification';
+import { ZodValidationPipe } from '../../src/zod-validation/zod-validation.pipe';
 import { NotificationController } from '../../src/notification/notification.controller';
 
 const user = {
@@ -19,6 +21,18 @@ describe('NotificationController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     controller = new NotificationController(notificationService as never);
+  });
+
+  it('refuses enrollment from a legacy client without the privacy-aware worker protocol', () => {
+    const pipe = new ZodValidationPipe(RegisterPushSubscriptionDtoSchema);
+    const legacy = {
+      endpoint: 'https://push.example.test',
+      keys: { p256dh: 'synthetic', auth: 'synthetic' },
+    };
+    expect(() => pipe.transform(legacy)).toThrow();
+    expect(pipe.transform({ ...legacy, protocolVersion: 2 })).toMatchObject({
+      protocolVersion: 2,
+    });
   });
 
   it('returns push config', () => {
@@ -48,7 +62,7 @@ describe('NotificationController', () => {
 
     expect(
       notificationService.getCurrentSubscriptionStatus,
-    ).toHaveBeenCalledWith(user.userId, 'https://push.example.com');
+    ).toHaveBeenCalledWith(user.userId, 'https://push.example.com', undefined);
   });
 
   it('registers current browser push subscription', async () => {
@@ -60,6 +74,7 @@ describe('NotificationController', () => {
 
     await expect(
       controller.registerPushSubscription(user, {
+        protocolVersion: 2,
         endpoint: 'https://push.example.com',
         keys: { p256dh: 'p256dh', auth: 'auth' },
       }),
