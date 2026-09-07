@@ -26,14 +26,30 @@ export async function fetchWithDeadline(
   milliseconds = 10_000,
 ): Promise<Response> {
   const controller = new AbortController()
-  const abort = () => controller.abort()
-  init.signal?.addEventListener('abort', abort, { once: true })
-  if (init.signal?.aborted) abort()
-  const timer = setTimeout(abort, milliseconds)
+  const caller = init.signal
+  let signal = controller.signal
+  if (caller) {
+    if (typeof AbortSignal.any === 'function') {
+      signal = AbortSignal.any([caller, controller.signal])
+    } else {
+      // Older browsers still need caller cancellation after headers arrive.
+      const forwardAbort = () => controller.abort(caller.reason)
+      if (caller.aborted) forwardAbort()
+      else {
+        caller.addEventListener('abort', forwardAbort, { once: true })
+        controller.signal.addEventListener(
+          'abort',
+          () => caller.removeEventListener('abort', forwardAbort),
+          { once: true },
+        )
+      }
+    }
+  }
+  const timer = setTimeout(() => controller.abort(), milliseconds)
   try {
-    return await fetch(input, { ...init, signal: controller.signal })
+    return await fetch(input, { ...init, signal })
   } finally {
+    // Only the header deadline ends here. The caller still owns body cancellation.
     clearTimeout(timer)
-    init.signal?.removeEventListener('abort', abort)
   }
 }

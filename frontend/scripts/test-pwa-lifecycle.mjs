@@ -71,6 +71,7 @@ const state = {
   hangNavigation: false,
   brokenWorker: false,
   holdRecoveryScript: false,
+  holdStaticProbe: false,
 }
 const apiPaths = new Set([
   'user',
@@ -222,6 +223,13 @@ const frontendGateway = createServer((req, res) => {
       req.headers['sec-fetch-mode'] === 'navigate' ||
       Boolean(req.headers['service-worker-navigation-preload']),
   })
+  if (
+    state.holdStaticProbe &&
+    url.pathname === '/assets/pwa-header-probe-12345678.js'
+  ) {
+    holdResponse(res, 'static-probe')
+    return
+  }
   if (state.holdRecoveryScript && url.pathname.startsWith('/pwa-offline-')) {
     holdResponse(res, 'recovery-script')
     return
@@ -1747,6 +1755,72 @@ try {
     } finally {
       state.release = 'a'
       await closeWithEvidence(updates, 'update-repeated')
+    }
+  })
+  await test('a stalled uncached static response cannot block real Update activation', async () => {
+    const stalled = await makeBrowserContext({ serviceWorkers: 'allow' })
+    try {
+      state.release = 'a'
+      const page = await stalled.newPage()
+      await login(page)
+      await controlled(page)
+      state.release = 'b'
+      await wake(page, 2)
+      await page.getByRole('button', { name: 'Update', exact: true }).waitFor()
+      await until('B waits before the held static request', () =>
+        page.evaluate(async () =>
+          Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
+        ),
+      )
+      const asset = '/assets/pwa-header-probe-12345678.js'
+      assert(
+        !(await cacheInventory(page)).some((cache) =>
+          cache.urls.includes(origin + asset),
+        ),
+      )
+      state.holdStaticProbe = true
+      await page.evaluate((asset) => {
+        void fetch(asset).catch(() => undefined)
+      }, asset)
+      await until('the static cache miss reaches the server', async () =>
+        requests.some((request) => request.path === asset),
+      )
+      const started = Date.now()
+      await page.getByRole('button', { name: 'Update', exact: true }).click()
+      await page.waitForFunction(
+        () => document.title === 'Splice PWA B',
+        undefined,
+        { timeout: 10000 },
+      )
+      await controlled(page)
+      assert.equal(
+        requests.filter((request) => request.path === asset).length,
+        1,
+        'A timed-out asset must not be fetched again',
+      )
+      assert(
+        state.holdStaticProbe,
+        'The injected server stall must last through activation',
+      )
+      await writeFile(
+        join(artifacts, 'static-header-update.json'),
+        JSON.stringify(
+          {
+            milliseconds: Date.now() - started,
+            title: await page.title(),
+            requestCount: requests.filter((request) => request.path === asset)
+              .length,
+            faultStillEnabled: state.holdStaticProbe,
+          },
+          null,
+          2,
+        ),
+      )
+    } finally {
+      state.holdStaticProbe = false
+      releaseHeldResponses('static-probe')
+      state.release = 'a'
+      await closeWithEvidence(stalled, 'static-header-update')
     }
   })
   await test('missing old lazy chunk returns404, preserves dirty Settings, and recovers only through explicit Update', async () => {

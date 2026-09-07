@@ -1,5 +1,7 @@
 /// <reference lib="webworker" />
 
+import { fetchWithDeadline } from './deadline'
+
 declare const self: ServiceWorkerGlobalScope
 
 const PREFIX = 'splice-static-v2-'
@@ -403,7 +405,12 @@ export async function loadStaticAsset(
   } catch {
     /* Fall through to network. */
   }
-  const response = await fetch(request)
+  // A stalled optional asset must not keep the outgoing worker alive forever.
+  const response = await fetchWithDeadline(
+    request,
+    { signal: request.signal },
+    5_000,
+  )
   // Keep the bounded writer alive without buffering the page's response.
   if (validResponse(request, response)) {
     const writing = store(request, response.clone(), null).catch(

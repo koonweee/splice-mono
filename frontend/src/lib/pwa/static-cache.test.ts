@@ -175,6 +175,128 @@ describe('public static caching', () => {
       [...cacheMap.values()].some((cache) => cache.entries.has(asset)),
     ).toBe(false)
   })
+  it.each(['deadline', 'caller abort'] as const)(
+    'ends a stalled cache-miss fetch on %s without retrying or caching a substitute',
+    async (reason) => {
+      vi.useFakeTimers()
+      const caller = new AbortController()
+      let signal: AbortSignal | undefined
+      fetcher.mockImplementation((_request: Request, options: RequestInit) => {
+        signal = options.signal ?? undefined
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener(
+            'abort',
+            () => reject(new DOMException('Aborted', 'AbortError')),
+            { once: true },
+          )
+        })
+      })
+      const pending = helpers.loadStaticAsset(
+        new Request(asset, { signal: caller.signal }),
+      )
+      const rejected = expect(pending).rejects.toMatchObject({
+        name: 'AbortError',
+      })
+      await vi.advanceTimersByTimeAsync(4999)
+      expect(signal?.aborted).toBe(false)
+      if (reason === 'caller abort') caller.abort()
+      else await vi.advanceTimersByTimeAsync(1)
+      await rejected
+      expect(signal?.aborted).toBe(true)
+      expect(fetcher).toHaveBeenCalledTimes(1)
+      expect(
+        [...cacheMap.values()].some((cache) => cache.entries.has(asset)),
+      ).toBe(false)
+      expect(vi.getTimerCount()).toBe(0)
+    },
+  )
+  it.each([true, false])(
+    'preserves caller cancellation of a live body after headers (native signal composition: %s)',
+    async (nativeComposition) => {
+      const originalAny = AbortSignal.any
+      if (!nativeComposition)
+        Object.defineProperty(AbortSignal, 'any', {
+          value: undefined,
+          configurable: true,
+        })
+      try {
+        const caller = new AbortController()
+        let signal: AbortSignal | undefined
+        fetcher.mockImplementation(
+          (_request: Request, options: RequestInit) => {
+            signal = options.signal ?? undefined
+            return Promise.resolve(
+              new Response(
+                new ReadableStream({
+                  start(controller) {
+                    signal?.addEventListener(
+                      'abort',
+                      () =>
+                        controller.error(
+                          new DOMException('Aborted', 'AbortError'),
+                        ),
+                      { once: true },
+                    )
+                  },
+                }),
+                { headers: { 'content-type': 'text/javascript' } },
+              ),
+            )
+          },
+        )
+        const waitUntil = vi.fn()
+        const response = await helpers.loadStaticAsset(
+          new Request(asset, { signal: caller.signal }),
+          { waitUntil },
+        )
+        const body = expect(response.text()).rejects.toMatchObject({
+          name: 'AbortError',
+        })
+        caller.abort()
+        await body
+        expect(signal?.aborted).toBe(true)
+        await waitUntil.mock.calls[0][0]
+        expect(fetcher).toHaveBeenCalledTimes(1)
+        expect(
+          [...cacheMap.values()].some((cache) => cache.entries.has(asset)),
+        ).toBe(false)
+      } finally {
+        Object.defineProperty(AbortSignal, 'any', {
+          value: originalAny,
+          configurable: true,
+        })
+      }
+    },
+  )
+  it('does not abort a live streaming body after its response headers arrive', async () => {
+    vi.useFakeTimers()
+    let finish: () => void = () => undefined
+    let signal: AbortSignal | undefined
+    const live = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('streamed javascript'))
+          finish = () => controller.close()
+        },
+      }),
+      { headers: { 'content-type': 'text/javascript' } },
+    )
+    fetcher.mockImplementation((_request: Request, options: RequestInit) => {
+      signal = options.signal ?? undefined
+      return Promise.resolve(live)
+    })
+    const waitUntil = vi.fn()
+    const response = await helpers.loadStaticAsset(new Request(asset), {
+      waitUntil,
+    })
+    expect(response).toBe(live)
+    await vi.advanceTimersByTimeAsync(6000)
+    expect(signal?.aborted).toBe(false)
+    finish()
+    expect(await response.text()).toBe('streamed javascript')
+    await waitUntil.mock.calls[0][0]
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
   it('returns the live response before its cache copy finishes and keeps the writer alive', async () => {
     let finish: () => void = () => undefined
     fetcher.mockResolvedValue(

@@ -128,9 +128,9 @@ plan and is not resolved by delivery deadlines or session-bound enrollment.
 
 Fresh final-source checks on September 7, 2026:
 
-- Whole frontend: 106 files, 757 tests passed. Typecheck passed; lint has zero
+- Whole frontend: 106 files, 758 tests passed. Typecheck passed; lint has zero
   errors and 21 warnings. Token guard, production build, and workbench build passed.
-  The final cooldown regression raises the focused offline suite to17 passing tests.
+  This includes the final cooldown regression and all17 offline recovery tests.
 - Backend acceptance: 26 suites, 208 tests passed with zero skips, plus lint,
   typecheck, and build. Real PostgreSQL used a dedicated loopback benchmark database
   and isolated schemas. Generated OpenAPI/client contracts were regenerated.
