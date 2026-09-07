@@ -55,7 +55,7 @@ jobs:
           fi
 
           # Check if frontend runtime, tests, generated-client config, or quality gates changed
-          if echo "$CHANGED_FILES" | grep -Eq "^frontend/(src|workbench|scripts|package.json|yarn.lock|eslint.config.js|tsconfig.json|vite.config.ts|vite-css.ts|orval.config.ts)"; then
+          if echo "$CHANGED_FILES" | grep -Eq "^frontend/(src|server|public|workbench|scripts|package.json|yarn.lock|eslint.config.js|tsconfig.json|vite.config.ts|vite-css.ts|orval.config.ts)|^\.github/workflows/ci\.yml$"; then
             echo "frontend=true" >> $GITHUB_OUTPUT
           else
             echo "frontend=false" >> $GITHUB_OUTPUT
@@ -152,3 +152,57 @@ jobs:
       - run: yarn tokens:check
       - run: yarn test workbench --maxWorkers=2
       - run: yarn workbench:build
+
+  frontend-pwa:
+    name: PWA Lifecycle
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          # Disposable CI database, reachable only through this runner's loopback.
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: splice_backend_benchmark
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d splice_backend_benchmark"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      BACKEND_BENCHMARK_DATABASE_URL: postgres://postgres@127.0.0.1:5432/splice_backend_benchmark
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "yarn"
+          cache-dependency-path: |
+            backend/yarn.lock
+            frontend/yarn.lock
+      - run: yarn install --frozen-lockfile
+        working-directory: backend
+      - run: yarn install --frozen-lockfile
+        working-directory: frontend
+      - run: >-
+          yarn test test/auth/browser-session.postgres.spec.ts test/auth/auth.service.spec.ts
+          test/auth/private-response.http.spec.ts test/user/user.controller.spec.ts
+          test/notification test/transaction/transaction-query.postgres.spec.ts --runInBand
+        working-directory: backend
+      - run: yarn playwright install --with-deps chromium
+        working-directory: frontend
+      - run: yarn test src/lib/pwa src/lib/notifications src/lib/queries/notification.test.tsx src/components/notifications src/components/PwaLifecycle.test.tsx --maxWorkers=2
+        working-directory: frontend
+      - run: yarn pwa:test --channel=chromium --artifacts=${{ runner.temp }}/pwa-lifecycle
+        env:
+          DEBUG: pw:browser
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pwa-lifecycle
+          path: ${{ runner.temp }}/pwa-lifecycle
+          if-no-files-found: ignore

@@ -1,0 +1,424 @@
+[
+  {
+    "args": {
+      "Event type": "Message",
+      "Request id": 2
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerVersion::Request",
+    "ph": "I",
+    "pid": 4482,
+    "s": "t",
+    "tid": 4482,
+    "ts": 5607867269,
+    "tts": 1580436
+  },
+  {
+    "args": {
+      "script_url": "http://localhost:39217/sw.js"
+    },
+    "cat": "ServiceWorker",
+    "dur": 53,
+    "name": "EmbeddedWorkerInstance::Stop",
+    "ph": "X",
+    "pid": 4482,
+    "tdur": 41,
+    "tid": 4482,
+    "ts": 5607867596,
+    "tts": 1580477
+  },
+  {
+    "args": {
+      "Script": "http://localhost:39217/sw.js",
+      "Version Status": "activated"
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerVersion::StopWorker",
+    "ph": "I",
+    "pid": 4482,
+    "s": "t",
+    "tid": 4482,
+    "ts": 5607867617,
+    "tts": 1580488
+  },
+  {
+    "args": {
+      "will_be_terminated": true
+    },
+    "cat": "ServiceWorker",
+    "dur": 13,
+    "name": "EmbeddedWorkerInstance::RequestTermination",
+    "ph": "X",
+    "pid": 4482,
+    "tdur": 8,
+    "tid": 4482,
+    "ts": 5607867649,
+    "tts": 1580518
+  },
+  {
+    "args": {
+      "url": "http://localhost:39217/notification/summary?native-race=1"
+    },
+    "cat": "ServiceWorker",
+    "dur": 51,
+    "name": "ServiceWorkerSubresourceLoader::StartRequest",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 35,
+    "tid": 4618,
+    "ts": 5607869737,
+    "tts": 91883
+  },
+  {
+    "args": {
+      "controller": "exists"
+    },
+    "cat": "ServiceWorker",
+    "dur": 36,
+    "name": "ServiceWorkerSubresourceLoader::DispatchFetchEvent",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 22,
+    "tid": 4618,
+    "ts": 5607869751,
+    "tts": 91896
+  },
+  {
+    "args": {
+      "Purpose": "Fetch Subresource",
+      "Script": "http://localhost:39217/sw.js"
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerVersion::StartWorkerRequested",
+    "ph": "I",
+    "pid": 4482,
+    "s": "t",
+    "tid": 4482,
+    "ts": 5607869955,
+    "tts": 1581330
+  },
+  {
+    "args": {
+      "Purpose": "Fetch Subresource",
+      "Script": "http://localhost:39217/sw.js"
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerVersion::StartWorker",
+    "ph": "I",
+    "pid": 4482,
+    "s": "t",
+    "tid": 4482,
+    "ts": 5607869994,
+    "tts": 1581368
+  },
+  {
+    "args": {
+      "url": "http://localhost:39217/transaction-analysis?startDate=2026-09-01&endDate=2026-09-07"
+    },
+    "cat": "ServiceWorker",
+    "dur": 28,
+    "name": "ServiceWorkerSubresourceLoader::StartRequest",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 25,
+    "tid": 4618,
+    "ts": 5607879371,
+    "tts": 92344
+  },
+  {
+    "args": {
+      "controller": "exists"
+    },
+    "cat": "ServiceWorker",
+    "dur": 22,
+    "name": "ServiceWorkerSubresourceLoader::DispatchFetchEvent",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 22,
+    "tid": 4618,
+    "ts": 5607879376,
+    "tts": 92347
+  },
+  {
+    "args": {
+      "Restart": true
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerVersion::OnStopped",
+    "ph": "I",
+    "pid": 4482,
+    "s": "t",
+    "tid": 4482,
+    "ts": 5607881894,
+    "tts": 1590791
+  },
+  {
+    "args": {
+      "main_script_url": "http://localhost:39217/sw.js"
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerInstalledScriptsSender::Start",
+    "ph": "I",
+    "pid": 4482,
+    "s": "t",
+    "tid": 4482,
+    "ts": 5607881975,
+    "tts": 1590872
+  },
+  {
+    "args": {
+      "script_url": "http://localhost:39217/sw.js"
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerInstalledScriptsSender::StartSendingScript",
+    "ph": "I",
+    "pid": 4482,
+    "s": "t",
+    "tid": 4482,
+    "ts": 5607881988,
+    "tts": 1590884
+  },
+  {
+    "args": {
+      "script_url": "http://localhost:39217/sw.js"
+    },
+    "cat": "ServiceWorker",
+    "dur": 400,
+    "name": "EmbeddedWorkerInstance::Start",
+    "ph": "X",
+    "pid": 4482,
+    "tdur": 398,
+    "tid": 4482,
+    "ts": 5607882021,
+    "tts": 1590916
+  },
+  {
+    "args": {
+      "Source": "InstalledScriptsManager",
+      "script_url": "http://localhost:39217/sw.js"
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerContextClient LOAD_SCRIPT",
+    "ph": "I",
+    "pid": 4614,
+    "s": "t",
+    "tid": 4623,
+    "ts": 5607882533,
+    "tts": 666
+  },
+  {
+    "args": {
+      "body_size": 19800,
+      "meta_data_size": 51080
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerInstalledScriptsSender::OnStarted",
+    "ph": "I",
+    "pid": 4482,
+    "s": "t",
+    "tid": 4482,
+    "ts": 5607883545,
+    "tts": 1592403
+  },
+  {
+    "args": {
+      "bytes_sent_": 0,
+      "meta_data size": 51080
+    },
+    "cat": "ServiceWorker",
+    "dur": 107,
+    "name": "ServiceWorkerInstalledScriptReader::MetaDataSender::OnWritable",
+    "ph": "X",
+    "pid": 4482,
+    "tdur": 66,
+    "tid": 4482,
+    "ts": 5607883638,
+    "tts": 1592455
+  },
+  {
+    "args": {
+      "meta_data size": 51080,
+      "new bytes_sent_": 51080
+    },
+    "cat": "ServiceWorker",
+    "dur": 38,
+    "name": "ServiceWorkerInstalledScriptReader::MetaDataSender::OnWritable",
+    "ph": "X",
+    "pid": 4482,
+    "tdur": 25,
+    "tid": 4482,
+    "ts": 5607883707,
+    "tts": 1592496
+  },
+  {
+    "args": {
+      "Status": "Success"
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerInstalledScriptsSender::OnFinished",
+    "ph": "I",
+    "pid": 4482,
+    "s": "t",
+    "tid": 4482,
+    "ts": 5607883797,
+    "tts": 1592573
+  },
+  {
+    "args": {
+      "script_url": {
+        "url": "http://localhost:39217/sw.js"
+      }
+    },
+    "cat": "ServiceWorker",
+    "dur": 61,
+    "name": "ServiceWorkerInstalledScriptsManager::GetScriptData",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 42,
+    "tid": 4673,
+    "ts": 5607884116,
+    "tts": 1514
+  },
+  {
+    "args": {
+      "success": true
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerGlobalScopeProxy::DidEvaluateTopLevelScript",
+    "ph": "I",
+    "pid": 4614,
+    "s": "t",
+    "tid": 4673,
+    "ts": 5607884597,
+    "tts": 1947
+  },
+  {
+    "args": {
+      "Status": "Operation has succeeded"
+    },
+    "cat": "ServiceWorker",
+    "name": "ServiceWorkerVersion::StartWorkerFinished",
+    "ph": "I",
+    "pid": 4482,
+    "s": "t",
+    "tid": 4482,
+    "ts": 5607884669,
+    "tts": 1592699
+  },
+  {
+    "args": {
+      "queued": "false",
+      "url": "http://localhost:39217/notification/summary?native-race=1"
+    },
+    "cat": "ServiceWorker",
+    "dur": 171,
+    "name": "ServiceWorkerGlobalScope::DispatchFetchEventForSubresource",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 167,
+    "tid": 4673,
+    "ts": 5607884805,
+    "tts": 2018
+  },
+  {
+    "args": {
+      "url": "http://localhost:39217/notification/summary?native-race=1"
+    },
+    "cat": "ServiceWorker",
+    "dur": 150,
+    "name": "ServiceWorkerGlobalScope::DispatchFetchEventInternal",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 147,
+    "tid": 4673,
+    "ts": 5607884824,
+    "tts": 2036
+  },
+  {
+    "args": {
+      "status": "COMPLETED"
+    },
+    "cat": "ServiceWorker",
+    "dur": 6,
+    "name": "ServiceWorkerGlobalScope::DidHandleFetchEvent",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 5,
+    "tid": 4673,
+    "ts": 5607884968,
+    "tts": 2178
+  },
+  {
+    "args": {
+      "queued": "false",
+      "url": "http://localhost:39217/transaction-analysis?startDate=2026-09-01&endDate=2026-09-07"
+    },
+    "cat": "ServiceWorker",
+    "dur": 57,
+    "name": "ServiceWorkerGlobalScope::DispatchFetchEventForSubresource",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 54,
+    "tid": 4673,
+    "ts": 5607884997,
+    "tts": 2205
+  },
+  {
+    "args": {
+      "commit_responsibility_": 0,
+      "fetch_response_from": 1
+    },
+    "cat": "ServiceWorker",
+    "dur": 4,
+    "name": "ServiceWorkerResourceLoader::SetCommitResponsibility",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 3,
+    "tid": 4620,
+    "ts": 5607885013,
+    "tts": 53438
+  },
+  {
+    "args": {
+      "url": "http://localhost:39217/transaction-analysis?startDate=2026-09-01&endDate=2026-09-07"
+    },
+    "cat": "ServiceWorker",
+    "dur": 33,
+    "name": "ServiceWorkerGlobalScope::DispatchFetchEventInternal",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 30,
+    "tid": 4673,
+    "ts": 5607885019,
+    "tts": 2227
+  },
+  {
+    "args": {
+      "status": "COMPLETED"
+    },
+    "cat": "ServiceWorker",
+    "dur": 4,
+    "name": "ServiceWorkerGlobalScope::DidHandleFetchEvent",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 4,
+    "tid": 4673,
+    "ts": 5607885047,
+    "tts": 2253
+  },
+  {
+    "args": {
+      "commit_responsibility_": 0,
+      "fetch_response_from": 1
+    },
+    "cat": "ServiceWorker",
+    "dur": 1,
+    "name": "ServiceWorkerResourceLoader::SetCommitResponsibility",
+    "ph": "X",
+    "pid": 4614,
+    "tdur": 1,
+    "tid": 4620,
+    "ts": 5607885103,
+    "tts": 53525
+  }
+]

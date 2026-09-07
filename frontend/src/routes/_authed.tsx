@@ -15,6 +15,7 @@ import { useLogout } from '../lib/auth'
 import { isConfirmedLoggedOutError } from '../lib/session-refresh'
 import { sessionQueryOptions, useSession } from '../lib/session'
 import { APPEARANCE_STORAGE_KEY } from '../lib/appearance-preferences'
+import { NotificationMenu } from '../components/notifications/NotificationMenu'
 import { AppShellLayout } from '../components/AppShellLayout'
 import type { PrimaryDestination } from '../lib/navigation-preload'
 
@@ -134,6 +135,13 @@ function AuthenticatedLayoutContent() {
   return (
     <AppShellLayout
       pathname={location.pathname}
+      headerActions={
+        <NotificationMenu
+          onNavigate={(url) => {
+            void router.navigate({ href: url })
+          }}
+        />
+      }
       onLogout={() => logoutMutation.mutate({ data: {} })}
       logoutPending={logoutMutation.isPending}
       onPrepareDestination={prepareDestination}

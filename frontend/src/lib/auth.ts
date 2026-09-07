@@ -11,6 +11,9 @@ import {
 import { clearAppBadge } from './pwa/app-badge'
 import { resolveApiBaseUrl } from './api-base-url'
 import { clearPrivateCaches } from './auth-generation'
+import { clearPendingLogout, setPendingLogout } from './pwa/logout-state'
+import { completePendingLogout } from './pwa/logout'
+import { disableWorkerSession } from './pwa/worker-channel'
 
 const DEFAULT_LOGIN_REDIRECT = '/home'
 const RELATIVE_URL_ORIGIN = 'http://splice.local'
@@ -61,7 +64,7 @@ export function buildGoogleOAuthStartUrl(redirectTo?: string): string {
 
 export function startGoogleLogin(redirectTo?: string): void {
   if (typeof window === 'undefined') return
-
+  clearPendingLogout()
   window.location.assign(buildGoogleOAuthStartUrl(redirectTo))
 }
 
@@ -87,10 +90,16 @@ export function useLogout(options?: { redirectTo?: string }) {
 
   return useUserControllerLogout({
     mutation: {
-      onMutate: async () => {
-        await revokeCurrentDevicePushSubscription()
-        await clearAppBadge()
+      networkMode: 'always',
+      mutationFn: async () => {
+        await completePendingLogout()
+      },
+      onMutate: () => {
+        setPendingLogout('device')
         clearSessionCache(queryClient)
+        void disableWorkerSession().catch(() => undefined)
+        void revokeCurrentDevicePushSubscription().catch(() => undefined)
+        void clearAppBadge().catch(() => undefined)
       },
       onSuccess: () => {
         clearSessionCache(queryClient)
@@ -115,10 +124,16 @@ export function useLogoutAll(options?: { redirectTo?: string }) {
 
   return useUserControllerLogoutAll({
     mutation: {
-      onMutate: async () => {
-        await revokeAllPushSubscriptions()
-        await clearAppBadge()
+      networkMode: 'always',
+      mutationFn: async () => {
+        await completePendingLogout()
+      },
+      onMutate: () => {
+        setPendingLogout('all')
         clearSessionCache(queryClient)
+        void disableWorkerSession().catch(() => undefined)
+        void revokeAllPushSubscriptions().catch(() => undefined)
+        void clearAppBadge().catch(() => undefined)
       },
       onSuccess: () => {
         clearSessionCache(queryClient)

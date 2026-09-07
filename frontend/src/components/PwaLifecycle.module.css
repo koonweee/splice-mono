@@ -1,9 +1,11 @@
 .container {
   position: fixed;
-  right: var(--mantine-spacing-md);
-  bottom: var(--mantine-spacing-md);
-  left: var(--mantine-spacing-md);
+  right: max(var(--mantine-spacing-md), var(--splice-safe-area-right, 0px));
+  bottom: max(var(--mantine-spacing-md), var(--splice-safe-area-bottom, 0px));
+  left: max(var(--mantine-spacing-md), var(--splice-safe-area-left, 0px));
   z-index: var(--splice-layer-lifecycle);
+  max-height: 60dvh;
+  overflow-y: auto;
   display: grid;
   justify-items: center;
   gap: var(--mantine-spacing-xs);
@@ -18,8 +20,8 @@
 
 @media (--compact-layout) {
   .container {
-    right: var(--mantine-spacing-sm);
-    bottom: var(--mantine-spacing-sm);
-    left: var(--mantine-spacing-sm);
+    right: max(var(--mantine-spacing-sm), var(--splice-safe-area-right, 0px));
+    bottom: max(var(--mantine-spacing-sm), var(--splice-safe-area-bottom, 0px));
+    left: max(var(--mantine-spacing-sm), var(--splice-safe-area-left, 0px));
   }
 }

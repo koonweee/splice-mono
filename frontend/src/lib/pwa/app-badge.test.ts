@@ -1,103 +1,54 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  clearAppBadge,
-  fetchUncategorizedTransactionCount,
-  isAppBadgeSupported,
-  refreshUncategorizedTransactionBadge,
-  setAppBadgeCount,
-} from './app-badge'
+import { applyNotificationSummaryBadge, clearAppBadge } from './app-badge'
 
-const mocks = vi.hoisted(() => ({
-  axios: vi.fn(),
-}))
+const mocks = vi.hoisted(() => ({ send: vi.fn() }))
+vi.mock('./worker-channel', () => ({ sendWorkerBadge: mocks.send }))
+afterEach(() => {
+  vi.resetAllMocks()
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+})
 
-vi.mock('../../api/axios', () => ({
-  axios: mocks.axios,
-}))
-
-describe('app badge helpers', () => {
-  afterEach(() => {
-    vi.clearAllMocks()
-    vi.unstubAllGlobals()
+describe('app badge routing', () => {
+  it.each([12, 0])(
+    'sends authoritative count %s and snapshot timestamp through the worker without a window writer',
+    async (count) => {
+      const set = vi.fn()
+      const clear = vi.fn()
+      vi.stubGlobal('navigator', { setAppBadge: set, clearAppBadge: clear })
+      mocks.send.mockResolvedValue(undefined)
+      await applyNotificationSummaryBadge({
+        uncategorizedTransactionCount: count,
+        unreadNotificationCount: 2,
+        computedAt: '2026-09-07T12:00:00.000Z',
+      })
+      expect(mocks.send).toHaveBeenCalledWith(count, '2026-09-07T12:00:00.000Z')
+      expect(set).not.toHaveBeenCalled()
+      expect(clear).not.toHaveBeenCalled()
+    },
+  )
+  it('ignores invalid or missing snapshots instead of replacing the badge with zero', async () => {
+    await applyNotificationSummaryBadge({
+      uncategorizedTransactionCount: -1,
+      unreadNotificationCount: 0,
+      computedAt: 'bad',
+    })
+    expect(mocks.send).not.toHaveBeenCalled()
   })
-
-  it('no-ops when the Badging API is unavailable', async () => {
-    Object.defineProperty(navigator, 'setAppBadge', {
-      value: undefined,
-      configurable: true,
-    })
-    Object.defineProperty(navigator, 'clearAppBadge', {
-      value: undefined,
-      configurable: true,
-    })
-
-    expect(isAppBadgeSupported()).toBe(false)
-    await expect(setAppBadgeCount(4)).resolves.toBeUndefined()
-  })
-
-  it('sets and clears supported app badges', async () => {
-    const setAppBadge = vi.fn().mockResolvedValue(undefined)
-    const clearBadge = vi.fn().mockResolvedValue(undefined)
-    Object.defineProperty(navigator, 'setAppBadge', {
-      value: setAppBadge,
-      configurable: true,
-    })
-    Object.defineProperty(navigator, 'clearAppBadge', {
-      value: clearBadge,
-      configurable: true,
-    })
-
-    expect(isAppBadgeSupported()).toBe(true)
-
-    await setAppBadgeCount(7)
+  it('clears locally on logout without waiting for registration or changing worker ownership', async () => {
+    const clear = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clearAppBadge: clear })
     await clearAppBadge()
-
-    expect(setAppBadge).toHaveBeenCalledWith(7)
-    expect(clearBadge).toHaveBeenCalledTimes(1)
+    expect(clear).toHaveBeenCalledOnce()
+    expect(mocks.send).not.toHaveBeenCalled()
   })
-
-  it('fetches the uncategorized transaction total', async () => {
-    mocks.axios.mockResolvedValueOnce({
-      data: [],
-      total: 12,
-      pageIndex: 0,
-      pageSize: 1,
-    })
-
-    await expect(fetchUncategorizedTransactionCount()).resolves.toBe(12)
-
-    expect(mocks.axios).toHaveBeenCalledWith({
-      url: '/transaction',
-      method: 'GET',
-      params: {
-        categoryId: 'UNCATEGORIZED',
-        pageIndex: '0',
-        pageSize: '1',
-        sortBy: 'activityDate',
-        sortOrder: 'DESC',
-      },
-    })
-  })
-
-  it('refreshes the browser badge from the uncategorized total', async () => {
-    const setAppBadge = vi.fn().mockResolvedValue(undefined)
-    Object.defineProperty(navigator, 'setAppBadge', {
-      value: setAppBadge,
-      configurable: true,
-    })
-    Object.defineProperty(navigator, 'clearAppBadge', {
-      value: vi.fn().mockResolvedValue(undefined),
-      configurable: true,
-    })
-    mocks.axios.mockResolvedValueOnce({
-      data: [],
-      total: 5,
-      pageIndex: 0,
-      pageSize: 1,
-    })
-
-    await expect(refreshUncategorizedTransactionBadge()).resolves.toBe(5)
-
-    expect(setAppBadge).toHaveBeenCalledWith(5)
+  it('tolerates unsupported local badging and bounds a stalled clear call', async () => {
+    vi.stubGlobal('navigator', {})
+    await expect(clearAppBadge()).resolves.toBeUndefined()
+    vi.useFakeTimers()
+    vi.stubGlobal('navigator', { clearAppBadge: () => new Promise(() => {}) })
+    const failure = expect(clearAppBadge()).rejects.toThrow('timed out')
+    await vi.advanceTimersByTimeAsync(3_000)
+    await failure
   })
 })

@@ -16,6 +16,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { Check, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useAppTransitionGuard } from '../../lib/pwa/app-transition'
 import { LoadingSkeleton, RowSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
@@ -185,6 +186,7 @@ export function TransactionsMobileList({
   )
   const activeTransaction =
     data.find((transaction) => transaction.id === activeTransactionId) ?? null
+  useAppTransitionGuard(activeTransaction !== null)
   const activeMerchant = activeTransaction
     ? getMerchantDisplay(activeTransaction)
     : null

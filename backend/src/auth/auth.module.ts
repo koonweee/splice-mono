@@ -10,9 +10,11 @@ import { PersonalAccessTokenEntity } from './personal-access-token.entity';
 import { PersonalAccessTokenService } from './personal-access-token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UserEntity } from '../user/user.entity';
+import { BrowserSessionModule } from './browser-session.module';
 
 @Module({
   imports: [
+    BrowserSessionModule,
     PassportModule,
     TypeOrmModule.forFeature([
       RefreshTokenEntity,

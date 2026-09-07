@@ -31,6 +31,13 @@ export function createServerApiClient({
     throw new Error('Invalid internal API origin')
   }
   const cookies = new Map<string, string>()
+  const logoutPending = cookieHeader
+    .split(';')
+    .some((part) =>
+      /^splice_logout_pending=(1|device|all|(?:device|all)\.[a-f0-9-]{36}(?:\.\d{1,16})?)$/i.test(
+        part.trim(),
+      ),
+    )
   for (const part of cookieHeader.split(';')) {
     const [name, ...value] = part.trim().split('=')
     if (SESSION_COOKIES.has(name)) cookies.set(name, value.join('='))
@@ -103,7 +110,7 @@ export function createServerApiClient({
 
   return {
     async request<T>(config: AxiosRequestConfig): Promise<T> {
-      if (!cookies.size) throw new ConfirmedLoggedOutError()
+      if (logoutPending || !cookies.size) throw new ConfirmedLoggedOutError()
       let response = await send(config)
       if (
         [401, 403].includes(response.status) &&

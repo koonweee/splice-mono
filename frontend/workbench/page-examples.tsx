@@ -8,8 +8,10 @@ import {
   createRoute,
   createRouter,
   useLocation,
+  useRouter,
 } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { NotificationMenu } from '../src/components/notifications/NotificationMenu'
 import { AppShellLayout } from '../src/components/AppShellLayout'
 import { Route as LandingRoute } from '../src/routes/index'
 import { Route as HomeRoute } from '../src/routes/_authed/home'
@@ -29,11 +31,22 @@ import type { ExampleProps } from './examples'
 
 function PageFrame() {
   const location = useLocation()
+  const router = useRouter()
   const showRefreshScenario =
     location.pathname === '/transactions' &&
     new URLSearchParams(window.location.search).get('state') === 'refresh-error'
   return (
-    <AppShellLayout pathname={location.pathname} onLogout={simulateLogout}>
+    <AppShellLayout
+      pathname={location.pathname}
+      onLogout={simulateLogout}
+      headerActions={
+        <NotificationMenu
+          onNavigate={(url) => {
+            void router.navigate({ href: url })
+          }}
+        />
+      }
+    >
       {showRefreshScenario && <TransactionRefreshScenario />}
       <Outlet />
     </AppShellLayout>
@@ -159,6 +172,7 @@ export const pageExamples = [
     states: ['ready', 'empty'],
     components: [
       'AppShellLayout',
+      'NotificationMenu',
       'HomePage',
       'NetWorthCard',
       'LazyChart',
@@ -208,7 +222,17 @@ export const pageExamples = [
       })
       return <Page path={`/settings?tab=${tab}`} />
     },
-    states: ['ready', 'empty'],
+    states: [
+      'ready',
+      'empty',
+      'notification-error',
+      'notification-denied',
+      'notification-unconfigured',
+      'notification-install-required',
+      'notification-rebind',
+      'notification-registering',
+      'notification-enabling',
+    ],
     components: [
       'SettingsPage',
       'AnalysisRulesSection',

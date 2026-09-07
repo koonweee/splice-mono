@@ -13,7 +13,7 @@ export class NotificationPushProcessor {
 
   @Interval(15_000)
   async processPendingPushDeliveries(): Promise<void> {
-    if (this.processing) {
+    if (process.env.PUSH_PROCESSING_ENABLED === 'false' || this.processing) {
       return;
     }
 
@@ -33,9 +33,22 @@ export class NotificationPushProcessor {
         'Processing notification push deliveries',
       );
 
-      for (const delivery of deliveries) {
-        await this.notificationService.sendPushDelivery(delivery);
-      }
+      let nextIndex = 0;
+      await Promise.all(
+        Array.from({ length: Math.min(4, deliveries.length) }, async () => {
+          while (nextIndex < deliveries.length) {
+            const delivery = deliveries[nextIndex++];
+            try {
+              await this.notificationService.sendPushDelivery(delivery);
+            } catch {
+              this.logger.warn(
+                { deliveryId: delivery.id },
+                'Push delivery job failed; continuing batch',
+              );
+            }
+          }
+        }),
+      );
     } catch (error) {
       this.logger.error(
         { error: error instanceof Error ? error.message : String(error) },

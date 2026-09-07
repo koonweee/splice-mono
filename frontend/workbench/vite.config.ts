@@ -37,6 +37,8 @@ export default defineConfig({
           'lib/auth': 'auth-boundary.ts',
           'lib/pwa/service-worker': 'pwa-boundary.ts',
           'lib/pwa/app-badge': 'pwa-boundary.ts',
+          'lib/pwa/logout': 'pwa-boundary.ts',
+          'lib/pwa/logout-state': 'pwa-boundary.ts',
           'lib/session': 'runtime-boundaries.tsx',
           'lib/presentation-preferences': 'runtime-boundaries.tsx',
           'lib/appearance-preferences': 'appearance-boundary.ts',

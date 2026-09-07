@@ -1,8 +1,8 @@
 .settingsPage {
   display: flex;
   height: calc(
-    100dvh - var(--app-shell-header-offset, 0rem) -
-      (var(--app-shell-padding) * 2)
+    100dvh - var(--splice-lifecycle-space, 0px) -
+      var(--app-shell-header-offset, 0rem) - (var(--app-shell-padding) * 2)
   );
   min-height: 0;
   flex: 1 1 auto;

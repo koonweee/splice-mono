@@ -43,7 +43,10 @@ const account = {
   name: 'Original',
   notes: 'Before',
   customName: null,
-  currentBalance: { money: { amount: '500', currency: 'USD' }, sign: 'positive' },
+  currentBalance: {
+    money: { amount: '500', currency: 'USD' },
+    sign: 'positive',
+  },
 }
 const accountKey = ['/account']
 const summaryKey = ['/balance-query/dashboard-summary', { period: 'month' }]
@@ -78,6 +81,37 @@ afterEach(() => {
 })
 
 describe('mutation reconciliation', () => {
+  it('rejects an offline scoped save before queueing or optimistic edits, with no reconnect replay', async () => {
+    const client = createClient()
+    seed(client)
+    const first = deferred<typeof account>()
+    const active = rename(client, first)
+    const firstSave = active.mutate({
+      id: account.id,
+      data: { name: 'Online edit' },
+    })
+    await flush()
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    const send = vi.fn().mockResolvedValue(account)
+    const offline = new MutationObserver(client, {
+      mutationKey: ['accountControllerUpdate'],
+      scope: { id: `account-metadata:${account.id}` },
+      mutationFn: send,
+    })
+    await expect(
+      offline.mutate({ id: account.id, data: { name: 'Offline edit' } }),
+    ).rejects.toThrow('offline')
+    expect(
+      client.getQueryData<Array<typeof account>>(accountKey)?.[0].name,
+    ).toBe('Online edit')
+    expect(send).not.toHaveBeenCalled()
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+    first.resolve({ ...account, name: 'Online edit' })
+    await firstSave
+    await client.resumePausedMutations()
+    expect(send).not.toHaveBeenCalled()
+  })
+
   it('uses URL families, not accidental substring matches', () => {
     expect(belongsToFamily(['/transaction/123'], ['transactions'])).toBe(true)
     expect(

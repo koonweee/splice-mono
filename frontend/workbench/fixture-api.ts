@@ -1,6 +1,8 @@
 import { AxiosError, AxiosHeaders, CanceledError } from 'axios'
+import { OfflineMutationError } from '../src/lib/offline-mutation'
 import { resolveAppearance } from '../src/lib/design-system/appearance'
 import { appearanceFromSearch } from './preferences'
+import { createNotificationStore } from './notification-store'
 import { createCategoryStore } from './category-store'
 import { createSettingsStore } from './settings-store'
 import { createTransactionBulkStore } from './transaction-bulk-store'
@@ -41,11 +43,13 @@ export type FixtureOptions = {
   appearance?: unknown
   latency?: number
   failure?: 'none' | 'reads' | 'writes'
+  manualSaveFailure?: 'offline' | 'lost-response' | 'reconcile-error'
   shouldFailRead?: (path: string) => boolean
 }
 
 /** Each document gets a new in-memory store. No fetch, XHR, cookies or storage. */
 export function createFixtureApi(options: FixtureOptions = {}) {
+  let manualResponseLost = false
   const accounts = structuredClone(options.empty ? [] : fixtureAccounts)
   const investmentStore = createInvestmentStore(
     accounts,
@@ -57,6 +61,10 @@ export function createFixtureApi(options: FixtureOptions = {}) {
   ).preference
   const categories = structuredClone(options.empty ? [] : fixtureCategories)
   const transactions = structuredClone(options.empty ? [] : fixtureTransactions)
+  const notificationStore = createNotificationStore(
+    options.empty,
+    () => transactions.filter((item) => !item.categoryId).length,
+  )
   const categoryStore = createCategoryStore(categories, transactions)
   const ruleStore = createRuleStore(categories, transactions, options.empty)
   const transactionBulkStore = createTransactionBulkStore(
@@ -180,6 +188,7 @@ export function createFixtureApi(options: FixtureOptions = {}) {
     }),
     ...ruleStore.reads,
     ...settingsStore.reads,
+    ...notificationStore.reads,
     '/balance-query/dashboard-summary': (config) =>
       fixtureDashboard(
         (config.params?.period ?? 'month') as DashboardPeriod,
@@ -193,6 +202,7 @@ export function createFixtureApi(options: FixtureOptions = {}) {
   }
   let nextId = 1
   const writes: Record<string, (config: AxiosRequestConfig) => unknown> = {
+    ...notificationStore.writes,
     'POST /transaction/category/bulk': (config) =>
       transactionBulkStore.update(
         config.data as BulkTransactionCategoryUpdateDto,
@@ -232,6 +242,7 @@ export function createFixtureApi(options: FixtureOptions = {}) {
         accountName:
           accounts.find((account) => account.id === draft.accountId)?.name ??
           null,
+        source: 'manual' as const,
         categoryAssignmentSource: 'manual' as const,
         id: `created-transaction-${nextId++}`,
       }
@@ -283,6 +294,12 @@ export function createFixtureApi(options: FixtureOptions = {}) {
         )
       throw new Error(message)
     }
+    const isManualWrite =
+      method !== 'GET' &&
+      path.startsWith('/transaction/') &&
+      path.endsWith('/manual')
+    if (isManualWrite && options.manualSaveFailure === 'offline')
+      throw new OfflineMutationError()
     if (config.signal?.aborted) throw new CanceledError()
     if (options.latency)
       await new Promise<void>((resolve, reject) => {
@@ -297,6 +314,10 @@ export function createFixtureApi(options: FixtureOptions = {}) {
         config.signal?.addEventListener?.('abort', abort, { once: true })
       })
     if (
+      (options.manualSaveFailure === 'reconcile-error' &&
+        manualResponseLost &&
+        method === 'GET' &&
+        path.startsWith('/transaction')) ||
       (options.failure === 'reads' &&
         method === 'GET' &&
         path !== '/user/me') ||
@@ -388,6 +409,16 @@ export function createFixtureApi(options: FixtureOptions = {}) {
       account.archivedAt = FIXTURE_NOW
       result = account
     }
+    if (
+      isManualWrite &&
+      !manualResponseLost &&
+      ['lost-response', 'reconcile-error'].includes(
+        options.manualSaveFailure ?? '',
+      )
+    ) {
+      manualResponseLost = true
+      throw new AxiosError('Fixture response lost after saving.', 'ERR_NETWORK')
+    }
     // The generated hook owns the response type; cloning models HTTP response isolation.
     return structuredClone(result) as T
   }
@@ -405,6 +436,13 @@ export const axios = createFixtureApi({
   manualHoldings:
     params.get('example') === 'account-dialogs' &&
     params.get('state') === 'holdings',
+  manualSaveFailure:
+    params.get('example') === 'manual-save' &&
+    ['offline', 'lost-response', 'reconcile-error'].includes(
+      params.get('state') ?? '',
+    )
+      ? (params.get('state') as 'offline' | 'lost-response' | 'reconcile-error')
+      : undefined,
   appearance: appearanceFromSearch(params.toString()).preference,
   latency: Math.min(10000, Math.max(0, Number(params.get('latency')) || 0)),
   failure: failure === 'reads' || failure === 'writes' ? failure : 'none',

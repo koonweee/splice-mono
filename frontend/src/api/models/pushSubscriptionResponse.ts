@@ -11,4 +11,6 @@ export interface PushSubscriptionResponse {
   endpoint: string
   /** @nullable */
   revokedAt: string | null
+  enrollmentId: string
+  rebindRequired: boolean
 }
