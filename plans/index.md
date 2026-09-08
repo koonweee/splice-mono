@@ -12,7 +12,7 @@ This directory tracks product and implementation plans for Splice.
 
 ## Directory
 
-- [Cached Home Launch And Periodic Refresh](./cached-home-launch-and-periodic-refresh.md) — Implemented and verified. Saved Home on cold PWA launch, subtle header-edge refresh status, offline/failure detail beside Splice, and hourly visible-page refreshes.
+- [Cached Home Launch And Periodic Refresh](./cached-home-launch-and-periodic-refresh.md) — Done; deployed 2026-09-08. Saved Home on cold PWA launch, subtle header-edge refresh status, offline/failure detail beside Splice, and hourly visible-page refreshes.
 
 | Plan                                                                                                                  | Status      | Notes                                                                                                                                                                                                |
 | --------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

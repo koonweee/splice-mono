@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented and verified; release in progress. See [implementation ledger](./cached-home-implementation-ledger.md) for evidence and physical-device limitation.
+Implemented, verified, and deployed on 2026-09-08. See [implementation ledger](./cached-home-implementation-ledger.md) for evidence and physical-device limitation.
 
 ## Goal
 
