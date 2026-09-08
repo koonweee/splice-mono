@@ -75,14 +75,6 @@
   overflow-wrap: anywhere;
 }
 
-.unread {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 6px;
-  border-radius: 50%;
-  background: var(--mantine-primary-color-filled);
-}
-
 .rowActions {
   flex: 0 0 auto;
   align-self: center;
