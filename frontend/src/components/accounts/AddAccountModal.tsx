@@ -3,7 +3,6 @@ import {
   Alert,
   Button,
   Group,
-  Loader,
   Select,
   Stack,
   Text,
@@ -27,11 +26,11 @@ import { tryParseMoneyDraft } from '../../lib/money'
 import { createMoneyWithSign } from '../../lib/balance-utils'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
-import { Pressable } from '../Pressable'
 import {
   ManualBrokeragePositionsEditor,
   isPositiveDecimal,
 } from '../investments/ManualBrokeragePositionsEditor'
+import { AccountProviderCard } from './AccountProviderCard'
 import { ACCOUNT_PROVIDERS } from './account-providers'
 import type { InitiateLinkRequestNetwork } from '../../api/models'
 import type { ManualBrokeragePositionDraft } from '../investments/ManualBrokeragePositionsEditor'
@@ -478,30 +477,16 @@ export function AddAccountModal({ opened, onClose }: AddAccountModalProps) {
         </Alert>
       ) : null}
 
-      {ACCOUNT_PROVIDERS.map((provider) => {
-        const Icon = provider.icon
-        const isLoading =
-          initiateLinking.isPending && selectedProvider === provider.id
-
-        return (
-          <Pressable
-            aria-label={`Add account with ${provider.name}`}
-            key={provider.id}
-            onClick={() => handleProviderClick(provider.id)}
-            style={{
-              border: '1px solid var(--mantine-color-default-border)',
-              borderRadius: 'var(--mantine-radius-md)',
-              padding: 'var(--mantine-spacing-md)',
-            }}
-          >
-            <Group>
-              <Icon size={24} />
-              <Text data-typography="rowTitle">{provider.name}</Text>
-              {isLoading && <Loader size="sm" />}
-            </Group>
-          </Pressable>
-        )
-      })}
+      {ACCOUNT_PROVIDERS.map((provider) => (
+        <AccountProviderCard
+          key={provider.id}
+          provider={provider}
+          onClick={() => handleProviderClick(provider.id)}
+          loading={
+            initiateLinking.isPending && selectedProvider === provider.id
+          }
+        />
+      ))}
     </Stack>
   )
 

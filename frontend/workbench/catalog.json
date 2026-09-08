@@ -1,15 +1,56 @@
 [
   {
-    "component": "LaunchScreen",
-    "source": "components/loading/LaunchScreen.tsx",
-    "example": "launch-screen",
-    "states": ["checking", "native"]
-  },
-  {
     "component": "AccountCard",
     "source": "components/AccountCard.tsx",
     "example": "account-overview",
     "states": ["ready", "loading", "empty"]
+  },
+  {
+    "source": "components/AccountComparisonFrame.tsx",
+    "component": "AccountComparisonFrame",
+    "example": "account-dialogs",
+    "states": ["account"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/AccountModal.skeleton.tsx",
+    "component": "AccountDetailsSkeleton",
+    "example": "account-dialogs",
+    "states": ["account"],
+    "loadingPairs": [
+      {
+        "owner": "AccountModal",
+        "phases": ["data"],
+        "loading": {
+          "state": "account",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "account",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "owner": "AccountModal",
+        "phases": ["module"],
+        "loading": {
+          "state": "account",
+          "query": {
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "account",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Hold the real account editor module in the shared deferred shell; inspect known comparison and tabs before release. Compare to the same account fixture."
+      }
+    ]
   },
   {
     "component": "AccountModal",
@@ -18,10 +59,68 @@
     "states": ["account", "add", "backfill", "holdings"]
   },
   {
+    "source": "components/AccountSection.skeleton.tsx",
+    "component": "AccountSectionSkeleton",
+    "example": "page-home",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "AccountSection",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
     "component": "AccountSection",
     "source": "components/AccountSection.tsx",
     "example": "account-overview",
     "states": ["ready", "loading", "empty"]
+  },
+  {
+    "source": "components/AccountSectionFrame.tsx",
+    "component": "AccountGroupHeader",
+    "example": "page-home",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/AccountSectionFrame.tsx",
+    "component": "AccountSectionHeading",
+    "example": "page-home",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/AccountSectionFrame.tsx",
+    "component": "AccountSectionPanel",
+    "example": "page-home",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/AccountSections.tsx",
+    "component": "AccountSections",
+    "example": "account-dialogs",
+    "states": ["account"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "component": "AppShellLayout",
+    "source": "components/AppShellLayout.tsx",
+    "example": "page-home",
+    "states": ["ready", "empty"]
   },
   {
     "component": "AppThemeProvider",
@@ -42,16 +141,75 @@
     "states": ["ready", "loading", "empty"]
   },
   {
+    "source": "components/Chart.skeleton.tsx",
+    "component": "HomeChartSkeleton",
+    "example": "page-home",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "Chart",
+        "phases": ["module", "data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "series",
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": [
+          "workbench:release-modules",
+          "workbench:release-reads"
+        ],
+        "interaction": "Release chart modules while keeping series held to inspect partial Home readiness, then release series. Repeat masked and alternate periods."
+      }
+    ]
+  },
+  {
     "component": "Chart",
     "source": "components/Chart.tsx",
     "example": "history",
     "states": ["ready", "loading", "empty", "single", "refresh-error"]
   },
   {
+    "source": "components/CompactAccountRow.skeleton.tsx",
+    "component": "CompactAccountRowSkeleton",
+    "example": "page-home",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "CompactAccountRow",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
     "component": "CompactAccountRow",
     "source": "components/CompactAccountRow.tsx",
     "example": "account-overview",
     "states": ["ready", "loading", "empty"]
+  },
+  {
+    "source": "components/CompactAccountRowFrame.tsx",
+    "component": "CompactAccountRowFrame",
+    "example": "page-home",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
   },
   {
     "component": "ConfirmActionDialog",
@@ -66,13 +224,13 @@
     "states": ["ready", "error", "pending"]
   },
   {
-    "component": "DateRangeFields",
+    "component": "DateRangeControl",
     "source": "components/DateRangeControl.tsx",
     "example": "editors",
     "states": ["ready", "error", "pending", "validation-pending"]
   },
   {
-    "component": "DateRangeControl",
+    "component": "DateRangeFields",
     "source": "components/DateRangeControl.tsx",
     "example": "editors",
     "states": ["ready", "error", "pending", "validation-pending"]
@@ -94,6 +252,12 @@
     "source": "components/HomePeriodControl.tsx",
     "example": "history",
     "states": ["ready", "loading", "empty", "single", "refresh-error"]
+  },
+  {
+    "component": "HomePeriodControl",
+    "source": "components/HomePeriodControl.tsx",
+    "example": "interaction-surfaces",
+    "states": ["ready", "extended", "disabled"]
   },
   {
     "component": "InteractiveRow",
@@ -132,10 +296,53 @@
     "states": ["ready", "empty"]
   },
   {
+    "source": "components/NetWorthCardFrame.tsx",
+    "component": "NetWorthCardFrame",
+    "example": "page-home",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "component": "PageActions",
+    "source": "components/PageActions.tsx",
+    "example": "touch-controls",
+    "states": ["ready", "disabled"]
+  },
+  {
     "component": "PageHeader",
     "source": "components/PageHeader.tsx",
     "example": "controls",
     "states": ["ready", "error", "pending"]
+  },
+  {
+    "component": "PageHeader",
+    "source": "components/PageHeader.tsx",
+    "example": "typography",
+    "states": ["ready"]
+  },
+  {
+    "component": "PageLayout",
+    "source": "components/PageLayout.tsx",
+    "example": "page-accounts",
+    "states": ["ready", "long-content"]
+  },
+  {
+    "component": "PageToolbar",
+    "source": "components/PageLayout.tsx",
+    "example": "page-transactions",
+    "states": ["ready"]
+  },
+  {
+    "component": "PageNavigation",
+    "source": "components/PageNavigation.tsx",
+    "example": "page-settings",
+    "states": ["ready", "long-content"]
+  },
+  {
+    "component": "PercentAmountPopover",
+    "source": "components/PercentAmountPopover.tsx",
+    "example": "account-overview",
+    "states": ["ready", "loading", "empty"]
   },
   {
     "component": "Pressable",
@@ -171,10 +378,130 @@
     "states": ["ready", "empty"]
   },
   {
+    "source": "components/TransactionsTable.skeleton.tsx",
+    "component": "TransactionsSkeleton",
+    "example": "page-transactions",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "TransactionsTable",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "example": "page-analysis",
+        "owner": "CategoryTransactionsModal",
+        "phases": ["module", "data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "holdModule": "loadCategoryTransactionsModal",
+            "hold": "/transaction-analysis/transactions"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": [
+          "workbench:release-modules",
+          "workbench:release-reads"
+        ],
+        "interaction": "Click a Cashflow category to open its transaction drilldown. Inspect module pending, release the module, inspect data pending, then release reads; preserve drilldown variant and compact breakpoint."
+      },
+      {
+        "example": "page-settings",
+        "owner": "CategorizationRulesSection",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "categorization",
+            "hold": "/categorization-rules/category-rule/application-preview"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "categorization"
+          }
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Open the Example grocery rule row actions and choose Apply to existing transactions. Capture Transactions to update inside the preview, including its hidden Category column, then release reads."
+      }
+    ]
+  },
+  {
+    "source": "components/TransactionsTable.skeleton.tsx",
+    "component": "TransactionsTableSkeleton",
+    "example": "page-transactions",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "TransactionsTable",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
     "component": "TransactionsTable",
     "source": "components/TransactionsTable.tsx",
     "example": "page-transactions",
     "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "source": "components/accounts/AccountProviderCard.tsx",
+    "component": "AccountProviderCard",
+    "example": "account-dialogs",
+    "states": ["add"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/accounts/AccountRow.skeleton.tsx",
+    "component": "AccountRowSkeleton",
+    "example": "page-accounts",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "AccountRow",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
   },
   {
     "component": "AccountRow",
@@ -183,10 +510,41 @@
     "states": ["ready", "disabled"]
   },
   {
+    "source": "components/accounts/AccountRowFrame.tsx",
+    "component": "AccountRowFrame",
+    "example": "page-accounts",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
     "component": "AccountSelect",
     "source": "components/accounts/AccountSelect.tsx",
     "example": "account-management",
     "states": ["ready", "disabled"]
+  },
+  {
+    "source": "components/accounts/AddAccountModal.skeleton.tsx",
+    "component": "AddAccountSkeleton",
+    "example": "account-dialogs",
+    "states": ["add"],
+    "loadingPairs": [
+      {
+        "owner": "AddAccountModal",
+        "phases": ["module"],
+        "loading": {
+          "state": "add",
+          "query": {
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "add",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
   },
   {
     "component": "AddAccountModal",
@@ -197,8 +555,32 @@
   {
     "component": "BackfillInstructions",
     "source": "components/accounts/BackfillInstructions.tsx",
-    "example": "loading-backfill",
-    "states": ["loading"]
+    "example": "account-dialogs",
+    "states": ["backfill"]
+  },
+  {
+    "source": "components/accounts/BackfillModal.skeleton.tsx",
+    "component": "BackfillSkeleton",
+    "example": "account-dialogs",
+    "states": ["backfill"],
+    "loadingPairs": [
+      {
+        "owner": "BackfillModal",
+        "phases": ["module"],
+        "loading": {
+          "state": "backfill",
+          "query": {
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "backfill",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
   },
   {
     "component": "BackfillModal",
@@ -213,10 +595,48 @@
     "states": ["ready", "disabled"]
   },
   {
+    "source": "components/accounts/InstitutionSection.skeleton.tsx",
+    "component": "AccountsSkeleton",
+    "example": "page-accounts",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "AccountsPage",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
     "component": "InstitutionSection",
     "source": "components/accounts/InstitutionSection.tsx",
     "example": "account-management",
     "states": ["ready", "disabled"]
+  },
+  {
+    "source": "components/accounts/InstitutionSectionFrame.tsx",
+    "component": "InstitutionAccountsFrame",
+    "example": "page-accounts",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/accounts/InstitutionSectionFrame.tsx",
+    "component": "InstitutionHeadingFrame",
+    "example": "page-accounts",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
   },
   {
     "component": "ProviderBadge",
@@ -231,6 +651,41 @@
     "states": ["ready"]
   },
   {
+    "source": "components/analysis/AnalysisAuditDrawer.skeleton.tsx",
+    "component": "AnalysisAuditCardFrame",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/analysis/AnalysisAuditDrawer.skeleton.tsx",
+    "component": "AnalysisAuditSkeleton",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "AnalysisAuditDrawer",
+        "phases": ["module", "data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "/transaction-analysis/audit",
+            "holdModule": "loadAnalysisAuditDrawer"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": [
+          "workbench:release-modules",
+          "workbench:release-reads"
+        ],
+        "interaction": "Open Audit after the parent analysis reads resolve. Hold the audit endpoint shown by the fixture adapter and its module; inspect grouped card placeholders before releasing each phase."
+      }
+    ]
+  },
+  {
     "component": "AnalysisAuditDrawer",
     "source": "components/analysis/AnalysisAuditDrawer.tsx",
     "example": "page-analysis",
@@ -241,6 +696,135 @@
     "source": "components/analysis/AnalysisAuditHeader.tsx",
     "example": "page-analysis",
     "states": ["ready", "empty", "long-content"]
+  },
+  {
+    "component": "AnalysisDonutSkeleton",
+    "source": "components/analysis/AnalysisDonut.skeleton.tsx",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "AnalysisPage",
+        "phases": ["module"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "sankey": "false",
+            "holdModule": "loadDonutChart"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "sankey": "false"
+          }
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "The Sankey-disabled page uses real donut sections. Hold only the donut module, capture the transparent ring in its shared section frame, then release modules."
+      }
+    ]
+  },
+  {
+    "source": "components/analysis/AnalysisFrames.tsx",
+    "component": "AnalysisFlowBody",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/analysis/AnalysisFrames.tsx",
+    "component": "AnalysisFlowFrame",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "component": "AnalysisFlowHeading",
+    "source": "components/analysis/AnalysisFrames.tsx",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "composition": "Shared known Inflows/Outflows heading and icon, composed by real AnalysisPage with sankey=false."
+  },
+  {
+    "source": "components/analysis/AnalysisFrames.tsx",
+    "component": "AnalysisSummaryFrame",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/analysis/AnalysisFrames.tsx",
+    "component": "CashflowFrame",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/analysis/AnalysisPage.skeleton.tsx",
+    "component": "AnalysisSkeleton",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "AnalysisPage",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture both Sankey-enabled and disabled analysis fixture settings; data-held page precedes the matching chart-owned module fallback."
+      },
+      {
+        "owner": "AnalysisPage",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads",
+            "sankey": "false"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "sankey": "false"
+          }
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Disable Sankey through the fixture query; capture the real responsive donut sections before and after releasing reads."
+      }
+    ]
+  },
+  {
+    "source": "components/analysis/AnalysisSankeyChart.skeleton.tsx",
+    "component": "CashflowSkeleton",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "AnalysisSankeyChart",
+        "phases": ["module"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Enable Sankey fixture via its supported setting before capture; capture both compact categories and desktop chart+categories. Module pending has known category counts."
+      }
+    ]
   },
   {
     "component": "AnalysisSankeyChart",
@@ -279,16 +863,95 @@
     "states": ["ready", "error", "pending", "validation-pending"]
   },
   {
+    "source": "components/investments/InvestmentActivityTable.skeleton.tsx",
+    "component": "InvestmentActivityTableSkeleton",
+    "example": "account-dialogs",
+    "states": ["account"],
+    "loadingPairs": [
+      {
+        "owner": "InvestmentActivityTable",
+        "phases": ["data"],
+        "loading": {
+          "state": "account",
+          "query": {
+            "hold": "/investment/account/investment/activity"
+          }
+        },
+        "ready": {
+          "state": "account",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Open the account dialog, select Activity. Hold its exact investment activity request (verify endpoint in the fixture adapter) before release; capture the resulting activity rows."
+      }
+    ]
+  },
+  {
     "component": "InvestmentActivityTable",
     "source": "components/investments/InvestmentActivityTable.tsx",
     "example": "investments",
     "states": ["ready", "empty"]
   },
   {
+    "source": "components/investments/InvestmentHoldingsTable.skeleton.tsx",
+    "component": "InvestmentHoldingsTableSkeleton",
+    "example": "account-dialogs",
+    "states": ["account"],
+    "loadingPairs": [
+      {
+        "owner": "InvestmentHoldingsTable",
+        "phases": ["data"],
+        "loading": {
+          "state": "account",
+          "query": {
+            "hold": "/investment/account/investment/holdings/latest"
+          }
+        },
+        "ready": {
+          "state": "account",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "The fixture summary is an investment account; capture its default Holdings tab. Keep reads held while the account boundary loads, then observe nested holdings readiness."
+      }
+    ]
+  },
+  {
     "component": "InvestmentHoldingsTable",
     "source": "components/investments/InvestmentHoldingsTable.tsx",
     "example": "investments",
     "states": ["ready", "empty"]
+  },
+  {
+    "source": "components/investments/InvestmentTableFrame.tsx",
+    "component": "InvestmentTableFrame",
+    "example": "account-dialogs",
+    "states": ["account"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/investments/ManualBrokerageHoldingsModal.skeleton.tsx",
+    "component": "ManualBrokerageHoldingsModalSkeleton",
+    "example": "account-dialogs",
+    "states": ["holdings"],
+    "loadingPairs": [
+      {
+        "owner": "ManualBrokerageHoldingsModal",
+        "phases": ["module"],
+        "loading": {
+          "state": "holdings",
+          "query": {
+            "holdModule": "loadManualBrokerageHoldingsModal"
+          }
+        },
+        "ready": {
+          "state": "holdings",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Open the resolved account Holdings tab, then Edit holdings; only the nested holdings editor module is held. Release modules after capturing its pending form."
+      }
+    ]
   },
   {
     "component": "ManualBrokerageHoldingsModal",
@@ -303,231 +966,54 @@
     "states": ["ready", "empty", "error", "disabled"]
   },
   {
-    "component": "AddAccountSkeleton",
-    "source": "components/loading/AccountDialogSkeletons.tsx",
-    "example": "loading-account-add",
-    "states": ["loading"]
-  },
-  {
-    "component": "BackfillSkeleton",
-    "source": "components/loading/AccountDialogSkeletons.tsx",
-    "example": "loading-backfill",
-    "states": ["loading"]
-  },
-  {
-    "component": "ChartSkeleton",
-    "source": "components/loading/ChartSkeleton.tsx",
-    "example": "loading-chart",
-    "states": ["loading"]
-  },
-  {
-    "component": "HomeSkeleton",
-    "source": "components/loading/HomeSkeleton.tsx",
-    "example": "loading-home",
-    "states": ["loading"]
+    "component": "LaunchScreen",
+    "source": "components/loading/LaunchScreen.tsx",
+    "example": "launch-screen",
+    "states": ["checking", "native"]
   },
   {
     "component": "LoadingSkeleton",
     "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-tableskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "RowSkeleton",
-    "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-rowskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "TableSkeleton",
-    "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-tableskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "ChartSkeleton",
-    "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-chartskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "FormSkeleton",
-    "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-formskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "SettingsSkeleton",
-    "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-settingsskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "AccountsSkeleton",
-    "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-accountsskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "AnalysisSkeleton",
-    "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-analysisskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "AccountDetailsSkeleton",
-    "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-accountdetailsskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "AccessTokensSkeleton",
-    "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-accesstokensskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "CategoriesTableSkeleton",
-    "source": "components/loading/LoadingSkeleton.tsx",
-    "example": "loading-categoriestableskeleton",
-    "states": ["loading"]
-  },
-  {
-    "component": "RoutePendingSkeleton",
-    "source": "components/loading/RoutePendingSkeleton.tsx",
-    "example": "page-home",
-    "states": ["ready", "empty"]
-  },
-  {
-    "component": "HomePage",
-    "source": "components/pages/HomePage.tsx",
-    "example": "page-home",
-    "states": ["ready", "empty"]
-  },
-  {
-    "component": "LandingPage",
-    "source": "components/pages/LandingPage.tsx",
-    "example": "page-landing",
-    "states": ["ready", "anonymous", "unavailable"]
-  },
-  {
-    "component": "SettingsPage",
-    "source": "components/pages/SettingsPage.tsx",
-    "example": "page-settings",
-    "states": [
-      "ready",
-      "empty",
-      "notification-error",
-      "notification-denied",
-      "notification-unconfigured",
-      "notification-install-required",
-      "notification-rebind",
-      "notification-registering",
-      "notification-enabling",
-      "long-content"
+    "example": "deferred",
+    "states": ["loading", "ready"],
+    "loadingPairs": [
+      {
+        "owner": "DeferredFeature",
+        "phases": ["module"],
+        "loading": {
+          "state": "loading",
+          "query": {}
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": [],
+        "interaction": "Neutral accessible-boundary example deliberately holds content via the loading state; select ready to compare. Domain geometry is covered by each owner pair."
+      }
     ]
   },
   {
-    "component": "AnalysisRulesSection",
-    "source": "components/settings/AnalysisRulesSection.tsx",
-    "example": "page-settings",
-    "states": ["ready", "empty", "long-content"]
-  },
-  {
-    "component": "CategorizationRulesSection",
-    "source": "components/settings/CategorizationRulesSection.tsx",
-    "example": "page-settings",
-    "states": ["ready", "empty", "long-content"]
-  },
-  {
-    "component": "CustomCategoriesSection",
-    "source": "components/settings/CustomCategoriesSection.tsx",
-    "example": "page-settings",
-    "states": ["ready", "empty", "long-content"]
-  },
-  {
-    "component": "PersonalAccessTokenSection",
-    "source": "components/settings/PersonalAccessTokenSection.tsx",
-    "example": "page-settings",
-    "states": ["ready", "empty", "long-content"]
-  },
-  {
-    "component": "RecurringManualTransactionsSection",
-    "source": "components/settings/RecurringManualTransactionsSection.tsx",
-    "example": "page-settings",
-    "states": ["ready", "empty", "long-content"]
-  },
-  {
-    "component": "SettingsArchiveFilter",
-    "source": "components/settings/SettingsArchiveFilter.tsx",
-    "example": "status-colors",
-    "states": ["ready"]
-  },
-  {
-    "component": "SettingsStatusBadge",
-    "source": "components/settings/SettingsStatusBadge.tsx",
-    "example": "status-colors",
-    "states": ["ready"]
-  },
-  {
-    "component": "SettingsToolbar",
-    "source": "components/settings/SettingsToolbar.tsx",
-    "example": "status-colors",
-    "states": ["ready"]
-  },
-  {
-    "component": "TransactionConditionInput",
-    "source": "components/settings/categorization/TransactionConditionInput.tsx",
-    "example": "category-inputs",
-    "states": ["ready", "empty", "disabled"]
-  },
-  {
-    "component": "ManualTransactionModal",
-    "source": "components/transactions/ManualTransactionModal.tsx",
-    "example": "manual-save",
-    "states": ["ready", "offline", "lost-response", "reconcile-error"]
-  },
-  {
-    "component": "TransactionBulkEditToolbar",
-    "source": "components/transactions/TransactionBulkEditToolbar.tsx",
-    "example": "page-transactions",
-    "states": ["ready", "empty", "refresh-error"]
-  },
-  {
-    "component": "TransactionsMobileList",
-    "source": "components/transactions/TransactionsMobileList.tsx",
-    "example": "page-transactions",
-    "states": ["ready", "empty", "refresh-error"]
-  },
-  {
-    "component": "AppearanceControl",
-    "source": "components/settings/AppearanceControl.tsx",
-    "example": "appearance",
-    "states": ["ready"]
-  },
-  {
-    "component": "AccountsPage",
-    "source": "routes/_authed/accounts.tsx",
-    "example": "page-accounts",
-    "states": ["ready", "empty", "long-content"]
-  },
-  {
-    "component": "TransactionsPage",
-    "source": "routes/_authed/transactions.tsx",
-    "example": "page-transactions",
-    "states": ["ready", "empty", "refresh-error"]
-  },
-  {
-    "component": "AnalysisPage",
-    "source": "routes/_authed/analysis.tsx",
-    "example": "page-analysis",
-    "states": ["ready", "empty", "long-content"]
-  },
-  {
-    "component": "AppShellLayout",
-    "source": "components/AppShellLayout.tsx",
-    "example": "page-home",
-    "states": ["ready", "empty"]
+    "source": "components/notifications/NotificationInbox.skeleton.tsx",
+    "component": "NotificationInboxSkeleton",
+    "example": "notification-inbox",
+    "states": ["loading", "ready"],
+    "loadingPairs": [
+      {
+        "owner": "NotificationInbox",
+        "phases": ["data"],
+        "loading": {
+          "state": "loading",
+          "query": {}
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": [],
+        "interaction": "Compare the real drawer loading state with ready, including its trailing actions and wrapped messages."
+      }
+    ]
   },
   {
     "component": "NotificationBell",
@@ -570,46 +1056,584 @@
     "states": ["ready", "empty"]
   },
   {
-    "component": "HomePeriodControl",
-    "source": "components/HomePeriodControl.tsx",
-    "example": "interaction-surfaces",
-    "states": ["ready", "extended", "disabled"]
-  },
-  {
-    "component": "PageHeader",
-    "source": "components/PageHeader.tsx",
-    "example": "typography",
-    "states": ["ready"]
-  },
-  {
-    "component": "ManualTransactionModal",
-    "source": "components/transactions/ManualTransactionModal.tsx",
-    "example": "page-transactions",
-    "states": ["ready", "empty", "refresh-error"]
-  },
-  {
-    "component": "PageLayout",
-    "source": "components/PageLayout.tsx",
+    "source": "components/pages/AccountsPageFrame.tsx",
+    "component": "AccountsPageFrame",
     "example": "page-accounts",
-    "states": ["ready", "long-content"]
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
   },
   {
-    "component": "PageActions",
-    "source": "components/PageActions.tsx",
-    "example": "touch-controls",
-    "states": ["ready", "disabled"]
+    "source": "components/pages/AnalysisPageFrame.tsx",
+    "component": "AnalysisPageFrame",
+    "example": "page-analysis",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
   },
   {
-    "component": "PageNavigation",
-    "source": "components/PageNavigation.tsx",
+    "source": "components/pages/HomePage.skeleton.tsx",
+    "component": "HomeSkeleton",
+    "example": "page-home",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "HomePage",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "component": "HomePage",
+    "source": "components/pages/HomePage.tsx",
+    "example": "page-home",
+    "states": ["ready", "empty"]
+  },
+  {
+    "source": "components/pages/HomePageFrame.tsx",
+    "component": "HomePageFrame",
+    "example": "page-home",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "component": "LandingPage",
+    "source": "components/pages/LandingPage.tsx",
+    "example": "page-landing",
+    "states": ["ready", "anonymous", "unavailable"]
+  },
+  {
+    "source": "components/pages/RoutePendingSkeleton.tsx",
+    "component": "RoutePendingSkeleton",
+    "example": "page-home",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "HomePage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "source": "components/pages/SettingsPage.skeleton.tsx",
+    "component": "GeneralSettingsSkeleton",
     "example": "page-settings",
-    "states": ["ready", "long-content"]
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "SettingsPage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "general",
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "general"
+          }
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the destination-owned Settings route fallback, then release the route to compare the same selected tab. A user-read hold alone does not render this companion."
+      }
+    ]
   },
   {
-    "component": "PageToolbar",
-    "source": "components/PageLayout.tsx",
-    "example": "page-transactions",
+    "source": "components/pages/SettingsPage.skeleton.tsx",
+    "component": "NotificationSettingsSkeleton",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "SettingsPage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "notifications",
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "notifications"
+          }
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the destination-owned Settings route fallback, then release the route to compare the same selected tab. A user-read hold alone does not render this companion."
+      }
+    ]
+  },
+  {
+    "source": "components/pages/SettingsPage.skeleton.tsx",
+    "component": "SettingsPageSkeleton",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "SettingsPage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "general",
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "general"
+          }
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "owner": "SettingsPage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "notifications",
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "notifications"
+          }
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "owner": "SettingsPage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "access",
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "access"
+          }
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "owner": "SettingsPage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "categories",
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "categories"
+          }
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "owner": "SettingsPage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "analysis",
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "analysis"
+          }
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "owner": "SettingsPage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "categorization",
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "categorization"
+          }
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "owner": "SettingsPage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "recurring",
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "recurring"
+          }
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "component": "SettingsPage",
+    "source": "components/pages/SettingsPage.tsx",
+    "example": "page-settings",
+    "states": [
+      "ready",
+      "empty",
+      "notification-error",
+      "notification-denied",
+      "notification-unconfigured",
+      "notification-install-required",
+      "notification-rebind",
+      "notification-registering",
+      "notification-enabling",
+      "long-content"
+    ]
+  },
+  {
+    "source": "components/pages/SettingsPageFrame.tsx",
+    "component": "GeneralSettingsFrame",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation. Select the corresponding settings tab; row/card frames are composed by their owner list."
+  },
+  {
+    "source": "components/pages/SettingsPageFrame.tsx",
+    "component": "NotificationSettingsFrame",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation. Select the corresponding settings tab; row/card frames are composed by their owner list."
+  },
+  {
+    "source": "components/pages/SettingsPageFrame.tsx",
+    "component": "SettingsPageFrame",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation. Select the corresponding settings tab; row/card frames are composed by their owner list."
+  },
+  {
+    "source": "components/settings/AnalysisRulesSection.skeleton.tsx",
+    "component": "AnalysisRulesSkeleton",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "AnalysisRulesSection",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads",
+            "tab": "analysis"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "analysis"
+          }
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "component": "AnalysisRulesSection",
+    "source": "components/settings/AnalysisRulesSection.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty", "long-content"]
+  },
+  {
+    "component": "AppearanceControl",
+    "source": "components/settings/AppearanceControl.tsx",
+    "example": "appearance",
     "states": ["ready"]
+  },
+  {
+    "source": "components/settings/CategorizationRulesSection.skeleton.tsx",
+    "component": "CategorizationRulesSkeleton",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "CategorizationRulesSection",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads",
+            "tab": "categorization"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "categorization"
+          }
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "source": "components/settings/CategorizationRulesSection.skeleton.tsx",
+    "component": "RecommendationCardFrame",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation. Select the corresponding settings tab; row/card frames are composed by their owner list."
+  },
+  {
+    "source": "components/settings/CategorizationRulesSection.skeleton.tsx",
+    "component": "RecommendationsSkeleton",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "CategorizationRulesSection",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "categorization",
+            "hold": "/categorization-rule-recommendations"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "categorization"
+          }
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Allow the parent section to resolve, then open Rule recommendations; hold the recommendation request shown by the fixture adapter. Capture nested cards, not the base rule table."
+      }
+    ]
+  },
+  {
+    "component": "CategorizationRulesSection",
+    "source": "components/settings/CategorizationRulesSection.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty", "long-content"]
+  },
+  {
+    "source": "components/settings/CustomCategoriesSection.skeleton.tsx",
+    "component": "CategoriesTableSkeleton",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "CustomCategoriesSection",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads",
+            "tab": "categories"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "categories"
+          }
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "component": "CustomCategoriesSection",
+    "source": "components/settings/CustomCategoriesSection.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty", "long-content"]
+  },
+  {
+    "source": "components/settings/PersonalAccessTokenSection.skeleton.tsx",
+    "component": "AccessTokensSkeleton",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "PersonalAccessTokenSection",
+        "phases": ["module"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "access",
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "access"
+          }
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "source": "components/settings/PersonalAccessTokenSection.skeleton.tsx",
+    "component": "PersonalAccessTokenFrame",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation. Select the corresponding settings tab; row/card frames are composed by their owner list."
+  },
+  {
+    "source": "components/settings/PersonalAccessTokenSection.skeleton.tsx",
+    "component": "TokenCardFrame",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation. Select the corresponding settings tab; row/card frames are composed by their owner list."
+  },
+  {
+    "source": "components/settings/PersonalAccessTokenSection.skeleton.tsx",
+    "component": "TokenCardsSkeleton",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "PersonalAccessTokenSection",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads",
+            "tab": "access"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "access"
+          }
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "component": "PersonalAccessTokenSection",
+    "source": "components/settings/PersonalAccessTokenSection.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty", "long-content"]
+  },
+  {
+    "source": "components/settings/RecurringManualTransactionsSection.skeleton.tsx",
+    "component": "RecurringTransactionsSkeleton",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "RecurringManualTransactionsSection",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads",
+            "tab": "recurring"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "recurring"
+          }
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "component": "RecurringManualTransactionsSection",
+    "source": "components/settings/RecurringManualTransactionsSection.tsx",
+    "example": "page-settings",
+    "states": ["ready", "empty", "long-content"]
+  },
+  {
+    "component": "SettingsArchiveFilter",
+    "source": "components/settings/SettingsArchiveFilter.tsx",
+    "example": "status-colors",
+    "states": ["ready"]
+  },
+  {
+    "source": "components/settings/SettingsCompactRowFrame.tsx",
+    "component": "SettingsCompactRowFrame",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation. Select the corresponding settings tab; row/card frames are composed by their owner list."
+  },
+  {
+    "source": "components/settings/SettingsFiltersFrame.tsx",
+    "component": "SettingsFiltersFrame",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation. Select the corresponding settings tab; row/card frames are composed by their owner list."
   },
   {
     "component": "SettingsRowActions",
@@ -618,9 +1642,312 @@
     "states": ["ready", "empty", "long-content"]
   },
   {
-    "component": "PercentAmountPopover",
-    "source": "components/PercentAmountPopover.tsx",
-    "example": "account-overview",
-    "states": ["ready", "loading", "empty"]
+    "component": "SettingsSectionActions",
+    "source": "components/settings/SettingsSection.skeleton.tsx",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Real SettingsPageFrame and route/module pending use this shared SSR-safe static control slot; select categories, analysis, categorization or recurring as appropriate."
+  },
+  {
+    "component": "SettingsSectionFilters",
+    "source": "components/settings/SettingsSection.skeleton.tsx",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Real SettingsPageFrame and route/module pending use this shared SSR-safe static control slot; select categories, analysis, categorization or recurring as appropriate."
+  },
+  {
+    "source": "components/settings/SettingsSection.skeleton.tsx",
+    "component": "SettingsSectionSkeleton",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "CustomCategoriesSection",
+        "phases": ["module"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "categories",
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "categories"
+          }
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "owner": "AnalysisRulesSection",
+        "phases": ["module"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "analysis",
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "analysis"
+          }
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "owner": "CategorizationRulesSection",
+        "phases": ["module"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "categorization",
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "categorization"
+          }
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      },
+      {
+        "owner": "RecurringManualTransactionsSection",
+        "phases": ["module"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "tab": "recurring",
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "recurring"
+          }
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "component": "SettingsStatusBadge",
+    "source": "components/settings/SettingsStatusBadge.tsx",
+    "example": "status-colors",
+    "states": ["ready"]
+  },
+  {
+    "source": "components/settings/SettingsTableFrame.tsx",
+    "component": "SettingsListPlaceholder",
+    "example": "page-settings",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "CustomCategoriesSection",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads",
+            "tab": "categories"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {
+            "tab": "categories"
+          }
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "source": "components/settings/SettingsTableFrame.tsx",
+    "component": "SettingsTableFrame",
+    "example": "page-settings",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation. Select the corresponding settings tab; row/card frames are composed by their owner list."
+  },
+  {
+    "component": "SettingsToolbar",
+    "source": "components/settings/SettingsToolbar.tsx",
+    "example": "status-colors",
+    "states": ["ready"]
+  },
+  {
+    "component": "TransactionConditionInput",
+    "source": "components/settings/categorization/TransactionConditionInput.tsx",
+    "example": "category-inputs",
+    "states": ["ready", "empty", "disabled"]
+  },
+  {
+    "source": "components/transactions/ManualTransactionFormFrame.tsx",
+    "component": "ManualTransactionFormFrame",
+    "example": "manual-save",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/transactions/ManualTransactionModal.skeleton.tsx",
+    "component": "ManualTransactionModalSkeleton",
+    "example": "manual-save",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "ManualTransactionModal",
+        "phases": ["module"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "holdModules": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-modules"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "component": "ManualTransactionModal",
+    "source": "components/transactions/ManualTransactionModal.tsx",
+    "example": "manual-save",
+    "states": ["ready", "offline", "lost-response", "reconcile-error"]
+  },
+  {
+    "component": "ManualTransactionModal",
+    "source": "components/transactions/ManualTransactionModal.tsx",
+    "example": "page-transactions",
+    "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "component": "TransactionBulkEditToolbar",
+    "source": "components/transactions/TransactionBulkEditToolbar.tsx",
+    "example": "page-transactions",
+    "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "source": "components/transactions/TransactionsMobileList.skeleton.tsx",
+    "component": "TransactionMobileRowSkeleton",
+    "example": "page-transactions",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "TransactionsMobileList",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "source": "components/transactions/TransactionsMobileList.skeleton.tsx",
+    "component": "TransactionsMobileListSkeleton",
+    "example": "page-transactions",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "TransactionsMobileList",
+        "phases": ["data"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "hold": "reads"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-reads"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "component": "TransactionsMobileList",
+    "source": "components/transactions/TransactionsMobileList.tsx",
+    "example": "page-transactions",
+    "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "source": "components/transactions/TransactionsPageFrame.tsx",
+    "component": "TransactionsPageFrame",
+    "example": "page-transactions",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "source": "components/transactions/TransactionsPageFrame.tsx",
+    "component": "TransactionsPageSkeleton",
+    "example": "page-transactions",
+    "states": ["ready"],
+    "loadingPairs": [
+      {
+        "owner": "TransactionsPage",
+        "phases": ["route"],
+        "loading": {
+          "state": "ready",
+          "query": {
+            "holdRoute": "true"
+          }
+        },
+        "ready": {
+          "state": "ready",
+          "query": {}
+        },
+        "releaseEvents": ["workbench:release-route"],
+        "interaction": "Capture the held state, dispatch the release event in the same frame, then capture ready after queries settle."
+      }
+    ]
+  },
+  {
+    "source": "components/transactions/TransactionsPageFrame.tsx",
+    "component": "TransactionsToolbarFrame",
+    "example": "page-transactions",
+    "states": ["ready"],
+    "composition": "Rendered through the real owner example; this lightweight shared frame is not a standalone imitation."
+  },
+  {
+    "component": "AccountsPage",
+    "source": "routes/_authed/accounts.tsx",
+    "example": "page-accounts",
+    "states": ["ready", "empty", "long-content"]
+  },
+  {
+    "component": "AnalysisPage",
+    "source": "routes/_authed/analysis.tsx",
+    "example": "page-analysis",
+    "states": ["ready", "empty", "long-content"]
+  },
+  {
+    "component": "TransactionsPage",
+    "source": "routes/_authed/transactions.tsx",
+    "example": "page-transactions",
+    "states": ["ready", "empty", "refresh-error"]
   }
 ]

@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Group,
-  Paper,
   Skeleton,
   Text,
   Title,
@@ -17,7 +16,9 @@ import {
   formatMoneyWithSign,
   getChangeColorMantine,
 } from '../lib/format'
-import { ChartSkeleton } from './loading/ChartSkeleton'
+import { HomeChartSkeleton } from './Chart.skeleton'
+import { LoadingSkeleton } from './loading/LoadingSkeleton'
+import { NetWorthCardFrame } from './NetWorthCardFrame'
 import { HomePeriodControl } from './HomePeriodControl'
 import styles from './NetWorthCard.module.css'
 import { ChangePercentPopover } from './ChangePercentPopover'
@@ -76,77 +77,79 @@ export function NetWorthCard({
     : displayValue
 
   return (
-    <Paper mb={8} bg="transparent">
-      <Box>
-        <Title data-typography="display" order={2} className={styles.amount}>
-          <VisuallyHidden>Net worth: </VisuallyHidden>
-          {visibleDisplayValue}
-        </Title>
-        <Box aria-busy={comparisonLoading} className={styles.comparison}>
-          {comparisonLoading && (
-            <Skeleton
-              aria-hidden="true"
-              h={14}
-              w={180}
-              style={{
-                position: 'absolute',
-                top: '50%',
-                transform: 'translateY(-50%)',
-              }}
-            />
-          )}
-          {hoveredPoint && (
-            <Text
-              data-typography="metadata"
-              c="dimmed"
-              className={styles.hoverLabel}
-            >
-              {hoveredPoint.label}
-            </Text>
-          )}
-          <Group
-            gap={6}
-            wrap="nowrap"
-            style={{
-              visibility:
-                !comparisonLoading &&
-                !hoveredPoint &&
-                changePercent !== undefined &&
-                changePercent !== 0
-                  ? 'visible'
-                  : 'hidden',
-            }}
-          >
-            {!comparisonLoading && (
-              <ChangePercentPopover
-                textRole="metadata"
-                color={getChangeColorMantine(false, changePercent)}
-                changeAmount={changeAmount}
-                changePercent={changePercent}
-                hidden={balancesHidden}
+    <NetWorthCardFrame
+      summary={
+        <Box>
+          <Title data-typography="display" order={2} className={styles.amount}>
+            <VisuallyHidden>Net worth: </VisuallyHidden>
+            {visibleDisplayValue}
+          </Title>
+          <Box aria-busy={comparisonLoading} className={styles.comparison}>
+            {comparisonLoading && (
+              <Skeleton
+                aria-hidden="true"
+                h={14}
+                w={180}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                }}
               />
             )}
-            <Text
-              data-typography="metadata"
-              aria-hidden={comparisonLoading}
-              c="dimmed"
+            {hoveredPoint && (
+              <Text
+                data-typography="metadata"
+                c="dimmed"
+                className={styles.hoverLabel}
+              >
+                {hoveredPoint.label}
+              </Text>
+            )}
+            <Group
+              gap={6}
+              wrap="nowrap"
+              style={{
+                visibility:
+                  !comparisonLoading &&
+                  !hoveredPoint &&
+                  changePercent !== undefined &&
+                  changePercent !== 0
+                    ? 'visible'
+                    : 'hidden',
+              }}
             >
-              {comparisonLoading
-                ? '\u00A0'
-                : comparisonPeriod === 'all'
-                  ? 'since first recorded balance'
-                  : `from last ${TIME_PERIOD_LABELS[comparisonPeriod].toLowerCase()}`}
-            </Text>
-          </Group>
+              {!comparisonLoading && (
+                <ChangePercentPopover
+                  textRole="metadata"
+                  color={getChangeColorMantine(false, changePercent)}
+                  changeAmount={changeAmount}
+                  changePercent={changePercent}
+                  hidden={balancesHidden}
+                />
+              )}
+              <Text
+                data-typography="metadata"
+                aria-hidden={comparisonLoading}
+                c="dimmed"
+              >
+                {comparisonLoading
+                  ? '\u00A0'
+                  : comparisonPeriod === 'all'
+                    ? 'since first recorded balance'
+                    : `from last ${TIME_PERIOD_LABELS[comparisonPeriod].toLowerCase()}`}
+              </Text>
+            </Group>
+          </Box>
         </Box>
-      </Box>
-      {/* The streamed series can settle between SSR and hydration. Keep this
-          region deterministic without making the summary wait for the chart. */}
-      <Box mt="xs" h={180} style={{ position: 'relative' }}>
+      }
+      chart={
         <ClientOnly
           fallback={
             <Box className={styles.chartBleed}>
-              <ChartSkeleton />
+              <LoadingSkeleton label="Loading chart…">
+                <HomeChartSkeleton />
+              </LoadingSkeleton>
             </Box>
           }
         >
@@ -193,12 +196,12 @@ export function NetWorthCard({
             </Alert>
           )}
         </ClientOnly>
-      </Box>
-      {period && onPeriodChange && (
-        <Box mt={8}>
+      }
+      period={
+        period && onPeriodChange ? (
           <HomePeriodControl period={period} onChange={onPeriodChange} />
-        </Box>
-      )}
-    </Paper>
+        ) : undefined
+      }
+    />
   )
 }

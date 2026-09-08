@@ -32,6 +32,7 @@ import {
 import { ConfirmActionDialog } from '../ConfirmActionDialog'
 import { StatusBadge } from './StatusBadge'
 import styles from './AccountRow.module.css'
+import { AccountRowFrame } from './AccountRowFrame'
 import type { Account } from '../../api/models'
 
 function archiveAccountById(id: string): Promise<Account> {
@@ -242,13 +243,7 @@ export function AccountRow({ account }: { account: Account }) {
 
   return (
     <>
-      <Group
-        justify="space-between"
-        className={styles.row}
-        p="sm"
-        gap="xs"
-        wrap="nowrap"
-      >
+      <AccountRowFrame>
         <div style={{ flex: 1, minWidth: 0 }}>
           {isEditing ? (
             <form
@@ -459,7 +454,7 @@ export function AccountRow({ account }: { account: Account }) {
             </div>
           </div>
         )}
-      </Group>
+      </AccountRowFrame>
       <ConfirmActionDialog
         opened={archiveModalOpened}
         onClose={() => {

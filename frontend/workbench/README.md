@@ -493,8 +493,9 @@ its period label use a 6px gap. Review in page-home or all-pages.
 Home period loading: use `/?frame=true&example=page-home&latency=1500&width=390`
 and select an uncached period. The comparison row reserves its touch-target
 height while loading, showing zero/no change, or inspecting a chart point, so
-the chart and period controls stay anchored. Compare the initial `loading-home`
-example as well; its comparison placeholder uses the same frame. Repeat with a
+the chart and period controls stay anchored. Compare the initial state at
+`/?frame=true&example=page-home&state=ready&hold=reads` and release reads in that
+same document; its comparison placeholder uses the real frame. Repeat with a
 desktop pointer and a wide coarse pointer, since touch geometry follows input
 capability as well as viewport width.
 
@@ -505,12 +506,70 @@ notification bell. On compact screens the Home heading occupies no visible space
 account rows and dividers extend to the shell edges with transparent group and row
 backgrounds. Text retains a safe-area-aware inset. Desktop keeps its heading and
 account cards. `account-overview` uses the same real AccountSection, and
-`loading-home` mirrors its compact panel treatment. Toggle masking in `page-home`
+the held/released `page-home` pair exercises its compact panel treatment. Toggle masking in `page-home`
 to check the headline, rows, chart and account details together.
 
-Validated this change in Chromium: OLED/Warm clay at 390×844, Light at 320×800,
+Historical Home edge-to-edge validation, before the skeleton migration:
+validated this change in Chromium: OLED/Warm clay at 390×844, Light at 320×800,
 and Dark/Warm clay at 1280×900. Inspected transparent full-width compact panels,
 content truncation, desktop cards, navbar order and masking. Real local Home also
 confirmed masking through the shared preference. Targeted Home, shell, account
 and workbench suites passed (67 tests); typecheck, lint (existing warnings), token
 guards and both builds passed.
+
+This historical result is preserved as recorded. Current loading ownership,
+retired standalone examples, and migration verification status live in the
+[loading-state inventory](../docs/loading-state-ownership.md).
+
+## Loading fidelity pairs
+
+Skeletons live with their production owner. Use the actual page or dialog example
+for both phases; isolated shape tiles have been retired. Keep frames, known copy,
+column definitions, responsive grouping, and surfaces shared with loaded content.
+See [the loading contract](../docs/ui-conventions.md#loading-preparation-and-stable-layouts)
+and [ownership inventory](../docs/loading-state-ownership.md).
+
+Use the same URL, theme, viewport, masking, and fixture data while releasing a held
+phase. These controls are deterministic and scoped to the workbench document:
+
+- `hold=reads` holds data reads while letting `/user/me` resolve.
+- `hold=user` holds only session reads; `hold=series` holds Home series only.
+- `hold=/exact/api/path` holds a specific nested read without freezing its parent.
+- `holdModules=true` holds feature imports independently of data. Account dialog
+  and manual editor examples also exercise their real deferred shell this way.
+- `holdModule=<loader name>` holds only that feature, allowing its parent to
+  resolve first. For example, use `holdModule=loadAnalysisAuditDrawer`,
+  `loadCategoryTransactionsModal`, `loadManualBrokerageHoldingsModal`, or
+  `loadDonutChart` (one exact loader name). Open the corresponding real control
+  before capturing an overlay. Release with `workbench:release-modules`.
+- `sankey=false` sets the fixture user to alternate donut Analysis. It changes
+  only fixture data. For a module pair use
+  `/?frame=true&example=page-analysis&state=ready&sankey=false&holdModule=loadDonutChart`;
+  for the initial data pair use the same URL with `hold=reads` instead of
+  `holdModule`. Keep `sankey=false` in the ready comparison too.
+- `holdRoute=true` holds the page route before loading to show its real destination
+  fallback, including navigation and toolbar. Combine holds to inspect each phase.
+
+Release a phase from the browser console or agent-browser `eval`:
+
+```js
+window.dispatchEvent(new Event('workbench:release-route'))
+window.dispatchEvent(new Event('workbench:release-modules'))
+window.dispatchEvent(new Event('workbench:release-reads'))
+```
+
+For example, compare
+`/?frame=true&example=page-home&state=ready&hold=reads&holdModules=true&mode=dark`
+with its own released state at 390px and 1440px. Settings uses the same controls
+with `example=page-settings&tab=categories` (or another section). Dialog pairs use
+`example=account-dialogs&state=add|backfill|account|holdings`; manual editor pairs
+use `example=manual-save&state=ready`. Reload resets every hold and fixture store.
+For nested audit/recommendation/holdings states, open the relevant production
+control before capturing; a page URL alone does not establish that coverage.
+
+Record screenshots/filmstrips of all visible phases and inspect them. Measure
+known anchors and separately check backgrounds, borders, text hierarchy, ordering,
+grouping, and action placement. CLS alone misses nonrepresentative placeholders.
+Unknown row counts and user text wrapping may legitimately change content height.
+Actual production browser checks still establish code splitting, SSR/hydration,
+and service-worker/cache behavior; fixture module holds do not prove those.

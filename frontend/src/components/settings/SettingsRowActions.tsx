@@ -5,6 +5,7 @@ import { useRef, useState } from 'react'
 import { mediaQueries } from '../../lib/media-queries'
 import { ResponsiveSlot } from '../ResponsiveSlot'
 import tableChrome from '../MantineTableChrome.module.css'
+import { settingsRowActionLayout } from './settings-row-action-layout'
 import type { ComponentType } from 'react'
 
 export type SettingsRowAction = {
@@ -36,7 +37,7 @@ export function SettingsRowActions({
       <Tooltip key={action.id} label={action.label}>
         <ActionIcon
           variant="subtle"
-          size={36}
+          size={settingsRowActionLayout.size}
           aria-label={action.label}
           onClick={action.onClick}
           disabled={action.disabled}
@@ -52,7 +53,11 @@ export function SettingsRowActions({
     )
   }
   return (
-    <Group gap={4} wrap="nowrap" className={tableChrome.actions}>
+    <Group
+      gap={settingsRowActionLayout.gap}
+      wrap="nowrap"
+      className={tableChrome.actions}
+    >
       <ResponsiveSlot compact={touch} variant="wide" breakpoint="touch">
         {actions.map(button)}
       </ResponsiveSlot>

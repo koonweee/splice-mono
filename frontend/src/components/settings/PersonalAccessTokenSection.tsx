@@ -3,7 +3,6 @@ import {
   Button,
   Code,
   Group,
-  Paper,
   Stack,
   Text,
   TextInput,
@@ -11,11 +10,6 @@ import {
 } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import {
-  AccessTokensSkeleton,
-  LoadingSkeleton,
-  RowSkeleton,
-} from '../loading/LoadingSkeleton'
 import { DataState } from '../DataState'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
@@ -33,6 +27,11 @@ import {
   getPersonalAccessTokenUsageText,
   normalizePersonalAccessTokenName,
 } from '../../lib/personal-access-tokens'
+import {
+  PersonalAccessTokenFrame,
+  TokenCardFrame,
+  TokenCardsSkeleton,
+} from './PersonalAccessTokenSection.skeleton'
 import type {
   CreatePersonalAccessTokenResponse,
   PersonalAccessToken,
@@ -195,183 +194,150 @@ export function PersonalAccessTokenSection() {
     [tokensQuery.data],
   )
 
-  if (tokensQuery.isPending) {
-    return (
-      <div data-testid="pat-section">
-        <div data-testid="pat-section-loader">
-          <LoadingSkeleton label="Loading access tokens…">
-            <AccessTokensSkeleton />
-          </LoadingSkeleton>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <Paper withBorder p="lg" radius="md" data-testid="pat-section">
-      <Stack gap="lg">
-        <Stack gap={4}>
-          <Title data-typography="sectionHeading" order={3}>
-            Personal access tokens
-          </Title>
-          <Text data-typography="metadata" c="dimmed">
-            Create tokens for REST API automation. The token is shown only once.
+    <PersonalAccessTokenFrame>
+      <Stack gap="sm">
+        <TextInput
+          label="Token name"
+          description="Leading and trailing spaces are trimmed. Up to 100 characters."
+          value={tokenName}
+          size="md"
+          disabled={createTokenMutation.isPending}
+          onChange={(event) => {
+            setTokenName(event.currentTarget.value)
+            if (createError != null) {
+              setCreateError(null)
+            }
+          }}
+          maxLength={PAT_NAME_LIMIT}
+          data-testid="pat-name-input"
+        />
+
+        <Group
+          gap="sm"
+          wrap="wrap"
+          align="flex-end"
+          data-testid="pat-form-actions"
+        >
+          <Button
+            onClick={handleCreateToken}
+            loading={createTokenMutation.isPending}
+            disabled={!canCreateToken}
+          >
+            Create token
+          </Button>
+          <Text data-typography="caption" c="dimmed">
+            Token names are limited to {PAT_NAME_LIMIT} characters.
           </Text>
-        </Stack>
+        </Group>
 
-        <Stack gap="sm">
-          <TextInput
-            label="Token name"
-            description="Leading and trailing spaces are trimmed. Up to 100 characters."
-            value={tokenName}
-            size="md"
-            disabled={createTokenMutation.isPending}
-            onChange={(event) => {
-              setTokenName(event.currentTarget.value)
-              if (createError != null) {
-                setCreateError(null)
-              }
-            }}
-            maxLength={PAT_NAME_LIMIT}
-            data-testid="pat-name-input"
-          />
-
-          <Group
-            gap="sm"
-            wrap="wrap"
-            align="flex-end"
-            data-testid="pat-form-actions"
-          >
-            <Button
-              onClick={handleCreateToken}
-              loading={createTokenMutation.isPending}
-              disabled={!canCreateToken}
-            >
-              Create token
-            </Button>
-            <Text data-typography="caption" c="dimmed">
-              Token names are limited to {PAT_NAME_LIMIT} characters.
-            </Text>
-          </Group>
-
-          {createError != null && (
-            <Alert color="red" title="Unable to create token">
-              {createError}
-            </Alert>
-          )}
-        </Stack>
-
-        {revealedToken != null && revealedTokenId != null && (
-          <Alert
-            color="blue"
-            title="New token revealed"
-            data-testid="pat-reveal-panel"
-          >
-            <Stack gap="xs">
-              <Text data-typography="bodySmall">
-                Copy this token now. You will not be able to see it again.
-              </Text>
-              <Code
-                data-testid="pat-revealed-token"
-                style={{
-                  display: 'block',
-                  overflowWrap: 'anywhere',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {revealedToken}
-              </Code>
-              <Group gap="sm" wrap="wrap">
-                <Button variant="light" onClick={handleCopyToken}>
-                  Copy token
-                </Button>
-                {clipboardFeedback != null && (
-                  <Text
-                    c={
-                      clipboardFeedback === 'Copied to clipboard.'
-                        ? 'dimmed'
-                        : 'red'
-                    }
-                  >
-                    {clipboardFeedback}
-                  </Text>
-                )}
-              </Group>
-            </Stack>
+        {createError != null && (
+          <Alert color="red" title="Unable to create token">
+            {createError}
           </Alert>
         )}
-
-        <Stack gap="sm">
-          <Title data-typography="sectionHeading" order={4}>
-            Active tokens
-          </Title>
-
-          <DataState
-            hasData={activeTokens.length > 0}
-            isError={tokensQuery.isError}
-            isFetching={tokensQuery.isFetching}
-            onRetry={() => {
-              void tokensQuery.refetch()
-            }}
-            errorTitle="Failed to load active tokens"
-            errorMessage={getErrorMessage(
-              tokensQuery.error,
-              'Unable to load personal access tokens.',
-            )}
-            emptyMessage="No active personal access tokens."
-            loadingFallback={<RowSkeleton rows={2} />}
-          >
-            <Stack gap="sm">
-              {activeTokens.map((token) => (
-                <Paper
-                  key={token.id}
-                  withBorder
-                  p="sm"
-                  radius="md"
-                  data-testid={`pat-token-row-${token.id}`}
-                >
-                  <Stack gap={8}>
-                    <Group
-                      justify="space-between"
-                      align="flex-start"
-                      wrap="wrap"
-                      gap="sm"
-                    >
-                      <Stack gap={2}>
-                        <Text data-typography="rowTitle">{token.name}</Text>
-                        <Text data-typography="metadata" c="dimmed">
-                          {token.tokenPreview}
-                        </Text>
-                        <Text data-typography="metadata" c="dimmed">
-                          {getPersonalAccessTokenUsageText(token.lastUsedAt)}
-                        </Text>
-                      </Stack>
-                      <Button
-                        variant="light"
-                        color="red"
-                        size="xs"
-                        onClick={() => handleRevokeToken(token)}
-                      >
-                        Revoke {token.name}
-                      </Button>
-                    </Group>
-
-                    {revokeErrors[token.id] != null && (
-                      <Text
-                        c="red"
-                        data-testid={`pat-revoke-error-${token.id}`}
-                      >
-                        {revokeErrors[token.id]}
-                      </Text>
-                    )}
-                  </Stack>
-                </Paper>
-              ))}
-            </Stack>
-          </DataState>
-        </Stack>
       </Stack>
-    </Paper>
+
+      {revealedToken != null && revealedTokenId != null && (
+        <Alert
+          color="blue"
+          title="New token revealed"
+          data-testid="pat-reveal-panel"
+        >
+          <Stack gap="xs">
+            <Text data-typography="bodySmall">
+              Copy this token now. You will not be able to see it again.
+            </Text>
+            <Code
+              data-testid="pat-revealed-token"
+              style={{
+                display: 'block',
+                overflowWrap: 'anywhere',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {revealedToken}
+            </Code>
+            <Group gap="sm" wrap="wrap">
+              <Button variant="light" onClick={handleCopyToken}>
+                Copy token
+              </Button>
+              {clipboardFeedback != null && (
+                <Text
+                  c={
+                    clipboardFeedback === 'Copied to clipboard.'
+                      ? 'dimmed'
+                      : 'red'
+                  }
+                >
+                  {clipboardFeedback}
+                </Text>
+              )}
+            </Group>
+          </Stack>
+        </Alert>
+      )}
+
+      <Stack gap="sm">
+        <Title data-typography="sectionHeading" order={4}>
+          Active tokens
+        </Title>
+
+        <DataState
+          hasData={activeTokens.length > 0}
+          isError={tokensQuery.isError}
+          isFetching={tokensQuery.isFetching}
+          onRetry={() => {
+            void tokensQuery.refetch()
+          }}
+          errorTitle="Failed to load active tokens"
+          errorMessage={getErrorMessage(
+            tokensQuery.error,
+            'Unable to load personal access tokens.',
+          )}
+          emptyMessage="No active personal access tokens."
+          isLoading={tokensQuery.isPending}
+          loadingMessage="Loading access tokens…"
+          loadingFallback={<TokenCardsSkeleton />}
+        >
+          <Stack gap="sm">
+            {activeTokens.map((token) => (
+              <TokenCardFrame
+                key={token.id}
+                testId={`pat-token-row-${token.id}`}
+                details={
+                  <>
+                    <Text data-typography="rowTitle">{token.name}</Text>
+                    <Text data-typography="metadata" c="dimmed">
+                      {token.tokenPreview}
+                    </Text>
+                    <Text data-typography="metadata" c="dimmed">
+                      {getPersonalAccessTokenUsageText(token.lastUsedAt)}
+                    </Text>
+                  </>
+                }
+                action={
+                  <Button
+                    variant="light"
+                    color="red"
+                    size="xs"
+                    onClick={() => handleRevokeToken(token)}
+                  >
+                    Revoke {token.name}
+                  </Button>
+                }
+              >
+                {revokeErrors[token.id] != null && (
+                  <Text c="red" data-testid={`pat-revoke-error-${token.id}`}>
+                    {revokeErrors[token.id]}
+                  </Text>
+                )}
+              </TokenCardFrame>
+            ))}
+          </Stack>
+        </DataState>
+      </Stack>
+    </PersonalAccessTokenFrame>
   )
 }

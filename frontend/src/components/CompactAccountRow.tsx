@@ -10,8 +10,7 @@ import {
   resolveBalance,
 } from '../lib/format'
 import { ChangePercentPopover } from './ChangePercentPopover'
-import { InteractiveRow } from './InteractiveRow'
-import styles from './CompactAccountRow.module.css'
+import { CompactAccountRowFrame } from './CompactAccountRowFrame'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
 const STALE_THRESHOLD_DAYS = 7
@@ -43,100 +42,102 @@ export function CompactAccountRow({
   const stale = isSyncStale(account.syncedAt)
 
   return (
-    <InteractiveRow
-      actionLabel={`Open account details for ${account.customName ?? account.name}`}
-      className={styles.row}
+    <CompactAccountRowFrame
+      label={`Open account details for ${account.customName ?? account.name}`}
       onActivate={onClick}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <Group gap={6} wrap="nowrap">
-          <Text data-typography="rowTitleSmall" truncate>
-            {account.customName ?? account.name}
+      details={
+        <>
+          <Group gap={6} wrap="nowrap">
+            <Text data-typography="rowTitleSmall" truncate>
+              {account.customName ?? account.name}
+            </Text>
+            {stale && (
+              <Tooltip
+                label={`Last synced ${formatRelativeTime(new Date(account.syncedAt ?? ''))}`}
+                withArrow
+              >
+                <AlertTriangle
+                  size={14}
+                  color="var(--mantine-color-yellow-6)"
+                  style={{ flexShrink: 0 }}
+                />
+              </Tooltip>
+            )}
+          </Group>
+          <Text data-typography="caption" c="dimmed" tt="capitalize" truncate>
+            {account.institutionName
+              ? `${account.institutionName} · ${formatAccountType(account.subType || account.type)}`
+              : formatAccountType(account.subType || account.type)}
           </Text>
-          {stale && (
-            <Tooltip
-              label={`Last synced ${formatRelativeTime(new Date(account.syncedAt ?? ''))}`}
-              withArrow
-            >
-              <AlertTriangle
-                size={14}
-                color="var(--mantine-color-yellow-6)"
-                style={{ flexShrink: 0 }}
-              />
-            </Tooltip>
-          )}
-        </Group>
-        <Text data-typography="caption" c="dimmed" tt="capitalize" truncate>
-          {account.institutionName
-            ? `${account.institutionName} · ${formatAccountType(account.subType || account.type)}`
-            : formatAccountType(account.subType || account.type)}
-        </Text>
-      </div>
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <Text
-          data-typography="amountSmall"
-          data-testid="account-primary-balance"
-        >
-          {balancesHidden
-            ? HIDDEN_BALANCE_PLACEHOLDER
-            : formatMoneyWithSign({ value: primaryBalance })}
-        </Text>
-        {!overview && originalBalance && (
+        </>
+      }
+      balance={
+        <>
           <Text
-            data-typography="numericCaption"
-            c="dimmed"
-            data-testid="account-original-balance"
+            data-typography="amountSmall"
+            data-testid="account-primary-balance"
           >
             {balancesHidden
               ? HIDDEN_BALANCE_PLACEHOLDER
-              : formatMoneyWithSign({
-                  value: originalBalance,
-                  appendCurrency: true,
-                })}
+              : formatMoneyWithSign({ value: primaryBalance })}
           </Text>
-        )}
-        {!overview && (
-          <Text
-            data-typography="caption"
-            component="div"
-            aria-busy={comparisonLoading}
-            onPointerDown={(event) => event.stopPropagation()}
-          >
-            {comparisonLoading ? (
-              <div
-                aria-hidden="true"
-                style={{
-                  height: 'var(--mantine-line-height-xs)',
-                  minHeight:
-                    'calc(var(--mantine-font-size-xs) * var(--mantine-line-height))',
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  alignItems: 'center',
-                }}
-              >
-                <Skeleton h={10} w={48} />
-              </div>
-            ) : (
-              <ChangePercentPopover
-                textRole="caption"
-                color={getChangeColorMantine(
-                  isLiability,
-                  account.changePercent,
-                )}
-                changeAmount={account.changeAmount}
-                changePercent={account.changePercent}
-                hidden={balancesHidden}
-                testId="account-change-percent"
-              />
-            )}
-          </Text>
-        )}
-        {!overview && !originalBalance && (
-          <Text data-typography="caption" style={{ visibility: 'hidden' }}>
-            {'\u00A0'}
-          </Text>
-        )}
-      </div>
-    </InteractiveRow>
+          {!overview && originalBalance && (
+            <Text
+              data-typography="numericCaption"
+              c="dimmed"
+              data-testid="account-original-balance"
+            >
+              {balancesHidden
+                ? HIDDEN_BALANCE_PLACEHOLDER
+                : formatMoneyWithSign({
+                    value: originalBalance,
+                    appendCurrency: true,
+                  })}
+            </Text>
+          )}
+          {!overview && (
+            <Text
+              data-typography="caption"
+              component="div"
+              aria-busy={comparisonLoading}
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              {comparisonLoading ? (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    height: 'var(--mantine-line-height-xs)',
+                    minHeight:
+                      'calc(var(--mantine-font-size-xs) * var(--mantine-line-height))',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Skeleton h={10} w={48} />
+                </div>
+              ) : (
+                <ChangePercentPopover
+                  textRole="caption"
+                  color={getChangeColorMantine(
+                    isLiability,
+                    account.changePercent,
+                  )}
+                  changeAmount={account.changeAmount}
+                  changePercent={account.changePercent}
+                  hidden={balancesHidden}
+                  testId="account-change-percent"
+                />
+              )}
+            </Text>
+          )}
+          {!overview && !originalBalance && (
+            <Text data-typography="caption" style={{ visibility: 'hidden' }}>
+              {'\u00A0'}
+            </Text>
+          )}
+        </>
+      }
+    />
   )
 }

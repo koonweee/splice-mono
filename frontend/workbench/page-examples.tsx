@@ -19,10 +19,11 @@ import { Route as AccountsRoute } from '../src/routes/_authed/accounts'
 import { Route as TransactionsRoute } from '../src/routes/_authed/transactions'
 import { Route as AnalysisRoute } from '../src/routes/_authed/analysis'
 import { Route as SettingsRoute } from '../src/routes/_authed/settings'
-import { RoutePendingSkeleton } from '../src/components/loading/RoutePendingSkeleton'
+import { RoutePendingSkeleton } from '../src/components/pages/RoutePendingSkeleton'
 import { LaunchScreen } from '../src/components/loading/LaunchScreen'
 import { validateSettingsSearch } from '../src/lib/route-search'
 import { invalidateFamilies } from '../src/lib/query-invalidation'
+import { waitForRoute } from './loading-gates'
 import { simulateLogout } from './auth-boundary'
 import { fixturePresentation } from './runtime-boundaries'
 import { setTransactionRefreshFailure } from './fixture-api'
@@ -107,6 +108,7 @@ function Page({ path }: { path: string }) {
         id: routePath,
         path: routePath,
         getParentRoute: () => authed,
+        beforeLoad: () => waitForRoute(),
       })
       return route
     }
@@ -188,6 +190,19 @@ export const pageExamples = [
       'LazyChart',
       'RoutePendingSkeleton',
       'AppThemeProvider',
+      'AccountSectionSkeleton',
+      'AccountSection',
+      'AccountGroupHeader',
+      'AccountSectionHeading',
+      'AccountSectionPanel',
+      'HomeChartSkeleton',
+      'Chart',
+      'CompactAccountRowSkeleton',
+      'CompactAccountRow',
+      'NetWorthCardFrame',
+      'HomeSkeleton',
+      'HomePageFrame',
+      'CompactAccountRowFrame',
     ],
   },
   {
@@ -195,7 +210,18 @@ export const pageExamples = [
     title: 'Accounts page',
     component: (_props: ExampleProps) => <Page path="/accounts" />,
     states: ['ready', 'empty', 'long-content'],
-    components: ['AccountsPage', 'PageLayout', 'PageActions'],
+    components: [
+      'AccountsPage',
+      'PageLayout',
+      'PageActions',
+      'AccountRowSkeleton',
+      'AccountRow',
+      'AccountRowFrame',
+      'AccountsSkeleton',
+      'InstitutionAccountsFrame',
+      'InstitutionHeadingFrame',
+      'AccountsPageFrame',
+    ],
   },
   {
     id: 'page-transactions',
@@ -209,6 +235,15 @@ export const pageExamples = [
       'TransactionsMobileList',
       'TransactionBulkEditToolbar',
       'ManualTransactionModal',
+      'TransactionsSkeleton',
+      'TransactionsTableSkeleton',
+      'TransactionMobileRowSkeleton',
+      'TransactionsMobileListSkeleton',
+      'TransactionsPageFrame',
+      'TransactionsPageSkeleton',
+      'TransactionsToolbarFrame',
+      'CategoryTransactionsModal',
+      'CategorizationRulesSection',
     ],
   },
   {
@@ -222,6 +257,20 @@ export const pageExamples = [
       'AnalysisAuditHeader',
       'AnalysisAuditDrawer',
       'CategoryTransactionsModal',
+      'AnalysisAuditCardFrame',
+      'AnalysisAuditSkeleton',
+      'AnalysisFlowBody',
+      'AnalysisFlowFrame',
+      'AnalysisSummaryFrame',
+      'CashflowFrame',
+      'AnalysisSkeleton',
+      'CashflowSkeleton',
+      'AnalysisPageFrame',
+      'AnalysisDonutSkeleton',
+      'AnalysisFlowHeading',
+      'TransactionsSkeleton',
+      'TransactionsTable',
+      'CategorizationRulesSection',
     ],
   },
   {
@@ -254,6 +303,32 @@ export const pageExamples = [
       'CustomCategoriesSection',
       'PersonalAccessTokenSection',
       'RecurringManualTransactionsSection',
+      'GeneralSettingsSkeleton',
+      'NotificationSettingsSkeleton',
+      'SettingsPageSkeleton',
+      'GeneralSettingsFrame',
+      'NotificationSettingsFrame',
+      'SettingsPageFrame',
+      'AnalysisRulesSkeleton',
+      'CategorizationRulesSkeleton',
+      'RecommendationCardFrame',
+      'RecommendationsSkeleton',
+      'CategoriesTableSkeleton',
+      'AccessTokensSkeleton',
+      'PersonalAccessTokenFrame',
+      'TokenCardFrame',
+      'TokenCardsSkeleton',
+      'RecurringTransactionsSkeleton',
+      'SettingsCompactRowFrame',
+      'SettingsFiltersFrame',
+      'SettingsSectionSkeleton',
+      'SettingsListPlaceholder',
+      'SettingsTableFrame',
+      'TransactionsSkeleton',
+      'TransactionsTable',
+      'CategoryTransactionsModal',
+      'SettingsSectionActions',
+      'SettingsSectionFilters',
     ],
   },
 ]

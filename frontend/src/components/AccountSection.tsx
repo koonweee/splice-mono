@@ -1,6 +1,5 @@
-import { Collapse, Divider, Group, Paper, Stack, Text } from '@mantine/core'
+import { Collapse, Divider, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { AccountType } from '../api/models'
 import { compareIntegers, ratioPercent, signedMinorUnits } from '../lib/money'
 import {
@@ -8,10 +7,13 @@ import {
   formatMinorMoneyString,
 } from '../lib/format'
 import { PercentAmountPopover } from './PercentAmountPopover'
-import toggleStyles from './SectionToggle.module.css'
 import { CompactAccountRow } from './CompactAccountRow'
-import { Pressable } from './Pressable'
 import styles from './AccountSection.module.css'
+import {
+  AccountGroupHeader,
+  AccountSectionHeading,
+  AccountSectionPanel,
+} from './AccountSectionFrame'
 import type { AccountSummaryData } from '../lib/balance-utils'
 
 const ASSET_TYPE_LABELS: Record<string, string> = {
@@ -104,46 +106,23 @@ export function AccountSection({
 
   return (
     <>
-      <Pressable
-        className={toggleStyles.toggle}
-        aria-expanded={opened}
-        aria-label={`${opened ? 'Collapse' : 'Expand'} ${title}`}
-        onClick={toggle}
-        style={{
-          borderRadius: 'var(--mantine-radius-sm)',
-          marginBottom: 'var(--mantine-spacing-xs)',
-        }}
-      >
-        <Group justify="space-between" px={4} py={2}>
-          <Text data-typography="sectionHeading">{title}</Text>
-          {opened ? (
-            <IconChevronUp size={16} className={toggleStyles.chevron} />
-          ) : (
-            <IconChevronDown size={16} className={toggleStyles.chevron} />
-          )}
-        </Group>
-      </Pressable>
+      <AccountSectionHeading title={title} opened={opened} onToggle={toggle} />
       <Collapse in={opened}>
         {accounts.length === 0 ? (
           <Text data-typography="metadata" c="dimmed">
             No {title.toLowerCase()}
           </Text>
         ) : (
-          <Paper withBorder p={0} className={styles.panel}>
-            <Stack gap={0}>
-              {groups
-                ? groups.map((group, groupIndex) => (
-                    <div key={group.label}>
-                      {groupIndex > 0 && (
-                        <Divider className={styles.groupDivider} />
-                      )}
-                      <Group
-                        className={styles.groupHeader}
-                        justify="space-between"
-                      >
-                        <Text data-typography="label" c="dimmed">
-                          {group.label}
-                        </Text>
+          <AccountSectionPanel>
+            {groups
+              ? groups.map((group, groupIndex) => (
+                  <div key={group.label}>
+                    {groupIndex > 0 && (
+                      <Divider className={styles.groupDivider} />
+                    )}
+                    <AccountGroupHeader
+                      label={group.label}
+                      total={
                         <PercentAmountPopover
                           percent={`${group.percent.toFixed(1)}%`}
                           amount={
@@ -155,42 +134,39 @@ export function AccountSection({
                           color="dimmed"
                           textRole="captionStrong"
                         />
-                      </Group>
-                      <Divider className={styles.groupHeaderDivider} />
-                      {group.accounts.map((account, accountIndex) => (
-                        <div key={account.id}>
-                          {accountIndex > 0 && (
-                            <Divider className={styles.accountDivider} />
-                          )}
-                          <CompactAccountRow
-                            overview
-                            account={account}
-                            balancesHidden={balancesHidden}
-                            comparisonLoading={comparisonLoading}
-                            isLiability={isLiability}
-                            onClick={() => onAccountClick(account)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  ))
-                : accounts.map((account, index) => (
-                    <div key={account.id}>
-                      {index > 0 && (
-                        <Divider className={styles.accountDivider} />
-                      )}
-                      <CompactAccountRow
-                        overview
-                        account={account}
-                        balancesHidden={balancesHidden}
-                        comparisonLoading={comparisonLoading}
-                        isLiability={isLiability}
-                        onClick={() => onAccountClick(account)}
-                      />
-                    </div>
-                  ))}
-            </Stack>
-          </Paper>
+                      }
+                    />
+                    {group.accounts.map((account, accountIndex) => (
+                      <div key={account.id}>
+                        {accountIndex > 0 && (
+                          <Divider className={styles.accountDivider} />
+                        )}
+                        <CompactAccountRow
+                          overview
+                          account={account}
+                          balancesHidden={balancesHidden}
+                          comparisonLoading={comparisonLoading}
+                          isLiability={isLiability}
+                          onClick={() => onAccountClick(account)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ))
+              : accounts.map((account, index) => (
+                  <div key={account.id}>
+                    {index > 0 && <Divider className={styles.accountDivider} />}
+                    <CompactAccountRow
+                      overview
+                      account={account}
+                      balancesHidden={balancesHidden}
+                      comparisonLoading={comparisonLoading}
+                      isLiability={isLiability}
+                      onClick={() => onAccountClick(account)}
+                    />
+                  </div>
+                ))}
+          </AccountSectionPanel>
         )}
       </Collapse>
     </>

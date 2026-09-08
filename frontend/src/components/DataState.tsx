@@ -1,6 +1,6 @@
 import { Alert, Button, Stack, Text, VisuallyHidden } from '@mantine/core'
 import { useEffect, useState } from 'react'
-import { LoadingSkeleton, RowSkeleton } from './loading/LoadingSkeleton'
+import { LoadingSkeleton } from './loading/LoadingSkeleton'
 import styles from './DataState.module.css'
 import type { ReactNode } from 'react'
 
@@ -15,7 +15,7 @@ interface DataStateProps {
   errorMessage?: string
   emptyMessage?: string
   onRetry?: () => void
-  loadingFallback?: ReactNode
+  loadingFallback: ReactNode
 }
 
 /** Retain matching results and their geometry during refresh, including failure. */
@@ -30,7 +30,7 @@ export function DataState({
   errorMessage = 'Unable to load results.',
   emptyMessage = 'No results found.',
   onRetry,
-  loadingFallback = <RowSkeleton />,
+  loadingFallback,
 }: DataStateProps) {
   const [dismissed, setDismissed] = useState(false)
   useEffect(() => {
@@ -83,7 +83,7 @@ export function DataState({
     )
   return (
     <div className={styles.emptyFrame}>
-      <div aria-hidden="true" className={styles.shape}>
+      <div aria-hidden="true" inert className={styles.shape}>
         {loadingFallback}
       </div>
       <div className={styles.message}>

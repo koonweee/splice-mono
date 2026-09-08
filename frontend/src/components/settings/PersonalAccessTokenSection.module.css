@@ -1,0 +1,17 @@
+.tokenSummary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--mantine-spacing-sm);
+}
+.tokenAction {
+  max-width: 100%;
+}
+@media (--compact-layout) {
+  .tokenSummary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tokenAction :global(.mantine-Button-root) {
+    min-height: var(--splice-size-touch-target);
+  }
+}

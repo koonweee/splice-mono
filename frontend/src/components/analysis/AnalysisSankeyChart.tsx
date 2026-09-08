@@ -1,9 +1,10 @@
-import { Box, Group, Paper, Progress, Stack, Text } from '@mantine/core'
+import { Box, Group, Progress, Stack, Text } from '@mantine/core'
 import { Sankey, Tooltip } from 'recharts'
 import { parseSignedMinorUnits, ratioPercent } from '../../lib/money'
 import { formatPrimaryCategory } from '../../lib/format'
 import { getDisplayCategoryColor } from '../../lib/category-colors'
 import { Pressable, usePressFeedback } from '../Pressable'
+import { CashflowFrame, cashflowCanvasSize } from './AnalysisFrames'
 import {
   buildAnalysisSankeyData,
   formatSankeyAmount,
@@ -245,98 +246,79 @@ export function AnalysisSankeyChart({
   showTotals = true,
 }: AnalysisSankeyChartProps) {
   const data = buildAnalysisSankeyData(analysis)
-  const height = Math.max(
-    360,
-    (analysis.inflows.length + analysis.outflows.length + 2) * 42,
+  const { width: chartWidth, height } = cashflowCanvasSize(
+    analysis.inflows.length,
+    analysis.outflows.length,
   )
-  const chartWidth = 900
   const directions: Array<FlowDirection> = ['outflow', 'inflow']
 
   return (
-    <Paper
-      p="sm"
-      radius="md"
-      withBorder
-      className={styles.sankeyCard}
-      data-testid="analysis-sankey-chart"
-    >
-      <Stack gap="sm">
-        <Group justify="space-between" gap="sm">
-          <Text data-typography="sectionHeading">Cashflow</Text>
-          {showTotals && (
-            <Text data-typography="amountSmall" c="dimmed">
-              {formatSankeyAmount(analysis.totalInflow, analysis.currency)} in /{' '}
-              {formatSankeyAmount(analysis.totalOutflow, analysis.currency)} out
-            </Text>
-          )}
-        </Group>
-        {
-          <Box className={styles.chartViewport}>
-            <Box className={styles.chartCanvas} h={height} w={chartWidth}>
-              <Sankey
-                width={chartWidth}
-                height={height}
-                data={data}
-                node={(props) => (
-                  <SankeyNodeShape
-                    nodeProps={props}
-                    onCategoryClick={onCategoryClick}
-                  />
-                )}
-                link={(props) => (
-                  <SankeyLinkShape
-                    linkProps={props}
-                    onCategoryClick={onCategoryClick}
-                  />
-                )}
-                nodePadding={18}
-                nodeWidth={12}
-                margin={{ top: 16, right: 190, bottom: 16, left: 190 }}
-                sort={false}
-              >
-                <Tooltip
-                  formatter={(_value, _name, item) => {
-                    const amount = item.payload?.exactAmount
-                    return typeof amount === 'string'
-                      ? formatSankeyAmount(amount, analysis.currency)
-                      : ''
-                  }}
-                />
-              </Sankey>
-            </Box>
-          </Box>
-        }
-        <Box
-          className={styles.drilldownList}
-          role="region"
-          aria-label="Cashflow categories"
-        >
-          <div className={styles.drilldownGrid}>
-            {directions.map((direction) => {
-              const categories =
-                direction === 'inflow' ? analysis.inflows : analysis.outflows
-              return (
-                <Box key={direction} data-direction={direction}>
-                  <Text data-typography="subsectionHeading" mb={4}>
-                    {direction === 'inflow' ? 'Inflows' : 'Outflows'}
-                  </Text>
-                  <CategoryDrilldownList
-                    categories={categories}
-                    currency={analysis.currency}
-                    direction={direction}
-                    onCategoryClick={onCategoryClick}
-                  />
-                  {categories.length === 0 && (
-                    <Text data-typography="metadata" c="dimmed">
-                      No {direction}s
-                    </Text>
-                  )}
-                </Box>
-              )
-            })}
-          </div>
+    <CashflowFrame
+      totals={
+        showTotals && (
+          <Text data-typography="amountSmall" c="dimmed">
+            {formatSankeyAmount(analysis.totalInflow, analysis.currency)} in /{' '}
+            {formatSankeyAmount(analysis.totalOutflow, analysis.currency)} out
+          </Text>
+        )
+      }
+      chart={
+        <Box className={styles.chartCanvas} h={height} w={chartWidth}>
+          <Sankey
+            width={chartWidth}
+            height={height}
+            data={data}
+            node={(props) => (
+              <SankeyNodeShape
+                nodeProps={props}
+                onCategoryClick={onCategoryClick}
+              />
+            )}
+            link={(props) => (
+              <SankeyLinkShape
+                linkProps={props}
+                onCategoryClick={onCategoryClick}
+              />
+            )}
+            nodePadding={18}
+            nodeWidth={12}
+            margin={{ top: 16, right: 190, bottom: 16, left: 190 }}
+            sort={false}
+          >
+            <Tooltip
+              formatter={(_value, _name, item) => {
+                const amount = item.payload?.exactAmount
+                return typeof amount === 'string'
+                  ? formatSankeyAmount(amount, analysis.currency)
+                  : ''
+              }}
+            />
+          </Sankey>
         </Box>
-      </Stack>
-    </Paper>
+      }
+    >
+      {directions.map((direction) => {
+        const categories =
+          direction === 'inflow' ? analysis.inflows : analysis.outflows
+        return (
+          <Box key={direction} data-direction={direction}>
+            <Text data-typography="subsectionHeading" mb={4}>
+              {direction === 'inflow' ? 'Inflows' : 'Outflows'}
+            </Text>
+            <CategoryDrilldownList
+              categories={categories}
+              currency={analysis.currency}
+              direction={direction}
+              onCategoryClick={onCategoryClick}
+            />
+            {categories.length === 0 && (
+              <Text data-typography="metadata" c="dimmed">
+                No {direction}s
+              </Text>
+            )}
+          </Box>
+        )
+      })}
+    </CashflowFrame>
   )
 }

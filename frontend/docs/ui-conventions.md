@@ -221,12 +221,35 @@ labels, and dialogs as well as primary numbers.
 
 ## Loading, preparation and stable layouts
 
-Prefer the shapes in `components/loading/LoadingSkeleton.tsx` for read-only
-initial loads. Pass the actual shape to `DataState.loadingFallback`; pass a
-`LoadingSkeleton` boundary with the same shape to `DeferredFeature.fallback` for
-module loading. The two phases must share geometry. Dialog code uses an overlay
-shell, so opening an editor must never insert a loading form into the page below
-its trigger. Keep page headings and filters outside data boundaries.
+Colocate every content skeleton with the component that owns its final layout:
+inline for a small loading variant, or in an adjacent `<Owner>.skeleton.tsx`.
+Share the actual structural frame, column definitions, slots, and responsive CSS
+between loading and loaded states. Moving duplicated markup next to its owner
+is not sufficient. Shared loading primitives own only neutral shapes and status
+semantics; they must not import page or domain styling.
+
+Render known headings, explanatory copy, labels, and controls in their final
+positions immediately; disable unavailable actions. Replace only unknown content.
+Preserve backgrounds, borders, spacing, grouping, ordering, and known conditional
+slots. A filled placeholder becoming a transparent chart is visual churn even
+when CLS is zero. Unknown counts and variable user text need not be predicted;
+do not force arbitrary panel heights to conceal intrinsic content changes.
+
+Pass an explicit owner fallback to `DataState`, `MobileTableList`,
+`DeferredFeature`, and `DeferredOverlay`. An explicit `null` is appropriate only
+for an intentionally neutral status or a ready-only nested boundary, with its
+reason documented at the call site. Code-loading and data-loading must compose
+the same lightweight frame; avoid importing heavy feature implementations through
+fallbacks or barrels. Keep page headings, navigation, filters, and action targets
+outside data boundaries. Overlay loading belongs inside the final closeable shell.
+
+Before changing UI, locate its loading owner in
+[the ownership inventory](loading-state-ownership.md). Update both presentations
+and their paired real-component workbench states in the same change. Inspect
+intermediate module/data loading, not just endpoints. When browser validation is
+required, compare visual fidelity as well as displacement and record actual
+states/viewports inspected. Document concrete exceptions in the change description;
+a green metric or catalog registration alone is not visual verification.
 
 Skeleton shapes are decorative, noninteractive and hidden from assistive
 technology. Their boundary exposes one concise loading announcement and

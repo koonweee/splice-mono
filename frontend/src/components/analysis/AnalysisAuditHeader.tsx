@@ -13,7 +13,12 @@ export function AnalysisAuditHeader({
   lookaroundDays?: number
 }) {
   return (
-    <Group justify="space-between" align="flex-start" gap="sm">
+    <Group
+      className={styles.header}
+      justify="space-between"
+      align="flex-start"
+      gap="sm"
+    >
       <Box style={{ minWidth: 0 }}>
         <Text data-typography="metadata" c="dimmed">
           {formatDateRangeLabel([startDate, endDate])}

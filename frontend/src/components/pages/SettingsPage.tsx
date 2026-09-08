@@ -1,6 +1,5 @@
 import {
   Alert,
-  Box,
   Button,
   Group,
   Paper,
@@ -18,18 +17,15 @@ import {
   prepareSettingsCode,
   settingsFeatureLoaders,
 } from '../../lib/feature-loaders'
-import {
-  AccessTokensSkeleton,
-  LoadingSkeleton,
-  SettingsSkeleton,
-} from '../loading/LoadingSkeleton'
+import { LoadingSkeleton } from '../loading/LoadingSkeleton'
+import { AccessTokensSkeleton } from '../settings/PersonalAccessTokenSection.skeleton'
+import { SettingsSectionSkeleton } from '../settings/SettingsSection.skeleton'
 import { useSettingsMutation } from '../../hooks/useSettingsMutation'
 import { useCurrentUser } from '../../lib/session'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { DeferredFeature } from '../DeferredFeature'
 import { getUserControllerMeQueryOptions } from '../../api/clients/spliceAPI'
 import { PageLayout } from '../PageLayout'
-import { PageNavigation } from '../PageNavigation'
 import {
   appearanceEqual,
   applyAppearance,
@@ -44,6 +40,11 @@ import {
   loadCurrentDeviceNotificationState,
 } from '../../lib/notifications/browser-push'
 import { useAppTransitionGuard } from '../../lib/pwa/app-transition'
+import {
+  GeneralSettingsFrame,
+  NotificationSettingsFrame,
+  SettingsPageFrame,
+} from './SettingsPageFrame'
 import styles from './SettingsPage.module.css'
 import type { NotificationSupportStatus } from '../../lib/notifications/browser-push'
 import type { AppearancePreference } from '../../lib/design-system/appearance'
@@ -542,11 +543,6 @@ export function SettingsPage({
     // Token inventory is refreshed only by selecting Access, never by speculation.
     if (nextTab !== 'access') void loadSettingsSection(queryClient, nextTab)
   }
-  const tabIntent = (nextTab: SettingsTab) => ({
-    onPointerEnter: () => prepareTab(nextTab),
-    onFocus: () => prepareTab(nextTab),
-    onTouchStart: () => prepareTab(nextTab),
-  })
 
   const handleTabChange = (value: string | null) => {
     const nextTab = (value ?? 'general') as SettingsTab
@@ -554,16 +550,6 @@ export function SettingsPage({
     setSelectedTab(nextTab)
 
     onTabChange?.(nextTab)
-  }
-
-  if (isLoading) {
-    return (
-      <PageLayout title="Settings">
-        <LoadingSkeleton label="Loading settings…">
-          <SettingsSkeleton />
-        </LoadingSkeleton>
-      </PageLayout>
-    )
   }
 
   if (error && !user) {
@@ -577,382 +563,333 @@ export function SettingsPage({
   }
 
   return (
-    <Box className={styles.settingsPage}>
-      <Tabs
-        className={styles.settingsTabs}
-        classNames={{ panel: styles.settingsPanel }}
-        value={selectedTab}
-        onChange={handleTabChange}
-        keepMounted={false}
-      >
-        <PageLayout
-          title="Settings"
-          scroll="content"
-          navigation={
-            <PageNavigation
-              label="Settings section"
-              value={selectedTab}
-              onChange={handleTabChange}
-              items={[
-                { value: 'general', label: 'General' },
-                { value: 'notifications', label: 'Notifications' },
-                { value: 'access', label: 'Access' },
-                { value: 'categories', label: 'Categories' },
-                { value: 'analysis', label: 'Analysis' },
-                { value: 'categorization', label: 'Categorization' },
-                { value: 'recurring', label: 'Recurring' },
-              ]}
-            >
-              <div className={styles.settingsTabScroller}>
-                <Tabs.List ref={tabListRef} className={styles.settingsTabList}>
-                  <Tabs.Tab value="general" {...tabIntent('general')}>
-                    General
-                  </Tabs.Tab>
-                  <Tabs.Tab
-                    value="notifications"
-                    {...tabIntent('notifications')}
-                  >
-                    Notifications
-                  </Tabs.Tab>
-                  <Tabs.Tab value="access" {...tabIntent('access')}>
-                    Access
-                  </Tabs.Tab>
-                  <Tabs.Tab value="categories" {...tabIntent('categories')}>
-                    Categories
-                  </Tabs.Tab>
-                  <Tabs.Tab value="analysis" {...tabIntent('analysis')}>
-                    Analysis
-                  </Tabs.Tab>
-                  <Tabs.Tab
-                    value="categorization"
-                    {...tabIntent('categorization')}
-                  >
-                    Categorization
-                  </Tabs.Tab>
-                  <Tabs.Tab value="recurring" {...tabIntent('recurring')}>
-                    Recurring
-                  </Tabs.Tab>
-                </Tabs.List>
-              </div>
-            </PageNavigation>
+    <SettingsPageFrame
+      tab={selectedTab}
+      onChange={handleTabChange}
+      onPrepare={prepareTab}
+      tabListRef={tabListRef}
+    >
+      <Tabs.Panel value="general">
+        <GeneralSettingsFrame
+          appearance={
+            <>
+              <AppearanceControl
+                withHeading
+                resetVersion={appearanceReset}
+                value={appearance}
+                onChange={handleAppearanceSelect}
+                disabled={isLoading || updateSettingsMutation.isPending}
+                onValidityChange={setAppearanceValid}
+              />
+            </>
+          }
+          currency={
+            <>
+              <Title data-typography="sectionHeading" order={4} mb="xs">
+                Display currency
+              </Title>
+              <Select
+                value={isLoading ? null : currency}
+                disabled={isLoading}
+                onChange={(value) => value && setCurrency(value)}
+                data={CURRENCY_OPTIONS}
+                searchable
+                size="md"
+                placeholder="Select currency"
+                aria-label="Display currency"
+              />
+              <Text data-typography="metadata" c="dimmed" mt={4}>
+                All balances and amounts use this currency.
+              </Text>
+            </>
+          }
+          timezone={
+            <>
+              <Group justify="space-between" gap="xs" mb={4}>
+                <Title data-typography="sectionHeading" order={4}>
+                  Timezone
+                </Title>
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={handleSetBrowserTimezone}
+                  disabled={isLoading || timezone === browserTimezone}
+                >
+                  Use browser
+                </Button>
+              </Group>
+              <Select
+                value={isLoading ? null : timezone}
+                disabled={isLoading}
+                onChange={(value) => value && setTimezone(value)}
+                data={timezoneOptions}
+                searchable
+                size="md"
+                placeholder="Select timezone"
+                aria-label="Timezone"
+              />
+              <Text data-typography="metadata" c="dimmed" mt={4}>
+                Dates and times use this timezone.
+              </Text>
+              {browserTimezone && browserTimezone !== timezone && (
+                <Text data-typography="caption" c="dimmed" mt="xs">
+                  Detected: {browserTimezone}
+                </Text>
+              )}
+            </>
+          }
+          preferences={
+            <>
+              <Switch
+                label="Hide zero balances on Home"
+                disabled={isLoading || updateSettingsMutation.isPending}
+                checked={hideZeroBalanceAccounts}
+                onChange={(event) =>
+                  setHideZeroBalanceAccounts(event.currentTarget.checked)
+                }
+              />
+
+              <Switch
+                label="Use monospace font for amounts"
+                checked={appearance.monospaceAmounts ?? false}
+                disabled={isLoading || updateSettingsMutation.isPending}
+                onChange={(event) =>
+                  handleAppearanceSelect({
+                    ...appearance,
+                    monospaceAmounts: event.currentTarget.checked,
+                  })
+                }
+              />
+            </>
+          }
+          actions={
+            <>
+              <Group justify="flex-end">
+                <Button
+                  variant="default"
+                  onClick={handleCancel}
+                  disabled={
+                    isLoading ||
+                    (!hasChanges && appearanceValid) ||
+                    updateSettingsMutation.isPending
+                  }
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  loading={updateSettingsMutation.isPending}
+                  disabled={isLoading || !hasChanges || !appearanceValid}
+                >
+                  Save changes
+                </Button>
+              </Group>
+            </>
           }
         >
-          <Tabs.Panel value="general">
-            <Paper bg="transparent" maw={720} data-testid="settings-card">
-              <Stack gap="sm">
-                <div className={styles.generalSection}>
-                  <AppearanceControl
-                    withHeading
-                    resetVersion={appearanceReset}
-                    value={appearance}
-                    onChange={handleAppearanceSelect}
-                    disabled={updateSettingsMutation.isPending}
-                    onValidityChange={setAppearanceValid}
-                  />
-                </div>
+          {updateSettingsMutation.isError && (
+            <Alert color="red" title="Error">
+              Failed to save settings
+            </Alert>
+          )}
 
-                <div className={styles.generalSection}>
-                  <Title data-typography="sectionHeading" order={4} mb="xs">
-                    Display currency
-                  </Title>
-                  <Select
-                    value={currency}
-                    onChange={(value) => value && setCurrency(value)}
-                    data={CURRENCY_OPTIONS}
-                    searchable
-                    size="md"
-                    placeholder="Select currency"
-                    aria-label="Display currency"
-                  />
-                  <Text data-typography="metadata" c="dimmed" mt={4}>
-                    All balances and amounts use this currency.
-                  </Text>
-                </div>
+          {updateSettingsMutation.isSuccess && !hasChanges && (
+            <Alert color="green" title="Success">
+              Settings saved successfully
+            </Alert>
+          )}
+        </GeneralSettingsFrame>
+      </Tabs.Panel>
 
-                <div className={styles.generalSection}>
-                  <Group justify="space-between" gap="xs" mb={4}>
-                    <Title data-typography="sectionHeading" order={4}>
-                      Timezone
-                    </Title>
-                    <Button
-                      variant="light"
-                      size="sm"
-                      onClick={handleSetBrowserTimezone}
-                      disabled={timezone === browserTimezone}
-                    >
-                      Use browser
-                    </Button>
-                  </Group>
-                  <Select
-                    value={timezone}
-                    onChange={(value) => value && setTimezone(value)}
-                    data={timezoneOptions}
-                    searchable
-                    size="md"
-                    placeholder="Select timezone"
-                    aria-label="Timezone"
-                  />
-                  <Text data-typography="metadata" c="dimmed" mt={4}>
-                    Dates and times use this timezone.
-                  </Text>
-                  {browserTimezone && browserTimezone !== timezone && (
-                    <Text data-typography="caption" c="dimmed" mt="xs">
-                      Detected: {browserTimezone}
-                    </Text>
-                  )}
-                </div>
+      <Tabs.Panel value="notifications">
+        <NotificationSettingsFrame
+          device={
+            <>
+              <Title data-typography="sectionHeading" order={4}>
+                Notifications
+              </Title>
+              <Switch
+                label="Enable notifications on this device"
+                checked={deviceNotificationsEnabled}
+                disabled={
+                  deviceNotificationsLoading ||
+                  deviceNotificationsPending ||
+                  notificationSupportStatus !== 'supported'
+                }
+                onChange={(event) => {
+                  void handleDeviceNotificationsChange(
+                    event.currentTarget.checked,
+                  )
+                }}
+              />
+              <Text
+                data-typography="metadata"
+                c="dimmed"
+                mih={42}
+                aria-live="polite"
+              >
+                {deviceNotificationsLoading
+                  ? 'Checking device notification status…'
+                  : deviceNotificationsPending
+                    ? 'Updating device notifications…'
+                    : deviceRebindRequired
+                      ? 'This device needs to reconnect notifications after the app update.'
+                      : (getNotificationSupportMessage(
+                          notificationSupportStatus,
+                        ) ??
+                        'Device notifications are configured separately in each browser.')}
+              </Text>
+              {deviceRebindRequired && !deviceNotificationsLoading && (
+                <Button
+                  variant="light"
+                  onClick={() => void handleDeviceNotificationsChange(true)}
+                  loading={deviceNotificationsPending}
+                >
+                  Reconnect notifications
+                </Button>
+              )}
+            </>
+          }
+          transactions={
+            <>
+              <Title data-typography="sectionHeading" order={4}>
+                Transactions
+              </Title>
+              <Switch
+                label="New uncategorized transactions"
+                checked={newSyncedTransactionsEnabled}
+                disabled={newSyncedTransactionsPending || !user?.settings}
+                onChange={(event) => {
+                  void handleNewSyncedTransactionsChange(
+                    event.currentTarget.checked,
+                  )
+                }}
+              />
+              <Switch
+                label="Bank connections need attention"
+                checked={bankLinkNeedsAttentionEnabled}
+                disabled={bankLinkNeedsAttentionPending || !user?.settings}
+                onChange={(event) => {
+                  void handleBankLinkNeedsAttentionChange(
+                    event.currentTarget.checked,
+                  )
+                }}
+              />
+            </>
+          }
+        >
+          {notificationError && (
+            <Alert color="red" title="Error">
+              {notificationError}
+              <Button
+                size="xs"
+                variant="light"
+                ml="sm"
+                onClick={() => setNotificationRetry((value) => value + 1)}
+                disabled={
+                  deviceNotificationsLoading || deviceNotificationsPending
+                }
+              >
+                Retry
+              </Button>
+            </Alert>
+          )}
+        </NotificationSettingsFrame>
+      </Tabs.Panel>
 
-                <Stack gap="sm" className={styles.generalSection}>
-                  <Switch
-                    label="Hide zero balances on Home"
-                    checked={hideZeroBalanceAccounts}
-                    onChange={(event) =>
-                      setHideZeroBalanceAccounts(event.currentTarget.checked)
-                    }
-                  />
+      <Tabs.Panel value="access">
+        <DeferredFeature
+          label="Settings section"
+          fallback={
+            <LoadingSkeleton label="Loading settings section…">
+              <AccessTokensSkeleton />
+            </LoadingSkeleton>
+          }
+        >
+          <PersonalAccessTokenSection />
+        </DeferredFeature>
+      </Tabs.Panel>
 
-                  <Switch
-                    label="Use monospace font for amounts"
-                    checked={appearance.monospaceAmounts ?? false}
-                    disabled={updateSettingsMutation.isPending}
-                    onChange={(event) =>
-                      handleAppearanceSelect({
-                        ...appearance,
-                        monospaceAmounts: event.currentTarget.checked,
-                      })
-                    }
-                  />
-                </Stack>
+      <Tabs.Panel className={styles.categoriesPanel} value="categories">
+        <DeferredFeature
+          label="Settings section"
+          fallback={
+            <LoadingSkeleton label="Loading settings section…">
+              <SettingsSectionSkeleton section="categories" />
+            </LoadingSkeleton>
+          }
+        >
+          <CustomCategoriesSection />
+        </DeferredFeature>
+      </Tabs.Panel>
 
-                <Group justify="flex-end">
-                  <Button
-                    variant="default"
-                    onClick={handleCancel}
-                    disabled={
-                      (!hasChanges && appearanceValid) ||
-                      updateSettingsMutation.isPending
-                    }
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSave}
-                    loading={updateSettingsMutation.isPending}
-                    disabled={!hasChanges || !appearanceValid}
-                  >
-                    Save changes
-                  </Button>
-                </Group>
-
-                {updateSettingsMutation.isError && (
-                  <Alert color="red" title="Error">
-                    Failed to save settings
-                  </Alert>
-                )}
-
-                {updateSettingsMutation.isSuccess && !hasChanges && (
-                  <Alert color="green" title="Success">
-                    Settings saved successfully
-                  </Alert>
-                )}
-              </Stack>
-            </Paper>
-          </Tabs.Panel>
-
-          <Tabs.Panel value="notifications">
-            <Stack gap="lg" maw={720}>
-              <Paper withBorder p="lg" radius="md">
-                <Stack gap="sm">
-                  <Title data-typography="sectionHeading" order={4}>
-                    Notifications
-                  </Title>
-                  <Switch
-                    label="Enable notifications on this device"
-                    checked={deviceNotificationsEnabled}
-                    disabled={
-                      deviceNotificationsLoading ||
-                      deviceNotificationsPending ||
-                      notificationSupportStatus !== 'supported'
-                    }
-                    onChange={(event) => {
-                      void handleDeviceNotificationsChange(
-                        event.currentTarget.checked,
-                      )
-                    }}
-                  />
-                  <Text
-                    data-typography="metadata"
-                    c="dimmed"
-                    mih={42}
-                    aria-live="polite"
-                  >
-                    {deviceNotificationsLoading
-                      ? 'Checking device notification status…'
-                      : deviceNotificationsPending
-                        ? 'Updating device notifications…'
-                        : deviceRebindRequired
-                          ? 'This device needs to reconnect notifications after the app update.'
-                          : (getNotificationSupportMessage(
-                              notificationSupportStatus,
-                            ) ??
-                            'Device notifications are configured separately in each browser.')}
-                  </Text>
-                  {deviceRebindRequired && !deviceNotificationsLoading && (
-                    <Button
-                      variant="light"
-                      onClick={() => void handleDeviceNotificationsChange(true)}
-                      loading={deviceNotificationsPending}
-                    >
-                      Reconnect notifications
-                    </Button>
-                  )}
-                </Stack>
-              </Paper>
-
-              <Paper withBorder p="lg" radius="md">
-                <Stack gap="sm">
-                  <Title data-typography="sectionHeading" order={4}>
-                    Transactions
-                  </Title>
-                  <Switch
-                    label="New uncategorized transactions"
-                    checked={newSyncedTransactionsEnabled}
-                    disabled={newSyncedTransactionsPending || !user?.settings}
-                    onChange={(event) => {
-                      void handleNewSyncedTransactionsChange(
-                        event.currentTarget.checked,
-                      )
-                    }}
-                  />
-                  <Switch
-                    label="Bank connections need attention"
-                    checked={bankLinkNeedsAttentionEnabled}
-                    disabled={bankLinkNeedsAttentionPending || !user?.settings}
-                    onChange={(event) => {
-                      void handleBankLinkNeedsAttentionChange(
-                        event.currentTarget.checked,
-                      )
-                    }}
-                  />
-                </Stack>
-              </Paper>
-
-              {notificationError && (
+      <Tabs.Panel className={styles.categoriesPanel} value="analysis">
+        <Stack gap="lg">
+          <Paper withBorder p="lg" radius="md">
+            <Stack gap="sm">
+              <Title data-typography="sectionHeading" order={4}>
+                Analysis display
+              </Title>
+              <Switch
+                label="Use Sankey diagram on Analysis"
+                description="Replace separate inflow and outflow charts with one cashflow diagram."
+                checked={analysisSankeyEnabled}
+                disabled={isLoading || updateAnalysisSankeyMutation.isPending}
+                onChange={(event) => {
+                  void handleAnalysisSankeyChange(event.currentTarget.checked)
+                }}
+              />
+              {analysisSankeyError && (
                 <Alert color="red" title="Error">
-                  {notificationError}
-                  <Button
-                    size="xs"
-                    variant="light"
-                    ml="sm"
-                    onClick={() => setNotificationRetry((value) => value + 1)}
-                    disabled={
-                      deviceNotificationsLoading || deviceNotificationsPending
-                    }
-                  >
-                    Retry
-                  </Button>
+                  {analysisSankeyError}
                 </Alert>
               )}
             </Stack>
-          </Tabs.Panel>
+          </Paper>
+          <DeferredFeature
+            label="Analysis rules"
+            fallback={
+              <LoadingSkeleton label="Loading analysis rules…">
+                <SettingsSectionSkeleton section="analysis" />
+              </LoadingSkeleton>
+            }
+          >
+            <AnalysisRulesSection
+              lookaroundSetting={{
+                value: user?.settings.neutralizationLookaroundDays ?? 60,
+                isSaving: updateLookaroundMutation.isPending,
+                onSave: handleSaveNeutralizationLookaround,
+              }}
+            />
+          </DeferredFeature>
+        </Stack>
+      </Tabs.Panel>
 
-          <Tabs.Panel value="access">
-            <DeferredFeature
-              label="Settings section"
-              fallback={
-                <LoadingSkeleton label="Loading settings section…">
-                  <AccessTokensSkeleton />
-                </LoadingSkeleton>
-              }
-            >
-              <PersonalAccessTokenSection />
-            </DeferredFeature>
-          </Tabs.Panel>
+      <Tabs.Panel className={styles.categoriesPanel} value="categorization">
+        <DeferredFeature
+          label="Settings section"
+          fallback={
+            <LoadingSkeleton label="Loading settings section…">
+              <SettingsSectionSkeleton section="categorization" />
+            </LoadingSkeleton>
+          }
+        >
+          <CategorizationRulesSection />
+        </DeferredFeature>
+      </Tabs.Panel>
 
-          <Tabs.Panel className={styles.categoriesPanel} value="categories">
-            <DeferredFeature
-              label="Settings section"
-              fallback={
-                <LoadingSkeleton label="Loading settings section…">
-                  <SettingsSkeleton section="categories" />
-                </LoadingSkeleton>
-              }
-            >
-              <CustomCategoriesSection />
-            </DeferredFeature>
-          </Tabs.Panel>
-
-          <Tabs.Panel className={styles.categoriesPanel} value="analysis">
-            <Stack gap="lg">
-              <Paper withBorder p="lg" radius="md">
-                <Stack gap="sm">
-                  <Title data-typography="sectionHeading" order={4}>
-                    Analysis display
-                  </Title>
-                  <Switch
-                    label="Use Sankey diagram on Analysis"
-                    description="Replace separate inflow and outflow charts with one cashflow diagram."
-                    checked={analysisSankeyEnabled}
-                    disabled={updateAnalysisSankeyMutation.isPending}
-                    onChange={(event) => {
-                      void handleAnalysisSankeyChange(
-                        event.currentTarget.checked,
-                      )
-                    }}
-                  />
-                  {analysisSankeyError && (
-                    <Alert color="red" title="Error">
-                      {analysisSankeyError}
-                    </Alert>
-                  )}
-                </Stack>
-              </Paper>
-              <DeferredFeature
-                label="Analysis rules"
-                fallback={
-                  <LoadingSkeleton label="Loading analysis rules…">
-                    <SettingsSkeleton section="analysis" />
-                  </LoadingSkeleton>
-                }
-              >
-                <AnalysisRulesSection
-                  lookaroundSetting={{
-                    value: user?.settings.neutralizationLookaroundDays ?? 60,
-                    isSaving: updateLookaroundMutation.isPending,
-                    onSave: handleSaveNeutralizationLookaround,
-                  }}
-                />
-              </DeferredFeature>
-            </Stack>
-          </Tabs.Panel>
-
-          <Tabs.Panel className={styles.categoriesPanel} value="categorization">
-            <DeferredFeature
-              label="Settings section"
-              fallback={
-                <LoadingSkeleton label="Loading settings section…">
-                  <SettingsSkeleton section="categorization" />
-                </LoadingSkeleton>
-              }
-            >
-              <CategorizationRulesSection />
-            </DeferredFeature>
-          </Tabs.Panel>
-
-          <Tabs.Panel className={styles.categoriesPanel} value="recurring">
-            <DeferredFeature
-              label="Settings section"
-              fallback={
-                <LoadingSkeleton label="Loading settings section…">
-                  <SettingsSkeleton section="recurring" filters={false} />
-                </LoadingSkeleton>
-              }
-            >
-              <RecurringManualTransactionsSection />
-            </DeferredFeature>
-          </Tabs.Panel>
-        </PageLayout>
-      </Tabs>
-    </Box>
+      <Tabs.Panel className={styles.categoriesPanel} value="recurring">
+        <DeferredFeature
+          label="Settings section"
+          fallback={
+            <LoadingSkeleton label="Loading settings section…">
+              <SettingsSectionSkeleton section="recurring" />
+            </LoadingSkeleton>
+          }
+        >
+          <RecurringManualTransactionsSection />
+        </DeferredFeature>
+      </Tabs.Panel>
+    </SettingsPageFrame>
   )
 }

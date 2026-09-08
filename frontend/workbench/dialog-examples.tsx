@@ -1,5 +1,11 @@
 import { Button, Stack, Text } from '@mantine/core'
-import { useEffect, useState } from 'react'
+import { lazy, useEffect, useState } from 'react'
+import { BACKFILL_TITLE } from '../src/components/accounts/BackfillInstructions'
+import { DeferredOverlay } from '../src/components/DeferredOverlay'
+import { AddAccountSkeleton } from '../src/components/accounts/AddAccountModal.skeleton'
+import { BackfillSkeleton } from '../src/components/accounts/BackfillModal.skeleton'
+import { AccountDetailsSkeleton } from '../src/components/AccountModal.skeleton'
+import { ManualTransactionModalSkeleton } from '../src/components/transactions/ManualTransactionModal.skeleton'
 import { ManualTransactionModal } from '../src/components/transactions/ManualTransactionModal'
 import { AccountModal } from '../src/components/AccountModal'
 import { AddAccountModal } from '../src/components/accounts/AddAccountModal'
@@ -13,38 +19,88 @@ import {
 } from '../src/lib/pwa/app-transition'
 import { clearPrivateCaches } from '../src/lib/auth-generation'
 import { TimePeriod } from '../src/lib/types'
+import { waitForModule } from './loading-gates'
 import { fixtureCategories, fixtureTransactions } from './page-fixtures'
 import { fixtureAccounts, fixtureSummaries } from './fixtures'
 import type { ExampleProps } from './examples'
 
+const DeferredAddAccount = lazy(async () => {
+  await waitForModule()
+  return { default: AddAccountModal }
+})
+const DeferredBackfill = lazy(async () => {
+  await waitForModule()
+  return { default: BackfillModal }
+})
+const DeferredAccount = lazy(async () => {
+  await waitForModule()
+  return { default: AccountModal }
+})
+const DeferredManual = lazy(async () => {
+  await waitForModule()
+  return { default: ManualTransactionModal }
+})
+
 function AccountDialogs({ state, masked }: ExampleProps) {
   const [opened, setOpened] = useState(true)
   const onClose = () => setOpened(false)
+  const account = {
+    ...fixtureSummaries[0],
+    ...(state === 'holdings'
+      ? {
+          valuationMode: 'holdings' as const,
+          changePercent: undefined,
+          changeAmount: undefined,
+        }
+      : {}),
+  }
   return (
     <Stack>
       <Button onClick={() => setOpened(true)}>Open dialog</Button>
-      {state === 'add' ? (
-        <AddAccountModal opened={opened} onClose={onClose} />
-      ) : state === 'backfill' ? (
-        <BackfillModal opened={opened} onClose={onClose} />
-      ) : (
-        <AccountModal
-          account={{
-            ...fixtureSummaries[0],
-            ...(state === 'holdings'
-              ? {
-                  valuationMode: 'holdings' as const,
-                  changePercent: undefined,
-                  changeAmount: undefined,
-                }
-              : {}),
-          }}
-          opened={opened}
-          onClose={onClose}
-          balancesHidden={masked}
-          period={TimePeriod.month}
-        />
-      )}
+      {opened &&
+        (state === 'add' ? (
+          <DeferredOverlay
+            label="Add account"
+            onClose={onClose}
+            minHeight={0}
+            skeleton={<AddAccountSkeleton />}
+          >
+            <DeferredAddAccount opened={opened} onClose={onClose} />
+          </DeferredOverlay>
+        ) : state === 'backfill' ? (
+          <DeferredOverlay
+            label="Backfill"
+            title={BACKFILL_TITLE}
+            size="lg"
+            onClose={onClose}
+            minHeight={0}
+            skeleton={<BackfillSkeleton />}
+          >
+            <DeferredBackfill opened={opened} onClose={onClose} />
+          </DeferredOverlay>
+        ) : (
+          <DeferredOverlay
+            label={account.name}
+            onClose={onClose}
+            size="xl"
+            centered={false}
+            minHeight={0}
+            skeleton={
+              <AccountDetailsSkeleton
+                account={account}
+                period={TimePeriod.month}
+              />
+            }
+          >
+            <DeferredAccount
+              account={account}
+              opened={opened}
+              onClose={onClose}
+              balancesHidden={masked}
+              period={TimePeriod.month}
+            />
+          </DeferredOverlay>
+        ))}
     </Stack>
   )
 }
@@ -53,16 +109,24 @@ function ManualSave() {
   return (
     <Stack>
       <Button onClick={() => setOpened(true)}>Open editor</Button>
-      <ManualTransactionModal
-        opened={opened}
-        onClose={() => setOpened(false)}
-        accounts={fixtureAccounts}
-        defaultAccountId="cash"
-        categories={fixtureCategories}
-        transaction={fixtureTransactions.find(
-          (item) => item.source === 'manual',
-        )}
-      />
+      {opened && (
+        <DeferredOverlay
+          label="Edit transaction"
+          onClose={() => setOpened(false)}
+          skeleton={<ManualTransactionModalSkeleton editing />}
+        >
+          <DeferredManual
+            opened={opened}
+            onClose={() => setOpened(false)}
+            accounts={fixtureAccounts}
+            defaultAccountId="cash"
+            categories={fixtureCategories}
+            transaction={fixtureTransactions.find(
+              (item) => item.source === 'manual',
+            )}
+          />
+        </DeferredOverlay>
+      )}
     </Stack>
   )
 }
@@ -105,7 +169,11 @@ export const dialogExamples = [
     title: 'Manual transaction save recovery',
     component: ManualSave,
     states: ['ready', 'offline', 'lost-response', 'reconcile-error'],
-    components: ['ManualTransactionModal'],
+    components: [
+      'ManualTransactionModal',
+      'ManualTransactionFormFrame',
+      'ManualTransactionModalSkeleton',
+    ],
   },
   {
     id: 'account-dialogs',
@@ -117,6 +185,19 @@ export const dialogExamples = [
       'AddAccountModal',
       'BackfillModal',
       'ManualBrokerageHoldingsModal',
+      'AccountComparisonFrame',
+      'AccountDetailsSkeleton',
+      'AccountSections',
+      'AccountProviderCard',
+      'AddAccountSkeleton',
+      'BackfillSkeleton',
+      'InvestmentActivityTableSkeleton',
+      'InvestmentActivityTable',
+      'InvestmentHoldingsTableSkeleton',
+      'InvestmentHoldingsTable',
+      'InvestmentTableFrame',
+      'ManualBrokerageHoldingsModalSkeleton',
+      'BackfillInstructions',
     ],
   },
   {

@@ -1,5 +1,6 @@
 import { MantineProvider } from '@mantine/core'
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -7,8 +8,9 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
-import { lazy } from 'react'
+import { lazy, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EditorModal } from './forms/EditorModal'
 import { DeferredOverlay } from './DeferredOverlay'
 import { AnalysisAuditHeader } from './analysis/AnalysisAuditHeader'
 
@@ -38,7 +40,7 @@ describe('deferred overlays', () => {
       onClose = vi.fn()
     render(
       <MantineProvider>
-        <DeferredOverlay label="Add account" onClose={onClose}>
+        <DeferredOverlay skeleton={null} label="Add account" onClose={onClose}>
           <Pending />
         </DeferredOverlay>
       </MantineProvider>,
@@ -57,6 +59,7 @@ describe('deferred overlays', () => {
     render(
       <MantineProvider>
         <DeferredOverlay
+          skeleton={null}
           label="Analysis audit"
           kind="audit"
           onClose={() => {}}
@@ -85,7 +88,12 @@ describe('deferred overlays', () => {
       onClose = vi.fn()
     render(
       <MantineProvider>
-        <DeferredOverlay label="Edit holdings" onClose={onClose} size="lg">
+        <DeferredOverlay
+          skeleton={null}
+          label="Edit holdings"
+          onClose={onClose}
+          size="lg"
+        >
           <Failed />
         </DeferredOverlay>
       </MantineProvider>,
@@ -101,5 +109,56 @@ describe('deferred overlays', () => {
       within(dialog).getByRole('button', { name: 'Close editor' }),
     )
     expect(onClose).toHaveBeenCalledOnce()
+  })
+  it('restores the opener after the pending modal is replaced by its loaded editor', async () => {
+    function Editor({ onClose }: { onClose: () => void }) {
+      return (
+        <EditorModal opened onClose={onClose} title="Edit example">
+          <input aria-label="Draft" />
+        </EditorModal>
+      )
+    }
+    let release: (module: { default: typeof Editor }) => void = () => {}
+    const LazyEditor = lazy(
+      () =>
+        new Promise<{ default: typeof Editor }>((resolve) => {
+          release = resolve
+        }),
+    )
+    function Example() {
+      const [opened, setOpened] = useState(false)
+      return (
+        <>
+          <button onClick={() => setOpened(true)}>Open editor</button>
+          {opened && (
+            <DeferredOverlay
+              label="Edit example"
+              skeleton={null}
+              onClose={() => setOpened(false)}
+            >
+              <LazyEditor onClose={() => setOpened(false)} />
+            </DeferredOverlay>
+          )}
+        </>
+      )
+    }
+    render(
+      <MantineProvider>
+        <Example />
+      </MantineProvider>,
+    )
+    const opener = screen.getByRole('button', { name: 'Open editor' })
+    opener.focus()
+    fireEvent.click(opener)
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy())
+    await act(() => {
+      release({ default: Editor })
+    })
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Draft' })).toBeTruthy(),
+    )
+    screen.getByRole<HTMLElement>('textbox', { name: 'Draft' }).focus()
+    fireEvent.click(screen.getByRole('button', { name: 'Close editor' }))
+    await waitFor(() => expect(document.activeElement).toBe(opener))
   })
 })

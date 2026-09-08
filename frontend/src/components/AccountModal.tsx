@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Group,
+  Skeleton,
   Stack,
   Tabs,
   Text,
@@ -31,7 +32,6 @@ import {
 import { useAccountBalanceHistory } from '../hooks/useBalanceData'
 import { useInvestmentActivity } from '../hooks/useInvestmentActivity'
 import { useInvestmentHoldings } from '../hooks/useInvestmentHoldings'
-import { TIME_PERIOD_LABELS } from '../lib/types'
 import { resolveEffectiveBalance } from '../lib/balance-utils'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
@@ -41,11 +41,13 @@ import {
   formatRelativeTime,
   getChangeColorMantine,
 } from '../lib/format'
+import { AccountComparisonFrame } from './AccountComparisonFrame'
+import { AccountSections } from './AccountSections'
+import { ManualBrokerageHoldingsModalSkeleton } from './investments/ManualBrokerageHoldingsModal.skeleton'
 import { ChangePercentPopover } from './ChangePercentPopover'
-import {
-  AccountDetailsSkeleton,
-  TableSkeleton,
-} from './loading/LoadingSkeleton'
+import { AccountDetailsSkeleton } from './AccountModal.skeleton'
+import { InvestmentHoldingsTableSkeleton } from './investments/InvestmentHoldingsTable.skeleton'
+import { InvestmentActivityTableSkeleton } from './investments/InvestmentActivityTable.skeleton'
 import { DataState } from './DataState'
 import styles from './AccountModal.module.css'
 import { InlineBalanceEditor } from './accounts/InlineBalanceEditor'
@@ -100,6 +102,33 @@ export function AccountModal({
     holdingsModalOpened,
     { open: openHoldingsModal, close: closeHoldingsModal },
   ] = useDisclosure(false)
+
+  const holdingsLauncherRef = useRef<HTMLButtonElement>(null)
+  const returnHoldingsFocusRef = useRef(false)
+  const previousHoldingsDialog = useRef({
+    opened: false,
+    accountId: account?.id,
+  })
+  useEffect(() => {
+    const previous = previousHoldingsDialog.current
+    previousHoldingsDialog.current = {
+      opened: holdingsModalOpened,
+      accountId: account?.id,
+    }
+    if (
+      !opened ||
+      holdingsModalOpened ||
+      !previous.opened ||
+      previous.accountId !== account?.id
+    )
+      return
+    // Restore after the nested portal and its focus trap unmount. The parent
+    // owns this launcher and can resolve its current node even after a remount.
+    const frame = requestAnimationFrame(() =>
+      holdingsLauncherRef.current?.focus(),
+    )
+    return () => cancelAnimationFrame(frame)
+  }, [holdingsModalOpened, opened, account?.id])
 
   const {
     data: balanceHistory,
@@ -171,6 +200,7 @@ export function AccountModal({
   }, [fullAccount?.id, fullAccount?.notes, opened])
 
   useEffect(() => {
+    returnHoldingsFocusRef.current = false
     setStaleSymbols([])
     closeBalanceEditor()
     closeNotesEditor()
@@ -289,6 +319,9 @@ export function AccountModal({
     <>
       <EditorModal
         opened={opened}
+        closeOnEscape={!holdingsModalOpened}
+        closeOnClickOutside={!holdingsModalOpened}
+        trapFocus={!holdingsModalOpened}
         onClose={onClose}
         title={account?.customName ?? account?.name ?? 'Account details'}
         size="xl"
@@ -306,7 +339,11 @@ export function AccountModal({
           onRetry={() => void refetchBalanceHistory()}
           loadingMessage="Loading account history"
           loadingFallback={
-            <AccountDetailsSkeleton account={account} section={activeSection} />
+            <AccountDetailsSkeleton
+              account={account}
+              section={activeSection}
+              period={period}
+            />
           }
           errorTitle="Unable to load account history"
           errorMessage="Balance history for this account could not be loaded."
@@ -430,15 +467,11 @@ export function AccountModal({
                     </div>
                   )}
                 </Group>
-                {!comparisonLoading &&
-                  account &&
-                  account.changePercent !== undefined && (
-                    <Group justify="space-between">
-                      <Text data-typography="metadata" c="dimmed">
-                        {period === 'all'
-                          ? 'Change since first recorded balance'
-                          : `${TIME_PERIOD_LABELS[period]} balance change`}
-                      </Text>
+                {account && account.changePercent !== undefined && (
+                  <AccountComparisonFrame period={period}>
+                    {comparisonLoading ? (
+                      <Skeleton height={18} width={80} />
+                    ) : (
                       <ChangePercentPopover
                         key={period}
                         textRole="metadata"
@@ -450,8 +483,9 @@ export function AccountModal({
                         )}
                         hidden={balancesHidden}
                       />
-                    </Group>
-                  )}
+                    )}
+                  </AccountComparisonFrame>
+                )}
               </>
             )}
 
@@ -463,16 +497,10 @@ export function AccountModal({
               }}
               value={activeSection}
             >
-              <Tabs.List aria-label="Account sections">
-                <Tabs.Tab value="history">History</Tabs.Tab>
-                <Tabs.Tab value="details">Details</Tabs.Tab>
-                {isInvestmentAccount && (
-                  <Tabs.Tab value="holdings">Holdings</Tabs.Tab>
-                )}
-                {isInvestmentAccount && !isHoldingsValued && (
-                  <Tabs.Tab value="activity">Activity</Tabs.Tab>
-                )}
-              </Tabs.List>
+              <AccountSections
+                investment={isInvestmentAccount}
+                holdingsValued={isHoldingsValued}
+              />
 
               <Tabs.Panel value="details" pt="md">
                 {fullAccount && (
@@ -586,9 +614,16 @@ export function AccountModal({
                       <Group gap={4} wrap="nowrap">
                         <Tooltip label="Edit holdings">
                           <ActionIcon
+                            ref={holdingsLauncherRef}
+                            data-autofocus={
+                              returnHoldingsFocusRef.current || undefined
+                            }
                             aria-label="Edit holdings"
                             disabled={holdingsLoading || holdingsError}
-                            onClick={openHoldingsModal}
+                            onClick={() => {
+                              returnHoldingsFocusRef.current = true
+                              openHoldingsModal()
+                            }}
                             {...featureIntent(loadManualBrokerageHoldingsModal)}
                             size="lg"
                             className={styles.compactAction}
@@ -628,7 +663,9 @@ export function AccountModal({
                       loadingMessage="Loading investment holdings"
                       errorMessage="Holdings unavailable."
                       emptyMessage="No holdings found."
-                      loadingFallback={<TableSkeleton rows={1} />}
+                      loadingFallback={
+                        <InvestmentHoldingsTableSkeleton rows={1} />
+                      }
                     >
                       <InvestmentHoldingsTable
                         accountCurrency={accountCurrency}
@@ -656,7 +693,9 @@ export function AccountModal({
                     loadingMessage="Loading investment activity"
                     errorMessage="Provider activity is unavailable or incomplete."
                     emptyMessage="No investment activity found."
-                    loadingFallback={<TableSkeleton rows={3} />}
+                    loadingFallback={
+                      <InvestmentActivityTableSkeleton rows={3} />
+                    }
                   >
                     <InvestmentActivityTable
                       activity={investmentActivity}
@@ -728,6 +767,9 @@ export function AccountModal({
       {holdingsModalOpened && isManual && isHoldingsValued && account?.id && (
         <DeferredOverlay
           label="Holdings editor"
+          skeleton={
+            <ManualBrokerageHoldingsModalSkeleton holdings={holdings} />
+          }
           title="Edit holdings"
           size="lg"
           onClose={closeHoldingsModal}

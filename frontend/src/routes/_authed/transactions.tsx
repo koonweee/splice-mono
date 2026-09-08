@@ -18,7 +18,8 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { TableSkeleton } from '../../components/loading/LoadingSkeleton'
+import { ManualTransactionModalSkeleton } from '../../components/transactions/ManualTransactionModal.skeleton'
+import { TransactionsTableSkeleton } from '../../components/TransactionsTable.skeleton'
 import { loadManualTransactionModal } from '../../lib/feature-loaders'
 import { ResponsiveSlot } from '../../components/ResponsiveSlot'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
@@ -50,7 +51,10 @@ import {
   initialTransactionParams,
   transactionsQueryOptions,
 } from '../../lib/queries/primary'
-import styles from './transactions.module.css'
+import {
+  TransactionsPageFrame,
+  TransactionsToolbarFrame,
+} from '../../components/transactions/TransactionsPageFrame'
 import type {
   Category,
   Transaction,
@@ -59,15 +63,11 @@ import type {
 import type { DatesRangeValue } from '@mantine/dates'
 import type { MRT_SortingState } from 'mantine-react-table'
 import type { CategorySelectOption } from '@/components/categories/CategorySelect'
-import {
-  DateRangeControl,
-  DateRangeFields,
-} from '@/components/DateRangeControl'
+import { DateRangeFields } from '@/components/DateRangeControl'
 import { TransactionsTable } from '@/components/TransactionsTable'
 import { CategorySelect } from '@/components/categories/CategorySelect'
 import { TransactionBulkEditToolbar } from '@/components/transactions/TransactionBulkEditToolbar'
 import { TransactionsMobileList } from '@/components/transactions/TransactionsMobileList'
-import { PageLayout } from '@/components/PageLayout'
 import { AccountSelect } from '@/components/accounts/AccountSelect'
 import { ConfirmActionDialog } from '@/components/ConfirmActionDialog'
 import { DataState } from '@/components/DataState'
@@ -665,13 +665,7 @@ function TransactionsPage() {
       variant="inline"
     />
   ) : (
-    <Group className={styles.filters} gap="xs" align="center">
-      <DateRangeControl
-        growOnMobile
-        onChange={setDateRange}
-        value={dateRange}
-      />
-
+    <TransactionsToolbarFrame value={dateRange} onChange={setDateRange}>
       {isMobile && (
         <Box pos="relative">
           <ActionIcon
@@ -744,7 +738,7 @@ function TransactionsPage() {
           </Box>
         </ResponsiveSlot>
       )}
-    </Group>
+    </TransactionsToolbarFrame>
   )
 
   const pageActions = {
@@ -768,16 +762,15 @@ function TransactionsPage() {
   }
 
   return (
-    <PageLayout
-      title="Transactions"
-      actions={pageActions}
-      scroll="content"
-      contentVariant="edge-to-edge"
-      toolbar={transactionToolbar}
-    >
+    <TransactionsPageFrame actions={pageActions} toolbar={transactionToolbar}>
       {manualModalOpened && (
         <DeferredOverlay
           label="Transaction editor"
+          skeleton={
+            <ManualTransactionModalSkeleton
+              editing={Boolean(editingManualTransaction)}
+            />
+          }
           title={
             editingManualTransaction ? 'Edit transaction' : 'Add transaction'
           }
@@ -837,7 +830,7 @@ function TransactionsPage() {
           isError={isError}
           isFetching={isFetching}
           loadingMessage="Loading transactions…"
-          loadingFallback={<TableSkeleton />}
+          loadingFallback={<TransactionsTableSkeleton />}
           errorMessage="Error loading transactions"
           emptyMessage="No transactions found."
           onRetry={() => void refetch()}
@@ -869,6 +862,6 @@ function TransactionsPage() {
           />
         </DataState>
       </ResponsiveSlot>
-    </PageLayout>
+    </TransactionsPageFrame>
   )
 }

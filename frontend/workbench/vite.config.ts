@@ -18,6 +18,33 @@ export default defineConfig({
     {
       name: 'workbench-api-boundary',
       enforce: 'pre',
+      transform(code, id) {
+        if (
+          id !==
+          fileURLToPath(
+            new URL('../src/lib/feature-loaders.ts', import.meta.url),
+          )
+        )
+          return
+        const gate = fileURLToPath(
+          new URL('./loading-gates.ts', import.meta.url),
+        )
+        const gated = code
+          .replace(
+            'sharedImport<T>(load:',
+            'sharedImport<T>(name: string, load:',
+          )
+          .replace(
+            /(export const (\w+) = )sharedImport\(/g,
+            '$1sharedImport("$2", ',
+          )
+          .replace(/(\n {2}(\w+): )sharedImport\(/g, '$1sharedImport("$2", ')
+          .replace(
+            'pending ??= load().catch',
+            'pending ??= waitForModule(name).then(load).catch',
+          )
+        return `import { waitForModule } from ${JSON.stringify(gate)};\n${gated}`
+      },
       resolveId(source, importer) {
         if (
           !importer ||

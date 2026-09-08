@@ -16,9 +16,13 @@ export function PageLayout({
   contentVariant = 'padded',
   scroll = 'page',
   titleAccessory,
+  actionFallback,
+  toolbarFallback,
 }: {
   title: string
   actions?: PageActionSet
+  actionFallback?: ReactNode
+  toolbarFallback?: ReactNode
   titleAccessory?: ReactNode
   navigation?: ReactNode
   toolbar?: ReactNode
@@ -46,14 +50,18 @@ export function PageLayout({
               actions={
                 <div className={styles.actions}>
                   {actions && <PageActions {...actions} />}
-                  <div ref={setActionTarget} />
+                  <div ref={setActionTarget}>
+                    {actionTarget === null ? actionFallback : null}
+                  </div>
                 </div>
               }
             />
           </div>
           {navigation && <div className={styles.navigation}>{navigation}</div>}
           {toolbar && <PageToolbar>{toolbar}</PageToolbar>}
-          <div ref={setToolbarTarget} className={styles.toolbar} />
+          <div ref={setToolbarTarget} className={styles.toolbar}>
+            {toolbarTarget === null ? toolbarFallback : null}
+          </div>
           <div
             className={`${styles.content} ${contentVariant === 'edge-to-edge' ? styles.edge : ''}`}
           >
@@ -73,6 +81,9 @@ export function PageToolbar({
   section?: boolean
 }) {
   const target = useContext(PageToolbarTarget)
-  if (section && target) return createPortal(children, target)
+  // Inside a page, wait for its portal target instead of briefly rendering
+  // filters below the section heading. Standalone compositions stay inline.
+  if (section && target !== undefined)
+    return target ? createPortal(children, target) : null
   return <div className={styles.toolbar}>{children}</div>
 }

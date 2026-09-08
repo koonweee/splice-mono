@@ -17,7 +17,7 @@ import dayjs from 'dayjs'
 import { Check, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useAppTransitionGuard } from '../../lib/pwa/app-transition'
-import { LoadingSkeleton, RowSkeleton } from '../loading/LoadingSkeleton'
+import { LoadingSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
   useCategoryControllerFindAll,
@@ -39,6 +39,10 @@ import {
 import { CategorySelect } from '../categories/CategorySelect'
 import { DataState } from '../DataState'
 import { InteractiveRow } from '../InteractiveRow'
+import {
+  TransactionMobileRowSkeleton,
+  TransactionsMobileListSkeleton,
+} from './TransactionsMobileList.skeleton'
 import {
   formatCounterpartyLabel,
   getMerchantDisplay,
@@ -280,6 +284,7 @@ export function TransactionsMobileList({
       isError={isError}
       isFetching={isFetching}
       loadingMessage="Loading transactions…"
+      loadingFallback={<TransactionsMobileListSkeleton variant={variant} />}
       errorMessage="Error loading transactions"
       emptyMessage="No transactions found."
       onRetry={onRetry}
@@ -414,7 +419,7 @@ export function TransactionsMobileList({
         {isFetchingNextPage && (
           <div className={styles.footer}>
             <LoadingSkeleton label="Loading more transactions…">
-              <RowSkeleton rows={1} />
+              <TransactionMobileRowSkeleton />
             </LoadingSkeleton>
           </div>
         )}

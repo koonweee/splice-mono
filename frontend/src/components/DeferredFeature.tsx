@@ -1,11 +1,6 @@
-import { Alert, Box, Button, Stack, Text } from '@mantine/core'
+import { Alert, Button, Stack, Text } from '@mantine/core'
 import { Component, Suspense } from 'react'
 import { requestAppTransition } from '../lib/pwa/app-transition'
-import {
-  ChartSkeleton,
-  FormSkeleton,
-  LoadingSkeleton,
-} from './loading/LoadingSkeleton'
 import type { ReactNode } from 'react'
 
 class FeatureErrorBoundary extends Component<
@@ -63,7 +58,7 @@ export function DeferredFeature({
   children: ReactNode
   label: string
   minHeight?: number
-  fallback?: ReactNode
+  fallback: ReactNode
   errorFallback?: (content: ReactNode) => ReactNode
 }) {
   return (
@@ -72,23 +67,7 @@ export function DeferredFeature({
       minHeight={minHeight}
       errorFallback={errorFallback}
     >
-      <Suspense
-        fallback={
-          <Box mih={minHeight}>
-            {fallback ?? (
-              <LoadingSkeleton label={`Loading ${label.toLowerCase()}…`}>
-                {minHeight ? (
-                  <ChartSkeleton height={minHeight} />
-                ) : (
-                  <FormSkeleton />
-                )}
-              </LoadingSkeleton>
-            )}
-          </Box>
-        }
-      >
-        {children}
-      </Suspense>
+      <Suspense fallback={fallback}>{children}</Suspense>
     </FeatureErrorBoundary>
   )
 }

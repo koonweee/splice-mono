@@ -280,6 +280,7 @@ function createBalanceHistoryHookState(
 function renderAccountModal(
   notes: string | null,
   options: {
+    changePercent?: number
     type?: AccountTypeValue
     balancesHidden?: boolean
     holdings?: Array<InvestmentHoldingSnapshot>
@@ -317,8 +318,9 @@ function renderAccountModal(
     account.availableBalance = createMoney(amount, currency)
     account.currentBalance = createMoney(amount, currency)
   }
-  const summary = {
+  const summary: AccountSummaryData = {
     ...accountSummary,
+    changePercent: options.changePercent,
     type: options.type ?? AccountType.depository,
     valuationMode: options.valuationMode ?? 'balance',
   }
@@ -596,6 +598,15 @@ describe('AccountModal balance history', () => {
     expect(
       screen.queryByText('No balance history is available for this account.'),
     ).toBeNull()
+  })
+
+  it('keeps known comparison copy and the actual section tabs during initial loading', () => {
+    renderAccountModal(null, { balanceHistoryLoading: true, changePercent: 2 })
+    expect(screen.getByText('Month balance change')).toBeTruthy()
+    // The loading boundary hides placeholders, but uses the same real tab controls.
+    const tabs = screen.getAllByRole('tab', { hidden: true })
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['History', 'Details'])
+    expect(tabs.every((tab) => (tab as HTMLButtonElement).disabled)).toBe(true)
   })
 
   it('renders an intentional empty state after a successful empty response', () => {
@@ -1096,6 +1107,26 @@ describe('AccountModal holdings', () => {
     result.setOpened(true)
 
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+  })
+
+  it('closes only the nested holdings editor on Escape and returns focus to its launcher', async () => {
+    const result = renderAccountModal(null, {
+      type: AccountType.investment,
+      valuationMode: 'holdings',
+      holdings: [investmentHolding],
+    })
+    const launcher = screen.getByRole('button', { name: 'Edit holdings' })
+    launcher.focus()
+    fireEvent.click(launcher)
+    const input = await screen.findByLabelText('VWRA quantity')
+    input.focus()
+    fireEvent.keyDown(input, { key: 'Escape', code: 'Escape' })
+    await waitFor(() =>
+      expect(screen.queryByLabelText('VWRA quantity')).toBeNull(),
+    )
+    await waitFor(() => expect(document.activeElement).toBe(launcher))
+    expect(screen.getByRole('tab', { name: 'Holdings' })).toBeTruthy()
+    result.unmount()
   })
 
   it('replaces edited holdings and invalidates account valuation queries', async () => {

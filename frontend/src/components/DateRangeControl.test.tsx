@@ -32,6 +32,28 @@ afterEach(() => {
 })
 
 describe('DateRangeControl', () => {
+  it('keeps known dates visible while disabling pending page controls', () => {
+    const onChange = vi.fn()
+    render(
+      <MantineProvider>
+        <DateRangeControl
+          disabled
+          onChange={onChange}
+          value={[new Date('2026-05-01'), new Date('2026-05-12')]}
+        />
+      </MantineProvider>,
+    )
+    const trigger = screen.getByRole('button', { name: 'Choose date range' })
+    const clear = screen.getByRole('button', { name: 'Clear date range' })
+    expect(trigger.hasAttribute('disabled')).toBe(true)
+    expect(clear.hasAttribute('disabled')).toBe(true)
+    expect(trigger.textContent).toContain('2026')
+    fireEvent.click(trigger)
+    fireEvent.click(clear)
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it.each([false, true])(
     'dismisses a nested calendar without closing its editor (mobile=%s)',
     (mobile) => {
