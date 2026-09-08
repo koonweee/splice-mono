@@ -2,6 +2,8 @@
 
 All inventory entries now have a real example or composition. Full state-by-state browser verification remains pending. State names below select scenarios; dialogs and settings sections inside page examples also require the interactions described below.
 
+LaunchScreen (`components/loading/LaunchScreen.tsx`): [App launch](http://localhost:4001/?example=launch-screen), states `checking` and `native`.
+
 | Component                          | Source                                                             | Example                                                                | States                                                                                                                                                                                              |
 | ---------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | AccountCard                        | `components/AccountCard.tsx`                                       | [Open](http://localhost:4001/?example=account-overview)                | ready, loading, empty                                                                                                                                                                               |

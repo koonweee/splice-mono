@@ -1,5 +1,11 @@
 [
   {
+    "component": "LaunchScreen",
+    "source": "components/loading/LaunchScreen.tsx",
+    "example": "launch-screen",
+    "states": ["checking", "native"]
+  },
+  {
     "component": "AccountCard",
     "source": "components/AccountCard.tsx",
     "example": "account-overview",

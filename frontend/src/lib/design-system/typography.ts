@@ -25,6 +25,10 @@ function numericRole(fontSize: string, fontWeight: number, lineHeight = '1.5') {
 }
 
 export const typographyRoles = {
+  launchScreen: {
+    ...role(typographyScale.md, 400),
+    fontFamily: typographyFonts.body,
+  },
   display: numericRole('clamp(1.75rem, 6vw, 2.5rem)', 700, '1.2'),
   brandDisplay: role('3rem', 700, '1.2'),
   brand: role(typographyScale.lg, 700, '1.4'),

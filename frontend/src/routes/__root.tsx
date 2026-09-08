@@ -14,6 +14,7 @@ import mantineNotificationsCss from '@mantine/notifications/styles.css?url'
 import mantineReactTableCss from 'mantine-react-table/styles.css?url'
 import appCss from '../styles.css?url'
 import { resolveAppearance } from '../lib/design-system/appearance'
+import { BASES } from '../lib/design-system/bases'
 import {
   PresentationProvider,
   getPresentationPreferences,
@@ -21,6 +22,9 @@ import {
 import { SessionOutcomeContext, sessionQueryOptions } from '../lib/session'
 import { isConfirmedLoggedOutError } from '../lib/session-refresh'
 import { PrivateSessionBoundary } from '../components/PrivateSessionBoundary'
+import { LaunchScreen } from '../components/loading/LaunchScreen'
+import { appleStartupImages } from '../lib/pwa/startup-images'
+import type { ReactNode } from 'react'
 import type { PresentationPreferences } from '../lib/presentation-preferences'
 import type { User } from '../api/models/user'
 import type { SessionOutcome } from '../lib/session'
@@ -41,54 +45,18 @@ const developmentStyles = import.meta.env.DEV
     ).join('\n')
   : undefined
 
-const APPLE_STARTUP_IMAGE_LINKS = [
-  {
-    href: '/splash/apple-splash-1290-2796.png',
-    media:
-      '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/splash/apple-splash-1170-2532.png',
-    media:
-      '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/splash/apple-splash-1284-2778.png',
-    media:
-      '(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/splash/apple-splash-1242-2688.png',
-    media:
-      '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/splash/apple-splash-828-1792.png',
-    media:
-      '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)',
-  },
-  {
-    href: '/splash/apple-splash-1125-2436.png',
-    media:
-      '(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/splash/apple-splash-1242-2208.png',
-    media:
-      '(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
-  },
-  {
-    href: '/splash/apple-splash-750-1334.png',
-    media:
-      '(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)',
-  },
-].map(({ href, media }) => ({
+const APPLE_STARTUP_IMAGE_LINKS = appleStartupImages.map(({ href, media }) => ({
   rel: 'apple-touch-startup-image',
   href,
   media,
 }))
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  // Send public launch markup immediately. Auth still resolves before any
+  // private child mounts; direct private URLs retain authenticated SSR.
+  ssr: ({ location }) => location.pathname !== '/',
+  shellComponent: DocumentShell,
+  pendingComponent: LaunchScreen,
   beforeLoad: async ({
     context,
   }): Promise<{
@@ -138,8 +106,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
       {
         name: 'theme-color',
-        content: resolveAppearance(loaderData?.presentation.appearance).colors
-          .canvas,
+        content: loaderData
+          ? resolveAppearance(loaderData.presentation.appearance).colors.canvas
+          : BASES.oled.canvas,
       },
       {
         name: 'apple-mobile-web-app-capable',
@@ -206,9 +175,17 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
 })
 
-function RootComponent() {
-  const { presentation, sessionOutcome, authenticated } = Route.useLoaderData()
-  const preset = resolveAppearance(presentation.appearance)
+function DocumentShell({ children }: { children: ReactNode }) {
+  const data = Route.useLoaderData()
+  const preset = resolveAppearance(
+    // The shell also renders before loaders run on the client-only launch path.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    data?.presentation.appearance ?? {
+      mode: 'oled',
+      accent: null,
+      monospaceAmounts: false,
+    },
+  )
   return (
     <html
       lang="en"
@@ -221,22 +198,29 @@ function RootComponent() {
         {developmentStyles && <style>{developmentStyles}</style>}
       </head>
       <body>
-        <AppThemeProvider
-          initialAppearance={presentation.appearance}
-          authenticated={authenticated}
-        >
-          <SessionOutcomeContext.Provider value={sessionOutcome}>
-            <PresentationProvider initial={presentation}>
-              <PrivateSessionBoundary fallback={null}>
-                <Notifications />
-              </PrivateSessionBoundary>
-              <PwaLifecycle />
-              <Outlet />
-            </PresentationProvider>
-          </SessionOutcomeContext.Provider>
-        </AppThemeProvider>
+        {children}
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function RootComponent() {
+  const { presentation, sessionOutcome, authenticated } = Route.useLoaderData()
+  return (
+    <AppThemeProvider
+      initialAppearance={presentation.appearance}
+      authenticated={authenticated}
+    >
+      <SessionOutcomeContext.Provider value={sessionOutcome}>
+        <PresentationProvider initial={presentation}>
+          <PrivateSessionBoundary fallback={null}>
+            <Notifications />
+          </PrivateSessionBoundary>
+          <PwaLifecycle />
+          <Outlet />
+        </PresentationProvider>
+      </SessionOutcomeContext.Provider>
+    </AppThemeProvider>
   )
 }

@@ -10,6 +10,8 @@
     "serve": "vite preview",
     "test": "vitest run",
     "pwa:check": "node scripts/check-pwa-artifacts.mjs",
+    "pwa:splash": "node scripts/generate-startup-images.mjs",
+    "pwa:launch-test": "node scripts/verify-launch.mjs",
     "pwa:test": "node scripts/test-pwa-lifecycle.mjs",
     "lint": "eslint",
     "lint:fix": "eslint --fix",

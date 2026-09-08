@@ -20,6 +20,7 @@ import { Route as TransactionsRoute } from '../src/routes/_authed/transactions'
 import { Route as AnalysisRoute } from '../src/routes/_authed/analysis'
 import { Route as SettingsRoute } from '../src/routes/_authed/settings'
 import { RoutePendingSkeleton } from '../src/components/loading/RoutePendingSkeleton'
+import { LaunchScreen } from '../src/components/loading/LaunchScreen'
 import { validateSettingsSearch } from '../src/lib/route-search'
 import { invalidateFamilies } from '../src/lib/query-invalidation'
 import { simulateLogout } from './auth-boundary'
@@ -158,6 +159,15 @@ function Page({ path }: { path: string }) {
   return <RouterProvider router={router} />
 }
 export const pageExamples = [
+  {
+    id: 'launch-screen',
+    title: 'App launch',
+    component: ({ state }: ExampleProps) => (
+      <LaunchScreen native={state === 'native'} />
+    ),
+    states: ['checking', 'native'],
+    components: ['LaunchScreen'],
+  },
   {
     id: 'page-landing',
     title: 'Landing and login',
