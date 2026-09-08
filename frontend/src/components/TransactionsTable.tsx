@@ -34,6 +34,10 @@ import {
   getFallbackCategoryColor,
 } from '../lib/category-colors'
 import { isManualTransaction } from '../lib/manual-transactions'
+import {
+  transactionColumns,
+  transactionTablePaperProps,
+} from './transactions/transaction-columns'
 import { CategorySelect } from './categories/CategorySelect'
 import tableChrome from './MantineTableChrome.module.css'
 import styles from './TransactionsTable.module.css'
@@ -777,8 +781,8 @@ export function TransactionsTable({
         : []),
       {
         accessorKey: 'activityDate',
-        header: 'Date',
-        size: 150,
+        header: transactionColumns.providerDate.header,
+        size: transactionColumns.providerDate.size,
         minSize: 90,
         maxSize: 220,
         Cell: ({ row }) => {
@@ -912,8 +916,8 @@ export function TransactionsTable({
       },
       {
         accessorKey: 'merchantName',
-        header: 'Description',
-        size: 260,
+        header: transactionColumns.description.header,
+        size: transactionColumns.description.size,
         minSize: 180,
         maxSize: 420,
         Cell: ({ row }) => (
@@ -928,8 +932,8 @@ export function TransactionsTable({
       },
       {
         accessorKey: 'amount',
-        header: 'Amount',
-        size: 110,
+        header: transactionColumns.amount.header,
+        size: transactionColumns.amount.size,
         minSize: 80,
         maxSize: 150,
         mantineTableBodyCellProps: {
@@ -942,15 +946,16 @@ export function TransactionsTable({
       },
       {
         accessorKey: 'accountName',
-        header: 'Account',
+        header: transactionColumns.accountName.header,
+        size: transactionColumns.accountName.size,
         enableSorting: false,
         Cell: ({ cell }) => cell.getValue<string | null>() ?? '--',
       },
       {
         id: 'category',
-        header: 'Category',
+        header: transactionColumns.category.header,
         enableSorting: false,
-        size: 220,
+        size: transactionColumns.category.size,
         minSize: 120,
         maxSize: 480,
         accessorFn: (row) =>
@@ -1174,7 +1179,7 @@ export function TransactionsTable({
           }
         : {}),
     },
-    mantinePaperProps,
+    mantinePaperProps: { ...transactionTablePaperProps, ...mantinePaperProps },
     mantineToolbarAlertBannerProps: isError
       ? { color: 'red', children: 'Error loading transactions' }
       : undefined,

@@ -96,3 +96,10 @@ Pull requests should include:
 - Copy `.env.example` to `.env` in each app and do not commit secrets.
 - Keep production credentials out of `docs` and history.
 - Backend API contract lives at `http://localhost:3000/api`; keep frontend client regeneration in sync with endpoint changes.
+
+## Loading-state ownership
+
+For UI work, colocate content skeletons with their owning component and share
+loading/loaded structural layout. Update paired workbench states whenever layout
+changes; assess visual mismatch as well as layout shift. Follow the authoritative
+[loading contract](frontend/docs/ui-conventions.md#loading-preparation-and-stable-layouts) and frontend workbench workflow.

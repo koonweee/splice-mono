@@ -1,12 +1,12 @@
 import { useId } from 'react'
-import styles from './ChartSkeleton.module.css'
+import styles from './Chart.skeleton.module.css'
 
 /** Decorative chart silhouette; never represents account history. */
-export function ChartSkeleton() {
+export function HomeChartSkeleton({ height = 180 }: { height?: number }) {
   const gradientId = useId()
 
   return (
-    <div className={styles.root} role="status" aria-label="Loading chart">
+    <div className={styles.root} style={{ height }} aria-hidden="true">
       <svg
         viewBox="0 0 600 180"
         preserveAspectRatio="none"

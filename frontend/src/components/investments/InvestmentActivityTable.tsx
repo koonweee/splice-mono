@@ -1,4 +1,5 @@
-import { Box, Group, ScrollArea, Table, Text } from '@mantine/core'
+import { Box, Group, Table, Text } from '@mantine/core'
+import { ResponsiveSlot } from '../ResponsiveSlot'
 import {
   HIDDEN_BALANCE_PLACEHOLDER,
   formatCalendarDate,
@@ -10,6 +11,7 @@ import {
   formatInvestmentValue,
 } from '../../lib/investment-format'
 import { useDataListLayout, useSupportsHover } from '../../lib/responsive'
+import { InvestmentTableFrame, activityColumns } from './InvestmentTableFrame'
 import styles from './InvestmentHoldingsTable.module.css'
 import type { InvestmentActivity } from '../../api/models'
 
@@ -71,64 +73,56 @@ export function InvestmentActivityTable({
     )
   }
 
-  if (isMobile) {
-    return (
-      <Box
-        role="region"
-        aria-label={`Investment activity list, ${activity.length} of ${total} shown`}
-      >
-        {activity.map((row) => (
-          <Box key={row.id} className={styles.mobileRow} px="xs" py="sm">
-            <Group justify="space-between" align="flex-start" wrap="nowrap">
-              <Box style={{ minWidth: 0 }}>
-                <Text data-typography="rowTitleSmall" truncate>
-                  {getSecurityLabel(row)}
-                </Text>
-                <Text data-typography="caption" c="dimmed">
-                  {formatCalendarDate(row.activityDate)} · {formatSubtype(row)}
-                </Text>
-                <Text data-typography="caption" c="dimmed">
-                  {formatInvestmentQuantity(row.quantity)} @{' '}
-                  {formatInvestmentQuote({
-                    value: row.price,
-                    currency: row.amount.money.currency,
-                  })}
-                </Text>
-              </Box>
-              <Text
-                data-typography="amountSmall"
-                ta="right"
-                style={{ flexShrink: 0 }}
-              >
-                {formatCashImpact(row, balancesHidden)}
+  const compactRows = (
+    <Box
+      role="region"
+      aria-label={`Investment activity list, ${activity.length} of ${total} shown`}
+    >
+      {activity.map((row) => (
+        <Box key={row.id} className={styles.mobileRow} px="xs" py="sm">
+          <Group justify="space-between" align="flex-start" wrap="nowrap">
+            <Box style={{ minWidth: 0 }}>
+              <Text data-typography="rowTitleSmall" truncate>
+                {getSecurityLabel(row)}
               </Text>
-            </Group>
-          </Box>
-        ))}
-      </Box>
-    )
-  }
+              <Text data-typography="caption" c="dimmed">
+                {formatCalendarDate(row.activityDate)} · {formatSubtype(row)}
+              </Text>
+              <Text data-typography="caption" c="dimmed">
+                {formatInvestmentQuantity(row.quantity)} @{' '}
+                {formatInvestmentQuote({
+                  value: row.price,
+                  currency: row.amount.money.currency,
+                })}
+              </Text>
+            </Box>
+            <Text
+              data-typography="amountSmall"
+              ta="right"
+              style={{ flexShrink: 0 }}
+            >
+              {formatCashImpact(row, balancesHidden)}
+            </Text>
+          </Group>
+        </Box>
+      ))}
+    </Box>
+  )
 
   return (
-    <ScrollArea type="auto">
-      <Table
-        className={styles.table}
-        striped
-        highlightOnHover={supportsHover}
-        verticalSpacing="xs"
+    <>
+      <ResponsiveSlot
+        compact={isMobile}
+        variant="compact"
+        breakpoint="data-list"
       >
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Date</Table.Th>
-            <Table.Th>Security</Table.Th>
-            <Table.Th>Type</Table.Th>
-            <Table.Th ta="right">Quantity</Table.Th>
-            <Table.Th ta="right">Price</Table.Th>
-            <Table.Th ta="right">Fees</Table.Th>
-            <Table.Th ta="right">Cash impact</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
+        {compactRows}
+      </ResponsiveSlot>
+      <ResponsiveSlot compact={isMobile} variant="wide" breakpoint="data-list">
+        <InvestmentTableFrame
+          columns={activityColumns}
+          highlightOnHover={supportsHover}
+        >
           {activity.map((row) => (
             <Table.Tr key={row.id}>
               <Table.Td>{formatCalendarDate(row.activityDate)}</Table.Td>
@@ -159,8 +153,8 @@ export function InvestmentActivityTable({
               </Table.Td>
             </Table.Tr>
           ))}
-        </Table.Tbody>
-      </Table>
-    </ScrollArea>
+        </InvestmentTableFrame>
+      </ResponsiveSlot>
+    </>
   )
 }

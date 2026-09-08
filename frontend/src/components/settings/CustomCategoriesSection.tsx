@@ -31,9 +31,7 @@ import {
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
-import { PageToolbar } from '../PageLayout'
 import { ResponsiveSlot } from '../ResponsiveSlot'
-import { CategoriesTableSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { useCompactLayout, usePhoneLayout } from '../../lib/responsive'
 import { DataState } from '../DataState'
@@ -57,6 +55,20 @@ import {
 } from '../../lib/mobile-combobox'
 import { MobileTableList } from '../MobileTableList'
 import tableChrome from '../MantineTableChrome.module.css'
+import { SettingsCompactRowFrame } from './SettingsCompactRowFrame'
+import { SettingsFiltersFrame } from './SettingsFiltersFrame'
+import {
+  CategoriesTableSkeleton,
+  categoriesTableLayout,
+  customCategoriesSectionColumns,
+} from './CustomCategoriesSection.skeleton'
+import { settingsSectionLabels } from './SettingsSection.skeleton'
+import {
+  settingsTableContainerFillStyle,
+  settingsTableFillStyle,
+  settingsTablePaperProps,
+  settingsTableProps,
+} from './SettingsTableFrame'
 import compactStyles from './SettingsCompactRow.module.css'
 import { SettingsRowActions } from './SettingsRowActions'
 import { SettingsToolbar } from './SettingsToolbar'
@@ -85,12 +97,12 @@ type CategoryConflictView = {
   archivedAt?: string | null
 }
 
-const VIRTUAL_ROW_HEIGHT = 66
-const TABLE_HEADER_HEIGHT = 52
-const SELECT_COLUMN_WIDTH = 56
-const STATUS_COLUMN_WIDTH = 130
-const USED_COLUMN_WIDTH = 88
-const ACTIONS_COLUMN_WIDTH = 92
+const VIRTUAL_ROW_HEIGHT = categoriesTableLayout.rowHeight
+const TABLE_HEADER_HEIGHT = categoriesTableLayout.headerHeight
+const SELECT_COLUMN_WIDTH = customCategoriesSectionColumns[0].size
+const STATUS_COLUMN_WIDTH = customCategoriesSectionColumns[3].size
+const USED_COLUMN_WIDTH = customCategoriesSectionColumns[2].size
+const ACTIONS_COLUMN_WIDTH = customCategoriesSectionColumns[4].size
 
 const tableHeaderCellStyle = {
   height: TABLE_HEADER_HEIGHT,
@@ -476,8 +488,12 @@ export function CustomCategoriesSection() {
     selectedRows.length > 0 &&
     selectedRows.every((category) => Boolean(category.archivedAt))
   const canDuplicate = canArchive
-  const categoryColumnSize = isMobile ? 168 : 320
-  const categoryColumnMinSize = isMobile ? 96 : 180
+  const categoryColumnSize = isMobile
+    ? 168
+    : customCategoriesSectionColumns[1].size
+  const categoryColumnMinSize = isMobile
+    ? 96
+    : customCategoriesSectionColumns[1].minSize
   const categoryColumnMaxSize = isMobile ? 220 : undefined
   const hiddenActiveFilterCount = primaryFilter ? 1 : 0
   const hasActiveFilters = archivedMode || hiddenActiveFilterCount > 0
@@ -871,23 +887,26 @@ export function CustomCategoriesSection() {
 
   function renderMobileCategoryRow(category: CategoryManagementItem) {
     return (
-      <div className={compactStyles.row}>
-        <div className={compactStyles.heading}>
-          <Checkbox
-            aria-label={`Select ${getCategoryPairLabel(category)}`}
-            checked={selectedIds.has(category.id)}
-            onChange={(event) =>
-              setCategorySelected(category.id, event.currentTarget.checked)
-            }
-          />
-          <Text
-            data-typography="sectionHeading"
-            className={compactStyles.title}
-          >
-            {getPrimaryDisplay(category)}
-          </Text>
-          {renderCategoryRowActions(category)}
-        </div>
+      <SettingsCompactRowFrame
+        heading={
+          <>
+            <Checkbox
+              aria-label={`Select ${getCategoryPairLabel(category)}`}
+              checked={selectedIds.has(category.id)}
+              onChange={(event) =>
+                setCategorySelected(category.id, event.currentTarget.checked)
+              }
+            />
+            <Text
+              data-typography="sectionHeading"
+              className={compactStyles.title}
+            >
+              {getPrimaryDisplay(category)}
+            </Text>
+            {renderCategoryRowActions(category)}
+          </>
+        }
+      >
         <Group gap="xs" wrap="nowrap" align="flex-start">
           <Box
             aria-hidden="true"
@@ -912,14 +931,14 @@ export function CustomCategoriesSection() {
             {(category.transactionCount ?? 0).toLocaleString()} used
           </Text>
         </div>
-      </div>
+      </SettingsCompactRowFrame>
     )
   }
 
   const categoryColumns: Array<MRT_ColumnDef<CategoryManagementItem>> = [
     {
       id: 'category',
-      header: 'Category',
+      header: customCategoriesSectionColumns[1].header,
       accessorFn: getCategoryPairLabel,
       size: categoryColumnSize,
       minSize: categoryColumnMinSize,
@@ -947,7 +966,7 @@ export function CustomCategoriesSection() {
     },
     {
       id: 'used',
-      header: 'Used',
+      header: customCategoriesSectionColumns[2].header,
       accessorFn: (category) => category.transactionCount ?? 0,
       size: USED_COLUMN_WIDTH,
       minSize: USED_COLUMN_WIDTH,
@@ -957,7 +976,7 @@ export function CustomCategoriesSection() {
     },
     {
       id: 'status',
-      header: 'Status',
+      header: customCategoriesSectionColumns[3].header,
       accessorFn: getStatus,
       size: STATUS_COLUMN_WIDTH,
       minSize: STATUS_COLUMN_WIDTH,
@@ -1021,7 +1040,7 @@ export function CustomCategoriesSection() {
         enableResizing: false,
       },
       'mrt-row-actions': {
-        header: 'Actions',
+        header: customCategoriesSectionColumns[4].header,
         size: ACTIONS_COLUMN_WIDTH,
         minSize: ACTIONS_COLUMN_WIDTH,
         maxSize: ACTIONS_COLUMN_WIDTH,
@@ -1052,31 +1071,11 @@ export function CustomCategoriesSection() {
     mantineTableBodyCellProps: {
       style: tableBodyCellStyle,
     },
-    mantineTableProps: {
-      className: tableChrome.table,
-    },
-    mantineTableContainerProps: {
-      style: {
-        flex: '1 1 0',
-        height: '100%',
-        maxHeight: '100%',
-        minHeight: 0,
-        overflow: 'auto',
-      },
-    },
+    mantineTableProps: settingsTableProps,
+    mantineTableContainerProps: { style: settingsTableContainerFillStyle },
     mantinePaperProps: {
-      withBorder: true,
-      radius: 'md',
-      style: {
-        display: 'flex',
-        flex: '1 1 0',
-        flexDirection: 'column',
-        height: '100%',
-        maxHeight: '100%',
-        minHeight: 0,
-        minWidth: 0,
-        overflow: 'hidden',
-      },
+      ...settingsTablePaperProps,
+      style: settingsTableFillStyle,
     },
     renderEmptyRowsFallback: () => (
       <Text data-typography="metadata" c="dimmed" ta="center" py="lg">
@@ -1092,59 +1091,55 @@ export function CustomCategoriesSection() {
       style={{ flex: '1 1 auto', minHeight: 0 }}
     >
       <SettingsToolbar
-        title="Categories"
-        description="Organize your transactions with categories that make sense to you."
-        addLabel="Add category"
+        {...settingsSectionLabels.categories}
         onAdd={openCreatePanel}
         hideAdd={selectedRows.length > 0}
       />
 
-      <PageToolbar section>
-        <Group w="100%" align="center" gap="xs" wrap="wrap">
-          <TextInput
-            aria-label="Search categories"
-            placeholder="Search categories..."
-            value={search}
-            onChange={(event) => setSearch(event.currentTarget.value)}
-            size="md"
-            style={{ flex: '1 1 240px', minWidth: 0 }}
-          />
-          <SettingsArchiveFilter
-            checked={archivedMode}
-            onChange={setArchivedMode}
-          />
-          <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
-            <Box pos="relative">
-              <ActionIcon
-                aria-label={filterButtonLabel}
-                variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
-                size={48}
-                onClick={toggleFilters}
-              >
-                <Filter size={20} />
-              </ActionIcon>
-              {hiddenActiveFilterCount > 0 && (
-                <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
-                  {hiddenActiveFilterCount}
-                </Badge>
-              )}
-            </Box>
-          </ResponsiveSlot>
-          <ResponsiveSlot compact={Boolean(isMobile)} variant="wide">
-            <>
-              <CategorySelect
-                aria-label="Primary category"
-                value={primaryFilter}
-                onChange={setPrimaryFilter}
-                data={primaryFilterData}
-                placeholder="Primary category"
-                size="md"
-                w={220}
-              />
-            </>
-          </ResponsiveSlot>
-        </Group>
-      </PageToolbar>
+      <SettingsFiltersFrame categories>
+        <TextInput
+          aria-label="Search categories"
+          placeholder="Search categories..."
+          value={search}
+          onChange={(event) => setSearch(event.currentTarget.value)}
+          size="md"
+          style={{ flex: '1 1 240px', minWidth: 0 }}
+        />
+        <SettingsArchiveFilter
+          checked={archivedMode}
+          onChange={setArchivedMode}
+        />
+        <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
+          <Box pos="relative">
+            <ActionIcon
+              aria-label={filterButtonLabel}
+              variant={hiddenActiveFilterCount > 0 ? 'light' : 'default'}
+              size={48}
+              onClick={toggleFilters}
+            >
+              <Filter size={20} />
+            </ActionIcon>
+            {hiddenActiveFilterCount > 0 && (
+              <Badge circle size="xs" pos="absolute" top={-6} right={-6}>
+                {hiddenActiveFilterCount}
+              </Badge>
+            )}
+          </Box>
+        </ResponsiveSlot>
+        <ResponsiveSlot compact={Boolean(isMobile)} variant="wide">
+          <>
+            <CategorySelect
+              aria-label="Primary category"
+              value={primaryFilter}
+              onChange={setPrimaryFilter}
+              data={primaryFilterData}
+              placeholder="Primary category"
+              size="md"
+              w={220}
+            />
+          </>
+        </ResponsiveSlot>
+      </SettingsFiltersFrame>
 
       <Drawer
         opened={Boolean(isMobile) && filtersOpened}
@@ -1278,6 +1273,7 @@ export function CustomCategoriesSection() {
                 />
               )}
               <MobileTableList
+                loadingFallback={null}
                 ariaLabel={`Categories list, ${filteredCategories.length.toLocaleString()} total`}
                 data={sortedCategories}
                 emptyMessage="No categories match the current filters."

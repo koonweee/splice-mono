@@ -1,10 +1,11 @@
 import { Box, Drawer, Modal, Stack } from '@mantine/core'
+import { useEffect, useState } from 'react'
 import { foundation } from '../lib/design-system/foundation'
 import { useCompactLayout } from '../lib/responsive'
 import styles from './DeferredOverlay.module.css'
 import { DeferredFeature } from './DeferredFeature'
 import { EditorModal } from './forms/EditorModal'
-import { FormSkeleton, LoadingSkeleton } from './loading/LoadingSkeleton'
+import { LoadingSkeleton } from './loading/LoadingSkeleton'
 import drilldownStyles from './CategoryTransactionsModal.module.css'
 import type { ReactNode } from 'react'
 import type { ModalProps } from '@mantine/core'
@@ -18,7 +19,7 @@ export function DeferredOverlay({
   size,
   centered,
   kind = 'editor',
-  skeleton = <FormSkeleton />,
+  skeleton,
   minHeight = 300,
   header,
 }: {
@@ -29,10 +30,32 @@ export function DeferredOverlay({
   size?: ModalProps['size']
   centered?: boolean
   kind?: 'editor' | 'drilldown' | 'audit'
-  skeleton?: ReactNode
+  skeleton: ReactNode
   minHeight?: number
   header?: ReactNode
 }) {
+  // This boundary outlives the pending and loaded modal instances. Mantine's
+  // return-focus hook cannot retain the opener across that instance swap.
+  const [returnTarget] = useState(() =>
+    typeof document !== 'undefined' &&
+    document.activeElement !== document.body &&
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null,
+  )
+  useEffect(
+    () => () => {
+      if (!returnTarget) return
+      requestAnimationFrame(() => {
+        if (
+          returnTarget.isConnected &&
+          document.activeElement === document.body
+        )
+          returnTarget.focus({ preventScroll: true })
+      })
+    },
+    [returnTarget],
+  )
   const isCompact = useCompactLayout()
   const frame = (content: ReactNode) => {
     const body = (
@@ -76,7 +99,10 @@ export function DeferredOverlay({
             body: drilldownStyles.drilldownModalBody,
             content: drilldownStyles.drilldownModalContent,
           }}
-          transitionProps={{ transition: 'fade', duration: foundation.motion.overlay }}
+          transitionProps={{
+            transition: 'fade',
+            duration: foundation.motion.overlay,
+          }}
         >
           {body}
         </Modal>
@@ -106,6 +132,7 @@ export function DeferredOverlay({
           <Box pos="relative">
             <div
               aria-hidden="true"
+              inert
               style={{ visibility: 'hidden', pointerEvents: 'none' }}
             >
               {skeleton}

@@ -10,7 +10,7 @@ import { useBalanceSnapshotControllerImportCsv } from '../../api/clients/spliceA
 import { getApiErrorMessage } from '../../lib/api-errors'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
-import { BackfillInstructions } from './BackfillInstructions'
+import { BACKFILL_TITLE, BackfillInstructions } from './BackfillInstructions'
 
 interface BackfillModalProps {
   opened: boolean
@@ -102,7 +102,7 @@ export function BackfillModal({ opened, onClose }: BackfillModalProps) {
     <EditorModal
       opened={opened}
       onClose={handleClose}
-      title="Manual backfill via CSV"
+      title={BACKFILL_TITLE}
       closeOnEscape={!importCsv.isPending}
       closeOnClickOutside={!importCsv.isPending}
       closeButtonProps={{ disabled: importCsv.isPending }}

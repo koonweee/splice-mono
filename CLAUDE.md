@@ -97,3 +97,10 @@ Avoid `useEffect` when possible. Prefer:
 - **Type Safety**: Zod schemas on backend flow through OpenAPI to generated TypeScript types on frontend.
 
 See individual CLAUDE.md files in `backend/` and `frontend/` for detailed guidance.
+
+## Loading-state ownership
+
+For UI work, colocate content skeletons with their owning component and share
+loading/loaded structural layout. Update paired workbench states whenever layout
+changes; assess visual mismatch as well as layout shift. Follow the authoritative
+[loading contract](frontend/docs/ui-conventions.md#loading-preparation-and-stable-layouts) and frontend workbench workflow.

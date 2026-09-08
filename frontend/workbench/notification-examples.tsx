@@ -109,6 +109,10 @@ export const notificationExamples = [
       'clearing',
       'clear-error',
     ],
-    components: ['NotificationBell', 'NotificationInbox'],
+    components: [
+      'NotificationBell',
+      'NotificationInbox',
+      'NotificationInboxSkeleton',
+    ],
   },
 ]

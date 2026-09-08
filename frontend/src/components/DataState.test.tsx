@@ -22,6 +22,7 @@ describe('DataState', () => {
     render(
       <MantineProvider>
         <DataState
+          loadingFallback={null}
           hasData
           isError
           errorMessage="Could not refresh accounts"
@@ -64,7 +65,9 @@ describe('DataState', () => {
     )
     rerender(
       <MantineProvider>
-        <DataState hasData>{content}</DataState>
+        <DataState loadingFallback={null} hasData>
+          {content}
+        </DataState>
       </MantineProvider>,
     )
     const draft = screen.getByRole<HTMLInputElement>('textbox', {
@@ -74,7 +77,7 @@ describe('DataState', () => {
     draft.focus()
     rerender(
       <MantineProvider>
-        <DataState hasData isFetching>
+        <DataState loadingFallback={null} hasData isFetching>
           {content}
         </DataState>
       </MantineProvider>,
@@ -85,7 +88,7 @@ describe('DataState', () => {
     expect(screen.queryByTestId('account-shape')).toBeNull()
     rerender(
       <MantineProvider>
-        <DataState hasData isError>
+        <DataState loadingFallback={null} hasData isError>
           {content}
         </DataState>
       </MantineProvider>,
@@ -104,7 +107,12 @@ describe('DataState', () => {
     const onRetry = vi.fn()
     const { rerender } = render(
       <MantineProvider>
-        <DataState hasData={false} isLoading emptyMessage="No accounts" />
+        <DataState
+          loadingFallback={null}
+          hasData={false}
+          isLoading
+          emptyMessage="No accounts"
+        />
       </MantineProvider>,
     )
     expect(screen.getByRole('status').textContent).toContain('Loading results')
@@ -113,6 +121,7 @@ describe('DataState', () => {
     rerender(
       <MantineProvider>
         <DataState
+          loadingFallback={null}
           hasData={false}
           isError
           isFetching
@@ -128,7 +137,11 @@ describe('DataState', () => {
 
     rerender(
       <MantineProvider>
-        <DataState hasData={false} emptyMessage="No accounts" />
+        <DataState
+          loadingFallback={null}
+          hasData={false}
+          emptyMessage="No accounts"
+        />
       </MantineProvider>,
     )
     expect(screen.getByRole('status').textContent).toBe('No accounts')

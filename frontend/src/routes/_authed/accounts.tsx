@@ -1,19 +1,17 @@
 import { Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { showNotification } from '@mantine/notifications'
-import { IconPlus, IconRefresh, IconUpload } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { lazy, useMemo } from 'react'
-import {
-  AddAccountSkeleton,
-  BackfillSkeleton,
-} from '../../components/loading/AccountDialogSkeletons'
+import { BACKFILL_TITLE } from '../../components/accounts/BackfillInstructions'
+import { AddAccountSkeleton } from '../../components/accounts/AddAccountModal.skeleton'
+import { BackfillSkeleton } from '../../components/accounts/BackfillModal.skeleton'
 import {
   loadAddAccountModal,
   loadBackfillModal,
 } from '../../lib/feature-loaders'
-import { AccountsSkeleton } from '../../components/loading/LoadingSkeleton'
+import { AccountsSkeleton } from '../../components/accounts/InstitutionSection.skeleton'
 import { DeferredOverlay } from '../../components/DeferredOverlay'
 import {
   useAccountControllerFindAll,
@@ -22,9 +20,9 @@ import {
 import { accountsQueryOptions } from '../../lib/queries/primary'
 import { loadQuery } from '../../lib/queries/loader'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
+import { AccountsPageFrame } from '../../components/pages/AccountsPageFrame'
 import type { Account } from '../../api/models'
 import { InstitutionSection } from '@/components/accounts/InstitutionSection'
-import { PageLayout } from '@/components/PageLayout'
 import { DataState } from '@/components/DataState'
 
 const AddAccountModal = lazy(loadAddAccountModal)
@@ -103,37 +101,11 @@ function AccountsPage() {
 
   return (
     <>
-      <PageLayout
-        title="Accounts"
-        actions={{
-          primary: {
-            id: 'add',
-            label: 'Add account',
-            icon: IconPlus,
-            onClick: openModal,
-            onPrepare: () => {
-              void loadAddAccountModal().catch(() => undefined)
-            },
-          },
-          secondary: [
-            {
-              id: 'sync',
-              label: syncAll.isPending ? 'Syncing' : 'Sync all',
-              icon: IconRefresh,
-              onClick: () => syncAll.mutate(),
-              loading: syncAll.isPending,
-            },
-            {
-              id: 'backfill',
-              label: 'Backfill',
-              icon: IconUpload,
-              onClick: openBackfill,
-              onPrepare: () => {
-                void loadBackfillModal().catch(() => undefined)
-              },
-            },
-          ],
-        }}
+      <AccountsPageFrame
+        onAdd={openModal}
+        onSync={() => syncAll.mutate()}
+        onBackfill={openBackfill}
+        syncing={syncAll.isPending}
       >
         <DataState
           hasData={groupedAccounts.size > 0}
@@ -158,7 +130,7 @@ function AccountsPage() {
             )}
           </Stack>
         </DataState>
-      </PageLayout>
+      </AccountsPageFrame>
       {modalOpened && (
         <DeferredOverlay
           label="Add account"
@@ -172,7 +144,7 @@ function AccountsPage() {
       {backfillOpened && (
         <DeferredOverlay
           label="Backfill balances"
-          title="Manual backfill via CSV"
+          title={BACKFILL_TITLE}
           minHeight={0}
           skeleton={<BackfillSkeleton />}
           size="lg"

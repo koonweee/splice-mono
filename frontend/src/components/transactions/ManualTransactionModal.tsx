@@ -41,6 +41,10 @@ import { AccountSelect } from '../accounts/AccountSelect'
 import { CategorySelect } from '../categories/CategorySelect'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
+import {
+  ManualTransactionFormFrame,
+  manualTransactionLabels,
+} from './ManualTransactionFormFrame'
 import type { ManualSaveAttempt } from '../../lib/transactions/manual-save-recovery'
 import type { CategorySelectOption } from '../categories/CategorySelect'
 import type { Account, Category, Transaction } from '../../api/models'
@@ -404,238 +408,236 @@ export function ManualTransactionModal({
       size="md"
       transitionProps={{ duration: 0 }}
     >
-      <form onSubmit={handleSubmit}>
-        <Stack gap="md">
-          {saveError && (
-            <Alert color="red" role="alert">
-              {saveError}
-            </Alert>
-          )}
-          {uncertain && (
-            <Alert
-              color="yellow"
-              title="Save confirmation missing"
-              role="alert"
-            >
-              <Stack gap="xs">
+      <ManualTransactionFormFrame onSubmit={handleSubmit}>
+        {saveError && (
+          <Alert color="red" role="alert">
+            {saveError}
+          </Alert>
+        )}
+        {uncertain && (
+          <Alert color="yellow" title="Save confirmation missing" role="alert">
+            <Stack gap="xs">
+              <Text data-typography="bodySmall">
+                The server may have saved this entry. Your draft is still here.
+                Check saved entries before trying again.
+              </Text>
+              {uncertain.matches !== undefined && (
                 <Text data-typography="bodySmall">
-                  The server may have saved this entry. Your draft is still
-                  here. Check saved entries before trying again.
+                  {uncertain.matches > 0
+                    ? `${uncertain.matches} saved ${uncertain.matches === 1 ? 'entry matches' : 'entries match'} these details.`
+                    : 'No match in the latest results. A delayed save may still finish.'}
                 </Text>
+              )}
+              <Group gap="xs">
+                <Button
+                  variant="light"
+                  loading={checkingSave}
+                  onClick={() => void checkSavedEntries()}
+                >
+                  Check saved{' '}
+                  {uncertain.attempt.recurrenceDay === undefined
+                    ? 'transactions'
+                    : 'schedules'}
+                </Button>
                 {uncertain.matches !== undefined && (
-                  <Text data-typography="bodySmall">
-                    {uncertain.matches > 0
-                      ? `${uncertain.matches} saved ${uncertain.matches === 1 ? 'entry matches' : 'entries match'} these details.`
-                      : 'No match in the latest results. A delayed save may still finish.'}
-                  </Text>
-                )}
-                <Group gap="xs">
                   <Button
-                    variant="light"
-                    loading={checkingSave}
-                    onClick={() => void checkSavedEntries()}
+                    variant="default"
+                    onClick={() => {
+                      setUncertain(null)
+                      setSaveError(
+                        'Check for duplicates if a delayed save finishes. Your draft is ready to submit again.',
+                      )
+                    }}
                   >
-                    Check saved{' '}
-                    {uncertain.attempt.recurrenceDay === undefined
-                      ? 'transactions'
-                      : 'schedules'}
+                    Try saving again
                   </Button>
-                  {uncertain.matches !== undefined && (
-                    <Button
-                      variant="default"
-                      onClick={() => {
-                        setUncertain(null)
-                        setSaveError(
-                          'Check for duplicates if a delayed save finishes. Your draft is ready to submit again.',
-                        )
-                      }}
-                    >
-                      Try saving again
-                    </Button>
-                  )}
-                  {Boolean(uncertain.matches) && (
-                    <Button
-                      variant="subtle"
-                      onClick={() => {
-                        onSaved?.()
-                        onClose()
-                      }}
-                    >
-                      Done
-                    </Button>
-                  )}
-                </Group>
-              </Stack>
-            </Alert>
-          )}
-          <Box component="fieldset" disabled={formLocked} m={0} p={0} bd={0}>
-            <Stack gap="md">
-              <AccountSelect
-                disabled={formLocked}
-                allowDeselect={false}
-                comboboxProps={comboboxProps}
-                data={accountOptions}
-                error={errors.accountId}
-                label="Account"
-                maxDropdownHeight={maxDropdownHeight}
-                onChange={(value) => {
-                  setAccountId(value ?? '')
-                  setErrors((current) => ({ ...current, accountId: undefined }))
-                }}
-                placeholder="Select account"
-                required
-                searchable
-                value={accountId}
-              />
-              <Group align="flex-start" grow>
-                <DecimalInput
-                  disabled={formLocked}
-                  error={errors.amount}
-                  label="Amount"
-                  onChange={(value) => {
-                    setAmount(value)
-                    setErrors((current) => ({ ...current, amount: undefined }))
-                  }}
-                  placeholder="0.00"
-                  required
-                  rightSection={
-                    <ActionIcon
-                      disabled={formLocked}
-                      aria-label={
-                        amountIsNegative
-                          ? 'Make amount positive'
-                          : 'Make amount negative'
-                      }
-                      onClick={() => {
-                        setAmount((current) => toggleMoneyDraftSign(current))
-                        setErrors((current) => ({
-                          ...current,
-                          amount: undefined,
-                        }))
-                      }}
-                      size="sm"
-                      type="button"
-                      variant="subtle"
-                    >
-                      {amountIsNegative ? (
-                        <Plus aria-hidden size={16} />
-                      ) : (
-                        <Minus aria-hidden size={16} />
-                      )}
-                    </ActionIcon>
-                  }
-                  rightSectionPointerEvents="auto"
-                  rightSectionWidth={40}
-                  value={amount}
-                />
-                <TextInput label="Currency" readOnly value={currency} />
+                )}
+                {Boolean(uncertain.matches) && (
+                  <Button
+                    variant="subtle"
+                    onClick={() => {
+                      onSaved?.()
+                      onClose()
+                    }}
+                  >
+                    Done
+                  </Button>
+                )}
               </Group>
-              <TextInput
+            </Stack>
+          </Alert>
+        )}
+        <Box component="fieldset" disabled={formLocked} m={0} p={0} bd={0}>
+          <Stack gap="md">
+            <AccountSelect
+              disabled={formLocked}
+              allowDeselect={false}
+              comboboxProps={comboboxProps}
+              data={accountOptions}
+              error={errors.accountId}
+              label={manualTransactionLabels.account}
+              maxDropdownHeight={maxDropdownHeight}
+              onChange={(value) => {
+                setAccountId(value ?? '')
+                setErrors((current) => ({ ...current, accountId: undefined }))
+              }}
+              placeholder="Select account"
+              required
+              searchable
+              value={accountId}
+            />
+            <Group align="flex-start" grow>
+              <DecimalInput
                 disabled={formLocked}
-                error={errors.providerDate}
-                label="Date"
-                onChange={(event) => {
-                  const nextProviderDate = event.currentTarget.value
-                  setProviderDate(nextProviderDate)
-                  if (!isEditing && recurringEnabled && nextProviderDate) {
-                    setRecurrenceDay(getDateDayOfMonth(nextProviderDate))
-                  }
-                  setErrors((current) => ({
-                    ...current,
-                    providerDate: undefined,
-                  }))
-                }}
-                required
-                type="date"
-                value={providerDate}
-              />
-              <TextInput
-                disabled={formLocked}
-                error={errors.merchantName}
-                label="Merchant"
-                onChange={(event) => {
-                  setMerchantName(event.currentTarget.value)
-                  setErrors((current) => ({
-                    ...current,
-                    merchantName: undefined,
-                  }))
-                }}
-                placeholder="Merchant or transaction name"
-                required
-                value={merchantName}
-              />
-              <CategorySelect
-                disabled={formLocked}
-                aria-label="Category"
-                clearable={false}
-                comboboxProps={comboboxProps}
-                data={categoryOptions}
-                error={errors.categoryId}
-                label="Category"
-                maxDropdownHeight={maxDropdownHeight}
+                error={errors.amount}
+                label={manualTransactionLabels.amount}
                 onChange={(value) => {
-                  setCategoryId(value)
-                  setErrors((current) => ({
-                    ...current,
-                    categoryId: undefined,
-                  }))
+                  setAmount(value)
+                  setErrors((current) => ({ ...current, amount: undefined }))
                 }}
-                placeholder="Select category"
+                placeholder="0.00"
                 required
-                value={categoryId}
-              />
-              {!isEditing && (
-                <>
-                  <Switch
+                rightSection={
+                  <ActionIcon
                     disabled={formLocked}
-                    checked={recurringEnabled}
-                    label="Repeat monthly"
-                    onChange={(event) => {
-                      const checked = event.currentTarget.checked
-                      setRecurringEnabled(checked)
-                      if (checked && providerDate) {
-                        setRecurrenceDay(getDateDayOfMonth(providerDate))
-                      }
+                    aria-label={
+                      amountIsNegative
+                        ? 'Make amount positive'
+                        : 'Make amount negative'
+                    }
+                    onClick={() => {
+                      setAmount((current) => toggleMoneyDraftSign(current))
+                      setErrors((current) => ({
+                        ...current,
+                        amount: undefined,
+                      }))
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="subtle"
+                  >
+                    {amountIsNegative ? (
+                      <Plus aria-hidden size={16} />
+                    ) : (
+                      <Minus aria-hidden size={16} />
+                    )}
+                  </ActionIcon>
+                }
+                rightSectionPointerEvents="auto"
+                rightSectionWidth={40}
+                value={amount}
+              />
+              <TextInput
+                label={manualTransactionLabels.currency}
+                readOnly
+                value={currency}
+              />
+            </Group>
+            <TextInput
+              disabled={formLocked}
+              error={errors.providerDate}
+              label={manualTransactionLabels.date}
+              onChange={(event) => {
+                const nextProviderDate = event.currentTarget.value
+                setProviderDate(nextProviderDate)
+                if (!isEditing && recurringEnabled && nextProviderDate) {
+                  setRecurrenceDay(getDateDayOfMonth(nextProviderDate))
+                }
+                setErrors((current) => ({
+                  ...current,
+                  providerDate: undefined,
+                }))
+              }}
+              required
+              type="date"
+              value={providerDate}
+            />
+            <TextInput
+              disabled={formLocked}
+              error={errors.merchantName}
+              label={manualTransactionLabels.merchant}
+              onChange={(event) => {
+                setMerchantName(event.currentTarget.value)
+                setErrors((current) => ({
+                  ...current,
+                  merchantName: undefined,
+                }))
+              }}
+              placeholder="Merchant or transaction name"
+              required
+              value={merchantName}
+            />
+            <CategorySelect
+              disabled={formLocked}
+              aria-label={manualTransactionLabels.category}
+              clearable={false}
+              comboboxProps={comboboxProps}
+              data={categoryOptions}
+              error={errors.categoryId}
+              label={manualTransactionLabels.category}
+              maxDropdownHeight={maxDropdownHeight}
+              onChange={(value) => {
+                setCategoryId(value)
+                setErrors((current) => ({
+                  ...current,
+                  categoryId: undefined,
+                }))
+              }}
+              placeholder="Select category"
+              required
+              value={categoryId}
+            />
+            {!isEditing && (
+              <>
+                <Switch
+                  disabled={formLocked}
+                  checked={recurringEnabled}
+                  label={manualTransactionLabels.recurring}
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked
+                    setRecurringEnabled(checked)
+                    if (checked && providerDate) {
+                      setRecurrenceDay(getDateDayOfMonth(providerDate))
+                    }
+                    setErrors((current) => ({
+                      ...current,
+                      recurrenceDay: undefined,
+                    }))
+                  }}
+                />
+                {recurringEnabled && (
+                  <NumberInput
+                    disabled={formLocked}
+                    allowDecimal={false}
+                    clampBehavior="strict"
+                    error={errors.recurrenceDay}
+                    label="Day of month"
+                    max={31}
+                    min={1}
+                    onChange={(value) => {
+                      setRecurrenceDay(value)
                       setErrors((current) => ({
                         ...current,
                         recurrenceDay: undefined,
                       }))
                     }}
+                    value={recurrenceDay}
                   />
-                  {recurringEnabled && (
-                    <NumberInput
-                      disabled={formLocked}
-                      allowDecimal={false}
-                      clampBehavior="strict"
-                      error={errors.recurrenceDay}
-                      label="Day of month"
-                      max={31}
-                      min={1}
-                      onChange={(value) => {
-                        setRecurrenceDay(value)
-                        setErrors((current) => ({
-                          ...current,
-                          recurrenceDay: undefined,
-                        }))
-                      }}
-                      value={recurrenceDay}
-                    />
-                  )}
-                </>
-              )}
-            </Stack>
-          </Box>
-          <FormActions onCancel={onClose} cancelDisabled={isSaving}>
-            <Button
-              loading={isSaving}
-              disabled={Boolean(uncertain)}
-              type="submit"
-            >
-              Save
-            </Button>
-          </FormActions>
-        </Stack>
-      </form>
+                )}
+              </>
+            )}
+          </Stack>
+        </Box>
+        <FormActions onCancel={onClose} cancelDisabled={isSaving}>
+          <Button
+            loading={isSaving}
+            disabled={Boolean(uncertain)}
+            type="submit"
+          >
+            Save
+          </Button>
+        </FormActions>
+      </ManualTransactionFormFrame>
     </EditorModal>
   )
 }

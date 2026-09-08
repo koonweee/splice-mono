@@ -6,15 +6,14 @@ import { useCurrentUser } from '../../lib/session'
 import { DeferredOverlay } from '../DeferredOverlay'
 import { AccountSection } from '../AccountSection'
 import { NetWorthCard } from '../NetWorthCard'
-import { PageHeader } from '../PageHeader'
 import { DataState } from '../DataState'
-import { AccountDetailsSkeleton } from '../loading/LoadingSkeleton'
-import { HomeSkeleton } from '../loading/HomeSkeleton'
+import { AccountDetailsSkeleton } from '../AccountModal.skeleton'
 import { useBalanceData } from '../../hooks/useBalanceData'
 import { isZeroBalanceAccount } from '../../lib/balance-utils'
 
 import { isValidTimePeriod } from '../../lib/route-search'
-import styles from './HomePage.module.css'
+import { HomeSkeleton } from './HomePage.skeleton'
+import { HomePageFrame } from './HomePageFrame'
 import type { AccountSummaryData } from '../../lib/balance-utils'
 import type { HomeSearch } from '../../lib/route-search'
 import { TimePeriod } from '@/lib/types'
@@ -96,11 +95,7 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
   }
 
   return (
-    <>
-      <div className={styles.heading}>
-        <PageHeader title="Home" mb="md" />
-      </div>
-
+    <HomePageFrame>
       <DataState
         hasData={Boolean(dashboard)}
         isLoading={isLoading}
@@ -108,7 +103,7 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
         isFetching={isFetching}
         errorMessage="Unable to load the selected dashboard period."
         onRetry={() => void refetch()}
-        loadingFallback={<HomeSkeleton />}
+        loadingFallback={<HomeSkeleton period={period} />}
       >
         {dashboard && (
           <>
@@ -162,7 +157,9 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
           onClose={handleCloseModal}
           centered={false}
           minHeight={0}
-          skeleton={<AccountDetailsSkeleton account={selectedAccount} />}
+          skeleton={
+            <AccountDetailsSkeleton account={selectedAccount} period={period} />
+          }
         >
           <AccountModal
             account={selectedAccount}
@@ -174,6 +171,6 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
           />
         </DeferredOverlay>
       )}
-    </>
+    </HomePageFrame>
   )
 }

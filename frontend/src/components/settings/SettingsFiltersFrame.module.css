@@ -1,0 +1,11 @@
+.filters {
+  flex-wrap: nowrap;
+}
+.categories {
+  flex-wrap: wrap;
+}
+@media (--compact-layout) {
+  .filters {
+    flex-wrap: wrap;
+  }
+}

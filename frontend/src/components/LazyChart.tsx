@@ -1,7 +1,8 @@
 import { lazy } from 'react'
 import { loadChart } from '../lib/feature-loaders'
 import { DeferredFeature } from './DeferredFeature'
-import { ChartSkeleton } from './loading/ChartSkeleton'
+import { HomeChartSkeleton } from './Chart.skeleton'
+import { LoadingSkeleton } from './loading/LoadingSkeleton'
 import type { ComponentProps } from 'react'
 import type { Chart as ChartComponent } from './Chart'
 
@@ -12,7 +13,11 @@ export function LazyChart(props: ComponentProps<typeof ChartComponent>) {
     <DeferredFeature
       label="Chart"
       minHeight={props.height ?? 280}
-      fallback={props.minimal ? <ChartSkeleton /> : undefined}
+      fallback={
+        <LoadingSkeleton label="Loading chart…">
+          <HomeChartSkeleton height={props.height ?? 280} />
+        </LoadingSkeleton>
+      }
     >
       <Chart {...props} />
     </DeferredFeature>

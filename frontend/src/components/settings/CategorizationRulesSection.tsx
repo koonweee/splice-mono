@@ -33,9 +33,8 @@ import {
 } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useEffect, useMemo, useState } from 'react'
-import { PageToolbar } from '../PageLayout'
+import { TransactionsSkeleton } from '../TransactionsTable.skeleton'
 import { ResponsiveSlot } from '../ResponsiveSlot'
-import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import {
   useAccountControllerFindAll,
@@ -58,9 +57,23 @@ import { CategorySelect } from '../categories/CategorySelect'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
 import { MobileTableList } from '../MobileTableList'
-import tableChrome from '../MantineTableChrome.module.css'
 import { TransactionsTable } from '../TransactionsTable'
 import { TransactionsMobileList } from '../transactions/TransactionsMobileList'
+import { SettingsCompactRowFrame } from './SettingsCompactRowFrame'
+import { SettingsFiltersFrame } from './SettingsFiltersFrame'
+import { settingsSectionLabels } from './SettingsSection.skeleton'
+import {
+  CategorizationRulesSkeleton,
+  RecommendationCardFrame,
+  RecommendationsSkeleton,
+  categorizationRulesSectionColumns,
+} from './CategorizationRulesSection.skeleton'
+import {
+  settingsRuleTableProps,
+  settingsTableContainerFillStyle,
+  settingsTableFillStyle,
+  settingsTablePaperProps,
+} from './SettingsTableFrame'
 import compactStyles from './SettingsCompactRow.module.css'
 import { SettingsRowActions } from './SettingsRowActions'
 import { SettingsToolbar } from './SettingsToolbar'
@@ -606,7 +619,7 @@ export function CategorizationRulesSection() {
 
   function renderSuggestionCard(suggestion: CategorizationRuleSuggestion) {
     return (
-      <Paper key={suggestion.id} withBorder p="sm" radius="md">
+      <RecommendationCardFrame key={suggestion.id}>
         <Group
           align="flex-start"
           gap="sm"
@@ -683,7 +696,7 @@ export function CategorizationRulesSection() {
             </Tooltip>
           </Group>
         </Group>
-      </Paper>
+      </RecommendationCardFrame>
     )
   }
 
@@ -721,17 +734,20 @@ export function CategorizationRulesSection() {
 
   function renderMobileRuleRow(rule: CategorizationRuleView) {
     return (
-      <div className={compactStyles.row}>
-        <div className={compactStyles.heading}>
-          <Text
-            data-typography="sectionHeading"
-            className={compactStyles.title}
-          >
-            {rule.name}
-          </Text>
-          <SettingsStatusBadge status={getRuleStatus(rule)} />
-          {renderRuleRowActions(rule)}
-        </div>
+      <SettingsCompactRowFrame
+        heading={
+          <>
+            <Text
+              data-typography="sectionHeading"
+              className={compactStyles.title}
+            >
+              {rule.name}
+            </Text>
+            <SettingsStatusBadge status={getRuleStatus(rule)} />
+            {renderRuleRowActions(rule)}
+          </>
+        }
+      >
         <Text data-typography="metadata" c="dimmed" lineClamp={3}>
           {renderConditionSummary(rule)}
         </Text>
@@ -755,31 +771,31 @@ export function CategorizationRulesSection() {
             Priority {rule.priority}
           </Badge>
         </div>
-      </div>
+      </SettingsCompactRowFrame>
     )
   }
 
   const columns: Array<MRT_ColumnDef<CategorizationRuleView>> = [
     {
       accessorKey: 'name',
-      header: 'Name',
-      minSize: 180,
+      ...categorizationRulesSectionColumns[0],
+      minSize: categorizationRulesSectionColumns[0].minSize,
       Cell: ({ row }) => (
         <Text data-typography="subsectionHeading">{row.original.name}</Text>
       ),
     },
     {
       id: 'targetCategory',
-      header: 'Then categorize as',
+      ...categorizationRulesSectionColumns[1],
       accessorFn: (rule) => getCategoryLabel(rule.targetCategory),
-      minSize: 220,
+      minSize: categorizationRulesSectionColumns[1].minSize,
       Cell: ({ row }) => renderTargetCategory(row.original),
     },
     {
       id: 'conditions',
-      header: 'When',
+      ...categorizationRulesSectionColumns[2],
       accessorFn: renderConditionSummary,
-      minSize: 280,
+      minSize: categorizationRulesSectionColumns[2].minSize,
       Cell: ({ row }) => (
         <Text data-typography="bodySmall" lineClamp={2}>
           {renderConditionSummary(row.original)}
@@ -788,14 +804,14 @@ export function CategorizationRulesSection() {
     },
     {
       accessorKey: 'priority',
-      header: 'Priority',
-      size: 100,
+      ...categorizationRulesSectionColumns[3],
+      size: categorizationRulesSectionColumns[3].size,
     },
     {
       id: 'status',
-      header: 'Status',
+      ...categorizationRulesSectionColumns[4],
       accessorFn: getRuleStatus,
-      size: 110,
+      size: categorizationRulesSectionColumns[4].size,
       Cell: ({ row }) => {
         const status = getRuleStatus(row.original)
         return <SettingsStatusBadge status={status} />
@@ -820,31 +836,19 @@ export function CategorizationRulesSection() {
     enableBottomToolbar: false,
     enableStickyHeader: true,
     initialState: { density: 'xs' },
-    mantineTableProps: {
-      className: tableChrome.table,
-    },
-    mantineTableContainerProps: {
-      style: {
-        flex: '1 1 0',
-        height: '100%',
-        maxHeight: '100%',
-        minHeight: 0,
-        overflow: 'auto',
+    mantineTableProps: settingsRuleTableProps(
+      categorizationRulesSectionColumns,
+    ),
+    displayColumnDefOptions: {
+      'mrt-row-actions': {
+        size: categorizationRulesSectionColumns[5].size,
+        minSize: categorizationRulesSectionColumns[5].size,
       },
     },
+    mantineTableContainerProps: { style: settingsTableContainerFillStyle },
     mantinePaperProps: {
-      withBorder: true,
-      radius: 'md',
-      style: {
-        display: 'flex',
-        flex: '1 1 0',
-        flexDirection: 'column',
-        height: '100%',
-        maxHeight: '100%',
-        minHeight: 0,
-        minWidth: 0,
-        overflow: 'hidden',
-      },
+      ...settingsTablePaperProps,
+      style: settingsTableFillStyle,
     },
     renderRowActions: ({ row }) => renderRuleRowActions(row.original),
     renderEmptyRowsFallback: () => (
@@ -898,9 +902,7 @@ export function CategorizationRulesSection() {
       }}
     >
       <SettingsToolbar
-        title="Categorization rules"
-        description="Automatically categorize new transactions when they match your rules."
-        addLabel="Add rule"
+        {...settingsSectionLabels.categorization}
         onAdd={resetFormForCreate}
         secondary={[
           {
@@ -913,25 +915,23 @@ export function CategorizationRulesSection() {
         ]}
       />
 
-      <PageToolbar section>
-        <Group w="100%" gap="xs" wrap={isMobile ? 'wrap' : 'nowrap'}>
-          <TextInput
-            aria-label="Search categorization rules"
-            onChange={(event) => setSearch(event.currentTarget.value)}
-            placeholder="Search rules..."
-            size="md"
-            style={{ flex: '1 1 240px', minWidth: 0 }}
-            value={search}
-          />
-          <SettingsArchiveFilter
-            checked={archivedMode}
-            onChange={setArchivedMode}
-          />
-        </Group>
-      </PageToolbar>
+      <SettingsFiltersFrame>
+        <TextInput
+          aria-label="Search categorization rules"
+          onChange={(event) => setSearch(event.currentTarget.value)}
+          placeholder="Search rules..."
+          size="md"
+          style={{ flex: '1 1 240px', minWidth: 0 }}
+          value={search}
+        />
+        <SettingsArchiveFilter
+          checked={archivedMode}
+          onChange={setArchivedMode}
+        />
+      </SettingsFiltersFrame>
 
       <DataState
-        loadingFallback={<TableSkeleton rows={4} />}
+        loadingFallback={<CategorizationRulesSkeleton />}
         hasData={rules.length > 0}
         isLoading={isLoading}
         isError={isError}
@@ -943,6 +943,7 @@ export function CategorizationRulesSection() {
       >
         <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
           <MobileTableList
+            loadingFallback={null}
             ariaLabel={`Categorization rules list, ${filteredRules.length.toLocaleString()} total`}
             data={filteredRules}
             emptyMessage="No categorization rules match the current filters."
@@ -1125,7 +1126,14 @@ export function CategorizationRulesSection() {
                   isFetching={applicationPreview.isFetching}
                   isError={applicationPreview.isError && !applyResult}
                   loadingMessage="Loading eligible transactions…"
-                  loadingFallback={<TableSkeleton rows={4} />}
+                  loadingFallback={
+                    <TransactionsSkeleton
+                      rows={4}
+                      variant="drilldown"
+                      compact={isMobile}
+                      hiddenColumns={['category']}
+                    />
+                  }
                   emptyMessage="No eligible transactions to update."
                   errorMessage="Failed to load rule preview"
                   onRetry={() => void applicationPreview.refetch()}
@@ -1256,7 +1264,7 @@ export function CategorizationRulesSection() {
             isFetching={recommendations.isFetching}
             isError={recommendations.isError}
             loadingMessage="Loading recommendations…"
-            loadingFallback={<TableSkeleton rows={3} />}
+            loadingFallback={<RecommendationsSkeleton />}
             errorMessage="Unable to load recommendations."
             onRetry={() => void recommendations.refetch()}
           >

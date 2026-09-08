@@ -19,6 +19,7 @@ import {
   Radio,
   SegmentedControl,
   Select,
+  Skeleton,
   Stack,
   Switch,
   Tabs,
@@ -548,6 +549,12 @@ function Rows({ state, masked }: ExampleProps) {
       <PageHeader title="Account rows" />
       <Text role="status">{action}</Text>
       <MobileTableList
+        loadingFallback={
+          <Group p="md">
+            <Skeleton h={22} flex={1} />
+            <Skeleton h={22} w={80} />
+          </Group>
+        }
         ariaLabel="Fixture accounts"
         data={data}
         getRowKey={(row) => row.id}
@@ -702,6 +709,7 @@ function History({ state, masked }: ExampleProps) {
       </Text>
       {state === 'empty' && <Alert>No history for this period.</Alert>}
       <DataState
+        loadingFallback={null} // This example always retains its live Chart.
         hasData
         isError={state === 'refresh-error' && !retried}
         errorMessage="Unable to refresh history."

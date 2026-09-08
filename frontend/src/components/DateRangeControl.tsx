@@ -21,6 +21,7 @@ import type { DatesRangeValue } from '@mantine/dates'
 import type { FocusEvent, KeyboardEvent } from 'react'
 
 type DateRangeControlProps = {
+  disabled?: boolean
   clearable?: boolean
   growOnMobile?: boolean
   onChange: (range: DatesRangeValue) => void
@@ -149,6 +150,7 @@ export function DateRangeFields({
 }
 
 export function DateRangeControl({
+  disabled = false,
   clearable = true,
   growOnMobile = false,
   onChange,
@@ -185,6 +187,7 @@ export function DateRangeControl({
       style={{ '--date-range-width': `${width}px` }}
     >
       <Button
+        disabled={disabled}
         ref={triggerRef}
         data-mantine-stop-propagation={opened || undefined}
         onKeyDown={(event) => {
@@ -218,6 +221,7 @@ export function DateRangeControl({
       </Button>
       {clearable && hasValue && (
         <ActionIcon
+          disabled={disabled}
           aria-label="Clear date range"
           onClick={(event) => {
             event.stopPropagation()

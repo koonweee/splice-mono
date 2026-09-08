@@ -1,4 +1,8 @@
 @media (--compact-layout) {
+  .header {
+    flex-direction: column;
+  }
+
   .manageButton {
     height: var(--button-height-md);
     padding-inline: var(--button-padding-x-md);

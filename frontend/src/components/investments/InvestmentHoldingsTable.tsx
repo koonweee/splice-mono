@@ -1,4 +1,4 @@
-import { Box, Group, ScrollArea, Table, Text } from '@mantine/core'
+import { Box, Group, Table, Text } from '@mantine/core'
 import { ResponsiveSlot } from '../ResponsiveSlot'
 import { HIDDEN_BALANCE_PLACEHOLDER, formatDateTime } from '../../lib/format'
 import {
@@ -7,6 +7,7 @@ import {
   formatInvestmentValue,
 } from '../../lib/investment-format'
 import { useDataListLayout, useSupportsHover } from '../../lib/responsive'
+import { InvestmentTableFrame, holdingsColumns } from './InvestmentTableFrame'
 import styles from './InvestmentHoldingsTable.module.css'
 import type { InvestmentHoldingSnapshot } from '../../api/models'
 
@@ -156,76 +157,61 @@ export function InvestmentHoldingsTable({
         {compactRows}
       </ResponsiveSlot>
       <ResponsiveSlot compact={isMobile} variant="wide" breakpoint="data-list">
-        <ScrollArea type="auto">
-          <Table
-            className={styles.table}
-            striped
-            highlightOnHover={supportsHover}
-            verticalSpacing="xs"
-          >
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Security</Table.Th>
-                <Table.Th>Ticker</Table.Th>
-                <Table.Th ta="right">Quantity</Table.Th>
-                <Table.Th ta="right">Price</Table.Th>
-                <Table.Th ta="right">Value</Table.Th>
+        <InvestmentTableFrame
+          columns={holdingsColumns}
+          highlightOnHover={supportsHover}
+        >
+          {holdings.map((holding) => {
+            const currency = getHoldingCurrency(holding)
+            const showNormalized = shouldShowNormalizedValue(
+              holding,
+              currency,
+              accountCurrency,
+            )
+            const quoteAsOf = getQuoteAsOf(holding)
+            return (
+              <Table.Tr key={holding.id}>
+                <Table.Td className={styles.securityCell}>
+                  <Text data-typography="bodySmall" truncate>
+                    {getSecurityLabel(holding)}
+                  </Text>
+                  {(holding.security.marketIdentifierCode || quoteAsOf) && (
+                    <Text data-typography="caption" c="dimmed">
+                      {holding.security.marketIdentifierCode
+                        ? `${holding.security.marketIdentifierCode}${quoteAsOf ? ' · ' : ''}`
+                        : ''}
+                      {quoteAsOf
+                        ? `Price as of ${formatDateTime(quoteAsOf)}`
+                        : ''}
+                    </Text>
+                  )}
+                </Table.Td>
+                <Table.Td>{getTickerLabel(holding)}</Table.Td>
+                <Table.Td ta="right">
+                  {formatInvestmentQuantity(holding.quantity)}
+                </Table.Td>
+                <Table.Td ta="right">
+                  {balancesHidden
+                    ? HIDDEN_BALANCE_PLACEHOLDER
+                    : formatInvestmentQuote({
+                        value: holding.institutionPrice,
+                        currency,
+                        showCurrencyCode: showNormalized,
+                      })}
+                </Table.Td>
+                <Table.Td ta="right">
+                  {balancesHidden
+                    ? HIDDEN_BALANCE_PLACEHOLDER
+                    : formatInvestmentValue({
+                        value: holding.institutionValue,
+                        currency,
+                        showCurrencyCode: showNormalized,
+                      })}
+                </Table.Td>
               </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {holdings.map((holding) => {
-                const currency = getHoldingCurrency(holding)
-                const showNormalized = shouldShowNormalizedValue(
-                  holding,
-                  currency,
-                  accountCurrency,
-                )
-                const quoteAsOf = getQuoteAsOf(holding)
-                return (
-                  <Table.Tr key={holding.id}>
-                    <Table.Td className={styles.securityCell}>
-                      <Text data-typography="bodySmall" truncate>
-                        {getSecurityLabel(holding)}
-                      </Text>
-                      {(holding.security.marketIdentifierCode || quoteAsOf) && (
-                        <Text data-typography="caption" c="dimmed">
-                          {holding.security.marketIdentifierCode
-                            ? `${holding.security.marketIdentifierCode}${quoteAsOf ? ' · ' : ''}`
-                            : ''}
-                          {quoteAsOf
-                            ? `Price as of ${formatDateTime(quoteAsOf)}`
-                            : ''}
-                        </Text>
-                      )}
-                    </Table.Td>
-                    <Table.Td>{getTickerLabel(holding)}</Table.Td>
-                    <Table.Td ta="right">
-                      {formatInvestmentQuantity(holding.quantity)}
-                    </Table.Td>
-                    <Table.Td ta="right">
-                      {balancesHidden
-                        ? HIDDEN_BALANCE_PLACEHOLDER
-                        : formatInvestmentQuote({
-                            value: holding.institutionPrice,
-                            currency,
-                            showCurrencyCode: showNormalized,
-                          })}
-                    </Table.Td>
-                    <Table.Td ta="right">
-                      {balancesHidden
-                        ? HIDDEN_BALANCE_PLACEHOLDER
-                        : formatInvestmentValue({
-                            value: holding.institutionValue,
-                            currency,
-                            showCurrencyCode: showNormalized,
-                          })}
-                    </Table.Td>
-                  </Table.Tr>
-                )
-              })}
-            </Table.Tbody>
-          </Table>
-        </ScrollArea>
+            )
+          })}
+        </InvestmentTableFrame>
       </ResponsiveSlot>
     </>
   )

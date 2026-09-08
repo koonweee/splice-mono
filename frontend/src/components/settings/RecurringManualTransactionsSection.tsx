@@ -4,7 +4,6 @@ import {
   Button,
   Group,
   NumberInput,
-  Paper,
   Stack,
   Table,
   Text,
@@ -15,7 +14,6 @@ import dayjs from 'dayjs'
 import { Pause, Pencil, Play, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ResponsiveSlot } from '../ResponsiveSlot'
-import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { moneyToMajorString, tryParseMoneyDraft } from '../../lib/money'
 import { DecimalInput } from '../forms/DecimalInput'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
@@ -52,6 +50,14 @@ import { ConfirmActionDialog } from '../ConfirmActionDialog'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
 import { MobileTableList } from '../MobileTableList'
+import { SettingsCompactRowFrame } from './SettingsCompactRowFrame'
+import {
+  RecurringTransactionsSkeleton,
+  recurringManualTransactionsSectionColumns,
+  recurringTableLayout,
+} from './RecurringManualTransactionsSection.skeleton'
+import { settingsSectionLabels } from './SettingsSection.skeleton'
+import { SettingsTableFrame } from './SettingsTableFrame'
 import compactStyles from './SettingsCompactRow.module.css'
 import { SettingsRowActions } from './SettingsRowActions'
 import { SettingsStatusBadge } from './SettingsStatusBadge'
@@ -585,26 +591,29 @@ export function RecurringManualTransactionsSection() {
 
   function renderMobileSchedule(schedule: RecurringManualTransactionSchedule) {
     return (
-      <div className={compactStyles.row}>
-        <div className={compactStyles.heading}>
-          <Box className={compactStyles.title}>
-            <Text data-typography="sectionHeading">
-              {schedule.merchantName}
-            </Text>
-            <Group justify="space-between" gap={6}>
-              <Text data-typography="metadata" c="dimmed">
-                {schedule.accountName ?? 'Account'}
+      <SettingsCompactRowFrame
+        heading={
+          <>
+            <Box className={compactStyles.title}>
+              <Text data-typography="sectionHeading">
+                {schedule.merchantName}
               </Text>
-              <Text
-                data-typography="amountSmall"
-                className={compactStyles.amount}
-              >
-                {formatMoneyWithSign({ value: schedule.amount })}
-              </Text>
-            </Group>
-          </Box>
-          {renderScheduleActions(schedule)}
-        </div>
+              <Group justify="space-between" gap={6}>
+                <Text data-typography="metadata" c="dimmed">
+                  {schedule.accountName ?? 'Account'}
+                </Text>
+                <Text
+                  data-typography="amountSmall"
+                  className={compactStyles.amount}
+                >
+                  {formatMoneyWithSign({ value: schedule.amount })}
+                </Text>
+              </Group>
+            </Box>
+            {renderScheduleActions(schedule)}
+          </>
+        }
+      >
         <div className={compactStyles.metadata}>
           <SettingsStatusBadge status={getScheduleStatus(schedule)} />
           <Text data-typography="metadata" c="dimmed">
@@ -618,7 +627,7 @@ export function RecurringManualTransactionsSection() {
             'No upcoming transaction'
           )}
         </Text>
-      </div>
+      </SettingsCompactRowFrame>
     )
   }
 
@@ -646,13 +655,11 @@ export function RecurringManualTransactionsSection() {
         onSaved={invalidateSchedules}
       />
       <SettingsToolbar
-        title="Recurring transactions"
-        description="Create monthly transactions automatically on their due date."
-        addLabel="Add recurring"
+        {...settingsSectionLabels.recurring}
         onAdd={openCreateModal}
       />
       <DataState
-        loadingFallback={<TableSkeleton rows={4} />}
+        loadingFallback={<RecurringTransactionsSkeleton />}
         hasData={schedules.length > 0}
         isLoading={schedulesQuery.isLoading}
         isError={schedulesQuery.isError}
@@ -664,6 +671,7 @@ export function RecurringManualTransactionsSection() {
       >
         <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
           <MobileTableList
+            loadingFallback={null}
             ariaLabel={`Recurring transactions list, ${schedules.length.toLocaleString()} total`}
             data={schedules}
             emptyMessage="No recurring transactions"
@@ -672,55 +680,41 @@ export function RecurringManualTransactionsSection() {
           />
         </ResponsiveSlot>
         <ResponsiveSlot compact={Boolean(isMobile)} variant="wide">
-          <Paper withBorder p={0} radius="md" style={{ overflow: 'hidden' }}>
-            <Table.ScrollContainer minWidth={720}>
-              <Table verticalSpacing="sm">
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Merchant</Table.Th>
-                    <Table.Th>Amount</Table.Th>
-                    <Table.Th>Schedule</Table.Th>
-                    <Table.Th>Next</Table.Th>
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th style={{ textAlign: 'right' }}>Actions</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {schedules.map((schedule) => (
-                    <Table.Tr key={schedule.id}>
-                      <Table.Td>
-                        <Stack gap={0}>
-                          <Text data-typography="subsectionHeading">
-                            {schedule.merchantName}
-                          </Text>
-                          <Text data-typography="caption" c="dimmed">
-                            {schedule.accountName ?? 'Account'}
-                          </Text>
-                        </Stack>
-                      </Table.Td>
-                      <Table.Td>
-                        {formatMoneyWithSign({ value: schedule.amount })}
-                      </Table.Td>
-                      <Table.Td>
-                        Monthly on {formatScheduleDay(schedule.dayOfMonth)}
-                      </Table.Td>
-                      <Table.Td>
-                        {schedule.nextOccurrenceDate
-                          ? formatCalendarDate(schedule.nextOccurrenceDate)
-                          : '—'}
-                      </Table.Td>
-                      <Table.Td>
-                        <SettingsStatusBadge
-                          status={getScheduleStatus(schedule)}
-                        />
-                      </Table.Td>
-                      <Table.Td>{renderScheduleActions(schedule)}</Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Table.ScrollContainer>
-          </Paper>
+          <SettingsTableFrame
+            layout={recurringTableLayout}
+            columns={recurringManualTransactionsSectionColumns}
+            bordered
+          >
+            {schedules.map((schedule) => (
+              <Table.Tr key={schedule.id}>
+                <Table.Td>
+                  <Stack gap={0}>
+                    <Text data-typography="subsectionHeading">
+                      {schedule.merchantName}
+                    </Text>
+                    <Text data-typography="caption" c="dimmed">
+                      {schedule.accountName ?? 'Account'}
+                    </Text>
+                  </Stack>
+                </Table.Td>
+                <Table.Td>
+                  {formatMoneyWithSign({ value: schedule.amount })}
+                </Table.Td>
+                <Table.Td>
+                  Monthly on {formatScheduleDay(schedule.dayOfMonth)}
+                </Table.Td>
+                <Table.Td>
+                  {schedule.nextOccurrenceDate
+                    ? formatCalendarDate(schedule.nextOccurrenceDate)
+                    : '—'}
+                </Table.Td>
+                <Table.Td>
+                  <SettingsStatusBadge status={getScheduleStatus(schedule)} />
+                </Table.Td>
+                <Table.Td>{renderScheduleActions(schedule)}</Table.Td>
+              </Table.Tr>
+            ))}
+          </SettingsTableFrame>
         </ResponsiveSlot>
       </DataState>
     </Stack>

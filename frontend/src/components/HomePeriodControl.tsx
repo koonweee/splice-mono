@@ -13,8 +13,10 @@ const more = [TimePeriod.threeYears, TimePeriod.tenYears, TimePeriod.all]
 export function HomePeriodControl({
   period,
   onChange,
+  disabled = false,
 }: {
   period: TimePeriod
+  disabled?: boolean
   onChange: (period: TimePeriod) => void
 }) {
   const extended = !shortcuts.some((item) => item.value === period)
@@ -28,6 +30,7 @@ export function HomePeriodControl({
     >
       {shortcuts.map(({ value, label }) => (
         <Button
+          disabled={disabled}
           className="splice-period-button"
           key={value}
           variant={period === value ? 'light' : 'subtle'}
@@ -48,6 +51,7 @@ export function HomePeriodControl({
       <Menu position="bottom-end" withinPortal>
         <Menu.Target>
           <Button
+            disabled={disabled}
             className="splice-period-button"
             variant={extended ? 'light' : 'subtle'}
             color={extended ? undefined : 'gray'}

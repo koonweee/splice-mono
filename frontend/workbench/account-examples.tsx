@@ -1,5 +1,6 @@
 import { Alert, Badge, Button, Group, Paper, Stack, Text } from '@mantine/core'
 import { useState } from 'react'
+import { AccountsSkeleton } from '../src/components/accounts/InstitutionSection.skeleton'
 import { useAccountControllerFindAll } from '../src/api/clients/spliceAPI'
 import { AccountSection } from '../src/components/AccountSection'
 import { AccountCard } from '../src/components/AccountCard'
@@ -64,6 +65,7 @@ function AccountManagement({ state }: ExampleProps) {
   return (
     <Stack>
       <DataState
+        loadingFallback={<AccountsSkeleton />}
         isLoading={isLoading}
         isError={Boolean(error)}
         isFetching={isFetching}

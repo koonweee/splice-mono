@@ -14,6 +14,7 @@ export function SettingsToolbar({
   addLabel,
   onAdd,
   hideAdd = false,
+  disabled = false,
   children,
   secondary,
 }: {
@@ -22,6 +23,7 @@ export function SettingsToolbar({
   addLabel: string
   onAdd: () => void
   hideAdd?: boolean
+  disabled?: boolean
   secondary?: Array<PageAction>
   children?: ReactNode
 }) {
@@ -33,6 +35,7 @@ export function SettingsToolbar({
           ? undefined
           : {
               id: 'add-section',
+              disabled,
               label: addLabel,
               icon: Plus,
               onClick: onAdd,
@@ -53,9 +56,10 @@ export function SettingsToolbar({
           {description}
         </Text>
       </Box>
-      {((!pageActionTarget && (!hideAdd || secondary?.length)) || children) && (
+      {((pageActionTarget === undefined && (!hideAdd || secondary?.length)) ||
+        children) && (
         <Group className={styles.actions} gap="xs" wrap="wrap">
-          {!pageActionTarget && actions}
+          {pageActionTarget === undefined && actions}
           {children}
         </Group>
       )}

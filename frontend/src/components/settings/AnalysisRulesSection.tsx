@@ -17,9 +17,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Archive, CircleHelp, Pencil, RotateCcw, Save } from 'lucide-react'
 import { MantineReactTable, useMantineReactTable } from 'mantine-react-table'
 import { useMemo, useState } from 'react'
-import { PageToolbar } from '../PageLayout'
 import { ResponsiveSlot } from '../ResponsiveSlot'
-import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { invalidateMutationFamilies } from '../../lib/query-invalidation'
 import { useCompactLayout } from '../../lib/responsive'
 import { DataState } from '../DataState'
@@ -33,7 +31,17 @@ import { CategoryScopeInput } from '../categories/CategoryScopeInput'
 import { EditorModal } from '../forms/EditorModal'
 import { FormActions } from '../forms/FormActions'
 import { MobileTableList } from '../MobileTableList'
-import tableChrome from '../MantineTableChrome.module.css'
+import { SettingsCompactRowFrame } from './SettingsCompactRowFrame'
+import { SettingsFiltersFrame } from './SettingsFiltersFrame'
+import {
+  AnalysisRulesSkeleton,
+  analysisRulesSectionColumns,
+} from './AnalysisRulesSection.skeleton'
+import { settingsSectionLabels } from './SettingsSection.skeleton'
+import {
+  settingsRuleTableProps,
+  settingsTablePaperProps,
+} from './SettingsTableFrame'
 import compactStyles from './SettingsCompactRow.module.css'
 import { SettingsRowActions } from './SettingsRowActions'
 import { SettingsArchiveFilter } from './SettingsArchiveFilter'
@@ -531,17 +539,20 @@ export function AnalysisRulesSection({
 
   function renderMobileRuleRow(item: AnalysisRuleTableItem) {
     return (
-      <div className={compactStyles.row}>
-        <div className={compactStyles.heading}>
-          <Text
-            data-typography="sectionHeading"
-            className={compactStyles.title}
-          >
-            {isLookaroundItem(item) ? 'Matching window' : item.name}
-          </Text>
-          <SettingsStatusBadge status={getItemStatus(item)} />
-          {renderRuleRowActions(item)}
-        </div>
+      <SettingsCompactRowFrame
+        heading={
+          <>
+            <Text
+              data-typography="sectionHeading"
+              className={compactStyles.title}
+            >
+              {isLookaroundItem(item) ? 'Matching window' : item.name}
+            </Text>
+            <SettingsStatusBadge status={getItemStatus(item)} />
+            {renderRuleRowActions(item)}
+          </>
+        }
+      >
         <Text data-typography="metadata" c="dimmed" lineClamp={3}>
           {getItemScopeSummary(item)}
         </Text>
@@ -550,7 +561,7 @@ export function AnalysisRulesSection({
             {getItemTypeLabel(item)}
           </Badge>
         </div>
-      </div>
+      </SettingsCompactRowFrame>
     )
   }
 
@@ -568,8 +579,8 @@ export function AnalysisRulesSection({
   const columns: Array<MRT_ColumnDef<AnalysisRuleTableItem>> = [
     {
       accessorKey: 'name',
-      header: 'Name',
-      minSize: 180,
+      ...analysisRulesSectionColumns[0],
+      minSize: analysisRulesSectionColumns[0].minSize,
       Cell: ({ row }) => (
         <Box>
           <Text data-typography="subsectionHeading">
@@ -585,9 +596,9 @@ export function AnalysisRulesSection({
     },
     {
       id: 'type',
-      header: 'Type',
+      ...analysisRulesSectionColumns[1],
       accessorFn: getItemTypeLabel,
-      size: 120,
+      size: analysisRulesSectionColumns[1].size,
       Cell: ({ row }) => (
         <Badge
           variant="light"
@@ -605,9 +616,9 @@ export function AnalysisRulesSection({
     },
     {
       id: 'scope',
-      header: 'Behavior',
+      ...analysisRulesSectionColumns[2],
       accessorFn: getItemScopeSummary,
-      minSize: 260,
+      minSize: analysisRulesSectionColumns[2].minSize,
       Cell: ({ row }) => (
         <Text data-typography="bodySmall" lineClamp={2}>
           {getItemScopeSummary(row.original)}
@@ -616,9 +627,9 @@ export function AnalysisRulesSection({
     },
     {
       id: 'status',
-      header: 'Status',
+      ...analysisRulesSectionColumns[3],
       accessorFn: getItemStatus,
-      size: 110,
+      size: analysisRulesSectionColumns[3].size,
       Cell: ({ row }) => {
         const status = getItemStatus(row.original)
         return <SettingsStatusBadge status={status} />
@@ -642,12 +653,15 @@ export function AnalysisRulesSection({
     enableTopToolbar: false,
     enableBottomToolbar: false,
     initialState: { density: 'xs' },
-    mantineTableProps: {
-      className: tableChrome.table,
+    mantineTableProps: settingsRuleTableProps(analysisRulesSectionColumns),
+    displayColumnDefOptions: {
+      'mrt-row-actions': {
+        size: analysisRulesSectionColumns[4].size,
+        minSize: analysisRulesSectionColumns[4].size,
+      },
     },
     mantinePaperProps: {
-      withBorder: true,
-      radius: 'md',
+      ...settingsTablePaperProps,
     },
     renderRowActions: ({ row }) => renderRuleRowActions(row.original),
     renderEmptyRowsFallback: () => (
@@ -668,31 +682,27 @@ export function AnalysisRulesSection({
       }}
     >
       <SettingsToolbar
-        title="Analysis rules"
-        description="Choose which transactions count toward your analysis totals."
-        addLabel="Add rule"
+        {...settingsSectionLabels.analysis}
         onAdd={resetFormForCreate}
       />
 
-      <PageToolbar section>
-        <Group w="100%" gap="xs" wrap={isMobile ? 'wrap' : 'nowrap'}>
-          <TextInput
-            aria-label="Search analysis rules"
-            placeholder="Search rules..."
-            value={search}
-            onChange={(event) => setSearch(event.currentTarget.value)}
-            size="md"
-            style={{ flex: '1 1 240px', minWidth: 0 }}
-          />
-          <SettingsArchiveFilter
-            checked={archivedMode}
-            onChange={setArchivedMode}
-          />
-        </Group>
-      </PageToolbar>
+      <SettingsFiltersFrame>
+        <TextInput
+          aria-label="Search analysis rules"
+          placeholder="Search rules..."
+          value={search}
+          onChange={(event) => setSearch(event.currentTarget.value)}
+          size="md"
+          style={{ flex: '1 1 240px', minWidth: 0 }}
+        />
+        <SettingsArchiveFilter
+          checked={archivedMode}
+          onChange={setArchivedMode}
+        />
+      </SettingsFiltersFrame>
 
       <DataState
-        loadingFallback={<TableSkeleton rows={4} />}
+        loadingFallback={<AnalysisRulesSkeleton />}
         hasData={rules.length > 0}
         isLoading={isLoading}
         isError={isError}
@@ -704,6 +714,7 @@ export function AnalysisRulesSection({
       >
         <ResponsiveSlot compact={Boolean(isMobile)} variant="compact">
           <MobileTableList
+            loadingFallback={null}
             ariaLabel={`Analysis rules list, ${filteredRules.length.toLocaleString()} total`}
             data={filteredRules}
             emptyMessage="No analysis rules match the current filters."

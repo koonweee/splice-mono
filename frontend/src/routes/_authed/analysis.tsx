@@ -12,12 +12,23 @@ import {
 import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import { ArrowDownLeft, ArrowUpRight, ClipboardList } from 'lucide-react'
-import { AnalysisAuditHeader } from '../../components/analysis/AnalysisAuditHeader'
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import { LoadingSkeleton } from '../../components/loading/LoadingSkeleton'
 import {
-  AnalysisSkeleton,
-  TableSkeleton,
-} from '../../components/loading/LoadingSkeleton'
+  AnalysisDonutSkeleton,
+  analysisDonutGeometry,
+} from '../../components/analysis/AnalysisDonut.skeleton'
+import { AnalysisAuditSkeleton } from '../../components/analysis/AnalysisAuditDrawer.skeleton'
+import { AnalysisAuditHeader } from '../../components/analysis/AnalysisAuditHeader'
+import { AnalysisSkeleton } from '../../components/analysis/AnalysisPage.skeleton'
+import { CashflowSkeleton } from '../../components/analysis/AnalysisSankeyChart.skeleton'
+import {
+  AnalysisFlowBody,
+  AnalysisFlowFrame,
+  AnalysisFlowHeading,
+  AnalysisSummaryFrame,
+} from '../../components/analysis/AnalysisFrames'
+import { TransactionsSkeleton } from '../../components/TransactionsTable.skeleton'
 import { DeferredOverlay } from '../../components/DeferredOverlay'
 import {
   featureIntent,
@@ -44,8 +55,7 @@ import {
   useTransactionAnalysisControllerGetAnalysis,
   useTransactionAnalysisControllerGetAudit,
 } from '../../api/clients/spliceAPI'
-import { DateRangeControl } from '../../components/DateRangeControl'
-import { PageLayout } from '../../components/PageLayout'
+import { AnalysisPageFrame } from '../../components/pages/AnalysisPageFrame'
 import { Pressable } from '../../components/Pressable'
 import {
   formatMinorMoneyString,
@@ -53,7 +63,6 @@ import {
   formatPrimaryCategory,
 } from '../../lib/format'
 import { getDisplayCategoryColor } from '../../lib/category-colors'
-import densityStyles from '../../components/analysis/AnalysisSummary.module.css'
 import type { CategoryAggregate } from '../../api/models'
 import type { DatesRangeValue } from '@mantine/dates'
 
@@ -132,61 +141,59 @@ function SummaryStrip({
   const inflowPct = ratioPercent(inflow, total)
 
   return (
-    <Paper p="sm" radius="md" withBorder>
-      <div
-        className={densityStyles.summary}
-        style={{ marginBottom: total > 0n ? 'var(--mantine-spacing-sm)' : 0 }}
-      >
-        <div>
-          <Text data-typography="label" c="dimmed">
-            Inflows
-          </Text>
-          <Text data-typography="amount">
-            {formatAmount(totalInflow, currency)}
-          </Text>
-        </div>
-        <div>
-          <Text data-typography="label" c="dimmed">
-            Outflows
-          </Text>
-          <Text data-typography="amount">
-            {formatAmount(totalOutflow, currency)}
-          </Text>
-        </div>
-        <div>
-          <Text data-typography="label" c="dimmed">
-            Net
-          </Text>
-          <Text
-            data-typography="amount"
-            c={
-              net === 0n
-                ? undefined
-                : net > 0n
-                  ? 'var(--splice-positive)'
-                  : 'var(--splice-negative)'
-            }
-          >
-            {net > 0n ? '+' : ''}
-            {formatAmount(netFlow, currency)}
-          </Text>
-        </div>
+    <AnalysisSummaryFrame
+      progress={
+        total > 0n ? (
+          <Progress.Root size="sm" radius="xl">
+            <Progress.Section
+              value={inflowPct}
+              color="var(--splice-positive)"
+              aria-label="Inflow share"
+            />
+            <Progress.Section
+              value={100 - inflowPct}
+              color="var(--splice-negative)"
+              aria-label="Outflow share"
+            />
+          </Progress.Root>
+        ) : undefined
+      }
+    >
+      <div>
+        <Text data-typography="label" c="dimmed">
+          Inflows
+        </Text>
+        <Text data-typography="amount">
+          {formatAmount(totalInflow, currency)}
+        </Text>
       </div>
-      {total > 0n && (
-        <Progress.Root size="sm" radius="xl">
-          <Progress.Section
-            value={inflowPct}
-            color="var(--splice-positive)"
-            aria-label="Inflow share"
-          />
-          <Progress.Section
-            value={100 - inflowPct}
-            color="var(--splice-negative)"
-            aria-label="Outflow share"
-          />
-        </Progress.Root>
-      )}
-    </Paper>
+      <div>
+        <Text data-typography="label" c="dimmed">
+          Outflows
+        </Text>
+        <Text data-typography="amount">
+          {formatAmount(totalOutflow, currency)}
+        </Text>
+      </div>
+      <div>
+        <Text data-typography="label" c="dimmed">
+          Net
+        </Text>
+        <Text
+          data-typography="amount"
+          c={
+            net === 0n
+              ? undefined
+              : net > 0n
+                ? 'var(--splice-positive)'
+                : 'var(--splice-negative)'
+          }
+        >
+          {net > 0n ? '+' : ''}
+          {formatAmount(netFlow, currency)}
+        </Text>
+      </div>
+    </AnalysisSummaryFrame>
   )
 }
 
@@ -209,7 +216,7 @@ function FlowSection({
 }) {
   if (categories.length === 0) {
     return (
-      <Paper p="lg" radius="md" withBorder>
+      <AnalysisFlowFrame>
         <Group gap="xs" mb="md">
           <Icon size={18} />
           <Text data-typography="sectionHeading">{title}</Text>
@@ -217,7 +224,7 @@ function FlowSection({
         <Text data-typography="body" c="dimmed" ta="center" py="xl">
           No data for this period
         </Text>
-      </Paper>
+      </AnalysisFlowFrame>
     )
   }
 
@@ -229,127 +236,127 @@ function FlowSection({
   }))
 
   return (
-    <Paper p="lg" radius="md" withBorder>
-      <Group justify="space-between" mb="md">
-        <Group gap="xs">
-          <Box c={iconColor}>
-            <Icon size={18} />
-          </Box>
-          <Text data-typography="sectionHeading">{title}</Text>
-        </Group>
-        <Text data-typography="amount" c="dimmed">
-          {formatAmount(total, currency)}
-        </Text>
-      </Group>
+    <AnalysisFlowFrame>
+      <AnalysisFlowHeading
+        title={title}
+        icon={Icon}
+        iconColor={iconColor}
+        total={
+          <Text data-typography="amount" c="dimmed">
+            {formatAmount(total, currency)}
+          </Text>
+        }
+      />
 
-      <Grid gutter="lg" align="center">
-        <Grid.Col span={{ base: 12, sm: 4 }}>
-          <Box style={{ display: 'flex', justifyContent: 'center' }}>
-            <DeferredFeature label="Category chart" minHeight={160}>
-              <DonutChart
-                data={chartData}
-                size={160}
-                thickness={24}
-                tooltipDataSource="segment"
-                tooltipProps={{
-                  content: ({ payload }) => {
-                    const segment = payload[0]?.payload
-                    return segment?.exactAmount ? (
-                      <Paper p="xs" withBorder>
-                        {segment.name}:{' '}
-                        {formatAmount(segment.exactAmount, currency)}
-                      </Paper>
-                    ) : null
-                  },
+      <AnalysisFlowBody
+        chart={
+          <DeferredFeature
+            label="Category chart"
+            minHeight={160}
+            fallback={
+              <LoadingSkeleton label="Loading category chart…">
+                <AnalysisDonutSkeleton />
+              </LoadingSkeleton>
+            }
+          >
+            <DonutChart
+              data={chartData}
+              {...analysisDonutGeometry}
+              tooltipDataSource="segment"
+              tooltipProps={{
+                content: ({ payload }) => {
+                  const segment = payload[0]?.payload
+                  return segment?.exactAmount ? (
+                    <Paper p="xs" withBorder>
+                      {segment.name}:{' '}
+                      {formatAmount(segment.exactAmount, currency)}
+                    </Paper>
+                  ) : null
+                },
+              }}
+              chartLabel={formatAmount(total, currency)}
+              valueFormatter={(value) =>
+                formatMoneyNumber({ value, currency, decimals: 0 })
+              }
+            />
+          </DeferredFeature>
+        }
+      >
+        <Stack gap={4}>
+          {categories.map((cat, i) => {
+            const pct = ratioPercent(
+              parseSignedMinorUnits(cat.totalAmount),
+              parseSignedMinorUnits(total),
+            )
+
+            return (
+              <Pressable
+                key={cat.primaryCategory}
+                onClick={() => onCategoryClick(cat.primaryCategory)}
+                {...featureIntent(loadCategoryTransactionsModal)}
+                style={{
+                  borderRadius: 6,
+                  padding: '6px var(--mantine-spacing-xs)',
                 }}
-                chartLabel={formatAmount(total, currency)}
-                valueFormatter={(value) =>
-                  formatMoneyNumber({ value, currency, decimals: 0 })
-                }
-              />
-            </DeferredFeature>
-          </Box>
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 8 }}>
-          <Stack gap={4}>
-            {categories.map((cat, i) => {
-              const pct = ratioPercent(
-                parseSignedMinorUnits(cat.totalAmount),
-                parseSignedMinorUnits(total),
-              )
-
-              return (
-                <Pressable
-                  key={cat.primaryCategory}
-                  onClick={() => onCategoryClick(cat.primaryCategory)}
-                  {...featureIntent(loadCategoryTransactionsModal)}
-                  style={{
-                    borderRadius: 6,
-                    padding: '6px var(--mantine-spacing-xs)',
-                  }}
-                >
-                  <Group gap="sm" wrap="nowrap">
-                    <Box
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        backgroundColor: getDisplayCategoryColor(
-                          cat.color,
-                          cat.primaryCategory,
-                          i,
-                        ),
-                        flexShrink: 0,
-                      }}
+              >
+                <Group gap="sm" wrap="nowrap">
+                  <Box
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      backgroundColor: getDisplayCategoryColor(
+                        cat.color,
+                        cat.primaryCategory,
+                        i,
+                      ),
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Text
+                    data-typography="bodySmall"
+                    style={{ flex: 1 }}
+                    truncate
+                  >
+                    {formatPrimaryCategory(cat.primaryCategory)}
+                  </Text>
+                  <Text data-typography="amountSmall" style={{ flexShrink: 0 }}>
+                    {formatAmount(cat.totalAmount, currency)}
+                  </Text>
+                  <Group
+                    gap={4}
+                    wrap="nowrap"
+                    w={80}
+                    style={{ flexShrink: 0 }}
+                    visibleFrom="xs"
+                  >
+                    <Progress
+                      value={pct}
+                      color={getDisplayCategoryColor(
+                        cat.color,
+                        cat.primaryCategory,
+                        i,
+                      )}
+                      size="xs"
+                      style={{ flex: 1 }}
+                      radius="xl"
                     />
                     <Text
-                      data-typography="bodySmall"
-                      style={{ flex: 1 }}
-                      truncate
+                      data-typography="caption"
+                      c="dimmed"
+                      w={32}
+                      ta="right"
                     >
-                      {formatPrimaryCategory(cat.primaryCategory)}
+                      {pct.toFixed(0)}%
                     </Text>
-                    <Text
-                      data-typography="amountSmall"
-                      style={{ flexShrink: 0 }}
-                    >
-                      {formatAmount(cat.totalAmount, currency)}
-                    </Text>
-                    <Group
-                      gap={4}
-                      wrap="nowrap"
-                      w={80}
-                      style={{ flexShrink: 0 }}
-                      visibleFrom="xs"
-                    >
-                      <Progress
-                        value={pct}
-                        color={getDisplayCategoryColor(
-                          cat.color,
-                          cat.primaryCategory,
-                          i,
-                        )}
-                        size="xs"
-                        style={{ flex: 1 }}
-                        radius="xl"
-                      />
-                      <Text
-                        data-typography="caption"
-                        c="dimmed"
-                        w={32}
-                        ta="right"
-                      >
-                        {pct.toFixed(0)}%
-                      </Text>
-                    </Group>
                   </Group>
-                </Pressable>
-              )
-            })}
-          </Stack>
-        </Grid.Col>
-      </Grid>
-    </Paper>
+                </Group>
+              </Pressable>
+            )
+          })}
+        </Stack>
+      </AnalysisFlowBody>
+    </AnalysisFlowFrame>
   )
 }
 
@@ -417,27 +424,10 @@ function AnalysisPage() {
 
   return (
     <>
-      <PageLayout
-        title="Analysis"
-        actions={{
-          primary: {
-            id: 'audit',
-            label: 'Audit',
-            icon: ClipboardList,
-            onClick: openAudit,
-            onPrepare: () => {
-              void loadAnalysisAuditDrawer().catch(() => undefined)
-            },
-          },
-        }}
-        toolbar={
-          <DateRangeControl
-            growOnMobile
-            value={dateRangeValue}
-            onChange={handleDateRangeChange}
-            clearable={false}
-          />
-        }
+      <AnalysisPageFrame
+        dateRange={dateRangeValue}
+        onDateRangeChange={handleDateRangeChange}
+        onAudit={openAudit}
       >
         <DataState
           hasData={Boolean(analysis)}
@@ -491,7 +481,17 @@ function AnalysisPage() {
               ) : (
                 <>
                   {analysisSankeyEnabled ? (
-                    <DeferredFeature label="Cashflow chart" minHeight={320}>
+                    <DeferredFeature
+                      label="Cashflow chart"
+                      fallback={
+                        <LoadingSkeleton label="Loading cashflow chart…">
+                          <CashflowSkeleton
+                            analysis={analysis}
+                            showTotals={false}
+                          />
+                        </LoadingSkeleton>
+                      }
+                    >
                       <AnalysisSankeyChart
                         showTotals={false}
                         analysis={analysis}
@@ -539,7 +539,7 @@ function AnalysisPage() {
             label="Category transactions"
             title={`${selectedCategory ? formatPrimaryCategory(selectedCategory) : 'Transactions'} Transactions (${selectedFlowDirection === 'inflow' ? 'Inflows' : 'Outflows'})`}
             kind="drilldown"
-            skeleton={<TableSkeleton />}
+            skeleton={<TransactionsSkeleton variant="drilldown" />}
             onClose={closeModal}
           >
             <CategoryTransactionsModal
@@ -563,7 +563,7 @@ function AnalysisPage() {
                 lookaroundDays={auditQuery.data?.neutralizationLookaroundDays}
               />
             }
-            skeleton={<TableSkeleton rows={4} />}
+            skeleton={<AnalysisAuditSkeleton />}
             onClose={closeAudit}
           >
             <AnalysisAuditDrawer
@@ -575,7 +575,7 @@ function AnalysisPage() {
             />
           </DeferredOverlay>
         )}
-      </PageLayout>
+      </AnalysisPageFrame>
     </>
   )
 }

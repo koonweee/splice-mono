@@ -12,7 +12,7 @@ interface MobileTableListProps<T> {
   isError?: boolean
   isLoading?: boolean
   isFetching?: boolean
-  loadingFallback?: ReactNode
+  loadingFallback: ReactNode
   loadingMessage?: string
   onRetry?: () => void
   isRowSelected?: (row: T) => boolean

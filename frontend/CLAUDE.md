@@ -82,6 +82,22 @@ Read [Shared UI conventions](docs/ui-conventions.md) before changing UI. Reuse t
 
 Shared components in `src/components/`. Icons from `lucide-react`.
 
+### Loading-state ownership
+
+Before changing a component's layout, find its skeleton/fallback owner in
+[the loading inventory](docs/loading-state-ownership.md). Keep the skeleton inline
+or in an adjacent companion and reuse the real structural frame, surface, column
+layout, breakpoints, and known content. Update loaded, module-loading, and
+data-loading states together. Shared boundaries require explicit owner fallbacks;
+do not add centralized domain skeletons or unrelated generic default shapes.
+
+Maintain paired workbench states and inspect intermediate phases when browser
+validation applies. Check background/border treatment, hierarchy, order, control
+placement, and known anchors separately from CLS. Preserve masking, accessible
+status, cached state/focus, and lazy imports. Explain any unavoidable mismatch
+(such as an unknown row count) in the change description. See the
+[loading contract](docs/ui-conventions.md#loading-preparation-and-stable-layouts).
+
 ### Component workbench
 
 Use the maintained workbench for future UI updates. Read [its README](workbench/README.md) and locate the affected component in [the catalog](workbench/catalog.md) before changing shared UI.

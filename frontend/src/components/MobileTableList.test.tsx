@@ -20,6 +20,7 @@ it('keeps its rows and forwards retry after a failed refresh', () => {
   render(
     <MantineProvider>
       <MobileTableList
+        loadingFallback={null}
         ariaLabel="Rules"
         data={[{ id: 'rule-1', name: 'Coffee shops' }]}
         emptyMessage="No rules"

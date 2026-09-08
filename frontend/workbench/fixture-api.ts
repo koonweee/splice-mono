@@ -1,6 +1,7 @@
 import { AxiosError, AxiosHeaders, CanceledError } from 'axios'
 import { OfflineMutationError } from '../src/lib/offline-mutation'
 import { resolveAppearance } from '../src/lib/design-system/appearance'
+import { waitForRead } from './loading-gates'
 import { appearanceFromSearch } from './preferences'
 import { createNotificationStore } from './notification-store'
 import { createCategoryStore } from './category-store'
@@ -38,6 +39,8 @@ import type {
 } from '../src/api/models'
 
 export type FixtureOptions = {
+  sankey?: boolean
+  beforeRead?: (path: string) => Promise<void>
   longContent?: boolean
   empty?: boolean
   manualHoldings?: boolean
@@ -88,6 +91,8 @@ export function createFixtureApi(options: FixtureOptions = {}) {
     options.manualHoldings,
   )
   const user = structuredClone(fixtureUser)
+  if (options.sankey !== undefined)
+    user.settings.analysisSankeyEnabled = options.sankey
   user.settings.appearance = resolveAppearance(
     options.appearance ?? user.settings.appearance,
   ).preference
@@ -354,6 +359,7 @@ export function createFixtureApi(options: FixtureOptions = {}) {
       path.endsWith('/manual')
     if (isManualWrite && options.manualSaveFailure === 'offline')
       throw new OfflineMutationError()
+    if (method === 'GET') await options.beforeRead?.(path)
     if (config.signal?.aborted) throw new CanceledError()
     if (options.latency)
       await new Promise<void>((resolve, reject) => {
@@ -486,6 +492,8 @@ export function setTransactionRefreshFailure(failing: boolean) {
   transactionRefreshFailure = failing
 }
 export const axios = createFixtureApi({
+  beforeRead: waitForRead,
+  sankey: params.has('sankey') ? params.get('sankey') !== 'false' : undefined,
   empty: params.get('state') === 'empty',
   longContent: params.get('state') === 'long-content',
   manualHoldings:

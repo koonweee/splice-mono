@@ -174,6 +174,101 @@ try {
       .waitFor()
     assert.equal(await page.getByText('ACCOUNT_ALICE').count(), 0)
     assert.deepEqual(errors, [], 'Launch must hydrate without errors')
+
+    // Direct entry must reserve the same known page controls before hydration.
+    // These synthetic settings reads are empty; no real account data is needed.
+    for (const width of [390, 1440]) {
+      for (const tab of [
+        'categories',
+        'analysis',
+        'categorization',
+        'recurring',
+      ]) {
+        const positions = []
+        for (const javaScriptEnabled of [false, true]) {
+          const context = await browser.newContext({
+            viewport: { width, height: 900 },
+            javaScriptEnabled,
+            serviceWorkers: 'block',
+          })
+          try {
+            await context.addCookies([
+              {
+                name: 'splice_access_token',
+                value: 'alice',
+                url: `http://localhost:${port}`,
+              },
+            ])
+            await context.route('http://localhost:3000/**', async (route) => {
+              const url = new URL(route.request().url())
+              const response = await fetch(
+                `http://127.0.0.1:${apiPort}${url.pathname}${url.search}`,
+                { headers: { Cookie: 'splice_access_token=alice' } },
+              )
+              await route.fulfill({
+                status: response.status,
+                contentType: 'application/json',
+                body: await response.text(),
+              })
+            })
+            const settings = await context.newPage()
+            const hydrationErrors = []
+            settings.on('pageerror', (error) =>
+              hydrationErrors.push(error.message),
+            )
+            await settings.goto(
+              `http://localhost:${port}/settings?tab=${tab}`,
+              { waitUntil: 'networkidle' },
+            )
+            const heading =
+              tab === 'categories'
+                ? 'Categories'
+                : tab === 'analysis'
+                  ? 'Analysis rules'
+                  : tab === 'categorization'
+                    ? 'Categorization rules'
+                    : 'Recurring transactions'
+            const section = settings
+              .locator('[data-typography="sectionHeading"]:visible')
+              .filter({ hasText: new RegExp(`^${heading}$`) })
+            await section.waitFor()
+            const anchor = await section.boundingBox()
+            assert.ok(
+              anchor,
+              `${tab} section must be visible before and after hydration`,
+            )
+            const search =
+              tab === 'recurring'
+                ? null
+                : await settings
+                    .locator(
+                      `input[placeholder="${tab === 'categories' ? 'Search categories...' : 'Search rules...'}"]:visible`,
+                    )
+                    .boundingBox()
+            if (tab !== 'recurring')
+              assert.ok(search, `${tab} filter must exist before hydration`)
+            positions.push({ heading: anchor.y, filter: search?.y })
+            assert.deepEqual(
+              hydrationErrors,
+              [],
+              `${tab} must hydrate without errors`,
+            )
+          } finally {
+            await context.close()
+          }
+        }
+        assert.ok(
+          Math.abs(positions[0].heading - positions[1].heading) <= 1,
+          `${tab} ${width}px heading moved on hydration: ${JSON.stringify(positions)}`,
+        )
+        if (positions[0].filter !== undefined)
+          assert.ok(
+            Math.abs(positions[0].filter - positions[1].filter) <= 1,
+            `${tab} ${width}px filter moved on hydration: ${JSON.stringify(positions)}`,
+          )
+        console.log(`PASS: ${tab} ${width}px SSR/hydrated control anchors`)
+      }
+    }
   } finally {
     await browser.close()
   }

@@ -166,13 +166,33 @@ afterEach(() => {
 })
 
 describe('PersonalAccessTokenSection', () => {
-  it('shows a section loader while the PAT query is pending', () => {
+  it('keeps the token form and draft mounted while the list loads', () => {
     listTokensState.isPending = true
+    const view = renderSection()
+    const input = screen.getByRole('textbox', { name: 'Token name' })
+    expect(
+      screen.getByRole('heading', { name: 'Personal access tokens' }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('status', { name: 'Loading access tokens' }),
+    ).toBeTruthy()
+    fireEvent.change(input, { target: { value: 'Draft token' } })
+    input.focus()
 
-    renderSection()
-
-    expect(screen.getByTestId('pat-section-loader')).toBeTruthy()
-    expect(screen.queryByText(/personal access tokens/i)).toBeNull()
+    listTokensState.isPending = false
+    listTokensState.data = [
+      makeToken({ id: 'existing', name: 'Existing token' }),
+    ]
+    view.rerender(
+      <MantineProvider>
+        <PersonalAccessTokenSection />
+      </MantineProvider>,
+    )
+    expect(screen.getByRole('textbox', { name: 'Token name' })).toBe(input)
+    expect((input as HTMLInputElement).value).toBe('Draft token')
+    expect(document.activeElement).toBe(input)
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByText('Existing token')).toBeTruthy()
   })
 
   it('shows a retryable section error when the token list fetch fails', () => {

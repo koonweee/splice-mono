@@ -22,6 +22,7 @@ import {
 import { DataState } from '../DataState'
 import { InteractiveRow } from '../InteractiveRow'
 import { formatDateTime } from '../../lib/format'
+import { NotificationInboxSkeleton } from './NotificationInbox.skeleton'
 import styles from './NotificationInbox.module.css'
 import type { NotificationInboxItem } from '../../api/models'
 
@@ -160,6 +161,7 @@ export function NotificationInbox({
                 isError={isError}
                 isFetching={isFetching}
                 loadingMessage="Loading notifications…"
+                loadingFallback={<NotificationInboxSkeleton />}
                 emptyMessage="You're all caught up."
                 errorTitle="Unable to load notifications"
                 errorMessage="Please retry when your connection is available."

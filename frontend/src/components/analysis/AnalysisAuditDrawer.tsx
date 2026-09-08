@@ -1,16 +1,6 @@
-import {
-  Badge,
-  Box,
-  Divider,
-  Drawer,
-  Group,
-  Paper,
-  Stack,
-  Text,
-} from '@mantine/core'
+import { Badge, Box, Divider, Drawer, Group, Stack, Text } from '@mantine/core'
 import { useMemo } from 'react'
 import { DataState } from '../DataState'
-import { TableSkeleton } from '../loading/LoadingSkeleton'
 import { useCompactLayout } from '../../lib/responsive'
 import {
   formatCategoryName,
@@ -18,6 +8,10 @@ import {
   formatMoneyWithSign,
   formatPrimaryCategory,
 } from '../../lib/format'
+import {
+  AnalysisAuditCardFrame,
+  AnalysisAuditSkeleton,
+} from './AnalysisAuditDrawer.skeleton'
 import { AnalysisAuditHeader } from './AnalysisAuditHeader'
 import type {
   AnalysisAuditTransaction,
@@ -118,20 +112,20 @@ function AuditRowCard({
 }) {
   if (row.type === 'excluded') {
     return (
-      <Paper withBorder p="sm" radius="sm">
+      <AnalysisAuditCardFrame>
         <TransactionSummary transaction={row.transaction} />
-      </Paper>
+      </AnalysisAuditCardFrame>
     )
   }
 
   return (
-    <Paper withBorder p="sm" radius="sm">
+    <AnalysisAuditCardFrame>
       <Stack gap="xs">
         <TransactionSummary label="Outflow" transaction={row.outflow} />
         <Divider />
         <TransactionSummary label="Inflow" transaction={row.inflow} />
       </Stack>
-    </Paper>
+    </AnalysisAuditCardFrame>
   )
 }
 
@@ -209,7 +203,7 @@ export function AnalysisAuditDrawer({
           errorMessage="Failed to load analysis audit."
           emptyMessage="No rule effects for this date range."
           loadingMessage="Loading analysis audit…"
-          loadingFallback={<TableSkeleton rows={4} />}
+          loadingFallback={<AnalysisAuditSkeleton />}
         >
           <Stack
             gap="lg"

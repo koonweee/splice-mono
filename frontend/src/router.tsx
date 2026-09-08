@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
-import { RoutePendingSkeleton } from './components/loading/RoutePendingSkeleton'
+import { RoutePendingSkeleton } from './components/pages/RoutePendingSkeleton'
 
 import { configureQueryPolicy } from './lib/query-policy'
 import { createMutationCache } from './lib/query-invalidation'
