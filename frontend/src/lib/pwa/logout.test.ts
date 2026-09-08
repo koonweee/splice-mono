@@ -4,8 +4,10 @@ import type { PendingLogout } from './logout-state'
 const mocks = vi.hoisted(() => ({
   request: vi.fn(),
   clear: vi.fn(),
+  clearSnapshot: vi.fn(),
   current: null as PendingLogout | null,
 }))
+vi.mock('./home-snapshot', () => ({ clearHomeSnapshot: mocks.clearSnapshot }))
 vi.mock('./deadline', () => ({ fetchWithDeadline: mocks.request }))
 vi.mock('./logout-state', () => ({
   getPendingLogout: () => mocks.current,
@@ -16,6 +18,7 @@ vi.mock('../api-base-url', () => ({ resolveApiUrl: (path: string) => path }))
 beforeEach(() => {
   vi.resetModules()
   vi.clearAllMocks()
+  mocks.clearSnapshot.mockResolvedValue(true)
   mocks.current = { id: 'device-a', mode: 'device' }
 })
 afterEach(() => {
@@ -48,6 +51,17 @@ describe('server-authoritative pending logout', () => {
     expect(mocks.clear).not.toHaveBeenCalled()
     await expect(completePendingLogout()).resolves.toBe(true)
     expect(mocks.clear).toHaveBeenCalledOnce()
+  })
+  it('retains logout eligibility until durable local cleanup is acknowledged', async () => {
+    mocks.request.mockResolvedValue(new Response(null, { status: 204 }))
+    mocks.clearSnapshot.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+    const { completePendingLogout } = await import('./logout')
+    await expect(completePendingLogout()).rejects.toThrow(
+      'Saved data could not be cleared',
+    )
+    expect(mocks.clear).not.toHaveBeenCalled()
+    await expect(completePendingLogout()).resolves.toBe(true)
+    expect(mocks.clear).toHaveBeenCalledWith('device-a')
   })
   it('refreshes expired access credentials for logout-all before retrying', async () => {
     mocks.current = { id: 'all-a', mode: 'all' }

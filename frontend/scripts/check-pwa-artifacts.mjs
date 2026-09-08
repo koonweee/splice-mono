@@ -56,13 +56,13 @@ let rawBytes = 0
 let gzipBytes = 0
 for (const entry of report.entries) {
   assert(
-    !/splash\/|\.map$|\.html$|version\.json|manifest\.json|(^|\/)(api|user|notification)(\/|$)/i.test(
+    entry.url === `pwa-shell-${version.buildId}.html` || !/splash\/|\.map$|\.html$|version\.json|manifest\.json|(^|\/)(api|user|notification)(\/|$)/i.test(
       entry.url,
     ),
     `Private or nonessential URL in precache: ${entry.url}`,
   )
   assert(
-    !/Chart-|RechartsWrapper-|CategorizationRulesSection-|TransactionsMobileList-/.test(
+    !/AnalysisSankeyChart-|CategorizationRulesSection-|TransactionsMobileList-/.test(
       entry.url,
     ),
     `Deferred feature in startup precache: ${entry.url}`,

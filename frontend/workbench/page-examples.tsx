@@ -12,6 +12,11 @@ import {
 } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { NotificationMenu } from '../src/components/notifications/NotificationMenu'
+import {
+  CachedHomeLaunch,
+  SavedHomePreview,
+} from '../src/components/pages/CachedHomeLaunch'
+import { TimePeriod } from '../src/lib/types'
 import { AppShellLayout } from '../src/components/AppShellLayout'
 import { Route as LandingRoute } from '../src/routes/index'
 import { Route as HomeRoute } from '../src/routes/_authed/home'
@@ -23,23 +28,104 @@ import { RoutePendingSkeleton } from '../src/components/pages/RoutePendingSkelet
 import { LaunchScreen } from '../src/components/loading/LaunchScreen'
 import { validateSettingsSearch } from '../src/lib/route-search'
 import { invalidateFamilies } from '../src/lib/query-invalidation'
+import { appearanceFromSearch } from './preferences'
+import { fixtureDashboard } from './page-fixtures'
 import { waitForRoute } from './loading-gates'
 import { simulateLogout } from './auth-boundary'
 import { fixturePresentation } from './runtime-boundaries'
 import { setTransactionRefreshFailure } from './fixture-api'
+import type { HomeSnapshot } from '../src/lib/pwa/home-snapshot'
 import type { AnyRoute } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
 import type { ExampleProps } from './examples'
+import type { RefreshStatus } from '../src/components/HeaderRefreshStatus'
+
+function CachedHomeExample({ state, masked }: ExampleProps) {
+  const [router] = useState(() => {
+    const root = createRootRouteWithContext<Record<string, never>>()({
+      component: () => {
+        const [retrying, setRetrying] = useState(false)
+        useEffect(() => {
+          if (!retrying) return
+          const timer = window.setTimeout(() => setRetrying(false), 2500)
+          return () => window.clearTimeout(timer)
+        }, [retrying])
+        if (state === 'no-snapshot') return <CachedHomeLaunch />
+        const data = fixtureDashboard('month', state === 'empty')
+        const updatedAt = Date.parse('2026-09-06T12:00:00Z')
+        const snapshot: HomeSnapshot = {
+          schemaVersion: 1,
+          identity: 'synthetic-preview',
+          authEpoch: 'workbench',
+          savedAt: updatedAt,
+          period: TimePeriod.month,
+          endDate: data.summary.endDate,
+          presentation: {
+            currency: 'USD',
+            timezone: 'UTC',
+            appearance: appearanceFromSearch(window.location.search).preference,
+            maskBalances: masked || state === 'masked',
+            hideZeroBalanceAccounts: false,
+          },
+          summary: { data: data.summary, updatedAt },
+          series:
+            state === 'missing-series'
+              ? null
+              : { data: data.series, updatedAt },
+        }
+        return (
+          <SavedHomePreview
+            snapshot={snapshot}
+            phase={
+              retrying
+                ? 'refreshing'
+                : state === 'offline'
+                  ? 'offline'
+                  : state === 'refresh-failure'
+                    ? 'error'
+                    : 'refreshing'
+            }
+            onRetry={() => setRetrying(true)}
+            onLogout={simulateLogout}
+          />
+        )
+      },
+    })
+    return createRouter({
+      routeTree: root,
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+      context: {},
+    })
+  })
+  return <RouterProvider router={router} />
+}
 
 function PageFrame() {
   const location = useLocation()
   const router = useRouter()
+  const state = new URLSearchParams(window.location.search).get('state')
+  const [retrying, setRetrying] = useState(false)
+  useEffect(() => {
+    if (!retrying) return
+    const timer = window.setTimeout(() => setRetrying(false), 2500)
+    return () => window.clearTimeout(timer)
+  }, [retrying])
+  const phase: RefreshStatus['phase'] =
+    retrying || state === 'retrying' || state === 'hourly-refreshing'
+      ? 'refreshing'
+      : state === 'offline'
+        ? 'offline'
+        : state === 'refresh-failure'
+          ? 'error'
+          : 'idle'
   const showRefreshScenario =
     location.pathname === '/transactions' &&
     new URLSearchParams(window.location.search).get('state') === 'refresh-error'
   return (
     <AppShellLayout
       pathname={location.pathname}
+      refreshStatus={{ phase, lastSuccessfulAt: Date.UTC(2026, 8, 8, 10, 0) }}
+      onRetryRefresh={() => setRetrying(true)}
       onLogout={simulateLogout}
       headerActions={
         <NotificationMenu
@@ -178,12 +264,36 @@ export const pageExamples = [
     components: ['LandingPage', 'LoginCard'],
   },
   {
+    id: 'cached-home',
+    title: 'Saved Home preview',
+    component: CachedHomeExample,
+    states: [
+      'cached-validating',
+      'masked',
+      'missing-series',
+      'no-snapshot',
+      'empty',
+      'offline',
+      'refresh-failure',
+    ],
+    components: ['SavedHomePreview', 'CachedHomeLaunch', 'HomeContent'],
+  },
+  {
     id: 'page-home',
     title: 'Home page',
     component: (_props: ExampleProps) => <Page path="/home?period=month" />,
-    states: ['ready', 'empty'],
+    states: [
+      'ready',
+      'empty',
+      'fresh',
+      'hourly-refreshing',
+      'offline',
+      'refresh-failure',
+      'retrying',
+    ],
     components: [
       'AppShellLayout',
+      'HeaderRefreshStatus',
       'NotificationMenu',
       'HomePage',
       'NetWorthCard',

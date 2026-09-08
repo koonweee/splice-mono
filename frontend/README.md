@@ -355,3 +355,31 @@ authenticated first paint; theme previews stay temporary.
 
 Reproducible validation and release ordering are documented in
 [performance validation](./docs/performance-validation.md).
+
+### Saved Home and periodic refresh
+
+Controlled PWA launches at `/` and `/home` can boot a versioned public shell from
+local static assets. The client restores one bounded Home snapshot from IndexedDB
+and renders a read-only preview while checking the real session. Saved state is
+never hydrated into `/user/me`. Successful matching authentication prepares live
+Home in the same document; anonymous or changed identities clear the preview.
+Initial visits and unavailable/expired storage retain the launch fallback.
+
+The snapshot expires after seven days, is limited to 2 MiB, and contains only Home
+summary/series data and presentation preferences. Masking applies before first
+paint. Explicit logout rotates a durable eligibility epoch before asynchronous
+cleanup and waits for local cleanup acknowledgment before clearing its retry
+journal. Cross-tab changes invalidate mounted previews and reject late writes.
+
+Visible pages refresh observed, eligible reads hourly. Hidden/offline pages pause;
+returning pages catch up when overdue, and reconnect retries failed reads. Edits,
+filter changes, session validation and notifications retain their own policies.
+The header divider animates subtly during refresh. Offline or failed refreshes
+use a status icon beside Splice with hover/focus/tap detail and Retry. Existing
+content stays mounted; provider synchronization and offline writes are not added.
+
+Build with `VITE_CACHED_HOME=false` to disable local-shell launch and snapshot
+writes/restoration. Updated clients clear their snapshot store and use network
+launch. An already-offline older client needs to receive the updated release
+before rollback can affect it. See [PWA validation](docs/pwa-validation.md) for
+reproducible checks and device limitations.

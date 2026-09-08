@@ -38,7 +38,11 @@ import type { PwaUpdateState } from '../lib/pwa/service-worker'
 
 let activeLifecycleMounted = false
 
-export function PwaLifecycle() {
+export function PwaLifecycle({
+  offlineStatusOwnedByHeader = false,
+}: {
+  offlineStatusOwnedByHeader?: boolean
+}) {
   const [active, setActive] = useState(false)
   const [online, setOnline] = useState(
     () => typeof navigator === 'undefined' || navigator.onLine,
@@ -408,7 +412,7 @@ export function PwaLifecycle() {
 
   return (
     <div ref={banner} className={styles.container}>
-      {!online && (
+      {!online && !offlineStatusOwnedByHeader && (
         <Alert
           className={styles.alert}
           color="yellow"

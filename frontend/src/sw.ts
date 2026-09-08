@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import {
   activateStaticAssets,
+  cachedLaunchResponse,
   installStaticAssets,
   isCacheableStaticRequest,
   loadStaticAsset,
@@ -17,8 +18,9 @@ declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision?: string | null }>
 }
 
+const essentialEntries = self.__WB_MANIFEST
 self.addEventListener('install', (event) => {
-  event.waitUntil(installStaticAssets(self.__WB_MANIFEST))
+  event.waitUntil(installStaticAssets(essentialEntries))
 })
 self.addEventListener('activate', (event) => {
   event.waitUntil(
@@ -46,7 +48,11 @@ self.addEventListener('message', (event) => {
 })
 self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate')
-    event.respondWith(handlePwaNavigation(event))
+    event.respondWith(
+      cachedLaunchResponse(event.request, essentialEntries).then(
+        (response) => response ?? handlePwaNavigation(event),
+      ),
+    )
   else if (isCacheableStaticRequest(event.request))
     event.respondWith(loadStaticAsset(event.request, event))
 })

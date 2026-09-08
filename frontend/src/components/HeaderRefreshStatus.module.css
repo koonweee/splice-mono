@@ -1,0 +1,51 @@
+.slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+}
+
+.trigger {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.edge {
+  position: absolute;
+  pointer-events: none;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.edge::after {
+  content: '';
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: var(--splice-chart-color);
+  opacity: 0.45;
+  animation: header-refresh 2.4s ease-in-out infinite;
+}
+
+@keyframes header-refresh {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(386%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edge::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.3;
+  }
+}

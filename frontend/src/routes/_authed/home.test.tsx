@@ -21,6 +21,10 @@ import type * as SpliceAPI from '../../api/clients/spliceAPI'
 import type * as BalanceDataHook from '../../hooks/useBalanceData'
 import { TimePeriod } from '@/lib/types'
 
+vi.mock('../../lib/pwa/use-save-home-snapshot', () => ({
+  useSaveHomeSnapshot: () => undefined,
+}))
+
 const mockFns = vi.hoisted(() => ({
   useNavigateMock: vi.fn(),
   useSearchMock: vi.fn(),
@@ -326,7 +330,7 @@ describe('HomePage balance visibility', () => {
   })
 })
 
-it('offers a retry while keeping matching cached dashboard data visible', () => {
+it('keeps matching cached dashboard visible with header-owned refresh failure', () => {
   const refetch = vi.fn()
   mockFns.useBalanceDataMock.mockReturnValue({
     data: dashboard,
@@ -335,13 +339,9 @@ it('offers a retry while keeping matching cached dashboard data visible', () => 
     refetch,
   })
   renderHomePage()
-  expect(
-    screen.getByText('Previously loaded results remain visible.', {
-      exact: false,
-    }),
-  ).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-  expect(refetch).toHaveBeenCalledOnce()
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Week' })).toBeTruthy()
 })
 
 it('keeps balances visible and hides old comparisons while switching', () => {

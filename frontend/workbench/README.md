@@ -573,3 +573,39 @@ grouping, and action placement. CLS alone misses nonrepresentative placeholders.
 Unknown row counts and user text wrapping may legitimately change content height.
 Actual production browser checks still establish code splitting, SSR/hydration,
 and service-worker/cache behavior; fixture module holds do not prove those.
+
+## Cached-data header status
+
+`page-home` adds `fresh`, `hourly-refreshing`, `offline`, `refresh-failure`, and
+`retrying` states using the real `HeaderRefreshStatus` inside `AppShellLayout`.
+Retry simulates 2.5 seconds of work and returns to the failure fixture. These
+fixtures verify presentation; persisted launch and hourly timing require the
+production lifecycle tests.
+
+Browser inspected the header on 2026-09-08 at 320×800 OLED (offline), 390×844
+Light (refreshing, reduced motion), and 1440×900 Dark (failure), with accent
+`#bf927a`. At 320px all five header targets were 44px wide without overlap;
+the brand remained at x=56 and retained its 52.8px width across failure/refresh
+states. Inspected captured images, opened the detail with click and keyboard
+Enter, used Retry, and confirmed Escape closed it and restored icon focus.
+Reduced-motion edge reported no animation; no browser runtime errors appeared.
+This does not certify installed-device touch or process lifecycle behavior.
+
+`/?frame=true&example=cached-home&state=cached-validating&mode=dark&width=1440`
+renders `SavedHomePreview` with a synthetic summary/chart and the saved period.
+Additional states are `masked`, `missing-series`, `empty`, `offline`,
+`refresh-failure`, and `no-snapshot`. The last mounts the real `CachedHomeLaunch`
+against a cache-miss storage adapter. Preview masking initializes from the
+snapshot in an isolated presentation scope; cookies/storage are never read or
+written by the adapter. Log out uses the fixture action. Retry simulates a
+2.5-second refresh. These fixtures do not validate network session handoff.
+
+Inspected the saved preview at 320×800 OLED masked, 390×844 Light missing-series,
+and 1440×900 Dark validating/no-snapshot. The preview shares the live Home inset
+(16px desktop) and preserves period controls visibly inside an inert content
+region. Navigation is disabled; masking and sign out remain available. Confirmed
+mask toggling changes local presentation and financial controls do not enter the
+accessibility tree. Missing series retains the chart region with its existing
+empty-history message; no-snapshot shows the launch screen. Browser runtime
+errors were empty and the isolated browser was closed. Workbench tests cover
+initial saved masking plus cookie/storage isolation.

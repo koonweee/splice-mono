@@ -22,6 +22,8 @@ import {
 } from 'lucide-react'
 import { usePresentationPreferences } from '../lib/presentation-preferences'
 import styles from './AppShellLayout.module.css'
+import { HeaderRefreshStatus } from './HeaderRefreshStatus'
+import type { RefreshStatus } from './HeaderRefreshStatus'
 import type { ReactNode } from 'react'
 import type { PrimaryDestination } from '../lib/navigation-preload'
 
@@ -33,15 +35,22 @@ export function AppShellLayout({
   onPrepareDestination,
   children,
   headerActions,
+  refreshStatus,
+  readOnly = false,
+  onRetryRefresh,
 }: {
   pathname: string
   onLogout: () => void
   logoutPending?: boolean
   onPrepareDestination?: (to: PrimaryDestination) => void
   headerActions?: ReactNode
+  refreshStatus?: RefreshStatus
+  readOnly?: boolean
+  onRetryRefresh?: () => void
   children: ReactNode
 }) {
-  const [opened, { toggle }] = useDisclosure()
+  const [navigationOpened, { toggle }] = useDisclosure()
+  const opened = navigationOpened && !readOnly
   const { maskBalances, setMaskBalances } = usePresentationPreferences()
   const navItems = [
     { to: '/home', label: 'Home', icon: Home },
@@ -71,17 +80,24 @@ export function AppShellLayout({
           wrap="nowrap"
           gap={8}
         >
-          <Group wrap="nowrap" gap={8}>
+          <Group wrap="nowrap" gap={4}>
             <Burger
               aria-label={opened ? 'Close navigation' : 'Open navigation'}
               aria-expanded={opened}
               aria-controls="main-navigation"
               opened={opened}
               onClick={toggle}
+              disabled={readOnly}
               size="sm"
               className={styles.navigationToggle}
             />
             <Text data-typography="brand">Splice</Text>
+            <HeaderRefreshStatus
+              status={
+                refreshStatus ?? { phase: 'idle', lastSuccessfulAt: null }
+              }
+              onRetry={onRetryRefresh}
+            />
           </Group>
           <Group gap={8} wrap="nowrap" className={styles.headerActions}>
             {pathname === '/home' && (

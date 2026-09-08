@@ -34,6 +34,7 @@ const params = new URLSearchParams(location.search)
 const initialAppearance = appearanceFromSearch(location.search)
 const modes = ['light', 'dark', 'oled']
 const pageIds = [
+  'cached-home',
   'page-home',
   'page-accounts',
   'page-transactions',
@@ -69,7 +70,9 @@ function Preview() {
         <FixturePresentation masked={params.get('masked') === 'true'}>
           <div
             className={
-              example.id.startsWith('page-') || example.id === 'launch-screen'
+              example.id.startsWith('page-') ||
+              example.id === 'launch-screen' ||
+              example.id === 'cached-home'
                 ? 'wb-page-preview'
                 : 'wb-preview'
             }

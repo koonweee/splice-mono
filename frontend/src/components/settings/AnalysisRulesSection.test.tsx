@@ -161,7 +161,7 @@ afterEach(() => {
 })
 
 describe('AnalysisRulesSection', () => {
-  it('keeps cached rows visible after a refresh failure and wires Retry', () => {
+  it('keeps cached rows visible while the app header owns refresh failure recovery', () => {
     const refetch = vi.fn()
     mockFns.useAnalysisRuleControllerFindAllMock.mockReturnValue({
       data: [activeRule],
@@ -172,11 +172,8 @@ describe('AnalysisRulesSection', () => {
     })
     renderSection()
     expect(screen.getAllByText(activeRule.name).length).toBeGreaterThan(0)
-    expect(
-      screen.getByText('Previously loaded results remain visible.'),
-    ).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(refetch).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
   })
 
   it('renders rules and archives active rules', () => {

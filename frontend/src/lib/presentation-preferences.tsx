@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { createIsomorphicFn } from '@tanstack/react-start'
 import {
   APPEARANCE_COOKIE,
@@ -71,6 +78,7 @@ const PresentationContext = createContext({
   maskBalances: true,
   setMaskBalances: (_value: boolean | ((value: boolean) => boolean)) => {},
   today: '',
+  reconcileDate: (_timezone: string): boolean => false,
 })
 
 export function PresentationProvider({
@@ -80,6 +88,25 @@ export function PresentationProvider({
   initial: PresentationPreferences
   children: ReactNode
 }) {
+  const [today, setToday] = useState(initial.today)
+  const currentDay = useRef(today)
+  const reconcileDate = useCallback((timezone: string) => {
+    let next: string
+    try {
+      next = new Intl.DateTimeFormat('en-CA', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date())
+    } catch {
+      next = new Date().toISOString().slice(0, 10)
+    }
+    if (next === currentDay.current) return false
+    currentDay.current = next
+    setToday(next)
+    return true
+  }, [])
   // Unknown legacy preferences must mask every monetary surface until migration.
   const [maskBalances, setMasked] = useState(initial.maskBalances ?? true)
   useEffect(() => {
@@ -120,7 +147,7 @@ export function PresentationProvider({
   }
   return (
     <PresentationContext.Provider
-      value={{ maskBalances, setMaskBalances, today: initial.today }}
+      value={{ maskBalances, setMaskBalances, today, reconcileDate }}
     >
       {children}
     </PresentationContext.Provider>

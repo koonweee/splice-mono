@@ -120,7 +120,15 @@
     "component": "AppShellLayout",
     "source": "components/AppShellLayout.tsx",
     "example": "page-home",
-    "states": ["ready", "empty"]
+    "states": [
+      "ready",
+      "empty",
+      "fresh",
+      "hourly-refreshing",
+      "offline",
+      "refresh-failure",
+      "retrying"
+    ]
   },
   {
     "component": "AppThemeProvider",
@@ -1949,5 +1957,65 @@
     "source": "routes/_authed/transactions.tsx",
     "example": "page-transactions",
     "states": ["ready", "empty", "refresh-error"]
+  },
+  {
+    "component": "HeaderRefreshStatus",
+    "source": "components/HeaderRefreshStatus.tsx",
+    "example": "page-home",
+    "states": [
+      "ready",
+      "empty",
+      "fresh",
+      "hourly-refreshing",
+      "offline",
+      "refresh-failure",
+      "retrying"
+    ],
+    "composition": "Presentational header status in the real app shell; Retry simulates a 2.5-second refresh before returning to the fixture failure."
+  },
+  {
+    "component": "HomeContent",
+    "source": "components/pages/HomeContent.tsx",
+    "example": "cached-home",
+    "states": [
+      "cached-validating",
+      "masked",
+      "missing-series",
+      "no-snapshot",
+      "empty",
+      "offline",
+      "refresh-failure"
+    ],
+    "composition": "Real saved Home presentation using a synthetic snapshot. CachedHomeLaunch is mounted in no-snapshot with storage boundaries that always miss; lifecycle/authentication are verified in production tests."
+  },
+  {
+    "component": "SavedHomePreview",
+    "source": "components/pages/CachedHomeLaunch.tsx",
+    "example": "cached-home",
+    "states": [
+      "cached-validating",
+      "masked",
+      "missing-series",
+      "no-snapshot",
+      "empty",
+      "offline",
+      "refresh-failure"
+    ],
+    "composition": "Real saved Home presentation using a synthetic snapshot. CachedHomeLaunch is mounted in no-snapshot with storage boundaries that always miss; lifecycle/authentication are verified in production tests."
+  },
+  {
+    "component": "CachedHomeLaunch",
+    "source": "components/pages/CachedHomeLaunch.tsx",
+    "example": "cached-home",
+    "states": [
+      "cached-validating",
+      "masked",
+      "missing-series",
+      "no-snapshot",
+      "empty",
+      "offline",
+      "refresh-failure"
+    ],
+    "composition": "Real saved Home presentation using a synthetic snapshot. CachedHomeLaunch is mounted in no-snapshot with storage boundaries that always miss; lifecycle/authentication are verified in production tests."
   }
 ]

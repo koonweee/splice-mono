@@ -99,11 +99,11 @@ const summary = {
   uncategorizedTransactionCount: 12,
   computedAt: '2026-09-07T12:00:00.000Z',
 }
-function mount() {
+function mount(offlineStatusOwnedByHeader = false) {
   return render(
     <MantineProvider>
       <QueryClientProvider client={client}>
-        <PwaLifecycle />
+        <PwaLifecycle offlineStatusOwnedByHeader={offlineStatusOwnedByHeader} />
       </QueryClientProvider>
     </MantineProvider>,
   )
@@ -176,6 +176,12 @@ afterEach(() => {
 })
 
 describe('PwaLifecycle integration', () => {
+  it('delegates offline feedback to the mounted authenticated header', () => {
+    mount(true)
+    online(false)
+    fireEvent(window, new Event('offline'))
+    expect(screen.queryByText(/Live financial data may not load/)).toBeNull()
+  })
   it('shows and clears offline degradation without making anonymous financial requests', () => {
     mount()
     online(false)

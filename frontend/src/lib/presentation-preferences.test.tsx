@@ -84,3 +84,35 @@ describe('presentation preferences before hydration', () => {
     vi.unstubAllGlobals()
   })
 })
+
+it('reconciles midnight and timezone changes without relabeling before reconciliation', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-09-07T00:01:00Z'))
+  function Day() {
+    const { today, reconcileDate } = usePresentationPreferences()
+    return (
+      <>
+        <span>{today}</span>
+        <button onClick={() => reconcileDate('UTC')}>UTC</button>
+        <button onClick={() => reconcileDate('America/Los_Angeles')}>LA</button>
+      </>
+    )
+  }
+  render(
+    <PresentationProvider
+      initial={readPresentationCookies(
+        'splice_mask_balances=1',
+        null,
+        new Date('2026-09-06T23:59:00Z'),
+      )}
+    >
+      <Day />
+    </PresentationProvider>,
+  )
+  expect(screen.getByText('2026-09-06')).toBeTruthy()
+  act(() => screen.getByText('UTC').click())
+  expect(screen.getByText('2026-09-07')).toBeTruthy()
+  act(() => screen.getByText('LA').click())
+  expect(screen.getByText('2026-09-06')).toBeTruthy()
+  vi.useRealTimers()
+})

@@ -427,7 +427,7 @@ describe('Analysis route', () => {
   })
 })
 
-it('offers retry and retains matching cached analysis after a refresh failure', () => {
+it('retains matching cached analysis with header-owned refresh failure', () => {
   const refetch = vi.fn()
   mockFns.useTransactionAnalysisControllerGetAnalysisMock.mockReturnValue({
     data: analysisResponse,
@@ -436,11 +436,7 @@ it('offers retry and retains matching cached analysis after a refresh failure', 
     refetch,
   })
   renderAnalysisPage()
-  expect(
-    screen.getByText('Previously loaded results remain visible.', {
-      exact: false,
-    }),
-  ).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-  expect(refetch).toHaveBeenCalledOnce()
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
+  expect(refetch).not.toHaveBeenCalled()
 })

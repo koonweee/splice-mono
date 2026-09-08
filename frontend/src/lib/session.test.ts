@@ -29,6 +29,7 @@ describe('session helpers', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
     vi.clearAllMocks()
   })
@@ -44,8 +45,21 @@ describe('session helpers', () => {
 
     expect(mocks.fetch).toHaveBeenCalledWith(
       new URL('/user/me', 'http://localhost:3000'),
-      { credentials: 'include' },
+      { credentials: 'include', signal: expect.any(AbortSignal) },
     )
+  })
+
+  it('ends a stalled session check and aborts its request', async () => {
+    vi.useFakeTimers()
+    let signal: AbortSignal | undefined
+    mocks.fetch.mockImplementation((_url, init) => {
+      signal = init.signal
+      return new Promise(() => undefined)
+    })
+    const result = expect(ensureSession()).rejects.toThrow('Session check timed out')
+    await vi.advanceTimersByTimeAsync(15_000)
+    await result
+    expect(signal?.aborted).toBe(true)
   })
 
   it('refreshes and retries /user/me after an expired access cookie', async () => {

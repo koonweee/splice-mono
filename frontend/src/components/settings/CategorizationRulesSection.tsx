@@ -931,6 +931,7 @@ export function CategorizationRulesSection() {
       </SettingsFiltersFrame>
 
       <DataState
+        backgroundErrorMode="header"
         loadingFallback={<CategorizationRulesSkeleton />}
         hasData={rules.length > 0}
         isLoading={isLoading}

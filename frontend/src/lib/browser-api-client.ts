@@ -1,4 +1,5 @@
 import Axios from 'axios'
+import { PAGE_READ_KEYS } from './page-refresh'
 import { OfflineMutationError } from './offline-mutation'
 import {
   assertAuthGeneration,
@@ -14,6 +15,15 @@ import type {
 } from 'axios'
 
 export { resolveApiBaseUrl } from './api-base-url'
+
+export const PAGE_READ_TIMEOUT = 30_000
+const isPageRead = (url = '') => {
+  const path = new URL(url, 'http://local.invalid').pathname
+  return (
+    PAGE_READ_KEYS.some((key) => path === key) ||
+    /^\/investment\/account\/[^/]+\/(?:activity|holdings\/latest)$/.test(path)
+  )
+}
 
 const axiosInstance = Axios.create({
   baseURL: resolveApiBaseUrl(),
@@ -38,6 +48,17 @@ axiosInstance.interceptors.request.use(
       )
     ) {
       throw new OfflineMutationError()
+    }
+    // Bound read-only page requests so a stalled response becomes retryable.
+    // Preserve shorter caller deadlines and leave financial writes untouched.
+    if (
+      (config.method ?? 'get').toLowerCase() === 'get' &&
+      isPageRead(config.url)
+    ) {
+      config.timeout =
+        config.timeout && config.timeout > 0
+          ? Math.min(config.timeout, PAGE_READ_TIMEOUT)
+          : PAGE_READ_TIMEOUT
     }
     config._authGeneration ??= getAuthGeneration()
     assertAuthGeneration(config._authGeneration)

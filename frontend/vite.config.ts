@@ -49,8 +49,29 @@ const config = defineConfig({
         }
         for (const output of Object.values(bundle)) {
           if (output.type === 'chunk' && output.isEntry) visit(output.fileName)
+          // Saved Home must include its lazy chart on a cold offline launch,
+          // including after an upgrade that changes chart dependency hashes.
+          if (output.type === 'chunk' && output.name === 'Chart')
+            visit(output.fileName)
           if (output.type === 'asset' && output.names.includes('style.css'))
             essentialAssets.add(output.fileName)
+        }
+        if (process.env.VITE_CACHED_HOME !== 'false') {
+          const entry = Object.values(bundle).find(
+            (output) => output.type === 'chunk' && output.isEntry,
+          )
+          if (!entry) throw new Error('Missing PWA client entry')
+          const styles = Object.values(bundle).filter(
+            (output) =>
+              output.type === 'asset' && output.fileName.endsWith('.css'),
+          )
+          const shell = `pwa-shell-${buildId}.html`
+          this.emitFile({
+            type: 'asset',
+            fileName: shell,
+            source: `<!doctype html><html lang="en" data-splice-launch="local"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#000000"><title>Splice</title>${styles.map((output) => `<link rel="stylesheet" href="/${output.fileName}">`).join('')}</head><body><script type="module" src="/${entry.fileName}"></script></body></html>`,
+          })
+          essentialAssets.add(shell)
         }
         this.emitFile({
           type: 'asset',
@@ -170,6 +191,7 @@ const config = defineConfig({
           'apple-touch-icon.png',
           'assets/**/*.{js,css,woff,woff2,png,svg,webp,avif,jpg,jpeg}',
           'pwa-offline-*.js',
+          'pwa-shell-*.html',
         ],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         manifestTransforms: [

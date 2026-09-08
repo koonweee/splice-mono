@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router'
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { usePageRefresh } from '../lib/use-page-refresh'
 import { createNavigationPreparation } from '../lib/navigation-preload'
 import { preparePageFeatureCode } from '../lib/feature-loaders'
 import { usePresentationPreferences } from '../lib/presentation-preferences'
@@ -77,6 +78,7 @@ function AuthenticatedLayoutContent() {
   const logoutMutation = useLogout()
   const { data: session } = useSession()
   const user = session?.user
+  const refresh = usePageRefresh(user?.id, user?.settings.timezone)
   const router = useRouter()
   const queryClient = useQueryClient()
   const { today } = usePresentationPreferences()
@@ -135,6 +137,8 @@ function AuthenticatedLayoutContent() {
   return (
     <AppShellLayout
       pathname={location.pathname}
+      refreshStatus={refresh.status}
+      onRetryRefresh={refresh.retry}
       headerActions={
         <NotificationMenu
           onNavigate={(url) => {

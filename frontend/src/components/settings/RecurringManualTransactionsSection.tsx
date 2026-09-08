@@ -659,6 +659,7 @@ export function RecurringManualTransactionsSection() {
         onAdd={openCreateModal}
       />
       <DataState
+        backgroundErrorMode="header"
         loadingFallback={<RecurringTransactionsSkeleton />}
         hasData={schedules.length > 0}
         isLoading={schedulesQuery.isLoading}

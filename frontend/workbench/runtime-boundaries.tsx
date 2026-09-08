@@ -67,3 +67,19 @@ export const fixturePresentation = {
   maskBalances: false,
   today: FIXTURE_NOW.slice(0, 10),
 }
+
+/** Saved preview callers get their own mask state and never read shared cookies. */
+export const readPresentationCookies = (_cookie: string) => ({})
+export function PresentationProvider({
+  initial,
+  children,
+}: {
+  initial?: { maskBalances?: boolean; today?: string; appearance?: unknown }
+  children: ReactNode
+}) {
+  return (
+    <FixturePresentation masked={initial?.maskBalances ?? false}>
+      {children}
+    </FixturePresentation>
+  )
+}

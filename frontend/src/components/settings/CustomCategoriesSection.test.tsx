@@ -117,7 +117,7 @@ afterEach(() => {
 })
 
 describe('CustomCategoriesSection', () => {
-  it('keeps cached rows visible after a refresh failure and wires Retry', () => {
+  it('keeps cached rows visible while the app header owns refresh failure recovery', () => {
     const refetch = vi.fn()
     mockFns.useCategoryControllerFindManagementMock.mockReturnValue({
       data: [activeCategory],
@@ -130,11 +130,8 @@ describe('CustomCategoriesSection', () => {
     expect(screen.getAllByText(activeCategory.detailed).length).toBeGreaterThan(
       0,
     )
-    expect(
-      screen.getByText('Previously loaded results remain visible.'),
-    ).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(refetch).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
   })
 
   it('creates and edits user categories without system or visibility controls', async () => {

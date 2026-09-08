@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { pageReadPolicy } from '../lib/page-refresh'
 import {
   getInvestmentControllerFindActivityForAccountQueryKey,
   investmentControllerFindActivityForAccount,
@@ -8,6 +9,7 @@ const INVESTMENT_ACTIVITY_PAGE_SIZE = 10
 
 export function useInvestmentActivity(accountId?: string, enabled = true) {
   const query = useInfiniteQuery({
+    ...pageReadPolicy,
     queryKey: [
       ...getInvestmentControllerFindActivityForAccountQueryKey(accountId),
       'infinite',
