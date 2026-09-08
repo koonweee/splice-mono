@@ -1,5 +1,5 @@
 import { Alert, Button, Group, Text } from '@mantine/core'
-import { CloudOff, RefreshCw } from 'lucide-react'
+import { CloudOff } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useIsMutating, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
@@ -49,6 +49,8 @@ export function PwaLifecycle() {
   const anonymousNavigationRequested = useRef(false)
   const [logoutBusy, setLogoutBusy] = useState(false)
   const [updating, setUpdating] = useState(false)
+  const updateInFlight = useRef(false)
+  const [updateError, setUpdateError] = useState<string>()
   const [retrying, setRetrying] = useState(false)
   const retryInFlight = useRef(false)
   const banner = useRef<HTMLDivElement>(null)
@@ -360,11 +362,40 @@ export function PwaLifecycle() {
   }, [active])
 
   if (!active) return null
-  const error = update.error || deviceError
+  const error = updateError || update.error || deviceError
+  const applyUpdate = async () => {
+    if (
+      updateInFlight.current ||
+      !online ||
+      transition.blocked ||
+      !update.updateServiceWorker
+    )
+      return
+    updateInFlight.current = true
+    setUpdating(true)
+    setUpdateError(undefined)
+    let reloading = false
+    try {
+      reloading = (await update.updateServiceWorker()) === true
+    } catch (cause) {
+      setUpdateError(
+        cause instanceof Error
+          ? cause.message
+          : 'Could not update Splice. Try again.',
+      )
+    } finally {
+      // Keep feedback visible until navigation replaces the current document.
+      if (!reloading) {
+        updateInFlight.current = false
+        setUpdating(false)
+      }
+    }
+  }
   const retry = async () => {
     if (retryInFlight.current) return
     retryInFlight.current = true
     setRetrying(true)
+    setUpdateError(undefined)
     try {
       await registerPwaServiceWorker().catch(() => undefined)
       await checkForPwaUpdate(true)
@@ -396,13 +427,12 @@ export function PwaLifecycle() {
           title="Sign out pending"
           role="alert"
         >
-          <Group gap="sm" justify="space-between">
+          <Group className={styles.actions} gap="sm" justify="space-between">
             <Text data-typography="bodySmall">
               Private data is hidden on this device. Reconnect to finish signing
               out on the server.
             </Text>
             <Button
-              size="xs"
               disabled={!online}
               loading={logoutBusy}
               onClick={() => void finishLogout()}
@@ -419,10 +449,9 @@ export function PwaLifecycle() {
           title="App features need attention"
           role="alert"
         >
-          <Group gap="sm" justify="space-between">
+          <Group className={styles.actions} gap="sm" justify="space-between">
             <Text data-typography="bodySmall">{error}</Text>
             <Button
-              size="xs"
               disabled={!online}
               loading={retrying}
               onClick={() => void retry()}
@@ -434,31 +463,27 @@ export function PwaLifecycle() {
       )}
       {!pendingLogout && update.needRefresh && (
         <Alert
-          className={styles.alert}
-          color="blue"
-          icon={<RefreshCw size={18} />}
+          className={`${styles.alert} ${styles.update}`}
           role="status"
-          title="Update available"
-          variant="light"
+          title={updating ? 'Updating Splice' : 'Update available'}
+          variant="default"
         >
-          <Group gap="sm" justify="space-between" wrap="nowrap">
+          <Group className={styles.actions} gap="sm" justify="space-between">
             <Text data-typography="bodySmall">
-              {transition.blocked
-                ? 'Finish your edits and saves before updating.'
-                : 'Update to use the latest version of Splice.'}
+              {updating
+                ? 'Splice will restart when the update is ready.'
+                : transition.blocked
+                  ? 'Finish your edits and saves before updating.'
+                  : 'Update to use the latest version of Splice.'}
             </Text>
             <Button
-              onClick={() => {
-                setUpdating(true)
-                void update
-                  .updateServiceWorker?.()
-                  .finally(() => setUpdating(false))
-              }}
+              onClick={() => void applyUpdate()}
               disabled={
                 !online || transition.blocked || !update.updateServiceWorker
               }
               loading={updating}
-              size="xs"
+              aria-label={updating ? 'Updating Splice' : 'Update'}
+              aria-busy={updating}
             >
               Update
             </Button>
@@ -471,14 +496,13 @@ export function PwaLifecycle() {
           title="Notification ready to open"
           role="status"
         >
-          <Group gap="sm" justify="space-between">
+          <Group className={styles.actions} gap="sm" justify="space-between">
             <Text data-typography="bodySmall">
               {transition.blocked
                 ? 'Finish your edits and saves, then open the notification.'
                 : 'Your notification is ready.'}
             </Text>
             <Button
-              size="xs"
               disabled={transition.blocked}
               onClick={openPendingAppTransition}
             >

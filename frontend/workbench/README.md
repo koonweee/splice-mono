@@ -1,5 +1,28 @@
 # Splice component workbench
 
+## September 8 lifecycle and Home validation
+
+Browser-inspected the production examples using Chromium at 320×800 (Light/OLED
+update idle, pending and failure), 390×844 (OLED Home and notifications),
+744×1000 (Light blocked update), and 1440×900 (Dark Home/update and Light inbox),
+with accent `#bf927a`. Update labels fit; the settled loading spinner stays inside
+the button and errors restore the action. The blocked action is disabled.
+With `page-home&latency=1500`, Week selection produced identical period-control,
+Assets and Liabilities anchor positions before, during and after loading at phone
+and desktop widths. Notification header icons measured 20px inside 44px targets
+on phone and 18px inside 34px targets on desktop. Clear all emptied the inbox;
+Escape restored focus to the bell. The empty bell and logout shared the same
+neutral foreground. No browser runtime errors were reported. This validates UI
+fixtures, not native iOS service-worker registration or installation.
+
+## App update notice
+
+`/?frame=true&example=pwa-lifecycle&state=update&mode=oled&width=320`
+shows the neutral production notice with a full-width phone action. Click Update
+to inspect its 2.5-second loading state; the fixture then dismisses the notice
+without navigating. `state=update-error` fails after the same delay so retry and
+error feedback can be inspected. `blocked-update` exercises the edit guard.
+
 ## Manual save recovery
 
 `/?frame=true&example=manual-save&state=lost-response&mode=light&width=390`
@@ -447,3 +470,11 @@ Saving in a fixture remains isolated from real user preferences.
 Home headline net worth uses whole-currency formatting, including hovered history
 values; percentage popovers retain exact cents. The comparison percentage and
 its period label use a 6px gap. Review in page-home or all-pages.
+
+Home period loading: use `/?frame=true&example=page-home&latency=1500&width=390`
+and select an uncached period. The comparison row reserves its touch-target
+height while loading, showing zero/no change, or inspecting a chart point, so
+the chart and period controls stay anchored. Compare the initial `loading-home`
+example as well; its comparison placeholder uses the same frame. Repeat with a
+desktop pointer and a wide coarse pointer, since touch geometry follows input
+capability as well as viewport width.

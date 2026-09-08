@@ -7,6 +7,7 @@ import {
 } from '../lib/session-refresh'
 import { LandingPage } from '../components/pages/LandingPage'
 import { validateIndexSearch } from '../lib/route-search'
+import { redirectAuthenticatedIndex } from './index'
 import type { ReactNode } from 'react'
 
 const mocks = vi.hoisted(() => ({
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   useSearch: vi.fn(),
   useSession: vi.fn(),
   refetch: vi.fn(),
+  redirect: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -23,6 +25,12 @@ vi.mock('@tanstack/react-router', () => ({
     </a>
   ),
   createFileRoute: () => (config: unknown) => config,
+  redirect: (options: unknown) => {
+    mocks.redirect(options)
+    const error = new Error('redirect')
+    Object.assign(error, { options })
+    throw error
+  },
   useNavigate: () => mocks.navigate,
   useSearch: () => mocks.useSearch(),
 }))
@@ -51,6 +59,27 @@ describe('index route search params', () => {
       validateIndexSearch({ login: 'true', redirect: '/transactions' }),
     ).toEqual({ login: true, redirect: '/transactions' })
   })
+})
+
+describe('index route session handling', () => {
+  beforeEach(() => {
+    mocks.redirect.mockReset()
+  })
+
+  it('redirects authenticated sessions directly into the app', () => {
+    expect(() => redirectAuthenticatedIndex('authenticated')).toThrowError(
+      'redirect',
+    )
+    expect(mocks.redirect).toHaveBeenCalledWith({ to: '/home' })
+  })
+
+  it.each(['anonymous', 'unavailable'] as const)(
+    'keeps the landing page for %s sessions',
+    (sessionOutcome) => {
+      expect(() => redirectAuthenticatedIndex(sessionOutcome)).not.toThrow()
+      expect(mocks.redirect).not.toHaveBeenCalled()
+    },
+  )
 })
 
 describe('LandingPage', () => {

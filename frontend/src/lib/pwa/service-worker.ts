@@ -12,7 +12,8 @@ export type PwaRegistrationStatus =
   | 'update-waiting'
 export type PwaUpdateState = {
   needRefresh: boolean
-  updateServiceWorker: (() => Promise<void>) | null
+  /** True means reload was dispatched; keep the action pending until navigation. */
+  updateServiceWorker: (() => Promise<boolean | void>) | null
   status?: PwaRegistrationStatus
   error?: string | null
 }
@@ -28,7 +29,7 @@ let needRefresh = false
 let status: PwaRegistrationStatus = 'unsupported'
 let error: string | null = null
 let lastVersionCheck = 0
-let updatePromise: Promise<void> | undefined
+let updatePromise: Promise<boolean> | undefined
 let cleanupListeners: Array<() => void> = []
 export const pwaNavigation = { reload: () => window.location.reload() }
 function supported() {
@@ -112,7 +113,7 @@ async function activeRegistration(current: ServiceWorkerRegistration) {
     const timer = setTimeout(() => {
       cleanup()
       reject(new Error('App installation timed out. Try again.'))
-    }, 10_000)
+    }, 45_000)
     function cleanup() {
       clearTimeout(timer)
       workers.forEach((worker) =>
@@ -136,27 +137,43 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
   status = 'registering'
   error = null
   emit()
-  const promise = withDeadline(
-    (async () => {
-      if ('caches' in window)
-        await window.caches.delete('splice-app-shell-v1').catch(() => false)
-      const current = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/',
-        updateViaCache: 'none',
-      })
-      if (token !== attempt) throw new Error('App registration was superseded.')
-      watchRegistration(current, token)
-      await activeRegistration(current)
-      if (token !== attempt) throw new Error('App registration was superseded.')
-      registration = current
-      status = current.waiting ? 'update-waiting' : 'ready'
-      needRefresh ||= Boolean(current.waiting)
-      emit()
-      return current
-    })(),
-    10_000,
-    'App registration timed out. Try again.',
-  ).catch((cause: unknown) => {
+  const promise = (async () => {
+    // Legacy cleanup must not hold up an already installed app's readiness.
+    if ('caches' in window)
+      void window.caches.delete('splice-app-shell-v1').catch(() => false)
+    const existing = await withDeadline(
+      navigator.serviceWorker.getRegistration('/'),
+      10_000,
+      'Could not find the installed app worker. Try again.',
+    ).catch(() => undefined)
+    if (token !== attempt) throw new Error('App registration was superseded.')
+    // register() can trigger a network update check. An installed worker is
+    // already usable; checkForPwaUpdate handles release checks separately.
+    const reusable =
+      existing?.scope === new URL('/', window.location.href).href &&
+      existing.active?.scriptURL ===
+        new URL('/sw.js', window.location.href).href &&
+      existing.active.state === 'activated'
+    const current = reusable
+      ? existing
+      : await withDeadline(
+          navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+            updateViaCache: 'none',
+          }),
+          10_000,
+          'App registration timed out. Try again.',
+        )
+    if (token !== attempt) throw new Error('App registration was superseded.')
+    watchRegistration(current, token)
+    await activeRegistration(current)
+    if (token !== attempt) throw new Error('App registration was superseded.')
+    registration = current
+    status = current.waiting ? 'update-waiting' : 'ready'
+    needRefresh ||= Boolean(current.waiting)
+    emit()
+    return current
+  })().catch((cause: unknown) => {
     if (token === attempt) {
       attempt += 1
       cleanupListeners.forEach((cleanup) => cleanup())
@@ -233,9 +250,12 @@ export async function checkForPwaUpdate(force = false) {
     emit()
   }
 }
-async function applyUpdate(): Promise<void> {
-  if (updatePromise || isAppTransitionBlocked()) return updatePromise
+async function applyUpdate(): Promise<boolean> {
+  if (updatePromise) return updatePromise
+  if (isAppTransitionBlocked()) return false
   updatePromise = (async () => {
+    error = null
+    emit()
     if (navigator.onLine === false)
       throw new Error('Reconnect before updating Splice.')
     const current = await getServiceWorkerRegistration()
@@ -269,7 +289,7 @@ async function applyUpdate(): Promise<void> {
         ).finally(() => cleanup())
       }
     }
-    if (isAppTransitionBlocked()) return
+    if (isAppTransitionBlocked()) return false
     if (current.waiting) {
       await new Promise<void>((resolve, reject) => {
         const done = () => {
@@ -287,7 +307,9 @@ async function applyUpdate(): Promise<void> {
         current.waiting?.postMessage({ type: 'SKIP_WAITING' })
       })
     }
-    if (!isAppTransitionBlocked()) pwaNavigation.reload()
+    if (isAppTransitionBlocked()) return false
+    pwaNavigation.reload()
+    return true
   })()
     .catch((cause: unknown) => {
       error =
@@ -295,6 +317,7 @@ async function applyUpdate(): Promise<void> {
           ? cause.message
           : 'Could not apply update. Try again.'
       emit()
+      return false
     })
     .finally(() => {
       updatePromise = undefined

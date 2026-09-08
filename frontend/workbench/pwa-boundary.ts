@@ -6,7 +6,9 @@ const scenario =
   typeof location === 'undefined'
     ? ''
     : new URLSearchParams(location.search).get('state')
-let needRefresh = scenario === 'update' || scenario === 'blocked-update'
+let needRefresh = ['update', 'update-error', 'blocked-update'].includes(
+  scenario ?? '',
+)
 let error: string | null =
   scenario === 'error' ? 'App registration failed. Try again.' : null
 let pending: PendingLogout | null =
@@ -22,10 +24,13 @@ export const getPwaUpdateState = (): PwaUpdateState => ({
   needRefresh,
   status: error ? 'failed' : needRefresh ? 'update-waiting' : 'ready',
   error,
-  updateServiceWorker: () => {
+  updateServiceWorker: async () => {
+    await new Promise((resolve) => setTimeout(resolve, 2500))
+    if (scenario === 'update-error')
+      throw new Error('The update could not finish. Try again.')
     needRefresh = false
     emit()
-    return Promise.resolve()
+    return false
   },
 })
 export const subscribeToPwaUpdates = (

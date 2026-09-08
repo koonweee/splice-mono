@@ -13,6 +13,7 @@ import {
 import { registerAppTransitionGuard } from './app-transition'
 
 class Worker extends EventTarget {
+  scriptURL = new URL('/sw.js', window.location.href).href
   constructor(public state: ServiceWorkerState = 'activated') {
     super()
   }
@@ -23,6 +24,7 @@ class Worker extends EventTarget {
   }
 }
 class Registration extends EventTarget {
+  scope = new URL('/', window.location.href).href
   active: Worker | null = new Worker()
   installing: Worker | null = null
   waiting: Worker | null = null
@@ -31,6 +33,7 @@ class Registration extends EventTarget {
 class Container extends EventTarget {
   controller: Worker | null = new Worker()
   register = vi.fn()
+  getRegistration = vi.fn().mockResolvedValue(undefined)
 }
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -115,6 +118,69 @@ describe('native PWA service worker lifecycle', () => {
     expect(await getServiceWorkerRegistration()).toBe(registration)
   })
 
+  it('reuses an installed app worker even when network registration and legacy cache cleanup stall', async () => {
+    container.getRegistration.mockResolvedValue(registration)
+    container.register.mockReturnValue(new Promise(() => {}))
+    vi.mocked(caches.delete).mockReturnValue(new Promise(() => {}))
+    registration.waiting = new Worker('installed')
+    expect(await getServiceWorkerRegistration()).toBe(registration)
+    expect(container.register).not.toHaveBeenCalled()
+    expect(getPwaUpdateState()).toMatchObject({
+      status: 'update-waiting',
+      needRefresh: true,
+      error: null,
+    })
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it.each(['scope', 'script'])(
+    'does not reuse an unrelated registration with a different %s',
+    async (difference) => {
+      const unrelated = new Registration()
+      if (difference === 'scope') unrelated.scope += 'other/'
+      else unrelated.active!.scriptURL += '?other'
+      container.getRegistration.mockResolvedValue(unrelated)
+      expect(await getServiceWorkerRegistration()).toBe(registration)
+      expect(container.register).toHaveBeenCalledOnce()
+    },
+  )
+
+  it.each(['rejects', 'stalls'])(
+    'falls back to registration when the installed-worker lookup %s',
+    async (failure) => {
+      container.getRegistration.mockImplementation(() =>
+        failure === 'rejects'
+          ? Promise.reject(new Error('Storage unavailable'))
+          : new Promise(() => {}),
+      )
+      const ready = getServiceWorkerRegistration()
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(await ready).toBe(registration)
+      expect(container.register).toHaveBeenCalledOnce()
+      expect(getPwaUpdateState().error).toBeNull()
+      expect(vi.getTimerCount()).toBe(0)
+    },
+  )
+
+  it('gives first installation its own deadline after a slow registration', async () => {
+    const registered = deferred<Registration>()
+    container.register.mockReturnValue(registered.promise)
+    const worker = new Worker('installing')
+    registration.active = null
+    registration.installing = worker
+    const ready = getServiceWorkerRegistration()
+    await vi.advanceTimersByTimeAsync(9_000)
+    registered.resolve(registration)
+    await vi.advanceTimersByTimeAsync(31_000)
+    expect(getPwaUpdateState().status).toBe('registering')
+    registration.active = worker
+    registration.installing = null
+    worker.change('activated')
+    expect(await ready).toBe(registration)
+    expect(getPwaUpdateState().status).toBe('ready')
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
   it('rejects failed installation, reports its error, and retries successfully', async () => {
     const worker = new Worker('installing')
     registration.active = null
@@ -140,7 +206,7 @@ describe('native PWA service worker lifecycle', () => {
     const failure = expect(getServiceWorkerRegistration()).rejects.toThrow(
       'timed out',
     )
-    await vi.advanceTimersByTimeAsync(10_000)
+    await vi.advanceTimersByTimeAsync(45_000)
     await failure
     expect(remove).toHaveBeenCalledWith('statechange', expect.any(Function))
     expect(vi.getTimerCount()).toBe(0)
@@ -184,7 +250,7 @@ describe('native PWA service worker lifecycle', () => {
     const waiting = registration.waiting
     await getServiceWorkerRegistration()
     releaseGuard = registerAppTransitionGuard()
-    await getPwaUpdateState().updateServiceWorker?.()
+    expect(await getPwaUpdateState().updateServiceWorker?.()).toBe(false)
     expect(waiting.postMessage).not.toHaveBeenCalled()
     expect(reload).not.toHaveBeenCalled()
     releaseGuard()
@@ -195,7 +261,7 @@ describe('native PWA service worker lifecycle', () => {
     container.controller = waiting
     registration.waiting = null
     container.dispatchEvent(new Event('controllerchange'))
-    await updating
+    expect(await updating).toBe(true)
     expect(reload).toHaveBeenCalledOnce()
   })
 
@@ -283,6 +349,7 @@ describe('native PWA service worker lifecycle', () => {
   )
 
   it('checks the release version without cache, deduplicates foreground checks, and requests the changed worker', async () => {
+    container.getRegistration.mockResolvedValue(registration)
     const fetch = vi
       .fn()
       .mockResolvedValue(
@@ -299,6 +366,7 @@ describe('native PWA service worker lifecycle', () => {
       }),
     )
     expect(registration.update).toHaveBeenCalledOnce()
+    expect(container.register).not.toHaveBeenCalled()
     expect(getPwaUpdateState().needRefresh).toBe(true)
     expect(reload).not.toHaveBeenCalled()
   })
