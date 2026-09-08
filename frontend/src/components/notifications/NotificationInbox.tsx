@@ -49,6 +49,8 @@ export function NotificationBell({
           aria-expanded={opened}
           aria-haspopup="dialog"
           variant={opened ? 'light' : 'subtle'}
+          color="gray"
+          c="dimmed"
           onClick={onClick}
         >
           <Bell size={18} />
@@ -137,7 +139,11 @@ export function NotificationInbox({
                 <ListX size={18} />
               </ActionIcon>
             </Tooltip>
-            <Drawer.CloseButton size="lg" aria-label="Close notifications" />
+            <Drawer.CloseButton
+              size="lg"
+              icon={<X size={18} />}
+              aria-label="Close notifications"
+            />
           </Group>
         </Drawer.Header>
         <Drawer.Body className={styles.body}>

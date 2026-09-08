@@ -126,6 +126,7 @@ export const dialogExamples = [
     states: [
       'offline',
       'update',
+      'update-error',
       'blocked-update',
       'error',
       'deferred',

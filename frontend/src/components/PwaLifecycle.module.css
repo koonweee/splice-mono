@@ -18,10 +18,32 @@
   box-shadow: var(--mantine-shadow-md);
 }
 
+.update {
+  background: var(--splice-surface-overlay);
+  border-color: var(--splice-border);
+  color: var(--mantine-color-text);
+}
+
+.actions > p {
+  flex: 1 1 14rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.actions > button {
+  flex-shrink: 0;
+}
+
 @media (--compact-layout) {
   .container {
     right: max(var(--mantine-spacing-sm), var(--splice-safe-area-right, 0px));
     bottom: max(var(--mantine-spacing-sm), var(--splice-safe-area-bottom, 0px));
     left: max(var(--mantine-spacing-sm), var(--splice-safe-area-left, 0px));
+  }
+}
+
+@media (--phone-layout) {
+  .actions > button {
+    width: 100%;
   }
 }

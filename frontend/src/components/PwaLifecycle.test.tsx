@@ -373,6 +373,57 @@ describe('PwaLifecycle integration', () => {
     expect(error.defaultPrevented).toBe(true)
     expect(mocks.reportChunk).toHaveBeenCalledOnce()
   })
+  it('keeps Update busy through reload and prevents duplicate activation', async () => {
+    let resolve!: (reloading: boolean) => void
+    const update = vi.fn(
+      () =>
+        new Promise<boolean>((done) => {
+          resolve = done
+        }),
+    )
+    mocks.state = {
+      needRefresh: true,
+      updateServiceWorker: update,
+      status: 'update-waiting',
+    }
+    mount()
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
+    const button = screen.getByRole('button', { name: 'Updating Splice' })
+    expect(button.hasAttribute('disabled')).toBe(true)
+    expect(button.getAttribute('aria-busy')).toBe('true')
+    fireEvent.click(button)
+    expect(update).toHaveBeenCalledOnce()
+    await act(async () => {
+      resolve(true)
+      await Promise.resolve()
+    })
+    expect(
+      screen
+        .getByRole('button', { name: 'Updating Splice' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+  })
+  it('handles update failures and allows another attempt', async () => {
+    const update = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Update unavailable. Try again.'))
+      .mockResolvedValue(false)
+    mocks.state = {
+      needRefresh: true,
+      updateServiceWorker: update,
+      status: 'update-waiting',
+    }
+    mount()
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }))
+    await waitFor(() =>
+      expect(screen.getByText('Update unavailable. Try again.')).toBeTruthy(),
+    )
+    const button = screen.getByRole('button', { name: 'Update' })
+    expect(button.hasAttribute('disabled')).toBe(false)
+    fireEvent.click(button)
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(2))
+    expect(screen.queryByText('Update unavailable. Try again.')).toBeNull()
+  })
   it('reflects pending mutations in the shared update guard', async () => {
     const saving = deferred()
     mount()

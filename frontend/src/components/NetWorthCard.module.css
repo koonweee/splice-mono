@@ -4,6 +4,27 @@
   min-width: 0;
 }
 
+.comparison {
+  @splice-type metadata;
+  position: relative;
+  min-height: 1lh;
+  display: flex;
+  align-items: center;
+}
+
+.hoverLabel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+}
+
+@media (--touch-controls) {
+  .comparison {
+    min-height: var(--splice-size-touch-target);
+  }
+}
+
 @media (--phone-layout) {
   .chartBleed {
     margin-inline-start: calc(-1 * var(--splice-page-inline-start, 0px));

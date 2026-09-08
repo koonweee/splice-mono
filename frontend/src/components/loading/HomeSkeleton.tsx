@@ -1,4 +1,4 @@
-import { Box, Grid, Group, Paper, Skeleton, Text, Title } from '@mantine/core'
+import { Box, Grid, Group, Paper, Skeleton, Title } from '@mantine/core'
 import styles from '../NetWorthCard.module.css'
 import { ChartSkeleton } from './ChartSkeleton'
 import { RowSkeleton } from './LoadingSkeleton'
@@ -14,9 +14,8 @@ export function HomeSkeleton() {
           </Title>
           <Skeleton h="75%" w={210} pos="absolute" top="12.5%" />
         </Box>
-        <Box pos="relative">
-          <Text data-typography="bodySmall">{'\u00A0'}</Text>
-          <Skeleton h={14} w={180} pos="absolute" top="15%" />
+        <Box className={styles.comparison}>
+          <Skeleton h={14} w={180} />
         </Box>
         <Box mt="xs" className={styles.chartBleed}>
           <ChartSkeleton />

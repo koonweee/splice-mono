@@ -82,7 +82,7 @@ export function NetWorthCard({
           <VisuallyHidden>Net worth: </VisuallyHidden>
           {visibleDisplayValue}
         </Title>
-        <Box aria-busy={comparisonLoading} style={{ position: 'relative' }}>
+        <Box aria-busy={comparisonLoading} className={styles.comparison}>
           {comparisonLoading && (
             <Skeleton
               aria-hidden="true"
@@ -96,7 +96,11 @@ export function NetWorthCard({
             />
           )}
           {hoveredPoint && (
-            <Text data-typography="metadata" c="dimmed" pos="absolute" top={0}>
+            <Text
+              data-typography="metadata"
+              c="dimmed"
+              className={styles.hoverLabel}
+            >
               {hoveredPoint.label}
             </Text>
           )}
