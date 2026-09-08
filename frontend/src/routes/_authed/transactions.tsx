@@ -825,6 +825,7 @@ function TransactionsPage() {
       </ResponsiveSlot>
       <ResponsiveSlot compact={isMobile} variant="wide" fill>
         <DataState
+          backgroundErrorMode="header"
           hasData={flatData.length > 0}
           isLoading={isLoading}
           isError={isError}

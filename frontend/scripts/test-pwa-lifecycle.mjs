@@ -221,7 +221,8 @@ const frontendGateway = createServer((req, res) => {
     release: state.release,
     navigation:
       req.headers['sec-fetch-mode'] === 'navigate' ||
-      Boolean(req.headers['service-worker-navigation-preload']),
+      Boolean(req.headers['service-worker-navigation-preload']) ||
+      String(req.headers.accept ?? '').includes('text/html'),
   })
   if (
     state.holdStaticProbe &&
@@ -250,7 +251,8 @@ const frontendGateway = createServer((req, res) => {
   if (
     state.hangNavigation &&
     (req.headers['sec-fetch-mode'] === 'navigate' ||
-      req.headers['service-worker-navigation-preload'])
+      req.headers['service-worker-navigation-preload'] ||
+      String(req.headers.accept ?? '').includes('text/html'))
   ) {
     holdResponse(res, 'navigation')
     return

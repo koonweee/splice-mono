@@ -1,3 +1,4 @@
+import { pageReadPolicy } from '../lib/page-refresh'
 import { useInvestmentControllerFindLatestHoldingsForAccount } from '../api/clients/spliceAPI'
 
 export function useInvestmentHoldings(accountId?: string, enabled = true) {
@@ -5,6 +6,7 @@ export function useInvestmentHoldings(accountId?: string, enabled = true) {
     accountId ?? '',
     {
       query: {
+        ...pageReadPolicy,
         enabled: enabled && !!accountId,
       },
     },

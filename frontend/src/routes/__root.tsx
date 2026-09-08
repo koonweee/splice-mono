@@ -22,7 +22,19 @@ import {
 import { SessionOutcomeContext, sessionQueryOptions } from '../lib/session'
 import { isConfirmedLoggedOutError } from '../lib/session-refresh'
 import { PrivateSessionBoundary } from '../components/PrivateSessionBoundary'
-import { LaunchScreen } from '../components/loading/LaunchScreen'
+import { CachedHomeLaunch } from '../components/pages/CachedHomeLaunch'
+import {
+  cachedHomeEnabled,
+  isHomeLaunchUrl,
+  isLocalLaunch,
+} from '../lib/pwa/launch-mode'
+import { clearHomeSnapshot, readHomeSnapshot } from '../lib/pwa/home-snapshot'
+import {
+  dashboardSeriesOptions,
+  dashboardSummaryOptions,
+} from '../lib/queries/dashboard'
+import { TimePeriod } from '../lib/types'
+import { isValidTimePeriod } from '../lib/route-search'
 import { appleStartupImages } from '../lib/pwa/startup-images'
 import type { ReactNode } from 'react'
 import type { PresentationPreferences } from '../lib/presentation-preferences'
@@ -51,29 +63,117 @@ const APPLE_STARTUP_IMAGE_LINKS = appleStartupImages.map(({ href, media }) => ({
   media,
 }))
 
+let localHomePrepared = false
+
 export const Route = createRootRouteWithContext<RouterContext>()({
   // Send public launch markup immediately. Auth still resolves before any
   // private child mounts; direct private URLs retain authenticated SSR.
   ssr: ({ location }) => location.pathname !== '/',
   shellComponent: DocumentShell,
-  pendingComponent: LaunchScreen,
+  pendingComponent: CachedHomeLaunch,
   beforeLoad: async ({
     context,
   }): Promise<{
     sessionUser: Omit<User, 'providerDetails'> | null
     sessionOutcome: SessionOutcome
     presentation: PresentationPreferences
+    savedHomeAvailable: boolean
   }> => {
+    const snapshotPromise =
+      typeof window !== 'undefined' &&
+      !localHomePrepared &&
+      cachedHomeEnabled &&
+      isHomeLaunchUrl(new URL(window.location.href))
+        ? readHomeSnapshot()
+        : Promise.resolve(null)
+    if (typeof window !== 'undefined' && !cachedHomeEnabled) clearHomeSnapshot()
     let sessionOutcome: SessionOutcome = 'authenticated'
-    const sessionUser = await context.queryClient
-      .ensureQueryData(sessionQueryOptions())
-      .catch((error: unknown) => {
-        sessionOutcome = isConfirmedLoggedOutError(error)
-          ? 'anonymous'
-          : 'unavailable'
-        return null
+    let sessionUser: User | null = null
+    try {
+      sessionUser = await context.queryClient.ensureQueryData(
+        sessionQueryOptions(),
+      )
+    } catch (error) {
+      sessionOutcome = isConfirmedLoggedOutError(error)
+        ? 'anonymous'
+        : 'unavailable'
+    }
+    let presentation = await getPresentationPreferences(sessionUser)
+    let keepSavedHome = false
+    const snapshot = await snapshotPromise
+    if (sessionOutcome === 'anonymous') clearHomeSnapshot()
+    if (snapshot && sessionUser && snapshot.identity !== sessionUser.id)
+      clearHomeSnapshot()
+    if (
+      snapshot &&
+      sessionUser?.id === snapshot.identity &&
+      snapshot.presentation.currency === sessionUser.settings.currency
+    ) {
+      const seed = <T,>(
+        key: ReadonlyArray<unknown>,
+        data: T,
+        updatedAt: number,
+      ) => {
+        if (
+          (context.queryClient.getQueryState(key)?.dataUpdatedAt ?? 0) <
+          updatedAt
+        )
+          context.queryClient.setQueryData(key, data, { updatedAt })
+      }
+      seed(
+        dashboardSummaryOptions(snapshot.period, snapshot.endDate).queryKey,
+        snapshot.summary.data,
+        snapshot.summary.updatedAt,
+      )
+      if (snapshot.series)
+        seed(
+          dashboardSeriesOptions(snapshot.period, snapshot.endDate).queryKey,
+          snapshot.series.data,
+          snapshot.series.updatedAt,
+        )
+    }
+    if (
+      isLocalLaunch &&
+      !localHomePrepared &&
+      sessionUser &&
+      isHomeLaunchUrl(new URL(window.location.href))
+    ) {
+      const requested = new URL(window.location.href).searchParams.get('period')
+      const period = isValidTimePeriod(requested) ? requested : TimePeriod.month
+      // Keep the launch preview until the first live summary is prepared. Force
+      // a real read on launch even when the restored data was recently written.
+      const liveSummary = await context.queryClient
+        .fetchQuery({
+          ...dashboardSummaryOptions(period, presentation.today),
+          staleTime: 0,
+        })
+        .then(
+          () => true,
+          () => false,
+        )
+      keepSavedHome =
+        !liveSummary &&
+        Boolean(
+          snapshot &&
+          snapshot.identity === sessionUser.id &&
+          !context.queryClient.getQueryData(
+            dashboardSummaryOptions(period, presentation.today).queryKey,
+          ),
+        )
+      void context.queryClient.prefetchQuery({
+        ...dashboardSeriesOptions(period, presentation.today),
+        staleTime: 0,
       })
-    const presentation = await getPresentationPreferences(sessionUser)
+      // Local masking remains usable while launch reads are in flight.
+      presentation = await getPresentationPreferences(sessionUser)
+      localHomePrepared = !keepSavedHome
+    }
+    if (
+      typeof window !== 'undefined' &&
+      !isLocalLaunch &&
+      sessionOutcome !== 'unavailable'
+    )
+      localHomePrepared = true
     const safeUser = sessionUser
       ? {
           id: sessionUser.id,
@@ -85,12 +185,19 @@ export const Route = createRootRouteWithContext<RouterContext>()({
           updatedAt: sessionUser.updatedAt,
         }
       : null
-    return { sessionUser: safeUser, sessionOutcome, presentation }
+    return {
+      sessionUser: safeUser,
+      sessionOutcome,
+      presentation,
+      savedHomeAvailable:
+        keepSavedHome || Boolean(snapshot && sessionOutcome === 'unavailable'),
+    }
   },
   loader: ({ context }) => ({
     presentation: context.presentation,
     sessionOutcome: context.sessionOutcome,
     authenticated: Boolean(context.sessionUser),
+    savedHomeAvailable: context.savedHomeAvailable,
   }),
   head: ({ loaderData }) => ({
     meta: [
@@ -206,7 +313,9 @@ function DocumentShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
-  const { presentation, sessionOutcome, authenticated } = Route.useLoaderData()
+  const { presentation, sessionOutcome, authenticated, savedHomeAvailable } =
+    Route.useLoaderData()
+  if (savedHomeAvailable) return <CachedHomeLaunch failed />
   return (
     <AppThemeProvider
       initialAppearance={presentation.appearance}
@@ -217,7 +326,7 @@ function RootComponent() {
           <PrivateSessionBoundary fallback={null}>
             <Notifications />
           </PrivateSessionBoundary>
-          <PwaLifecycle />
+          <PwaLifecycle offlineStatusOwnedByHeader={authenticated} />
           <Outlet />
         </PresentationProvider>
       </SessionOutcomeContext.Provider>

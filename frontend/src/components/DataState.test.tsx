@@ -17,6 +17,38 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('DataState', () => {
+  it('delegates only retained-data errors to the header, preserving initial errors', () => {
+    const { rerender } = render(
+      <MantineProvider>
+        <DataState
+          backgroundErrorMode="header"
+          hasData
+          isError
+          isFetching
+          loadingFallback={null}
+        >
+          <input aria-label="Draft" defaultValue="Keep me" />
+        </DataState>
+      </MantineProvider>,
+    )
+    expect(screen.getByRole('textbox')).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('status')).toBeNull()
+    rerender(
+      <MantineProvider>
+        <DataState
+          backgroundErrorMode="header"
+          hasData={false}
+          isError
+          loadingFallback={null}
+          onRetry={() => {}}
+        />
+      </MantineProvider>,
+    )
+    expect(screen.getByRole('alert')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+  })
+
   it('keeps existing results visible during a failed refresh and retries explicitly', () => {
     const onRetry = vi.fn()
     render(

@@ -108,6 +108,7 @@ function AccountsPage() {
         syncing={syncAll.isPending}
       >
         <DataState
+          backgroundErrorMode="header"
           hasData={groupedAccounts.size > 0}
           isLoading={isLoading}
           isError={Boolean(error)}

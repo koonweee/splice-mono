@@ -12,6 +12,8 @@ RUN --mount=type=cache,id=splice-frontend-yarn-node22,target=/yarn-cache,sharing
 # API configuration only affects the application build, not dependencies.
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ARG VITE_CACHED_HOME=true
+ENV VITE_CACHED_HOME=$VITE_CACHED_HOME
 
 # Copy source and build
 COPY . .

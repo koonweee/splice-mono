@@ -57,7 +57,7 @@ beforeEach(async () => {
     },
     clients: { matchAll: async () => clients },
     registration: {
-      navigationPreload: { enable: enablePreload },
+      navigationPreload: { disable: enablePreload },
       get waiting() {
         return waiting
       },
@@ -104,6 +104,54 @@ async function seed(buildId: string, age: number, bytes = 10, url = asset) {
 }
 
 describe('public static caching', () => {
+  it('serves only the public build shell when every essential dependency is available', async () => {
+    const shell = '/pwa-shell-test-build.html'
+    // Test configuration defines the build id; use it rather than accepting
+    // arbitrary HTML as a static resource.
+    const shellPath = `/pwa-shell-${__SPLICE_BUILD_ID__}.html`
+    const entries = [{ url: shellPath }, { url: asset }]
+    fetcher.mockImplementation(async (request: Request) =>
+      request.url.endsWith('.html')
+        ? new Response('<html data-splice-launch="local"></html>', {
+            headers: {
+              'Content-Type': 'text/html',
+              'Cache-Control': 'public,max-age=31536000,immutable',
+            },
+          })
+        : js(),
+    )
+    await helpers.installStaticAssets(entries)
+    await helpers.activateStaticAssets()
+    const request = new Request('https://splice.test/home?period=week')
+    expect(
+      await (await helpers.cachedLaunchResponse(request, entries))?.text(),
+    ).toContain('data-splice-launch')
+    expect(
+      await helpers.cachedLaunchResponse(
+        new Request('https://splice.test/?login=true'),
+        entries,
+      ),
+    ).toBeNull()
+    expect(
+      await helpers.cachedLaunchResponse(
+        new Request('https://splice.test/user/oauth/google/callback'),
+        entries,
+      ),
+    ).toBeNull()
+    expect(
+      await helpers.cachedLaunchResponse(
+        new Request('https://splice.test/accounts'),
+        entries,
+      ),
+    ).toBeNull()
+    expect(
+      helpers.isCacheableStaticRequest(
+        new Request(`https://splice.test${shell}-private`),
+      ),
+    ).toBe(false)
+    await cacheMap.get(`splice-static-v2-${__SPLICE_BUILD_ID__}`)?.delete(asset)
+    expect(await helpers.cachedLaunchResponse(request, entries)).toBeNull()
+  })
   it('never treats financial routes, arbitrary assets, HTML, query URLs, or cross-origin URLs as static', () => {
     for (const url of [
       '/home',

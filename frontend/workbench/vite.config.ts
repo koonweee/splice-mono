@@ -66,6 +66,8 @@ export default defineConfig({
         const replacements: Record<string, string> = {
           'api/axios': 'fixture-api.ts',
           'lib/auth': 'auth-boundary.ts',
+          'lib/pwa/use-save-home-snapshot': 'snapshot-boundary.ts',
+          'lib/pwa/home-snapshot': 'snapshot-boundary.ts',
           'lib/pwa/service-worker': 'pwa-boundary.ts',
           'lib/pwa/app-badge': 'pwa-boundary.ts',
           'lib/pwa/logout': 'pwa-boundary.ts',

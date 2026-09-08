@@ -1,3 +1,4 @@
+import { PAGE_READ_KEYS, pageReadPolicy } from './page-refresh'
 import type { QueryClient } from '@tanstack/react-query'
 
 export const FINANCIAL_STALE_TIME = 30_000
@@ -18,6 +19,8 @@ export function configureQueryPolicy(client: QueryClient) {
       retry: false,
     },
   })
+  for (const key of PAGE_READ_KEYS)
+    client.setQueryDefaults([key], pageReadPolicy)
   client.setQueryDefaults(['/user/me'], { staleTime: SESSION_STALE_TIME })
   client.setQueryDefaults(['/user/tokens'], { staleTime: 0 })
   const configureSettingsScope = () => {

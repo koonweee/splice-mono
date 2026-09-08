@@ -1,17 +1,16 @@
-import { Grid } from '@mantine/core'
 import { useNavigate } from '@tanstack/react-router'
 import { lazy, useMemo } from 'react'
 import { usePresentationPreferences } from '../../lib/presentation-preferences'
 import { useCurrentUser } from '../../lib/session'
 import { DeferredOverlay } from '../DeferredOverlay'
-import { AccountSection } from '../AccountSection'
-import { NetWorthCard } from '../NetWorthCard'
+import { useSaveHomeSnapshot } from '../../lib/pwa/use-save-home-snapshot'
 import { DataState } from '../DataState'
 import { AccountDetailsSkeleton } from '../AccountModal.skeleton'
 import { useBalanceData } from '../../hooks/useBalanceData'
 import { isZeroBalanceAccount } from '../../lib/balance-utils'
 
 import { isValidTimePeriod } from '../../lib/route-search'
+import { HomeContent } from './HomeContent'
 import { HomeSkeleton } from './HomePage.skeleton'
 import { HomePageFrame } from './HomePageFrame'
 import type { AccountSummaryData } from '../../lib/balance-utils'
@@ -25,6 +24,7 @@ const AccountModal = lazy(() =>
 )
 
 export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
+  useSaveHomeSnapshot(period)
   const navigate = useNavigate()
   const { data: user } = useCurrentUser()
   const {
@@ -97,6 +97,7 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
   return (
     <HomePageFrame>
       <DataState
+        backgroundErrorMode={isChangingPeriod ? 'local' : 'header'}
         hasData={Boolean(dashboard)}
         isLoading={isLoading}
         isError={Boolean(error)}
@@ -106,46 +107,20 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
         loadingFallback={<HomeSkeleton period={period} />}
       >
         {dashboard && (
-          <>
-            <NetWorthCard
-              period={period}
-              onPeriodChange={handlePeriodChange}
-              balancesHidden={balancesHidden}
-              netWorth={dashboard.netWorth}
-              changePercent={dashboard.changePercent}
-              changeAmount={dashboard.changeAmount}
-              comparisonPeriod={dashboard.comparisonPeriod}
-              comparisonLoading={isChangingPeriod}
-              chartData={chartDisplayData ?? dashboard.chartData}
-              chartLoading={seriesLoading}
-              chartError={Boolean(seriesError)}
-              onRetryChart={() => void refetchSeries()}
-            />
-
-            <Grid>
-              <Grid.Col span={{ base: 12, md: 6 }}>
-                <AccountSection
-                  title="Assets"
-                  accounts={visibleAssets}
-                  balancesHidden={balancesHidden}
-                  comparisonLoading={isChangingPeriod}
-                  isLiability={false}
-                  onAccountClick={handleAccountClick}
-                />
-              </Grid.Col>
-
-              <Grid.Col span={{ base: 12, md: 6 }}>
-                <AccountSection
-                  title="Liabilities"
-                  accounts={visibleLiabilities}
-                  balancesHidden={balancesHidden}
-                  comparisonLoading={isChangingPeriod}
-                  isLiability={true}
-                  onAccountClick={handleAccountClick}
-                />
-              </Grid.Col>
-            </Grid>
-          </>
+          <HomeContent
+            dashboard={dashboard}
+            period={period}
+            balancesHidden={balancesHidden}
+            visibleAssets={visibleAssets}
+            visibleLiabilities={visibleLiabilities}
+            isChangingPeriod={isChangingPeriod}
+            chartDisplayData={chartDisplayData}
+            seriesLoading={seriesLoading}
+            seriesError={Boolean(seriesError)}
+            onPeriodChange={handlePeriodChange}
+            onAccountClick={handleAccountClick}
+            onRetrySeries={() => void refetchSeries()}
+          />
         )}
       </DataState>
 

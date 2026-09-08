@@ -3,6 +3,8 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { APPEARANCE_CHANGE_EVENT } from '../src/lib/appearance-preferences'
 import {
   FixturePresentation,
+  PresentationProvider,
+  readPresentationCookies,
   usePresentationPreferences,
 } from './runtime-boundaries'
 import {
@@ -69,4 +71,27 @@ it('simulates notification subscription without requesting browser permission', 
     enrollmentId: 'workbench-enrollment',
   })
   expect(fetch).not.toHaveBeenCalled()
+})
+
+it('honors saved preview masking without reading or writing device preferences', () => {
+  const cookie = document.cookie
+  const storage = vi.spyOn(Storage.prototype, 'setItem')
+  function SavedMask() {
+    const { maskBalances, setMaskBalances } = usePresentationPreferences()
+    return (
+      <button onClick={() => setMaskBalances((value) => !value)}>
+        {maskBalances ? 'Masked preview' : 'Visible preview'}
+      </button>
+    )
+  }
+  render(
+    <PresentationProvider initial={{ maskBalances: true }}>
+      <SavedMask />
+    </PresentationProvider>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Masked preview' }))
+  expect(screen.getByRole('button', { name: 'Visible preview' })).toBeTruthy()
+  expect(readPresentationCookies('splice_mask_balances=false')).toEqual({})
+  expect(storage).not.toHaveBeenCalled()
+  expect(document.cookie).toBe(cookie)
 })

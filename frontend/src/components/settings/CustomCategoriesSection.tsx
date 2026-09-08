@@ -1228,6 +1228,7 @@ export function CustomCategoriesSection() {
       )}
 
       <DataState
+        backgroundErrorMode="header"
         loadingFallback={<CategoriesTableSkeleton />}
         hasData={categories.length > 0}
         isLoading={isLoading}

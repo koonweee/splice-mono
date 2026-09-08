@@ -1,4 +1,5 @@
 import { resolveApiUrl } from '../api-base-url'
+import { clearHomeSnapshot } from './home-snapshot'
 import { fetchWithDeadline } from './deadline'
 import { clearPendingLogout, getPendingLogout } from './logout-state'
 import type { PendingLogout } from './logout-state'
@@ -45,6 +46,10 @@ export async function completePendingLogout(
     if (!response.ok)
       throw new Error(
         'Sign out has not reached the server. Reconnect and retry.',
+      )
+    if (!(await clearHomeSnapshot()))
+      throw new Error(
+        'Saved data could not be cleared. Retry sign out to finish local cleanup.',
       )
     clearPendingLogout(pending.id)
     return true

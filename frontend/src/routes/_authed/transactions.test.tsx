@@ -624,7 +624,7 @@ describe('TransactionsPage category assignment workflow', () => {
     expect(mockFns.invalidateQueriesMock).toHaveBeenCalled()
   })
 
-  it('keeps the desktop header and cached table on refresh failure with a visible Retry action', () => {
+  it('keeps the desktop header and cached table while the app header owns refresh failures', () => {
     mockFns.useInfiniteQueryMock.mockReturnValue({
       data: { pages: [transactionsPageData] },
       fetchNextPage: vi.fn(),
@@ -639,11 +639,8 @@ describe('TransactionsPage category assignment workflow', () => {
 
     expect(screen.getByRole('heading', { name: 'Transactions' })).toBeTruthy()
     expect(screen.getByTestId('transactions-table')).toBeTruthy()
-    expect(screen.getByRole('alert').textContent).toContain(
-      'Error loading transactions',
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(mockFns.refetchMock).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
   })
 
   it('bulk clears selected transaction categories and exposes undo', () => {

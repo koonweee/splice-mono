@@ -116,9 +116,8 @@ describe('Accounts page states', () => {
     })
     render(page())
     expect(screen.getByText('Everyday Checking')).toBeTruthy()
-    expect(screen.getByRole('alert').textContent).toContain(
-      'Failed to load accounts',
-    )
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+    // The authenticated header owns retained-data failures; initial errors above remain local.
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
   })
 })

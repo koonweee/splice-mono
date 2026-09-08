@@ -13,6 +13,7 @@ import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import { usePresentationPreferences } from '../../lib/presentation-preferences'
 import { LoadingSkeleton } from '../../components/loading/LoadingSkeleton'
 import {
   AnalysisDonutSkeleton,
@@ -365,7 +366,8 @@ function FlowSection({
 function AnalysisPage() {
   const navigate = useNavigate()
 
-  const { startDate, endDate } = Route.useLoaderData()
+  const { today } = usePresentationPreferences()
+  const { startDate, endDate } = analysisDateRange(today, Route.useSearch())
 
   const {
     data: analysis,
@@ -430,6 +432,7 @@ function AnalysisPage() {
         onAudit={openAudit}
       >
         <DataState
+          backgroundErrorMode="header"
           hasData={Boolean(analysis)}
           isLoading={isPending}
           isError={isError}

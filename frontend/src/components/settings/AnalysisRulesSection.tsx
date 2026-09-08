@@ -702,6 +702,7 @@ export function AnalysisRulesSection({
       </SettingsFiltersFrame>
 
       <DataState
+        backgroundErrorMode="header"
         loadingFallback={<AnalysisRulesSkeleton />}
         hasData={rules.length > 0}
         isLoading={isLoading}

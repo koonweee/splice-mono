@@ -446,3 +446,19 @@ Save/Cancel. Omitted/false uses the body font; true uses the canonical mono stac
 Keep dates, names and prose in their existing roles. Numeric input roles are
 selected centrally by inputmode. Account amounts and percentage disclosures share
 the same preference, including in portals and server-rendered first paint.
+
+## Coordinated background refresh feedback
+
+For page reads owned by the hourly refresh coordinator, pass
+`backgroundErrorMode="header"` to `DataState` only when matching retained data is
+present and the coordinator reports that query's errors. This suppresses the
+local retained-data error overlay and duplicate refresh announcement. Initial
+errors, missing series, failed new filters and mutation failures remain local
+and actionable. The default stays `local`.
+
+`AppShellLayout` accepts presentational `refreshStatus` and `onRetryRefresh`
+inputs. The header divider hosts a delayed, subtle edge animation; reduced
+motion uses a static edge. A reserved title-adjacent slot holds offline/failure
+feedback, with a focus/hover tooltip and tap/keyboard detail offering Retry.
+Status changes preserve header and content geometry; networking stays with the
+caller. Preview and authenticated callers share this component.

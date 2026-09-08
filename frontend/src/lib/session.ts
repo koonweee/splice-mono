@@ -10,6 +10,7 @@ import {
 } from './auth-generation'
 import { resolveApiUrl } from './api-base-url'
 import { getPendingLogout } from './pwa/logout-state'
+import { withDeadline } from './pwa/deadline'
 import {
   ConfirmedLoggedOutError,
   TransientAuthError,
@@ -32,9 +33,22 @@ export type SessionState = {
 export const sessionQueryKey = ['/user/me'] as const
 
 async function browserSession(): Promise<User> {
+  const controller = new AbortController()
+  try {
+    return await withDeadline(
+      browserSessionRequest(controller.signal),
+      15_000,
+      'Session check timed out',
+    )
+  } finally {
+    controller.abort()
+  }
+}
+
+async function browserSessionRequest(signal: AbortSignal): Promise<User> {
   if (getPendingLogout()) throw new ConfirmedLoggedOutError()
   const generation = getAuthGeneration()
-  const firstResponse = await fetchCurrentUser()
+  const firstResponse = await fetchCurrentUser(signal)
   if (firstResponse.ok) {
     const user = (await firstResponse.json()) as User
     assertAuthGeneration(generation)
@@ -52,7 +66,7 @@ async function browserSession(): Promise<User> {
   await refreshSession()
   assertAuthGeneration(generation)
 
-  const retryResponse = await fetchCurrentUser()
+  const retryResponse = await fetchCurrentUser(signal)
   if (retryResponse.ok) {
     const user = (await retryResponse.json()) as User
     assertAuthGeneration(generation)
@@ -139,9 +153,10 @@ export function useSession() {
   return { ...query, refetch }
 }
 
-function fetchCurrentUser(): Promise<Response> {
+function fetchCurrentUser(signal: AbortSignal): Promise<Response> {
   return fetch(resolveApiUrl('/user/me'), {
     credentials: 'include',
+    signal,
   })
 }
 

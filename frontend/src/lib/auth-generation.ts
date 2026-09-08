@@ -1,3 +1,4 @@
+import { clearHomeSnapshot, setHomeSnapshotIdentity } from './pwa/home-snapshot'
 import { getPendingLogout } from './pwa/logout-state'
 import { clearPendingAppTransition } from './pwa/app-transition'
 import type { QueryClient } from '@tanstack/react-query'
@@ -41,6 +42,7 @@ export function assertAuthGeneration(expected: number) {
 }
 
 export function clearPrivateCaches(broadcast = true) {
+  clearHomeSnapshot()
   clearPendingAppTransition()
   generation += 1
   identity = undefined
@@ -146,6 +148,7 @@ export function acceptBrowserIdentity(next: string) {
     replaceIdentityDocument()
     return
   }
+  setHomeSnapshotIdentity(next)
   const changed = identity !== next
   identity = next
   if (changed) {

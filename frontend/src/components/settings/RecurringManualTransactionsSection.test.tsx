@@ -124,17 +124,14 @@ beforeEach(() => {
 })
 
 describe('RecurringManualTransactionsSection', () => {
-  it('keeps cached schedules visible after a refresh failure and wires Retry', () => {
+  it('keeps cached schedules visible while the app header owns refresh failure recovery', () => {
     mockFns.queryError = true
     renderSection()
     expect(
       screen.getAllByText(schedules[0].merchantName).length,
     ).toBeGreaterThan(0)
-    expect(
-      screen.getByText('Previously loaded results remain visible.'),
-    ).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(mockFns.refetchMock).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
   })
 
   it('shows schedules and supports pause and delete actions', async () => {

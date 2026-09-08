@@ -1,7 +1,7 @@
 # PWA validation
 
 This release adds session-bound device notifications, a compact inbox, guarded
-updates, bounded offline recovery, and static-only caching. The uncategorized
+updates, bounded offline recovery, and bounded public-asset caching. The uncategorized
 transaction badge remains independent of the inbox unread indicator.
 
 ## Reproducible checks
@@ -44,8 +44,8 @@ fixtures only:
 
 ## Static assets and privacy
 
-Only successful same-origin hashed JS/CSS/font/image responses and the minimal
-recovery assets enter the PWA caches. Authenticated HTML, API responses, financial
+Only successful same-origin hashed JS/CSS/font/image responses, the generic versioned
+launch shell, and the minimal recovery assets enter the PWA caches. Authenticated HTML, API responses, financial
 drafts, notification bodies, and badge counts are never persisted. Cache metadata
 contains build IDs, use times, and byte counts; enrollment metadata contains opaque
 control IDs, a server-verified opaque account scope, and badge ordering timestamps. Pending logout uses a minimal
@@ -229,3 +229,35 @@ digests, operation IDs, privacy counts, and public probe results. The
 [final corrected CI results](./pwa-evidence/lifecycle-ci-9903776.json) retain all
 18 cases and their explicit browser/OS limitations. Physical-device checks remain
 blocked by unavailable devices as described above.
+
+## Cached Home launch and hourly refresh (September 8)
+
+The previous no-financial-persistence policy is superseded only for the bounded
+Home snapshot described in the frontend README. This data lives in a separate
+IndexedDB store, never in the service worker HTTP response cache. Private HTML,
+API responses, credentials, drafts and notifications remain excluded from that
+cache. The public shell includes no serialized session; `src/client.tsx` mounts
+TanStack Router with `createRoot(document)` for that shell and retains Start's
+normal hydration for network-rendered documents. Only verified session checks
+can seed the live identity. The pending root renders the shared Home presentation
+without private query observers or usable financial actions.
+
+`yarn pwa:cached-home-test` uses synthetic accounts, a production build, full
+Chromium and real service worker/IndexedDB. Full Chromium is intentional: the
+bundled headless shell can crash on the existing service-worker BadgeService IPC.
+`yarn pwa:test --channel=chromium` selects the same engine for lifecycle tests.
+The public manifest is network-only and is not a boot dependency even though the
+PWA plugin appends it to its injected manifest. Home's lazy Chart and its static
+imports are boot dependencies so updated snapshots remain drawable offline.
+
+For manual inspection, first build with `VITE_API_BASE_URL='' yarn build` so a
+local `.env` API override cannot redirect the synthetic fixture to the real
+localhost backend. Then `yarn pwa:cached-home-test --serve` starts an isolated IPv6
+loopback gateway with a synthetic API and production frontend, preserving normal
+local app ports. Use the printed URL. The `splice_access_token=alice` cookie
+selects the synthetic account. This mode never accesses real financial data.
+
+Automated/browser evidence is recorded in the implementation ledger. Physical
+installed-iOS process termination/relaunch and OS-native splash caching require
+an actual device and remain a device-only validation limitation; desktop
+Chromium service-worker cold-start tests do not certify those OS behaviors.

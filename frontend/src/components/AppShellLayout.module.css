@@ -60,3 +60,14 @@
 .navigationToggle {
   --burger-size: 24px;
 }
+
+@media (--phone-layout) {
+  .headerContent {
+    padding-left: max(8px, var(--splice-safe-area-left, 0px));
+    padding-right: max(8px, var(--splice-safe-area-right, 0px));
+    gap: 4px;
+  }
+  .headerActions {
+    gap: 4px;
+  }
+}

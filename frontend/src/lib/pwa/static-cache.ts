@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import { fetchWithDeadline } from './deadline'
+import { cachedHomeEnabled, isHomeLaunchUrl } from './launch-mode'
 
 declare const self: ServiceWorkerGlobalScope
 
@@ -95,6 +96,8 @@ export function isCacheableStaticRequest(request: Request): boolean {
   if (url.origin !== self.location.origin || url.search) return false
   return (
     branding.has(url.pathname) ||
+    (cachedHomeEnabled &&
+      url.pathname === `/pwa-shell-${__SPLICE_BUILD_ID__}.html`) ||
     /^\/pwa-offline-[a-zA-Z0-9-]+\.js$/.test(url.pathname) ||
     /^\/assets\/[a-zA-Z0-9._-]+-[a-zA-Z0-9_-]{8,}\.(js|css|woff2?|png|webp|avif|jpe?g|svg)$/.test(
       url.pathname,
@@ -119,6 +122,8 @@ function validResponse(request: Request, response: Response): boolean {
     response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() ??
     ''
   const path = new URL(request.url).pathname
+  if (path === `/pwa-shell-${__SPLICE_BUILD_ID__}.html`)
+    return type === 'text/html'
   if (path.endsWith('.js'))
     return ['application/javascript', 'text/javascript'].includes(type)
   if (path.endsWith('.css')) return type === 'text/css'
@@ -265,7 +270,7 @@ export async function activateStaticAssets(): Promise<void> {
   try {
     await (
       self.registration as { navigationPreload?: NavigationPreloadManager }
-    ).navigationPreload?.enable()
+    ).navigationPreload?.[cachedHomeEnabled ? 'disable' : 'enable']()
   } catch {
     /* Unsupported/disabled preload falls back to one normal fetch. */
   }
@@ -282,6 +287,42 @@ export async function activateStaticAssets(): Promise<void> {
     /* Storage failure cannot prevent activation. */
   }
   await pruneStaticAssets()
+}
+
+/** Only our generic build shell is cacheable HTML, never a navigation response. */
+export async function cachedLaunchResponse(
+  request: Request,
+  entries: Array<Entry>,
+): Promise<Response | null> {
+  if (
+    !cachedHomeEnabled ||
+    request.method !== 'GET' ||
+    !isHomeLaunchUrl(new URL(request.url))
+  )
+    return null
+  try {
+    const cache = await caches.open(CACHE_NAME)
+    const meta = await metadata(cache)
+    if (!meta?.activated) return null
+    // A partial install must not strand a cold launch offline. Every essential
+    // dependency must be present in this exact build's cache before using it.
+    for (const entry of entries) {
+      const dependency = new Request(new URL(entry.url, self.location.origin))
+      // vite-plugin-pwa appends manifest.json after manifestTransforms; it is
+      // intentionally network-only and is not a boot dependency.
+      if (!isCacheableStaticRequest(dependency)) continue
+      const response = await cache.match(dependency)
+      if (!response || !validResponse(dependency, response)) return null
+    }
+    return (
+      (await cache.match(
+        new URL(`/pwa-shell-${__SPLICE_BUILD_ID__}.html`, self.location.origin)
+          .href,
+      )) ?? null
+    )
+  } catch {
+    return null
+  }
 }
 
 async function waitingBuildId(worker: ServiceWorker): Promise<string | null> {
