@@ -18,7 +18,7 @@ export function HomeSkeleton() {
           <Text data-typography="bodySmall">{'\u00A0'}</Text>
           <Skeleton h={14} w={180} pos="absolute" top="15%" />
         </Box>
-        <Box mt="xs">
+        <Box mt="xs" className={styles.chartBleed}>
           <ChartSkeleton />
         </Box>
         <Group mt={8} justify="center" h={50}>
