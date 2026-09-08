@@ -190,18 +190,9 @@ export function NotificationInbox({
                             )}
                           </ThemeIcon>
                           <div className={styles.detail}>
-                            <Group gap="xs" wrap="nowrap">
-                              <Text data-typography="rowTitleSmall">
-                                {item.title}
-                              </Text>
-                              {!item.readAt && (
-                                <span
-                                  className={styles.unread}
-                                  role="img"
-                                  aria-label="Unread"
-                                />
-                              )}
-                            </Group>
+                            <Text data-typography="rowTitleSmall">
+                              {item.title}
+                            </Text>
                             <Text data-typography="bodySmall" c="dimmed">
                               {item.body}
                             </Text>
