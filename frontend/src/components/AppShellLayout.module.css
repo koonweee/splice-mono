@@ -1,15 +1,20 @@
 .main {
+  --splice-page-inline-start: max(
+    var(--mantine-spacing-md),
+    var(--splice-safe-area-left, 0px)
+  );
+  --splice-page-inline-end: max(
+    var(--mantine-spacing-md),
+    var(--splice-safe-area-right, 0px)
+  );
+
   display: flex;
   flex-direction: column;
   min-height: 0;
   padding-inline-start: calc(
-    var(--app-shell-navbar-offset, 0px) +
-      max(var(--mantine-spacing-md), var(--splice-safe-area-left, 0px))
+    var(--app-shell-navbar-offset, 0px) + var(--splice-page-inline-start)
   );
-  padding-inline-end: max(
-    var(--mantine-spacing-md),
-    var(--splice-safe-area-right, 0px)
-  );
+  padding-inline-end: var(--splice-page-inline-end);
   padding-bottom: calc(
     var(--splice-lifecycle-space, 0px) +
       max(var(--mantine-spacing-md), var(--splice-safe-area-bottom, 0px))

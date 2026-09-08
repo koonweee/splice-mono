@@ -139,28 +139,38 @@ export function NetWorthCard({
       {/* The streamed series can settle between SSR and hydration. Keep this
           region deterministic without making the summary wait for the chart. */}
       <Box mt="xs" h={180} style={{ position: 'relative' }}>
-        <ClientOnly fallback={<ChartSkeleton />}>
+        <ClientOnly
+          fallback={
+            <Box className={styles.chartBleed}>
+              <ChartSkeleton />
+            </Box>
+          }
+        >
           {hasChartData ||
           (!chartError && (comparisonLoading || chartLoading)) ? (
-            <Chart
-              data={chartData ?? []}
-              placeholder
-              loading={!hasChartData}
-              minimal
-              animate
-              interactive={!comparisonLoading && !chartLoading && !chartError}
-              height={180}
-              valueFormatter={(value) =>
-                balancesHidden
-                  ? HIDDEN_BALANCE_PLACEHOLDER
-                  : formatMoneyNumber({
-                      value,
-                      currency: netWorth.money.currency,
-                      decimals: 0,
-                    })
-              }
-              onDataPointHover={(point) => setHover({ point, data: chartData })}
-            />
+            <Box className={styles.chartBleed}>
+              <Chart
+                data={chartData ?? []}
+                placeholder
+                loading={!hasChartData}
+                minimal
+                animate
+                interactive={!comparisonLoading && !chartLoading && !chartError}
+                height={180}
+                valueFormatter={(value) =>
+                  balancesHidden
+                    ? HIDDEN_BALANCE_PLACEHOLDER
+                    : formatMoneyNumber({
+                        value,
+                        currency: netWorth.money.currency,
+                        decimals: 0,
+                      })
+                }
+                onDataPointHover={(point) =>
+                  setHover({ point, data: chartData })
+                }
+              />
+            </Box>
           ) : !chartError ? (
             <Text data-typography="metadata" c="dimmed">
               No history for this period.

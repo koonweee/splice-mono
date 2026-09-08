@@ -3,3 +3,11 @@
   overflow-wrap: anywhere;
   min-width: 0;
 }
+
+@media (--phone-layout) {
+  .chartBleed {
+    margin-inline-start: calc(-1 * var(--splice-page-inline-start, 0px));
+    margin-inline-end: calc(-1 * var(--splice-page-inline-end, 0px));
+    overflow: hidden;
+  }
+}
