@@ -69,7 +69,9 @@ function Preview() {
         <FixturePresentation masked={params.get('masked') === 'true'}>
           <div
             className={
-              example.id.startsWith('page-') ? 'wb-page-preview' : 'wb-preview'
+              example.id.startsWith('page-') || example.id === 'launch-screen'
+                ? 'wb-page-preview'
+                : 'wb-preview'
             }
           >
             <Component

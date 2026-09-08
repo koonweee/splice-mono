@@ -1,5 +1,24 @@
 # Splice component workbench
 
+## PWA launch screen
+
+`/?frame=true&example=launch-screen&state=checking&mode=oled&width=430`
+shows the public session-checking surface. `state=native` removes the spinner and
+status while keeping the brand in the same position for native startup artwork.
+Browser-inspected at 320×568, 430×932 (iPhone 14 Pro Max), 932×430, and 1032×1376.
+
+Run `yarn pwa:splash` with the workbench running to regenerate the versioned PNGs
+from this production component. `src/lib/pwa/startup-images.ts` is the shared
+device/media-query registry: 23 size/scale combinations, each in portrait and
+landscape. The generator checks physical PNG dimensions, including 1290×2796
+for the 14 Pro Max. Native iOS launch behavior still requires device validation;
+the workbench verifies rendering, not iOS startup-image caching.
+
+After `yarn build`, `yarn pwa:launch-test` verifies immediate public HTML without
+an API wait, the loading state during a held session response, authenticated Home
+navigation, logged-out Google login, transient-error Retry, hydration, and direct
+private-route SSR/authentication using synthetic users.
+
 ## September 8 lifecycle and Home validation
 
 Browser-inspected the production examples using Chromium at 320×800 (Light/OLED

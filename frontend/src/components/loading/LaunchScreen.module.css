@@ -1,0 +1,59 @@
+.screen {
+  @splice-type launchScreen;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.brand {
+  display: grid;
+  justify-items: center;
+  gap: 24px;
+  text-align: center;
+  width: 100%;
+}
+
+.title {
+  @splice-type brandDisplay;
+  margin: 0;
+}
+
+.subtitle {
+  @splice-type lead;
+  margin: 0;
+  max-width: 28rem;
+}
+
+.status {
+  @splice-type bodySmall;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: launch-spin 900ms linear infinite;
+}
+
+@keyframes launch-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
