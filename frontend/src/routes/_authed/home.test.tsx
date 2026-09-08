@@ -8,6 +8,7 @@ import {
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountType, MoneyWithSignSign } from '../../api/models'
+import { AppShellLayout } from '../../components/AppShellLayout'
 import { HomePage } from '../../components/pages/HomePage'
 import {
   HOME_BALANCES_HIDDEN_STORAGE_KEY,
@@ -40,6 +41,9 @@ vi.mock('@tanstack/react-router', async () => {
 
   return {
     ...actual,
+    Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
+      <a href={to}>{children}</a>
+    ),
     createFileRoute: () => (config: Record<string, unknown>) => ({
       ...config,
       useSearch: mockFns.useSearchMock,
@@ -160,7 +164,9 @@ function renderHomePage() {
           today: '2026-09-05',
         }}
       >
-        <HomePage {...mockFns.useSearchMock()} />
+        <AppShellLayout pathname="/home" onLogout={() => {}}>
+          <HomePage {...mockFns.useSearchMock()} />
+        </AppShellLayout>
       </PresentationProvider>
     </MantineProvider>,
   )

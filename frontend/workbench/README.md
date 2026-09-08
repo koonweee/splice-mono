@@ -497,3 +497,20 @@ the chart and period controls stay anchored. Compare the initial `loading-home`
 example as well; its comparison placeholder uses the same frame. Repeat with a
 desktop pointer and a wide coarse pointer, since touch geometry follows input
 capability as well as viewport width.
+
+## Home edge-to-edge accounts
+
+`page-home` now places the balance visibility toggle in the app header before the
+notification bell. On compact screens the Home heading occupies no visible space;
+account rows and dividers extend to the shell edges with transparent group and row
+backgrounds. Text retains a safe-area-aware inset. Desktop keeps its heading and
+account cards. `account-overview` uses the same real AccountSection, and
+`loading-home` mirrors its compact panel treatment. Toggle masking in `page-home`
+to check the headline, rows, chart and account details together.
+
+Validated this change in Chromium: OLED/Warm clay at 390×844, Light at 320×800,
+and Dark/Warm clay at 1280×900. Inspected transparent full-width compact panels,
+content truncation, desktop cards, navbar order and masking. Real local Home also
+confirmed masking through the shared preference. Targeted Home, shell, account
+and workbench suites passed (67 tests); typecheck, lint (existing warnings), token
+guards and both builds passed.

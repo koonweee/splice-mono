@@ -3,5 +3,13 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--mantine-spacing-md);
-  padding: var(--mantine-spacing-sm);
+  padding-block: var(--mantine-spacing-sm);
+  padding-inline-start: var(
+    --splice-account-inline-start,
+    var(--mantine-spacing-sm)
+  );
+  padding-inline-end: var(
+    --splice-account-inline-end,
+    var(--mantine-spacing-sm)
+  );
 }

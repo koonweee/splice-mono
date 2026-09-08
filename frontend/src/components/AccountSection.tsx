@@ -129,7 +129,7 @@ export function AccountSection({
             No {title.toLowerCase()}
           </Text>
         ) : (
-          <Paper withBorder p={0} style={{ overflow: 'hidden' }}>
+          <Paper withBorder p={0} className={styles.panel}>
             <Stack gap={0}>
               {groups
                 ? groups.map((group, groupIndex) => (
@@ -140,7 +140,6 @@ export function AccountSection({
                       <Group
                         className={styles.groupHeader}
                         justify="space-between"
-                        px="sm"
                       >
                         <Text data-typography="label" c="dimmed">
                           {group.label}

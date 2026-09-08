@@ -4,6 +4,7 @@
 
 .groupHeader {
   padding-block: var(--mantine-spacing-xs);
+  padding-inline: var(--mantine-spacing-sm);
   background-color: var(--splice-group-header);
 }
 
@@ -19,5 +20,34 @@
 @media (--touch-controls) {
   .groupHeader {
     padding-block: 0;
+  }
+}
+
+.panel {
+  overflow: hidden;
+}
+
+@media (--compact-layout) {
+  .panel:global(.mantine-Paper-root)[data-with-border] {
+    --splice-account-inline-start: var(
+      --splice-page-inline-start,
+      var(--mantine-spacing-sm)
+    );
+    --splice-account-inline-end: var(
+      --splice-page-inline-end,
+      var(--mantine-spacing-sm)
+    );
+
+    margin-inline-start: calc(-1 * var(--splice-page-inline-start, 0px));
+    margin-inline-end: calc(-1 * var(--splice-page-inline-end, 0px));
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .groupHeader {
+    background: transparent;
+    padding-inline-start: var(--splice-account-inline-start);
+    padding-inline-end: var(--splice-account-inline-end);
   }
 }

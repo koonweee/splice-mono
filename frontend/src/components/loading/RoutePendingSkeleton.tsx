@@ -1,6 +1,7 @@
 import { Box, Group, Skeleton } from '@mantine/core'
 import { useRouterState } from '@tanstack/react-router'
 import { PageHeader } from '../PageHeader'
+import homeStyles from '../pages/HomePage.module.css'
 import { HomeSkeleton } from './HomeSkeleton'
 import {
   AccountsSkeleton,
@@ -28,16 +29,18 @@ export function RoutePendingSkeleton() {
     )[page] ?? 'Splice'
   return (
     <Box>
-      <PageHeader
-        title={title}
-        actions={
-          page !== 'settings' ? (
-            <Group aria-hidden>
-              <Skeleton h={42} w={page === 'home' ? 150 : 180} />
-            </Group>
-          ) : undefined
-        }
-      />
+      <div className={page === 'home' ? homeStyles.heading : undefined}>
+        <PageHeader
+          title={title}
+          actions={
+            page !== 'settings' && page !== 'home' ? (
+              <Group aria-hidden>
+                <Skeleton h={42} w={180} />
+              </Group>
+            ) : undefined
+          }
+        />
+      </div>
       <LoadingSkeleton label={`Loading ${title.toLowerCase()}…`}>
         {page === 'home' ? (
           <HomeSkeleton />
