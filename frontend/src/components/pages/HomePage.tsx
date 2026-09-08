@@ -1,5 +1,4 @@
-import { ActionIcon, Grid, Tooltip } from '@mantine/core'
-import { Eye, EyeOff } from 'lucide-react'
+import { Grid } from '@mantine/core'
 import { useNavigate } from '@tanstack/react-router'
 import { lazy, useMemo } from 'react'
 import { usePresentationPreferences } from '../../lib/presentation-preferences'
@@ -15,6 +14,7 @@ import { useBalanceData } from '../../hooks/useBalanceData'
 import { isZeroBalanceAccount } from '../../lib/balance-utils'
 
 import { isValidTimePeriod } from '../../lib/route-search'
+import styles from './HomePage.module.css'
 import type { AccountSummaryData } from '../../lib/balance-utils'
 import type { HomeSearch } from '../../lib/route-search'
 import { TimePeriod } from '@/lib/types'
@@ -43,8 +43,7 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
     period,
     user ? (user.settings.currency ?? 'USD') : undefined,
   )
-  const { maskBalances: balancesHidden, setMaskBalances: setBalancesHidden } =
-    usePresentationPreferences()
+  const { maskBalances: balancesHidden } = usePresentationPreferences()
   const hideZeroBalanceAccounts =
     user?.settings.hideZeroBalanceAccounts ?? false
 
@@ -96,30 +95,11 @@ export function HomePage({ accountId, period = TimePeriod.month }: HomeSearch) {
     }
   }
 
-  const handleToggleBalancesHidden = () => {
-    setBalancesHidden((current) => !current)
-  }
-
   return (
     <>
-      <PageHeader
-        title="Home"
-        mb="md"
-        titleAccessory={
-          <Tooltip label={balancesHidden ? 'Show balances' : 'Hide balances'}>
-            <ActionIcon
-              variant="subtle"
-              size="md"
-              c="dimmed"
-              aria-label={balancesHidden ? 'Show balances' : 'Hide balances'}
-              aria-pressed={balancesHidden}
-              onClick={handleToggleBalancesHidden}
-            >
-              {balancesHidden ? <EyeOff size={18} /> : <Eye size={18} />}
-            </ActionIcon>
-          </Tooltip>
-        }
-      />
+      <div className={styles.heading}>
+        <PageHeader title="Home" mb="md" />
+      </div>
 
       <DataState
         hasData={Boolean(dashboard)}

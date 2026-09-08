@@ -12,12 +12,15 @@ import { useDisclosure } from '@mantine/hooks'
 import { Link } from '@tanstack/react-router'
 import {
   CreditCard,
+  Eye,
+  EyeOff,
   Home,
   LogOut,
   PieChart,
   Settings,
   TrendingUp,
 } from 'lucide-react'
+import { usePresentationPreferences } from '../lib/presentation-preferences'
 import styles from './AppShellLayout.module.css'
 import type { ReactNode } from 'react'
 import type { PrimaryDestination } from '../lib/navigation-preload'
@@ -39,6 +42,7 @@ export function AppShellLayout({
   children: ReactNode
 }) {
   const [opened, { toggle }] = useDisclosure()
+  const { maskBalances, setMaskBalances } = usePresentationPreferences()
   const navItems = [
     { to: '/home', label: 'Home', icon: Home },
     { to: '/transactions', label: 'Transactions', icon: TrendingUp },
@@ -80,6 +84,19 @@ export function AppShellLayout({
             <Text data-typography="brand">Splice</Text>
           </Group>
           <Group gap={8} wrap="nowrap" className={styles.headerActions}>
+            {pathname === '/home' && (
+              <Tooltip label={maskBalances ? 'Show balances' : 'Hide balances'}>
+                <ActionIcon
+                  variant="subtle"
+                  c="dimmed"
+                  aria-label={maskBalances ? 'Show balances' : 'Hide balances'}
+                  aria-pressed={maskBalances}
+                  onClick={() => setMaskBalances((current) => !current)}
+                >
+                  {maskBalances ? <EyeOff size={18} /> : <Eye size={18} />}
+                </ActionIcon>
+              </Tooltip>
+            )}
             {headerActions}
             <Tooltip label="Logout">
               <ActionIcon

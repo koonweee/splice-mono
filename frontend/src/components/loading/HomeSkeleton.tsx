@@ -1,5 +1,6 @@
 import { Box, Grid, Group, Paper, Skeleton, Title } from '@mantine/core'
 import styles from '../NetWorthCard.module.css'
+import accountStyles from '../AccountSection.module.css'
 import { ChartSkeleton } from './ChartSkeleton'
 import { RowSkeleton } from './LoadingSkeleton'
 
@@ -30,7 +31,7 @@ export function HomeSkeleton() {
             <Group mb="xs" px={4} py={2}>
               <Skeleton h={22} w={90} />
             </Group>
-            <Paper p={0} withBorder>
+            <Paper p={0} withBorder className={accountStyles.panel}>
               <RowSkeleton rows={3} />
             </Paper>
           </Grid.Col>
