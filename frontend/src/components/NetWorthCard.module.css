@@ -21,7 +21,11 @@
 
 @media (--touch-controls) {
   .comparison {
-    min-height: var(--splice-size-touch-target);
+    min-height: 36px;
+  }
+
+  .comparison :global(.splice-touch-target) {
+    min-height: 36px !important;
   }
 }
 

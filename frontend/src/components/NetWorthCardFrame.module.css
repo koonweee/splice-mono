@@ -1,0 +1,5 @@
+@media (--compact-layout) {
+  .summary {
+    padding-top: 8px;
+  }
+}

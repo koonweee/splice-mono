@@ -64,3 +64,11 @@ The full frontend suite passed **825 tests across 115 files**. After the final m
 Unknown record counts, user-authored wrapping, optional security metadata, unread notification styling, and actual chart data can change intrinsic content. Disabled known controls become enabled. These are distinct from avoidable changes to surfaces, known labels, ordering, or anchors; no claim of universal zero CLS is made.
 
 This report distinguishes local production and synthetic workbench evidence. It does not claim an authenticated audit of the deployed site. No API/database migrations or financial behavior changes are part of this refactor.
+
+## Release verification
+
+Released 2026-09-08. Implementation commit `5cb58e975a309e9e8911fa43b5276c97879c20c0` was pushed to main. [Deployment workflow 34196458319](https://github.com/koonweee/splice-mono/actions/runs/34196458319) passed after [release CI 34196476088](https://github.com/koonweee/splice-mono/actions/runs/34196476088), including Chromium PWA lifecycle verification. [PR #290](https://github.com/koonweee/splice-mono/pull/290) merged to deploy as `b464c0cc7b80088e76cee7f9205b302016d6693a`.
+
+Komodo built frontend `0.0.126` from `b464c0c`. Updated only the frontend service on `splice-app-vps`, `splice-app-sg`, and `splice-app-sf`, sequentially. All three deployment operations completed successfully; every frontend container reported running, healthy, and zero restarts. Image inspection on all hosts resolved to registry digest `sha256:c301ff2b36bdadcaad04548747784a228f4986a51a040dcc36bb84b950f6f5e5`; VPS image tags also identify `0.0.126` and `b464c0c`.
+
+Public frontend `/version.json` returned HTTP 200 with build ID `mtsbhxa6-0375df39-3c20-4217-a2c9-4a00fc2f8e75`; API `/health` returned HTTP 200 and status ok. A fresh deployed browser reached Continue with Google with no page exceptions, then was closed. Authenticated content was verified locally as described above; no authenticated deployed-content audit is claimed. Temporary validation browser sessions and servers were closed; pre-existing local development services were preserved.

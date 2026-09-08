@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation and validation complete; release pending.
+Implementation, validation, and deployment complete. See the linked validation report for release revision, CI, image, and replica health evidence.
 
 The [ownership ledger](../frontend/docs/loading-state-ownership.md) records the final source inventory and phase coverage. The [validation report](../frontend/docs/skeleton-migration-validation.md) records browser findings, responsive/theme coverage, local production SSR/hydration checks, and remaining release gates.
 

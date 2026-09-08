@@ -1,4 +1,5 @@
 import { Box, Paper } from '@mantine/core'
+import styles from './NetWorthCardFrame.module.css'
 import type { ReactNode } from 'react'
 
 /** Lightweight geometry shared by summary, data and chart-module loading. */
@@ -13,7 +14,7 @@ export function NetWorthCardFrame({
 }) {
   return (
     <Paper mb={8} bg="transparent">
-      {summary}
+      <Box className={styles.summary}>{summary}</Box>
       <Box mt="xs" h={180} pos="relative">
         {chart}
       </Box>

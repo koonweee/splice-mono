@@ -1,7 +1,7 @@
 # Loading-state ownership
 
 Implementation/source reconciliation: 2026-09-07. Implementation and the recorded
-browser matrix are complete; release remains pending. A registered pair is a reproducible fixture, not proof that
+browser matrix are complete; release is verified. A registered pair is a reproducible fixture, not proof that
 its transitions were visually inspected. Follow the [loading contract](ui-conventions.md#loading-preparation-and-stable-layouts),
 [migration plan](../../plans/skeleton-colocation-and-visual-fidelity.md), and
 [paired-state workflow](../workbench/README.md#loading-fidelity-pairs). The
@@ -249,4 +249,4 @@ chunk boundaries, session behavior, cache/service-worker behavior, or hydration.
 | 4. Domain lists and rows                     | verified | Responsive owner structures, exact rule columns, token cards, notifications, and retained Transactions rows inspected.                                                                                                                                                        |
 | 5. Analysis / account details / overlays     | verified | Transparent cashflow/hollow donut, known comparison slot, overlay shells, and Escape/focus restoration inspected.                                                                                                                                                             |
 | 6. Cleanup / complete regression coverage    | verified | Central domain exports removed; explicit boundary inventory, registry/dependency guards, catalogs and durable browser matrix reconciled. 825 tests, lint/typecheck, tokens, production/workbench builds, and launch/SSR checks pass; final nested-state evidence is recorded. |
-| Release                                      | pending  | Commit/CI/deploy workflow and deployed revision verification remain required.                                                                                                                                                                                                 |
+| Release                                      | verified | Deployment workflow/CI passed; deploy b464c0c, frontend 0.0.126, all three replicas healthy. See release verification in the validation report.                                                                                                                               |
